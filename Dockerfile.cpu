@@ -1,0 +1,7 @@
+FROM python:3.5
+
+RUN apt update
+RUN apt install ffmpeg -y
+ARG BITBUCKET_TAG
+ADD ./dist/dtlpy-$BITBUCKET_TAG-py3-none-any.whl /dtlpy-$BITBUCKET_TAG-py3-none-any.whl
+RUN pip install /dtlpy-$BITBUCKET_TAG-py3-none-any.whl --upgrade

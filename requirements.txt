@@ -1,0 +1,17 @@
+requests_toolbelt
+opencv_python==3.4.2.17
+requests
+anytree
+fleep
+numpy
+pandas
+tabulate
+setuptools
+pika
+Pillow
+PyJWT
+progressbar2
+PyYAML
+ffmpeg-python==0.1.17
+scikit-image
+sphinx-argparse
