@@ -8,7 +8,7 @@ Dataloop's SDK and CLI documentation
 
 .. toctree::
    :caption: Table of Contents
-   :maxdepth: 2
+   :maxdepth: 6
   
    installation
    getting_started
