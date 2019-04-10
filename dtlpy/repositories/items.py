@@ -2,6 +2,7 @@ import io
 import os
 import json
 import logging
+import shutil
 import numpy as np
 from PIL import Image
 import fleep
@@ -9,8 +10,12 @@ import queue
 import threading
 from urllib.parse import urlencode
 from progressbar import Bar, ETA, ProgressBar, Timer, FileTransferSpeed, DataSize
+from multiprocessing.pool import ThreadPool
 
 from .. import entities, services
+
+DEFAULT_DOWNLOAD_OPTIONS = {'overwrite': False,
+                            'relative_path': True}
 
 
 class Items:
@@ -22,6 +27,11 @@ class Items:
         self.logger = logging.getLogger('dataloop.repositories.items')
         self.client_api = services.ApiClient()
         self.dataset = dataset
+        # set items entity to represent the item (Item, Package, Artifact etc...)
+        self.items_entity = entities.Item
+
+    def set_items_entity(self, entity):
+        self.items_entity = entity
 
     def get_list(self, query, page_offset, page_size):
         """
@@ -74,7 +84,11 @@ class Items:
         :param page_size:
         :return: Pages object
         """
-        paged = entities.PagedEntities(items=self, query=query, page_offset=page_offset, page_size=page_size)
+        paged = entities.PagedEntities(items=self,
+                                       query=query,
+                                       page_offset=page_offset,
+                                       page_size=page_size,
+                                       item_entity=self.items_entity)
         paged.get_page()
         return paged
 
@@ -89,7 +103,7 @@ class Items:
         if item_id is not None:
             success = self.client_api.gen_request('get', '/datasets/%s/items/%s' % (self.dataset.id, item_id))
             if success:
-                item = entities.Item(entity_dict=self.client_api.last_response.json(), dataset=self.dataset)
+                item = self.items_entity(entity_dict=self.client_api.last_response.json(), dataset=self.dataset)
             else:
                 self.logger.exception(
                     'Unable to get info from item. dataset id: %s, item id: %s' % (self.dataset.id, item_id))
@@ -109,11 +123,105 @@ class Items:
             raise ValueError('Must choose by at least one. "filename" or "item_id"')
         return item
 
+    @staticmethod
+    def __download_img_annotations(item, img_filepath, local_path, download_options, annotation_options):
+        if local_path.endswith('/image') or local_path.endswith('\image'):
+            local_path = os.path.dirname(local_path)
+        overwrite = download_options['overwrite']
+        if download_options['relative_path']:
+            annotation_rel_path = item.filename[1:]
+        else:
+            annotation_rel_path = item.name
+
+        img_shape = None
+        if 'mask' in annotation_options:
+            if img_shape is None:
+                if item.width is not None and item.height is not None:
+                    img_shape = (item.height, item.width)
+                else:
+                    img_shape = Image.open(img_filepath).size[::-1]
+            annotation_filepath = os.path.join(local_path, 'mask', annotation_rel_path)
+            temp_path, ext = os.path.splitext(annotation_filepath)
+            annotation_filepath = temp_path + '.png'
+            if not os.path.isfile(annotation_filepath) or \
+                    (os.path.isfile(annotation_filepath) and overwrite):
+                if not os.path.exists(os.path.dirname(annotation_filepath)):
+                    os.makedirs(os.path.dirname(annotation_filepath), exist_ok=True)
+                item.annotations.download(filepath=annotation_filepath,
+                                          get_mask=True,
+                                          img_shape=img_shape)
+
+        if 'instance' in annotation_options:
+            if img_shape is None:
+                if item.width is not None and item.height is not None:
+                    img_shape = (item.height, item.width)
+                else:
+                    img_shape = Image.open(img_filepath).size[::-1]
+            annotation_filepath = os.path.join(local_path, 'instance', annotation_rel_path)
+            temp_path, ext = os.path.splitext(annotation_filepath)
+            annotation_filepath = temp_path + '.png'
+            if not os.path.isfile(annotation_filepath) or \
+                    (os.path.isfile(annotation_filepath) and overwrite):
+                if not os.path.exists(os.path.dirname(annotation_filepath)):
+                    os.makedirs(os.path.dirname(annotation_filepath), exist_ok=True)
+                item.annotations.download(filepath=annotation_filepath,
+                                          get_instance=True,
+                                          img_shape=img_shape)
+
+        if 'img_mask' in annotation_options:
+            # TODO
+            pass
+
+    def __download_binary(self):
+        pass
+
+    def __download_video(self):
+        pass
+
+    def download_batch(self, items,
+                       save_locally=True, local_path=None,
+                       chunk_size=8192, download_options=None,
+                       download_item=True, annotation_options=None,
+                       verbose=True, show_progress=False
+                       ):
+        def download_single(i_w_item, w_item):
+            try:
+                data = self.download(item_id=w_item.id,
+                                     save_locally=save_locally,
+                                     local_path=local_path,
+                                     chunk_size=chunk_size,
+                                     download_options=download_options,
+                                     download_item=download_item,
+                                     annotation_options=annotation_options,
+                                     verbose=verbose,
+                                     show_progress=show_progress)
+                outputs[i_w_item] = data
+            except Exception as e:
+                outputs[i_w_item] = w_item.id
+                success[i_w_item] = False
+                errors[i_w_item] = e
+
+        pool = ThreadPool(processes=32)
+        num_items = len(items)
+        success = [None for _ in range(num_items)]
+        errors = [None for _ in range(num_items)]
+        outputs = [None for _ in range(num_items)]
+        for i_item, item in enumerate(items):
+            pool.apply_async(func=download_single,
+                             kwds={'i_w_item': i_item,
+                                   'w_item': item})
+        # log error
+        pool.close()
+        pool.join()
+        pool.terminate()
+        dummy = [self.logger.exception(errors[i_job]) for i_job, suc in enumerate(success) if suc is False]
+        return outputs
+
     def download(self, filepath=None, item_id=None,
                  save_locally=True, local_path=None,
                  chunk_size=8192, download_options=None,
-                 download_img=True, download_mask=False, download_img_mask=False, download_instance=False,
-                 verbose=True, thickness=1, opacity=0.5):
+                 download_item=True, annotation_options=None,
+                 verbose=True, show_progress=False):
         """
         Get a single item's binary data
         Calling this method will returns the item body itself , an image for example with the proper mimetype.
@@ -121,19 +229,27 @@ class Items:
         :param filepath: optional - search item by remote path
         :param item_id: optional - search item by id
         :param save_locally: bool. save to file or return buffer
-        :param local_path: path to save downloaded items
-        :param download_options: 'merge' or 'overwrite'
-        :param download_img: force download image
-        :param download_mask: download annotations as mask
-        :param download_img_mask: download annotations on image
-        :param download_instance: download annotations as instances - annotations id for each label
-        :param verbose: log exceptions
-        :param thickness: line thickness for polygon etc
-        :param opacity: alpha level when blending mask and image
+        :param local_path: local folder or filename to save to. if folder ends with * images with be downloaded directly to folder. else - an "images" folder will be create for the images
         :param chunk_size:
+        :param download_options: {'overwrite': True/False, 'relative_path': True/False}
+        :param download_item:
+        :param annotation_options: download annotations options: ['mask', 'img_mask', 'instance', 'json']
         :return:
         """
         try:
+            if annotation_options is None:
+                annotation_options = list()
+            if download_options is None:
+                download_options = DEFAULT_DOWNLOAD_OPTIONS
+            else:
+                if not isinstance(download_options, dict):
+                    raise ValueError('"download_options" must be a dict. {<option>:<value>}')
+                tmp_options = DEFAULT_DOWNLOAD_OPTIONS
+                for key, val in download_options.items():
+                    if key not in tmp_options:
+                        raise ValueError('unknown download option: %s. known: %s' % (key, list(tmp_options.keys())))
+                    tmp_options[key] = val
+                download_options = tmp_options
             # get items
             item = self.get(filepath=filepath, item_id=item_id)
             if item is None:
@@ -142,43 +258,53 @@ class Items:
             if item.type == 'dir':
                 # item is directory
                 return
-            local_image_filename = None
-            local_mask_filename = None
-            local_instance_filename = None
-            local_img_mask_filename = None
             if save_locally:
                 # create paths
                 if local_path is None:
                     # create default local file
-                    main_dataset_path = self.dataset.__get_local_path__()
-                    local_image_filename = os.path.join(main_dataset_path, 'images', item.filename[1:])
-                    local_mask_filename = os.path.join(main_dataset_path, 'mask', item.filename[1:])
-                    local_instance_filename = os.path.join(main_dataset_path, 'instance', item.filename[1:])
-                    local_img_mask_filename = os.path.join(main_dataset_path, 'img_mask', item.filename[1:])
+                    local_path = os.path.join(os.path.expanduser('~'),
+                                              '.dataloop',
+                                              'datasets',
+                                              item.dataset.id,
+                                              'image')
+                    if download_options['relative_path']:
+                        local_filepath = os.path.join(local_path, item.filename[1:])
+                    else:
+                        local_filepath = os.path.join(local_path, item.name)
+
                 else:
+                    include_images_in_path = True
+                    if local_path.endswith('/*') or local_path.endswith('\*'):
+                        # if end with * download directly to folder
+                        local_path = local_path[:-2]
+                        include_images_in_path = False
                     # check if input is file or directory
                     _, ext = os.path.splitext(local_path)
-                    if not ext:
-                        # if directory - get item's filename
-                        local_image_filename = os.path.join(local_path, item.filename[1:])
-                        local_dir = local_path
+                    if ext:
+                        # local_path is a filename
+                        local_filepath = local_path
+                        local_path = os.path.dirname(local_filepath)
                     else:
-                        local_image_filename = local_path
-                        local_dir = os.path.dirname(local_image_filename)
-                    local_mask_filename = os.path.join(local_dir, 'mask', item.filename[1:])
-                    local_instance_filename = os.path.join(local_dir, 'instance', item.filename[1:])
-                    local_img_mask_filename = os.path.join(local_dir, 'img_mask', item.filename[1:])
+                        # if directory - get item's filename
+                        if include_images_in_path:
+                            local_path = os.path.join(local_path, 'image')
+                        if download_options['relative_path']:
+                            local_filepath = os.path.join(local_path, item.filename[1:])
+                        else:
+                            local_filepath = os.path.join(local_path, item.name)
+            else:
+                local_filepath = None
 
             overwrite = False
-            if download_options == 'overwrite':
+            if 'overwrite' in download_options and download_options['overwrite']:
                 overwrite = True
 
             # check if need to download image binary from platform
             if save_locally:
                 # save
-                if download_img:
+                if download_item:
                     # get image
-                    if os.path.isfile(local_image_filename):
+                    if os.path.isfile(local_filepath):
                         # local file exists
                         if overwrite:
                             # overwrite local file
@@ -206,71 +332,36 @@ class Items:
 
             if save_locally:
                 # download
-                if download_img:
-                    if not os.path.isfile(local_image_filename) or \
-                            (os.path.isfile(local_image_filename) and overwrite):
-                        if not os.path.exists(os.path.dirname(local_image_filename)):
-                            os.makedirs(os.path.dirname(local_image_filename), exist_ok=True)
+                if download_item:
+                    if not os.path.isfile(local_filepath) or \
+                            (os.path.isfile(local_filepath) and overwrite):
+                        if not os.path.exists(os.path.dirname(local_filepath)):
+                            os.makedirs(os.path.dirname(local_filepath), exist_ok=True)
                         # download and save locally
-                        with open(local_image_filename, 'wb') as f:
+                        if show_progress:
+                            total_length = resp.headers.get('content-length')
+                            pbar = ProgressBar(widgets=[' [', Timer(), '] ', Bar(), ' (', FileTransferSpeed(), ' | ', DataSize(), ' | ', ETA(),')'])
+                            pbar.max_value = int(total_length)
+                            dl = 0
+                        with open(local_filepath, 'wb') as f:
                             for chunk in resp.iter_content(chunk_size=chunk_size):
                                 if chunk:  # filter out keep-alive new chunks
+                                    if show_progress:
+                                        dl += len(chunk)
+                                        pbar.update(dl)
                                     f.write(chunk)
+                            if show_progress:
+                                pbar.finish()
+
                 # save to output variable
-                data = local_image_filename
+                data = local_filepath
                 # if image - can download annotation mask
                 if 'image' in item.mimetype:
-                    # get image size without opening it
-                    if item.width is None or item.height is None:
-                        img_shape = Image.open(data).size[::-1]
-                    else:
-                        img_shape = (item.height, item.width)
-
-                    if download_mask:
-                        temp_path, ext = os.path.splitext(local_mask_filename)
-                        local_mask_filename = temp_path + '.png'
-                        if not os.path.isfile(local_mask_filename) or \
-                                (os.path.isfile(local_mask_filename) and overwrite):
-                            # file doesnt exists or (file exists and overwrite)
-                            if not os.path.exists(os.path.dirname(local_mask_filename)):
-                                os.makedirs(os.path.dirname(local_mask_filename), exist_ok=True)
-                            item.annotations.download(filepath=local_mask_filename,
-                                                      get_mask=True,
-                                                      img_shape=img_shape,
-                                                      thickness=thickness)
-
-                    if download_instance:
-                        temp_path, ext = os.path.splitext(local_instance_filename)
-                        local_instance_filename = temp_path + '.png'
-                        if not os.path.isfile(local_instance_filename) or \
-                                (os.path.isfile(local_instance_filename) and overwrite):
-                            # file doesnt exists or (file exists and overwrite)
-                            if not os.path.exists(os.path.dirname(local_instance_filename)):
-                                os.makedirs(os.path.dirname(local_instance_filename), exist_ok=True)
-                            item.annotations.download(filepath=local_instance_filename,
-                                                      get_instance=True,
-                                                      img_shape=img_shape,
-                                                      thickness=thickness)
-
-                    if download_img_mask:
-                        temp_path, ext = os.path.splitext(local_img_mask_filename)
-                        local_img_mask_filename = temp_path + '.png'
-                        if not os.path.isfile(local_img_mask_filename) or \
-                                (os.path.isfile(local_img_mask_filename) and overwrite):
-                            # file doesnt exists or (file exists and overwrite)
-                            if not os.path.exists(os.path.dirname(local_img_mask_filename)):
-                                # create folder
-                                os.makedirs(os.path.dirname(local_img_mask_filename), exist_ok=True)
-                            mask = item.annotations.to_mask(img_shape=img_shape, thickness=thickness, with_text=False)
-                            img = Image.open(data).convert('RGBA')
-                            # set opacity
-                            mask[:, :, 3] = mask[:, :, 3] * opacity
-                            # create PIL
-                            rgb_mask_img = Image.fromarray(mask.astype(np.uint8))
-                            # combine with mask
-                            img.paste(rgb_mask_img, (0, 0), rgb_mask_img)
-                            img.save(local_img_mask_filename)
-
+                    self.__download_img_annotations(item=item,
+                                                    img_filepath=local_filepath,
+                                                    download_options=download_options,
+                                                    annotation_options=annotation_options,
+                                                    local_path=local_path)
             else:
                 # save as byte stream
                 data = io.BytesIO()
@@ -284,6 +375,37 @@ class Items:
             if verbose:
                 self.logger.exception(e)
             raise
+
+    def upload_batch(self, filepaths,
+                     remote_path=None, upload_options=None):
+        def upload_single(i_w_filepath, w_filepath):
+            try:
+                item = self.upload(
+                    filepath=w_filepath,
+                    remote_path=remote_path,
+                    upload_options=upload_options
+                )
+                outputs[i_w_filepath] = item
+            except Exception as e:
+                outputs[i_w_filepath] = w_filepath
+                success[i_w_filepath] = False
+                errors[i_w_filepath] = e
+
+        pool = ThreadPool(processes=32)
+        num_items = len(filepaths)
+        success = [None for _ in range(num_items)]
+        errors = [None for _ in range(num_items)]
+        outputs = [None for _ in range(num_items)]
+        for i_filepath, filepath in enumerate(filepaths):
+            pool.apply_async(func=upload_single,
+                             kwds={'i_w_filepath': i_filepath,
+                                   'w_filepath': filepath})
+        # log error
+        pool.close()
+        pool.join()
+        pool.terminate()
+        dummy = [self.logger.exception(errors[i_job]) for i_job, suc in enumerate(success) if suc is False]
+        return outputs
 
     def upload(self, filepath, remote_path=None, uploaded_filename=None, callback=None, upload_options=None):
         """
@@ -341,6 +463,7 @@ class Items:
                     else:
                         if uploaded_filename is None:
                             self.logger.exception('Must have filename when uploading bytes array (uploaded_filename)')
+                            raise ValueError('Must have filename when uploading bytes array (uploaded_filename)')
                 items = self.get(filepath=remote_path + uploaded_filename)
                 if items is not None:
                     if upload_options == 'overwrite':
@@ -352,7 +475,7 @@ class Items:
                 info = fleep.get(buffer.read(128))
                 # go back to beginning of file
                 buffer.seek(0)
-                files = {'file': (uploaded_filename, buffer, info.mime)}
+                files = {'file': (uploaded_filename, buffer, info.mime[0])}
                 payload = {'path': os.path.join(remote_path, uploaded_filename).replace('\\', '/'),
                            'type': 'file'}
                 result = self.client_api.gen_request(req_type='post',
@@ -360,7 +483,7 @@ class Items:
                                                      files=files,
                                                      data=payload)
             if result:
-                return entities.Item(entity_dict=self.client_api.last_response.json(), dataset=self.dataset)
+                return self.items_entity(entity_dict=self.client_api.last_response.json(), dataset=self.dataset)
             else:
                 self.logger.exception('error uploading')
                 raise self.client_api.platform_exception
@@ -400,7 +523,9 @@ class Items:
         url_path = '/datasets/%s/items/%s' % (self.dataset.id, item.id)
         if system_metadata:
             url_path += '?system=true'
-        success = self.client_api.gen_request('patch', url_path, json_req=item.to_dict())
+        success = self.client_api.gen_request(req_type='patch',
+                                              path=url_path,
+                                              json_req=item.to_dict())
         if success:
             return item
         else:

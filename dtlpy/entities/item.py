@@ -67,6 +67,7 @@ class Item:
                     return Metadata(value) if isinstance(value, dict) else value
 
         return Metadata(self.entity_dict['metadata'])
+        # return self.entity_dict['metadata']
 
     @metadata.setter
     def metadata(self, metadata):
@@ -79,6 +80,13 @@ class Item:
     @property
     def mimetype(self):
         return self.entity_dict['metadata']['system']['mimetype']
+
+    @property
+    def md5(self):
+        md5 = None
+        if hasattr(self.metadata.system, 'md5'):
+            md5 = self.metadata.system.md5
+        return md5
 
     @property
     def size(self):

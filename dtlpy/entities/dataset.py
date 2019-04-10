@@ -20,6 +20,9 @@ class Dataset:
     def __copy__(self):
         return Dataset(entity_dict=self.entity_dict, project=self.project)
 
+    def to_dict(self):
+        return self.entity_dict
+
     def __get_local_path__(self):
         if self.project is not None:
             local_path = os.path.join(os.path.expanduser('~'), '.dataloop',

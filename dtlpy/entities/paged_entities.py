@@ -9,7 +9,12 @@ class PagedEntities:
     Pages object
     """
 
-    def __init__(self, items, query, page_offset, page_size):
+    def __init__(self, items, query, page_offset, page_size, item_entity=None):
+        # entity for item type (Package, Artifact etc..)
+        if item_entity is None:
+            item_entity = entities.Item
+        self.item_entity = item_entity
+
         self.items_repository = items
         self.query = query
         self.__has_next_page = False
@@ -18,7 +23,7 @@ class PagedEntities:
         self.__page_offset = page_offset
         self.__page_size = page_size
         self.__items = utilities.List()
-
+        
     def process_result(self, result):
         if 'page_offset' in result:
             self.__page_offset = result['page_offset']
@@ -32,8 +37,8 @@ class PagedEntities:
             self.__total_pages_count = result['totalPagesCount']
         if 'items' in result:
             self.__items = utilities.List(
-                [entities.Item(entity_dict=entity_dict, dataset=self.items_repository.dataset) for entity_dict
-                 in result['items']])
+                [self.item_entity(entity_dict=entity_dict, dataset=self.items_repository.dataset)
+                 for entity_dict in result['items']])
 
     def __iter__(self):
         self.__page_offset = 0

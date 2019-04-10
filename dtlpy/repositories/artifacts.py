@@ -2,9 +2,7 @@ import os
 import logging
 from progressbar import Bar, ETA, ProgressBar, Timer, FileTransferSpeed, DataSize
 
-from .. import entities, services, utilities
-
-logger = logging.getLogger('dataloop.artifaces')
+from .. import entities, services, utilities, repositories
 
 
 class Artifacts:
@@ -12,177 +10,187 @@ class Artifacts:
     Artifacts repository
     """
 
-    def __init__(self, session=None, package=None):
+    def __init__(self, project=None, dataset=None):
+        self.logger = logging.getLogger('dataloop.packages')
         self.client_api = services.ApiClient()
-        if session is not None and package is not None:
-            logger.exception('Need one none None input')
-            raise ValueError
-        self._artifacts = list()
-        self._session = session
-        self._package = package
+        if project is None and dataset is None:
+            self.logger.exception('at least one must be not None: dataset or project')
+            raise ValueError('at least one must be not None: dataset or project')
+        self.project = project
+        self._dataset = dataset
+        self._items_repository = None
 
-    def _get_url(self):
-        if self._package is not None:
-            return '/packages/%s' % self._package.id
-        elif self._session is not None:
-            return '/sessions/%s' % self._session.id
-        else:
-            logger.exception('no package or session')
-            raise ValueError
+    @property
+    def items_repository(self):
+        if self._items_repository is None:
+            # load Binaries dataset
 
-    def list(self):
-        """
-        List of artifacts
-        :return:
-        """
-        url = self._get_url()
-        success = self.client_api.gen_request('get', url + '/artifacts')
-        if success:
-            artifacts = utilities.List([entities.Artifact(entity_dict=entity_dict) for entity_dict in
-                                        self.client_api.last_response.json()])
-        else:
-            logger.exception('Error getting artifacts list from platform')
-            raise self.client_api.platform_exception
-        return artifacts
+            # load items repository
+            self._items_repository = self.dataset.items
+            self._items_repository.set_items_entity(entities.Package)
+        return self._items_repository
 
-    def create(self, artifact_name='', artifact_type='', description=''):
+    @property
+    def dataset(self):
+        if self._dataset is None:
+            # get dataset from project
+            self._dataset = self.project.datasets.get(dataset_name='Binaries')
+            if self._dataset is None:
+                self.logger.warning(
+                    'Dataset for packages was not found. Creating... dataset name: "Binaries". project_id=%s' % self.project.id)
+                self._dataset = self.project.datasets.create(dataset_name='Binaries')
+                # add system to metadata
+                self._dataset.entity_dict['metadata']['system']['scope'] = 'system'
+                self.project.datasets.edit(dataset=self._dataset, system_metadata=True)
+        return self._dataset
+
+    def list(self, session_id=None, task_id=None):
+            """
+            List of artifacts
+            :return:
+            """
+            if session_id is not None:
+                pages = self.items_repository.list(query={'directories': ['/artifacts/sessions/%s' % session_id]})
+            elif task_id is not None:
+                pages = self.items_repository.list(query={'directories': ['/artifacts/tasks/%s' % task_id]})
+            else:
+                raise ValueError('Must input one search parameter')
+            items = [item for page in pages for item in page]
+            return items
+
+    def get(self, artifact_id=None, artifact_name=None,
+            session_id=None, task_id=None):
         """
-        Create a new artifact
+
+        Get an artifact object by name, id or type
+        If by name or type - need to input also session/task id for the artifact folder
+        :param artifact_id: optional - search by id
         :param artifact_name:
-        :param artifact_type:
-        :param description:
+        :param session_id:
+        :param task_id:
         :return:
         """
-        payload = {'name': artifact_name, 'type': artifact_type, 'description': description}
-        url = self._get_url()
-        success = self.client_api.gen_request(req_type='post',
-                                              path=url + '/artifacts',
-                                              data=payload)
-        if success:
-            artifact = entities.Artifact(entity_dict=self.client_api.last_response.json())
+        if artifact_id is not None:
+            artifact = self.items_repository.get(item_id=artifact_id)
+            return artifact
+        elif artifact_name is not None:
+            artifacts = self.list(session_id=session_id, task_id=task_id)
+            artifact = [artifact for artifact in artifacts if artifact.name == artifact_name]
+            if len(artifact) == 1:
+                artifact = artifact[0]
+            else:
+                artifact = None
             return artifact
         else:
-            logger.exception('Artifact id was not created')
-            raise self.client_api.platform_exception
+            msg = 'one input must be not None: artifact_id or artifact_name'
+            raise ValueError(msg)
 
-    def get(self, artifact_id=None, artifact_name=None, artifact_type=None):
+    def download(self, artifact_id=None, artifact_name=None,
+                 session_id=None, task_id=None,
+                 local_path=None, download_options=None):
         """
-        Get an artifact object by name, id or type
-        :param artifact_id: optional - search by id
-        :param artifact_name: optional - search by name
-        :param artifact_type: optional - search by type
-        :return:
-        """
-        artifacts = self.list()
-        if artifact_id is not None:
-            artifact = [artifact for artifact in artifacts if artifact.id == 'id']
-        elif artifact_name is not None:
-            artifact = [artifact for artifact in artifacts if artifact.name == artifact_name]
-        elif artifact_type is not None:
-            artifact = [artifact for artifact in artifacts if artifact.type == artifact_type]
-        else:
-            logger.exception('Missing search params for "get"')
-            raise ValueError('Missing search params for "get"')
-        if len(artifact) == 1:
-            artifact = artifact[0]
-        else:
-            artifact = None
-        return artifact
 
-    def download(self, artifact_id=None, artifact_name=None, artifact_type=None,
-                 local_path=None, download_options=None, chunk_size=8192):
-        """
-        Download artifact binary to disk. get artifact by name, id or type
+        Download artifact binary.
+        Get artifact by name, id or type
+
         :param artifact_id: optional - search by id
-        :param artifact_name: optional - search by name
-        :param artifact_type: optional - search by type
         :param local_path: artifact will be saved to this filepath
-        :param download_options: 'merge' or 'overwrite'
-        :param chunk_size: defaule - 8192
+        :param download_options: {'overwrite': True/False, 'relative_path':True/False}
+        :param artifact_name:
+        :param session_id:
+        :param task_id:
         :return:
         """
-        artifact = self.get(artifact_id=artifact_id, artifact_name=artifact_name, artifact_type=artifact_type)
-        if artifact is None:
-            logger.exception('Artifact was not found. id: %s, name: %s, type: %s' % (artifact_id, artifact_name, artifact_type))
-            raise ValueError('Artifact was not found. id: %s, name: %s, type: %s' % (artifact_id, artifact_name, artifact_type))
         if download_options is None:
-            download_options = 'overwrite'
-        if local_path is None:
-            local_path = os.getcwd()
+            download_options = {'relative_path': False}
+        if artifact_id is not None:
+            artifact = self.items_repository.download(item_id=artifact_id,
+                                                      save_locally=True,
+                                                      local_path=local_path,
+                                                      download_options=download_options)
+            return artifact
+
         if artifact_name is None:
-            artifact_name = artifact.name
-        if not os.path.isdir(local_path):
-            os.makedirs(local_path)
-        local_filename = os.path.join(local_path, artifact_name)
-        # checking if directory already exists
-        if os.path.isfile(local_filename):
-            logger.info('Local file already exists: %s' % local_filename)
-            if download_options.lower() == 'overwrite':
-                # dont use cached dataset
-                logger.warning('download_options flag is overwrite. deleting local directory: %s' % local_filename)
-                os.remove(local_filename)
+            if session_id is not None:
+                directories = '/artifacts/sessions/%s' % session_id
+            elif task_id is not None:
+                directories = '/artifacts/tasks/%s' % task_id
             else:
-                # use cached dataset
-                logger.info(
-                    'file exists. To overwrite set the "download_options" flag to "overwrite". %s' % local_filename)
-                return local_filename
+                raise ValueError('Must input task or session (id or entity)')
+            query = {'directories': [directories]}
+            if not (local_path.endswith('/*') or local_path.endswith(r'\*')):
+                # download directly to folder
+                local_path = os.path.join(local_path, '*')
+            self.project.datasets.download(dataset_id=self.dataset.id,
+                                           query=query,
+                                           save_locally=True,
+                                           local_path=local_path,
+                                           download_options=download_options)
+        else:
+            artifact = self.get(artifact_id=artifact_id,
+                                session_id=session_id,
+                                task_id=task_id,
+                                artifact_name=artifact_name)
 
-        # download
-        success = self.client_api.gen_request(req_type='get',
-                                              path='/artifacts/%s/body?name=%s' % (artifact.id, artifact.name),
-                                              stream=True)
-        if not success:
-            raise self.client_api.platform_exception
+            if artifact is None:
+                msg = 'Cant find artifact. remote_filename: %s.' % artifact_name
+                self.logger.exception(msg=msg)
+                raise ValueError(msg)
+            artifact = self.items_repository.download(item_id=artifact.id,
+                                                      save_locally=True,
+                                                      local_path=local_path,
+                                                      download_options=download_options)
+            return artifact
 
-        resp = self.client_api.last_response
-
-        total_length = resp.headers.get('content-length')
-        pbar = ProgressBar(
-            widgets=
-            [' [', Timer(), '] ', Bar(), ' (', FileTransferSpeed(), ' | ', DataSize(), ' | ', ETA(), ')'])
-        pbar.max_value = total_length
-        dl = 0
-        with open(local_filename, 'wb') as f:
-            for chunk in resp.iter_content(chunk_size=chunk_size):
-                if chunk:  # filter out keep-alive new chunks
-                    dl += len(chunk)
-                    pbar.update(dl)
-                    f.write(chunk)
-        pbar.finish()
-        return local_filename
-
-    def upload(self, filepath, artifact_id=None, artifact_name=None, artifact_type=None, description=None, create=True):
+    def upload(self,
+               # what to upload
+               filepath,
+               # where to upload
+               task_id=None, task=None, session_id=None, session=None,
+               # add information
+               upload_options=None):
         """
+
         Upload binary file to artifact. get by name, id or type.
         If artifact exists - overwriting binary
         Else and if create==True a new artifact will be created and uploaded
+
         :param filepath: local binary file
-        :param artifact_id: optional - search by id
-        :param artifact_name: optional - search by name
-        :param artifact_type: optional - search by type
-        :param description:
-        :param create: bool. Create new artifact
+        :param upload_options: 'merge' or 'overwrite'
+        :param task_id:
+        :param task:
+        :param session_id:
+        :param session:
         :return:
         """
-        if not artifact_name:
-            artifact_name = os.path.basename(filepath)
-
-        artifact = self.get(artifact_id=artifact_id, artifact_name=artifact_name, artifact_type=artifact_type)
-        if artifact is None:
-            # create new artifact for the model
-            artifact = self.create(artifact_name=artifact_name, artifact_type=artifact_type, description=description)
-            logger.warning('Artifact was not found. New artifact created. id: %s' % artifact.id)
-        # prepare request
-        success = self.client_api.upload_local_file(filepath=filepath,
-                                                    remote_url='/artifacts/%s/body' % artifact.id,
-                                                    uploaded_filename=artifact_name)
-        if success:
-            return artifact
+        if session_id is not None or session is not None:
+            if session is not None:
+                session_id = session.id
+            remote_path = '/artifacts/sessions/%s' % session_id
+        elif task_id is not None or task is not None:
+            if task is not None:
+                task_id = task.id
+            remote_path = '/artifacts/tasks/%s' % task_id
         else:
-            logger.exception('Artifact id was not created. session_id: %s' % self._session.id)
-            raise self.client_api.platform_exception
+            raise ValueError('Must input task or session (id or entity)')
 
-    def delete(self):
+        if os.path.isfile(filepath):
+            artifact = self.items_repository.upload(filepath=filepath,
+                                                    remote_path=remote_path,
+                                                    upload_options=upload_options)
+        elif os.path.isdir(filepath):
+            if not (filepath.endswith('/*') or filepath.endswith(r'\*')):
+                # upload directly to folder
+                filepath = os.path.join(filepath, '*')
+            artifact = self.project.datasets.upload(dataset_id=self.dataset.id,
+                                                    local_path=filepath,
+                                                    remote_path=remote_path,
+                                                    upload_options=upload_options)
+        else:
+            raise ValueError('Missing file or directory: %s' % filepath)
+        return artifact
+
+    def delete(self, artifact_id):
         pass
 
     def edit(self):

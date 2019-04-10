@@ -14,11 +14,13 @@ class ItemsEditStep(pipeline_step.PipelineStep):
         if step_dict is not None:
             self.inputs = step_dict['inputs']
             self.kwargs = step_dict['kwargs']
+            self.args = step_dict['args']
             self.outputs = step_dict['outputs']
         else:
-            self.inputs = [{'name': 'dataset', 'from': 'dataset', 'type': 'object'},
-                           {'name': 'item', 'from': 'item', 'type': 'object'}]
+            self.inputs = [{'name': 'dataset', 'from': 'dataset',  'by': 'ref','type': 'object'},
+                           {'name': 'item', 'from': 'item', 'by': 'ref', 'type': 'object'}]
             self.kwargs = {'system_metadata': True}
+            self.args = []
             self.outputs = [{'name': 'item', 'type': 'object'}]
 
     def execute(self, pipeline_dict):

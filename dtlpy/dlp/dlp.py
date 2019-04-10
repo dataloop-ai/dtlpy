@@ -381,7 +381,7 @@ def main():
                 dlp.projects.create(args.project_name).print()
 
             else:
-                print('Type \'dlp projects --help\' for options')
+                print('Type "dlp projects --help" for options')
 
         ############
         # Datasets #
@@ -424,8 +424,8 @@ def main():
 
             elif args.datasets == 'download':
                 print('[INFO] Downloading dataset...')
-                if isinstance(args.num_workers, str):
-                    args.num_workers = int(args.num_workers)
+                # if isinstance(args.num_workers, str):
+                #     args.num_workers = int(args.num_workers)
                 project = dlp.projects.get(project_name=args.project_name)
                 if project is None:
                     logger.exception('Project wasnt found. name: %s' % args.project_name)
@@ -433,7 +433,7 @@ def main():
                 project.datasets.download(query={'filenames': [args.remote_path]},
                                           dataset_name=args.dataset_name,
                                           local_path=args.local_path,
-                                          download_img=args.dl_img,
+                                          download_item=args.dl_img,
                                           download_mask=args.dl_mask,
                                           download_instance=args.dl_instance,
                                           # download_img_mask=args.dl_img_mask,
@@ -452,7 +452,7 @@ def main():
                     )
 
             else:
-                print('Type \'dlp datasets --help\' for options')
+                print('Type "dlp datasets --help" for options')
 
         ###################
         # Files and items #
@@ -468,20 +468,18 @@ def main():
                     logger.exception('Project wasnt found. name: %s' % args.project_name)
                     raise ValueError('Project wasnt found. name: %s' % args.project_name)
 
-                project.datasets.get(dataset_name=args.dataset_name) \
-                    .items.list()
+                project.datasets.get(dataset_name=args.dataset_name).items.list()
 
             elif args.files == 'upload':
                 project = dlp.projects.get(project_name=args.project_name)
                 if project is None:
                     logger.exception('Project wasnt found. name: %s' % args.project_name)
                     raise ValueError('Project wasnt found. name: %s' % args.project_name)
-                project.datasets.get(dataset_name=args.dataset_name) \
-                    .items.upload(filepath=args.filename,
-                                  remote_path=args.remote_path)
+                project.datasets.get(dataset_name=args.dataset_name).items.upload(filepath=args.filename,
+                                                                                  remote_path=args.remote_path)
 
             else:
-                print('Type \'dlp files --help\' for options')
+                print('Type "dlp files --help" for options')
 
         ##########
         # Videos #
@@ -523,7 +521,7 @@ def main():
             #                                    remote_path=args.remote_path)
 
             else:
-                print('Type \'dlp files --help\' for options')
+                print('Type "dlp files --help" for options')
 
         ############
         # Packages #
@@ -567,7 +565,7 @@ def main():
                 dlp.packages.unpack(package_id=args.package_id,
                                     local_directory=args.directory)
             else:
-                print('Type \'dlp packages --help\' for options')
+                print('Type "dlp packages --help" for options')
 
         ############
         # Sessions #
@@ -603,7 +601,7 @@ def main():
                 dlp.sessions.get(session_id=args.session_id).artifacts.download(artifact_type=args.artifact_type,
                                                                                 local_directory=args.local_dir)
             else:
-                print('Type \'dlp sessions --help\' for options')
+                print('Type "dlp sessions --help" for options')
 
         #########
         # Pipes #
@@ -639,33 +637,33 @@ def main():
                                      input_params=kwargs,
                                      remote_run=args.remote_run)
                 else:
-                    print('[INFO] input missing. \'session-id\' or \'prev-session-id\'')
+                    print('[INFO] input missing. "session-id" or "prev-session-id"')
             else:
-                print('Type \'dlp pipes --help\' for options')
+                print('Type "dlp pipes --help" for options')
 
         ###############
         # Catch typos #
         ###############
         elif args.operation == 'project':
-            print('dlp: \'project\' is not an dlp command. Did you mean \'projects\'?')
+            print('dlp: "project" is not an dlp command. Did you mean "projects"?')
         elif args.operation == 'dataset':
-            print('dlp: \'dataset\' is not an dlp command. Did you mean \'datasets\'?')
+            print('dlp: "dataset" is not an dlp command. Did you mean "datasets"?')
         elif args.operation == 'item':
-            print('dlp: \'file\' is not an dlp command. Did you mean \'files\'?')
+            print('dlp: "file" is not an dlp command. Did you mean "files"?')
         elif args.operation == 'session':
-            print('dlp: \'session\' is not an dlp command. Did you mean \'sessions\'?')
+            print('dlp: "session" is not an dlp command. Did you mean "sessions"?')
         elif args.operation == 'package':
-            print('dlp: \'package\' is not an dlp command. Did you mean \'packages\'?')
+            print('dlp: "package" is not an dlp command. Did you mean "packages"?')
         elif args.operation == 'pipe':
-            print('dlp: \'pipe\' is not an dlp command. Did you mean \'pipes\'?')
+            print('dlp: "pipe" is not an dlp command. Did you mean "pipes"?')
 
         #########################
         # Catch rest of options #
         #########################
         else:
             if (args.operation):
-                print('dlp: \'%s\' is not an dlp command' % args.operation)
-            print('See \'dlp --help\' for options')
+                print('dlp: "%s" is not an dlp command' % args.operation)
+            print('See "dlp --help" for options')
 
     except Exception as e:
         print(traceback.format_exc())

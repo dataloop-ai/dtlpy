@@ -2,6 +2,7 @@
 Dataloop platform calls
 """
 import requests_toolbelt
+import mimetypes
 import datetime
 import requests
 import logging
@@ -67,7 +68,7 @@ class CookieIO:
         if key in cfg.keys():
             return cfg[key]
         else:
-            logger.exception(msg='key not in platform cookie file: %s. default is None' % key)
+            logger.warning(msg='key not in platform cookie file: %s. default is None' % key)
             return None
 
     def put(self, key, value):
@@ -343,12 +344,14 @@ class ApiClient:
         statinfo = os.stat(filepath)
         try:
             # read beginning for mime type
+            _, ext = os.path.splitext(filepath)
+            mime = mimetypes.types_map[ext]
             with open(filepath, 'rb') as file:
                 info = fleep.get(file.read(128))
             # multipart uploading of the file
             with open(filepath, 'rb') as f:
                 file = requests_toolbelt.MultipartEncoder(fields={
-                    'file': (uploaded_filename, f, info.mime),
+                    'file': (uploaded_filename, f, mime),
                     'type': item_type,
                     'path': os.path.join(remote_path, uploaded_filename).replace('\\', '/'),
                 })
@@ -542,7 +545,7 @@ class ApiClient:
         if to_return:
             return msg
         else:
-            logger.info(msg)
+            print(msg)
 
     ################
     # Environments #

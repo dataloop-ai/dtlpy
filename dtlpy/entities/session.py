@@ -9,10 +9,8 @@ class Session:
     Session object
     """
 
-    def __init__(self, entity_dict, project):
+    def __init__(self, entity_dict):
         self.entity_dict = entity_dict
-        self._project = project
-        self._artifacts = repositories.Artifacts(session=self)
 
     def print(self):
         utilities.List([self]).print()
@@ -22,37 +20,42 @@ class Session:
         return self.entity_dict['id']
 
     @property
-    def dataset(self):
-        return self.entity_dict['dataset']
+    def createdAt(self):
+        return self.entity_dict['createdAt']
+
+    @property
+    def datasetId(self):
+        return self.entity_dict['datasetId']
+
+    @property
+    def input(self):
+        return self.entity_dict['input']
+
+    @property
+    def output(self):
+        return self.entity_dict['output']
 
     @property
     def name(self):
         return self.entity_dict['name']
 
     @property
-    def package(self):
-        return self.entity_dict['package']
-
-    @property
-    def pipeline(self):
-        return self.entity_dict['pipe']
-
-    @property
-    def previous_session(self):
-        return self.entity_dict['previous_session']
+    def projectId(self):
+        return self.entity_dict['projectId']
 
     @property
     def status(self):
         return self.entity_dict['status']
 
     @property
-    def project(self):
-        return self.entity_dict['project']
-
+    def taskId(self):
+        return self.entity_dict['metadata']['system']['taskId']
+    
     @property
-    def createdAt(self):
-        return self.entity_dict['createdAt']
-
+    def reporting_exchange(self):
+        return self.entity_dict['feedbackQueue']['exchange']
+    
     @property
-    def artifacts(self):
-        return self._artifacts
+    def reporting_route(self):
+        return self.entity_dict['feedbackQueue']['routing']
+

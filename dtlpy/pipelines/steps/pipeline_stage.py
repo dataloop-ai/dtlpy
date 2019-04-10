@@ -1,17 +1,34 @@
 from ..steps import *
 
 mapping = {
-    'GetSession': GetSessionStep,
-    'GetDataset': GetDatasetStep,
-    'GetItem': GetItemStep,
-    'GetAnnotations': GetAnnotationsStep,
-    'PackagesUnpack': PackagesUnpackStep,
-    'PackagesSessionsUnpack': PackagesSessionsUnpackStep,
-    'ItemsDownload': ItemsDownloadStep,
-    'ItemsEdit': ItemsEditStep,
-    'ItemsUpload': ItemsUploadStep,
+    # annotations
+    'AnnotationsGet': AnnotationsGetStep,
+    'AnnotationsGetBatch': AnnotationsGetBatchStep,
+    'AnnotationsUpload': AnnotationsUploadStep,
+    'AnnotationsUploadBatch': AnnotationsUploadBatchStep,
+    'AnnotationsEdit': AnnotationsEditStep,
+    # artifacts
+    'ArtifactsDownload': ArtifactsDownloadStep,
+    'ArtifactsUpload': ArtifactsUploadStep,
+    # keras callbacks
+    'CallbacksGet': CallbacksGetStep,
+    # datasets
+    'DatasetsGet': DatasetsGetStep,
     'DatasetsDownload': DatasetsDownloadStep,
-    'SessionsArtifactsDownload': SessionsArtifactsDownloadStep}
+    # items
+    'ItemsGet': ItemsGetStep,
+    'ItemsDownload': ItemsDownloadStep,
+    'ItemsDownloadBatch': ItemsDownloadBatchStep,
+    'ItemsEdit': ItemsEditStep,
+    'ItemsList': ItemsListStep,
+    'ItemsUpload': ItemsUploadStep,
+    'ItemsUploadBatch': ItemsUploadBatchStep,
+    # packages
+    'PackagesProjectsUnpack': PackagesProjectsUnpackStep,
+    # sessions
+    'SessionsGet': SessionsGetStep,
+    # python builtins
+    'BuiltinFunc': BuiltinFuncStep}
 
 
 class PipelineStage(object):
@@ -46,6 +63,11 @@ class PipelineStage(object):
         self.steps.append(step)
 
     def from_dict(self, stage_dict):
+        if 'generators' in stage_dict:
+            self.generators = stage_dict['generators']
+        if 'type' in stage_dict:
+            self.type = stage_dict['type']
+
         for step_dict in stage_dict['steps']:
             if step_dict['type'].lower() == 'custom':
                 self.steps.append(CustomPipelineStep(step_dict))

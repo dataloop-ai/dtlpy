@@ -380,15 +380,26 @@ class VideoPlayer:
         annotation = self.video_annotations.get_snapshots_by_time(second=self.annotations_timestamp)
         timestamps_list = list()
         for ann in annotation:
-            top_left = (int(ann['data'][0]['x']), int(ann['data'][0]['y']))
-            bottom_right = (int(ann['data'][1]['x']), int(ann['data'][1]['y']))
-            color = self.get_class_color(ann['label'])
-            frame = cv2.rectangle(frame, top_left, bottom_right, color=color, thickness=2)
-            if self.show_label:
-                text = '%s-%s' % (ann['label'], ','.join(ann['attributes']))
-                frame = cv2.putText(frame, text=text, org=top_left, color=color,
-                                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1, thickness=2)
-            timestamps_list.append(str(ann['startTime']))
+            if ann['type'] == 'box':
+                top_left = (int(ann['data'][0]['x']), int(ann['data'][0]['y']))
+                bottom_right = (int(ann['data'][1]['x']), int(ann['data'][1]['y']))
+                color = self.get_class_color(ann['label'])
+                frame = cv2.rectangle(frame, top_left, bottom_right, color=color, thickness=2)
+                if self.show_label:
+                    text = '%s-%s' % (ann['label'], ','.join(ann['attributes']))
+                    frame = cv2.putText(frame, text=text, org=top_left, color=color,
+                                        fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1, thickness=2)
+                timestamps_list.append(str(ann['startTime']))
+            elif ann['type'] == 'point':
+                x = int(ann['data']['x'])
+                y = int(ann['data']['y'])
+                color = self.get_class_color(ann['label'])
+                frame = cv2.circle(frame, center=(x, y),radius=5, color=color, thickness=2)
+                if self.show_label:
+                    text = '%s-%s' % (ann['label'], ','.join(ann['attributes']))
+                    frame = cv2.putText(frame, text=text, org=(x, y), color=color, fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1, thickness=2)
+                timestamps_list.append(str(ann['startTime']))
+
         self.annotations_timestamp_text.configure(text='Annotations timestamp[s]:\n%s' % '\n'.join(timestamps_list))
         self.annotations_timestamp_text.grid(sticky="W", row=9, column=0)
         return frame
@@ -527,7 +538,5 @@ class VideoCapture:
 
 if __name__ == '__main__':
     def test():
-        a = VideoPlayer(project_name="Eyezon-dev", dataset_name="Pilot", item_filepath="/dor_alon_1_1_3_min/101_2.mp4")
-
-
+        v = VideoPlayer(project_name='Feb19_shelf_zed', dataset_name='try1', item_id='5c922994507c2b001cb2e5ce')
     test()

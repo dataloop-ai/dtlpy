@@ -1,19 +1,13 @@
 import logging
-from .. import utilities
+from .. import utilities, entities
 
 logger = logging.getLogger('dataloop.artifact')
 
 
-class Artifact:
+class Artifact(entities.Item):
     """
     Artifact object
     """
-    def __init__(self, entity_dict):
-        self.entity_dict = entity_dict
-
-    def print(self):
-        utilities.List([self]).print()
-
     @property
     def id(self):
         return self.entity_dict['id']

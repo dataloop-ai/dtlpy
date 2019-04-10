@@ -16,10 +16,8 @@ class PlatformInterface:
         self._client_api = services.ApiClient()
         self._projects = repositories.Projects()
         self._datasets = repositories.Datasets(project=None)
-        self._artifacts = repositories.Artifacts()
-        self._pipelines = repositories.Pipelines()
-        self._packages = repositories.Packages(project=None)
-        self._sessions = repositories.Sessions(project=None)
+        self._tasks = repositories.Tasks()
+        self._sessions = repositories.Sessions(task=None)
 
         self.logger = logging.getLogger(name='dataloop.platform_interface')
 
@@ -116,12 +114,12 @@ class PlatformInterface:
         return self._datasets
 
     @property
-    def pipelines(self):
+    def tasks(self):
         """
-        Pipelines repository
+        Tasks repository
         :return:
         """
-        return self._pipelines
+        return self._tasks
 
     @property
     def packages(self):

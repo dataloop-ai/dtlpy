@@ -127,9 +127,7 @@ class Annotations:
                     self.logger.exception('Unknown annotation type: %s' % annotation.type)
                     raise TypeError('Unknown annotation type: %s' % annotation.type)
             except Exception as err:
-                self.logger.exception(
-                    'Unable to get annotation\'s mask. item_id: %s, annotation_id: %s' % (
-                        annotation.item.id, annotation.id))
+                self.logger.exception('Unable to get annotation\'s mask. item_id: %s, annotation_id: %s' % (annotation.item.id, annotation.id))
         return mask.astype(np.uint8)
 
     def to_instance(self, img_shape, thickness=1):
@@ -222,14 +220,14 @@ class Annotations:
             img = Image.fromarray(mask)
             img.save(filepath)
 
-    def edit(self, annotation, annotation_id=None, system_metadata=False):
+    def edit(self, annotations, annotations_ids=None, system_metadata=False):
         """
         Edit an existing annotation.
-        :param annotation:
-        :param annotation_id:
+        :param annotations:
+        :param annotations_ids:
+        :param system_metadata:
         :return:
         """
-
         # annotation = {'attributes': [],
         #               'coordinates': [[{'x': 106.74999999999999, 'y': 103.14999999999999},
         #                                {'x': 320.71530562347186, 'y': 103.14999999999999},
@@ -238,26 +236,59 @@ class Annotations:
         #               'label': '',
         #               'type': 'box'}
 
-        if isinstance(annotation, str):
-            annotation = json.loads(annotation)
-        if isinstance(annotation, entities.Annotation):
-            annotation_id = annotation_id or annotation.id
-            annotation = annotation.to_dict()
-        if annotation_id is None:
-            self.logger.exception('missing argument: annotation_id')
-            raise ValueError('missing argument: annotation_id')
-        url_path = '/datasets/%s/items/%s/annotations/%s' % (self.dataset.id, self.item.id, annotation_id)
-        if system_metadata:
-            url_path += '?system=true'
-        success = self.client_api.gen_request(req_type='put',
-                                              path=url_path,
-                                              json_req=annotation)
-        if success:
-            entity_dict = self.client_api.last_response.json()
-            return entities.Annotation(entity_dict=entity_dict, dataset=self.dataset, item=self.item)
+        if not isinstance(annotations, list):
+            annotations = [annotations]
+        if annotations_ids is not None:
+            if not isinstance(annotations_ids, list):
+                annotations_ids = [annotations_ids]
         else:
-            self.logger.exception('cant edit annotation')
-            raise self.client_api.platform_exception
+            annotations_ids = [None for _ in range(len(annotations))]
+
+        if len(annotations) != len(annotations_ids):
+            raise ValueError('inputs must have same length. len(annotations)=%d, len(annotations_ids)=%d' % (len(annotations), len(annotations_ids)))
+
+        def edit_single_annotation(i_annotation):
+            try:
+                annotation = annotations[i_annotation]
+                annotation_id = annotations_ids[i_annotation]
+                if isinstance(annotation, str):
+                    annotation = json.loads(annotation)
+                elif isinstance(annotation, entities.Annotation):
+                    annotation_id = annotation_id or annotation.id
+                    annotation = annotation.to_dict()
+                else:
+                    self.logger.exception('Unknown annotation type: %s' % type(annotation))
+                    raise ValueError('Unknown annotation type: %s' % type(annotation))
+
+                if annotation_id is None:
+                    self.logger.exception('missing argument: annotation_id')
+                    raise ValueError('missing argument: annotation_id')
+                url_path = '/datasets/%s/items/%s/annotations/%s' % (self.dataset.id, self.item.id, annotation_id)
+                if system_metadata:
+                    url_path += '?system=true'
+                suc = self.client_api.gen_request(req_type='put',
+                                                  path=url_path,
+                                                  json_req=annotation)
+                if suc:
+                    success[i_annotation] = True
+                else:
+                    raise self.client_api.platform_exception
+
+            except Exception as e:
+                success[i_annotation] = False
+                errors[i_annotation] = e
+
+        from multiprocessing.pool import ThreadPool
+        pool = ThreadPool(processes=32)
+        num_annotations = len(annotations)
+        success = [None for _ in range(num_annotations)]
+        errors = [None for _ in range(num_annotations)]
+        for i_ann in range(len(annotations)):
+            pool.apply_async(func=edit_single_annotation,
+                             kwds={'i_annotation': i_ann})
+        # log error
+        dummy = [self.logger.exception(errors[i_job]) for i_job, suc in enumerate(success) if suc is False]
+        return True
 
     def upload(self, annotations):
         """
@@ -269,19 +300,18 @@ class Annotations:
         if not isinstance(annotations, list):
             annotations = [annotations]
 
-        def upload_single_annotation(i_annotation, annotation):
+        def upload_single_annotation(i_w_annotation, w_annotation):
             try:
                 res = self.client_api.gen_request(req_type='post',
-                                                  path='/datasets/%s/items/%s/annotations' %
-                                                       (self.dataset.id, self.item.id),
-                                                  json_req=annotation)
+                                                  path='/datasets/%s/items/%s/annotations' %(self.dataset.id, self.item.id),
+                                                  json_req=w_annotation)
                 if res:
-                    success[i_annotation] = True
+                    success[i_w_annotation] = True
                 else:
                     raise self.client_api.platform_exception
             except Exception as e:
-                success[i_annotation] = False
-                errors[i_annotation] = e
+                success[i_w_annotation] = False
+                errors[i_w_annotation] = e
 
         from multiprocessing.pool import ThreadPool
         pool = ThreadPool(processes=32)
@@ -301,7 +331,9 @@ class Annotations:
                 errors[i_annotation] = 'unknown annotations type: %s' % type(annotation)
                 continue
             pool.apply_async(func=upload_single_annotation,
-                             kwds={'i_annotation': i_annotation, 'annotation': annotation})
+                             kwds={'i_w_annotation': i_annotation, 'w_annotation': annotation})
+        pool.close()
+        pool.join()
         # log error
         dummy = [self.logger.exception(errors[i_job]) for i_job, suc in enumerate(success) if suc is False]
         return True

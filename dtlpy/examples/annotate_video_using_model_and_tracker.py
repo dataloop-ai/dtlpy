@@ -52,12 +52,14 @@ def main():
         for element in tracked_elements:
             # element.bb - format of the bounding box is 2 points in 1 array - [x_left, y_top, x_right, y_bottom])
             # tracking id of each element is in element.id. to keep the ids of the detected elements
-            second = frame_num / video_fps
-            video_annotations.add_snapshot(element_id=element.id,
-                                           pts=element.bb,
-                                           second=second,
-                                           frame_num=frame_num,
-                                           label=element.label)
+            video_annotations.add_snapshot(
+                element_id=element.id,  # object id for tracking across frames
+                annotation_type='box',  # 'box', 'point' 'binary' etc
+                pts=element.bb,  # points of annotation (bb or [x,y] of a point
+                second=float('%.3f' % (frame_num / video_fps)),  # timestamp of the frame
+                frame_num=frame_num,  #
+                label=element.label
+            )
 
         # increase frame number
         frame_num += 1
@@ -71,8 +73,9 @@ def main():
     dlp = PlatformInterface()
 
     # get the item from platform
-    item = dlp.projects.get(project_name='MyProject').datasets.get(dataset_name='MyDataset').items.get(
-        '/path/to/video.mp4')
+    item = dlp.projects.get(project_name='MyProject')\
+        .datasets.get(dataset_name='MyDataset')\
+        .items.get('/path/to/video.mp4')
 
     # upload annotations
     item.annotations.upload(video_annotations.to_platform())

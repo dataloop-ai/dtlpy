@@ -36,6 +36,8 @@ class BaseAnnotation:
             elif len(pts) == 2 and isinstance(pts[0], dict):
                 # input pts is a 2 point dict with 'x', 'y'
                 coordinates = pts
+            else:
+                raise ValueError('"box" annotations must have len 2 dictionary or len 4 list. got: %d' % len(pts))
 
         elif annotation_type == 'segment':
             coordinates = list()
@@ -61,6 +63,8 @@ class BaseAnnotation:
             pil_img.save(buff, format="PNG")
             new_image_string = base64.b64encode(buff.getvalue()).decode("utf-8")
             coordinates = 'data:image/png;base64,%s' % new_image_string
+        elif annotation_type == 'point':
+            coordinates = {'x': pts[0], 'y': pts[1]}
         else:
             logger.exception('annotation type note supported yet. type: %s' % annotation_type)
             raise ValueError('annotation type note supported yet. type: %s' % annotation_type)
@@ -337,7 +341,7 @@ class ImageAnnotation(BaseAnnotation):
         self.logger = logging.getLogger('dataloop.annotations.builder')
         self.annotations = list()
 
-    def add_annotation(self, pts, label, annotation_type='box',
+    def add_annotation(self, pts, label, annotation_type='box', object_id=None, attributes=None,
                        to_annotation_type=None, color=None, img_shape=None):
         """
         Add new annotation
@@ -388,11 +392,15 @@ class ImageAnnotation(BaseAnnotation):
                                                   color=color,
                                                   img_shape=img_shape)
         # create annotation structure
+
         new_annotation = {'label': label,
                           'type': annotation_type,
                           'coordinates': coordinates,
-                          'attributes': []
                           }
+        if attributes is not None:
+            new_annotation['attributes'] = attributes
+        if object_id is not None:
+            new_annotation['metadata'] = {'system':{'objectId': object_id}}
         # append to list of annotations
         self.annotations.append(new_annotation)
 

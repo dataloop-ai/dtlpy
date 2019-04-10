@@ -12,8 +12,9 @@ class Project:
     def __init__(self, entity_dict):
         self.entity_dict = entity_dict
         self._datasets = repositories.Datasets(project=self)
-        self._sessions = repositories.Sessions(project=self)
+        self._tasks = repositories.Tasks(project=self)
         self._packages = repositories.Packages(project=self)
+        self._artifacts = repositories.Artifacts(project=self)
 
     def print(self):
         utilities.List([self]).print()
@@ -37,3 +38,11 @@ class Project:
     @property
     def packages(self):
         return self._packages
+
+    @property
+    def tasks(self):
+        return self._tasks
+
+    @property
+    def artifacts(self):
+        return self._artifacts

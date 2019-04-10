@@ -1,4 +1,5 @@
 import yaml
+import json
 from .steps import PipelineStage
 
 
@@ -32,7 +33,7 @@ class PipelineBuilder(object):
             pipeline_dict = yaml.safe_load(f)
         self.from_dict(pipeline_dict=pipeline_dict)
 
-    def to_file(self, filename):
+    def to_file(self, filename, file_type='yaml'):
         stages = self.stages
         stages_list = list()
         for stage in stages:
@@ -42,18 +43,54 @@ class PipelineBuilder(object):
             stages_list.append(stage_dict)
 
         pipeline_dict = {'inputs': self.inputs, 'stages': stages_list}
-        with open(filename, 'w') as f:
-            yaml.safe_dump(pipeline_dict, f, default_flow_style=False)
+        if file_type == 'yaml':
+            with open(filename, 'w') as f:
+                yaml.safe_dump(pipeline_dict, f, default_flow_style=False)
+        else:
+            with open(filename, 'w') as f:
+                json.dump(pipeline_dict, f, indent=4)
 
     def get_context(self):
         input_arg_names = list()
         needed_arg_names = list()
         output_arg_names = list()
+
+        # go over all stage
         for stage in self.stages:
+
+            # take generators output
+            for gen in stage.generators:
+                for output_arg in gen['outputs']:
+                    if output_arg['name'] not in output_arg_names:
+                        output_arg_names.append(output_arg['name'])
+
             for step in stage.steps:
-                for input_arg in step.inputs:
-                    if input_arg['from'] not in input_arg_names:
+                # go over all steps in stage
+                for input_arg in step.args:
+                    # go over all inputs in inputs list
+                    if 'by' in input_arg:
+                        if input_arg['by'] == 'ref':
+                            add_arg = True
+                        else:
+                            add_arg = False
+                    else:
+                        add_arg = True
+                    if add_arg and input_arg['from'] not in input_arg_names:
                         input_arg_names.append(input_arg['from'])
+
+                # go over all steps in stage
+                for input_arg in step.inputs:
+                    # go over all inputs in inputs list
+                    if 'by' in input_arg:
+                        if input_arg['by'] == 'ref':
+                            add_arg = True
+                        else:
+                            add_arg = False
+                    else:
+                        add_arg = True
+                    if add_arg and input_arg['from'] not in input_arg_names:
+                        input_arg_names.append(input_arg['from'])
+                # add outputs
                 for output_arg in step.outputs:
                     if output_arg['name'] not in output_arg_names:
                         output_arg_names.append(output_arg['name'])

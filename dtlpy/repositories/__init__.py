@@ -18,6 +18,6 @@ from .artifacts import Artifacts
 from .datasets import Datasets
 from .items import Items
 from .packages import Packages
-from .pipelines import Pipelines
+from .tasks import Tasks
 from .projects import Projects
 from .sessions import Sessions

@@ -14,5 +14,4 @@
 # You should have received a copy of the GNU General Public License
 # along with DTLPY.  If not, see <http://www.gnu.org/licenses/>.
 from .pipeline_builder import PipelineBuilder
-from .pipeline_progress import PipelineProgress
 from .pipeline_runner import PipelineRunner

@@ -13,13 +13,13 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with DTLPY.  If not, see <http://www.gnu.org/licenses/>.
+from .item import Item
 from .project import Project
 from .artifact import Artifact
-from .pipeline import Pipeline
+from .task import Task
 from .session import Session
 from .dataset import Dataset
 from .package import Package
 from .annotation import Annotation
-from .item import Item
 from .paged_entities import PagedEntities
 from .query import Query

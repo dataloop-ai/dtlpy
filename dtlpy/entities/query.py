@@ -8,10 +8,10 @@ class Query:
 
     def __init__(self):
         self.logger = logging.getLogger('dataloop.items.query')
-        self._known_queries = list(['directories', 'filenames'])
+        self._known_queries = list(['directories', 'filenames', 'itemType', 'mimetypes'])
         self.query = dict()
 
-    def __call__(self, filename=None, directory=None, ):
+    def __call__(self, filename=None, directory=None, itemType=None, mimetypes=None):
         """
         Add filter to Query
         :param filename:
@@ -33,6 +33,18 @@ class Query:
             if 'directories' not in self.query:
                 self.query['directories'] = list()
             self.query['directories'] += directory
+
+        #  itemtype
+        if itemType is not None:
+            if 'itemType' not in self.query:
+                self.query['itemType'] = list()
+            self.query['itemType'] = itemType
+
+        #  mimetypes
+        if mimetypes is not None:
+            if 'mimetypes' not in self.query:
+                self.query['mimetypes'] = list()
+            self.query['mimetypes'] += mimetypes
         return self
 
     def known_queries(self):

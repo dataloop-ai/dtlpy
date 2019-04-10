@@ -18,6 +18,8 @@ class CustomPipelineStep(pipeline_step.PipelineStep):
             self.name = step_dict['name']
         if 'kwargs' in step_dict:
             self.kwargs = step_dict['kwargs']
+        if 'args' in step_dict:
+            self.args = step_dict['args']
 
         success = True
         if 'module_location' in step_dict:

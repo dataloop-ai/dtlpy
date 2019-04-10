@@ -14,11 +14,13 @@ class DatasetsDownloadStep(pipeline_step.PipelineStep):
         if step_dict is not None:
             self.inputs = step_dict['inputs']
             self.kwargs = step_dict['kwargs']
+            self.args = step_dict['args']
             self.outputs = step_dict['outputs']
         else:
-            self.inputs = [{'name': 'platform_interface', 'from': 'platform_interface', 'type': 'object'},
-                           {'name': 'dataset', 'from': 'dataset', 'type': 'object'},]
+            self.inputs = [{'name': 'platform_interface', 'from': 'platform_interface',  'by': 'ref','type': 'object'},
+                           {'name': 'dataset', 'from': 'dataset', 'by': 'ref', 'type': 'object'},]
             self.kwargs = {}
+            self.args = []
             self.outputs = [{'name': 'filepath', 'type': 'string'}]
 
     def execute(self, pipeline_dict):
@@ -65,7 +67,7 @@ class DatasetsDownloadStep(pipeline_step.PipelineStep):
     def get_arguments():
         import inspect
         from ... import repositories
-        signature = inspect.signature(repositories.Items.download)
+        signature = inspect.signature(repositories.Datasets.download)
         f_callargs = {
             k: v.default
             for k, v in signature.parameters.items()

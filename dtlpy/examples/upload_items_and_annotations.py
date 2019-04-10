@@ -45,6 +45,7 @@ def main():
             data = json.load(f)
             # data = f.read().split('\n')
 
+        # create a Builder instance and add all annotations to it
         d_annotations = ImageAnnotation()
         for line in data:
             if not line:

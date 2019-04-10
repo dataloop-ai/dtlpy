@@ -9,7 +9,7 @@ logger = logging.getLogger('dataloop.List')
 
 
 class List(list):
-    def print(self):
+    def print(self, show_all=False):
         try:
             to_print = list()
             keys_list = list()
@@ -25,8 +25,11 @@ class List(list):
                 logger.exception(err)
 
             remove_keys_list = ['contributors', 'url', 'annotations', 'items', 'export', 'directoryTree',
-                                'attributes', 'partitions', 'metadata', 'stream', 'updatedAt', 'arch']
-            if not self.show_all:
+                                'attributes', 'partitions', 'metadata', 'stream', 'updatedAt', 'arch',
+                                'input', 'revisions', 'pipeline',  # task fields
+                                'feedbackQueue'  # session fields
+                                ]
+            if not show_all:
                 for key in remove_keys_list:
                     if key in keys_list:
                         keys_list.remove(key)
@@ -37,7 +40,8 @@ class List(list):
                         str_timestamp = str(element['createdAt'])
                         if len(str_timestamp) > 10:
                             str_timestamp = str_timestamp[:10]
-                        element['createdAt'] = datetime.datetime.utcfromtimestamp(int(str_timestamp)).strftime('%Y-%m-%d %H:%M:%S')
+                        element['createdAt'] = datetime.datetime.utcfromtimestamp(int(str_timestamp)).strftime(
+                            '%Y-%m-%d %H:%M:%S')
                     except Exception:
                         pass
 
@@ -47,17 +51,6 @@ class List(list):
         except Exception as err:
             logger.exception('Printing entity response:')
             logger.exception(err)
-
-    @property
-    def show_all(self):
-        try:
-            return self._print_all
-        except AttributeError:
-            return False
-
-    @show_all.setter
-    def show_all(self, val):
-        self._print_all = val
 
 
 class Miscellaneous:

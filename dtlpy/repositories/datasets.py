@@ -97,8 +97,21 @@ class Datasets:
             raise self.client_api.platform_exception
         # create local path
         if local_path is None:
-            local_path = os.path.join(dataset.__get_local_path__(), 'json')
-
+            if self.project is not None:
+                local_path = os.path.join(os.path.expanduser('~'), '.dataloop',
+                                          'projects', self.project.name,
+                                          'datasets', dataset.name,
+                                          'annotation')
+            else:
+                local_path = os.path.join(os.path.expanduser('~'), '.dataloop',
+                                          'datasets', dataset.id,
+                                          'annotation')
+        else:
+            if local_path.endswith('/*') or local_path.endswith(r'\*'):
+                # if end with * download directly to folder
+                local_path = local_path[:-2]
+            else:
+                local_path = os.path.join(local_path, 'annotation')
         # zip filepath
         annotations_zip = os.path.join(local_path, 'annotations.zip')
         if not os.path.isdir(local_path):
@@ -124,25 +137,22 @@ class Datasets:
     def download(self, dataset_name=None, dataset_id=None,
                  query=None, local_path=None, filetypes=None,
                  num_workers=None, download_options=None, save_locally=True,
-                 download_img=True, download_mask=False, download_img_mask=False, download_instance=False, download_json=False,
+                 download_item=True, annotation_options=None,
                  opacity=1, with_text=False, thickness=3):
         """
         Download dataset by query.
         Quering the dataset for items and save them local
         Optional - also download annotation, mask, instance and image mask of the item
-
-        :param dataset_name:
+        :param dataset_name: get dataset by name
+        :param dataset_id: get dataset by id
         :param query: Query entity or a dictionary containing query parameters
-        :param local_path:
+        :param local_path: local folder or filename to save to. if folder ends with * images with be downloaded directly to folder. else - an "images" folder will be create for the images
         :param filetypes: a list of filetype to download. e.g ['.jpg', '.png']
         :param num_workers: default - 32
         :param download_options: 'merge' or 'overwrite'
         :param save_locally: bool. save to disk or return a buffer
-        :param download_img: bool. download image
-        :param download_mask: bool. save annotations mask
-        :param download_img_mask: bool. save image with annotations
-        :param download_instance: bool. save annotations instance
-        :param download_json: bool. save annotation's json file
+        :param download_item: bool. download image
+        :param annotation_options: download annotations options: ['mask', 'img_mask', 'instance', 'json']
         :param opacity: for img_mask
         :param with_text: add label to annotations
         :param thickness: annotation line
@@ -156,12 +166,9 @@ class Datasets:
                                                     save_locally=save_locally,
                                                     local_path=local_path,
                                                     download_options=download_options,
-                                                    download_img=download_img,
-                                                    download_mask=download_mask,
-                                                    download_instance=download_instance,
-                                                    download_img_mask=download_img_mask,
-                                                    verbose=False,
-                                                    thickness=thickness)
+                                                    download_item=download_item,
+                                                    annotation_options=annotation_options,
+                                                    verbose=False)
                 status[i_item] = 'download'
                 output[i_item] = download
                 success[i_item] = True
@@ -176,37 +183,35 @@ class Datasets:
         dataset = self.get(dataset_name=dataset_name, dataset_id=dataset_id)
         if dataset is None:
             raise ValueError('Datasets not found. See above for details')
+        if annotation_options is None:
+            annotation_options = list()
         if num_workers is None:
             num_workers = 32
-        if download_options is None:
-            # default value
-            download_options = 'merge'
         # which file to download
         if filetypes is None:
             # default
             # TODO
-            filetypes = ['.jpg']
+            pass
         # create local path
         if local_path is None:
-            local_path = dataset.__get_local_path__()
-
-        if os.path.isdir(local_path):
-            self.logger.info('Local folder already exists:%s', local_path)
-            if download_options.lower() == 'merge':
-                # use cached dataset
-                self.logger.info('"download_options="merge". Merging remote dataset to local.')
-            elif download_options.lower() == 'overwrite':
-                # don't use cached dataset
-                self.logger.info('"download_options="overwrite". Replacing local files (if exists) with remote.')
+            if self.project is None:
+                local_path = os.path.join(os.path.expanduser('~'), '.dataloop',
+                                          'datasets', '%s_%s' % (dataset.name, dataset.id))
             else:
-                self.logger.exception('Unknown "download_options": %s. Options: "merge","overwrite"', download_options)
-                raise ValueError('Unknown "download_options": %s. Options: "merge","overwrite"' % download_options)
+                local_path = os.path.join(os.path.expanduser('~'), '.dataloop',
+                                          'projects', self.project.name,
+                                          'datasets', dataset.name)
+        folder_to_check = local_path
+        if local_path.endswith('/*') or local_path.endswith(r'\*'):
+            folder_to_check = local_path[:-2]
+        if os.path.isdir(folder_to_check):
+            self.logger.info('Local folder already exists:%s. merge/overwrite according to "download_options"')
         else:
-            self.logger.info('Creating new directory for download: %s', local_path)
-            os.makedirs(local_path, exist_ok=True)
+            self.logger.info('Creating new directory for download: %s', folder_to_check)
+            os.makedirs(folder_to_check, exist_ok=True)
 
         # download annotations' json files
-        if download_json:
+        if 'json' in annotation_options:
             self.download_annotations(dataset_name=dataset_name,
                                       dataset_id=dataset_id,
                                       local_path=os.path.join(local_path, 'json'))
@@ -266,7 +271,7 @@ class Datasets:
         :param local_path: local files to upload
         :param remote_path: remote path to save.
         :param upload_options: 'merge' or 'overwrite'
-        :param filetypes: list of filetype to upload. e.g ['.jpg', '.png']
+        :param filetypes: list of filetype to upload. e.g ['.jpg', '.png']. default is all
         :param num_workers:
         :return:
         """
@@ -325,10 +330,7 @@ class Datasets:
             remote_path = '/'
         if upload_options is None:
             upload_options = 'merge'
-        if filetypes is None:
-            # default
-            filetypes = ['.jpg', '.png', '.jpeg']
-        if not isinstance(filetypes, list):
+        if filetypes is not None and not isinstance(filetypes, list):
             self.logger.exception('"filetypes" should be a list of file extension. e.g [".jpg", ".png"]')
             return False
         dataset = self.get(dataset_name=dataset_name, dataset_id=dataset_id)
@@ -339,15 +341,18 @@ class Datasets:
         if not os.path.isdir(local_path):
             self.logger.exception('Directory doest exists: %s', local_path)
             raise OSError('Directory doest exists: %s' % local_path)
+        if filetypes is None:
+            self.logger.info('Uploading ALL files of type!')
+        else:
+            self.logger.info('Uploading ONLY files of type: %s', ','.join(filetypes))
 
-        self.logger.info('Uploading all files of type: %s', ','.join(filetypes))
         num_tries = 3
         filepaths = list()
         total_size = 0
         for root, subdirs, files in os.walk(local_path):
             for filename in files:
                 _, ext = os.path.splitext(filename)
-                if ext in filetypes:
+                if filetypes is None or ext in filetypes:
                     filepath = os.path.join(root, filename)
                     total_size += os.path.getsize(filepath)
                     filepaths.append(filepath)
@@ -413,21 +418,26 @@ class Datasets:
             raise self.client_api.platform_exception
         return True
 
-    def edit(self, dataset):
+    def edit(self, dataset, system_metadata=False):
         """
         Edit dataset field
-
-        :param dataset: Dataset object
+        :param dataset: Dataset entity
+        :param system_metadata: bool
         :return:
         """
-
-        payload = dataset.to_dict()
-        success = self.client_api.gen_request('patch', '/datasets/%s' % dataset.id, json_req=payload)
-        if not success:
+        url_path = '/datasets/%s' % dataset.id
+        if system_metadata:
+            url_path += '?system=true'
+        success = self.client_api.gen_request(req_type='patch',
+                                              path=url_path,
+                                              json_req=dataset.to_dict())
+        if success:
+            return dataset
+        else:
+            self.logger.exception('Platform error editing dataset. id: %s' % dataset.id)
             raise self.client_api.platform_exception
-        return True
 
-    def create(self, dataset_name, classes=None):
+    def create(self, dataset_name, classes=None, driver=None):
         """
         Create a new dataset
 
@@ -444,7 +454,11 @@ class Datasets:
         if self.project is None:
             self.logger.exception('Cant create dataset with no project. Try same command from a "project" entity')
             raise ValueError('Cant create dataset with no project. Try same command from a "project" entity')
-        payload = {'name': dataset_name, 'projects': [self.project.id], 'classes': classes}
+        payload = {'name': dataset_name,
+                   'projects': [self.project.id],
+                   'classes': classes}
+        if driver is not None:
+            payload['driver'] = driver
         success = self.client_api.gen_request('post', '/datasets', json_req=payload)
         if success:
             dataset = entities.Dataset(entity_dict=self.client_api.last_response.json(),
@@ -623,7 +637,6 @@ class Progress(threading.Thread):
                 decoded_body = self.queue.get()
                 msg, = decoded_body
                 if msg is None:
-                    self.progressbar.finish()
                     break
                 if msg == 'download':
                     self.download += 1

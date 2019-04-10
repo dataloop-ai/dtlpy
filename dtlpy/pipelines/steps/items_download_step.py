@@ -14,11 +14,13 @@ class ItemsDownloadStep(pipeline_step.PipelineStep):
         if step_dict is not None:
             self.inputs = step_dict['inputs']
             self.kwargs = step_dict['kwargs']
+            self.args = step_dict['args']
             self.outputs = step_dict['outputs']
         else:
-            self.inputs = [{'name': 'dataset', 'from': 'dataset', 'type': 'object'},
-                           {'name': 'item_id', 'from': 'item_id', 'type': 'string'}]
+            self.inputs = [{'name': 'dataset', 'from': 'dataset', 'by': 'ref', 'type': 'object'},
+                           {'name': 'item_id', 'from': 'item_id', 'by': 'ref', 'type': 'string'}]
             self.kwargs = {'save_locally': True}
+            self.args = []
             self.outputs = [{'name': 'filepath', 'type': 'string'}]
 
     def execute(self, pipeline_dict):
