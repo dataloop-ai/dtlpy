@@ -4,6 +4,78 @@ dtlpy.pipelines.steps package
 Submodules
 ----------
 
+dtlpy.pipelines.steps.annotations\_edit\_step module
+----------------------------------------------------
+
+.. automodule:: dtlpy.pipelines.steps.annotations_edit_step
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+dtlpy.pipelines.steps.annotations\_get\_batch\_step module
+----------------------------------------------------------
+
+.. automodule:: dtlpy.pipelines.steps.annotations_get_batch_step
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+dtlpy.pipelines.steps.annotations\_get\_step module
+---------------------------------------------------
+
+.. automodule:: dtlpy.pipelines.steps.annotations_get_step
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+dtlpy.pipelines.steps.annotations\_upload\_batch\_step module
+-------------------------------------------------------------
+
+.. automodule:: dtlpy.pipelines.steps.annotations_upload_batch_step
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+dtlpy.pipelines.steps.annotations\_upload\_step module
+------------------------------------------------------
+
+.. automodule:: dtlpy.pipelines.steps.annotations_upload_step
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+dtlpy.pipelines.steps.artifacts\_download\_step module
+------------------------------------------------------
+
+.. automodule:: dtlpy.pipelines.steps.artifacts_download_step
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+dtlpy.pipelines.steps.artifacts\_upload\_step module
+----------------------------------------------------
+
+.. automodule:: dtlpy.pipelines.steps.artifacts_upload_step
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+dtlpy.pipelines.steps.builtin\_func\_step module
+------------------------------------------------
+
+.. automodule:: dtlpy.pipelines.steps.builtin_func_step
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+dtlpy.pipelines.steps.callbacks\_get\_step module
+-------------------------------------------------
+
+.. automodule:: dtlpy.pipelines.steps.callbacks_get_step
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 dtlpy.pipelines.steps.custom\_pipeline\_step module
 ---------------------------------------------------
 
@@ -20,34 +92,18 @@ dtlpy.pipelines.steps.datasets\_download\_step module
     :undoc-members:
     :show-inheritance:
 
-dtlpy.pipelines.steps.get\_annotations\_step module
----------------------------------------------------
+dtlpy.pipelines.steps.datasets\_get\_step module
+------------------------------------------------
 
-.. automodule:: dtlpy.pipelines.steps.get_annotations_step
+.. automodule:: dtlpy.pipelines.steps.datasets_get_step
     :members:
     :undoc-members:
     :show-inheritance:
 
-dtlpy.pipelines.steps.get\_dataset\_step module
------------------------------------------------
+dtlpy.pipelines.steps.items\_download\_batch\_step module
+---------------------------------------------------------
 
-.. automodule:: dtlpy.pipelines.steps.get_dataset_step
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-dtlpy.pipelines.steps.get\_item\_step module
---------------------------------------------
-
-.. automodule:: dtlpy.pipelines.steps.get_item_step
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-dtlpy.pipelines.steps.get\_session\_step module
------------------------------------------------
-
-.. automodule:: dtlpy.pipelines.steps.get_session_step
+.. automodule:: dtlpy.pipelines.steps.items_download_batch_step
     :members:
     :undoc-members:
     :show-inheritance:
@@ -68,6 +124,30 @@ dtlpy.pipelines.steps.items\_edit\_step module
     :undoc-members:
     :show-inheritance:
 
+dtlpy.pipelines.steps.items\_get\_step module
+---------------------------------------------
+
+.. automodule:: dtlpy.pipelines.steps.items_get_step
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+dtlpy.pipelines.steps.items\_list\_step module
+----------------------------------------------
+
+.. automodule:: dtlpy.pipelines.steps.items_list_step
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+dtlpy.pipelines.steps.items\_upload\_batch\_step module
+-------------------------------------------------------
+
+.. automodule:: dtlpy.pipelines.steps.items_upload_batch_step
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 dtlpy.pipelines.steps.items\_upload\_step module
 ------------------------------------------------
 
@@ -76,18 +156,10 @@ dtlpy.pipelines.steps.items\_upload\_step module
     :undoc-members:
     :show-inheritance:
 
-dtlpy.pipelines.steps.packages\_sessions\_unpack\_step module
+dtlpy.pipelines.steps.packages\_projects\_unpack\_step module
 -------------------------------------------------------------
 
-.. automodule:: dtlpy.pipelines.steps.packages_sessions_unpack_step
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-dtlpy.pipelines.steps.packages\_unpack\_step module
----------------------------------------------------
-
-.. automodule:: dtlpy.pipelines.steps.packages_unpack_step
+.. automodule:: dtlpy.pipelines.steps.packages_projects_unpack_step
     :members:
     :undoc-members:
     :show-inheritance:
@@ -108,10 +180,10 @@ dtlpy.pipelines.steps.pipeline\_step module
     :undoc-members:
     :show-inheritance:
 
-dtlpy.pipelines.steps.sessions\_artifacts\_download\_step module
-----------------------------------------------------------------
+dtlpy.pipelines.steps.sessions\_get\_step module
+------------------------------------------------
 
-.. automodule:: dtlpy.pipelines.steps.sessions_artifacts_download_step
+.. automodule:: dtlpy.pipelines.steps.sessions_get_step
     :members:
     :undoc-members:
     :show-inheritance:

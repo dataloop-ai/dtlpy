@@ -44,14 +44,6 @@ dtlpy.repositories.packages module
     :undoc-members:
     :show-inheritance:
 
-dtlpy.repositories.pipelines module
------------------------------------
-
-.. automodule:: dtlpy.repositories.pipelines
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 dtlpy.repositories.projects module
 ----------------------------------
 
@@ -64,6 +56,14 @@ dtlpy.repositories.sessions module
 ----------------------------------
 
 .. automodule:: dtlpy.repositories.sessions
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+dtlpy.repositories.tasks module
+-------------------------------
+
+.. automodule:: dtlpy.repositories.tasks
     :members:
     :undoc-members:
     :show-inheritance:

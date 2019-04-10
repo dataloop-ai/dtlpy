@@ -52,14 +52,6 @@ dtlpy.entities.paged\_entities module
     :undoc-members:
     :show-inheritance:
 
-dtlpy.entities.pipeline module
-------------------------------
-
-.. automodule:: dtlpy.entities.pipeline
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 dtlpy.entities.project module
 -----------------------------
 
@@ -80,6 +72,14 @@ dtlpy.entities.session module
 -----------------------------
 
 .. automodule:: dtlpy.entities.session
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+dtlpy.entities.task module
+--------------------------
+
+.. automodule:: dtlpy.entities.task
     :members:
     :undoc-members:
     :show-inheritance:

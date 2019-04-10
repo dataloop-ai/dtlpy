@@ -28,18 +28,34 @@ dtlpy.examples.annotate\_video\_using\_model\_and\_tracker module
     :undoc-members:
     :show-inheritance:
 
-dtlpy.examples.basic\_operations module
----------------------------------------
+dtlpy.examples.annotations\_convert\_to\_voc module
+---------------------------------------------------
 
-.. automodule:: dtlpy.examples.basic_operations
+.. automodule:: dtlpy.examples.annotations_convert_to_voc
     :members:
     :undoc-members:
     :show-inheritance:
 
-dtlpy.examples.download\_item\_and\_mask module
------------------------------------------------
+dtlpy.examples.annotations\_convert\_to\_yolo module
+----------------------------------------------------
 
-.. automodule:: dtlpy.examples.download_item_and_mask
+.. automodule:: dtlpy.examples.annotations_convert_to_yolo
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+dtlpy.examples.copy\_annotations module
+---------------------------------------
+
+.. automodule:: dtlpy.examples.copy_annotations
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+dtlpy.examples.copy\_folder module
+----------------------------------
+
+.. automodule:: dtlpy.examples.copy_folder
     :members:
     :undoc-members:
     :show-inheritance:
@@ -52,14 +68,6 @@ dtlpy.examples.play\_video\_annotation module
     :undoc-members:
     :show-inheritance:
 
-dtlpy.examples.plot\_annotation\_on\_item module
-------------------------------------------------
-
-.. automodule:: dtlpy.examples.plot_annotation_on_item
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 dtlpy.examples.segment\_to\_binary module
 -----------------------------------------
 
@@ -68,10 +76,34 @@ dtlpy.examples.segment\_to\_binary module
     :undoc-members:
     :show-inheritance:
 
+dtlpy.examples.show\_item\_and\_mask module
+-------------------------------------------
+
+.. automodule:: dtlpy.examples.show_item_and_mask
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 dtlpy.examples.upload\_items\_and\_annotations module
 -----------------------------------------------------
 
 .. automodule:: dtlpy.examples.upload_items_and_annotations
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+dtlpy.examples.upload\_segmentation\_annotations\_from\_file module
+-------------------------------------------------------------------
+
+.. automodule:: dtlpy.examples.upload_segmentation_annotations_from_file
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+dtlpy.examples.upload\_yolo\_format\_annotations module
+-------------------------------------------------------
+
+.. automodule:: dtlpy.examples.upload_yolo_format_annotations
     :members:
     :undoc-members:
     :show-inheritance:

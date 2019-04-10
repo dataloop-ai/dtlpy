@@ -12,6 +12,14 @@ dtlpy.utilities.annotations.annotation\_builder module
     :undoc-members:
     :show-inheritance:
 
+dtlpy.utilities.annotations.annotation\_converters module
+---------------------------------------------------------
+
+.. automodule:: dtlpy.utilities.annotations.annotation_converters
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 Module contents
 ---------------

@@ -4,6 +4,14 @@ dtlpy.callbacks package
 Submodules
 ----------
 
+dtlpy.callbacks.piper\_progress\_reporter module
+------------------------------------------------
+
+.. automodule:: dtlpy.callbacks.piper_progress_reporter
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 dtlpy.callbacks.progress\_viewer module
 ---------------------------------------
 

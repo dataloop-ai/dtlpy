@@ -11,18 +11,18 @@ Subpackages
 Submodules
 ----------
 
-dtlpy.pipelines.pipeline\_builder module
-----------------------------------------
+dtlpy.pipelines.misc module
+---------------------------
 
-.. automodule:: dtlpy.pipelines.pipeline_builder
+.. automodule:: dtlpy.pipelines.misc
     :members:
     :undoc-members:
     :show-inheritance:
 
-dtlpy.pipelines.pipeline\_progress module
------------------------------------------
+dtlpy.pipelines.pipeline\_builder module
+----------------------------------------
 
-.. automodule:: dtlpy.pipelines.pipeline_progress
+.. automodule:: dtlpy.pipelines.pipeline_builder
     :members:
     :undoc-members:
     :show-inheritance:

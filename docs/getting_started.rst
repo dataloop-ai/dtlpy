@@ -66,13 +66,13 @@ Upload and download items
 -------------------------
 .. code-block:: python
 
-	# upload image
+	# upload SINGLE image
 	dataset.items.upload(
 		filepath='/images/000000000036.jpg',
 		remote_path='/dog'
 	)
 
-	# upload dataset
+	# upload dataset (folder of images)
 	filename = project.datasets.upload(
 		dataset_name='MyDataset',
 		local_path='/home/images',
