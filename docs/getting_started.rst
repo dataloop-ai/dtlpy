@@ -2,6 +2,9 @@ Getting Started
 ===============
 
 *dtlpy* enables python connection to Dataloop's environment
+dtlpy package provides two interfaces: python SDK and CLI tool. The common use cases : 
+Python SDK: If you wish to automate data ops directly from your code. 
+CLI(Command line interface): Usually used for uploading or downloading data in a more fault tolerant way comapred to browser. 
 
 Login
 --------------------------
