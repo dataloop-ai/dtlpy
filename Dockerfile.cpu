@@ -25,6 +25,7 @@ RUN apt-get -y update && \
         tree \
         vim \
         ffmpeg \
+        locales \
         software-properties-common
 
 RUN apt-get -y update \
@@ -33,6 +34,14 @@ RUN apt-get -y update \
   && ln -s /usr/bin/python3 python \
   && ln -s /usr/bin/pip3 pip \
   && pip3 install --upgrade pip
+
+# fix for other languages issues
+RUN locale-gen en_US.UTF-8
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+ENV LC_ALL en_US.UTF-8
+ENV LANG en_US.UTF-8
+ENV LC_ALL en_US.UTF-8
 
 ARG BITBUCKET_TAG
 ADD ./dist/dtlpy-$BITBUCKET_TAG-py3-none-any.whl /dtlpy-$BITBUCKET_TAG-py3-none-any.whl

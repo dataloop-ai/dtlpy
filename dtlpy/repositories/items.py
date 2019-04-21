@@ -9,7 +9,7 @@ import fleep
 import queue
 import threading
 from urllib.parse import urlencode
-from progressbar import Bar, ETA, ProgressBar, Timer, FileTransferSpeed, DataSize
+from progressbar import Bar, ETA, ProgressBar, Timer, FileTransferSpeed, DataSize,Percentage,FormatLabel
 from multiprocessing.pool import ThreadPool
 
 from .. import entities, services
@@ -61,19 +61,19 @@ class Items:
              'pageSize': page_size}).replace('%3A', ':').replace('%2F', '/').replace('%2C', ',')
 
         # prepare request
-        success = self.client_api.gen_request(req_type='get',
-                                              path='/datasets/%s/items?%s' % (self.dataset.id, query_string))
+        success, response = self.client_api.gen_request(req_type='get',
+                                                        path='/datasets/%s/items?%s' % (self.dataset.id, query_string))
         if not success:
             self.logger.exception('Getting items list. dataset id: %d' % self.dataset.id)
             assert False
         try:
-            self.client_api.print_json(self.client_api.last_response.json()['items'])
-            self.logger.debug('Page:%d/%d' % (1 + page_offset, self.client_api.last_response.json()['totalPagesCount']))
+            self.client_api.print_json(response.json()['items'])
+            self.logger.debug('Page:%d/%d' % (1 + page_offset, response.json()['totalPagesCount']))
         except ValueError:
             # no JSON returned
             pass
 
-        return self.client_api.last_response.json()
+        return response.json()
 
     def list(self, query=None, page_offset=0, page_size=100):
         """
@@ -101,9 +101,10 @@ class Items:
         :return:
         """
         if item_id is not None:
-            success = self.client_api.gen_request('get', '/datasets/%s/items/%s' % (self.dataset.id, item_id))
+            success, response = self.client_api.gen_request(req_type='get',
+                                                            path='/datasets/%s/items/%s' % (self.dataset.id, item_id))
             if success:
-                item = self.items_entity(entity_dict=self.client_api.last_response.json(), dataset=self.dataset)
+                item = self.items_entity(entity_dict=response.json(), dataset=self.dataset)
             else:
                 self.logger.exception(
                     'Unable to get info from item. dataset id: %s, item id: %s' % (self.dataset.id, item_id))
@@ -231,6 +232,8 @@ class Items:
         :param save_locally: bool. save to file or return buffer
         :param local_path: local folder or filename to save to. if folder ends with * images with be downloaded directly to folder. else - an "images" folder will be create for the images
         :param chunk_size:
+        :param verbose:
+        :param show_progress:
         :param download_options: {'overwrite': True/False, 'relative_path': True/False}
         :param download_item:
         :param annotation_options: download annotations options: ['mask', 'img_mask', 'instance', 'json']
@@ -320,14 +323,12 @@ class Items:
                 # get image buffer
                 need_to_download = True
 
-            resp = None
+            response = None
             if need_to_download:
-                result = self.client_api.gen_request(req_type='get',
-                                                     path='/datasets/%s/items/%s/stream' % (item.dataset.id, item.id),
-                                                     stream=True)
-                if result:
-                    resp = self.client_api.last_response
-                else:
+                result, response = self.client_api.gen_request(req_type='get',
+                                                               path='/datasets/%s/items/%s/stream' % (item.dataset.id, item.id),
+                                                               stream=True)
+                if not result:
                     raise self.client_api.platform_exception
 
             if save_locally:
@@ -339,16 +340,16 @@ class Items:
                             os.makedirs(os.path.dirname(local_filepath), exist_ok=True)
                         # download and save locally
                         if show_progress:
-                            total_length = resp.headers.get('content-length')
-                            pbar = ProgressBar(widgets=[' [', Timer(), '] ', Bar(), ' (', FileTransferSpeed(), ' | ', DataSize(), ' | ', ETA(),')'])
+                            total_length = response.headers.get('content-length')
+                            pbar = ProgressBar(widgets=[' [', Timer(), '] ', Bar(),FormatLabel(item.name),' (', FileTransferSpeed(), ' | ', DataSize(), ' | ',Percentage(),' | ', ETA(),')'])
                             pbar.max_value = int(total_length)
                             dl = 0
                         with open(local_filepath, 'wb') as f:
-                            for chunk in resp.iter_content(chunk_size=chunk_size):
+                            for chunk in response.iter_content(chunk_size=chunk_size):
                                 if chunk:  # filter out keep-alive new chunks
                                     if show_progress:
                                         dl += len(chunk)
-                                        pbar.update(dl)
+                                        pbar.update(dl,force=True)
                                     f.write(chunk)
                             if show_progress:
                                 pbar.finish()
@@ -365,7 +366,7 @@ class Items:
             else:
                 # save as byte stream
                 data = io.BytesIO()
-                for chunk in resp.iter_content(chunk_size=chunk_size):
+                for chunk in response.iter_content(chunk_size=chunk_size):
                     if chunk:  # filter out keep-alive new chunks
                         data.write(chunk)
                 # go back to the beginning of the stream
@@ -439,11 +440,11 @@ class Items:
                     else:
                         return items
                 remote_url = '/datasets/%s/items' % self.dataset.id
-                result = self.client_api.upload_local_file(filepath=filepath,
-                                                           remote_url=remote_url,
-                                                           uploaded_filename=uploaded_filename,
-                                                           remote_path=remote_path,
-                                                           callback=callback)
+                result, response = self.client_api.upload_local_file(filepath=filepath,
+                                                                     remote_url=remote_url,
+                                                                     uploaded_filename=uploaded_filename,
+                                                                     remote_path=remote_path,
+                                                                     callback=callback)
             else:
                 if isinstance(filepath, bytes):
                     # item is  bytes array
@@ -478,12 +479,12 @@ class Items:
                 files = {'file': (uploaded_filename, buffer, info.mime[0])}
                 payload = {'path': os.path.join(remote_path, uploaded_filename).replace('\\', '/'),
                            'type': 'file'}
-                result = self.client_api.gen_request(req_type='post',
-                                                     path='/datasets/%s/items' % self.dataset.id,
-                                                     files=files,
-                                                     data=payload)
+                result, response = self.client_api.gen_request(req_type='post',
+                                                               path='/datasets/%s/items' % self.dataset.id,
+                                                               files=files,
+                                                               data=payload)
             if result:
-                return self.items_entity(entity_dict=self.client_api.last_response.json(), dataset=self.dataset)
+                return self.items_entity(entity_dict=response.json(), dataset=self.dataset)
             else:
                 self.logger.exception('error uploading')
                 raise self.client_api.platform_exception
@@ -500,14 +501,16 @@ class Items:
         :return:
         """
         if item_id is not None:
-            success = self.client_api.gen_request('delete', '/datasets/%s/items/%s' % (self.dataset.id, item_id))
+            success, response = self.client_api.gen_request(req_type='delete',
+                                                            path='/datasets/%s/items/%s' % (self.dataset.id, item_id))
         elif filename is not None:
             if not filename.startswith('/'):
                 filename = '/' + filename
             items = self.get(filepath=filename)
             if len(items) != 1:
                 assert False
-            success = self.client_api.gen_request('delete', '/datasets/%s/items/%s' % (self.dataset.id, items[0].id))
+            success, response = self.client_api.gen_request(req_type='delete',
+                                                            path='/datasets/%s/items/%s' % (self.dataset.id, items[0].id))
         else:
             assert False
         return success
@@ -523,11 +526,11 @@ class Items:
         url_path = '/datasets/%s/items/%s' % (self.dataset.id, item.id)
         if system_metadata:
             url_path += '?system=true'
-        success = self.client_api.gen_request(req_type='patch',
-                                              path=url_path,
-                                              json_req=item.to_dict())
+        success, response = self.client_api.gen_request(req_type='patch',
+                                                        path=url_path,
+                                                        json_req=item.to_dict())
         if success:
-            return item
+            return self.items_entity(entity_dict=response.json(), dataset=self.dataset)
         else:
             self.logger.exception('editing item')
             assert False

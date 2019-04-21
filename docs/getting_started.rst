@@ -2,22 +2,22 @@ Getting Started
 ===============
 
 *dtlpy* enables python connection to Dataloop's environment
-dtlpy package provides two interfaces: python SDK and CLI tool. The common use cases : 
-Python SDK: If you wish to automate data ops directly from your code. 
-CLI(Command line interface): Usually used for uploading or downloading data in a more fault tolerant way comapred to browser. 
+dtlpy package provides two interfaces: python SDK and CLI tool. The common use cases :
+Python SDK: If you wish to automate data ops directly from your code.
+CLI(Command line interface): Usually used for uploading or downloading data in a more fault tolerant way comapred to browser.
 
 Login
 --------------------------
 .. code-block:: python
 
 	from dtlpy import PlatformInterface
-	# init 
+	# init
 	dlp = PlatformInterface()
-	# login 
+	# login
 	dlp.login()
 	# print projects
 	dlp.projects.list().print()
-	
+
 Create project and dataset
 --------------------------
 .. code-block:: python
@@ -60,7 +60,7 @@ You can create a generator of items with different queries
 
 	dataset = dlp.projects.get(project_name='MyProject').datasets.get(dataset_name='MyDataset')
 	pages = dataset.items.list()
-	
+
 	for page in pages:
 		for item in page:
 			print(item.name)

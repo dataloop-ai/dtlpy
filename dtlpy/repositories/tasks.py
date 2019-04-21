@@ -52,10 +52,11 @@ class Tasks(object):
         if triggers_filter:
             payload['triggersFilter'] = triggers_filter
 
-        success = self.client_api.gen_request(
-            'post', '/tasks', json_req=payload)
+        success, response = self.client_api.gen_request(req_type='post',
+                                                        path='/tasks',
+                                                        json_req=payload)
         if success:
-            task = entities.Task(self.client_api.last_response.json())
+            task = entities.Task(response.json())
         else:
             self.logger.exception('Platform error creating new task:')
             raise self.client_api.platform_exception
@@ -69,9 +70,10 @@ class Tasks(object):
         :return: Pipeline object
         """
         if task_id is not None:
-            success = self.client_api.gen_request('get', '/tasks/%s' % task_id)
+            success, response = self.client_api.gen_request(req_type='get',
+                                                            path='/tasks/%s' % task_id)
             if success:
-                res = self.client_api.last_response.json()
+                res = response.json()
                 if len(res) > 0:
                     task = entities.Task(entity_dict=res)
                 else:
@@ -103,14 +105,15 @@ class Tasks(object):
         :return:
         """
         if task_id is not None:
-            success = self.client_api.gen_request(req_type='delete',
-                                                  path='/tasks/%s' % task_id)
+            success, response = self.client_api.gen_request(req_type='delete',
+                                                            path='/tasks/%s' % task_id)
         elif task_name is not None:
             task = self.get(task_name=task_name)
             if task is None:
                 self.logger.warning('task name was not found: name: %s' % task_name)
                 raise ValueError('task name was not found: name: %s' % task_name)
-            success = self.client_api.gen_request('delete', '/tasks/%s' % task.id)
+            success, response = self.client_api.gen_request(req_type='delete',
+                                                            path='/tasks/%s' % task.id)
         else:
             assert False
         return success
@@ -121,14 +124,15 @@ class Tasks(object):
         :return: List of Pipeline objects
         """
         if self.project is None:
-            success = self.client_api.gen_request('get', '/tasks')
+            success, response = self.client_api.gen_request(req_type='get',
+                                                            path='/tasks')
         else:
-            success = self.client_api.gen_request('get', '/tasks?projects=%s' % self.project.id)
+            success, response = self.client_api.gen_request(req_type='get',
+                                                            path='/tasks?projects=%s' % self.project.id)
 
         if success:
-            tasks = utilities.List(
-                [entities.Task(entity_dict=entity_dict) for entity_dict in
-                 self.client_api.last_response.json()['items']])
+            tasks = utilities.List([entities.Task(entity_dict=entity_dict)
+                                    for entity_dict in response.json()['items']])
             return tasks
         else:
             self.logger.exception('Platform error getting tasks')
@@ -144,11 +148,11 @@ class Tasks(object):
         url_path = '/tasks/%s' % task.id
         if system_metadata:
             url_path += '?system=true'
-        success = self.client_api.gen_request(req_type='patch',
-                                              path=url_path,
-                                              json_req=task.to_dict())
+        success, response = self.client_api.gen_request(req_type='patch',
+                                                        path=url_path,
+                                                        json_req=task.to_dict())
         if success:
-            return task
+            return entities.Task(entity_dict=response.json())
         else:
             self.logger.exception('Platform error editing task. id: %s' % task.id)
             raise self.client_api.platform_exception

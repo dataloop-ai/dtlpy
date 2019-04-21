@@ -159,7 +159,7 @@ class PipelineRunner:
             self.logger.exception(err)
             self.reporter.send_progress({'status': 'failed',
                                          'error': '%s' % traceback.format_exc()})
-            return
+            raise
         self.reporter.send_progress({'status': 'success',
                                      'percent_complete': 100})
         # return all arguments

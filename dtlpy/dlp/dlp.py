@@ -20,20 +20,20 @@ def login_input():
     return email, password, client_id, client_secret
 
 
-def prefix_completion(r, endpoint, prefix):
-    if endpoint == 'models':
-        verbose = r.verbose
-        r.verbose = False
-        r.modelsGet()
-        r.verbose = verbose
-        models = r.last_response.json()
-        model_id = list()
-        for model in models:
-            if model['id'].startswith(prefix):
-                model_id.append(model['id'])
-        assert not len(model_id) == 0, '[ERROR] no model_id found with prefix: %s' % prefix
-        assert not len(model_id) > 1, '[ERROR] more than one model_id found with prefix: %s' % prefix
-        return model_id[0]
+# def prefix_completion(r, endpoint, prefix):
+#     if endpoint == 'models':
+#         verbose = r.verbose
+#         r.verbose = False
+#         r.modelsGet()
+#         r.verbose = verbose
+#         models = r.last_response.json()
+#         model_id = list()
+#         for model in models:
+#             if model['id'].startswith(prefix):
+#                 model_id.append(model['id'])
+#         assert not len(model_id) == 0, '[ERROR] no model_id found with prefix: %s' % prefix
+#         assert not len(model_id) > 1, '[ERROR] more than one model_id found with prefix: %s' % prefix
+#         return model_id[0]
 
 
 def get_parser():
@@ -118,7 +118,7 @@ def get_parser():
     optional = a.add_argument_group('optional named arguments')
     optional.add_argument('-r', '--remote-path', metavar='', help='remote path to upload to. default: /', default='/')
     optional.add_argument('-f', '--file-types', metavar='',
-                          help='Comma separated list of file types to upload. default: \'.jpg\'', default=None)
+                          help='Comma separated list of file types to upload, e.g ".jpg,.png". default: all', default=None)
     optional.add_argument('-nw', '--num-workers', metavar='', help='num of threads workers', default=None)
     optional.add_argument('-u', '--upload-options', metavar='', help='"overwrite" or "merge"', default='merge')
 
@@ -133,8 +133,12 @@ def get_parser():
                           default=True)
     optional.add_argument('-da', '--dl-ann', action='store_true', help='download annotations json files: False',
                           default=False)
-    optional.add_argument('-dm', '--dl-mask', action='store_true', help='download annotations as images default: False',
-                          default=False)
+    optional.add_argument('-do', '--download_options', metavar='', help='download options CSV : merge/overwrite,relative-path/absolute-path ',
+                          default='')
+    optional.add_argument('-nw', '--num_workers', metavar='',
+                          help='number of download workers',
+                          default='')
+
     optional.add_argument('-dn', '--dl-instance', action='store_true',
                           help='download annotations instance default: False',
                           default=False)
@@ -304,6 +308,7 @@ def main():
     ##########
     # Logger #
     ##########
+    logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('dataloop.cli')
     logger.setLevel(logging.DEBUG)
     console = logging.StreamHandler()
@@ -401,8 +406,8 @@ def main():
             elif args.datasets == 'create':
                 project = dlp.projects.get(project_name=args.project_name)
                 if project is None:
-                    logger.exception('Project wasnt found. name: %s' % args.project_name)
-                    raise ValueError('Project wasnt found. name: %s' % args.project_name)
+                    logger.exception('Project was not found. name: %s' % args.project_name)
+                    raise ValueError('Project was not found. name: %s' % args.project_name)
                 project.datasets.create(dataset_name=args.dataset_name).print()
 
             elif args.datasets == 'upload':
@@ -413,8 +418,9 @@ def main():
                     args.file_types = args.file_types.split(',')
                 project = dlp.projects.get(project_name=args.project_name)
                 if project is None:
-                    logger.exception('Project wasnt found. name: %s' % args.project_name)
-                    raise ValueError('Project wasnt found. name: %s' % args.project_name)
+                    msg = 'Project wasnt found. name: %s' % args.project_name
+                    logger.exception(msg)
+                    raise ValueError(msg)
                 project.datasets.upload(dataset_name=args.dataset_name,
                                         local_path=args.local_path,
                                         remote_path=args.remote_path,
@@ -424,22 +430,31 @@ def main():
 
             elif args.datasets == 'download':
                 print('[INFO] Downloading dataset...')
-                # if isinstance(args.num_workers, str):
-                #     args.num_workers = int(args.num_workers)
+                if isinstance(args.num_workers, str):
+                    args.num_workers = int(args.num_workers)
                 project = dlp.projects.get(project_name=args.project_name)
                 if project is None:
                     logger.exception('Project wasnt found. name: %s' % args.project_name)
                     raise ValueError('Project wasnt found. name: %s' % args.project_name)
+                download_options = {}
+                if len(args.download_options)>0:
+                    do_arr= args.download_options.split(',')
+                    if len(do_arr)>0 and do_arr[0] == 'overwrite':
+                        download_options['overwrite'] = True
+                        print('[INFO] Overwrite mode')
+                    if len(do_arr)>1 and do_arr[1] == 'relative-path':
+                        download_options['relative_path'] = True
+                        print('[INFO] relative path')
                 project.datasets.download(query={'filenames': [args.remote_path]},
                                           dataset_name=args.dataset_name,
                                           local_path=args.local_path,
                                           download_item=args.dl_img,
-                                          download_mask=args.dl_mask,
-                                          download_instance=args.dl_instance,
+                                          download_options=download_options,
+                                          num_workers=args.num_workers
                                           # download_img_mask=args.dl_img_mask,
                                           # opacity=args.opacity,
                                           # filetypes=args.file_types,
-                                          # num_workers=args.num_workers
+
                                           )
                 if args.dl_ann:
                     project = dlp.projects.get(project_name=args.project_name)
@@ -661,7 +676,7 @@ def main():
         # Catch rest of options #
         #########################
         else:
-            if (args.operation):
+            if args.operation:
                 print('dlp: "%s" is not an dlp command' % args.operation)
             print('See "dlp --help" for options')
 

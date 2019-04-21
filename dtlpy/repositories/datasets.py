@@ -12,7 +12,7 @@ import threading
 import queue
 from progressbar import Bar, ETA, ProgressBar, Timer
 import numpy as np
-
+import sys
 from .. import entities, services, utilities
 
 
@@ -36,10 +36,11 @@ class Datasets:
             self.logger.exception('Cant list datasets with no project. Try same command from a "project" entity')
             raise ValueError('Cant list datasets with no project. Try same command from a "project" entity')
         query_string = urlencode({'name': '', 'creator': '', 'projects': self.project.id}, doseq=True)
-        success = self.client_api.gen_request('get', '/datasets?%s' % query_string)
+        success, response = self.client_api.gen_request(req_type='get',
+                                                        path='/datasets?%s' % query_string)
         if success:
-            datasets = utilities.List([entities.Dataset(entity_dict=entity_dict, project=self.project) for entity_dict in
-                                       self.client_api.last_response.json()])
+            datasets = utilities.List([entities.Dataset(entity_dict=entity_dict, project=self.project)
+                                       for entity_dict in response.json()])
         else:
             raise self.client_api.platform_exception
         return datasets
@@ -53,10 +54,10 @@ class Datasets:
         :return: Dataset object
         """
         if dataset_id is not None:
-            success = self.client_api.gen_request('get', '/datasets/%s' % dataset_id)
+            success, response = self.client_api.gen_request(req_type='get',
+                                                            path='/datasets/%s' % dataset_id)
             if success:
-                dataset = entities.Dataset(entity_dict=self.client_api.last_response.json(),
-                                           project=self.project)
+                dataset = entities.Dataset(entity_dict=response.json(), project=self.project)
             else:
                 raise self.client_api.platform_exception
         elif dataset_name is not None:
@@ -89,8 +90,8 @@ class Datasets:
         dataset = self.get(dataset_name=dataset_name, dataset_id=dataset_id)
         if dataset is None:
             raise ValueError('Dataset not found')
-        success = self.client_api.gen_request(req_type='get',
-                                              path='/datasets/%s/annotations/zip' % dataset.id)
+        success, response = self.client_api.gen_request(req_type='get',
+                                                        path='/datasets/%s/annotations/zip' % dataset.id)
         if not success:
             # platform error
             self.logger.exception('Downloading annotations zip')
@@ -118,7 +119,6 @@ class Datasets:
             os.makedirs(local_path)
         try:
             # downloading zip from platform
-            response = self.client_api.last_response
             with open(annotations_zip, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=8192):
                     if chunk:  # filter out keep-alive new chunks
@@ -128,7 +128,7 @@ class Datasets:
 
         except Exception as err:
             self.logger.exception('Getting annotations from zip ')
-            raise err
+            raise
         finally:
             # cleanup
             if os.path.isfile(annotations_zip):
@@ -162,13 +162,18 @@ class Datasets:
         def download_single_item(i_item, item):
             try:
                 w_dataset = dataset.__copy__()
+                # info ='Downloading:{}'.format(item.filename)
+                # sys.stdout.write(info)
+                # sys.stdout.flush()
+                # sys.stdout.write("\b" * (len(info) + 1))
                 download = w_dataset.items.download(item_id=item.id,
                                                     save_locally=save_locally,
                                                     local_path=local_path,
                                                     download_options=download_options,
                                                     download_item=download_item,
                                                     annotation_options=annotation_options,
-                                                    verbose=False)
+                                                    verbose=False,
+                                                    show_progress=True)
                 status[i_item] = 'download'
                 output[i_item] = download
                 success[i_item] = True
@@ -187,6 +192,7 @@ class Datasets:
             annotation_options = list()
         if num_workers is None:
             num_workers = 32
+        self.logger.info('Download workers number:{}'.format(num_workers))
         # which file to download
         if filetypes is None:
             # default
@@ -230,6 +236,7 @@ class Datasets:
                 for item in page:
                     if item.type == 'dir':
                         continue
+                    self.logger.info('Adding:{}'.format(item.filename))
                     pool.apply_async(download_single_item, kwds={'i_item': i_items, 'item': item})
                     i_items += 1
         except Exception as e:
@@ -413,7 +420,8 @@ class Datasets:
         :return:
         """
         dataset = self.get(dataset_name=dataset_name, dataset_id=dataset_id)
-        success = self.client_api.gen_request('delete', '/datasets/%s' % dataset.id)
+        success, response = self.client_api.gen_request(req_type='delete',
+                                                        path='/datasets/%s' % dataset.id)
         if not success:
             raise self.client_api.platform_exception
         return True
@@ -428,9 +436,9 @@ class Datasets:
         url_path = '/datasets/%s' % dataset.id
         if system_metadata:
             url_path += '?system=true'
-        success = self.client_api.gen_request(req_type='patch',
-                                              path=url_path,
-                                              json_req=dataset.to_dict())
+        success, response = self.client_api.gen_request(req_type='patch',
+                                                        path=url_path,
+                                                        json_req=dataset.to_dict())
         if success:
             return dataset
         else:
@@ -443,6 +451,7 @@ class Datasets:
 
         :param dataset_name: name
         :param classes: dictionary of labels and colors
+        :param driver: dictionary of labels and colors
         :return:
         """
         # classes to list
@@ -459,10 +468,11 @@ class Datasets:
                    'classes': classes}
         if driver is not None:
             payload['driver'] = driver
-        success = self.client_api.gen_request('post', '/datasets', json_req=payload)
+        success, response = self.client_api.gen_request(req_type='post',
+                                                        path='/datasets',
+                                                        json_req=payload)
         if success:
-            dataset = entities.Dataset(entity_dict=self.client_api.last_response.json(),
-                                       project=self.project)
+            dataset = entities.Dataset(entity_dict=response.json(), project=self.project)
         else:
             raise self.client_api.platform_exception
         return dataset

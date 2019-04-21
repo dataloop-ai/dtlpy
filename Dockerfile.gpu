@@ -7,7 +7,7 @@ RUN apt-get install -y \
     libjasper-dev libavformat-dev libpq-dev libxine2-dev libglew-dev \
     libtiff5-dev zlib1g-dev libjpeg-dev libpng12-dev libjasper-dev \
     libavcodec-dev libavformat-dev libavutil-dev libpostproc-dev \
-	libswscale-dev libeigen3-dev libtbb-dev libgtk2.0-dev
+	libswscale-dev libeigen3-dev libtbb-dev libgtk2.0-dev locales
     # libcudnn7=7.1.4.18-1+cuda9.0
 
 RUN apt-get install -y \
@@ -36,6 +36,14 @@ RUN cd /usr/local/bin \
 	&& ln -s python3 python \
 	&& ln -s pip3 pip \
 	&& ln -s python3-config python-config
+
+# fix for other languages issues
+RUN locale-gen en_US.UTF-8
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+ENV LC_ALL en_US.UTF-8
+ENV LANG en_US.UTF-8
+ENV LC_ALL en_US.UTF-8
 
 ARG BITBUCKET_TAG
 ADD ./dist/dtlpy-$BITBUCKET_TAG-py3-none-any.whl /dtlpy-$BITBUCKET_TAG-py3-none-any.whl

@@ -29,12 +29,11 @@ class Annotations:
         :return: Annotation object or None
         """
 
-        success = self.client_api.gen_request(req_type='get',
-                                              path='/datasets/%s/items/%s/annotations/%s' % (
-                                                  self.dataset.id, self.item.id, annotation_id))
+        success, response = self.client_api.gen_request(req_type='get',
+                                                        path='/datasets/%s/items/%s/annotations/%s' % (self.dataset.id, self.item.id, annotation_id))
         annotation = None
         if success:
-            res = self.client_api.last_response.json()
+            res = response.json()
             if not res:
                 annotation = entities.Annotation(entity_dict=res[0], dataset=self.dataset, item=self.item)
         return annotation
@@ -45,14 +44,13 @@ class Annotations:
         :return: List of Annotation objects
         """
 
-        success = self.client_api.gen_request(req_type='get',
-                                              path='/datasets/%s/items/%s/annotations' % (
-                                                  self.dataset.id, self.item.id))
+        success, response = self.client_api.gen_request(req_type='get',
+                                                        path='/datasets/%s/items/%s/annotations' % (self.dataset.id, self.item.id))
         annotations = utilities.List()
         if success:
             annotations = utilities.List(
                 [entities.Annotation(entity_dict=entity_dict, dataset=self.dataset, item=self.item)
-                 for entity_dict in self.client_api.last_response.json()])
+                 for entity_dict in response.json()])
         return annotations
 
     def to_mask(self, img_shape, thickness=1, with_text=False):
@@ -192,10 +190,9 @@ class Annotations:
         # get creator from token
         creator = jwt.decode(self.client_api.token, algorithms=['HS256'], verify=False)['email']
         payload = {'username': creator}
-        success = self.client_api.gen_request(req_type='delete',
-                                              path='/datasets/%s/items/%s/annotations/%s' % (
-                                                  self.dataset.id, self.item.id, annotation_id),
-                                              json_req=payload)
+        success, response = self.client_api.gen_request(req_type='delete',
+                                                        path='/datasets/%s/items/%s/annotations/%s' % (self.dataset.id, self.item.id, annotation_id),
+                                                        json_req=payload)
         if not success:
             raise self.client_api.platform_exception
         return True
@@ -266,9 +263,9 @@ class Annotations:
                 url_path = '/datasets/%s/items/%s/annotations/%s' % (self.dataset.id, self.item.id, annotation_id)
                 if system_metadata:
                     url_path += '?system=true'
-                suc = self.client_api.gen_request(req_type='put',
-                                                  path=url_path,
-                                                  json_req=annotation)
+                suc, response = self.client_api.gen_request(req_type='put',
+                                                            path=url_path,
+                                                            json_req=annotation)
                 if suc:
                     success[i_annotation] = True
                 else:
@@ -287,6 +284,8 @@ class Annotations:
             pool.apply_async(func=edit_single_annotation,
                              kwds={'i_annotation': i_ann})
         # log error
+        pool.close()
+        pool.join()
         dummy = [self.logger.exception(errors[i_job]) for i_job, suc in enumerate(success) if suc is False]
         return True
 
@@ -302,10 +301,10 @@ class Annotations:
 
         def upload_single_annotation(i_w_annotation, w_annotation):
             try:
-                res = self.client_api.gen_request(req_type='post',
-                                                  path='/datasets/%s/items/%s/annotations' %(self.dataset.id, self.item.id),
-                                                  json_req=w_annotation)
-                if res:
+                suc, response = self.client_api.gen_request(req_type='post',
+                                                            path='/datasets/%s/items/%s/annotations' %(self.dataset.id, self.item.id),
+                                                            json_req=w_annotation)
+                if suc:
                     success[i_w_annotation] = True
                 else:
                     raise self.client_api.platform_exception

@@ -24,12 +24,11 @@ class Sessions:
         """
         if self.task is None:
             raise ValueError('cant list sessions without task id')
-        success = self.client_api.gen_request(req_type='get',
-                                              path='/tasks/%s/sessions' % self.task.id)
+        success, response = self.client_api.gen_request(req_type='get',
+                                                        path='/tasks/%s/sessions' % self.task.id)
         if success:
-            sessions = utilities.List(
-                [entities.Session(entity_dict=entity_dict) for entity_dict in
-                 self.client_api.last_response.json()['items']])
+            sessions = utilities.List([entities.Session(entity_dict=entity_dict)
+                                       for entity_dict in response.json()['items']])
         else:
             self.logger.exception('Platform error listing sessions')
             raise self.client_api.platform_exception
@@ -42,9 +41,10 @@ class Sessions:
         :param session_name: optional - search by name
         :return:
         """
-        success = self.client_api.gen_request(req_type='get', path='/sessions/%s' % session_id)
+        success, response = self.client_api.gen_request(req_type='get',
+                                                        path='/sessions/%s' % session_id)
         if success:
-            res = self.client_api.last_response.json()
+            res = response.json()
             if len(res) > 0:
                 session = entities.Session(entity_dict=res)
             else:
@@ -58,26 +58,23 @@ class Sessions:
     def create(self, input_parameters):
         """
         Create a new session
-        :param session_name:
-        :param pipeline_id: pipeline for session
-        :param dataset_id: dataset for session
-        :param package_id: package for session
-        :param previous_session: previous session if exists
+        :param input_parameters: inputs dictionary. keys as specified in Task
         :return:
         """
         if self.task is None:
             raise ValueError('cant create a session without task id')
         if not isinstance(input_parameters, dict):
             raise ValueError('input must be a dictionary')
-        success = self.client_api.gen_request(req_type='post',
-                                              path='/tasks/%s/sessions' % self.task.id,
-                                              json_req=input_parameters)
+        success, response = self.client_api.gen_request(req_type='post',
+                                                        path='/tasks/%s/sessions' % self.task.id,
+                                                        json_req=input_parameters)
         if success:
-            session = entities.Session(entity_dict=self.client_api.last_response.json())
+            session = entities.Session(entity_dict=response.json())
             return session
         else:
             self.logger.exception('Platform error creating a session')
             raise self.client_api.platform_exception
+
     #
     # def tree(self):
     #     """
@@ -151,27 +148,25 @@ class Sessions:
         Must supply exactly one: "session_id" or "session"
         :param session_id: session id
         :param session: Session object
-        :param remote_run:
         :param pipelines_to_run: list of pipeline types to run
-        :param pipelines_not_to_run: list of pipeline types to skip
+        :param remote_run:
+        :param reporter:
         :return:
         """
         from ..pipelines import PipelineRunner
         from ..platform_interface import PlatformInterface
 
         if session_id is None and session is None or \
-                session_id is not None and session is not None:
+                                session_id is not None and session is not None:
             # check that exactly one exists
-            self.logger.exception(
-                'Must supply exactly one of inputs: "session_id" or "session"')
-            raise ValueError(
-                'Must supply exactly one of inputs: "session_id" or "session"')
+            msg = 'Must supply exactly one of inputs: "session_id" or "session"'
+            self.logger.exception(msg)
+            raise ValueError(msg)
 
         if session_id is not None:
             session = self.get(session_id=session_id)
         if session is None:
-            self.logger.exception(
-                'cant run session. session_id: %s' % session.id)
+            self.logger.exception('cant run session. session_id: %s' % session.id)
             assert False
 
         # when call to run_pipe from run_pipe_from_previous_session the following params should be set from there.
@@ -236,66 +231,66 @@ class Sessions:
                 if reporter is not None:
                     reporter.send_progress({'output': session_outs})
 
-    def run_from_previous(self, prev_session_id, config_filename=None, input_params=None, pipe_id=None,
-                          project_name=None, dataset_name=None, session_name=None, package_id=None,
-                          remote_run=False):
-        """
-        Create and run a new session based on a previous one.
-        Input arguments will replace the previous session's parameters in the new one
-        :param prev_session_id:
-        :param config_filename:
-        :param input_params:
-        :param pipe_id:
-        :param project_name:
-        :param dataset_name:
-        :param session_name:
-        :param package_id:
-        :param remote_run:
-        :return:
-        """
-        session_params = self.sessions_info(session_id=prev_session_id)
-        assert len(session_params) == 1, '[ERROR]'
-        session_params = session_params[0]
-
-        #######################################
-        # Take params from prev or from input #
-        project_id = self.get_project(project_name=project_name).id
-        dataset_id = self.get_dataset(
-            dataset_name=dataset_name, project_name=project_name).id
-
-        if pipe_id is None:
-            pipe_id = session_params['pipe']
-        if session_name is None:
-            session_name = session_params['name']
-        if package_id is None:
-            package_id = session_params['package']
-
-        ######################
-        # Create new session #
-        ######################
-        res = self.sessions_create(session_name=session_name,
-                                   pipe_id=pipe_id,
-                                   previous_session_id=prev_session_id,
-                                   project_id=project_id,
-                                   dataset_id=dataset_id,
-                                   package_id=package_id)
-        assert res
-        session_id = self.last_response.json()['id']
-
-        # define location of input to pipe
-        input_params['weights_from_prev'] = True
-        input_params['conf_from_prev'] = True
-        if config_filename is not None:
-            # check if new configuration file was inputted
-            input_params['conf_from_prev'] = False
-            self.sessions_artifact_upload(session_id=session_id,
-                                          filename=config_filename,
-                                          artifact_type='conf',
-                                          description='configuration for model in session')
-
-        self.run(session_id=session_id,
-                 input_params=input_params,
-                 remote_run=remote_run)
+    # def run_from_previous(self, prev_session_id, config_filename=None, input_params=None, pipe_id=None,
+    #                       project_name=None, dataset_name=None, session_name=None, package_id=None,
+    #                       remote_run=False):
+    #     """
+    #     Create and run a new session based on a previous one.
+    #     Input arguments will replace the previous session's parameters in the new one
+    #     :param prev_session_id:
+    #     :param config_filename:
+    #     :param input_params:
+    #     :param pipe_id:
+    #     :param project_name:
+    #     :param dataset_name:
+    #     :param session_name:
+    #     :param package_id:
+    #     :param remote_run:
+    #     :return:
+    #     """
+    #     session_params = self.sessions_info(session_id=prev_session_id)
+    #     assert len(session_params) == 1, '[ERROR]'
+    #     session_params = session_params[0]
+    #
+    #     #######################################
+    #     # Take params from prev or from input #
+    #     project_id = self.get_project(project_name=project_name).id
+    #     dataset_id = self.get_dataset(
+    #         dataset_name=dataset_name, project_name=project_name).id
+    #
+    #     if pipe_id is None:
+    #         pipe_id = session_params['pipe']
+    #     if session_name is None:
+    #         session_name = session_params['name']
+    #     if package_id is None:
+    #         package_id = session_params['package']
+    #
+    #     ######################
+    #     # Create new session #
+    #     ######################
+    #     res = self.sessions_create(session_name=session_name,
+    #                                pipe_id=pipe_id,
+    #                                previous_session_id=prev_session_id,
+    #                                project_id=project_id,
+    #                                dataset_id=dataset_id,
+    #                                package_id=package_id)
+    #     assert res
+    #     session_id = self.last_response.json()['id']
+    #
+    #     # define location of input to pipe
+    #     input_params['weights_from_prev'] = True
+    #     input_params['conf_from_prev'] = True
+    #     if config_filename is not None:
+    #         # check if new configuration file was inputted
+    #         input_params['conf_from_prev'] = False
+    #         self.sessions_artifact_upload(session_id=session_id,
+    #                                       filename=config_filename,
+    #                                       artifact_type='conf',
+    #                                       description='configuration for model in session')
+    #
+    #     self.run(session_id=session_id,
+    #              input_params=input_params,
+    #              remote_run=remote_run)
 
     def edit(self):
         pass
@@ -316,8 +311,8 @@ class Sessions:
                 'Must choose by at least one. "session_id" or "session"')
             raise ValueError(
                 'Must choose by at least one. "session_id" or "session"')
-        success = self.client_api.gen_request(
-            'delete', '/sessions/%s' % session_id)
+        success, response = self.client_api.gen_request(req_type='delete',
+                                                        path='/sessions/%s' % session_id)
         if not success:
             self.logger.exception('Platform error deleting a session:')
             raise self.client_api.platform_exception

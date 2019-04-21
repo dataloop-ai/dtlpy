@@ -20,11 +20,11 @@ class Projects:
         Get users project's list.
         :return: List of Project objects
         """
-        success = self.client_api.gen_request('get', '/projects')
+        success, response = self.client_api.gen_request(req_type='get',
+                                                        path='/projects')
         if success:
-            projects = utilities.List(
-                [entities.Project(entity_dict=entity_dict)
-                 for entity_dict in self.client_api.last_response.json()])
+            projects = utilities.List([entities.Project(entity_dict=entity_dict)
+                                       for entity_dict in response.json()])
         else:
             self.logger.exception('Platform error getting projects')
             raise self.client_api.platform_exception
@@ -40,9 +40,10 @@ class Projects:
         """
 
         if project_id is not None:
-            success = self.client_api.gen_request('get', '/projects/%s' % project_id)
+            success, response = self.client_api.gen_request(req_type='get',
+                                                            path='/projects/%s' % project_id)
             if success:
-                project = entities.Project(entity_dict=self.client_api.last_response.json())
+                project = entities.Project(entity_dict=response.json())
             else:
                 self.logger.exception('Platform error getting project. id: %s', project_id)
                 raise self.client_api.platform_exception
@@ -72,9 +73,10 @@ class Projects:
         :return:
         """
         project = self.get(project_name=project_name, project_id=project_id)
-        success = self.client_api.gen_request('delete', '/projects/%s' % project.id)
+        success = self.client_api.gen_request(req_type='delete',
+                                              path='/projects/%s' % project.id)
         if not success:
-            self.logger.exception('Platform error getting a project')
+            self.logger.exception('Platform error deleting a project')
             raise self.client_api.platform_exception
         return True
 
@@ -91,9 +93,11 @@ class Projects:
         :return: Project object
         """
         payload = {'name': project_name}
-        success = self.client_api.gen_request('post', '/projects', data=payload)
+        success, response = self.client_api.gen_request(req_type='post',
+                                                        path='/projects',
+                                                        data=payload)
         if success:
-            project = entities.Project(entity_dict=self.client_api.last_response.json())
+            project = entities.Project(entity_dict=response.json())
         else:
             self.logger.exception('Platform error creating a project')
             raise self.client_api.platform_exception

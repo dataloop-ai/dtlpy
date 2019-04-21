@@ -4,12 +4,14 @@ Main Platform Interface module for Dataloop
 import logging
 
 from . import services, repositories
+from .__version__ import version
 
 
 class PlatformInterface:
     """
     Platform Interface repository
     """
+    __version__ = version
 
     def __init__(self):
         super().__init__()
@@ -23,6 +25,7 @@ class PlatformInterface:
 
         if self._client_api.token_expired():
             self.logger.exception('Token expired. Please login')
+
 
     def login(self, audience=None, auth0_url=None, client_id=None):
         """

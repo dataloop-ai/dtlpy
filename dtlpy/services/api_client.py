@@ -316,12 +316,12 @@ class ApiClient:
             try:
                 # print only what is printable (dont print get steam etc..)
                 if not stream:
-                    self.print_json(self.last_response.json())
+                    self.print_json(resp.json())
             except ValueError:
                 # no JSON returned
                 pass
             return_type = True
-        return return_type
+        return return_type, resp
 
     def upload_local_file(self, filepath, remote_url, uploaded_filename=None, remote_path=None, callback=None):
         """
@@ -344,8 +344,17 @@ class ApiClient:
         statinfo = os.stat(filepath)
         try:
             # read beginning for mime type
-            _, ext = os.path.splitext(filepath)
-            mime = mimetypes.types_map[ext]
+            try:
+                _, ext = os.path.splitext(filepath)
+                if ext in mimetypes.types_map:
+                    mime = mimetypes.types_map[ext.lower()]
+                else:
+                    import magic
+                    mime = magic.Magic(mime=True)
+                    mime = mime.from_file(filepath)
+            except:
+                mime = 'unknown'
+
             with open(filepath, 'rb') as file:
                 info = fleep.get(file.read(128))
             # multipart uploading of the file
@@ -400,15 +409,17 @@ class ApiClient:
             else:
                 try:
                     # print only what is printable (dont print get steam etc..)
-                    self.print_json(self.last_response.json())
+                    self.print_json(resp.json())
                 except ValueError:
                     # no JSON returned
                     pass
                 success = True
         except Exception as e:
             logger.exception(e)
+
             success = False
-        return success
+            resp = None
+        return success, resp
 
     @staticmethod
     def check_proxy():
@@ -485,8 +496,9 @@ class ApiClient:
                     for item in to_print:
                         [keys_list.append(key) for key in list(item.keys()) if key not in keys_list]
             else:
-                logger.exception('Unknown printing input type: %s' % type(to_print))
-                raise ValueError
+                msg = 'Unknown printing input type: %s' % type(to_print)
+                logger.exception(msg)
+                raise ValueError(msg)
 
             try:
                 # try sorting bt creation date
