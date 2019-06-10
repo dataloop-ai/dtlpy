@@ -13,8 +13,5 @@ progressbar2==3.39.3
 PyYAML==5.1
 ffmpeg-python==0.1.17
 scikit-image==0.15.0
-jinja2==2.10.1
-attrs==19.1.0
-attr==0.3.1
 sphinx-argparse==0.2.5
 sphinxcontrib-websupport==1.1.2
