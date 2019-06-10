@@ -1,61 +1,71 @@
 import logging
-from .. import repositories, utilities
+from .. import utilities
+import attr
 
 logger = logging.getLogger('dataloop.package')
 
 
+@attr.s
 class Session:
     """
     Session object
     """
+    # platform
+    id = attr.ib()
+    createdAt = attr.ib()
+    updatedAt = attr.ib()
+    url = attr.ib()
+    taskId = attr.ib()
 
-    def __init__(self, entity_dict):
-        self.entity_dict = entity_dict
+    # params
+    input = attr.ib()
+    output = attr.ib()
+    feedbackQueue = attr.ib()
+    status = attr.ib()
+    metadata = attr.ib()
+    latestStatus = attr.ib()
+    reporting_exchange = attr.ib()
+    reporting_route = attr.ib()
+
+    # entities
+    task = attr.ib()
+
+    @classmethod
+    def from_json(cls, _json, task):
+        """
+        Build a Session entity object from a json
+
+        :param _json: _json respons form host
+        :param task: session's task
+        :return: Session object
+        """
+        return cls(
+            task=task,
+            id=_json['id'],
+            createdAt=_json['createdAt'],
+            updatedAt=_json['updatedAt'],
+            input=_json['input'],
+            output=_json.get('output', list()),
+            feedbackQueue=_json['feedbackQueue'],
+            status=_json['status'],
+            metadata=_json['metadata'],
+            latestStatus=_json['latestStatus'],
+            url=_json['url'],
+            taskId=_json['metadata']['system']['taskId'],
+            reporting_exchange=_json['feedbackQueue']['exchange'],
+            reporting_route=_json['feedbackQueue']['routing']
+        )
 
     def print(self):
         utilities.List([self]).print()
 
-    @property
-    def id(self):
-        return self.entity_dict['id']
+    def to_json(self):
+        """
+        Returns platform _json format of object
 
-    @property
-    def createdAt(self):
-        return self.entity_dict['createdAt']
-
-    @property
-    def datasetId(self):
-        return self.entity_dict['datasetId']
-
-    @property
-    def input(self):
-        return self.entity_dict['input']
-
-    @property
-    def output(self):
-        return self.entity_dict['output']
-
-    @property
-    def name(self):
-        return self.entity_dict['name']
-
-    @property
-    def projectId(self):
-        return self.entity_dict['projectId']
-
-    @property
-    def status(self):
-        return self.entity_dict['status']
-
-    @property
-    def taskId(self):
-        return self.entity_dict['metadata']['system']['taskId']
-    
-    @property
-    def reporting_exchange(self):
-        return self.entity_dict['feedbackQueue']['exchange']
-    
-    @property
-    def reporting_route(self):
-        return self.entity_dict['feedbackQueue']['routing']
-
+        :return: platform json format of object
+        """
+        return attr.asdict(self,
+                           filter=attr.filters.exclude(attr.fields(Session).taskId,
+                                                       attr.fields(Session).reporting_exchange,
+                                                       attr.fields(Session).reporting_route))

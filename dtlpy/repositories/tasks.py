@@ -2,17 +2,17 @@ import logging
 import os
 import json
 
-from .. import services, entities, utilities
+from .. import entities, utilities, PlatformException
 
 
 class Tasks(object):
     """
-    Pipeliens repository
+        Tasks repository
     """
 
-    def __init__(self, project=None):
+    def __init__(self, client_api, project=None):
         self.logger = logging.getLogger('dataloop.tasks')
-        self.client_api = services.ApiClient()
+        self.client_api = client_api
         self.project = project
 
     def create(self, pipeline_dict, name, description, triggers, input_parameters, output_parameters, projects,
@@ -23,6 +23,7 @@ class Tasks(object):
         :param name: task name
         :param description:
         :param triggers: initiate session for task on triggers
+        :param triggers_filter: initiate session for task on triggers
         :param input_parameters: inputs for the task's sessions
         :param output_parameters: outputs for the task's sessions
         :param projects: projects to associate with task
@@ -56,10 +57,11 @@ class Tasks(object):
                                                         path='/tasks',
                                                         json_req=payload)
         if success:
-            task = entities.Task(response.json())
+            task = entities.Task.from_json(client_api=self.client_api,
+                                           _json=response.json())
         else:
             self.logger.exception('Platform error creating new task:')
-            raise self.client_api.platform_exception
+            raise PlatformException(response)
         return task
 
     def get(self, task_id=None, task_name=None):
@@ -75,12 +77,12 @@ class Tasks(object):
             if success:
                 res = response.json()
                 if len(res) > 0:
-                    task = entities.Task(entity_dict=res)
+                    task = entities.Task.from_json(client_api=self.client_api, _json=res)
                 else:
                     task = None
             else:
                 self.logger.exception('Platform error getting the task. id: %s' % task_id)
-                raise self.client_api.platform_exception
+                raise PlatformException(response)
         elif task_name is not None:
             tasks = self.list()
             task = [task for task in tasks if task.name == task_name]
@@ -102,7 +104,7 @@ class Tasks(object):
         Delete remote item
         :param task_name: optional - search item by remote path
         :param task_id: optional - search item by id
-        :return:
+        :return: True
         """
         if task_id is not None:
             success, response = self.client_api.gen_request(req_type='delete',
@@ -131,16 +133,18 @@ class Tasks(object):
                                                             path='/tasks?projects=%s' % self.project.id)
 
         if success:
-            tasks = utilities.List([entities.Task(entity_dict=entity_dict)
-                                    for entity_dict in response.json()['items']])
+            tasks = utilities.List(
+                [entities.Task.from_json(client_api=self.client_api,
+                                         _json=_json)
+                 for _json in response.json()['items']])
             return tasks
         else:
             self.logger.exception('Platform error getting tasks')
-            raise self.client_api.platform_exception
+            raise PlatformException(response)
 
-    def edit(self, task, system_metadata=False):
+    def update(self, task, system_metadata=False):
         """
-        Edit an existing task
+        Update an existing task
         :param task: Task entity
         :param system_metadata: bool
         :return: Task entity
@@ -150,9 +154,10 @@ class Tasks(object):
             url_path += '?system=true'
         success, response = self.client_api.gen_request(req_type='patch',
                                                         path=url_path,
-                                                        json_req=task.to_dict())
+                                                        json_req=task.to_json())
         if success:
-            return entities.Task(entity_dict=response.json())
+            return entities.Task.from_json(client_api=self.client_api,
+                                           _json=response.json())
         else:
-            self.logger.exception('Platform error editing task. id: %s' % task.id)
-            raise self.client_api.platform_exception
+            self.logger.exception('Platform error updating task. id: %s' % task.id)
+            raise PlatformException(response)

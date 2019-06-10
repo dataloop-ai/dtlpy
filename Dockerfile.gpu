@@ -7,7 +7,7 @@ RUN apt-get install -y \
     libjasper-dev libavformat-dev libpq-dev libxine2-dev libglew-dev \
     libtiff5-dev zlib1g-dev libjpeg-dev libpng12-dev libjasper-dev \
     libavcodec-dev libavformat-dev libavutil-dev libpostproc-dev \
-	libswscale-dev libeigen3-dev libtbb-dev libgtk2.0-dev locales
+    libswscale-dev libeigen3-dev libtbb-dev libgtk2.0-dev locales
     # libcudnn7=7.1.4.18-1+cuda9.0
 
 RUN apt-get install -y \
@@ -15,8 +15,13 @@ RUN apt-get install -y \
     python3-numpy \
     python3-pip
 
+# upgrade pip
+RUN mkdir -p /src
+ENV PYTHONPATH="$PYTHONPATH:/src"
+RUN pip3 install --upgrade pip
+
 # Python dependencies
-RUN pip3 --no-cache-dir install \
+RUN pip3 install --no-cache-dir --target=/src \
     numpy \
     hdf5storage \
     h5py \
@@ -30,12 +35,11 @@ RUN pip3 --no-cache-dir install \
 
 # make some useful symlinks that are expected to exist
 RUN cd /usr/local/bin \
-	&& { [ -e easy_install ] || ln -s easy_install-* easy_install; } \
-	&& ln -s idle3 idle \
-	&& ln -s pydoc3 pydoc \
-	&& ln -s python3 python \
-	&& ln -s pip3 pip \
-	&& ln -s python3-config python-config
+    && { [ -e easy_install ] || ln -s easy_install-* easy_install; } \
+    && ln -s idle3 idle \
+    && ln -s pydoc3 pydoc \
+    && ln -s python3 python \
+    && ln -s python3-config python-config
 
 # fix for other languages issues
 RUN locale-gen en_US.UTF-8
@@ -47,6 +51,6 @@ ENV LC_ALL en_US.UTF-8
 
 ARG BITBUCKET_TAG
 ADD ./dist/dtlpy-$BITBUCKET_TAG-py3-none-any.whl /dtlpy-$BITBUCKET_TAG-py3-none-any.whl
-RUN pip3 install /dtlpy-$BITBUCKET_TAG-py3-none-any.whl --upgrade
+RUN pip3 install --no-cache-dir --target=/src /dtlpy-$BITBUCKET_TAG-py3-none-any.whl --upgrade
 
 WORKDIR /home

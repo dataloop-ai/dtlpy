@@ -3,7 +3,7 @@ import traceback
 import logging
 import os
 
-from .. import services, entities, utilities
+from .. import entities, utilities, PlatformException, exceptions
 
 
 class Packages:
@@ -11,12 +11,12 @@ class Packages:
     Packages repository
     """
 
-    def __init__(self, project=None, dataset=None):
+    def __init__(self, client_api, project=None, dataset=None):
         self.logger = logging.getLogger('dataloop.packages')
-        self.client_api = services.ApiClient()
+        self.client_api = client_api
         if project is None and dataset is None:
             self.logger.exception('at least one must be not None: dataset or project')
-            raise ValueError('at least one must be not None: dataset or project')
+            raise PlatformException('400', 'at least one must be not None: dataset or project')
         self.project = project
         self._dataset = dataset
         self._items_repository = None
@@ -35,14 +35,21 @@ class Packages:
     def dataset(self):
         if self._dataset is None:
             # get dataset from project
-            self._dataset = self.project.datasets.get(dataset_name='Binaries')
+            try:
+                self._dataset = self.project.datasets.get(dataset_name='Binaries')
+            except exceptions.NotFound:
+                self._dataset = None
             if self._dataset is None:
                 self.logger.warning(
                     'Dataset for packages was not found. Creating... dataset name: "Binaries". project_id=%s' % self.project.id)
                 self._dataset = self.project.datasets.create(dataset_name='Binaries')
                 # add system to metadata
-                self._dataset.entity_dict['metadata']['system']['scope'] = 'system'
-                self.project.datasets.edit(dataset=self._dataset, system_metadata=True)
+                if 'metadata' not in self._dataset.to_json():
+                    self._dataset.metadata = dict()
+                if 'system' not in self._dataset.metadata:
+                    self._dataset.metadata['system'] = dict()
+                self._dataset.metadata['system']['scope'] = 'system'
+                self.project.datasets.update(dataset=self._dataset, system_metadata=True)
         return self._dataset
 
     @staticmethod
@@ -54,18 +61,24 @@ class Packages:
         return m.hexdigest()
 
     def list_versions(self, package_name):
+        """
+        List all package versions
+
+        :param package_name: package name
+        :return: list of versions
+        """
         versions = self.items_repository.list(query={'directories': ['/packages/%s' % package_name]})
         return versions
 
     def list(self):
         """
         List all packages
-        :return:
+        :return: Paged entity
         """
         packages = self.items_repository.list(query={'directories': ['/packages']})
         return packages
 
-    def edit(self):
+    def update(self):
         pass
 
     def delete(self):
@@ -88,22 +101,25 @@ class Packages:
             return matched_version
 
         if package_name is None:
-            raise ValueError('Need to input only least of "package_name" or "package_id"')
+            raise PlatformException('400', 'Either "package_name" or "package_id" is needed')
         if version is None:
             version = 'latest'
 
         if version not in ['all', 'latest']:
-            matched_version = self.items_repository.get(filepath='/packages/%s/%s.zip' % (package_name, version))
-            if matched_version is None:
+            try:
+                matched_version = self.items_repository.get(filepath='/packages/%s/%s.zip' % (package_name, version))
+            except Exception:
                 self.logger.warning('No matching version was found. version: %s' % version)
+                message = ('No matching version was found. version: %s' % version)
+                raise PlatformException('404', message)
             return matched_version
-        # get all or latest
 
-        # list all packages
+        # get all or latest
         versions_pages = self.list_versions(package_name=package_name)
         if versions_pages.items_count == 0:
             self.logger.warning('No package was found. name: %s' % package_name)
-            matched_version = None
+            message = ('No package was found. name: %s' % package_name)
+            raise PlatformException('404', message)
         else:
             if version == 'all':
                 matched_version = versions_pages
@@ -119,9 +135,29 @@ class Packages:
                         if ver_int > max_ver:
                             max_ver = ver_int
                             matched_version = ver
+                if matched_version is None:
+                    message = ('No package was found. name: %s' % package_name)
+                    raise PlatformException('404', message)
             else:
-                raise ValueError('unknown version string: %s' % version)
+                message = ('unknown version string: %s' % version)
+                raise PlatformException('404', message)
+
         return matched_version
+
+    def get_current_version(self, all_versions_pages, zip_md):
+        latest_version = 0
+        same_version_found = None
+        # go over all existing versions
+        for page in all_versions_pages:
+            for v_item in page:
+                # get latest version
+                if int(os.path.splitext(v_item.name)[0]) > latest_version:
+                    latest_version = int(os.path.splitext(v_item.name)[0])
+                # check md5 to find same package
+                if v_item.md5 == zip_md:
+                    same_version_found = v_item
+                    break
+        return latest_version + 1, same_version_found
 
     def pack(self, directory, name=None, description=''):
         """
@@ -129,18 +165,18 @@ class Packages:
         :param directory: local directory to pack
         :param name: package name
         :param description: package description
-        :return:
+        :return: Package object
         """
         zip_filename = None
         try:
             if not os.path.isdir(directory):
                 self.logger.exception('Not a directory: %s' % directory)
-                raise ValueError('Not a directory: %s' % directory)
+                message = ('Not a directory: %s' % directory)
+                raise PlatformException('400', message)
             directory = os.path.abspath(directory)
             # create zipfile
             utilities.Miscellaneous.zip_directory(directory)
             zip_filename = directory + '.zip'
-
             zip_md = self.__file_hash(zip_filename)
 
             # get package name
@@ -149,40 +185,34 @@ class Packages:
 
             # get latest version
             same_version_found = None
-            all_versions_pages = self.get(package_name=name, version='all')
+            try:
+                all_versions_pages = self.get(package_name=name, version='all')
+            except exceptions.NotFound:
+                all_versions_pages = None
             if all_versions_pages is None:
                 # no package with that name - create new version
                 current_version = 0
             else:
-                latest_version = 0
-                # go over all existing versions
-                for page in all_versions_pages:
-                    for v_item in page:
-                        # get latest version
-                        if int(os.path.splitext(v_item.name)[0]) > latest_version:
-                            latest_version = int(os.path.splitext(v_item.name)[0])
-                        # check md5 to find same package
-                        if v_item.md5 == zip_md:
-                            same_version_found = v_item
-                            break
-                current_version = latest_version + 1
+                current_version, same_version_found = self.get_current_version(all_versions_pages=all_versions_pages,
+                                                                               zip_md=zip_md)
 
             if same_version_found is not None:
                 # same md5 hash file found in version - return the matched version
                 item = same_version_found
             else:
                 # no matched version was found - create a new version
-                item = self.items_repository.upload(filepath=zip_filename,
-                                                    remote_path='/packages/%s' % name,
-                                                    uploaded_filename=str(current_version) + '.zip')
-                if item is None:
+                try:
+                    item = self.items_repository.upload(filepath=zip_filename,
+                                                        remote_path='/packages/%s' % name,
+                                                        uploaded_filename=str(current_version) + '.zip')
+                except Exception:
                     self.logger.exception('unable to create package item.')
-                    raise self.client_api.platform_exception
+                    raise
 
                 # add metadata to source code
-                item.entity_dict['metadata']['system']['description'] = description
-                item.entity_dict['metadata']['system']['md5'] = zip_md
-                item = self.items_repository.edit(item=item, system_metadata=True)
+                item.metadata['system']['description'] = description
+                item.metadata['system']['md5'] = zip_md
+                item = self.items_repository.update(item=item, system_metadata=True)
             return item
 
         except Exception as e:
@@ -194,26 +224,41 @@ class Packages:
                 if os.path.isfile(zip_filename):
                     os.remove(zip_filename)
 
-    def unpack(self, package_name=None, package_id=None, local_path=None, version=None):
-        """
-        Unpack package locally. Download source code and unzip
-        :param package_name: search by name
-        :param local_path: local path to save package source
-        :param version: package version to unpack. default - latest
-        :return:
-        """
-        package = self.get(package_name=package_name, package_id=package_id, version=version)
-        download_path = local_path
-        if not (local_path.endswith('/*') or local_path.endswith('\*')):
+    def unpack_single(self, package, download_path, local_path):
+        if not (download_path.endswith('/*') or download_path.endswith('\\*')):
             # add * to download directly to folder
-            download_path = os.path.join(local_path, '*')
+            download_path = os.path.join(download_path, '*')
         artifact_filepath = self.items_repository.download(item_id=package.id,
                                                            save_locally=True,
                                                            local_path=download_path,
                                                            download_options={'relative_path': False})
         utilities.Miscellaneous.unzip_directory(zip_filename=artifact_filepath,
                                                 to_directory=local_path)
-        # to_directory=os.path.dirname(os.path.dirname(artifact_filepath)))
         os.remove(artifact_filepath)
-        self.logger.info('Source code was unpacked to: %s' % os.path.dirname(artifact_filepath))
+        return artifact_filepath
+
+    def unpack(self, package_name=None, package_id=None, local_path=None, version=None):
+        """
+        Unpack package locally. Download source code and unzip
+        :param package_name: search by name
+        :param package_id: search by id
+        :param local_path: local path to save package source
+        :param version: package version to unpack. default - latest
+        :return: String (dirpath)
+        """
+        package = self.get(package_name=package_name, package_id=package_id, version=version)
+        download_path = local_path
+        if isinstance(package, entities.PagedEntities):
+            for page in package:
+                for item in page:
+                    local_path = download_path + '/v.' + item.name.split('.')[0]
+                    self.unpack_single(package=item, download_path=download_path, local_path=local_path)
+            return os.path.dirname(local_path)
+        elif isinstance(package, entities.Package):
+            artifact_filepath = self.unpack_single(package=package, download_path=download_path, local_path=local_path)
+            self.logger.info('Source code was unpacked to: %s' % os.path.dirname(artifact_filepath))
+        else:
+            raise PlatformException(
+                error='404',
+                message='Package was not found! name:{name}, id:{id}'.format(name=package_name, id=package_id))
         return os.path.dirname(artifact_filepath)

@@ -17,7 +17,7 @@ from .annotations_get_step import AnnotationsGetStep
 from .annotations_get_batch_step import AnnotationsGetBatchStep
 from .annotations_upload_step import AnnotationsUploadStep
 from .annotations_upload_batch_step import AnnotationsUploadBatchStep
-from .annotations_edit_step import AnnotationsEditStep
+from .annotations_update_step import AnnotationsUpdateStep
 
 from .artifacts_download_step import ArtifactsDownloadStep
 from .artifacts_upload_step import ArtifactsUploadStep
@@ -32,7 +32,7 @@ from .datasets_download_step import DatasetsDownloadStep
 from .items_get_step import ItemsGetStep
 from .items_download_step import ItemsDownloadStep
 from .items_download_batch_step import ItemsDownloadBatchStep
-from .items_edit_step import ItemsEditStep
+from .items_update_step import ItemsUpdateStep
 from .items_list_step import ItemsListStep
 from .items_upload_step import ItemsUploadStep
 from .items_upload_batch_step import ItemsUploadBatchStep

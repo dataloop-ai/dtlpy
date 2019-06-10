@@ -19,9 +19,9 @@ class ArtifactsUploadStep(pipeline_step.PipelineStep):
         else:
             self.inputs = [{'name': 'platform_interface', 'from': 'platform_interface',  'by': 'ref','type': 'object'},
                            {'name': 'project_id', 'from': 'project_id', 'by': 'ref', 'type': 'string'}]
-            self.kwargs = {}
+            self.kwargs = dict()
             self.outputs = [{'name': 'filepath', 'type': 'string'}]
-            self.args = []
+            self.args = list()
 
     def execute(self, pipeline_dict):
         # input arguments for step

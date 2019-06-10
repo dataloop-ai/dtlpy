@@ -1,7 +1,7 @@
 def main():
 
     from keras.callbacks import Callback
-    from dtlpy import PlatformInterface
+    import dtlpy as dl
     import numpy as np
     import logging
     import time
@@ -13,9 +13,8 @@ def main():
             super(ProgressViewer, self).__init__()
             self.logger = logging.getLogger('dataloop.callback')
             # init Dataloop instance
-            self.dlp = PlatformInterface()
             # get sessions artifact
-            self.session = self.dlp.sessions.get(session_id=session_id)
+            self.session = dl.sessions.get(session_id=session_id)
             artifacts = self.session.artifacts.list()
             self.artifact = None
             for artifact in artifacts:

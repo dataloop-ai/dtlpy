@@ -23,3 +23,6 @@ from .package import Package
 from .annotation import Annotation
 from .paged_entities import PagedEntities
 from .query import Query
+from .recipe import Recipe
+from .ontology import Ontology
+from .label import Label

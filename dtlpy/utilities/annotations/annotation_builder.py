@@ -45,6 +45,13 @@ class BaseAnnotation:
                 x, y = np.squeeze(pt)
                 coordinates.append({'y': int(y), 'x': int(x)})
             coordinates = [coordinates]
+
+        elif annotation_type == 'polyline':
+            coordinates = list()
+            for pt in pts:
+                x, y = np.squeeze(pt)
+                coordinates.append({'y': int(y), 'x': int(x)})
+
         elif annotation_type == 'binary':
             if color is None:
                 color = np.random.randint(0, 255, 3)
@@ -187,7 +194,7 @@ class VideoAnnotation(BaseAnnotation):
         if fixed is None:
             fixed = False
         if attributes is None:
-            attributes = []
+            attributes = list()
 
         for annotation in self.annotations:
             if annotation['element_id'] == element_id:
@@ -211,11 +218,11 @@ class VideoAnnotation(BaseAnnotation):
         if not found:
             # add new annotation
             if metadata_system is None:
-                metadata_system = {}
+                metadata_system = dict()
             if not isinstance(metadata_system, dict):
                 self.logger.exception(
                     '"metadata_system" must be a dictionary with extra metadata system info. igonring.')
-                metadata_system = {}
+                metadata_system = dict()
             new_annotation = {'label': label,
                               'type': annotation_type,
                               'attributes': attributes,
@@ -274,7 +281,7 @@ class VideoAnnotation(BaseAnnotation):
                 snap_id = np.argmin(np.abs(snapshots_time - second))
                 matched_snapshot = annotation['snapshots_'][snap_id]
         if matched_snapshot is None:
-            self.logger.exception('element was not found in annotations. element_id: %d' % element_id)
+            self.logger.exception('element was not found in annotations. element_id: {}'.format(element_id))
         return matched_snapshot
 
     def get_snapshots_by_time(self, second):
@@ -298,7 +305,7 @@ class VideoAnnotation(BaseAnnotation):
                 if not annotation['snapshots_']:
                     continue
                 # add first timestamp to snapshots list
-                attributes = []
+                attributes = list()
                 if 'attributes' in head_annotation:
                     attributes = head_annotation['attributes']
                 snapshots = [{'data': head_annotation['coordinates'],
@@ -326,7 +333,7 @@ class VideoAnnotation(BaseAnnotation):
                     if 'attributes' in head_annotation:
                         current_snapshot['attributes'] = head_annotation['attributes']
                     else:
-                        current_snapshot['attributes'] = []
+                        current_snapshot['attributes'] = list()
                         # add to timestamp's list
                 timestamp_snapshots.append(current_snapshot)
         return timestamp_snapshots
@@ -342,7 +349,7 @@ class ImageAnnotation(BaseAnnotation):
         self.annotations = list()
 
     def add_annotation(self, pts, label, annotation_type='box', object_id=None, attributes=None,
-                       to_annotation_type=None, color=None, img_shape=None):
+                       to_annotation_type=None, color=None, img_shape=None, metadata=None):
         """
         Add new annotation
 
@@ -361,7 +368,15 @@ class ImageAnnotation(BaseAnnotation):
         if to_annotation_type is not None:
             # convert annotation types
             to_annotation_type = to_annotation_type.lower()
-            if annotation_type == 'segment' and to_annotation_type == 'binary':
+            if annotation_type == 'segment' and to_annotation_type == 'box':
+                pts = np.asarray([[[pt['x'], pt['y']] for pt in segs] for segs in pts])
+                top = np.min(pts[:, 1])
+                left = np.min(pts[:, 0])
+                bottom = np.max(pts[:, 1])
+                right = np.max(pts[:, 0])
+                pts = [left, top, right, bottom]
+                annotation_type = to_annotation_type
+            elif annotation_type == 'segment' and to_annotation_type == 'binary':
                 # backward compatible
                 if isinstance(pts[0][0], dict):
                     pts = [[[pt['x'], pt['y']] for pt in segs] for segs in pts]
@@ -381,7 +396,7 @@ class ImageAnnotation(BaseAnnotation):
                 # do nothing
                 pass
             else:
-                assert False, '[ERROR] Unknown conversion from: %s to:%s' % (annotation_type, to_annotation_type)
+                raise ValueError('Unknown conversion from: %s to:%s' % (annotation_type, to_annotation_type))
 
         # create platform coordinates
         if annotation_type == 'class':
@@ -399,8 +414,14 @@ class ImageAnnotation(BaseAnnotation):
                           }
         if attributes is not None:
             new_annotation['attributes'] = attributes
+        if metadata is None:
+            metadata = dict()
         if object_id is not None:
-            new_annotation['metadata'] = {'system':{'objectId': object_id}}
+            if 'system' not in metadata:
+                metadata['system'] = dict()
+            metadata['system']['objectId'] = object_id
+        new_annotation['metadata'] = metadata
+
         # append to list of annotations
         self.annotations.append(new_annotation)
 

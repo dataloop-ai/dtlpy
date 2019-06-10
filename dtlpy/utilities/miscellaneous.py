@@ -14,8 +14,9 @@ class List(list):
             to_print = list()
             keys_list = list()
             for element in self.__iter__():
-                to_print.append(element.entity_dict.copy())
-                [keys_list.append(key) for key in list(element.entity_dict.keys()) if key not in keys_list]
+                item_dict = element.to_json()
+                to_print.append(item_dict)
+                [keys_list.append(key) for key in list(item_dict.keys()) if key not in keys_list]
             try:
                 # try sorting bt creation date
                 to_print = sorted(to_print, key=lambda k: k['createdAt'])

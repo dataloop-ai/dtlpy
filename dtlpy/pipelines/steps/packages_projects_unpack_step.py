@@ -20,8 +20,8 @@ class PackagesProjectsUnpackStep(pipeline_step.PipelineStep):
             self.inputs = [{'name': 'platform_interface', 'from': 'platform_interface', 'by': 'ref', 'type': 'object'},
                            {'name': 'project_id', 'from': 'project_id', 'by': 'ref', 'type': 'object'},
                            {'name': 'package_name', 'from': 'package_name', 'by': 'ref', 'type': 'string'}]
-            self.kwargs = {}
-            self.args = []
+            self.kwargs = dict()
+            self.args = list()
             self.outputs = [{'name': 'package_path', 'type': 'string'}]
 
     def execute(self, pipeline_dict):

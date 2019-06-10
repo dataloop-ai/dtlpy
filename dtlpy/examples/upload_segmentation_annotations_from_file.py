@@ -4,17 +4,13 @@
 
 
 def main():
-    import matplotlib.pyplot as plt
     from PIL import Image
     import numpy as np
-    from dtlpy import PlatformInterface
+    import dtlpy as dl
     from dtlpy.utilities.annotations import ImageAnnotation
 
-    # init platform interface
-    dlp = PlatformInterface()
-
     # get project and dataset
-    dataset = dlp.projects.get('MyProject').datasets.get('MyDataset')
+    dataset = dl.projects.get('MyProject').datasets.get('MyDataset')
 
     # image filepath
     image_filepath = r'E:\Images\img_000.png'
@@ -22,7 +18,7 @@ def main():
     annotations_filepath = r'E:\annotations\img_000.png'
 
     # upload item to root directory
-    item = dataset.items.upload(image_filepath, remote_path='/')
+    item = dataset.items.update(image_filepath, remote_path='/')
 
     # read mask from file
     mask = np.array(Image.open(annotations_filepath))

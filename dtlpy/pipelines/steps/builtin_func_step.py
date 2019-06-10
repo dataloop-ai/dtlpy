@@ -17,9 +17,9 @@ class BuiltinFuncStep(pipeline_step.PipelineStep):
             self.outputs = step_dict['outputs']
         else:
             self.inputs = [{'name': 'cmd', 'from': 'cmd', 'by': 'ref', 'type':'string'}]
-            self.kwargs = {}
-            self.args = []
-            self.outputs = []
+            self.kwargs = dict()
+            self.args = list()
+            self.outputs = list()
 
     def execute(self, pipeline_dict):
         # input arguments for step

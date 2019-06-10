@@ -4,8 +4,7 @@ def main():
     :return:
     """
     import cv2
-
-    from dtlpy.platform_interface import PlatformInterface
+    import dtlpy as dl
     from dtlpy.utilities.annotations import VideoAnnotation
 
     ##########################
@@ -70,12 +69,11 @@ def main():
     # Upload annotations to platform #
     ##################################
     # Init dataloop platform
-    dlp = PlatformInterface()
 
     # get the item from platform
-    item = dlp.projects.get(project_name='MyProject')\
+    item = dl.projects.get(project_name='MyProject')\
         .datasets.get(dataset_name='MyDataset')\
-        .items.get('/path/to/video.mp4')
+        .items.get(filepath='/path/to/video.mp4')
 
     # upload annotations
     item.annotations.upload(video_annotations.to_platform())

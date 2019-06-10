@@ -1,6 +1,17 @@
 options:
   docker: true
 pipelines:
+  default:
+    - step:
+        image: python:3.5
+        name: Tests
+        script:
+          - pip install -r requirements.txt
+          - python setup.py build
+          - python setup.py install
+          - dlp api setenv -e dev
+          - dlp login-secret -e "$TEST_USERNAME" -p "$TEST_PASSWORD" -i "$TEST_CLIENT_ID" -s "$TEST_CLIENT_SECRET"
+          - behave tests/features --no-source --no-timings --stop # run tests
   tags:
     "*":
       - step:

@@ -108,6 +108,8 @@ class ApiClient:
         ############
         # Initiate #
         ############
+        self._token = None
+        self._environment = None
         self.last_response = None
         self.last_request = None
         self.platform_exception = None
@@ -130,6 +132,7 @@ class ApiClient:
         # set token if input
         if token is not None:
             self.token = token
+        self.renew_status = 'pending'
 
         # validate token
         self.token_expired()
@@ -153,10 +156,14 @@ class ApiClient:
 
     @property
     def environment(self):
-        return self.io.get('url')
+        environment = self._environment
+        if environment is None:
+            environment = self.io.get('url')
+        return environment
 
     @environment.setter
     def environment(self, env):
+        self._environment = env
         self.io.put('url', env)
 
     @property
@@ -224,15 +231,19 @@ class ApiClient:
 
     @property
     def token(self):
-        environments = self.environments
-        token = None
-        if self.environment in environments:
-            if 'token' in environments[self.environment]:
-                token = environments[self.environment]['token']
+        token = self._token
+        if token is None:
+            environments = self.environments
+            if self.environment in environments:
+                if 'token' in environments[self.environment]:
+                    token = environments[self.environment]['token']
         return token
 
     @token.setter
     def token(self, token):
+        # set to variable
+        self._token = token
+        # set to cookie file
         environments = self.environments
         if self.environment in environments:
             environments[self.environment]['token'] = token
@@ -240,7 +251,26 @@ class ApiClient:
             environments[self.environment] = {'token': token}
         self.environments = environments
 
-    def add_environment(self, environment, audience, client_id, auth0_url, verify_ssl=True, token=None, alias=None):
+    @property
+    def refresh_token(self):
+        environments = self.environments
+        refresh_token = None
+        if self.environment in environments:
+            if 'refresh_token' in environments[self.environment]:
+                refresh_token = environments[self.environment]['refresh_token']
+        return refresh_token
+
+    @refresh_token.setter
+    def refresh_token(self, token):
+        environments = self.environments
+        if self.environment in environments:
+            environments[self.environment]['refresh_token'] = token
+        else:
+            environments[self.environment] = {'refresh_token': token}
+        self.environments = environments
+
+    def add_environment(self, environment, audience, client_id, auth0_url,
+                        verify_ssl=True, token=None, refresh_token=None, alias=None):
         environments = self.environments
         if environment in environments:
             logger.warning('Environment exists. Overwriting. env: %s' % environment)
@@ -253,6 +283,7 @@ class ApiClient:
                                      'auth0_url': auth0_url,
                                      'alias': alias,
                                      'token': token,
+                                     'refresh_token': refresh_token,
                                      'verify_ssl': verify_ssl}
         self.environments = environments
 
@@ -346,7 +377,7 @@ class ApiClient:
             # read beginning for mime type
             try:
                 _, ext = os.path.splitext(filepath)
-                if ext in mimetypes.types_map:
+                if ext.lower() in mimetypes.types_map:
                     mime = mimetypes.types_map[ext.lower()]
                 else:
                     import magic
@@ -355,8 +386,6 @@ class ApiClient:
             except:
                 mime = 'unknown'
 
-            with open(filepath, 'rb') as file:
-                info = fleep.get(file.read(128))
             # multipart uploading of the file
             with open(filepath, 'rb') as f:
                 file = requests_toolbelt.MultipartEncoder(fields={
@@ -460,9 +489,15 @@ class ApiClient:
             payload = jwt.decode(self.token, algorithms=['HS256'], verify=False)
             now = datetime.datetime.now().timestamp()
             exp = payload['exp']
+
             if now < exp:
                 return False
             else:
+                # check if need to renew
+                if (exp - now) < 3600 and self.renew_status == 'pending':
+                    # 1 hour till expiration and not already in renew process
+                    self.renew_status = 'working'
+                    self.renew_token()
                 return True
         except jwt.exceptions.DecodeError as err:
             logger.exception('Invalid token.')
@@ -711,7 +746,7 @@ class ApiClient:
                    'code_challenge': challenge,
                    'response_type': 'code',
                    'audience': audience,
-                   'scope': 'openid email',
+                   'scope': 'openid email offline_access',
                    'client_id': client_id,
                    'redirect_uri': redirect_url}
 
@@ -774,8 +809,11 @@ class ApiClient:
                     self.print_bad_response(resp)
                     login_success = False
                 else:
-                    final_token = resp.json()['id_token']
+                    response_dict = resp.json()
+                    final_token = response_dict['id_token']
                     self.token = final_token
+                    if 'refresh_token' in response_dict:
+                        self.refresh_token = response_dict['refresh_token']
                     payload = jwt.decode(self.token, algorithms=['HS256'], verify=False)
                     if 'email' in payload:
                         logger.info('Logged in: %s' % payload['email'])
@@ -792,3 +830,34 @@ class ApiClient:
             # shutdown local server
             server.server_close()
         return login_success
+
+    def renew_token(self):
+        if self.refresh_token is None:
+            self.renew_status = 'failed'
+            return
+        if self.environment in self.environments.keys():
+            env_params = self.environments[self.environment]
+            client_id = env_params['client_id']
+            auth0_url = env_params['auth0_url']
+        else:
+            logger.error('missing params for refreshing token')
+            self.renew_status = 'failed'
+            return
+
+        payload = {'grant_type': 'refresh_token',
+                   'client_id': client_id,
+                   'refresh_token': self.refresh_token}
+        resp = requests.request("POST",
+                                auth0_url + '/oauth/token',
+                                json=payload,
+                                headers={'content-type': 'application/json'})
+        if not resp.ok:
+            self.print_bad_response(resp)
+            self.renew_status = 'failed'
+        else:
+            response_dict = resp.json()
+            # get new token
+            final_token = response_dict['id_token']
+            self.token = final_token
+            # set status back to pending
+            self.renew_status = 'pending'

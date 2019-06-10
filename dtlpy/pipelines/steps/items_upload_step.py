@@ -19,9 +19,9 @@ class ItemsUploadStep(pipeline_step.PipelineStep):
         else:
             self.inputs = [{'name': 'dataset', 'from': 'dataset', 'by': 'ref', 'type': 'object'},
                            {'name': 'filepath', 'from': 'filepath',  'by': 'ref','type': 'string'}]
-            self.kwargs = {}
-            self.args = []
-            self.outputs = []
+            self.kwargs = dict()
+            self.args = list()
+            self.outputs = list()
 
     def execute(self, pipeline_dict):
         # input arguments for step

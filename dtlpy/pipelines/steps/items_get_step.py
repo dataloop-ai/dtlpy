@@ -19,8 +19,8 @@ class ItemsGetStep(pipeline_step.PipelineStep):
         else:
             self.inputs = [{'name': 'dataset', 'from': 'dataset',  'by': 'ref','type': 'object'},
                            {'name': 'item_id', 'from': 'item_id',  'by': 'ref','type': 'string'}]
-            self.kwargs = {}
-            self.args = []
+            self.kwargs = dict()
+            self.args = list()
             self.outputs = [{'name': 'item', 'type': 'object'}]
 
     def execute(self, pipeline_dict):

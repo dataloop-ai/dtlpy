@@ -19,9 +19,9 @@ class AnnotationsUploadStep(pipeline_step.PipelineStep):
         else:
             self.inputs = [{'name': 'item', 'from': 'item', 'by': 'ref', 'type': 'object'},
                            {'name': 'annotations', 'from': 'annotations', 'by': 'ref', 'type': 'List'}]
-            self.kwargs = {}
-            self.outputs = []
-            self.args = []
+            self.kwargs = dict()
+            self.outputs = list()
+            self.args = list()
 
     def execute(self, pipeline_dict):
         # input arguments for step

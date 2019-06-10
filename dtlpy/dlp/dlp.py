@@ -5,7 +5,7 @@ import os
 import subprocess
 import traceback
 
-from dtlpy import platform_interface
+import dtlpy as dlp
 
 
 def login_input():
@@ -118,41 +118,23 @@ def get_parser():
     optional = a.add_argument_group('optional named arguments')
     optional.add_argument('-r', '--remote-path', metavar='', help='remote path to upload to. default: /', default='/')
     optional.add_argument('-f', '--file-types', metavar='',
-                          help='Comma separated list of file types to upload, e.g ".jpg,.png". default: all', default=None)
+                          help='Comma separated list of file types to upload, e.g ".jpg,.png". default: all',
+                          default=None)
     optional.add_argument('-nw', '--num-workers', metavar='', help='num of threads workers', default=None)
     optional.add_argument('-u', '--upload-options', metavar='', help='"overwrite" or "merge"', default='merge')
 
     a = subparser_parser.add_parser('download', help='Download dataset to a local directory')
-    # TODO
-    # error when too much args - sphinx argparser fails
-    # check why, report..
-    optional = a.add_argument_group('optional named arguments')
-    optional.add_argument('-r', '--remote-path', metavar='', help='remote path to download from. default: /',
-                          default='/')
-    optional.add_argument('-di', '--dl-img', action='store_true', help='download image. default: True',
-                          default=True)
-    optional.add_argument('-da', '--dl-ann', action='store_true', help='download annotations json files: False',
-                          default=False)
-    optional.add_argument('-do', '--download_options', metavar='', help='download options CSV : merge/overwrite,relative-path/absolute-path ',
-                          default='')
-    optional.add_argument('-nw', '--num_workers', metavar='',
-                          help='number of download workers',
-                          default='')
-
-    optional.add_argument('-dn', '--dl-instance', action='store_true',
-                          help='download annotations instance default: False',
-                          default=False)
-    # optional.add_argument('-dim', '--dl-img-mask', action='store_true',
-    #                       help='download images with marked annotations. default: False',
-    #                       default=False)
-    # optional.add_argument('-o', '--opacity', metavar='', type=float,
-    #                       help='opacity when marking image. range:[0,1]. default: 1', default=1)
-    optional.add_argument('-l', '--local-path', metavar='', help='local path', default=None)
-    # optional.add_argument('-nw', '--num-workers', metavar='', help='num of threads workers', default=None)
-
     required = a.add_argument_group('required named arguments')
     required.add_argument('-p', '--project-name', metavar='', help='project name', required=True)
     required.add_argument('-d', '--dataset-name', metavar='', help='dataset name', required=True)
+    optional = a.add_argument_group('optional named arguments')
+    optional.add_argument('-r', '--remote-path', metavar='', help='remote path to download from. default: /', default='/')
+    optional.add_argument('-ao', '--annotation_options', metavar='', help='which annotation to download. options: json,instance,mask', default='')
+    optional.add_argument('-do', '--download_options', metavar='', help='download options CSV : merge/overwrite,relative-path/absolute-path', default='')
+    optional.add_argument('-di', '--dl_img', help='download image or not', action='store_true', default=True)
+    optional.add_argument('-nw', '--num_workers', metavar='', help='number of download workers', default=None)
+    # optional.add_argument('-o', '--opacity', metavar='', type=float, help='opacity when marking image. range:[0,1]. default: 1', default=1)
+    optional.add_argument('-l', '--local-path', metavar='', help='local path', default=None)
 
     ###################
     # files and items #
@@ -164,8 +146,8 @@ def get_parser():
     required = a.add_argument_group('required named arguments')
     required.add_argument('-p', '--project-name', metavar='', help='project name', required=True)
     required.add_argument('-d', '--dataset-name', metavar='', help='dataset name', required=True)
-    required.add_argument('-o', '--page', metavar='', help='dataset name', required=True)
     optional = a.add_argument_group('optional named arguments')
+    optional.add_argument('-o', '--page', metavar='', help='page number (integer)', default=0)
     optional.add_argument('-r', '--remote-path', metavar='', help='remote path', default='/')
 
     a = subparser_parser.add_parser('upload', help='Upload a single file')
@@ -335,7 +317,6 @@ def main():
         #########
         # Login #
         #########
-        dlp = platform_interface.PlatformInterface()
 
         if args.operation == 'login':
             dlp.login()
@@ -357,7 +338,7 @@ def main():
                 print('environment')
                 print(dlp.environment)
                 print('token')
-                print(dlp.token)
+                print(dlp.token())
 
             if args.api == 'setenv':
                 dlp.setenv(args.env)
@@ -437,35 +418,25 @@ def main():
                     logger.exception('Project wasnt found. name: %s' % args.project_name)
                     raise ValueError('Project wasnt found. name: %s' % args.project_name)
                 download_options = {}
-                if len(args.download_options)>0:
-                    do_arr= args.download_options.split(',')
-                    if len(do_arr)>0 and do_arr[0] == 'overwrite':
+                if len(args.download_options) > 0:
+                    do_arr = args.download_options.split(',')
+                    if len(do_arr) > 0 and do_arr[0] == 'overwrite':
                         download_options['overwrite'] = True
                         print('[INFO] Overwrite mode')
-                    if len(do_arr)>1 and do_arr[1] == 'relative-path':
+                    if len(do_arr) > 1 and do_arr[1] == 'relative-path':
                         download_options['relative_path'] = True
                         print('[INFO] relative path')
+                annotation_options = list()
+                if len(args.annotation_options) > 0:
+                    annotation_options = args.annotation_options.split(',')
                 project.datasets.download(query={'filenames': [args.remote_path]},
                                           dataset_name=args.dataset_name,
                                           local_path=args.local_path,
                                           download_item=args.dl_img,
+                                          annotation_options=annotation_options,
                                           download_options=download_options,
                                           num_workers=args.num_workers
-                                          # download_img_mask=args.dl_img_mask,
-                                          # opacity=args.opacity,
-                                          # filetypes=args.file_types,
-
                                           )
-                if args.dl_ann:
-                    project = dlp.projects.get(project_name=args.project_name)
-                    if project is None:
-                        logger.exception('Project wasnt found. name: %s' % args.project_name)
-                        raise ValueError('Project wasnt found. name: %s' % args.project_name)
-                    project.datasets.download_annotations(
-                        dataset_name=args.dataset_name,
-                        local_path=args.local_path
-                    )
-
             else:
                 print('Type "dlp datasets --help" for options')
 
@@ -480,10 +451,18 @@ def main():
             if args.files == 'ls':
                 project = dlp.projects.get(project_name=args.project_name)
                 if project is None:
-                    logger.exception('Project wasnt found. name: %s' % args.project_name)
-                    raise ValueError('Project wasnt found. name: %s' % args.project_name)
-
-                project.datasets.get(dataset_name=args.dataset_name).items.list()
+                    msg = 'Project was not found. name: %s' % args.project_name
+                    raise ValueError(msg)
+                dataset = project.datasets.get(dataset_name=args.dataset_name)
+                if isinstance(args.page, str):
+                    try:
+                        args.page = int(args.page)
+                    except ValueError:
+                        raise ValueError('Input --page must be integer')
+                pages = dataset.items.list(query={'filenames': [args.remote_path]},
+                                           page_offset=args.page)
+                pages.print()
+                print('Displaying page %d/%d' % (args.page + 1, pages.pages_count))
 
             elif args.files == 'upload':
                 project = dlp.projects.get(project_name=args.project_name)

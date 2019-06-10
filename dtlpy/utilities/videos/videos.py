@@ -7,8 +7,6 @@ import subprocess
 import shlex
 import logging
 
-from ... import platform_interface
-
 logger = logging.getLogger('dataloop.videos')
 
 
@@ -56,7 +54,7 @@ class Videos:
             ffmpeg.overwrite_output(stream).run()
         except Exception as e:
             logger.exception('ffmpeg error in disassemble:')
-            raise e
+            raise
         return basename
 
     @staticmethod
@@ -83,7 +81,7 @@ class Videos:
             ffmpeg.overwrite_output(stream).run()
         except Exception as e:
             logger.exception('ffmpeg error in disassemble:')
-            raise e
+            raise
 
         output_probe = Videos.get_info(output_filepath)
         start_time = eval(output_probe['streams'][0]['start_time'])
@@ -194,7 +192,7 @@ class Videos:
             ffmpeg.overwrite_output(stream).run(capture_stdout=True)
         except Exception as e:
             logger.exception('ffmpeg error in disassemble:')
-            raise e
+            raise
 
         # split_cmd = 'ffmpeg -y -i "%s" -b 0 -f mp4 -reset_timestamps 1 -map 0 -f segment -segment_frames %s "%s"' % (
         #     filepath, ','.join([str(int(i)) for i in list_frames_to_split]), output_regex)
@@ -237,7 +235,7 @@ class Videos:
     def upload_to_platform(project_name=None, project_id=None, dataset_name=None, dataset_id=None,
                            local_path=None, remote_path=None):
 
-        dlp = platform_interface.PlatformInterface()
+        import dtlpy as dlp
         if project_id is not None or project_name is not None:
             dlp.projects.get(project_name=project_name, project_id=project_id) \
                 .datasets.upload(dataset_name=dataset_name,

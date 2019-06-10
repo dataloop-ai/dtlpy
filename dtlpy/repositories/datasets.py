@@ -7,24 +7,24 @@ from multiprocessing.pool import ThreadPool
 import logging
 import traceback
 import datetime
+import json
 from urllib.parse import urlencode
 import threading
 import queue
 from progressbar import Bar, ETA, ProgressBar, Timer
 import numpy as np
-import sys
-from .. import entities, services, utilities
+from .. import entities, repositories, utilities, PlatformException, exceptions
+import attr
 
 
+@attr.s
 class Datasets:
     """
     Datasets repository
     """
-
-    def __init__(self, project):
-        self.logger = logging.getLogger('dataloop.repositories.datasets')
-        self.client_api = services.ApiClient()
-        self.project = project
+    client_api = attr.ib()
+    project = attr.ib()
+    logger = attr.ib(default=logging.getLogger('dataloop.repositories.datasets'))
 
     def list(self):
         """
@@ -39,10 +39,12 @@ class Datasets:
         success, response = self.client_api.gen_request(req_type='get',
                                                         path='/datasets?%s' % query_string)
         if success:
-            datasets = utilities.List([entities.Dataset(entity_dict=entity_dict, project=self.project)
-                                       for entity_dict in response.json()])
+            datasets = utilities.List([entities.Dataset.from_json(client_api=self.client_api,
+                                                                  _json=_json,
+                                                                  project=self.project)
+                                       for _json in response.json()])
         else:
-            raise self.client_api.platform_exception
+            raise PlatformException(response)
         return datasets
 
     def get(self, dataset_name=None, dataset_id=None):
@@ -57,25 +59,28 @@ class Datasets:
             success, response = self.client_api.gen_request(req_type='get',
                                                             path='/datasets/%s' % dataset_id)
             if success:
-                dataset = entities.Dataset(entity_dict=response.json(), project=self.project)
+                dataset = entities.Dataset.from_json(client_api=self.client_api,
+                                                     _json=response.json(),
+                                                     project=self.project)
             else:
-                raise self.client_api.platform_exception
+                raise PlatformException(response)
         elif dataset_name is not None:
             datasets = self.list()
             dataset = [dataset for dataset in datasets if dataset.name == dataset_name]
             if not dataset:
                 # empty list
                 self.logger.info('Dataset not found. dataset_name: %s', dataset_name)
-                dataset = None
+                raise PlatformException('404', 'Dataset not found.')
+                # dataset = None
             elif len(dataset) > 1:
                 # more than one dataset
                 self.logger.warning('More than one dataset with same name. Please "get" by id')
-                raise ValueError('More than one dataset with same name. Please "get" by id')
+                raise PlatformException('400', 'More than one dataset with same name.')
             else:
                 dataset = dataset[0]
         else:
             self.logger.exception('Must choose by at least one. "dataset_id" or "dataset_name"')
-            raise ValueError('Must choose by at least one. "dataset_id" or "dataset_name"')
+            raise PlatformException('400', 'Must choose by at least one. "dataset_id" or "dataset_name"')
         return dataset
 
     def download_annotations(self, dataset_name=None, dataset_id=None, local_path=None):
@@ -88,31 +93,29 @@ class Datasets:
         :return:
         """
         dataset = self.get(dataset_name=dataset_name, dataset_id=dataset_id)
-        if dataset is None:
-            raise ValueError('Dataset not found')
         success, response = self.client_api.gen_request(req_type='get',
                                                         path='/datasets/%s/annotations/zip' % dataset.id)
         if not success:
             # platform error
             self.logger.exception('Downloading annotations zip')
-            raise self.client_api.platform_exception
+            raise PlatformException(response)
         # create local path
         if local_path is None:
             if self.project is not None:
                 local_path = os.path.join(os.path.expanduser('~'), '.dataloop',
                                           'projects', self.project.name,
                                           'datasets', dataset.name,
-                                          'annotation')
+                                          'json')
             else:
                 local_path = os.path.join(os.path.expanduser('~'), '.dataloop',
                                           'datasets', dataset.id,
-                                          'annotation')
+                                          'json')
         else:
             if local_path.endswith('/*') or local_path.endswith(r'\*'):
                 # if end with * download directly to folder
                 local_path = local_path[:-2]
             else:
-                local_path = os.path.join(local_path, 'annotation')
+                local_path = os.path.join(local_path, 'json')
         # zip filepath
         annotations_zip = os.path.join(local_path, 'annotations.zip')
         if not os.path.isdir(local_path):
@@ -126,7 +129,7 @@ class Datasets:
             # unzipping annotations to directory
             utilities.Miscellaneous.unzip_directory(zip_filename=annotations_zip, to_directory=local_path)
 
-        except Exception as err:
+        except Exception:
             self.logger.exception('Getting annotations from zip ')
             raise
         finally:
@@ -149,31 +152,36 @@ class Datasets:
         :param local_path: local folder or filename to save to. if folder ends with * images with be downloaded directly to folder. else - an "images" folder will be create for the images
         :param filetypes: a list of filetype to download. e.g ['.jpg', '.png']
         :param num_workers: default - 32
-        :param download_options: 'merge' or 'overwrite'
+        :param download_options: {'overwrite': True/False, 'relative_path': True/False}
         :param save_locally: bool. save to disk or return a buffer
         :param download_item: bool. download image
         :param annotation_options: download annotations options: ['mask', 'img_mask', 'instance', 'json']
         :param opacity: for img_mask
         :param with_text: add label to annotations
         :param thickness: annotation line
-        :return:
+        :return: Output (list)
         """
 
         def download_single_item(i_item, item):
             try:
                 w_dataset = dataset.__copy__()
-                # info ='Downloading:{}'.format(item.filename)
-                # sys.stdout.write(info)
-                # sys.stdout.flush()
-                # sys.stdout.write("\b" * (len(info) + 1))
-                download = w_dataset.items.download(item_id=item.id,
-                                                    save_locally=save_locally,
-                                                    local_path=local_path,
-                                                    download_options=download_options,
-                                                    download_item=download_item,
-                                                    annotation_options=annotation_options,
-                                                    verbose=False,
-                                                    show_progress=True)
+                download = False
+                for i_try in range(num_tries):
+                    try:
+                        download = w_dataset.items.download(item_id=item.id,
+                                                            save_locally=save_locally,
+                                                            local_path=local_path,
+                                                            download_options=download_options,
+                                                            download_item=download_item,
+                                                            annotation_options=annotation_options,
+                                                            verbose=False,
+                                                            show_progress=True)
+                    except:
+                        if i_try > num_tries:
+                            raise
+                        else:
+                            i_try += 1
+                            continue
                 status[i_item] = 'download'
                 output[i_item] = download
                 success[i_item] = True
@@ -186,10 +194,21 @@ class Datasets:
                 progress.queue.put((status[i_item],))
 
         dataset = self.get(dataset_name=dataset_name, dataset_id=dataset_id)
-        if dataset is None:
-            raise ValueError('Datasets not found. See above for details')
         if annotation_options is None:
             annotation_options = list()
+        default_download_options = repositories.items.DEFAULT_DOWNLOAD_OPTIONS
+        if download_options is None:
+            download_options = default_download_options
+        else:
+            if not isinstance(download_options, dict):
+                msg = '"download_options" must be a dict. {<option>:<value>}. default: %s' % default_download_options
+                raise ValueError(msg)
+            tmp_options = default_download_options
+            for key, val in download_options.items():
+                if key not in tmp_options:
+                    raise ValueError('unknown download option: %s. known: %s' % (key, list(tmp_options.keys())))
+                tmp_options[key] = val
+            download_options = tmp_options
         if num_workers is None:
             num_workers = 32
         self.logger.info('Download workers number:{}'.format(num_workers))
@@ -199,6 +218,7 @@ class Datasets:
             # TODO
             pass
         # create local path
+        num_tries = 3
         if local_path is None:
             if self.project is None:
                 local_path = os.path.join(os.path.expanduser('~'), '.dataloop',
@@ -211,16 +231,18 @@ class Datasets:
         if local_path.endswith('/*') or local_path.endswith(r'\*'):
             folder_to_check = local_path[:-2]
         if os.path.isdir(folder_to_check):
-            self.logger.info('Local folder already exists:%s. merge/overwrite according to "download_options"')
+            self.logger.info('Local folder already exists:%s. merge/overwrite according to "download_options"',
+                             folder_to_check)
         else:
             self.logger.info('Creating new directory for download: %s', folder_to_check)
             os.makedirs(folder_to_check, exist_ok=True)
 
         # download annotations' json files
         if 'json' in annotation_options:
+            # a new folder named 'json' will be created under the "local_path"
             self.download_annotations(dataset_name=dataset_name,
                                       dataset_id=dataset_id,
-                                      local_path=os.path.join(local_path, 'json'))
+                                      local_path=os.path.join(local_path))
         paged_entity = dataset.items.list(query=query)
         output = [None for _ in range(paged_entity.items_count)]
         success = [None for _ in range(paged_entity.items_count)]
@@ -250,69 +272,75 @@ class Datasets:
         n_upload = status.count('download')
         n_exist = status.count('exist')
         n_error = status.count('error')
-        self.logger.info('Number of files downloaded: %d', n_upload)
-        self.logger.info('Number of files exists: %d', n_exist)
-        self.logger.info('Total number of files: %d', n_upload + n_exist)
+        self.logger.info('Number of files downloaded:{}'.format(n_upload))
+        self.logger.info('Number of files exists: {}'.format(n_exist))
+        self.logger.info('Total number of files: {}'.format(n_upload + n_exist))
         # log error
         if n_error > 0:
-            log_filepath = os.path.join(local_path, 'log_%s.txt' % datetime.datetime.now().strftime('%Y%m%d_%H%M%S'))
+            log_filepath = os.path.join(folder_to_check,
+                                        'log_%s.txt' % datetime.datetime.now().strftime('%Y%m%d_%H%M%S'))
             errors_list = [errors[i_job] for i_job, suc in enumerate(success) if suc is False]
+            ids_list = [output[i_job] for i_job, suc in enumerate(success) if suc is False]
+            errors_json = {item_id: error for item_id, error in zip(errors_list, ids_list)}
             with open(log_filepath, 'w') as f:
-                f.write('\n'.join(errors_list))
-            self.logger.warning('Errors in %d files. See %s for full log' % (n_error, log_filepath))
+                json.dump(errors_json, f, indent=4)
+            self.logger.warning('Errors in {} files. See %s for full log'.format(n_error, log_filepath))
 
         # remove empty cells
         output = [x for x in output if x is not None]
         return output
 
     def upload(self, dataset_name=None, dataset_id=None,
-               local_path=None, remote_path=None,
+               local_path=None, local_annotations_path=None, remote_path=None,
                upload_options=None, filetypes=None, num_workers=None):
         """
         Upload local file to dataset.
         Local filesystem will remain.
-        If "*" at the end of local_path (e.g. "\images\*") items will be uploaded without head directory
+        If "*" at the end of local_path (e.g. "/images/*") items will be uploaded without head directory
 
         :param dataset_name: optional - search by name
         :param dataset_id: optional - search by id
         :param local_path: local files to upload
+        :param local_annotations_path: path to dataloop format annotations json files.
+         annotations need to be in same files structure as "local_path"
         :param remote_path: remote path to save.
         :param upload_options: 'merge' or 'overwrite'
         :param filetypes: list of filetype to upload. e.g ['.jpg', '.png']. default is all
         :param num_workers:
-        :return:
+        :return: Output (list)
         """
 
         def callback(monitor):
             progress.queue.put((monitor.encoder.fields['path'], monitor.bytes_read))
 
-        def upload_single_file(i_item, filepath, relative_path):
+        def upload_single_file(i_item, filepath, annotations_filepath, relative_path):
             try:
                 w_dataset = dataset.__copy__()
                 # create remote path
-                remote_path_w = os.path.join(remote_path,
-                                             os.path.dirname(relative_path)).replace('\\', '/')
+                remote_path_w = os.path.join(remote_path, os.path.dirname(relative_path)).replace('\\', '/')
                 uploaded_filename_w = os.path.basename(filepath)
-                remote_filepath_w = os.path.join(remote_path_w,
-                                                 uploaded_filename_w).replace('\\', '/')
+                remote_filepath_w = os.path.join(remote_path_w, uploaded_filename_w).replace('\\', '/')
                 # check if item exists
-                items = w_dataset.items.get(filepath=remote_filepath_w)
-                if items is not None:
+                try:
+                    items = w_dataset.items.get(filepath=remote_filepath_w)
                     # items exists
                     if upload_options == 'overwrite':
                         # delete remote item
-                        result = w_dataset.items.delete(item_id=items[0].id)
+                        result, response = w_dataset.items.delete(item_id=items[0].id)
                         if not result:
-                            raise w_dataset.items.client_api.platform_exception
+                            raise PlatformException(response)
                     else:
                         status[i_item] = 'exist'
                         output[i_item] = relative_path
                         success[i_item] = True
                         return
+                except exceptions.NotFound:
+                    pass
                 # put file in gate
                 result = False
                 for _ in range(num_tries):
                     result = w_dataset.items.upload(filepath=filepath,
+                                                    annotations_filepath=annotations_filepath,
                                                     remote_path=remote_path_w,
                                                     uploaded_filename=uploaded_filename_w,
                                                     callback=callback)
@@ -341,10 +369,10 @@ class Datasets:
             self.logger.exception('"filetypes" should be a list of file extension. e.g [".jpg", ".png"]')
             return False
         dataset = self.get(dataset_name=dataset_name, dataset_id=dataset_id)
-        inculde_head_folder = True
+        include_head_folder = True
         if local_path.endswith('/*') or local_path.endswith(r'\*'):
             local_path = local_path[:-2]
-            inculde_head_folder = False
+            include_head_folder = False
         if not os.path.isdir(local_path):
             self.logger.exception('Directory doest exists: %s', local_path)
             raise OSError('Directory doest exists: %s' % local_path)
@@ -355,14 +383,30 @@ class Datasets:
 
         num_tries = 3
         filepaths = list()
+        annotations_filepaths = list()
         total_size = 0
         for root, subdirs, files in os.walk(local_path):
             for filename in files:
                 _, ext = os.path.splitext(filename)
                 if filetypes is None or ext in filetypes:
+                    # get full image filepath
                     filepath = os.path.join(root, filename)
+                    # extract item's size
                     total_size += os.path.getsize(filepath)
+                    # append to list
                     filepaths.append(filepath)
+                    # get annotations file
+                    if local_annotations_path is not None:
+                        # change path to annotations
+                        annotations_filepath = filepath.replace(local_path, local_annotations_path)
+                        # remove image extension
+                        annotations_filepath, _ = os.path.splitext(annotations_filepath)
+                        # add json extension
+                        annotations_filepath += '.json'
+                        # append to list
+                        annotations_filepaths.append(annotations_filepath)
+        if local_annotations_path is None:
+            annotations_filepaths = [None for _ in range(len(filepaths))]
         num_files = len(filepaths)
         output = [None for _ in range(num_files)]
         status = [None for _ in range(num_files)]
@@ -372,18 +416,20 @@ class Datasets:
         pool = ThreadPool(processes=num_workers)
         progress.start()
         try:
-            i_items = 0
-            for filepath in filepaths:
+            for i_item in range(len(filepaths)):
                 # update total files' size
+                filepath = filepaths[i_item]
+                # get matching annotation. None if annotations path was not in inputs
+                annotations_filepath = annotations_filepaths[i_item]
                 # update progressbar
-                if inculde_head_folder:
+                if include_head_folder:
                     relative_path = os.path.relpath(filepath, os.path.dirname(local_path))
                 else:
                     relative_path = os.path.relpath(filepath, local_path)
-                pool.apply_async(upload_single_file, kwds={'i_item': i_items,
+                pool.apply_async(upload_single_file, kwds={'i_item': i_item,
                                                            'filepath': filepath,
+                                                           'annotations_filepath': annotations_filepath,
                                                            'relative_path': relative_path})
-                i_items += 1
         except Exception as e:
             self.logger.exception(e)
             self.logger.exception(traceback.format_exc())
@@ -396,85 +442,103 @@ class Datasets:
         n_upload = status.count('upload')
         n_exist = status.count('exist')
         n_error = status.count('error')
-        self.logger.info('Number of files uploaded: %d', n_upload)
-        self.logger.info('Number of files exists: %d', n_exist)
-        self.logger.info('Number of errors: %d', n_error)
-        self.logger.info('Total number of files: %d', n_upload + n_exist)
+        self.logger.info('Number of files uploaded: {}'.format(n_upload))
+        self.logger.info('Number of files exists: {}'.format(n_exist))
+        self.logger.info('Number of errors: {}'.format(n_error))
+        self.logger.info('Total number of files: {}'.format(n_upload + n_exist))
         # log error
         if n_error > 0:
             log_filepath = os.path.join(local_path, 'log_%s.txt' % datetime.datetime.now().strftime('%Y%m%d_%H%M%S'))
             errors_list = [errors[i_job] for i_job, suc in enumerate(success) if suc is False]
             with open(log_filepath, 'w') as f:
                 f.write('\n'.join(errors_list))
-            self.logger.warning('Errors in %d files. See %s for full log' % (n_error, log_filepath))
+            self.logger.warning('Errors in {n_error} files. See {log_filepath} for full log'.format(n_error=n_error,
+                                                                                                    log_filepath=log_filepath))
         # remove empty cells
         output = [x for x in output if x is not None]
         return output
 
-    def delete(self, dataset_name=None, dataset_id=None):
+    def delete(self, dataset_name=None, dataset_id=None, sure=False, really=False):
         """
         Delete a dataset forever!
-
         :param dataset_name: optional - search by name
         :param dataset_id: optional - search by id
-        :return:
-        """
-        dataset = self.get(dataset_name=dataset_name, dataset_id=dataset_id)
-        success, response = self.client_api.gen_request(req_type='delete',
-                                                        path='/datasets/%s' % dataset.id)
-        if not success:
-            raise self.client_api.platform_exception
-        return True
+        :param sure: are you sure you want to delete?
+        :param really: really really?
 
-    def edit(self, dataset, system_metadata=False):
+        :return: True
         """
-        Edit dataset field
+        if sure and really:
+            dataset = self.get(dataset_name=dataset_name, dataset_id=dataset_id)
+            success, response = self.client_api.gen_request(req_type='delete',
+                                                            path='/datasets/%s' % dataset.id)
+            if not success:
+                raise PlatformException(response)
+            self.logger.info('Dataset was deleted successfully')
+            return True
+        else:
+            raise PlatformException(error='403',
+                                    message='Cant delete dataset from SDK. Please login to platform to delete')
+
+    def update(self, dataset, system_metadata=False):
+        """
+        Update dataset field
         :param dataset: Dataset entity
         :param system_metadata: bool
-        :return:
+        :return: Dataset object
         """
         url_path = '/datasets/%s' % dataset.id
         if system_metadata:
             url_path += '?system=true'
         success, response = self.client_api.gen_request(req_type='patch',
                                                         path=url_path,
-                                                        json_req=dataset.to_dict())
+                                                        json_req=dataset.to_json())
         if success:
+            self.logger.info('Dataset was updated successfully')
             return dataset
         else:
-            self.logger.exception('Platform error editing dataset. id: %s' % dataset.id)
-            raise self.client_api.platform_exception
+            self.logger.exception('Platform error updating dataset. id: %s' % dataset.id)
+            raise PlatformException(response)
 
-    def create(self, dataset_name, classes=None, driver=None):
+    def create(self, dataset_name, labels=None, driver=None, attributes=None):
         """
         Create a new dataset
 
         :param dataset_name: name
-        :param classes: dictionary of labels and colors
+        :param attributes:
+        :param labels: dictionary of labels and colors
         :param driver: dictionary of labels and colors
-        :return:
+        :return: Dataset object
         """
-        # classes to list
-        if classes is not None:
-            classes = entities.Dataset.serialize_classes(classes)
+        # labels to list
+        if labels is not None:
+            labels = entities.Dataset.serialize_labels(labels)
         else:
-            classes = ''
+            labels = list()
         # get creator from token
         if self.project is None:
             self.logger.exception('Cant create dataset with no project. Try same command from a "project" entity')
             raise ValueError('Cant create dataset with no project. Try same command from a "project" entity')
         payload = {'name': dataset_name,
-                   'projects': [self.project.id],
-                   'classes': classes}
+                   'projects': [self.project.id]}
         if driver is not None:
             payload['driver'] = driver
         success, response = self.client_api.gen_request(req_type='post',
                                                         path='/datasets',
                                                         json_req=payload)
         if success:
-            dataset = entities.Dataset(entity_dict=response.json(), project=self.project)
+            dataset = entities.Dataset.from_json(client_api=self.client_api,
+                                                 _json=response.json(),
+                                                 project=self.project)
+            # create ontology and recipe
+            recipe = dataset.recipes.create(ontology_ids=None, labels=labels, attributes=attributes)
+            # patch recipe to dataset
+            dataset.metadata['system']['recipes'] = [recipe.id]
+            self.update(dataset=dataset, system_metadata=True)
+            dataset = self.get(dataset_name=dataset.name)
         else:
-            raise self.client_api.platform_exception
+            raise PlatformException(response)
+        self.logger.info('Dataset was created successfully. Dataset id: %s' % dataset.id)
         return dataset
 
     def set_items_metadata(self, dataset_name=None, dataset_id=None, query=None,
@@ -488,16 +552,16 @@ class Datasets:
         :param key_val_list: list of dictioanry to set in metadata. e.g [{'split': 'training'}, {'split': 'validation'}
         :param percent: list of percentages to set the key_val_list
         :param random: bool. shuffle the items before setting the metadata
-        :return:
+        :return: Output (list)
         """
 
         def set_single_item(i_item, item, key_val):
             try:
-                metadata = item.to_dict()
+                metadata = item.to_json()
                 for key, val in key_val.items():
                     metadata[key] = val
                 item.from_dict(metadata)
-                dataset.items.edit(item)
+                dataset.items.update(item)
                 success[i_item] = True
             except Exception as err:
                 success[i_item] = False
@@ -505,14 +569,15 @@ class Datasets:
 
         if key_val_list is None or percent is None:
             self.logger.exception('Must input name and percents')
-            raise ValueError('Must input name and percents')
+            raise PlatformException('400', 'Must input name and percents')
         if not (isinstance(key_val_list, list) and isinstance(key_val_list[0], dict)):
             self.logger.exception(
                 '"key_val" must be a list of dictionaries of keys and values to store in items metadata')
-            raise ValueError('"key_val" must be a list of dictionaries of keys and values to store in items metadata')
+            raise PlatformException('400',
+                                    '"key_val" must be a list of dictionaries of keys and values to store in items metadata')
         if np.sum(percent) != 1:
             self.logger.exception('"percent" must sum up to 1')
-            raise ValueError('"percent" must sum up to 1')
+            raise PlatformException('400', '"percent" must sum up to 1')
         # start
         dataset = self.get(dataset_name=dataset_name, dataset_id=dataset_id)
         pages = dataset.items.list(query=query)

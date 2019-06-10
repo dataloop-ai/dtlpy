@@ -10,39 +10,31 @@ Login
 --------------------------
 .. code-block:: python
 
-	from dtlpy import PlatformInterface
-	# init
-	dlp = PlatformInterface()
+	# import dtlpy
+	import dtlpy as dl
 	# login
-	dlp.login()
+	dl.login()
 	# print projects
-	dlp.projects.list().print()
+	dl.projects.list().print()
 
 Create project and dataset
 --------------------------
 .. code-block:: python
 
-	project = dlp.projects.create(project_name='MyProject')
+	project = dl.projects.create(project_name='MyProject')
 
-	dataset = project.datasets.create(dataset_name='MyDataset',
-									  classes={'pinky': (255, 0, 0), 'the brain': (0, 0, 255)})
-
-Delete project and dataset
---------------------------
-.. code-block:: python
-
-	result = project.datasets.delete(dataset_name='MyDataset')
-
-	dlp.projects.delete(project_name='MyProject')
+	dataset = project.datasets.create(dataset_name='MyDataset', 
+					labels={'pinky': (255, 0, 0), 'the brain': (0, 0, 255)})
 
 List projects, datasets
 -----------------------
 .. code-block:: python
 
 	# list projects
-	projects = dlp.projects.list().print()
+	projects = dl.projects.list()
+	projects.print()
 
-	project = dlp.projects.get(project_name='MyProject')
+	project = dl.projects.get(project_name='MyProject')
 	project.print()
 
 	# list dataset
@@ -58,12 +50,12 @@ You can create a generator of items with different queries
 
 .. code-block:: python
 
-	dataset = dlp.projects.get(project_name='MyProject').datasets.get(dataset_name='MyDataset')
+	dataset = dl.projects.get(project_name='MyProject').datasets.get(dataset_name='MyDataset')
 	pages = dataset.items.list()
 
 	for page in pages:
 		for item in page:
-			print(item.name)
+			item.print()
 
 Upload and download items
 -------------------------
@@ -83,18 +75,10 @@ Upload and download items
 	)
 
 	# download dataset
-	filenames = project.datasets.download(
+	filenames = dataset.download(
 		dataset_name='MyDataset',
 		local_path='/home/images',
-		download_options='merge'
-	)
-	# upload video
-	Videos.split_and_upload(
-		filepath='/home/videos/messi.mp4',
-		project_name='MyProject',
-		dataset_name='MyDataset',
-		split_pairs=[(0, 5), (10, 20)],
-		remote_path='/'
+		download_options={'overwrite': True, 'relative_path': True}
 	)
 
 More...

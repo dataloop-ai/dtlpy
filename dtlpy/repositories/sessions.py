@@ -1,10 +1,5 @@
 import logging
-import datetime
-import anytree
-import json
-from urllib.parse import urlencode
-
-from .. import services, entities, utilities, repositories
+from .. import entities, utilities, repositories, PlatformException
 
 
 class Sessions:
@@ -12,54 +7,56 @@ class Sessions:
     Sessions repository
     """
 
-    def __init__(self, task=None):
+    def __init__(self, client_api, task=None):
         self.logger = logging.getLogger('dataloop.pipelines')
-        self.client_api = services.ApiClient()
+        self.client_api = client_api
         self.task = task
 
     def list(self):
         """
         A list of session for project
-        :return:
+        :return: List of Sessions
         """
         if self.task is None:
             raise ValueError('cant list sessions without task id')
         success, response = self.client_api.gen_request(req_type='get',
                                                         path='/tasks/%s/sessions' % self.task.id)
         if success:
-            sessions = utilities.List([entities.Session(entity_dict=entity_dict)
-                                       for entity_dict in response.json()['items']])
+            sessions = utilities.List(
+                [entities.Session.from_json(_json=_json,
+                                            task=self.task)
+                 for _json in response.json()['items']])
         else:
             self.logger.exception('Platform error listing sessions')
-            raise self.client_api.platform_exception
+            raise PlatformException(response)
         return sessions
 
     def get(self, session_id):
         """
         Get a Session object
         :param session_id: optional - search by id
-        :param session_name: optional - search by name
-        :return:
+        :return: Session object
         """
         success, response = self.client_api.gen_request(req_type='get',
                                                         path='/sessions/%s' % session_id)
         if success:
             res = response.json()
             if len(res) > 0:
-                session = entities.Session(entity_dict=res)
+                session = entities.Session.from_json(_json=res,
+                                                     task=self.task)
             else:
                 session = None
         else:
             self.logger.exception(
                 'Platform error getting session. id: %s' % session_id)
-            raise self.client_api.platform_exception
+            raise PlatformException(response)
         return session
 
     def create(self, input_parameters):
         """
         Create a new session
         :param input_parameters: inputs dictionary. keys as specified in Task
-        :return:
+        :return: Session object
         """
         if self.task is None:
             raise ValueError('cant create a session without task id')
@@ -69,11 +66,12 @@ class Sessions:
                                                         path='/tasks/%s/sessions' % self.task.id,
                                                         json_req=input_parameters)
         if success:
-            session = entities.Session(entity_dict=response.json())
+            session = entities.Session.from_json(_json=response.json(),
+                                                 task=self.task)
             return session
         else:
             self.logger.exception('Platform error creating a session')
-            raise self.client_api.platform_exception
+            raise PlatformException(response)
 
     #
     # def tree(self):
@@ -154,10 +152,10 @@ class Sessions:
         :return:
         """
         from ..pipelines import PipelineRunner
-        from ..platform_interface import PlatformInterface
+        import dtlpy as dlp
 
         if session_id is None and session is None or \
-                                session_id is not None and session is not None:
+                session_id is not None and session is not None:
             # check that exactly one exists
             msg = 'Must supply exactly one of inputs: "session_id" or "session"'
             self.logger.exception(msg)
@@ -193,7 +191,7 @@ class Sessions:
 
             # run locally
             self.logger.info('Running session. session_id: %s' % session.id)
-            tasks_repo = repositories.Tasks()
+            tasks_repo = repositories.Tasks(client_api=self.client_api)
             task = tasks_repo.get(task_id=session.taskId)
             pipelines = task.pipeline
             for pipeline_type in run_pipelines_types:
@@ -208,7 +206,7 @@ class Sessions:
                 pipeline_dict = pipelines[pipeline_type]
                 self.logger.info('Running pipeline type: %s' % pipeline_type)
                 # Run pipeline
-                pipeline_runner = PipelineRunner(PlatformInterface(), reporter=reporter)
+                pipeline_runner = PipelineRunner(platform_interface=dlp, reporter=reporter)
                 # load pipe from yml
                 pipeline_runner.from_dictionary(pipeline_dict)
                 # get pipelines context
@@ -217,7 +215,7 @@ class Sessions:
                 session.input['platform_interface'] = pipeline_runner.platform_interface
                 session.input['session_id'] = session.id
                 if reporter is not None:
-                    session.input['globals_msg_thread_queue'] = reporter.queue
+                    session.input['globals_context_reporter'] = reporter.context_reporter
                 for key, val in session.input.items():
                     current_context[key] = val
                 out_context = pipeline_runner.run(context=current_context)
@@ -292,7 +290,7 @@ class Sessions:
     #              input_params=input_params,
     #              remote_run=remote_run)
 
-    def edit(self):
+    def update(self):
         pass
 
     def delete(self, session_id=None, session=None):
@@ -300,7 +298,7 @@ class Sessions:
         Delete a session
         :param session_id: optional - search by id
         :param session: optional - Session object
-        :return:
+        :return: True
         """
         if session_id is not None:
             pass
@@ -315,5 +313,5 @@ class Sessions:
                                                         path='/sessions/%s' % session_id)
         if not success:
             self.logger.exception('Platform error deleting a session:')
-            raise self.client_api.platform_exception
+            raise PlatformException(response)
         return True

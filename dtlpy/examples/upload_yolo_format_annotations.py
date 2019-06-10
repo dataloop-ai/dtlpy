@@ -4,7 +4,7 @@ def main():
     Yolo annotations format:
     For each image there is a text file with same name that has a list of box location and label index
     """
-    from dtlpy import PlatformInterface
+    import dtlpy as dl
     from dtlpy.utilities.annotations import ImageAnnotation
     from PIL import Image
     import os
@@ -13,9 +13,8 @@ def main():
     labels_filepath = r'E:\Projects\obj.names'
 
     # init platform and get dataset
-    dlp = PlatformInterface()
-    project = dlp.projects.get('MyProject')
-    dataset = project.datasets.get('MyDataset')
+    project = dl.projects.get(project_name='MyProject')
+    dataset = project.datasets.get(dataset_name='MyDataset')
 
     # read all images from local dataset
     img_filepaths = list()
@@ -34,7 +33,7 @@ def main():
         img = Image.open(filepath)
         width, height = img.size()
         # upload item to platform
-        item = dataset.items.upload(filepath=filepath)
+        item = dataset.items.update(filepath=filepath)
 
         # get YOLO annotations
         _, ext = os.path.splitext(filepath)

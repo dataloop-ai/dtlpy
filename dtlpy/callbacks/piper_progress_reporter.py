@@ -6,11 +6,10 @@ def main():
     import time
 
     class PiperProgressReporter(Callback):
-        def __init__(self, session_id, thread_queue):
+        def __init__(self, context_reporter):
             super(PiperProgressReporter, self).__init__()
             self.logger = logging.getLogger('dataloop.callback')
-            self.session_id = session_id
-            self.thread_queue = thread_queue
+            self.context_reporter = context_reporter
             self.results = dict()
             self.epoch_time_start = None
 
@@ -21,10 +20,10 @@ def main():
             self.epoch_time_start = time.time()
 
         def on_epoch_end(self, epoch, logs=None):
-            self.results[epoch] = dict(zip(list(logs.keys()), np.array(list(logs.values())).tolist()))
+            logs_dict = dict(zip(list(logs.keys()), [float(num) for num in np.array(list(logs.values())).tolist()]))
+            self.results[epoch] = logs_dict
             self.results[epoch]['runtime'] = time.time() - self.epoch_time_start
-            self.thread_queue.put({'type': 'train_progress',
-                                   'body': {'train_progress': self.results}
-                                   })
+            self.context_reporter.report_output(output={'epoch': epoch,
+                                                        'logs': logs_dict})
 
     return PiperProgressReporter

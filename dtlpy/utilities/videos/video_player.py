@@ -7,8 +7,7 @@ import os
 import PIL.ImageTk
 import PIL.Image
 import numpy as np
-
-from dtlpy import PlatformInterface
+import dtlpy as dl
 from dtlpy.utilities.annotations import VideoAnnotation
 
 
@@ -28,11 +27,10 @@ class VideoPlayer:
         self.video_source = None
         self.video_annotations = None
         self.local_annotations_filename = None
-        self.classes = None
+        self.labels = None
         self.project = None
         self.dataset = None
         self.item = None
-        self.platform_interface = PlatformInterface()
         #############################
         # load video and annotation #
         #############################
@@ -279,7 +277,7 @@ class VideoPlayer:
         item_id = self.platform_params['item_id']
 
         # load remote item
-        self.project = self.platform_interface.projects.get(project_name=project_name, project_id=project_id)
+        self.project = dl.projects.get(project_name=project_name, project_id=project_id)
         if self.project is None:
             self.logger.exception('Project doesnt exists. name: %s, id: %s', project_name, project_id)
             raise ValueError('Project doesnt exists. name: %s, id: %s' % (project_name, project_id))
@@ -291,14 +289,14 @@ class VideoPlayer:
         if self.item is None:
             self.logger.exception('Item doesnt exists. name: %s, id: %s', item_filepath, item_id)
             raise ValueError('Item doesnt exists. name: %s, id: %s' % (item_filepath, item_id))
-        self.classes = self.dataset.classes
+        self.labels = {label.tag: label.rgb() for label in self.dataset.labels}
         _, ext = os.path.splitext(self.item.filename[1:])
         video_filename = os.path.join(self.dataset.__get_local_path__(), self.item.filename[1:])
         if not os.path.isdir(os.path.dirname(video_filename)):
             os.makedirs(os.path.dirname(video_filename))
         if not os.path.isfile(video_filename):
             self.dataset.items.download(item_id=self.item.id, local_path=video_filename)
-        annotations = [ann.entity_dict for ann in self.item.annotations.list()]
+        annotations = [ann.to_json() for ann in self.item.annotations.list()]
         self.video_source = video_filename
         self.video_annotations = VideoAnnotation()
         self.video_annotations.annotations = annotations
@@ -356,10 +354,10 @@ class VideoPlayer:
         :param label:
         :return:
         """
-        if label not in self.classes:
+        if label not in self.labels:
             print('[WARNING] label not in dataset labels: %s' % label)
             return (255, 0, 0)
-        color = self.classes[label]
+        color = self.labels[label]
         if isinstance(color, str):
             if color.startswith('rgb'):
                 color = tuple(eval(color.lstrip('rgb')))
@@ -538,5 +536,5 @@ class VideoCapture:
 
 if __name__ == '__main__':
     def test():
-        v = VideoPlayer(project_name='Feb19_shelf_zed', dataset_name='try1', item_id='5c922994507c2b001cb2e5ce')
+        v = VideoPlayer(project_name='Feb19_shelf_zed', dataset_name='100videos_webm_fixed', item_filepath='/workflow/Batch1/Rajesh/day_1/2019-03-11 16.19.34.webm')
     test()

@@ -1,8 +1,7 @@
 import os
 import logging
-from progressbar import Bar, ETA, ProgressBar, Timer, FileTransferSpeed, DataSize
 
-from .. import entities, services, utilities, repositories
+from .. import entities, utilities, PlatformException, exceptions
 
 
 class Artifacts:
@@ -10,12 +9,12 @@ class Artifacts:
     Artifacts repository
     """
 
-    def __init__(self, project=None, dataset=None):
+    def __init__(self, client_api, project=None, dataset=None):
         self.logger = logging.getLogger('dataloop.packages')
-        self.client_api = services.ApiClient()
+        self.client_api = client_api
         if project is None and dataset is None:
             self.logger.exception('at least one must be not None: dataset or project')
-            raise ValueError('at least one must be not None: dataset or project')
+            raise PlatformException('400', 'at least one must be not None: dataset or project')
         self.project = project
         self._dataset = dataset
         self._items_repository = None
@@ -34,29 +33,37 @@ class Artifacts:
     def dataset(self):
         if self._dataset is None:
             # get dataset from project
-            self._dataset = self.project.datasets.get(dataset_name='Binaries')
+            try:
+                self._dataset = self.project.datasets.get(dataset_name='Binaries')
+            except exceptions.NotFound:
+                self._dataset = None
             if self._dataset is None:
                 self.logger.warning(
-                    'Dataset for packages was not found. Creating... dataset name: "Binaries". project_id=%s' % self.project.id)
+                    'Dataset for packages was not found. Creating... dataset name: "Binaries". project_id={id}'.format(
+                        id=self.project.id))
                 self._dataset = self.project.datasets.create(dataset_name='Binaries')
                 # add system to metadata
-                self._dataset.entity_dict['metadata']['system']['scope'] = 'system'
-                self.project.datasets.edit(dataset=self._dataset, system_metadata=True)
+                if 'metadata' not in self._dataset.to_json():
+                    self._dataset.metadata = dict()
+                if 'system' not in self._dataset.metadata:
+                    self._dataset.metadata['system'] = dict()
+                self._dataset.metadata['system']['scope'] = 'system'
+                self.project.datasets.update(dataset=self._dataset, system_metadata=True)
         return self._dataset
 
     def list(self, session_id=None, task_id=None):
-            """
-            List of artifacts
-            :return:
-            """
-            if session_id is not None:
-                pages = self.items_repository.list(query={'directories': ['/artifacts/sessions/%s' % session_id]})
-            elif task_id is not None:
-                pages = self.items_repository.list(query={'directories': ['/artifacts/tasks/%s' % task_id]})
-            else:
-                raise ValueError('Must input one search parameter')
-            items = [item for page in pages for item in page]
-            return items
+        """
+        List of artifacts
+        :return: list of artifacts
+        """
+        if session_id is not None:
+            pages = self.items_repository.list(query={'directories': ['/artifacts/sessions/%s' % session_id]})
+        elif task_id is not None:
+            pages = self.items_repository.list(query={'directories': ['/artifacts/tasks/%s' % task_id]})
+        else:
+            raise ValueError('Must input one search parameter')
+        items = [item for page in pages for item in page]
+        return utilities.List(items)
 
     def get(self, artifact_id=None, artifact_name=None,
             session_id=None, task_id=None):
@@ -68,7 +75,7 @@ class Artifacts:
         :param artifact_name:
         :param session_id:
         :param task_id:
-        :return:
+        :return: Artifact object
         """
         if artifact_id is not None:
             artifact = self.items_repository.get(item_id=artifact_id)
@@ -99,7 +106,7 @@ class Artifacts:
         :param artifact_name:
         :param session_id:
         :param task_id:
-        :return:
+        :return: Artifact object
         """
         if download_options is None:
             download_options = {'relative_path': False}
@@ -116,7 +123,7 @@ class Artifacts:
             elif task_id is not None:
                 directories = '/artifacts/tasks/%s' % task_id
             else:
-                raise ValueError('Must input task or session (id or entity)')
+                raise PlatformException('400', 'Must input task or session (id or entity)')
             query = {'directories': [directories]}
             if not (local_path.endswith('/*') or local_path.endswith(r'\*')):
                 # download directly to folder
@@ -132,10 +139,6 @@ class Artifacts:
                                 task_id=task_id,
                                 artifact_name=artifact_name)
 
-            if artifact is None:
-                msg = 'Cant find artifact. remote_filename: %s.' % artifact_name
-                self.logger.exception(msg=msg)
-                raise ValueError(msg)
             artifact = self.items_repository.download(item_id=artifact.id,
                                                       save_locally=True,
                                                       local_path=local_path,
@@ -161,7 +164,7 @@ class Artifacts:
         :param task:
         :param session_id:
         :param session:
-        :return:
+        :return: Artifact Object
         """
         if session_id is not None or session is not None:
             if session is not None:
@@ -188,10 +191,11 @@ class Artifacts:
                                                     upload_options=upload_options)
         else:
             raise ValueError('Missing file or directory: %s' % filepath)
+        self.logger.debug('Artifact uploaded successfully')
         return artifact
 
     def delete(self, artifact_id):
         pass
 
-    def edit(self):
+    def update(self):
         pass

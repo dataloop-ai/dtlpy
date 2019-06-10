@@ -1,82 +1,85 @@
 import logging
-from .. import entities, repositories, utilities
+from .. import entities, utilities
+import attr
 
 logger = logging.getLogger('dataloop.package')
-
-
+@attr.s
 class PagedEntities:
     """
     Pages object
     """
+    page_offset = attr.ib()
+    page_size = attr.ib()
+    query = attr.ib()
+    items_repository = attr.ib()
+    client_api = attr.ib()
+    item_entity = attr.ib(default=entities.Item)
+    has_next_page = attr.ib(default=False)
+    total_pages_count = attr.ib(default=0)
+    items_count = attr.ib(default=0)
 
-    def __init__(self, items, query, page_offset, page_size, item_entity=None):
-        # entity for item type (Package, Artifact etc..)
-        if item_entity is None:
-            item_entity = entities.Item
-        self.item_entity = item_entity
+    # items list
+    items = attr.ib(default=utilities.List())
 
-        self.items_repository = items
-        self.query = query
-        self.__has_next_page = False
-        self.__total_pages_count = 0
-        self.__total_items_count = 0
-        self.__page_offset = page_offset
-        self.__page_size = page_size
-        self.__items = utilities.List()
-        
     def process_result(self, result):
         if 'page_offset' in result:
-            self.__page_offset = result['page_offset']
+            self.page_offset = result['page_offset']
         if 'page_size' in result:
-            self.__page_size = result['page_size']
+            self.page_size = result['page_size']
         if 'hasNextPage' in result:
-            self.__has_next_page = result['hasNextPage']
+            self.has_next_page = result['hasNextPage']
         if 'totalItemsCount' in result:
-            self.__total_items_count = result['totalItemsCount']
+            self.items_count = result['totalItemsCount']
         if 'totalPagesCount' in result:
-            self.__total_pages_count = result['totalPagesCount']
+            self.total_pages_count = result['totalPagesCount']
         if 'items' in result:
-            self.__items = utilities.List(
-                [self.item_entity(entity_dict=entity_dict, dataset=self.items_repository.dataset)
-                 for entity_dict in result['items']])
+            self.items = utilities.List(
+                [self.item_entity.from_json(client_api=self.client_api,
+                                            _json=_json,
+                                            dataset=self.items_repository.dataset)
+                 for _json in result['items']])
 
     def __iter__(self):
-        self.__page_offset = 0
-        self.__has_next_page = True
-        while self.__has_next_page:
+        self.page_offset = 0
+        self.has_next_page = True
+        while self.has_next_page:
             self.get_page()
-            self.__page_offset += 1
+            self.page_offset += 1
             yield self.items
 
     def get_page(self):
         result = self.items_repository.get_list(query=self.query,
-                                                page_offset=self.__page_offset,
-                                                page_size=self.__page_size)
+                                                page_offset=self.page_offset,
+                                                page_size=self.page_size)
         self.process_result(result)
 
     def print(self):
         self.items.print()
 
-    @property
-    def items(self):
-        return self.__items
-
-    @property
-    def pages_count(self):
-        return self.__total_pages_count
-
-    @property
-    def items_count(self):
-        return self.__total_items_count
-
     def next_page(self):
-        self.__page_offset += 1
+        """
+        Brings the next page of items from host
+
+        :return:
+        """
+        self.page_offset += 1
         self.get_page()
 
     def prev_page(self):
-        self.__page_offset -= 1
+        """
+        Brings the previous page of items from host
+
+        :return:
+        """
+        self.page_offset -= 1
         self.get_page()
 
     def go_to_page(self, page=0):
-        self.__page_offset = page
+        """
+        Brings specified page of items from host
+
+        :param page: page number
+        :return:
+        """
+        self.page_offset = page
         self.get_page()

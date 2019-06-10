@@ -19,8 +19,8 @@ class DatasetsDownloadStep(pipeline_step.PipelineStep):
         else:
             self.inputs = [{'name': 'platform_interface', 'from': 'platform_interface',  'by': 'ref','type': 'object'},
                            {'name': 'dataset', 'from': 'dataset', 'by': 'ref', 'type': 'object'},]
-            self.kwargs = {}
-            self.args = []
+            self.kwargs = dict()
+            self.args = list()
             self.outputs = [{'name': 'filepath', 'type': 'string'}]
 
     def execute(self, pipeline_dict):

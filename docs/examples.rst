@@ -22,6 +22,8 @@ Content
 
 :ref:`9`
 
+:ref:`10`
+
 .. _1:
 
 Add metadata to items
@@ -100,4 +102,9 @@ Convert and upload:
 .. literalinclude:: ../dtlpy/examples/upload_segmentation_annotations_from_file.py
 
 
+.. _10:
+
+Copy folder to another dataset
+------------------------------
+.. literalinclude:: ../dtlpy/examples/annotate_video_using_model_and_tracker.py
 

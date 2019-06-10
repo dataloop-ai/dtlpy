@@ -18,8 +18,8 @@ class AnnotationsGetBatchStep(pipeline_step.PipelineStep):
             self.outputs = step_dict['outputs']
         else:
             self.inputs = [{'name': 'items', 'from': 'items', 'by': 'ref', 'type': 'object'}]
-            self.kwargs = {}
-            self.args = []
+            self.kwargs = dict()
+            self.args = list()
             self.outputs = [{'name': 'annotations', 'type': 'list'}]
 
     def execute(self, pipeline_dict):

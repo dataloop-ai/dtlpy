@@ -19,8 +19,8 @@ class SessionsGetStep(pipeline_step.PipelineStep):
         else:
             self.inputs = [{'name': 'platform_interface', 'from': 'platform_interface', 'by': 'ref', 'type': 'object'},
                            {'name': 'session_id', 'from': 'session_id',  'by': 'ref','type': 'string'}]
-            self.kwargs = {}
-            self.args = []
+            self.kwargs = dict()
+            self.args = list()
             self.outputs = [{'name': 'session', 'type': 'object'}]
 
     def execute(self, pipeline_dict):

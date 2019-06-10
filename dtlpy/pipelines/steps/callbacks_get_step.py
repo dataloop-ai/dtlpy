@@ -25,8 +25,8 @@ class CallbacksGetStep(pipeline_step.PipelineStep):
             self.outputs = step_dict['outputs']
         else:
             self.inputs = [{'name': 'callback_names', 'from': 'callback_names', 'by': 'ref', 'type': 'object'}]
-            self.kwargs = {}
-            self.args = []
+            self.kwargs = dict()
+            self.args = list()
             self.outputs = [{'name': 'pages', 'type': 'List'}]
 
     def execute(self, pipeline_dict):

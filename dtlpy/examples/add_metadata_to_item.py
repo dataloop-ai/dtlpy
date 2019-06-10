@@ -3,16 +3,14 @@ def main():
     Add any metadata to item
     :return:
     """
-    from dtlpy.platform_interface import PlatformInterface
+    # import Dataloop SDK
+    import dtlpy as dl
+    # get dataset
+    dataset = dl.projects.get(project_name='Project').datasets.get(dataset_name='Dataset')
+    # get item
+    item = dataset.items.get(filename='/file')
 
-    dlp = PlatformInterface()
-
-    dataset = dlp.projects.get('ImageNet').datasets.get(dataset_name='sample')
-
-    item = dataset.items.get(filename='/000000001036.jpg')
-
-    metadata = item.metadata
-    metadata['user']['MyKey'] = 'MyVal'
-    item.metadata = metadata
-
-    dataset.items.edit(item=item, system_metadata=True)
+    # modify metadata
+    item.metadata['user']['MyKey'] = 'MyVal'
+    # update item
+    item.update()

@@ -21,3 +21,5 @@ from .packages import Packages
 from .tasks import Tasks
 from .projects import Projects
 from .sessions import Sessions
+from .ontologies import Ontologies
+from .recipes import Recipes

@@ -8,7 +8,7 @@ def main():
     from keras.applications.imagenet_utils import decode_predictions
     from keras.applications.inception_v3 import InceptionV3, preprocess_input
 
-    from dtlpy import PlatformInterface
+    import dtlpy as dl
     from dtlpy.utilities.annotations import ImageAnnotation
 
     ##############
@@ -19,8 +19,8 @@ def main():
     ##########################
     # init platform instance #
     ##########################
-    dlp = PlatformInterface()
-    dataset = dlp.projects.get(project_name='ImageNet').datasets.get('sample')
+    project = dl.projects.get(project_name='ImageNet')
+    dataset = project.datasets.get(dataset_name='sample')
 
     # get pages of images from dataset
     pages = dataset.items.list()

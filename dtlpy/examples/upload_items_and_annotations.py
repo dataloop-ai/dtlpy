@@ -3,7 +3,7 @@ import os
 
 import numpy as np
 
-from dtlpy.platform_interface import PlatformInterface
+import dtlpy as dl
 from dtlpy.utilities.annotations import ImageAnnotation
 
 """
@@ -30,9 +30,8 @@ def main():
     dataset_name = 'Example Dataset'
 
     # init platform
-    dlp = PlatformInterface()
-    # dlp.login()
-    dataset = dlp.projects.get(project_name=project_name).datasets.get(dataset_name=dataset_name)
+    # dl.login()
+    dataset = dl.projects.get(project_name=project_name).datasets.get(dataset_name=dataset_name)
 
     for img_filename in os.listdir(images_folder):
         # get the matching annotations json
@@ -51,15 +50,15 @@ def main():
             if not line:
                 continue
             # line format if 4 points of bbox
-            # this is where you need to edit according to your annotation format
+            # this is where you need to update according to your annotation format
             label_id, left, top, right, bottom = np.array(line.split()[:5]).astype(float)
             d_annotations.add_annotation(pts=[left, top, right, bottom],
                                          label=str(label_id),
                                          annotation_type='box')
 
         # upload item to platform
-        item = dataset.items.upload(filepath=img_filename,
+        item = dataset.items.update(filepath=img_filename,
                                     remote_path='/')
         # upload annotations
         annotations_batch = d_annotations.to_platform()
-        item.annotations.upload(annotations_batch)
+        item.upload_annotations(annotations_batch)

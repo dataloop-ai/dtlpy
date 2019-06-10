@@ -20,7 +20,7 @@ class ItemsDownloadStep(pipeline_step.PipelineStep):
             self.inputs = [{'name': 'dataset', 'from': 'dataset', 'by': 'ref', 'type': 'object'},
                            {'name': 'item_id', 'from': 'item_id', 'by': 'ref', 'type': 'string'}]
             self.kwargs = {'save_locally': True}
-            self.args = []
+            self.args = list()
             self.outputs = [{'name': 'filepath', 'type': 'string'}]
 
     def execute(self, pipeline_dict):
