@@ -83,7 +83,7 @@ class Datasets:
             raise PlatformException('400', 'Must choose by at least one. "dataset_id" or "dataset_name"')
         return dataset
 
-    def download_annotations(self, dataset_name=None, dataset_id=None, local_path=None):
+    def download_annotations(self, dataset_name=None, dataset_id=None, local_path=None, overwrite=False):
         """
         Download annotations json for entire dataset
 
@@ -92,14 +92,9 @@ class Datasets:
         :param local_path:
         :return:
         """
+        # get dataset
         dataset = self.get(dataset_name=dataset_name, dataset_id=dataset_id)
-        success, response = self.client_api.gen_request(req_type='get',
-                                                        path='/datasets/%s/annotations/zip' % dataset.id)
-        if not success:
-            # platform error
-            self.logger.exception('Downloading annotations zip')
-            raise PlatformException(response)
-        # create local path
+        # create local path to download and save to
         if local_path is None:
             if self.project is not None:
                 local_path = os.path.join(os.path.expanduser('~'), '.dataloop',
@@ -116,26 +111,35 @@ class Datasets:
                 local_path = local_path[:-2]
             else:
                 local_path = os.path.join(local_path, 'json')
-        # zip filepath
-        annotations_zip = os.path.join(local_path, 'annotations.zip')
-        if not os.path.isdir(local_path):
-            os.makedirs(local_path)
-        try:
-            # downloading zip from platform
-            with open(annotations_zip, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    if chunk:  # filter out keep-alive new chunks
-                        f.write(chunk)
-            # unzipping annotations to directory
-            utilities.Miscellaneous.unzip_directory(zip_filename=annotations_zip, to_directory=local_path)
+        if not os.path.isdir(local_path) or os.path.isdir(local_path) and overwrite:
+            # if folder not exists OR (exists and overwrite)
+            # get zip from platform
+            success, response = self.client_api.gen_request(req_type='get',
+                                                            path='/datasets/%s/annotations/zip' % dataset.id)
+            if not success:
+                # platform error
+                self.logger.exception('Downloading annotations zip')
+                raise PlatformException(response)
+            # zip filepath
+            annotations_zip = os.path.join(local_path, 'annotations.zip')
+            if not os.path.isdir(local_path):
+                os.makedirs(local_path)
+            try:
+                # downloading zip from platform
+                with open(annotations_zip, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:  # filter out keep-alive new chunks
+                            f.write(chunk)
+                # unzipping annotations to directory
+                utilities.Miscellaneous.unzip_directory(zip_filename=annotations_zip, to_directory=local_path)
 
-        except Exception:
-            self.logger.exception('Getting annotations from zip ')
-            raise
-        finally:
-            # cleanup
-            if os.path.isfile(annotations_zip):
-                os.remove(annotations_zip)
+            except Exception:
+                self.logger.exception('Getting annotations from zip ')
+                raise
+            finally:
+                # cleanup
+                if os.path.isfile(annotations_zip):
+                    os.remove(annotations_zip)
 
     def download(self, dataset_name=None, dataset_id=None,
                  query=None, local_path=None, filetypes=None,
@@ -238,15 +242,16 @@ class Datasets:
             os.makedirs(folder_to_check, exist_ok=True)
 
         # download annotations' json files
-        if 'json' in annotation_options:
+        if annotation_options:
             # a new folder named 'json' will be created under the "local_path"
+            self.logger.info('Downloading annotations...')
             self.download_annotations(dataset_name=dataset_name,
                                       dataset_id=dataset_id,
                                       local_path=os.path.join(local_path))
         paged_entity = dataset.items.list(query=query)
         output = [None for _ in range(paged_entity.items_count)]
-        success = [None for _ in range(paged_entity.items_count)]
-        status = [None for _ in range(paged_entity.items_count)]
+        success = [False for _ in range(paged_entity.items_count)]
+        status = ['' for _ in range(paged_entity.items_count)]
         errors = [None for _ in range(paged_entity.items_count)]
         num_files = paged_entity.items_count
         progress = Progress(max_val=num_files, progress_type='download')

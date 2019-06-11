@@ -139,28 +139,6 @@ class Dataset:
         utilities.List([self]).print()
 
     @staticmethod
-    def parse_labels(labels):
-        """
-        Convert rgb color format to hex
-
-        :param labels: dict of labels
-        :return: dict of converted labels
-        """
-        label_dict = dict()
-        for label, color_str in labels.items():
-            if color_str is None:
-                color = None
-            elif color_str.startswith('rgb'):
-                color = tuple(eval(color_str.lstrip('rgb')))
-            elif color_str.startswith('#'):
-                color = tuple(int(color_str.lstrip('#')[i:i + 2], 16) for i in (0, 2, 4))
-            else:
-                logger.warning('Unknown color scheme: %s' % color_str)
-                color = (255, 0, 0)
-            label_dict[label] = color
-        return label_dict
-
-    @staticmethod
     def serialize_labels(labels_dict):
         """
         Convert hex color format to rgb

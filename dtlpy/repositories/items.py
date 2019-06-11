@@ -167,6 +167,21 @@ class Items:
             annotation_rel_path = item.filename[1:]
         else:
             annotation_rel_path = item.name
+        # find annotations json
+        annotations_filepath = os.path.join(local_path, 'json', item.filename[1:])
+        name, _ = os.path.splitext(annotations_filepath)
+        annotations_filepath = name + '.json'
+        if os.path.isfile(annotations_filepath):
+            # if exists take from json file
+            with open(annotations_filepath, 'r') as f:
+                data = json.load(f)
+            annotations = [entities.Annotation.from_json(_json=ann,
+                                                         item=item,
+                                                         dataset=item.dataset)
+                           for ann in data['annotations']]
+        else:
+            # get from platform
+            annotations = item.annotations.list()
 
         if item.width is not None and item.height is not None:
             img_shape = (item.height, item.width)
@@ -177,21 +192,24 @@ class Items:
             annotation_filepath = os.path.join(local_path, option, annotation_rel_path)
             temp_path, ext = os.path.splitext(annotation_filepath)
             annotation_filepath = temp_path + '.png'
-            if not os.path.isfile(annotation_filepath) or \
-                    (os.path.isfile(annotation_filepath) and overwrite):
+            if not os.path.isfile(annotation_filepath) or (os.path.isfile(annotation_filepath) and overwrite):
+                # if not exists OR (exists AND overwrite)
                 if not os.path.exists(os.path.dirname(annotation_filepath)):
+                    # create folder if not exists
                     os.makedirs(os.path.dirname(annotation_filepath), exist_ok=True)
-            if option == 'mask':
-                item.annotations.download(filepath=annotation_filepath,
-                                          get_mask=True,
-                                          img_shape=img_shape)
-            if option == 'instance':
-                item.annotations.download(filepath=annotation_filepath,
-                                          get_instance=True,
-                                          img_shape=img_shape)
-        if 'img_mask' in annotation_options:
-            # TODO
-            pass
+                if option == 'mask':
+                    item.annotations.download(filepath=annotation_filepath,
+                                              get_mask=True,
+                                              img_shape=img_shape,
+                                              annotation=annotations)
+                if option == 'instance':
+                    item.annotations.download(filepath=annotation_filepath,
+                                              get_instance=True,
+                                              img_shape=img_shape,
+                                              annotation=annotations)
+                if option == 'img_mask':
+                    # TODO
+                    pass
 
     def __download_binary(self):
         pass
@@ -375,9 +393,10 @@ class Items:
             if save_locally:
                 # download
                 if download_item:
-                    if not os.path.isfile(local_filepath) or \
-                            (os.path.isfile(local_filepath) and overwrite):
+                    if not os.path.isfile(local_filepath) or (os.path.isfile(local_filepath) and overwrite):
+                        # if not exists OR (exists AND overwrite)
                         if not os.path.exists(os.path.dirname(local_filepath)):
+                            # create folder if not exists
                             os.makedirs(os.path.dirname(local_filepath), exist_ok=True)
                         # download and save locally
                         if show_progress:
@@ -401,11 +420,12 @@ class Items:
                 data = local_filepath
                 # if image - can download annotation mask
                 if 'image' in item.mimetype:
-                    self.__download_img_annotations(item=item,
-                                                    img_filepath=local_filepath,
-                                                    download_options=download_options,
-                                                    annotation_options=annotation_options,
-                                                    local_path=local_path)
+                    if annotation_options:
+                        self.__download_img_annotations(item=item,
+                                                        img_filepath=local_filepath,
+                                                        download_options=download_options,
+                                                        annotation_options=annotation_options,
+                                                        local_path=local_path)
             else:
                 # save as byte stream
                 data = io.BytesIO()

@@ -1,5 +1,5 @@
 import logging
-from .. import utilities
+from .. import utilities, PlatformException
 import attr
 
 logger = logging.getLogger("dataloop.annotation")
@@ -45,8 +45,14 @@ class Annotation:
             metadata = _json["metadata"]
         else:
             metadata = None
+        if 'id' in _json:
+            annotations_id = _json['id']
+        elif '_id' in _json:
+            annotations_id = _json['_id']
+        else:
+            raise PlatformException('400', 'missing id in annotations json')
         return cls(
-            id=_json["id"],
+            id=annotations_id,
             type=_json["type"],
             label=_json["label"],
             attributes=_json.get("attributes", list()),
@@ -56,8 +62,8 @@ class Annotation:
             updatedBy=_json["updatedBy"],
             updatedAt=_json["updatedAt"],
             itemId=_json["itemId"],
-            url=_json["url"],
-            item_url=_json["item"],
+            url=_json.get("url", None),
+            item_url=_json.get("item", None),
             item=item,
             dataset=dataset,
             metadata=metadata,

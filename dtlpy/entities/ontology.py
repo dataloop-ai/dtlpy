@@ -86,9 +86,7 @@ class Ontology:
         """
         return self.recipe.ontologies.update(self, system_metadata=system_metadata)
 
-    def add_label(
-        self, label_name, color=None, children=None, attributes=None, display_label=None
-    ):
+    def add_label(self, label_name, color=None, children=None, attributes=None, display_label=None):
         """
         Add a single label to ontology
 
@@ -143,9 +141,7 @@ class Ontology:
             if "tag" in label:
                 label_name = label["tag"]
             else:
-                raise PlatformException(
-                    "400", "Invalid input - each label must have a tag"
-                )
+                raise PlatformException("400", "Invalid input - each label must have a tag")
             if "color" in label:
                 color = label["color"]
             else:

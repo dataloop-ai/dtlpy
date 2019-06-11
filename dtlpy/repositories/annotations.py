@@ -72,6 +72,8 @@ class Annotations:
         mask = np.zeros((height, width, 4))
         if annotation is None:
             annotations = self.list()
+        elif isinstance(annotation, list):
+            annotations = annotation
         else:
             annotations = [annotation]
         if annotations is None:
@@ -132,6 +134,8 @@ class Annotations:
                         cv2.putText(mask, text=label, org=(top_x, top_y), color=(255, 255, 255, 255),
                                     fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.5,
                                     thickness=1)
+                elif annotation.type == 'class':
+                    pass
                 else:
                     self.logger.exception('Unknown annotation type: %s' % annotation.type)
                     raise TypeError('Unknown annotation type: %s' % annotation.type)
@@ -153,6 +157,8 @@ class Annotations:
         mask = np.zeros((height, width))
         if annotation is None:
             annotations = self.list()
+        elif isinstance(annotation, list):
+            annotations = annotation
         else:
             annotations = [annotation]
         # get labels
@@ -160,7 +166,9 @@ class Annotations:
         labels.sort()
         # need to change color to a format that cv2 understands
         for annotation in annotations:
-            label_ind = labels.index(annotation.label.lower())
+            if annotation.label.lower() not in labels:
+                continue
+            label_ind = labels.index(annotation.label.lower()) + 1  # to avoid instance id of 0
             if annotation.type == 'binary':
                 if isinstance(annotation.coordinates, dict):
                     coordinates = annotation.coordinates['data'][22:]
