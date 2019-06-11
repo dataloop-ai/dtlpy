@@ -77,12 +77,12 @@ class Annotations:
         if annotations is None:
             self.logger.debug('No annotations found for item. id: %s' % self.item.id)
             return mask
+        colors = {label.tag: label.rgb() for label in self.dataset.labels}
         for annotation in annotations:
             try:
                 label = annotation.label
-                labels = {label.tag: label.rgb() for label in self.dataset.labels}
-                if label in labels:
-                    color = labels[label]
+                if label in colors:
+                    color = colors[label]
                     color = (color[0], color[1], color[2], 255)
                 else:
                     color = *tuple(map(int, np.random.randint(0, 255, 3))), 255
@@ -156,11 +156,11 @@ class Annotations:
         else:
             annotations = [annotation]
         # get labels
-        labels = {label.tag: label.rgb() for label in self.dataset.labels}
+        labels = [label.tag.lower() for label in self.dataset.labels]
+        labels.sort()
         # need to change color to a format that cv2 understands
         for annotation in annotations:
-            label_ind = labels[annotation.label]
-            label_ind = (label_ind[0], label_ind[1], label_ind[2], 255)
+            label_ind = labels.index(annotation.label.lower())
             if annotation.type == 'binary':
                 if isinstance(annotation.coordinates, dict):
                     coordinates = annotation.coordinates['data'][22:]
