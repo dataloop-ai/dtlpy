@@ -10,18 +10,22 @@ Login
 --------------------------
 .. code-block:: python
 
-	# import dtlpy
+	# Import Dataloop SDK package
 	import dtlpy as dl
-	# login
+	# Login to Dataloop platform
 	dl.login()
-	# print projects
+	# Print all your projects
 	dl.projects.list().print()
 
 Create project and dataset
 --------------------------
 .. code-block:: python
 
+	# Create a new project
 	project = dl.projects.create(project_name='MyProject')
+
+	# Create a new dataset in existing project
+	project = dl.projects.get(project_name='MyProject')
 
 	dataset = project.datasets.create(dataset_name='MyDataset', 
 					labels={'pinky': (255, 0, 0), 'the brain': (0, 0, 255)})
@@ -30,18 +34,24 @@ List projects, datasets
 -----------------------
 .. code-block:: python
 
-	# list projects
+	# Get a list of projects
 	projects = dl.projects.list()
+	# Print the list
 	projects.print()
 
+	# Get a specific project by name
 	project = dl.projects.get(project_name='MyProject')
+	# Print the project's properties
 	project.print()
 
-	# list dataset
+	# Get a list all datasets in the project
 	datasets = project.datasets.list()
+	# Print the list with all the properties
 	datasets.print()
 
+	# Get a specific dataset by name
 	dataset = project.datasets.get(dataset_name='MyDataset')
+	# Print the dataset's properties
 	dataset.print()
 
 Iterator of items
@@ -50,9 +60,15 @@ You can create a generator of items with different queries
 
 .. code-block:: python
 
-	dataset = dl.projects.get(project_name='MyProject').datasets.get(dataset_name='MyDataset')
+	# Get the project
+	project = dl.projects.get(project_name='MyProject')
+	# Get the dataset
+	dataset = project.datasets.get(dataset_name='MyDataset')
+	# Get items in pages (100 item per page)
 	pages = dataset.items.list()
-
+	# Count the items
+	print('Number of items in dataset: {}'.format(pages.items_count))
+	# Go over all item and print the properties
 	for page in pages:
 		for item in page:
 			item.print()
@@ -61,24 +77,23 @@ Upload and download items
 -------------------------
 .. code-block:: python
 
-	# upload SINGLE image
+	# Upload entire folder to dataset dataset
+	dataset.upload(
+		local_path=r'C:\home\dogs',
+		remote_path='/images/dogs',
+		upload_options='overwrite'
+	)
+
+	# Upload SINGLE image
 	dataset.items.upload(
 		filepath='/images/000000000036.jpg',
 		remote_path='/dog'
 	)
 
-	# upload dataset (folder of images)
-	filename = project.datasets.upload(
-		dataset_name='MyDataset',
-		local_path='/home/images',
-		upload_options='overwrite'
-	)
-
-	# download dataset
+	# Download entire dataset
 	filenames = dataset.download(
-		dataset_name='MyDataset',
 		local_path='/home/images',
-		download_options={'overwrite': True, 'relative_path': True}
+		download_options={'overwrite': True}
 	)
 
 More...
