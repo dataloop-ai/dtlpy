@@ -11,6 +11,7 @@ dtlpy.entities.annotation module
    :members:
    :undoc-members:
    :show-inheritance:
+
 dtlpy.entities.artifact module
 ------------------------------
 
@@ -18,6 +19,7 @@ dtlpy.entities.artifact module
    :members:
    :undoc-members:
    :show-inheritance:
+
 dtlpy.entities.dataset module
 -----------------------------
 
@@ -25,6 +27,7 @@ dtlpy.entities.dataset module
    :members:
    :undoc-members:
    :show-inheritance:
+
 dtlpy.entities.item module
 --------------------------
 
@@ -32,6 +35,7 @@ dtlpy.entities.item module
    :members:
    :undoc-members:
    :show-inheritance:
+
 dtlpy.entities.label module
 ---------------------------
 
@@ -39,6 +43,7 @@ dtlpy.entities.label module
    :members:
    :undoc-members:
    :show-inheritance:
+
 dtlpy.entities.ontology module
 ------------------------------
 
@@ -46,6 +51,7 @@ dtlpy.entities.ontology module
    :members:
    :undoc-members:
    :show-inheritance:
+
 dtlpy.entities.package module
 -----------------------------
 
@@ -53,13 +59,15 @@ dtlpy.entities.package module
    :members:
    :undoc-members:
    :show-inheritance:
-dtlpy.entities.paged\_entities module
+
+dtlpy.entities.paged_entities module
 -------------------------------------
 
 .. automodule:: dtlpy.entities.paged_entities
    :members:
    :undoc-members:
    :show-inheritance:
+
 dtlpy.entities.project module
 -----------------------------
 
@@ -67,13 +75,15 @@ dtlpy.entities.project module
    :members:
    :undoc-members:
    :show-inheritance:
-dtlpy.entities.query module
----------------------------
 
-.. automodule:: dtlpy.entities.query
+dtlpy.entities.filters module
+-----------------------------
+
+.. automodule:: dtlpy.entities.filters
    :members:
    :undoc-members:
    :show-inheritance:
+
 dtlpy.entities.recipe module
 ----------------------------
 
@@ -81,6 +91,7 @@ dtlpy.entities.recipe module
    :members:
    :undoc-members:
    :show-inheritance:
+
 dtlpy.entities.session module
 -----------------------------
 
@@ -88,6 +99,7 @@ dtlpy.entities.session module
    :members:
    :undoc-members:
    :show-inheritance:
+
 dtlpy.entities.task module
 --------------------------
 
@@ -95,7 +107,6 @@ dtlpy.entities.task module
    :members:
    :undoc-members:
    :show-inheritance:
-
 
 Module contents
 ---------------

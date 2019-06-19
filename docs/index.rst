@@ -13,7 +13,8 @@ Dataloop's SDK and CLI documentation
    installation
    getting_started
    examples
-   queries
+   filters
+   starting_with_plugins
    cli
    repositories
    entities

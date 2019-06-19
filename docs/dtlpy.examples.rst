@@ -11,6 +11,7 @@ dtlpy.examples.add\_metadata\_to\_item module
    :members:
    :undoc-members:
    :show-inheritance:
+
 dtlpy.examples.annotate\_items\_using\_model module
 ---------------------------------------------------
 
@@ -18,6 +19,7 @@ dtlpy.examples.annotate\_items\_using\_model module
    :members:
    :undoc-members:
    :show-inheritance:
+
 dtlpy.examples.annotate\_video\_using\_model\_and\_tracker module
 -----------------------------------------------------------------
 
@@ -25,6 +27,7 @@ dtlpy.examples.annotate\_video\_using\_model\_and\_tracker module
    :members:
    :undoc-members:
    :show-inheritance:
+
 dtlpy.examples.annotations\_convert\_to\_voc module
 ---------------------------------------------------
 
@@ -32,6 +35,7 @@ dtlpy.examples.annotations\_convert\_to\_voc module
    :members:
    :undoc-members:
    :show-inheritance:
+
 dtlpy.examples.annotations\_convert\_to\_yolo module
 ----------------------------------------------------
 
@@ -39,6 +43,7 @@ dtlpy.examples.annotations\_convert\_to\_yolo module
    :members:
    :undoc-members:
    :show-inheritance:
+
 dtlpy.examples.copy\_annotations module
 ---------------------------------------
 
@@ -46,6 +51,7 @@ dtlpy.examples.copy\_annotations module
    :members:
    :undoc-members:
    :show-inheritance:
+
 dtlpy.examples.copy\_folder module
 ----------------------------------
 
@@ -53,6 +59,7 @@ dtlpy.examples.copy\_folder module
    :members:
    :undoc-members:
    :show-inheritance:
+
 dtlpy.examples.play\_video\_annotation module
 ---------------------------------------------
 
@@ -60,6 +67,7 @@ dtlpy.examples.play\_video\_annotation module
    :members:
    :undoc-members:
    :show-inheritance:
+
 dtlpy.examples.segment\_to\_binary module
 -----------------------------------------
 
@@ -67,6 +75,7 @@ dtlpy.examples.segment\_to\_binary module
    :members:
    :undoc-members:
    :show-inheritance:
+
 dtlpy.examples.show\_item\_and\_mask module
 -------------------------------------------
 
@@ -74,6 +83,7 @@ dtlpy.examples.show\_item\_and\_mask module
    :members:
    :undoc-members:
    :show-inheritance:
+
 dtlpy.examples.upload\_items\_and\_annotations module
 -----------------------------------------------------
 
@@ -81,6 +91,7 @@ dtlpy.examples.upload\_items\_and\_annotations module
    :members:
    :undoc-members:
    :show-inheritance:
+
 dtlpy.examples.upload\_segmentation\_annotations\_from\_file module
 -------------------------------------------------------------------
 
@@ -88,6 +99,7 @@ dtlpy.examples.upload\_segmentation\_annotations\_from\_file module
    :members:
    :undoc-members:
    :show-inheritance:
+
 dtlpy.examples.upload\_yolo\_format\_annotations module
 -------------------------------------------------------
 
