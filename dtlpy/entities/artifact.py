@@ -13,13 +13,13 @@ class Artifact(entities.Item):
     @classmethod
     def from_json(cls, _json, dataset, client_api):
         """
-        Build an Arftifact entity object from a json
-
-        :param _json: _json respons form host
+        Build an Artifact entity object from a json
+        :param _json: _json response form host
         :param dataset: Artifact's dataset
         :param client_api: client_api
         :return: Artifact object
         """
+
         return cls(
             client_api=client_api,
             dataset=dataset,
@@ -40,24 +40,27 @@ class Artifact(entities.Item):
             type=_json.get('type', None),
             annotations=None,
             height=None,
-            width=None
+            width=None,
+            fps=None
         )
 
     def print(self):
+        """
+
+        :return:
+        """
         utilities.List([self]).print()
 
     def download(self, session_id=None, task_id=None, local_path=None, download_options=None):
         """
-
-        Download artifact binary.
-        Get artifact by name, id or type
-
+        Download artifact binary. Get artifact by name, id or type
         :param local_path: artifact will be saved to this filepath
         :param download_options: {'overwrite': True/False, 'relative_path':True/False}
         :param session_id:
         :param task_id:
         :return: Artifact object
         """
+
         return self.dataset.project.artifacts.download(artifact_id=self.id, artifact_name=self.name,
                                                        session_id=session_id, task_id=task_id,
                                                        local_path=local_path, download_options=download_options)

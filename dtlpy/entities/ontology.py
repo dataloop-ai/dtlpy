@@ -1,6 +1,7 @@
 import logging
 from .. import utilities, entities, PlatformException
 import attr
+import random
 
 logger = logging.getLogger("dataloop.item")
 
@@ -102,6 +103,10 @@ class Ontology:
         if not isinstance(attributes, list):
             attributes = [attributes]
 
+        # get random color if none given
+        if color is None:
+            color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+
         if children is None:
             children = list()
         if not isinstance(children, list):
@@ -131,7 +136,7 @@ class Ontology:
         Adds a list of labels to ontology
 
         :param label_list: list of labels [{"value": {"tag": "tag", "displayLabel": "displayLabel", 
-        "color": "#color", "attributes": [attributes]}, "children": [children]}]
+                                            "color": "#color", "attributes": [attributes]}, "children": [children]}]
         :return: True if labels were added
         """
         labels = list()

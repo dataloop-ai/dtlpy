@@ -23,3 +23,4 @@ from .projects import Projects
 from .sessions import Sessions
 from .ontologies import Ontologies
 from .recipes import Recipes
+from .plugins import Plugins

@@ -35,14 +35,17 @@ class Label:
         :return: platform json format of object
         """
         value = attr.asdict(self, filter=attr.filters.exclude(attr.fields(Label).children,
+                                                              attr.fields(Label).color,
                                                               attr.fields(Label).display_label))
         value['displayLabel'] = self.display_label
+        value['color'] = self.hex
         _json = {
             'value': value,
             'children': self.children
         }
         return _json
 
+    @property
     def rgb(self):
         """
         Return label's color in RBG format
@@ -60,6 +63,7 @@ class Label:
             color = (255, 0, 0)
         return color
 
+    @property
     def hex(self):
         """
         Return label's color in HEX format

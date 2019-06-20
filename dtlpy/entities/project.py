@@ -25,6 +25,7 @@ class Project:
     _tasks = attr.ib()
     _packages = attr.ib()
     _artifacts = attr.ib()
+    _plugins = attr.ib()
 
     @_projects.default
     def set_projects(self):
@@ -52,6 +53,14 @@ class Project:
     def tasks(self):
         assert isinstance(self._tasks, repositories.Tasks)
         return self._tasks
+
+    @property
+    def plugins(self):
+        return self._plugins
+
+    @_plugins.default
+    def set_plugin(self):
+        return repositories.Plugins(project=self, client_api=self.client_api)
 
     @_packages.default
     def set_packages(self):

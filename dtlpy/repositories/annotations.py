@@ -1,33 +1,56 @@
-import io
-import cv2
 import json
-import base64
 import logging
 import jwt
-import numpy as np
-from PIL import Image
 import attr
+from multiprocessing.pool import ThreadPool
 
-from .. import entities, utilities, PlatformException
+from .. import entities, PlatformException
 
 
 @attr.s
 class Annotations:
     """
-    Annotations repository
+        Annotations repository
     """
+    logger = logging.getLogger('dataloop.annotations')
     client_api = attr.ib()
     dataset = attr.ib()
     item = attr.ib()
-    logger = attr.ib()
 
-    @logger.default
-    def set_logger(self):
-        return logging.getLogger('dataloop.annotations')
+    @staticmethod
+    def multiprocess_wrapper(func, items, params=None):
+        """
+            Wrapper to tun fun con a list of items in multi threads
+
+        :param func:
+        :param items:
+        :param params:
+        :return:
+        """
+        n_items = len(items)
+        success = [False for _ in range(n_items)]
+        output = [None for _ in range(n_items)]
+        errors = [None for _ in range(n_items)]
+
+        pool = ThreadPool(processes=32)
+        for i_item, item in enumerate(items):
+            pool.apply_async(func=func,
+                             kwds={'i_item': i_item,
+                                   'item': item,
+                                   'output': output,
+                                   'errors': errors,
+                                   'success': success,
+                                   'params': params})
+        pool.close()
+        pool.join()
+        pool.terminate()
+        errors = {i_job: errors[i_job] for i_job, suc in enumerate(success) if suc is False}
+        return output, errors
 
     def get(self, annotation_id):
         """
-        Get a single annotation
+            Get a single annotation
+
         :param annotation_id:
         :return: Annotation object or None
         """
@@ -35,189 +58,59 @@ class Annotations:
                                                         path='/datasets/%s/items/%s/annotations/%s' %
                                                              (self.dataset.id, self.item.id, annotation_id))
         if success:
-            annotation = entities.Annotation.from_json(_json=response.json(), dataset=self.dataset, item=self.item)
+            annotation = entities.Annotation.from_json(_json=response.json(),
+                                                       item=self.item)
         else:
             raise PlatformException(response)
         return annotation
 
     def list(self):
         """
-        Get all annotations
+            Get all annotations
+
         :return: List of Annotation objects
         """
 
         success, response = self.client_api.gen_request(req_type='get',
                                                         path='/datasets/%s/items/%s/annotations' %
                                                              (self.dataset.id, self.item.id))
-        annotations = utilities.List()
         if success:
-            annotations = utilities.List(
-                [entities.Annotation.from_json(_json=_json,
-                                               dataset=self.dataset,
-                                               item=self.item)
-                 for _json in response.json()])
+            annotations = entities.AnnotationCollection.from_json(_json=response.json(),
+                                                                  item=self.item)
+        else:
+            raise PlatformException(response)
         return annotations
 
-    def to_mask(self, img_shape, thickness=1, with_text=False, annotation=None):
+    def show(self, image=None, thickness=1, with_text=False, height=None, width=None, annotation_format='mask'):
         """
-        Convert items annotations to a colored mask
-        :param img_shape
+        Show annotations
+
+        :param image: empty or image to draw on
+        :param height: height
+        :param width: width
         :param thickness: line thickness
-        :param annotation:
         :param with_text: add label to annotation
+        :param annotation_format: 'mask'/'instance'
         :return: ndarray of the annotations
         """
+        # get item's annotations
+        annotations = self.list()
 
-        height, width = img_shape
-        mask = np.zeros((height, width, 4))
-        if annotation is None:
-            annotations = self.list()
-        elif isinstance(annotation, list):
-            annotations = annotation
-        else:
-            annotations = [annotation]
-        if annotations is None:
-            self.logger.debug('No annotations found for item. id: %s' % self.item.id)
-            return mask
-        colors = {label.tag: label.rgb() for label in self.dataset.labels}
-        for annotation in annotations:
-            try:
-                label = annotation.label
-                if label in colors:
-                    color = colors[label]
-                    color = (color[0], color[1], color[2], 255)
-                else:
-                    color = *tuple(map(int, np.random.randint(0, 255, 3))), 255
-                if annotation.type == 'binary':
-                    if isinstance(annotation.coordinates, dict):
-                        coordinates = annotation.coordinates['data'][22:]
-                    elif isinstance(annotation.coordinates, str):
-                        coordinates = annotation.coordinates[22:]
-                    else:
-                        raise TypeError('Unknown annotation type in binary. type: %s' % type(annotation.coordinates))
-                    decode = base64.b64decode(coordinates)
-                    n_mask = np.array(Image.open(io.BytesIO(decode)))
-                    mask[np.where(n_mask[:, :, 3] > 127)] = color
-                elif annotation.type == 'box':
-                    segment = annotation.coordinates
-                    pts = np.asarray([[pt['x'], pt['y']] for pt in segment]).astype(int)
-                    cv2.rectangle(img=mask,
-                                  pt1=(np.min(pts[:, 0]), np.min(pts[:, 1])),
-                                  pt2=(np.max(pts[:, 0]), np.max(pts[:, 1])),
-                                  color=color, thickness=thickness, lineType=cv2.LINE_AA)
-                    top_x = np.min(pts[:, 0])
-                    top_y = np.min(pts[:, 1])
-                    if with_text:
-                        cv2.putText(mask, text=label, org=(top_x, top_y), color=(255, 255, 255, 255),
-                                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.5,
-                                    thickness=1)
-                elif annotation.type == 'segment':
-                    # go over all segments in annotation
-                    for segment in annotation.coordinates:
-                        pts = np.asarray([[pt['x'], pt['y']] for pt in segment]).astype(int)
-                        # draw polygon
-                        cv2.drawContours(image=mask, contours=[pts], contourIdx=-1, color=color,
-                                         thickness=thickness)
-                        top_x = np.min(pts[:, 0])
-                        top_y = np.min(pts[:, 1])
-                        if with_text:
-                            cv2.putText(mask, text=label, org=(top_x, top_y), color=(255, 255, 255, 255),
-                                        fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.5,
-                                        thickness=1)
-                elif annotation.type == 'polyline':
-                    pts = np.asarray([[pt['x'], pt['y']] for pt in annotation.coordinates]).astype(int)
-                    # draw polygon
-                    cv2.polylines(img=mask, pts=[pts], color=color, isClosed=False, thickness=thickness)
-                    top_x = np.min(pts[:, 0])
-                    top_y = np.min(pts[:, 1])
-                    if with_text:
-                        cv2.putText(mask, text=label, org=(top_x, top_y), color=(255, 255, 255, 255),
-                                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.5,
-                                    thickness=1)
-                elif annotation.type == 'class':
-                    pass
-                else:
-                    self.logger.exception('Unknown annotation type: %s' % annotation.type)
-                    raise TypeError('Unknown annotation type: %s' % annotation.type)
-            except Exception as err:
-                self.logger.exception('Unable to get annotation\'s mask. item_id: %s, annotation_id: %s' % (
-                    annotation.item.id, annotation.id))
-        return mask.astype(np.uint8)
-
-    def to_instance(self, img_shape, thickness=1, annotation=None):
-        """
-                Convert items annotations to an instance mask (2d array with label index)
-        :param thickness: line thickness
-        :param img_shape:
-        :param annotation:
-        :return: mask
-        """
-
-        height, width = img_shape
-        mask = np.zeros((height, width))
-        if annotation is None:
-            annotations = self.list()
-        elif isinstance(annotation, list):
-            annotations = annotation
-        else:
-            annotations = [annotation]
-        # get labels
-        labels = [label.tag.lower() for label in self.dataset.labels]
-        labels.sort()
-        # need to change color to a format that cv2 understands
-        for annotation in annotations:
-            if annotation.label.lower() not in labels:
-                continue
-            label_ind = labels.index(annotation.label.lower()) + 1  # to avoid instance id of 0
-            if annotation.type == 'binary':
-                if isinstance(annotation.coordinates, dict):
-                    coordinates = annotation.coordinates['data'][22:]
-                elif isinstance(annotation.coordinates, str):
-                    coordinates = annotation.coordinates[22:]
-                else:
-                    raise TypeError('Unknown annotation type in binary. type: %s' % type(annotation.coordinates))
-                decode = base64.b64decode(coordinates)
-                n_mask = np.array(Image.open(io.BytesIO(decode)))
-                mask[np.where(n_mask[:, :, 3] > 127)] = label_ind
-            elif annotation.type == 'box':
-                pts = np.asarray([[pt['x'], pt['y']] for pt in annotation.coordinates]).astype(int)
-                cv2.rectangle(img=mask,
-                              pt1=(np.min(pts[:, 0]), np.min(pts[:, 1])),
-                              pt2=(np.max(pts[:, 0]), np.max(pts[:, 1])),
-                              color=label_ind, thickness=thickness, lineType=cv2.LINE_AA)
-            elif annotation.type == 'point':
-                pts = np.asarray([[pt['x'], pt['y']] for pt in [annotation.coordinates]]).astype(int)
-                cv2.circle(img=mask,
-                           center=(np.min(pts[:, 0]), np.min(pts[:, 1])),
-                           radius=10,
-                           color=label_ind, thickness=thickness, lineType=cv2.LINE_AA)
-            elif annotation.type == 'ellipse':
-                self.logger.exception('Unhandled annotation type: %s' % annotation.type)
-                # To Do
-            elif annotation.type == 'segment':
-                # go over all segments in annotation
-                for segment in annotation.coordinates:
-                    pts = np.asarray([[pt['x'], pt['y']] for pt in segment]).astype(int)
-                    # draw polygon
-                    cv2.drawContours(image=mask, contours=[pts], contourIdx=-1, color=label_ind,
-                                     thickness=thickness)
-            elif annotation.type == 'polyline':
-                pts = np.asarray([[pt['x'], pt['y']] for pt in annotation.coordinates]).astype(int)
-                # draw polygon
-                cv2.polylines(img=mask, pts=[pts], color=label_ind, isClosed=False, thickness=thickness)
-            else:
-                self.logger.exception('Unknown annotation type: %s' % annotation.type)
-                raise TypeError('Unknown annotation type: %s' % annotation.type)
-        return mask.astype(np.uint8)
+        return annotations.show(image=image,
+                                width=width,
+                                height=height,
+                                thickness=thickness,
+                                with_text=with_text,
+                                annotation_format=annotation_format)
 
     def delete(self, annotation=None, annotation_id=None):
         """
-        Remove an annotation from item
+            Remove an annotation from item
+
         :param annotation: Annotation object
         :param annotation_id: annotation id
         :return: True/False
         """
-
         if annotation_id is not None:
             pass
         elif annotation is not None and isinstance(annotation, entities.Annotation):
@@ -227,155 +120,144 @@ class Annotations:
         # get creator from token
         creator = jwt.decode(self.client_api.token, algorithms=['HS256'], verify=False)['email']
         payload = {'username': creator}
-        success, response = self.client_api.gen_request(req_type='delete',
-                                                        path='/datasets/%s/items/%s/annotations/%s' %
-                                                             (self.dataset.id, self.item.id, annotation_id),
-                                                        json_req=payload)
+        success, response = self.client_api.gen_request(
+            req_type='delete',
+            path='/datasets/{dataset_id}/items/{item_id}/annotations/{annotations_id}'.format(
+                dataset_id=self.dataset.id,
+                item_id=self.item.id,
+                annotations_id=annotation_id),
+            json_req=payload)
         if not success:
             raise PlatformException(response)
         self.logger.info('Annotation %s deleted successfully')
         return True
 
-    def download(self, filepath, get_mask=False, get_instance=False, img_shape=None, thickness=1, annotation=None):
+    def download(self, filepath, annotation_format='mask', height=None, width=None, thickness=1, with_text=False):
         """
-        Save annotation mask to file
-        :param annotation:
+            Save annotation format to file
+
         :param filepath:
-        :param get_mask:
-        :param get_instance:
-        :param img_shape:
+        :param annotation_format:
+        :param height:
+        :param width:
         :param thickness:
-        :return: True
+        :param with_text:
+        :return:
         """
+        # get item's annotations
+        annotations = self.list()
 
-        if get_mask:
-            mask = self.to_mask(img_shape=img_shape, thickness=thickness, annotation=annotation)
-            img = Image.fromarray(mask)
-            img.save(filepath)
-        if get_instance:
-            mask = self.to_instance(img_shape=img_shape, thickness=thickness, annotation=annotation)
-            img = Image.fromarray(mask)
-            img.save(filepath)
-        return True
+        # height/weight
+        if height is None:
+            if self.item.height is None:
+                raise PlatformException('400', 'Height must be provided')
+            height = self.item.height
+        if width is None:
+            if self.item.width is None:
+                raise PlatformException('400', 'Width must be provided')
+            width = self.item.width
 
-    def update(self, annotations, annotations_ids=None, system_metadata=False):
+        return annotations.download(filepath=filepath,
+                                    width=width,
+                                    height=height,
+                                    thickness=thickness,
+                                    with_text=with_text,
+                                    annotation_format=annotation_format)
+
+    def update(self, annotations, system_metadata=False):
         """
-        Update an existing annotation.
+            Update an existing annotation.
+
         :param annotations:
-        :param annotations_ids:
         :param system_metadata:
         :return: True
         """
-        if not isinstance(annotations, list):
-            annotations = [annotations]
-        if annotations_ids is not None:
-            if not isinstance(annotations_ids, list):
-                annotations_ids = [annotations_ids]
-        else:
-            annotations_ids = [None for _ in range(len(annotations))]
 
-        if len(annotations) != len(annotations_ids):
-            raise PlatformException(
-                error='400',
-                message='Inputs must have same length. len(annotations)={annotations}, len(annotations_ids)={annotations_ids}'.format(annotations=len(annotations),
-                                                                                                                                      annotations_ids=len(annotations_ids)))
-
-        def update_single_annotation(i_annotation):
+        def update_single_annotation(i_item, item, output, success, errors, params):
             try:
-                annotation = annotations[i_annotation]
-                annotation_id = annotations_ids[i_annotation]
-                if isinstance(annotation, str):
-                    annotation = json.loads(annotation)
-                elif isinstance(annotation, entities.Annotation):
-                    annotation_id = annotation_id or annotation.id
-                    annotation = annotation.to_json()
+                if isinstance(item, entities.Annotation):
+                    annotation_id = item.id
+                    annotation = item.to_json()
                 else:
-                    self.logger.exception('Unknown annotation type: %s' % type(annotation))
-                    raise ValueError('Unknown annotation type: %s' % type(annotation))
+                    raise PlatformException('400',
+                                            'unknown annotations type: {}'.format(type(item)))
 
-                if annotation_id is None:
-                    self.logger.exception('missing argument: annotation_id')
-                    raise ValueError('missing argument: annotation_id')
                 url_path = '/datasets/%s/items/%s/annotations/%s' % (self.dataset.id, self.item.id, annotation_id)
-                if system_metadata:
+                if params['system_metadata']:
                     url_path += '?system=true'
                 suc, response = self.client_api.gen_request(req_type='put',
                                                             path=url_path,
                                                             json_req=annotation)
                 if suc:
-                    success[i_annotation] = True
+                    success[i_item] = True
+                    output[i_item] = entities.Annotation.from_json(_json=response.json(),
+                                                                   item=self.item)
                 else:
                     raise PlatformException(response)
 
             except Exception as e:
-                success[i_annotation] = False
-                errors[i_annotation] = e
+                success[i_item] = False
+                errors[i_item] = e
 
-        from multiprocessing.pool import ThreadPool
-        pool = ThreadPool(processes=32)
-        num_annotations = len(annotations)
-        success = [None for _ in range(num_annotations)]
-        errors = [None for _ in range(num_annotations)]
-        for i_ann in range(len(annotations)):
-            pool.apply_async(func=update_single_annotation,
-                             kwds={'i_annotation': i_ann})
-        # log error
-        pool.close()
-        pool.join()
-        dummy = [self.logger.exception(errors[i_job]) for i_job, suc in enumerate(success) if suc is False]
-        self.logger.debug('Annotation/s updated successfully')
-        return True
+        if not isinstance(annotations, list):
+            annotations = [annotations]
+        multi_errors, multi_output = self.multiprocess_wrapper(func=update_single_annotation,
+                                                               items=annotations,
+                                                               params={'system_metadata': system_metadata})
+        if len(multi_errors) == 0:
+            self.logger.debug('Annotation/s uploaded with {} errors'.format(len(multi_errors)))
+        else:
+            self.logger.debug('Annotation/s uploaded successfully')
+        return multi_output
 
     def upload(self, annotations):
         """
         Create a new annotation
-        :param annotations: list or single annotation - dictionary or json string
+
+        :param annotations: list or single annotation of type Annotation
         :return: list of annotation objects
         """
 
-        if not isinstance(annotations, list):
-            annotations = [annotations]
-
-        def upload_single_annotation(i_w_annotation, w_annotation):
+        def upload_single_annotation(i_item, item, output, success, errors, params):
             try:
-                suc, response = self.client_api.gen_request(req_type='post',
-                                                            path='/datasets/%s/items/%s/annotations' %
-                                                                 (self.dataset.id, self.item.id),
-                                                            json_req=w_annotation)
+                if isinstance(item, str):
+                    annotation = json.loads(item)
+                elif isinstance(item, entities.Annotation):
+                    annotation = item.to_json()
+                elif isinstance(item, dict):
+                    annotation = item
+                else:
+                    raise PlatformException('400',
+                                            'unknown annotations type: {}'.format(type(item)))
+
+                suc, response = self.client_api.gen_request(
+                    req_type='post',
+                    path='/datasets/{}/items/{}/annotations'.format(self.dataset.id, self.item.id),
+                    json_req=annotation)
                 if suc:
-                    annotations_created[i_w_annotation] = entities.Annotation.from_json(_json=response.json(),
-                                                                                        dataset=self.dataset,
-                                                                                        item=self.item)
-                    success[i_w_annotation] = True
+                    output[i_item] = entities.Annotation.from_json(_json=response.json(),
+                                                                   item=self.item)
+                    success[i_item] = True
                 else:
                     raise PlatformException(response)
             except Exception as e:
-                success[i_w_annotation] = False
-                errors[i_w_annotation] = e
+                success[i_item] = False
+                errors[i_item] = e
 
-        from multiprocessing.pool import ThreadPool
-        pool = ThreadPool(processes=32)
-        num_annotations = len(annotations)
-        success = [None for _ in range(num_annotations)]
-        annotations_created = [None for _ in range(num_annotations)]
-        errors = [None for _ in range(num_annotations)]
-        for i_annotation, annotation in enumerate(annotations):
-            if isinstance(annotation, str):
-                annotation = json.loads(annotation)
-            elif isinstance(annotation, entities.Annotation):
-                annotation = annotation.to_json()
-            elif isinstance(annotation, dict):
-                pass
-            else:
-                self.logger.exception('unknown annotations type: %s' % type(annotation))
-                success[i_annotation] = False
-                errors[i_annotation] = 'unknown annotations type: %s' % type(annotation)
-                continue
-            pool.apply_async(func=upload_single_annotation,
-                             kwds={'i_w_annotation': i_annotation, 'w_annotation': annotation})
-        pool.close()
-        pool.join()
-        # log error
-        dummy = [self.logger.exception(errors[i_job]) for i_job, suc in enumerate(success) if suc is False]
-        self.logger.debug('Annotation/s uploaded successfully')
-        return annotations_created
+        # make list if not list
+        if isinstance(annotations, entities.AnnotationCollection):
+            annotations = annotations.annotations
+        if not isinstance(annotations, list):
+            annotations = [annotations]
+        # call multiprocess wrapper to run function on each item in list
+        multi_output, multi_errors = self.multiprocess_wrapper(func=upload_single_annotation,
+                                                               items=annotations)
+        if len(multi_errors) == 0:
+            self.logger.debug('Annotation/s uploaded successfully')
+        else:
+            self.logger.error(multi_errors)
+            self.logger.error('Annotation/s uploaded with {} errors'.format(len(multi_errors)))
+        return multi_output
+
+    def builder(self):
+        return entities.AnnotationCollection(item=self.item)

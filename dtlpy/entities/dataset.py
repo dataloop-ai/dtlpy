@@ -3,7 +3,9 @@ import logging
 import attr
 
 from .. import repositories, utilities
+
 logger = logging.getLogger('dataloop.dataset')
+
 
 @attr.s
 class Dataset:
@@ -31,8 +33,8 @@ class Dataset:
     _recipes = attr.ib()
 
     # defaults
-    ontology_ids = attr.ib()
-    labels = attr.ib()
+    _ontology_ids = attr.ib(default=None)
+    _labels = attr.ib(default=None)
 
     @classmethod
     def from_json(cls, project, _json, client_api):
@@ -64,24 +66,36 @@ class Dataset:
             project=project,
             metadata=metadata)
 
+    @property
+    def labels(self):
+        if self._labels is None:
+            self._labels = self.recipes.list()[0].ontologies.list()[0].labels
+        return self._labels
+
+    @labels.setter
+    def labels(self, labels):
+        self._labels = labels
+
+    @property
+    def ontology_ids(self):
+        if self._ontology_ids is not None:
+            return self._ontology_ids
+        else:
+            ontlogy_ids = list()
+            if self.metadata is not None and 'system' in self.metadata and 'recipes' in self.metadata['system']:
+                recipe_ids = self.get_recipe_ids()
+                recipes = list()
+                for rec_id in recipe_ids:
+                    recipes.append(self.recipes.get(recipe_id=rec_id))
+                ontologies = dict()
+                for recipe in recipes:
+                    ontologies[recipe.id] = recipe.ontologyIds
+                self._ontology_ids = ontologies
+            return ontlogy_ids
+
     @_items.default
     def set_items(self):
         return repositories.Items(dataset=self, client_api=self.client_api)
-
-    @ontology_ids.default
-    def set_ontology_ids(self):
-        ontlogy_ids = list()
-        if self.metadata is not None and 'system' in self.metadata and 'recipes' in self.metadata['system']:
-            recipe_ids = self.get_recipe_ids()
-            recipes = list()
-            for rec_id in recipe_ids:
-                recipes.append(self.recipes.get(recipe_id=rec_id))
-
-            ontologies = dict()
-            for recipe in recipes:
-                ontologies[recipe.id] = recipe.ontologyIds
-            self.ontology_ids = ontologies
-        return ontlogy_ids
 
     @property
     def items(self):
@@ -99,17 +113,6 @@ class Dataset:
 
     def __copy__(self):
         return Dataset.from_json(_json=self.to_json(), project=self.project, client_api=self.client_api)
-
-    @labels.default
-    def set_labels(self):
-        if self.metadata is None:
-            return list()
-        labels = list()
-        recipes = self.recipes.list()
-        for rec in recipes:
-            for ont in rec.ontologies.list():
-                labels += ont.labels
-        return labels
 
     def to_json(self):
         """
@@ -151,6 +154,21 @@ class Dataset:
             dataset_labels_dict[label] = '#%02x%02x%02x' % color
         return dataset_labels_dict
 
+    # def get_classes(self, label_and_color=False):
+    #     if self.metadata is None:
+    #         return list()
+    #     classes = list()
+    #     recipes = self.get_ontology_ids()
+    #     for rec in recipes:
+    #         recipe = self.recipes.get(recipe_id=rec)
+    #         for ont in recipes[rec]:
+    #             ontology = recipe.ontologies.get(ontology_id=ont)
+    #             classes += ontology.roots
+    #     if label_and_color:
+    #         return self.label_and_color(classes=classes)
+    #     else:
+    #         return classes
+
     def get_recipe_ids(self):
         """
         Get dataset recipe Ids
@@ -168,17 +186,18 @@ class Dataset:
         """
         return self.project.datasets.download_annotations(dataset_id=self.id, local_path=local_path)
 
-    def download(self, query=None, local_path=None, filetypes=None,
+    def download(self, filters=None, local_path=None, filetypes=None,
                  num_workers=None, download_options=None, save_locally=True,
                  download_item=True, annotation_options=None,
                  opacity=1, with_text=False, thickness=3):
         """
-        Download dataset by query.
-        Quering the dataset for items and save them local
+        Download dataset by filters.
+        Filtering the dataset for items and save them local
         Optional - also download annotation, mask, instance and image mask of the item
-        :param query: Query entity or a dictionary containing query parameters
+
+        :param filters: Filters entity or a dictionary containing filters parameters
         :param local_path: local folder or filename to save to. if folder ends with * images with be downloaded directly
-        to folder. else - an "images" folder will be create for the images
+                           to folder. else - an "images" folder will be create for the images
         :param filetypes: a list of filetype to download. e.g ['.jpg', '.png']
         :param num_workers: default - 32
         :param download_options: {'overwrite': True/False, 'relative_path': True/False}
@@ -191,22 +210,28 @@ class Dataset:
         :return:
         """
         return self.project.datasets.download(dataset_id=self.id,
-                                              query=query, local_path=local_path, filetypes=filetypes,
-                                              num_workers=num_workers, download_options=download_options,
+                                              filters=filters,
+                                              local_path=local_path,
+                                              filetypes=filetypes,
+                                              num_workers=num_workers,
+                                              download_options=download_options,
                                               save_locally=save_locally,
-                                              download_item=download_item, annotation_options=annotation_options,
-                                              opacity=opacity, with_text=with_text, thickness=thickness)
+                                              download_item=download_item,
+                                              annotation_options=annotation_options,
+                                              opacity=opacity,
+                                              with_text=with_text,
+                                              thickness=thickness)
 
     def upload(self, local_path=None, local_annotations_path=None, remote_path=None,
                upload_options=None, filetypes=None, num_workers=None):
         """
         Upload local file to dataset.
         Local filesystem will remain.
-        If "*" at the end of local_path (e.g. "/images/*") items will be uploaded without head directory
+        If "/*" at the end of local_path (e.g. "/images/*") items will be uploaded without head directory
 
         :param local_path: local files to upload
         :param local_annotations_path: path to dataloop format annotations json files.
-        annotations need to be in same files structure as "local_path"
+                                       annotations need to be in same files structure as "local_path"
         :param remote_path: remote path to save.
         :param upload_options: 'merge' or 'overwrite'
         :param filetypes: list of filetype to upload. e.g ['.jpg', '.png']. default is all

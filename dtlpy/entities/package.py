@@ -2,7 +2,7 @@ import os
 import logging
 import attr
 
-from .. import utilities, entities
+from .. import utilities, entities, PlatformException
 
 logger = logging.getLogger('dataloop.package')
 
@@ -26,32 +26,57 @@ class Package(entities.Item):
         :param client_api: client_api
         :return: Package object
         """
-        if 'md5' in _json['metadata']['system']:
+        try:
             md5 = _json['metadata']['system']['md5']
-        else:
+        except KeyError:
             md5 = None
-        return cls(
-            dataset=dataset,
-            annotated=_json['annotated'],
-            annotations_link=_json['annotations'],
-            stream=_json['stream'],
-            thumbnail=_json['thumbnail'],
-            url=_json['url'],
-            filename=_json['filename'],
-            id=_json['id'],
-            metadata=_json['metadata'],
-            mimetype=_json['metadata']['system']['mimetype'],
-            name=_json['name'],
-            size=_json['metadata']['system']['size'],
-            system=_json['metadata']['system'],
-            type=_json['type'],
-            version=int(os.path.splitext(_json['name'])[0]),
-            md5=md5,
-            client_api=client_api,
-            annotations=None,
-            width=None,
-            height=None
-        )
+        if _json['type'] == 'dir':
+            return cls(
+                client_api=client_api,
+                dataset=dataset,
+                annotated=None,
+                annotations_link=None,
+                stream=None,
+                thumbnail=None,
+                url=_json['url'],
+                filename=_json['filename'],
+                id=_json['id'],
+                metadata=_json['metadata'],
+                mimetype=None,
+                name=_json['name'],
+                size=None,
+                system=None,
+                type=_json['type'],
+                fps=None,
+                width=None,
+                height=None,
+                md5=md5,
+                annotations=None)
+        elif _json['type'] == 'file':
+            return cls(
+                client_api=client_api,
+                dataset=dataset,
+                annotated=_json['annotated'],
+                annotations_link=_json['annotations'],
+                stream=_json['stream'],
+                thumbnail=_json['thumbnail'],
+                url=_json['url'],
+                filename=_json['filename'],
+                id=_json['id'],
+                metadata=_json['metadata'],
+                mimetype=_json['metadata']['system']['mimetype'],
+                name=_json['name'],
+                size=_json['metadata']['system']['size'],
+                system=_json['metadata']['system'],
+                type=_json['type'],
+                fps=None,
+                width=None,
+                height=None,
+                md5=md5,
+                annotations=None)
+        else:
+            message = 'Unknown item type: %s' % _json['type']
+            raise PlatformException('404', message)
 
     def set_description(self, description):
         self.description = description

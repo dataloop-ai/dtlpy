@@ -18,6 +18,8 @@ import logging
 from .exceptions import PlatformException
 from . import services, repositories
 from .__version__ import version as __version__
+from .entities import Box, Point, Segmentation, Polygon, Ellipse, Classification, Polyline
+from .entities import AnnotationCollection, Annotation, Item, Package, Filters, Task, Session, Recipe, Ontology, Label
 
 """
 Main Platform Interface module for Dataloop

@@ -45,6 +45,12 @@ class Recipes:
         else:
             self.logger.exception('Failed to create Recipe')
             raise PlatformException(response)
+        # add recipe id to dataset system metadad
+        if 'system' not in self.dataset.metadata:
+            self.dataset.metadata['system'] = dict()
+        if 'recipes' not in self.dataset.metadata['system']:
+            self.dataset.metadata['system']['recipes'] = list()
+        self.dataset.metadata['system']['recipes'].append(recipe.id)
         return recipe
 
     def list(self):

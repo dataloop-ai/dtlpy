@@ -284,59 +284,59 @@ class VideoAnnotation(BaseAnnotation):
             self.logger.exception('element was not found in annotations. element_id: {}'.format(element_id))
         return matched_snapshot
 
-    def get_snapshots_by_time(self, second):
-        """
-        Get all annotations in timestamp
-        :param second:
-        :return:
-        """
-        timestamp_snapshots = list()
-        for head_annotation in self.annotations:
-            if 'snapshots_' in head_annotation['metadata']:
-                annotation = head_annotation['metadata']
-            elif 'snapshots_' in head_annotation['metadata']['system']:
-                annotation = head_annotation['metadata']['system']
-            else:
-                self.logger.exception('cant find snapshots in annotation')
-                break
-            # find annotation by element id
-            if annotation['startTime'] <= second <= annotation['endTime']:
-                # find closest snapshot
-                if not annotation['snapshots_']:
-                    continue
-                # add first timestamp to snapshots list
-                attributes = list()
-                if 'attributes' in head_annotation:
-                    attributes = head_annotation['attributes']
-                snapshots = [{'data': head_annotation['coordinates'],
-                              'frame': 0,
-                              'type': head_annotation['type'],
-                              'startTime': annotation['startTime'],
-                              'fixed': True,
-                              'attributes': attributes,
-                              'label': head_annotation['label']}]
-                # add all other snapshots
-                snapshots += annotation['snapshots_']
-                # get snapshots times
-                snapshots_time = np.array([snapshot['startTime'] for snapshot in snapshots])
-                # find closest
-                timestamp_diff = snapshots_time - second
-                positive_inds = [i for i, val in enumerate(timestamp_diff) if val >= 0]
-                if not positive_inds:
-                    continue
-                snap_id = np.argmin(timestamp_diff[positive_inds])
-                # get snapshot
-                current_snapshot = snapshots[positive_inds[snap_id]]
-                # current_snapshot['label'] = annotation['label']
-                # add attribut if not exist
-                if 'attributes' not in current_snapshot:
-                    if 'attributes' in head_annotation:
-                        current_snapshot['attributes'] = head_annotation['attributes']
-                    else:
-                        current_snapshot['attributes'] = list()
-                        # add to timestamp's list
-                timestamp_snapshots.append(current_snapshot)
-        return timestamp_snapshots
+    # def get_snapshots_by_time(self, second):
+    #     """
+    #     Get all annotations in timestamp
+    #     :param second:
+    #     :return:
+    #     """
+    #     timestamp_snapshots = list()
+    #     for head_annotation in self.annotations:
+    #         if 'snapshots_' in head_annotation['metadata']:
+    #             annotation = head_annotation['metadata']
+    #         elif 'snapshots_' in head_annotation['metadata']['system']:
+    #             annotation = head_annotation['metadata']['system']
+    #         else:
+    #             self.logger.exception('cant find snapshots in annotation')
+    #             break
+    #         # find annotation by element id
+    #         if annotation['startTime'] <= second <= annotation['endTime']:
+    #             # find closest snapshot
+    #             if not annotation['snapshots_']:
+    #                 continue
+    #             # add first timestamp to snapshots list
+    #             attributes = list()
+    #             if 'attributes' in head_annotation:
+    #                 attributes = head_annotation['attributes']
+    #             snapshots = [{'data': head_annotation['coordinates'],
+    #                           'frame': 0,
+    #                           'type': head_annotation['type'],
+    #                           'startTime': annotation['startTime'],
+    #                           'fixed': True,
+    #                           'attributes': attributes,
+    #                           'label': head_annotation['label']}]
+    #             # add all other snapshots
+    #             snapshots += annotation['snapshots_']
+    #             # get snapshots times
+    #             snapshots_time = np.array([snapshot['startTime'] for snapshot in snapshots])
+    #             # find closest
+    #             timestamp_diff = snapshots_time - second
+    #             positive_inds = [i for i, val in enumerate(timestamp_diff) if val >= 0]
+    #             if not positive_inds:
+    #                 continue
+    #             snap_id = np.argmin(timestamp_diff[positive_inds])
+    #             # get snapshot
+    #             current_snapshot = snapshots[positive_inds[snap_id]]
+    #             # current_snapshot['label'] = annotation['label']
+    #             # add attribut if not exist
+    #             if 'attributes' not in current_snapshot:
+    #                 if 'attributes' in head_annotation:
+    #                     current_snapshot['attributes'] = head_annotation['attributes']
+    #                 else:
+    #                     current_snapshot['attributes'] = list()
+    #                     # add to timestamp's list
+    #             timestamp_snapshots.append(current_snapshot)
+    #     return timestamp_snapshots
 
 
 class ImageAnnotation(BaseAnnotation):

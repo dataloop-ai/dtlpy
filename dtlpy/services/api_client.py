@@ -2,6 +2,7 @@
 Dataloop platform calls
 """
 import requests_toolbelt
+import threading
 import mimetypes
 import datetime
 import requests
@@ -22,8 +23,11 @@ from requests.adapters import HTTPAdapter
 from urllib.parse import urlencode
 from tabulate import tabulate
 from functools import wraps
+from .cookie import CookieIO
+from .calls_counter import CallsCounter
 
 logger = logging.getLogger('dataloop.api_client')
+threadLock = threading.Lock()
 
 
 class PlatformError(Exception):
@@ -40,47 +44,6 @@ class PlatformError(Exception):
         if hasattr(resp, 'text'):
             msg += '\ntext:%s' % resp.text
         super().__init__(msg)
-
-
-class CookieIO:
-    """
-    Cookie interface for Dataloop parameters
-    """
-
-    def __init__(self):
-        self.COOKIE = os.path.join(os.path.expanduser('~'), '.dataloop', 'cookie')
-        # create directory '.dataloop' if not exists
-        if not os.path.exists(os.path.dirname(self.COOKIE)):
-            os.makedirs(os.path.dirname(self.COOKIE))
-
-        if not os.path.exists(self.COOKIE) or os.path.getsize(self.COOKIE) == 0:
-            self.reset()
-        try:
-            with open(self.COOKIE, 'r') as f:
-                json.load(f)
-        except json.JSONDecodeError:
-            print('{} is corrupted'.format(self.COOKIE))
-            raise SystemExit
-
-    def get(self, key):
-        with open(self.COOKIE, 'r') as fp:
-            cfg = json.load(fp)
-        if key in cfg.keys():
-            return cfg[key]
-        else:
-            logger.warning(msg='key not in platform cookie file: %s. default is None' % key)
-            return None
-
-    def put(self, key, value):
-        with open(self.COOKIE, 'r') as fp:
-            cfg = json.load(fp)
-        cfg[key] = value
-        with open(self.COOKIE, 'w') as fp:
-            json.dump(cfg, fp, indent=4)
-
-    def reset(self):
-        with open(self.COOKIE, 'w') as fp:
-            json.dump({}, fp)
 
 
 class Decorators:
@@ -110,11 +73,13 @@ class ApiClient:
         ############
         self._token = None
         self._environment = None
+        self._verbose = None
         self.last_response = None
         self.last_request = None
         self.platform_exception = None
         self.last_curl = None
-        self.io = CookieIO()
+        CookieIO.init()
+        self.io = CookieIO.global_cookie
 
         ##################
         # configurations #
@@ -140,6 +105,9 @@ class ApiClient:
         # STDOUT
         self.remove_keys_list = ['contributors', 'url', 'annotations', 'items', 'export', 'directoryTree',
                                  'attributes', 'partitions', 'metadata', 'stream', 'createdAt', 'updatedAt', 'arch']
+
+        # API calls counter
+        self.calls_counter = CallsCounter(cookie=self.io)
 
     @property
     def verify(self):
@@ -219,14 +187,15 @@ class ApiClient:
 
     @property
     def verbose(self):
-        verbose = self.io.get('verbose')
-        if verbose is None:
-            verbose = False
-            self.verbose = verbose
-        return verbose
+        if self._verbose is None:
+            verbose = self.io.get('verbose')
+            if verbose is None:
+                self.verbose = False
+        return self._verbose
 
     @verbose.setter
     def verbose(self, verbose):
+        self._verbose = verbose
         self.io.put(key='verbose', value=verbose)
 
     @property
@@ -338,6 +307,8 @@ class ApiClient:
             s.mount('http://', adapter)
             s.mount('https://', adapter)
             resp = s.send(request=prepared, stream=stream, verify=self.verify)
+            with threadLock:
+                self.calls_counter.add()
         self.last_response = resp
         # handle output
         if not resp.ok:
@@ -429,6 +400,8 @@ class ApiClient:
                     s.mount('http://', adapter)
                     s.mount('https://', adapter)
                     resp = s.send(prepared, verify=self.verify)
+                    with threadLock:
+                        self.calls_counter.add()
             self.last_response = resp
             self.last_request = prepared
             # handle output

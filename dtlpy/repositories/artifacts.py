@@ -57,9 +57,10 @@ class Artifacts:
         :return: list of artifacts
         """
         if session_id is not None:
-            pages = self.items_repository.list(query={'directories': ['/artifacts/sessions/%s' % session_id]})
+            pages = self.items_repository.list(
+                filters=entities.Filters(directories='/artifacts/sessions/%s' % session_id))
         elif task_id is not None:
-            pages = self.items_repository.list(query={'directories': ['/artifacts/tasks/%s' % task_id]})
+            pages = self.items_repository.list(filters=entities.Filters(directories='/artifacts/tasks/%s' % task_id))
         else:
             raise ValueError('Must input one search parameter')
         items = [item for page in pages for item in page]
@@ -124,12 +125,12 @@ class Artifacts:
                 directories = '/artifacts/tasks/%s' % task_id
             else:
                 raise PlatformException('400', 'Must input task or session (id or entity)')
-            query = {'directories': [directories]}
+            filters = entities.Filters(directories=directories)
             if not (local_path.endswith('/*') or local_path.endswith(r'\*')):
                 # download directly to folder
                 local_path = os.path.join(local_path, '*')
             self.project.datasets.download(dataset_id=self.dataset.id,
-                                           query=query,
+                                           filters=filters,
                                            save_locally=True,
                                            local_path=local_path,
                                            download_options=download_options)

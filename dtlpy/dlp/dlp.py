@@ -64,6 +64,11 @@ def get_parser():
     required.add_argument('-i', '--client-id', metavar='', help='client id', required=True)
     required.add_argument('-s', '--client-secret', metavar='', help='client secret', required=True)
 
+    ########
+    # Init #
+    ########
+    subparsers.add_parser('init', help='Initialize a .dataloop context')
+
     #######
     # API #
     #######
@@ -221,6 +226,34 @@ def get_parser():
                           default=os.getcwd())
 
     ############
+    # Plugins #
+    ############
+    subparser = subparsers.add_parser('plugins', help='Operations with plugins')
+    subparser_parser = subparser.add_subparsers(dest='plugins', help='plugin operations')
+
+    a = subparser_parser.add_parser('generate', help='Create a boilerplate for a new plugin')
+
+    a = subparser_parser.add_parser('push', help='Push the plugin to the platform')
+
+    a = subparser_parser.add_parser('test', help='Tests that plugin locally using mock.json')
+
+    a = subparser_parser.add_parser('status', help='?')
+
+    ############
+    # Checkout #
+    ############
+    subparser = subparsers.add_parser('checkout', help='Operations with setting the state of the cli')
+    subparser_parser = subparser.add_subparsers(dest='checkout', help='package operations')
+
+    a = subparser_parser.add_parser('project', help='Checks out to a different project')
+    required = a.add_argument_group('required named arguments')
+    required.add_argument('project', metavar='Project', type=str, help='project name')
+
+    a = subparser_parser.add_parser('dataset', help='Checks out to a different dataset')
+    required = a.add_argument_group('required named arguments')
+    required.add_argument('dataset', metavar='Dataset', type=str, help='dataset name')
+
+    ############
     # Sessions #
     ############
     subparser = subparsers.add_parser('sessions', help='Operations with sessions')
@@ -283,6 +316,13 @@ def get_parser():
     optional.add_argument('-i', '--input', action='append', type=lambda kv: kv.split('='), dest='pipe_kwargs',
                           help='Input args for pipe. Use: ["--input key1=val1 --input key2=val2"]')
 
+    ############
+    # Tasks #
+    ############
+    subparser = subparsers.add_parser('tasks', help='Operations with tasks')
+    subparser_parser = subparser.add_subparsers(dest='tasks', help='Tasks operations')
+    a = subparser_parser.add_parser('create', help='Creates a task from the folder')
+
     return parser
 
 
@@ -330,19 +370,26 @@ def main():
                              client_id=args.client_id,
                              client_secret=args.client_secret)
 
+        #########
+        # Init  #
+        #########
+        elif args.operation == 'init':
+            from ..utilities.plugin_bootstraping.dataloop_folder_initializator import init_dataloop_folder
+            init_dataloop_folder()
+
         #######
         # api #
         #######
         elif args.operation == 'api':
             if args.api == 'info':
                 print('environment')
-                print(dlp.environment)
+                print(dlp.environment())
                 print('token')
                 print(dlp.token())
 
             if args.api == 'setenv':
                 dlp.setenv(args.env)
-                print('[INFO] Platform environment: %s' % dlp.environment)
+                print('[INFO] Platform environment: %s' % dlp.environment())
 
             if args.api == 'update':
                 url = args.url
@@ -429,7 +476,7 @@ def main():
                 annotation_options = list()
                 if len(args.annotation_options) > 0:
                     annotation_options = args.annotation_options.split(',')
-                project.datasets.download(query={'filenames': [args.remote_path]},
+                project.datasets.download(filters=dlp.Filters(filenames=[args.remote_path]),
                                           dataset_name=args.dataset_name,
                                           local_path=args.local_path,
                                           download_item=args.dl_img,
@@ -459,7 +506,7 @@ def main():
                         args.page = int(args.page)
                     except ValueError:
                         raise ValueError('Input --page must be integer')
-                pages = dataset.items.list(query={'filenames': [args.remote_path]},
+                pages = dataset.items.list(filters=dlp.Filters(filenames=[args.remote_path]),
                                            page_offset=args.page)
                 pages.print()
                 print('Displaying page %d/%d' % (args.page + 1, pages.pages_count))
@@ -558,6 +605,51 @@ def main():
                 print('Unpacking source code...')
                 dlp.packages.unpack(package_id=args.package_id,
                                     local_directory=args.directory)
+
+            else:
+                print('Type "dlp packages --help" for options')
+
+        ############
+        # Plugins  #
+        ############
+        elif args.operation == 'plugins':
+            if dlp.token_expired():
+                print('[ERROR] token expired, please login.')
+                return
+
+            if args.plugins == 'generate':
+                from ..utilities.plugin_bootstraping.package_generator import generate_package
+                generate_package()
+
+            elif args.plugins == 'push':
+                from dtlpy.utilities.plugin_bootstraping.package_uploader.package_uploader import PackageUploader
+                package_uploader = PackageUploader()
+                package_uploader.upload_package(dlp)
+
+            elif args.plugins == 'test':
+                from ..utilities.plugin_bootstraping.package_runner import PackageRunner
+                package_runner = PackageRunner()
+                package_runner.run_local_project(dlp)
+
+            elif args.plugins == 'status':
+                from  ..utilities.plugin_bootstraping.package_status_manager import get_package_status
+                get_package_status()
+
+        ############
+        # Checkout #
+        ############
+        elif args.operation == 'checkout':
+            if dlp.token_expired():
+                print('[ERROR] token expired, please login.')
+                return
+
+            if args.checkout == 'project':
+                from dtlpy.utilities.checkout_manager.project_checkout import checkout_project
+                checkout_project(dlp, args.project)
+            elif args.checkout == 'dataset':
+                from dtlpy.utilities.checkout_manager.dataset_checkout import checkout_dataset
+                checkout_dataset(dlp, args.dataset)
+
             else:
                 print('Type "dlp packages --help" for options')
 
@@ -634,6 +726,20 @@ def main():
                     print('[INFO] input missing. "session-id" or "prev-session-id"')
             else:
                 print('Type "dlp pipes --help" for options')
+
+        #########
+        # Tasks #
+        #########
+        elif args.operation == 'tasks':
+            if dlp.token_expired():
+                print('[ERROR] token expired, please login.')
+                return
+
+            if args.tasks == "create":
+                from ..utilities.plugin_bootstraping.task_generator import generate_task_from_project
+                generate_task_from_project()
+            else:
+                print('Type "dlp tasks --help" for options')
 
         ###############
         # Catch typos #

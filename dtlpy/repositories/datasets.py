@@ -85,11 +85,12 @@ class Datasets:
 
     def download_annotations(self, dataset_name=None, dataset_id=None, local_path=None, overwrite=False):
         """
-        Download annotations json for entire dataset
+            Download annotations json for entire dataset
 
         :param dataset_name: optional - search by name
         :param dataset_id: optional - search by id
         :param local_path:
+        :param overwrite:
         :return:
         """
         # get dataset
@@ -142,24 +143,24 @@ class Datasets:
                     os.remove(annotations_zip)
 
     def download(self, dataset_name=None, dataset_id=None,
-                 query=None, local_path=None, filetypes=None,
+                 filters=None, local_path=None, filetypes=None,
                  num_workers=None, download_options=None, save_locally=True,
                  download_item=True, annotation_options=None,
                  opacity=1, with_text=False, thickness=3):
         """
-        Download dataset by query.
+        Download dataset by filters.
         Quering the dataset for items and save them local
         Optional - also download annotation, mask, instance and image mask of the item
         :param dataset_name: get dataset by name
         :param dataset_id: get dataset by id
-        :param query: Query entity or a dictionary containing query parameters
+        :param filters: Filters entity or a dictionary containing filters parameters
         :param local_path: local folder or filename to save to. if folder ends with * images with be downloaded directly to folder. else - an "images" folder will be create for the images
         :param filetypes: a list of filetype to download. e.g ['.jpg', '.png']
         :param num_workers: default - 32
         :param download_options: {'overwrite': True/False, 'relative_path': True/False}
         :param save_locally: bool. save to disk or return a buffer
         :param download_item: bool. download image
-        :param annotation_options: download annotations options: ['mask', 'img_mask', 'instance', 'json']
+        :param annotation_options: download annotations options: ['mask', 'instance', 'json']
         :param opacity: for img_mask
         :param with_text: add label to annotations
         :param thickness: annotation line
@@ -168,32 +169,33 @@ class Datasets:
 
         def download_single_item(i_item, item):
             try:
-                w_dataset = dataset.__copy__()
-                download = False
-                for i_try in range(num_tries):
+                i_try = 0
+                while True:
                     try:
-                        download = w_dataset.items.download(item_id=item.id,
-                                                            save_locally=save_locally,
-                                                            local_path=local_path,
-                                                            download_options=download_options,
-                                                            download_item=download_item,
-                                                            annotation_options=annotation_options,
-                                                            verbose=False,
-                                                            show_progress=True)
+                        self.logger.debug('download item: {}, try {}'.format(item.id, i_try))
+                        download = dataset.items.download(item_id=item.id,
+                                                          save_locally=save_locally,
+                                                          local_path=local_path,
+                                                          download_options=download_options,
+                                                          download_item=download_item,
+                                                          annotation_options=annotation_options,
+                                                          verbose=False,
+                                                          show_progress=True)
+                        # if here than download went well - break the while
+                        break
                     except:
-                        if i_try > num_tries:
+                        i_try += 1
+                        if i_try >= num_tries:
                             raise
-                        else:
-                            i_try += 1
-                            continue
                 status[i_item] = 'download'
                 output[i_item] = download
                 success[i_item] = True
             except Exception as err:
+                self.logger.debug('{}\n{}'.format(err, traceback.format_exc()))
                 status[i_item] = 'error'
                 output[i_item] = i_item
                 success[i_item] = False
-                errors[i_item] = '%s\n%s' % (err, traceback.format_exc())
+                errors[i_item] = '{}\n{}'.format(err, traceback.format_exc())
             finally:
                 progress.queue.put((status[i_item],))
 
@@ -248,7 +250,7 @@ class Datasets:
             self.download_annotations(dataset_name=dataset_name,
                                       dataset_id=dataset_id,
                                       local_path=os.path.join(local_path))
-        paged_entity = dataset.items.list(query=query)
+        paged_entity = dataset.items.list(filters=filters)
         output = [None for _ in range(paged_entity.items_count)]
         success = [False for _ in range(paged_entity.items_count)]
         status = ['' for _ in range(paged_entity.items_count)]
@@ -286,13 +288,13 @@ class Datasets:
                                         'log_%s.txt' % datetime.datetime.now().strftime('%Y%m%d_%H%M%S'))
             errors_list = [errors[i_job] for i_job, suc in enumerate(success) if suc is False]
             ids_list = [output[i_job] for i_job, suc in enumerate(success) if suc is False]
-            errors_json = {item_id: error for item_id, error in zip(errors_list, ids_list)}
+            errors_json = {item_id: error for item_id, error in zip(ids_list, errors_list)}
             with open(log_filepath, 'w') as f:
                 json.dump(errors_json, f, indent=4)
             self.logger.warning('Errors in {} files. See %s for full log'.format(n_error, log_filepath))
 
         # remove empty cells
-        output = [x for x in output if x is not None]
+        output = [output[i_job] for i_job, suc in enumerate(success) if suc is True]
         return output
 
     def upload(self, dataset_name=None, dataset_id=None,
@@ -320,39 +322,21 @@ class Datasets:
 
         def upload_single_file(i_item, filepath, annotations_filepath, relative_path):
             try:
-                w_dataset = dataset.__copy__()
                 # create remote path
                 remote_path_w = os.path.join(remote_path, os.path.dirname(relative_path)).replace('\\', '/')
                 uploaded_filename_w = os.path.basename(filepath)
-                remote_filepath_w = os.path.join(remote_path_w, uploaded_filename_w).replace('\\', '/')
-                # check if item exists
-                try:
-                    items = w_dataset.items.get(filepath=remote_filepath_w)
-                    # items exists
-                    if upload_options == 'overwrite':
-                        # delete remote item
-                        result, response = w_dataset.items.delete(item_id=items[0].id)
-                        if not result:
-                            raise PlatformException(response)
-                    else:
-                        status[i_item] = 'exist'
-                        output[i_item] = relative_path
-                        success[i_item] = True
-                        return
-                except exceptions.NotFound:
-                    pass
                 # put file in gate
                 result = False
                 for _ in range(num_tries):
-                    result = w_dataset.items.upload(filepath=filepath,
-                                                    annotations_filepath=annotations_filepath,
-                                                    remote_path=remote_path_w,
-                                                    uploaded_filename=uploaded_filename_w,
-                                                    callback=callback)
+                    result = dataset.items.upload(filepath=filepath,
+                                                  annotations_filepath=annotations_filepath,
+                                                  remote_path=remote_path_w,
+                                                  uploaded_filename=uploaded_filename_w,
+                                                  callback=callback)
                     if result:
                         break
                 if not result:
-                    raise w_dataset.items.client_api.platform_exception
+                    raise dataset.items.client_api.platform_exception
                 status[i_item] = 'upload'
                 output[i_item] = relative_path
                 success[i_item] = True
@@ -415,7 +399,7 @@ class Datasets:
         num_files = len(filepaths)
         output = [None for _ in range(num_files)]
         status = [None for _ in range(num_files)]
-        success = [None for _ in range(num_files)]
+        success = [False for _ in range(num_files)]
         errors = [None for _ in range(num_files)]
         progress = Progress(max_val=total_size, progress_type='upload')
         pool = ThreadPool(processes=num_workers)
@@ -538,23 +522,21 @@ class Datasets:
             # create ontology and recipe
             recipe = dataset.recipes.create(ontology_ids=None, labels=labels, attributes=attributes)
             # patch recipe to dataset
-            dataset.metadata['system']['recipes'] = [recipe.id]
-            self.update(dataset=dataset, system_metadata=True)
-            dataset = self.get(dataset_name=dataset.name)
+            dataset = self.update(dataset=dataset, system_metadata=True)
         else:
             raise PlatformException(response)
         self.logger.info('Dataset was created successfully. Dataset id: %s' % dataset.id)
         return dataset
 
-    def set_items_metadata(self, dataset_name=None, dataset_id=None, query=None,
+    def set_items_metadata(self, dataset_name=None, dataset_id=None, filters=None,
                            key_val_list=None, percent=None, random=True):
         """
-        Set of changes metadata key for a query.
+        Set of metadata to post on items in filter.
 
         :param dataset_name: optional - search by name
         :param dataset_id: optional - search by id
-        :param query: Query entity or a dictionary containing query parameters
-        :param key_val_list: list of dictioanry to set in metadata. e.g [{'split': 'training'}, {'split': 'validation'}
+        :param filters: Filters entity or a dictionary containing filters parameters
+        :param key_val_list: list of dictionary to set in metadata. e.g [{'split': 'training'}, {'split': 'validation'}
         :param percent: list of percentages to set the key_val_list
         :param random: bool. shuffle the items before setting the metadata
         :return: Output (list)
@@ -585,7 +567,7 @@ class Datasets:
             raise PlatformException('400', '"percent" must sum up to 1')
         # start
         dataset = self.get(dataset_name=dataset_name, dataset_id=dataset_id)
-        pages = dataset.items.list(query=query)
+        pages = dataset.items.list(filters=filters)
         num_items = pages.items_count
         # get list of number of items for each percent
         percent_cumsum = num_items * np.cumsum(percent)

@@ -1,0 +1,27 @@
+from ..main import run
+from dtlpy import PlatformInterface
+from dtlpy import entities
+
+class Wrapper:
+
+    @staticmethod
+    def get_dataset(dlp, dataset_id):
+        return dlp.datasets.get(dataset_id=dataset_id)
+
+    @staticmethod
+    def get_item(dlp, dataset_id, item_id):
+        dataset = Wrapper.get_dataset(dlp, dataset_id)
+        return dataset.items.get(item_id=item_id)
+
+    @staticmethod
+    def get_annotation(dlp, dataset_id, item_id, annotation_id):
+        item = Wrapper.get_item(dlp, dataset_id, item_id)
+        return item.annotations.get(annotation_id=annotation_id)
+
+    @staticmethod
+    def entry_point({{RAW_INPUTS}}):
+        {{RESOURCE_RESOLUTION}}
+        ret_val = run({{RESOLVED_RESOURCES}})
+        outputs = {}
+        {{OUTPUT_RESOLUTION}}
+        return outputs

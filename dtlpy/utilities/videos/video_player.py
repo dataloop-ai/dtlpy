@@ -8,7 +8,6 @@ import PIL.ImageTk
 import PIL.Image
 import numpy as np
 import dtlpy as dl
-from dtlpy.utilities.annotations import VideoAnnotation
 
 
 class VideoPlayer:
@@ -77,8 +76,8 @@ class VideoPlayer:
         ################
         # Play / Pause #
         ################
-        btn_play = tkinter.Button(button_frame, text="Play", command=self.play).grid(sticky="W", row=4, column=0)
-        btn_pause = tkinter.Button(button_frame, text="Pause", command=self.pause).grid(sticky="W", row=4, column=1)
+        self.btn_toggle_play = tkinter.Button(button_frame, text='Play ', command=self.toggle_play)
+        self.btn_toggle_play.grid(sticky="W", row=4, column=0)
         ###################
         # Next prev frame #
         ###################
@@ -88,37 +87,40 @@ class VideoPlayer:
         btn_prev_frame = tkinter.Button(button_frame, text="Prev frame", command=self.prev_frame).grid(sticky="W",
                                                                                                        row=4,
                                                                                                        column=3)
-        btn_toggle_frame_num = tkinter.Button(button_frame, text="Show/hide frame number",
-                                              command=self.toggle_show_frame_number).grid(sticky="W", row=5, column=0,
-                                                                                          columnspan=10)
-        btn_toggle_annotations = tkinter.Button(button_frame, text="Show/hide annotations",
-                                                command=self.toggle_show_annotations) \
-            .grid(sticky="W", row=6, column=0, columnspan=10)
-        btn_toggle_label = tkinter.Button(button_frame, text="Show/hide label", command=self.toggle_show_label) \
-            .grid(sticky="W", row=7, column=0, columnspan=10)
+        self.btn_toggle_frame_num = tkinter.Button(button_frame,
+                                                   text="Hide frame number",
+                                                   command=self.toggle_show_frame_number)
+        self.btn_toggle_frame_num.grid(sticky="W", row=5, column=0, columnspan=10)
+        self.btn_toggle_annotations = tkinter.Button(button_frame,
+                                                     text="Hide annotations",
+                                                     command=self.toggle_show_annotations)
+        self.btn_toggle_annotations.grid(sticky="W", row=6, column=0, columnspan=10)
+        self.btn_toggle_label = tkinter.Button(button_frame,
+                                               text="Hide label",
+                                               command=self.toggle_show_label)
+        self.btn_toggle_label.grid(sticky="W", row=7, column=0, columnspan=10)
         #################
         # Export button #
         #################
         tkinter.Button(button_frame, text="Export video", command=self.export) \
             .grid(sticky="W", row=16, column=2, columnspan=2)
-        ################
-        # Apply button #
-        ################
-        btn_apply_offset_fix = tkinter.Button(button_frame, text="Apply offset fix", command=self.apply_offset_fix) \
-            .grid(sticky="W", row=16, column=0, columnspan=2)
-        btn_reset = tkinter.Button(button_frame, text="Reset", command=self.reset) \
-            .grid(sticky="W", row=4, column=4)
-        #####################
-        # Annotation Offset #
-        #####################
-        tkinter.Label(button_frame, text="Annotation offset (in frames):") \
-            .grid(sticky="W", row=13, column=0,
-                  columnspan=10)
-        self.annotations_offset_entry = tkinter.Entry(button_frame)
-        self.annotations_offset_entry.bind("<Return>", self.set_annotation_offset)
-        self.annotations_offset_entry.grid(sticky="W", row=14, column=0, columnspan=10)
-        self.annotation_offset_text = tkinter.Label(button_frame)
-        self.annotation_offset_text.grid(sticky="W", row=15, column=0, columnspan=10)
+        # ################
+        # # Apply button #
+        # ################
+        # btn_apply_offset_fix = tkinter.Button(button_frame, text="Apply offset fix", command=self.apply_offset_fix) \
+        #     .grid(sticky="W", row=16, column=0, columnspan=2)
+        btn_reset = tkinter.Button(button_frame, text="Reset", command=self.reset).grid(sticky="W", row=4, column=4)
+        # #####################
+        # # Annotation Offset #
+        # #####################
+        # tkinter.Label(button_frame, text="Annotation offset (in frames):") \
+        #     .grid(sticky="W", row=13, column=0,
+        #           columnspan=10)
+        # self.annotations_offset_entry = tkinter.Entry(button_frame)
+        # self.annotations_offset_entry.bind("<Return>", self.set_annotation_offset)
+        # self.annotations_offset_entry.grid(sticky="W", row=14, column=0, columnspan=10)
+        # self.annotation_offset_text = tkinter.Label(button_frame)
+        # self.annotation_offset_text.grid(sticky="W", row=15, column=0, columnspan=10)
         ##############
         # Set Frames #
         ##############
@@ -142,7 +144,7 @@ class VideoPlayer:
         ##############
         self.delay = None
         self.annotations_timestamp = None
-        self.annotations_offset = None
+        # self.annotations_offset = None
         self.annotations_timestamp = None
         self.show_frame_num = True
         self.show_annotations = True
@@ -212,16 +214,22 @@ class VideoPlayer:
             if not ret:
                 break
             # mark on frame
-            annotations_timestamp = i_frame / fps
-            annotation = self.video_annotations.get_snapshots_by_time(second=annotations_timestamp)
-            for ann in annotation:
-                top_left = (int(ann['data'][0]['x']), int(ann['data'][0]['y']))
-                bottom_right = (int(ann['data'][1]['x']), int(ann['data'][1]['y']))
-                color = self.get_class_color(ann['label'])
-                frame = cv2.rectangle(frame, top_left, bottom_right, color=color, thickness=2)
-                frame = cv2.putText(frame, text=ann['label'], org=top_left, color=color,
-                                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=2, thickness=2)
+            annotations = [frame_annotation.get_annotation_by_frame(frame=i_frame)
+                           for frame_annotation in self.video_annotations]
 
+            for annotation in annotations:
+                if annotation is None:
+                    continue
+                frame = annotation.show(image=frame, color=self.get_class_color(annotation.label))
+                if self.show_label:
+                    text = '%s-%s' % (annotation.label, ','.join(annotation.attributes))
+                    frame = cv2.putText(frame,
+                                        text=text,
+                                        org=tuple([int(np.round(annotation.left)), int(np.round(annotation.top))]),
+                                        color=(255, 0, 0),
+                                        fontFace=cv2.FONT_HERSHEY_DUPLEX,
+                                        fontScale=1,
+                                        thickness=2)
             # write
             writer.write(frame)
             i_frame += 1
@@ -243,13 +251,13 @@ class VideoPlayer:
         :return:
         """
         self.annotations_timestamp = 0
-        self.annotations_offset = 0
-        self.annotation_offset_text.configure(text='Current: %d' % self.annotations_offset)
+        # self.annotations_offset = 0
+        # self.annotation_offset_text.configure(text='Current: %d' % self.annotations_offset)
         self.annotations_timestamp_text.configure(text='Annotation timestamp:\n %d' % self.annotations_timestamp)
         self.annotations_timestamp_text.grid(sticky="W", row=9, column=0, columnspan=10)
         # set text frames
-        self.annotations_offset_entry.delete(0, 'end')
-        self.annotations_offset_entry.insert(0, str(self.annotations_offset))
+        # self.annotations_offset_entry.delete(0, 'end')
+        # self.annotations_offset_entry.insert(0, str(self.annotations_offset))
         self.current_frame_entry.delete(0, 'end')
         self.current_frame_entry.insert(0, str(self.vid.frame_number))
 
@@ -258,11 +266,10 @@ class VideoPlayer:
         Load local video and annotation
         :return:
         """
-        self.video_annotations = VideoAnnotation()
         if self.local_annotations_filename is not None:
             with open(self.local_annotations_filename, 'r') as f:
-                annotations = json.load(f)
-            self.video_annotations.annotations = annotations['annotations']
+                data = json.load(f)
+        self.video_annotations = dl.AnnotationCollection.from_json(data['annotations'])
 
     def from_platform(self):
         """
@@ -277,11 +284,14 @@ class VideoPlayer:
         item_id = self.platform_params['item_id']
 
         # load remote item
-        self.project = dl.projects.get(project_name=project_name, project_id=project_id)
-        if self.project is None:
-            self.logger.exception('Project doesnt exists. name: %s, id: %s', project_name, project_id)
-            raise ValueError('Project doesnt exists. name: %s, id: %s' % (project_name, project_id))
-        self.dataset = self.project.datasets.get(dataset_name=dataset_name, dataset_id=dataset_id)
+        if dataset_id is None:
+            self.project = dl.projects.get(project_name=project_name, project_id=project_id)
+            if self.project is None:
+                self.logger.exception('Project doesnt exists. name: %s, id: %s', project_name, project_id)
+                raise ValueError('Project doesnt exists. name: %s, id: %s' % (project_name, project_id))
+            self.dataset = self.project.datasets.get(dataset_name=dataset_name, dataset_id=dataset_id)
+        else:
+            self.dataset = dl.datasets.get(dataset_id=dataset_id)
         if self.dataset is None:
             self.logger.exception('Dataset doesnt exists. name: %s, id: %s', dataset_name, dataset_id)
             raise ValueError('Dataset doesnt exists. name: %s, id: %s' % (dataset_name, dataset_id))
@@ -289,17 +299,15 @@ class VideoPlayer:
         if self.item is None:
             self.logger.exception('Item doesnt exists. name: %s, id: %s', item_filepath, item_id)
             raise ValueError('Item doesnt exists. name: %s, id: %s' % (item_filepath, item_id))
-        self.labels = {label.tag: label.rgb() for label in self.dataset.labels}
+        self.labels = {label.tag: label.rgb for label in self.dataset.labels}
         _, ext = os.path.splitext(self.item.filename[1:])
         video_filename = os.path.join(self.dataset.__get_local_path__(), self.item.filename[1:])
         if not os.path.isdir(os.path.dirname(video_filename)):
             os.makedirs(os.path.dirname(video_filename))
         if not os.path.isfile(video_filename):
             self.dataset.items.download(item_id=self.item.id, local_path=video_filename)
-        annotations = [ann.to_json() for ann in self.item.annotations.list()]
         self.video_source = video_filename
-        self.video_annotations = VideoAnnotation()
-        self.video_annotations.annotations = annotations
+        self.video_annotations = self.item.annotations.list()
 
     def close(self):
         """
@@ -309,14 +317,15 @@ class VideoPlayer:
         self.window.destroy()
         self.buttons_window.destroy()
 
-    def set_annotation_offset(self, entry):
-        """
-        Set annotations offset to video start time
-        :param entry:
-        :return:
-        """
-        self.annotations_offset = int(self.annotations_offset_entry.get())
-        self.annotation_offset_text.configure(text='Current: %d' % self.annotations_offset)
+    #
+    # def set_annotation_offset(self, entry):
+    #     """
+    #     Set annotations offset to video start time
+    #     :param entry:
+    #     :return:
+    #     """
+    #     self.annotations_offset = int(self.annotations_offset_entry.get())
+    #     self.annotation_offset_text.configure(text='Current: %d' % self.annotations_offset)
 
     def set_current_frame(self, entry):
         """
@@ -332,21 +341,36 @@ class VideoPlayer:
         Show/hide frame number on frames
         :return:
         """
-        self.show_frame_num = not self.show_frame_num
+        if self.show_frame_num:
+            self.show_frame_num = False
+            self.btn_toggle_frame_num.config(text='Show frame num')
+        else:
+            self.show_frame_num = True
+            self.btn_toggle_frame_num.config(text='Hide frame num')
 
     def toggle_show_annotations(self):
         """
         Show/hide annotations from frame
         :return:
         """
-        self.show_annotations = not self.show_annotations
+        if self.show_annotations:
+            self.show_annotations = False
+            self.btn_toggle_annotations.config(text='Show annotations')
+        else:
+            self.show_annotations = True
+            self.btn_toggle_annotations.config(text='Hide annotations')
 
     def toggle_show_label(self):
         """
         Show/hide label per annotations
         :return:
         """
-        self.show_label = not self.show_label
+        if self.show_label:
+            self.show_label = False
+            self.btn_toggle_label.config(text='Show label')
+        else:
+            self.show_label = True
+            self.btn_toggle_label.config(text='Hide label')
 
     def get_class_color(self, label):
         """
@@ -374,49 +398,29 @@ class VideoPlayer:
         :param frame:
         :return:
         """
-        self.annotations_timestamp = (self.vid.frame_number + self.annotations_offset) / self.vid.fps
-        annotation = self.video_annotations.get_snapshots_by_time(second=self.annotations_timestamp)
-        timestamps_list = list()
-        for ann in annotation:
-            if ann['type'] == 'box':
-                top_left = (int(ann['data'][0]['x']), int(ann['data'][0]['y']))
-                bottom_right = (int(ann['data'][1]['x']), int(ann['data'][1]['y']))
-                color = self.get_class_color(ann['label'])
-                frame = cv2.rectangle(frame, top_left, bottom_right, color=color, thickness=2)
-                if self.show_label:
-                    text = '%s-%s' % (ann['label'], ','.join(ann['attributes']))
-                    frame = cv2.putText(frame, text=text, org=top_left, color=color,
-                                        fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1, thickness=2)
-                timestamps_list.append(str(ann['startTime']))
-            elif ann['type'] == 'point':
-                x = int(ann['data']['x'])
-                y = int(ann['data']['y'])
-                color = self.get_class_color(ann['label'])
-                frame = cv2.circle(frame, center=(x, y),radius=5, color=color, thickness=2)
-                if self.show_label:
-                    text = '%s-%s' % (ann['label'], ','.join(ann['attributes']))
-                    frame = cv2.putText(frame, text=text, org=(x, y), color=color, fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1, thickness=2)
-                timestamps_list.append(str(ann['startTime']))
-
-        self.annotations_timestamp_text.configure(text='Annotations timestamp[s]:\n%s' % '\n'.join(timestamps_list))
-        self.annotations_timestamp_text.grid(sticky="W", row=9, column=0)
+        # self.annotations_timestamp = (self.vid.frame_number + self.annotations_offset) / self.vid.fps
+        self.annotations_timestamp = self.vid.frame_number / self.vid.fps
+        frame = self.video_annotations.get_frame(frame_num=self.vid.frame_number).show(image=frame,
+                                                                                       height=frame.shape[0],
+                                                                                       width=frame.shape[1],
+                                                                                       with_text=self.show_label)
         return frame
 
-    def play(self):
+    def toggle_play(self):
         """
-        Start play move
+        Toggle play pause
         :return:
         """
-        self.playing = True
+        if self.playing:
+            # need to pause
+            self.playing = False
+            self.btn_toggle_play.config(text='Play ')
+        else:
+            # need to play
+            self.playing = True
+            self.btn_toggle_play.config(text='Pause')
 
-    def pause(self):
-        """
-        Pause movie
-        :return:
-        """
-        self.playing = False
-
-    def next_frame(self):
+    def next_frame(selsf):
         """
         Get next frame
         :return:
@@ -430,27 +434,27 @@ class VideoPlayer:
         """
         self.show_frame(self.vid.frame_number - 1)
 
-    def apply_offset_fix(self):
-        """
-        Apply offset to platform
-        :return:
-        """
-        # delete annotations from platform
-        for annotation in self.video_annotations.annotations:
-            self.item.annotations.delete(annotations_id=annotation.id)
-
-        # apply annotations fix
-        new_annotations = list()
-        for annotation in self.video_annotations.annotations:
-            new_annotation = annotation.copy()
-            for i in range(len(new_annotation['metadata']['snapshots_'])):
-                new_annotation['metadata']['snapshots_'][i]['startTime'] -= (self.annotations_offset / self.vid.fps)
-                new_annotation['metadata']['snapshots_'][i]['frameNum'] = int(
-                    new_annotation['metadata']['snapshots_'][i]['startTime'] * self.vid.fps)
-            new_annotations.append(json.dumps(new_annotation))
-
-        # upload annotations
-        self.item.annotation.upload(annotation=[new_annotations])
+    # def apply_offset_fix(self):
+    #     """
+    #     Apply offset to platform
+    #     :return:
+    #     """
+    #     # delete annotations from platform
+    #     for annotation in self.video_annotations.annotations:
+    #         self.item.annotations.delete(annotations_id=annotation.id)
+    #
+    #     # apply annotations fix
+    #     new_annotations = list()
+    #     for annotation in self.video_annotations.annotations:
+    #         new_annotation = annotation.copy()
+    #         for i in range(len(new_annotation['metadata']['snapshots_'])):
+    #             new_annotation['metadata']['snapshots_'][i]['startTime'] -= (self.annotations_offset / self.vid.fps)
+    #             new_annotation['metadata']['snapshots_'][i]['frameNum'] = int(
+    #                 new_annotation['metadata']['snapshots_'][i]['startTime'] * self.vid.fps)
+    #         new_annotations.append(json.dumps(new_annotation))
+    #
+    #     # upload annotations
+    #     self.item.annotation.upload(annotation=[new_annotations])
 
     def show_frame(self, frame_number=None):
         """
@@ -464,8 +468,14 @@ class VideoPlayer:
                 frame = self.get_annotations(frame)
             if self.show_frame_num:
                 text = '%d - %d' % (self.vid.frame_number, np.round(self.annotations_timestamp * self.vid.fps))
-                frame = cv2.putText(frame, text=text, org=(100, 100), color=(0, 0, 255),
-                                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=2, thickness=3)
+                frame = cv2.putText(frame,
+                                    text=text,
+                                    org=(100, 100),
+                                    color=(0, 0, 255),
+                                    fontFace=cv2.FONT_HERSHEY_DUPLEX,
+                                    fontScale=2,
+                                    thickness=3)
+
             self.photo = PIL.ImageTk.PhotoImage(
                 image=PIL.Image.fromarray(frame).resize((self.window_width, self.window_height)))
             self.canvas.create_image(0, 0, image=self.photo, anchor=tkinter.NW)
@@ -522,19 +532,13 @@ class VideoCapture:
 
             if ret:
                 # Return a boolean success flag and the current frame converted to BGR
-                return (ret, cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+                return ret, cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             else:
-                return (ret, None)
+                return ret, None
         else:
-            return (False, None)
+            return False, None
 
     # Release the video source when the object is destroyed
     def __del__(self):
         if self.vid.isOpened():
             self.vid.release()
-
-
-if __name__ == '__main__':
-    def test():
-        v = VideoPlayer(project_name='Feb19_shelf_zed', dataset_name='100videos_webm_fixed', item_filepath='/workflow/Batch1/Rajesh/day_1/2019-03-11 16.19.34.webm')
-    test()

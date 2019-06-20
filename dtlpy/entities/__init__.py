@@ -20,9 +20,12 @@ from .task import Task
 from .session import Session
 from .dataset import Dataset
 from .package import Package
-from .annotation import Annotation
+from .annotation import Annotation, FrameAnnotation
+from .annotation_collection import AnnotationCollection
 from .paged_entities import PagedEntities
-from .query import Query
+from .filters import Filters
 from .recipe import Recipe
 from .ontology import Ontology
+from .annotation_definitions import Box, Point, Segmentation, Polygon, Ellipse, Classification, Polyline
 from .label import Label
+from .plugin import Plugin, PluginInput, PluginOutput

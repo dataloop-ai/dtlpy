@@ -27,6 +27,7 @@ class Item:
     name = attr.ib()
     size = attr.ib()
     type = attr.ib()
+    fps = attr.ib()
 
     # entities
     dataset = attr.ib()
@@ -42,10 +43,8 @@ class Item:
     def from_json(cls, _json, dataset, client_api):
         """
         Build an item entity object from a json
-
-        :param _json: _json respons form host
+        :param _json: _json response form host
         :param dataset: dataset in which the annotation's item is located
-        :param item: annotation's item
         :param client_api: client_api
         :return: Item object
         """
@@ -65,8 +64,12 @@ class Item:
                 name=_json['name'],
                 size=None,
                 system=None,
-                type=_json['type'])
+                type=_json['type'],
+                fps=None)
         elif _json['type'] == 'file':
+            fps = _json.get('fps', None)
+            if fps is None and 'metadata' in _json:
+                fps = _json['metadata'].get('fps', None)
             return cls(
                 client_api=client_api,
                 dataset=dataset,
@@ -82,7 +85,8 @@ class Item:
                 name=_json['name'],
                 size=_json['metadata']['system']['size'],
                 system=_json['metadata']['system'],
-                type=_json['type'])
+                type=_json['type'],
+                fps=fps)
         else:
             message = 'Unknown item type: %s' % _json['type']
             raise PlatformException('404', message)
@@ -116,7 +120,6 @@ class Item:
     def to_json(self):
         """
         Returns platform _json format of object
-
         :return: platform json format of object
         """
         if self.type == 'dir':
@@ -179,7 +182,6 @@ class Item:
     def delete(self):
         """
         Delete item from platform
-
         :return: True
         """
         return self.dataset.items.delete(item_id=self.id)
@@ -187,7 +189,6 @@ class Item:
     def update(self, system_metadata=False):
         """
         Update items metadata
-
         :param system_metadata: bool
         :return: Item object
         """

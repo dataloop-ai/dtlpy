@@ -41,7 +41,7 @@ class Items:
 
         :return: list of all items
         """
-        page = self.list(query={"itemType": "file"})
+        page = self.list(filters=entities.Filters(itemType="file"))
         items = list()
         while True:
             for item in page.items:
@@ -52,44 +52,44 @@ class Items:
                 break
         return items
 
-    def create_query_string(self, query, page_offset, page_size):
+    def create_query_string(self, filters, page_offset, page_size):
         """
-        Create a platform query string
+        Create a platform filters string
 
-        :param query: Query entity or a dictionary containing query parameters
+        :param filters: Filters entity or a dictionary containing filters parameters
         :param page_offset: starting page number
         :param page_size: number of items in each page
-        :return: query string
+        :return: filters string
         """
         # using path for backward compatibility
-        if query is None:
+        if filters is None:
             # default value
-            query = entities.Query()(filename='/')
-        if isinstance(query, dict):
-            query = entities.Query().from_dict(query)
-        elif isinstance(query, entities.Query):
+            filters = entities.Filters(filenames='/')
+        if isinstance(filters, dict):
+            filters = entities.Filters.from_dict(filters)
+        elif isinstance(filters, entities.Filters):
             pass
         else:
-            self.logger.exception('Unknown query type: %s' % type(query))
-            message = 'Unknown query type: %s' % type(query)
+            self.logger.exception('Unknown filters type: %s' % type(filters))
+            message = 'Unknown filters type: %s' % type(filters)
             raise PlatformException('404', message)
 
         return urlencode(
-            {'query': json.dumps(query.to_dict(), separators=(',', ':')), 'pageOffset': page_offset,
+            {'query': json.dumps(filters.prepare(), separators=(',', ':')), 'pageOffset': page_offset,
              'pageSize': page_size}).replace('%3A', ':').replace('%2F', '/').replace('%2C', ',')
 
-    def get_list(self, query, page_offset, page_size):
+    def get_list(self, filters, page_offset, page_size):
         """
         Get dataset items list This is a browsing endpoint, for any given path item count will be returned,
         user is expected to perform another request then for every folder item to actually get the its item list.
 
-        :param query: Query entity or a dictionary containing query parameters
+        :param filters: Filters entity or a dictionary containing filters parameters
         :param page_offset: starting page number
         :param page_size: number of items in each page
         :return: json response
         """
-        # create query string
-        query_string = self.create_query_string(query=query, page_offset=page_offset, page_size=page_size)
+        # create filters string
+        query_string = self.create_query_string(filters=filters, page_offset=page_offset, page_size=page_size)
 
         # prepare request
         success, response = self.client_api.gen_request(req_type='get',
@@ -106,17 +106,17 @@ class Items:
 
         return response.json()
 
-    def list(self, query=None, page_offset=0, page_size=100):
+    def list(self, filters=None, page_offset=0, page_size=100):
         """
         List items
 
-        :param query: Query entity or a dictionary containing query parameters
+        :param filters: Filters entity or a dictionary containing filters parameters
         :param page_offset:
         :param page_size:
         :return: Pages object
         """
         paged = entities.PagedEntities(items_repository=self,
-                                       query=query,
+                                       filters=filters,
                                        page_offset=page_offset,
                                        page_size=page_size,
                                        client_api=self.client_api,
@@ -144,7 +144,7 @@ class Items:
                     'Unable to get info from item. dataset id: %s, item id: %s' % (self.dataset.id, item_id))
                 raise PlatformException(response)
         elif filepath is not None:
-            paged_entity = self.list(entities.Query()(filename=filepath))
+            paged_entity = self.list(entities.Filters(filenames=filepath))
             if len(paged_entity.items) == 0:
                 self.logger.debug('Item not found. filename: %s' % filepath)
                 raise PlatformException('404', 'Item not found.')
@@ -175,20 +175,17 @@ class Items:
             # if exists take from json file
             with open(annotations_filepath, 'r') as f:
                 data = json.load(f)
-            annotations = [entities.Annotation.from_json(_json=ann,
-                                                         item=item,
-                                                         dataset=item.dataset)
-                           for ann in data['annotations']]
+            annotations = entities.AnnotationCollection.from_json(_json=data['annotations'], item=item)
         else:
             # get from platform
             annotations = item.annotations.list()
-
         if item.width is not None and item.height is not None:
             img_shape = (item.height, item.width)
         else:
             img_shape = Image.open(img_filepath).size[::-1]
-
         for option in annotation_options:
+            if option == 'json':
+                continue
             annotation_filepath = os.path.join(local_path, option, annotation_rel_path)
             temp_path, ext = os.path.splitext(annotation_filepath)
             annotation_filepath = temp_path + '.png'
@@ -197,19 +194,9 @@ class Items:
                 if not os.path.exists(os.path.dirname(annotation_filepath)):
                     # create folder if not exists
                     os.makedirs(os.path.dirname(annotation_filepath), exist_ok=True)
-                if option == 'mask':
-                    item.annotations.download(filepath=annotation_filepath,
-                                              get_mask=True,
-                                              img_shape=img_shape,
-                                              annotation=annotations)
-                if option == 'instance':
-                    item.annotations.download(filepath=annotation_filepath,
-                                              get_instance=True,
-                                              img_shape=img_shape,
-                                              annotation=annotations)
-                if option == 'img_mask':
-                    # TODO
-                    pass
+                annotations.download(filepath=annotation_filepath,
+                                     annotation_format=option,
+                                     height=img_shape[0], width=img_shape[1])
 
     def __download_binary(self):
         pass
@@ -406,6 +393,9 @@ class Items:
                                          ' | ', DataSize(), ' | ', Percentage(), ' | ', ETA(), ')'])
                             pbar.max_value = int(total_length)
                             dl = 0
+                        else:
+                            pbar = None
+                            dl = None
                         with open(local_filepath, 'wb') as f:
                             for chunk in response.iter_content(chunk_size=chunk_size):
                                 if chunk:  # filter out keep-alive new chunks
@@ -450,6 +440,7 @@ class Items:
         :param upload_options: 'merge' or 'overwrite'
         :return: Output (list)
         """
+
         def upload_single(i_w_filepath, w_filepath):
             try:
                 item = self.upload(
@@ -459,6 +450,7 @@ class Items:
                 )
                 outputs[i_w_filepath] = item
             except Exception as e:
+
                 outputs[i_w_filepath] = w_filepath
                 success[i_w_filepath] = False
                 errors[i_w_filepath] = e

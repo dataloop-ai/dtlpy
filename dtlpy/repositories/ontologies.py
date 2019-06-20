@@ -29,7 +29,7 @@ class Ontologies:
             project_ids = [self.recipe.dataset.project.id]
         elif not isinstance(project_ids, list):
             project_ids = [project_ids]
-        #convert to platform label format (root)
+        # convert to platform label format (root)
         if isinstance(labels, dict):
             labels = self.labels_to_roots(labels)
         payload = {'roots': labels, 'projectIds': project_ids, 'attributes': attributes}
@@ -133,13 +133,12 @@ class Ontologies:
         :return: platform represantation of labels
         """
         roots = list()
-        for label, color in  labels.items():
+        for label, color in labels.items():
             roots.append({'value': {
-                                "tag": label,
-                                "color": color,
-                                "attributes": []
-                                    },
-                            'children': []
-                        })
-        labels = roots
+                "tag": label,
+                "color": color,
+                "attributes": []
+            },
+                'children': []
+            })
         return roots

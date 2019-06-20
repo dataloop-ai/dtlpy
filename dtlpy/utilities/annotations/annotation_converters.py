@@ -78,8 +78,8 @@ class BaseConverterFromPlatform:
                 f.write('\n'.join(['%s:%s' % (val, key) for key, val in self.params['labels_dict'].items()]))
 
             # get all items (for width and height)
-            pages = dataset.items.list(query={'filenames': [self.remote_path],
-                                              'itemType': 'file'})
+            pages = dataset.items.list(filters=dl.Filters(filenames=self.remote_path,
+                                                          itemType='file'))
 
             # init workers and results lists
             pool = ThreadPool(processes=32)

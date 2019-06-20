@@ -3,6 +3,8 @@ from .. import entities, utilities
 import attr
 
 logger = logging.getLogger('dataloop.package')
+
+
 @attr.s
 class PagedEntities:
     """
@@ -10,7 +12,7 @@ class PagedEntities:
     """
     page_offset = attr.ib()
     page_size = attr.ib()
-    query = attr.ib()
+    filters = attr.ib()
     items_repository = attr.ib()
     client_api = attr.ib()
     item_entity = attr.ib(default=entities.Item)
@@ -48,7 +50,7 @@ class PagedEntities:
             yield self.items
 
     def get_page(self):
-        result = self.items_repository.get_list(query=self.query,
+        result = self.items_repository.get_list(filters=self.filters,
                                                 page_offset=self.page_offset,
                                                 page_size=self.page_size)
         self.process_result(result)

@@ -53,6 +53,11 @@ class Task:
         :param client_api: client_api
         :return: Task object
         """
+        try:
+            description = _json['metadata']['system']['description']
+        except KeyError:
+            description = ''
+
         return cls(
             client_api=client_api,
             id=_json['id'],
@@ -69,7 +74,7 @@ class Task:
             metadata=_json['metadata'],
             triggersFilter=_json.get('triggersFilter', dict()),
             url=_json['url'],
-            description=_json['metadata']['system']['description'],
+            description=description,
             mq_details=_json['metadata']['system']['mq'],
             projects=_json['metadata']['system']['projects']
         )
