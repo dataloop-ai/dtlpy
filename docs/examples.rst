@@ -24,6 +24,14 @@ Content
 
 :ref:`10`
 
+:ref:`11`
+
+:ref:`12`
+
+:ref:`13`
+
+:ref:`14`
+
 .. _1:
 
 Add metadata to items
@@ -107,4 +115,28 @@ Convert and upload:
 Copy folder to another dataset
 ------------------------------
 .. literalinclude:: ../dtlpy/examples/annotate_video_using_model_and_tracker.py
+
+.. _11:
+
+Upload a batch of items
+------------------------------
+.. literalinclude:: ../dtlpy/examples/upload_batch_of_items.py
+
+.. _12:
+
+Create Annotation
+------------------------------
+.. literalinclude:: ../dtlpy/examples/create_annotations.py
+
+.. _13:
+
+Create Video Annotation
+------------------------------
+.. literalinclude:: ../dtlpy/examples/create_video_annotations.py
+
+.. _14:
+
+Create Video Annotation
+------------------------------
+.. literalinclude:: ../dtlpy/examples/add_labels.py
 

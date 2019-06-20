@@ -12,6 +12,22 @@ dtlpy.entities.annotation module
    :undoc-members:
    :show-inheritance:
 
+dtlpy.entities.annotation\_collection module
+--------------------------------------------
+
+.. automodule:: dtlpy.entities.annotation_collection
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+dtlpy.entities.annotation\_definitions module
+---------------------------------------------
+
+.. automodule:: dtlpy.entities.annotation_definitions
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 dtlpy.entities.artifact module
 ------------------------------
 

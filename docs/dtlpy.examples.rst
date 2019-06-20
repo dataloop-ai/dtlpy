@@ -4,6 +4,14 @@ dtlpy.examples package
 Submodules
 ----------
 
+dtlpy.examples.add\_labels module
+---------------------------------
+
+.. automodule:: dtlpy.examples.add_labels
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 dtlpy.examples.add\_metadata\_to\_item module
 ---------------------------------------------
 
@@ -60,6 +68,22 @@ dtlpy.examples.copy\_folder module
    :undoc-members:
    :show-inheritance:
 
+dtlpy.examples.create\_annotations module
+-----------------------------------------
+
+.. automodule:: dtlpy.examples.create_annotations
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+dtlpy.examples.create\_video\_annotations module
+------------------------------------------------
+
+.. automodule:: dtlpy.examples.create_video_annotations
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 dtlpy.examples.play\_video\_annotation module
 ---------------------------------------------
 
@@ -80,6 +104,14 @@ dtlpy.examples.show\_item\_and\_mask module
 -------------------------------------------
 
 .. automodule:: dtlpy.examples.show_item_and_mask
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+dtlpy.examples.upload\_batch\_of\_items module
+----------------------------------------------
+
+.. automodule:: dtlpy.examples.upload_batch_of_items
    :members:
    :undoc-members:
    :show-inheritance:
