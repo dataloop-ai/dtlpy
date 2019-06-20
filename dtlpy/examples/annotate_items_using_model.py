@@ -31,7 +31,6 @@ def main():
         for item in page:
             if item.type == 'dir':
                 continue
-            print(item.filename)
             img_batch = [dataset.items.download(item_id=item.id, save_locally=False)]
             # load images
             img_batch = [Image.open(buf) for buf in img_batch]
@@ -49,37 +48,29 @@ def main():
             batch_annotations = list()
             for i_pred, label in enumerate(labels):
                 # create platform annotations instance
-                annotation = ImageAnnotation()
+                builder = item.annotations.builder()
                 # add the class labels
 
                 ##############################
                 # If model is classification #
                 ##############################
-                annotation.add_annotation(
-                    pts=list(),  # no pts so empty list
-                    label=label[0][1],  # predicted label
-                    annotation_type='class'  # type of annotations is class
+                builder.add(
+                    annotation_definition=dl.Classification(label=label[0][1])
                 )
                 #############################
                 # If model outputs polygons #
                 #############################
-                annotation.add_annotation(
-                    pts=pred['polygon_pts'],  # list of list of pts. [[x0,y0], [x1,y1]... [xn,yn]]
-                    label=labels[i_pred][0][1],  # predicted label
-                    annotation_type='segment'  # type of annotations is class
+                builder.add(
+                    annotation_definition=dl.Polyline(geo=pred['polygon_pts'],
+                                                  label=labels[i_pred][0][1])
                 )
                 #########################
                 # If model outputs mask #
                 #########################
-                annotation.add_annotation(
-                    pts=pred['mask'],  # binary mask of the annotation. shape as the input image to model (nxm)
-                    label=labels[i_pred][0][1],  # predicted label
-                    annotation_type='binary',  # type of annotations is class
-                    color=pred['color'],  # need to input the class color for the platform
-                    img_shape=orig_img_shape[i_pred]  # need to input the original shape so to match the platform image
+                builder.add(
+                    annotation_definition=dl.Segmentation(geo=pred['mask'],
+                                                label=labels[i_pred][0][1])
                 )
-
-                # append DataLoop annotation to list
-                batch_annotations.append(annotation.to_platform())
             # upload a annotations to matching items in platform
-            item.annotations.upload()
+            builder.upload()
+            

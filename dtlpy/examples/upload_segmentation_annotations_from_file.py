@@ -27,7 +27,7 @@ def main():
     unique_colors = np.unique(mask.reshape(-1, mask.shape[2]), axis=0)
 
     # init dataloop annotations builder
-    ann = ImageAnnotation()
+    builder = item.annotations.builder()
     # for each label - create a dataloop mask annotation
     for i, color in enumerate(unique_colors):
         print(color)
@@ -40,6 +40,6 @@ def main():
         # plt.figure()
         # plt.imshow(class_mask)
         # add annotation to builder
-        ann.add_annotation(pts=class_mask, label=str(i), annotation_type='binary', color=color)
+        builder.add(annotation_definition=dl.Segmentation(geo=class_mask, label=str(i)))
     # upload all annotations
-    item.annotations.upload(ann.to_platform())
+    builder.upload()

@@ -45,20 +45,23 @@ def main():
             # data = f.read().split('\n')
 
         # create a Builder instance and add all annotations to it
-        d_annotations = ImageAnnotation()
+        builder = item.annotations.builder()
         for line in data:
             if not line:
                 continue
             # line format if 4 points of bbox
             # this is where you need to update according to your annotation format
             label_id, left, top, right, bottom = np.array(line.split()[:5]).astype(float)
-            d_annotations.add_annotation(pts=[left, top, right, bottom],
-                                         label=str(label_id),
-                                         annotation_type='box')
+            builder.add(
+                annotation_definition=dl.Box(top=top,
+                                             left=left,
+                                             bottom=bottom,
+                                             right=right,
+                                             label=str(label_id))
+            )
 
         # upload item to platform
         item = dataset.items.update(filepath=img_filename,
                                     remote_path='/')
         # upload annotations
-        annotations_batch = d_annotations.to_platform()
-        item.upload_annotations(annotations_batch)
+        builder.upload()

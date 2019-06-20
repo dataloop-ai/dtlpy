@@ -9,9 +9,9 @@ def main():
     project = dl.projects.get(project_name='FirstProject')
     dataset_from = project.datasets.get(dataset_name='FirstDataset')
     # ll items from folder
-    pages = dataset_from.items.list(query={'filenames': ['/source_folder'],  # take files from the directory only
-                                           'itemType': 'file'  # only files
-                                           })
+    pages = dataset_from.items.list(filters=dl.Filters(filenames='/source_folder',  # take files from the directory only
+                                                       itemType='file'  # only files
+                                                       ))
 
     # TO post annotations to other item
     project = dl.projects.get(project_name='SecondProjects')
@@ -22,6 +22,7 @@ def main():
             # download item (without save to disk)
             buffer = item.download(save_locally=False)
             # upload item
-            success = dataset_to.items.upload(filepath=buffer,
-                                              remote_path='/destination_folder',
-                                              uploaded_filename=item.name)
+            new_item = dataset_to.items.upload(filepath=buffer,
+                                               remote_path='/destination_folder',
+                                               uploaded_filename=item.name)
+            print(new_item.filename)

@@ -41,7 +41,7 @@ def main():
         with open(annotation_filepath, 'r') as f:
             annotations = f.read().split('\n')
 
-        dlp_annotations = ImageAnnotation()
+        builder = item.annotations.builder()
         # convert to Dataloop annotations
         for annotation in annotations:
             if not annotation:
@@ -62,8 +62,10 @@ def main():
             bottom = top + h
 
             # add to annotations
-            dlp_annotations.add_annotation(pts=[left, top, right, bottom],
-                                           label=labels[int(label_id)],
-                                           annotation_type='box')
+            builder.add(dl.Box(annotation_definition=dl.Box(top=10,
+                                             left=10,
+                                             bottom=100,
+                                             right=100,
+                                             label='person')))
         # upload all annotations of an item
-        item.annotations.upload(dlp_annotations.to_platform())
+        builder.upload()
