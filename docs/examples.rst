@@ -30,8 +30,6 @@ Content
 
 :ref:`13`
 
-:ref:`14`
-
 .. _1:
 
 Add metadata to items
@@ -96,7 +94,6 @@ YOlO annotations:
 
 .. literalinclude:: ../dtlpy/examples/upload_yolo_format_annotations.py
 
-
 .. _9:
 
 Convert annotations types
@@ -109,32 +106,25 @@ Convert and upload:
 
 .. literalinclude:: ../dtlpy/examples/upload_segmentation_annotations_from_file.py
 
-
 .. _10:
-
-Copy folder to another dataset
-------------------------------
-.. literalinclude:: ../dtlpy/examples/annotate_video_using_model_and_tracker.py
-
-.. _11:
 
 Upload a batch of items
 ------------------------------
 .. literalinclude:: ../dtlpy/examples/upload_batch_of_items.py
 
-.. _12:
+.. _11:
 
 Create Annotation
 ------------------------------
 .. literalinclude:: ../dtlpy/examples/create_annotations.py
 
-.. _13:
+.. _12:
 
 Create Video Annotation
 ------------------------------
 .. literalinclude:: ../dtlpy/examples/create_video_annotations.py
 
-.. _14:
+.. _13:
 
 Create Video Annotation
 ------------------------------
