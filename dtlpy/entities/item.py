@@ -154,10 +154,9 @@ class Item:
     def print(self):
         utilities.List([self]).print()
 
-    def download(self, save_locally=True, local_path=None,
-                 chunk_size=8192, download_options=None,
-                 download_item=True, annotation_options=None,
-                 verbose=True, show_progress=False):
+    def download(self, local_path=None, save_locally=True,
+                 download_options=None,
+                 annotation_options=None):
         """
         Get item's binary data
         Calling this method will returns the item body itself , an image for example with the proper mimetype.
@@ -165,19 +164,15 @@ class Item:
         :param save_locally: bool. save to file or return buffer
         :param local_path: local folder or filename to save to. if folder ends with * images with be downloaded directly
          to folder. else - an "images" folder will be create for the images
-        :param chunk_size:
-        :param verbose:
-        :param show_progress:
         :param download_options: {'overwrite': True/False, 'relative_path': True/False}
-        :param download_item:
         :param annotation_options: download annotations options: ['mask', 'img_mask', 'instance', 'json']
         :return: 
         """
-        return self.dataset.items.download(item_id=self.id,
-                                           save_locally=save_locally, local_path=local_path,
-                                           chunk_size=chunk_size, download_options=download_options,
-                                           download_item=download_item, annotation_options=annotation_options,
-                                           verbose=verbose, show_progress=show_progress)
+        return self.dataset.items.download(items=self,
+                                           save_locally=save_locally,
+                                           local_path=local_path,
+                                           download_options=download_options,
+                                           annotation_options=annotation_options,)
 
     def delete(self):
         """
@@ -193,3 +188,22 @@ class Item:
         :return: Item object
         """
         return self.dataset.items.update(item=self, system_metadata=system_metadata)
+
+    def move(self, new_path):
+        """
+        Move item from one folder to another in Platform
+        :param new_path: new path to move item to. Format: /main_folder/sub_folder/.../item_name.type
+        :return: True
+        """
+        assert isinstance(new_path, str)
+        if not new_path.startswith('/'):
+            new_path = '/' + new_path
+        if '.' in new_path:
+            if len(new_path.split('.')) > 2:
+                raise PlatformException('400', 'Remote path cannot include dots')
+            else:
+                self.filename = new_path
+        else:
+            self.filename = new_path + '/' + self.name
+
+        return self.update(system_metadata=True)

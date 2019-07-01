@@ -7,7 +7,7 @@ Python SDK: If you wish to automate data ops directly from your code.
 CLI(Command line interface): Usually used for uploading or downloading data in a more fault tolerant way comapred to browser.
 
 Login
---------------------------
+-----
 .. code-block:: python
 
 	# Import Dataloop SDK package
@@ -78,30 +78,42 @@ Upload and download items
 .. code-block:: python
 
 	# Upload entire folder to dataset dataset
-	dataset.upload(
-		local_path=r'C:\home\dogs',
+	dataset.items.upload(
+		local_path=r'C:\home\dogs', #  can be a directory
 		remote_path='/images/dogs',
-		upload_options='overwrite'
+		upload_options={'overwrite': False}
 	)
 
 	# Upload entire folder to dataset dataset with annotations
-	dataset.upload(
-		local_path=r'C:\home\dogs',
+	dataset.items.upload(
+		local_path=r'C:\home\images\dogs', # folder of images
+		local_annotations_path=r'C:\home\json\dogs', # dataloop annotations files (jsons)
 		remote_path='/images/dogs',
-		upload_options='overwrite'
+		upload_options={'overwrite': False}
 	)
 
-	# Upload SINGLE image
+	# Upload single image
 	dataset.items.upload(
-		filepath='/images/000000000036.jpg',
+		filepath='/images/000000000036.jpg', # can be a filepath
 		remote_path='/dog'
 	)
 
 	# Download entire dataset
 	filenames = dataset.download(
 		local_path='/home/images',
-		download_options={'overwrite': True}
+		download_options={'overwrite': True},
+		annotation_options=['json'] # download with annotations
 	)
+
+Move item between folders
+-------------------------
+.. code-block:: python
+
+	# get an item from location
+	item = dataset.items.get(filepath='/moon/1.jpg')
+	item.move('/moon/front')
+	# or rename
+	item.move('/moon/front/2.jpg')
 
 More...
 -------

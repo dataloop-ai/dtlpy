@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with DTLPY.  If not, see <http://www.gnu.org/licenses/>.
 import logging
+import json
+import jwt
 
 from .exceptions import PlatformException
 from . import services, repositories
@@ -29,6 +31,7 @@ client_api = services.ApiClient()
 projects = repositories.Projects(client_api=client_api)
 datasets = repositories.Datasets(client_api=client_api, project=None)
 tasks = repositories.Tasks(client_api=client_api)
+plugins = repositories.Plugins(client_api=client_api)
 sessions = repositories.Sessions(client_api=client_api, task=None)
 
 logger = logging.getLogger(name='dataloop.platform_interface')
@@ -114,3 +117,8 @@ def environment():
     :return: current environment
     """
     return client_api.environment
+
+
+def info():
+    payload = jwt.decode(token(), algorithms=['HS256'], verify=False)
+    print('{}'.format(json.dumps(payload, indent=4)))

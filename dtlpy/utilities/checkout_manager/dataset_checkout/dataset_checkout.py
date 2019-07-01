@@ -1,14 +1,4 @@
-import os
-import json
-from dtlpy.utilities.state_manager import get_state, set_state
-
-def load_json_from_file(filepath):
-    file_as_str = open(filepath, 'r').read()
-    return json.loads(file_as_str)
-
-def save_json_to_file(filepath, target_json):
-    file = open(filepath, 'w+')
-    file.write(json.dumps(target_json))
+from dtlpy.utilities.checkout_manager.state_manager import get_state, set_state
 
 def get_dataset_by_identifier(datasets, identifier):
     datasets_by_name = [dataset for dataset in datasets if dataset.name == identifier]

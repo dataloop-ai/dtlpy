@@ -1,0 +1,137 @@
+import logging
+import behave
+import random as r
+import time
+
+
+@behave.then(u"Annotations to_json() equals to Platform json")
+def step_impl(context):
+    annotations_list = context.item.annotations.list()
+    for ann in annotations_list:
+        success, response = context.item.client_api.gen_request(
+            req_type="get",
+            path="/datasets/%s/items/%s/annotations/%s"
+                 % (context.item.dataset.id, context.item.id, ann.id),
+        )
+        ann_json = ann.to_json()
+        assert success is True
+        if response.json() != ann_json:
+            logging.error('FAILED: response json is:\n{}\n\nto_json is:\n{}'.format(response.json(), ann_json))
+            assert False
+
+
+@behave.when(u"I create a blank annotation to item")
+def step_impl(context):
+    context.dataset = context.dataset.update()
+    context.item = context.item.update()
+    if context.item.fps is None:
+        context.item.fps = 25
+    logging.warning('item fps is: {}'.format(context.item.fps))
+    context.annotation = context.dl.Annotation.new(item=context.item)
+
+
+@behave.when(u"I add annotation to item using add annotation method")
+def step_impl(context):
+    context.dataset = context.dataset.update()
+    item = context.item.update()
+    labels = context.dataset.labels
+    height = item.height
+    if height is None:
+        height = 768
+    width = item.width
+    if width is None:
+        width = 1536
+
+    # box
+    top = r.randrange(0, height)
+    left = r.randrange(0, width)
+    right = left + 100
+    bottom = top + 100
+    annotation_definition = context.dl.Box(
+        top=top,
+        left=left,
+        right=right,
+        bottom=bottom,
+        label=r.choice(labels).tag,
+        attributes=["attr1", "attr2"],
+    )
+    context.annotation = context.dl.Annotation.new(
+        annotation_definition=annotation_definition, item=context.item
+    )
+
+
+@behave.when(u"I upload annotation created")
+def step_impl(context):
+    logging.warning('item fps is: {}'.format(context.item.fps))
+    context.annotation.upload()
+
+
+@behave.when(u"I add some frames to annotation")
+def step_impl(context):
+    if context.item.fps is None:
+        context.item.fps = 25
+    ann = context.annotation
+    for i in range(20):
+        top = ann.top + (i * 10)
+        left = ann.left + (i * 10)
+        right = ann.right + (i * 10)
+        bottom = ann.bottom + (i * 10)
+        annotation_definition = context.dl.Box(
+            top=top,
+            left=left,
+            right=right,
+            bottom=bottom,
+            label=ann.label,
+            attributes=ann.attributes,
+        )
+        frame_num = i * 10
+        ann.add_frame(annotation_definition=annotation_definition, frame_num=frame_num)
+
+
+@behave.then(u"Item in host has annotation added")
+def step_impl(context):
+    if context.item.fps is None:
+        context.item.fps = 25
+        context.item.update(system_metadata=True)
+        time.sleep(4)
+        context.item = context.dataset.items.get(item_id=context.item.id)
+    if context.item.fps is None:
+        context.item.fps = 25
+        time.sleep(1)
+    try:
+        annotations = context.item.annotations.list()
+        context.annotation_get = annotations[0]
+    except:
+        logging.error(context.item.to_json())
+    assert context.annotation_get.label == context.annotation.label
+    assert context.annotation_get.attributes == context.annotation.attributes
+    assert context.annotation_get.coordinates == context.annotation.coordinates
+
+
+@behave.when(u"I add frames to annotation")
+def step_impl(context):
+    ann = context.annotation
+    top = 100
+    left = 100
+    right = left + 100
+    bottom = top + 100
+    label = context.dataset.labels[0]
+    for i in range(20):
+        top = top + (i * 10)
+        left = left + (i * 10)
+        right = right + (i * 10)
+        bottom = bottom + (i * 10)
+        annotation_definition = context.dl.Box(
+            top=top, left=left, right=right, bottom=bottom, label=label.tag
+        )
+        frame_num = i * 10
+        ann.add_frame(annotation_definition=annotation_definition, frame_num=frame_num)
+
+
+@behave.then(u"Item in host has video annotation added")
+def step_impl(context):
+    context.annotation_get = context.item.annotations.list()[0]
+    assert context.annotation_get.label == context.annotation.label
+    assert context.annotation_get.attributes == context.annotation.attributes
+    assert context.annotation_get.coordinates == context.annotation.coordinates
+    assert len(context.annotation_get.frames) == len(context.annotation.frames)

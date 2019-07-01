@@ -78,10 +78,7 @@ class Dataset:
 
     @property
     def ontology_ids(self):
-        if self._ontology_ids is not None:
-            return self._ontology_ids
-        else:
-            ontlogy_ids = list()
+        if self._ontology_ids is None:
             if self.metadata is not None and 'system' in self.metadata and 'recipes' in self.metadata['system']:
                 recipe_ids = self.get_recipe_ids()
                 recipes = list()
@@ -91,7 +88,7 @@ class Dataset:
                 for recipe in recipes:
                     ontologies[recipe.id] = recipe.ontologyIds
                 self._ontology_ids = ontologies
-            return ontlogy_ids
+        return self._ontology_ids
 
     @_items.default
     def set_items(self):
@@ -177,72 +174,6 @@ class Dataset:
         """
         return self.metadata['system']['recipes']
 
-    def download_annotations(self, local_path=None):
-        """
-        Download annotations json for entire dataset
-
-        :param local_path: optional - local directory in which annotations will be saved
-        :return:
-        """
-        return self.project.datasets.download_annotations(dataset_id=self.id, local_path=local_path)
-
-    def download(self, filters=None, local_path=None, filetypes=None,
-                 num_workers=None, download_options=None, save_locally=True,
-                 download_item=True, annotation_options=None,
-                 opacity=1, with_text=False, thickness=3):
-        """
-        Download dataset by filters.
-        Filtering the dataset for items and save them local
-        Optional - also download annotation, mask, instance and image mask of the item
-
-        :param filters: Filters entity or a dictionary containing filters parameters
-        :param local_path: local folder or filename to save to. if folder ends with * images with be downloaded directly
-                           to folder. else - an "images" folder will be create for the images
-        :param filetypes: a list of filetype to download. e.g ['.jpg', '.png']
-        :param num_workers: default - 32
-        :param download_options: {'overwrite': True/False, 'relative_path': True/False}
-        :param save_locally: bool. save to disk or return a buffer
-        :param download_item: bool. download image
-        :param annotation_options: download annotations options: ['mask', 'img_mask', 'instance', 'json']
-        :param opacity: for img_mask
-        :param with_text: add label to annotations
-        :param thickness: annotation line
-        :return:
-        """
-        return self.project.datasets.download(dataset_id=self.id,
-                                              filters=filters,
-                                              local_path=local_path,
-                                              filetypes=filetypes,
-                                              num_workers=num_workers,
-                                              download_options=download_options,
-                                              save_locally=save_locally,
-                                              download_item=download_item,
-                                              annotation_options=annotation_options,
-                                              opacity=opacity,
-                                              with_text=with_text,
-                                              thickness=thickness)
-
-    def upload(self, local_path=None, local_annotations_path=None, remote_path=None,
-               upload_options=None, filetypes=None, num_workers=None):
-        """
-        Upload local file to dataset.
-        Local filesystem will remain.
-        If "/*" at the end of local_path (e.g. "/images/*") items will be uploaded without head directory
-
-        :param local_path: local files to upload
-        :param local_annotations_path: path to dataloop format annotations json files.
-                                       annotations need to be in same files structure as "local_path"
-        :param remote_path: remote path to save.
-        :param upload_options: 'merge' or 'overwrite'
-        :param filetypes: list of filetype to upload. e.g ['.jpg', '.png']. default is all
-        :param num_workers: num_workers
-        :return:
-        """
-        return self.project.datasets.upload(dataset_id=self.id,
-                                            local_path=local_path, local_annotations_path=local_annotations_path,
-                                            remote_path=remote_path,
-                                            upload_options=upload_options, filetypes=filetypes, num_workers=num_workers)
-
     def delete(self, sure=False, really=False):
         """
         Delete a dataset forever!
@@ -261,3 +192,8 @@ class Dataset:
         :return:
         """
         return self.project.datasets.update(dataset=self, system_metadata=system_metadata)
+
+    def download_annotations(self, local_path, overwrite=False):
+        return self.project.datasets.download_annotations(dataset=self,
+                                                   local_path=local_path,
+                                                   overwrite=overwrite)

@@ -92,4 +92,5 @@ class Task:
                            filter=attr.filters.exclude(attr.fields(Task).sessions,
                                                        attr.fields(Task).description,
                                                        attr.fields(Task).mq_details,
-                                                       attr.fields(Task).projects))
+                                                       attr.fields(Task).projects,
+                                                       attr.fields(Task).client_api))

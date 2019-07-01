@@ -2,6 +2,7 @@ import hashlib
 import traceback
 import logging
 import os
+import io
 
 from .. import entities, utilities, PlatformException, exceptions
 
@@ -202,9 +203,11 @@ class Packages:
             else:
                 # no matched version was found - create a new version
                 try:
-                    item = self.items_repository.upload(filepath=zip_filename,
-                                                        remote_path='/packages/%s' % name,
-                                                        uploaded_filename=str(current_version) + '.zip')
+                    with open(zip_filename, 'rb') as f:
+                        buffer = io.BytesIO(f.read())
+                        buffer.name = str(current_version) + '.zip'
+                    item = self.items_repository.upload(local_path=buffer,
+                                                        remote_path='/packages/%s' % name)
                 except Exception:
                     self.logger.exception('unable to create package item.')
                     raise
@@ -225,13 +228,11 @@ class Packages:
                     os.remove(zip_filename)
 
     def unpack_single(self, package, download_path, local_path):
-        if not (download_path.endswith('/*') or download_path.endswith('\\*')):
-            # add * to download directly to folder
-            download_path = os.path.join(download_path, '*')
-        artifact_filepath = self.items_repository.download(item_id=package.id,
+        artifact_filepath = self.items_repository.download(items=package.id,
                                                            save_locally=True,
                                                            local_path=download_path,
-                                                           download_options={'relative_path': False})
+                                                           download_options={'relative_path': False,
+                                                                             'to_images_folder': False})
         utilities.Miscellaneous.unzip_directory(zip_filename=artifact_filepath,
                                                 to_directory=local_path)
         os.remove(artifact_filepath)

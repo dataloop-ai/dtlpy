@@ -30,6 +30,8 @@ Content
 
 :ref:`13`
 
+:ref:`14`
+
 .. _1:
 
 Add metadata to items
@@ -109,24 +111,29 @@ Convert and upload:
 .. _10:
 
 Upload a batch of items
-------------------------------
+-----------------------
 .. literalinclude:: ../dtlpy/examples/upload_batch_of_items.py
 
 .. _11:
 
 Create Annotation
-------------------------------
+-----------------
 .. literalinclude:: ../dtlpy/examples/create_annotations.py
 
 .. _12:
 
 Create Video Annotation
-------------------------------
+-----------------------
 .. literalinclude:: ../dtlpy/examples/create_video_annotations.py
 
 .. _13:
 
 Create Video Annotation
-------------------------------
+-----------------------
 .. literalinclude:: ../dtlpy/examples/add_labels.py
 
+.. _14:
+
+Move items to another folder in platform
+----------------------------------------
+.. literalinclude:: ../dtlpy/examples/move_item.py

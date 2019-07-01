@@ -9,7 +9,6 @@ import requests
 import logging
 import hashlib
 import base64
-import fleep
 import json
 import jwt
 import os
@@ -71,9 +70,13 @@ class ApiClient:
         ############
         # Initiate #
         ############
+        # define local params - read only once from cookie file
         self._token = None
+        self._environments = None
         self._environment = None
+        self._environments = None
         self._verbose = None
+        # define other params
         self.last_response = None
         self.last_request = None
         self.platform_exception = None
@@ -141,49 +144,53 @@ class ApiClient:
         :return:
         """
         # get environment login parameters
-        env_dict = self.io.get('login_parameters')
-        if env_dict is None:
-            # default
-            env_dict = {
-                'https://dev-gate.dataloop.ai/api/v1':
-                    {'alias': 'dev',
-                     'audience': 'https://dataloop-development.auth0.com/api/v2/',
-                     'client_id': 'I4Arr9ixs5RT4qIjOGtIZ30MVXzEM4w8',
-                     'auth0_url': 'https://dataloop-development.auth0.com',
-                     'token': '',
-                     'verify_ssl': True},
-                'https://gate.dataloop.ai/api/v1': {'alias': 'prod',
-                                                    'audience': 'https://dataloop-production.auth0.com/userinfo',
-                                                    'client_id': 'FrG0HZga1CK5UVUSJJuDkSDqItPieWGW',
-                                                    'auth0_url': 'https://dataloop-production.auth0.com',
-                                                    'token': '',
-                                                    'verify_ssl': True},
-                'https://localhost:8443/api/v1': {'alias': 'local',
-                                                  'audience': 'https://dataloop-local.auth0.com/userinfo',
-                                                  'client_id': 'ewGhbg5brMHOoL2XZLHBzhEanapBIiVO',
-                                                  'auth0_url': 'https://dataloop-local.auth0.com',
-                                                  'token': '',
-                                                  'verify_ssl': False},
-                'https://172.17.0.1:8443/api/v1': {'alias': 'docker_linux',
-                                                   'audience': 'https://dataloop-local.auth0.com/userinfo',
-                                                   'client_id': 'ewGhbg5brMHOoL2XZLHBzhEanapBIiVO',
-                                                   'auth0_url': 'https://dataloop-local.auth0.com',
-                                                   'token': '',
-                                                   'verify_ssl': False},
-                'https://host.docker.internal:8443/api/v1': {'alias': 'docker_windows',
-                                                             'audience': 'https://dataloop-local.auth0.com/userinfo',
-                                                             'client_id': 'ewGhbg5brMHOoL2XZLHBzhEanapBIiVO',
-                                                             'auth0_url': 'https://dataloop-local.auth0.com',
-                                                             'token': '',
-                                                             'verify_ssl': False}
-            }
-            # write default to file
-            self.io.put('login_parameters', env_dict)
-        return env_dict
+        if self._environments is None:
+            # take from cookie
+            env_dict = self.io.get('login_parameters')
+            # if cookie is None  - init with defaultas
+            if env_dict is None:
+                # default
+                env_dict = {
+                    'https://dev-gate.dataloop.ai/api/v1':
+                        {'alias': 'dev',
+                         'audience': 'https://dataloop-development.auth0.com/api/v2/',
+                         'client_id': 'I4Arr9ixs5RT4qIjOGtIZ30MVXzEM4w8',
+                         'auth0_url': 'https://dataloop-development.auth0.com',
+                         'token': '',
+                         'verify_ssl': True},
+                    'https://gate.dataloop.ai/api/v1': {'alias': 'prod',
+                                                        'audience': 'https://dataloop-production.auth0.com/userinfo',
+                                                        'client_id': 'FrG0HZga1CK5UVUSJJuDkSDqItPieWGW',
+                                                        'auth0_url': 'https://dataloop-production.auth0.com',
+                                                        'token': '',
+                                                        'verify_ssl': True},
+                    'https://localhost:8443/api/v1': {'alias': 'local',
+                                                      'audience': 'https://dataloop-local.auth0.com/userinfo',
+                                                      'client_id': 'ewGhbg5brMHOoL2XZLHBzhEanapBIiVO',
+                                                      'auth0_url': 'https://dataloop-local.auth0.com',
+                                                      'token': '',
+                                                      'verify_ssl': False},
+                    'https://172.17.0.1:8443/api/v1': {'alias': 'docker_linux',
+                                                       'audience': 'https://dataloop-local.auth0.com/userinfo',
+                                                       'client_id': 'ewGhbg5brMHOoL2XZLHBzhEanapBIiVO',
+                                                       'auth0_url': 'https://dataloop-local.auth0.com',
+                                                       'token': '',
+                                                       'verify_ssl': False},
+                    'https://host.docker.internal:8443/api/v1': {'alias': 'docker_windows',
+                                                                 'audience': 'https://dataloop-local.auth0.com/userinfo',
+                                                                 'client_id': 'ewGhbg5brMHOoL2XZLHBzhEanapBIiVO',
+                                                                 'auth0_url': 'https://dataloop-local.auth0.com',
+                                                                 'token': '',
+                                                                 'verify_ssl': False}
+                }
+            # save to local variable
+            self.environments = env_dict
+        return self._environments
 
     @environments.setter
     def environments(self, env_dict):
-        self.io.put('login_parameters', env_dict)
+        self._environments = env_dict
+        self.io.put(key='login_parameters', value=self._environments)
 
     @property
     def verbose(self):
@@ -345,22 +352,10 @@ class ApiClient:
             item_type = 'dir'
         statinfo = os.stat(filepath)
         try:
-            # read beginning for mime type
-            try:
-                _, ext = os.path.splitext(filepath)
-                if ext.lower() in mimetypes.types_map:
-                    mime = mimetypes.types_map[ext.lower()]
-                else:
-                    import magic
-                    mime = magic.Magic(mime=True)
-                    mime = mime.from_file(filepath)
-            except:
-                mime = 'unknown'
-
             # multipart uploading of the file
             with open(filepath, 'rb') as f:
                 file = requests_toolbelt.MultipartEncoder(fields={
-                    'file': (uploaded_filename, f, mime),
+                    'file': (uploaded_filename, f),
                     'type': item_type,
                     'path': os.path.join(remote_path, uploaded_filename).replace('\\', '/'),
                 })

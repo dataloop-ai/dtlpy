@@ -26,14 +26,14 @@ with open('requirements.txt') as f:
     requirements = f.read()
 
 setup(name='dtlpy',
-      version='1.5.0',
+      version='1.6.0',
       description='SDK and CLI for Dataloop platform',
       author='Or Shabtay',
       author_email='or@dataloop.ai',
       url='https://github.com/dataloop-ai/dtlpy',
       license='Apache License 2.0',
-	  long_description=readme,
-	  long_description_content_type='text/markdown',
+      long_description=readme,
+      long_description_content_type='text/markdown',
       packages=find_packages(exclude=('tests', 'docs', 'samples')),
       install_requires=requirements,
       test_suite='tests',

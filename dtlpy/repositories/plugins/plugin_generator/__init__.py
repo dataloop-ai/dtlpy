@@ -1,0 +1,1 @@
+from .plugin_generator import generate_plugin

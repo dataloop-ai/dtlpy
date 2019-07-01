@@ -133,9 +133,12 @@ def get_parser():
     required.add_argument('-p', '--project-name', metavar='', help='project name', required=True)
     required.add_argument('-d', '--dataset-name', metavar='', help='dataset name', required=True)
     optional = a.add_argument_group('optional named arguments')
-    optional.add_argument('-r', '--remote-path', metavar='', help='remote path to download from. default: /', default='/')
-    optional.add_argument('-ao', '--annotation_options', metavar='', help='which annotation to download. options: json,instance,mask', default='')
-    optional.add_argument('-do', '--download_options', metavar='', help='download options CSV : merge/overwrite,relative-path/absolute-path', default='')
+    optional.add_argument('-r', '--remote-path', metavar='', help='remote path to download from. default: /',
+                          default='/')
+    optional.add_argument('-ao', '--annotation_options', metavar='',
+                          help='which annotation to download. options: json,instance,mask', default='')
+    optional.add_argument('-do', '--download_options', metavar='',
+                          help='download options CSV : merge/overwrite,relative-path/absolute-path', default='')
     optional.add_argument('-di', '--dl_img', help='download image or not', action='store_true', default=True)
     optional.add_argument('-nw', '--num_workers', metavar='', help='number of download workers', default=None)
     # optional.add_argument('-o', '--opacity', metavar='', type=float, help='opacity when marking image. range:[0,1]. default: 1', default=1)
@@ -253,6 +256,10 @@ def get_parser():
     required = a.add_argument_group('required named arguments')
     required.add_argument('dataset', metavar='Dataset', type=str, help='dataset name')
 
+    a = subparser_parser.add_parser('plugin', help='Checks out to a different plugin')
+    required = a.add_argument_group('required named arguments')
+    required.add_argument('plugin', metavar='Plugin', type=str, help='plugin name')
+
     ############
     # Sessions #
     ############
@@ -315,13 +322,6 @@ def get_parser():
     # inputs
     optional.add_argument('-i', '--input', action='append', type=lambda kv: kv.split('='), dest='pipe_kwargs',
                           help='Input args for pipe. Use: ["--input key1=val1 --input key2=val2"]')
-
-    ############
-    # Tasks #
-    ############
-    subparser = subparsers.add_parser('tasks', help='Operations with tasks')
-    subparser_parser = subparser.add_subparsers(dest='tasks', help='Tasks operations')
-    a = subparser_parser.add_parser('create', help='Creates a task from the folder')
 
     return parser
 
@@ -445,25 +445,19 @@ def main():
                 if isinstance(args.file_types, str):
                     args.file_types = args.file_types.split(',')
                 project = dlp.projects.get(project_name=args.project_name)
-                if project is None:
-                    msg = 'Project wasnt found. name: %s' % args.project_name
-                    logger.exception(msg)
-                    raise ValueError(msg)
-                project.datasets.upload(dataset_name=args.dataset_name,
-                                        local_path=args.local_path,
-                                        remote_path=args.remote_path,
-                                        filetypes=args.file_types,
-                                        num_workers=args.num_workers,
-                                        upload_options=args.upload_options)
+                dataset = project.datasets.get(dataset_name=args.dataset_name)
+                dataset.items.upload(local_path=args.local_path,
+                                     remote_path=args.remote_path,
+                                     filet_ypes=args.file_types,
+                                     num_workers=args.num_workers,
+                                     upload_options=args.upload_options)
 
             elif args.datasets == 'download':
                 print('[INFO] Downloading dataset...')
                 if isinstance(args.num_workers, str):
                     args.num_workers = int(args.num_workers)
                 project = dlp.projects.get(project_name=args.project_name)
-                if project is None:
-                    logger.exception('Project wasnt found. name: %s' % args.project_name)
-                    raise ValueError('Project wasnt found. name: %s' % args.project_name)
+                dataset = project.datasets.get(dataset_name=args.dataset_name)
                 download_options = {}
                 if len(args.download_options) > 0:
                     do_arr = args.download_options.split(',')
@@ -476,14 +470,12 @@ def main():
                 annotation_options = list()
                 if len(args.annotation_options) > 0:
                     annotation_options = args.annotation_options.split(',')
-                project.datasets.download(filters=dlp.Filters(filenames=[args.remote_path]),
-                                          dataset_name=args.dataset_name,
-                                          local_path=args.local_path,
-                                          download_item=args.dl_img,
-                                          annotation_options=annotation_options,
-                                          download_options=download_options,
-                                          num_workers=args.num_workers
-                                          )
+                dataset.items.download(filters=dlp.Filters(filenames=[args.remote_path]),
+                                       local_path=args.local_path,
+                                       annotation_options=annotation_options,
+                                       download_options=download_options,
+                                       num_workers=args.num_workers
+                                       )
             else:
                 print('Type "dlp datasets --help" for options')
 
@@ -618,22 +610,16 @@ def main():
                 return
 
             if args.plugins == 'generate':
-                from ..utilities.plugin_bootstraping.package_generator import generate_package
-                generate_package()
+                dlp.plugins.generate_local_plugin()
 
             elif args.plugins == 'push':
-                from dtlpy.utilities.plugin_bootstraping.package_uploader.package_uploader import PackageUploader
-                package_uploader = PackageUploader()
-                package_uploader.upload_package(dlp)
+                dlp.plugins.push_local_plugin()
 
             elif args.plugins == 'test':
-                from ..utilities.plugin_bootstraping.package_runner import PackageRunner
-                package_runner = PackageRunner()
-                package_runner.run_local_project(dlp)
+                dlp.plugins.test_local_plugin()
 
             elif args.plugins == 'status':
-                from  ..utilities.plugin_bootstraping.package_status_manager import get_package_status
-                get_package_status()
+                dlp.plugins.get_local_plugin_status()
 
         ############
         # Checkout #
@@ -644,11 +630,14 @@ def main():
                 return
 
             if args.checkout == 'project':
-                from dtlpy.utilities.checkout_manager.project_checkout import checkout_project
+                from dtlpy.utilities.checkout_manager import checkout_project
                 checkout_project(dlp, args.project)
             elif args.checkout == 'dataset':
-                from dtlpy.utilities.checkout_manager.dataset_checkout import checkout_dataset
+                from dtlpy.utilities.checkout_manager import checkout_dataset
                 checkout_dataset(dlp, args.dataset)
+            elif args.checkout == 'plugin':
+                from dtlpy.utilities.checkout_manager import checkout_plugin
+                checkout_plugin(args.plugin)
 
             else:
                 print('Type "dlp packages --help" for options')
@@ -726,20 +715,6 @@ def main():
                     print('[INFO] input missing. "session-id" or "prev-session-id"')
             else:
                 print('Type "dlp pipes --help" for options')
-
-        #########
-        # Tasks #
-        #########
-        elif args.operation == 'tasks':
-            if dlp.token_expired():
-                print('[ERROR] token expired, please login.')
-                return
-
-            if args.tasks == "create":
-                from ..utilities.plugin_bootstraping.task_generator import generate_task_from_project
-                generate_task_from_project()
-            else:
-                print('Type "dlp tasks --help" for options')
 
         ###############
         # Catch typos #

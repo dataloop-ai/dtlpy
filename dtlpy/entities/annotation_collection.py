@@ -5,6 +5,7 @@ import numpy as np
 import traceback
 import logging
 import attr
+import json
 
 from .. import utilities, entities, PlatformException
 
@@ -112,7 +113,7 @@ class AnnotationCollection:
                 elif image.shape[2] == 3:
                     mask = cv2.cvtColor(image, cv2.COLOR_RGB2RGBA)
                 else:
-                    raise
+                    raise PlatformException('400', 'Unknown image type')
         elif annotation_format == 'instance':
             if image is None:
                 # create an empty mask
@@ -126,6 +127,14 @@ class AnnotationCollection:
             labels.sort()
             # each label gets index as instance id
             label_instance_dict = {label: (i_label + 1) for i_label, label in enumerate(labels)}
+        elif annotation_format == 'object_id':
+            if image is None:
+                # create an empty mask
+                mask = np.zeros((height, width))
+            else:
+                if len(image.shape) != 2:
+                    raise PlatformException('400', 'must be 2d array when trying to draw instance on image')
+                mask = image
         else:
             raise PlatformException('404', 'unknown annotations format: "{}". known formats: "mask", "instance"'.format(
                 annotation_format))
@@ -138,6 +147,8 @@ class AnnotationCollection:
             elif annotation_format == 'instance':
                 # if label not in dataset label - put it as background
                 color = label_instance_dict.get(annotation.label, 0)
+            elif annotation_format == 'object_id':
+                color = annotation.object_id
             else:
                 raise PlatformException('404',
                                         'unknown annotations format: {}. known formats: "mask", "instance"'.format(
@@ -165,14 +176,24 @@ class AnnotationCollection:
         :param with_text:
         :return:
         """
+        if annotation_format == 'json':
+            _json = {'_id': self.item.id,
+                           'filename': self.item.filename}
+            annotations = list()
+            for ann in self.annotations:
+                annotations.append(ann.to_json())
+            _json['annotations'] = annotations
+            with open(filepath, 'w') as f:
+                json.dump(_json, f)
 
-        mask = self.show(thickness=thickness,
-                         with_text=with_text,
-                         height=height,
-                         width=width,
-                         annotation_format=annotation_format)
-        img = Image.fromarray(mask.astype(np.uint8))
-        img.save(filepath)
+        else:
+            mask = self.show(thickness=thickness,
+                             with_text=with_text,
+                             height=height,
+                             width=width,
+                             annotation_format=annotation_format)
+            img = Image.fromarray(mask.astype(np.uint8))
+            img.save(filepath)
         return filepath
 
     ############

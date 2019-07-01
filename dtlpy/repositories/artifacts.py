@@ -129,11 +129,11 @@ class Artifacts:
             if not (local_path.endswith('/*') or local_path.endswith(r'\*')):
                 # download directly to folder
                 local_path = os.path.join(local_path, '*')
-            self.project.datasets.download(dataset_id=self.dataset.id,
-                                           filters=filters,
-                                           save_locally=True,
-                                           local_path=local_path,
-                                           download_options=download_options)
+            self.dataset.items.download(filters=filters,
+                                        save_locally=True,
+                                        local_path=local_path,
+                                        download_options=download_options)
+
         else:
             artifact = self.get(artifact_id=artifact_id,
                                 session_id=session_id,
@@ -160,7 +160,7 @@ class Artifacts:
         Else and if create==True a new artifact will be created and uploaded
 
         :param filepath: local binary file
-        :param upload_options: 'merge' or 'overwrite'
+        :param upload_options: {'overwrite': True/False, 'relative_path': True/False}
         :param task_id:
         :param task:
         :param session_id:
@@ -186,10 +186,9 @@ class Artifacts:
             if not (filepath.endswith('/*') or filepath.endswith(r'\*')):
                 # upload directly to folder
                 filepath = os.path.join(filepath, '*')
-            artifact = self.project.datasets.upload(dataset_id=self.dataset.id,
-                                                    local_path=filepath,
-                                                    remote_path=remote_path,
-                                                    upload_options=upload_options)
+            artifact = self.dataset.items.upload(local_path=filepath,
+                                                 remote_path=remote_path,
+                                                 upload_options=upload_options)
         else:
             raise ValueError('Missing file or directory: %s' % filepath)
         self.logger.debug('Artifact uploaded successfully')

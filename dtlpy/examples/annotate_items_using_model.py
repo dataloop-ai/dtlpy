@@ -31,7 +31,7 @@ def main():
         for item in page:
             if item.type == 'dir':
                 continue
-            img_batch = [dataset.items.download(item_id=item.id, save_locally=False)]
+            img_batch = [item.download(save_locally=False)]
             # load images
             img_batch = [Image.open(buf) for buf in img_batch]
             # get original images shapes before reshaping for model

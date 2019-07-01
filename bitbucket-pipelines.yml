@@ -11,7 +11,8 @@ pipelines:
           - python setup.py install
           - dlp api setenv -e dev
           - dlp login-secret -e "$TEST_USERNAME" -p "$TEST_PASSWORD" -i "$TEST_CLIENT_ID" -s "$TEST_CLIENT_SECRET"
-          - behave tests/features --no-source --no-timings --stop # run tests
+          # - behave tests/features --no-source --no-timings --stop # run tests
+          - python api_call_counter_parallel.py
   tags:
     "*":
       - step:

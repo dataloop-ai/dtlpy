@@ -1,0 +1,29 @@
+[
+    {
+        "value": {
+            "tag": "Person",
+            "displayLabel": "Person",
+            "color": "#8e4887",
+            "attributes": []
+        },
+        "children": []
+    },
+    {
+        "value": {
+            "tag": "Wheel",
+            "displayLabel": "Wheel",
+            "color": "#4facb3",
+            "attributes": []
+        },
+        "children": []
+    },
+    {
+        "value": {
+            "tag": "Object",
+            "displayLabel": "Object",
+            "color": "#8c658f",
+            "attributes": []
+        },
+        "children": []
+    }
+]

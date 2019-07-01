@@ -79,7 +79,6 @@ class Classification:
         )
 
 
-
 @attr.s
 class Polygon:
     """
@@ -611,7 +610,6 @@ class Ellipse:
         )
 
 
-
 @attr.s
 class Segmentation:
     """
@@ -727,14 +725,14 @@ class Segmentation:
             label=_json["label"],
             attributes=attributes,
         )
-        
+
 
 def add_text_to_image(image, annotation):
     text = '{label}-{attributes}'.format(label=annotation.label, attributes=','.join(annotation.attributes))
     return cv2.putText(img=image,
-                        text=text,
-                        org=tuple([int(np.round(annotation.top)), int(np.round(annotation.left))]),
-                        color=(255, 0, 0),
-                        fontFace=cv2.FONT_HERSHEY_DUPLEX,
-                        fontScale=1,
-                        thickness=2)
+                       text=text,
+                       org=tuple([int(np.round(annotation.top)), int(np.round(annotation.left))]),
+                       color=(255, 0, 0),
+                       fontFace=cv2.FONT_HERSHEY_DUPLEX,
+                       fontScale=1,
+                       thickness=2)

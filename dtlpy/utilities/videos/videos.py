@@ -237,15 +237,15 @@ class Videos:
 
         import dtlpy as dlp
         if project_id is not None or project_name is not None:
-            dlp.projects.get(project_name=project_name, project_id=project_id) \
-                .datasets.upload(dataset_name=dataset_name,
+            project = dlp.projects.get(project_name=project_name, project_id=project_id)
+            dataset = project.get(dataset_name=dataset_name, dataset_id=dataset_id)
+            dataset.items.upload(dataset_name=dataset_name,
                                  dataset_id=dataset_id,
                                  local_path=local_path,
                                  remote_path=remote_path,
-                                 filetypes=['.mp4'])
+                                 file_types=['.mp4'])
         else:
-            dlp.datasets.upload(dataset_name=dataset_name,
-                                dataset_id=dataset_id,
-                                local_path=local_path,
-                                remote_path=remote_path,
-                                filetypes=['.mp4'])
+            dataset = dlp.datasets.get(dataset_name=dataset_name, dataset_id=dataset_id)
+            dataset.items.upload(local_path=local_path,
+                                 remote_path=remote_path,
+                                 file_types=['.mp4'])

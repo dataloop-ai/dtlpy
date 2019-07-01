@@ -58,8 +58,8 @@ class BaseConverterFromPlatform:
             project = dl.projects.get(project_name=self.project_name)
             dataset = project.datasets.get(dataset_name=self.dataset_name)
 
-            project.datasets.download_annotations(dataset_name=self.dataset_name,
-                                                  local_path=os.path.join(local_annotations_path, '*'))
+            dataset.items.download_annotations(dataset_name=self.dataset_name,
+                                               local_path=os.path.join(local_annotations_path, '*'))
 
             # get labels to ids dictionary
             if 'labels_dict' not in self.params:

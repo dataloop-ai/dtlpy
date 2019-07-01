@@ -1,6 +1,7 @@
 import logging
 import numpy as np
 import cv2
+import json
 
 from PIL import Image
 
@@ -242,13 +243,17 @@ class Annotation:
         :param with_text: get mask with text
         :return: filepath
         """
-        mask = self.show(thickness=thickness,
-                         with_text=with_text,
-                         height=height,
-                         width=width,
-                         annotation_format=annotation_format)
-        img = Image.fromarray(mask.astype(np.uint8))
-        img.save(filepath)
+        if annotation_format == 'json':
+            with open(filepath, 'w') as f:
+                json.dump(self.to_json(), f)
+        else:
+            mask = self.show(thickness=thickness,
+                             with_text=with_text,
+                             height=height,
+                             width=width,
+                             annotation_format=annotation_format)
+            img = Image.fromarray(mask.astype(np.uint8))
+            img.save(filepath)
         return filepath
 
     def set_frame(self, frame):
@@ -521,8 +526,8 @@ class Annotation:
         ############
         if is_video:
             # get fps
-            if 'fps' in item.metadata:
-                fps = item.metadata['fps']
+            if item.fps is not None:
+                fps = item.fps
             else:
                 raise PlatformException('400', 'Video items must have fps.')
 
@@ -558,7 +563,7 @@ class Annotation:
             # get coordinates
             coordinates = _json.get('coordinates', list())
             # set video only attributes
-            fps = 0
+            fps = None
             end_frame = 0
             end_time = 0
             start_frame = 0
@@ -765,7 +770,7 @@ class FrameAnnotation:
             if label.tag == self.label:
                 return label.rgb
         if label is None:
-            return (255, 255, 255)
+            return 255, 255, 255
 
     @property
     def coordinates(self):
@@ -877,10 +882,10 @@ class FrameAnnotation:
 
     def to_snapshot(self, to_snapshot=False, color=None):
         snapshot_dict = {'frame': self.frame_num,
-                           'startTime': self.timestamp,
-                           'fixed': self.fixed,
-                           'label': self.label,
-                           'attributes': self.attributes,
-                           'type': self.type,
-                           'data': self.coordinates}
+                         'startTime': self.timestamp,
+                         'fixed': self.fixed,
+                         'label': self.label,
+                         'attributes': self.attributes,
+                         'type': self.type,
+                         'data': self.coordinates}
         return snapshot_dict

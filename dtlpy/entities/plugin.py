@@ -17,13 +17,11 @@ class Plugin:
     createdAt = attr.ib()
     updatedAt = attr.ib()
     name = attr.ib()
-    triggers = attr.ib()
     input = attr.ib()
     output = attr.ib()
     pipeline = attr.ib()
     revisions = attr.ib()
     metadata = attr.ib()
-    triggersFilter = attr.ib()
     url = attr.ib()
     description = attr.ib()
     mq_details = attr.ib()
@@ -49,13 +47,11 @@ class Plugin:
             createdAt=_json['createdAt'],
             updatedAt=_json['updatedAt'],
             name=_json['name'],
-            triggers=_json.get('triggers', list()),
             input=_json['input'],
             output=_json['output'],
             pipeline=_json['pipeline'],
             revisions=_json['revisions'],
             metadata=_json['metadata'],
-            triggersFilter=_json.get('triggersFilter', dict()),
             url=_json['url'],
             description=description,
             mq_details=_json['metadata']['system']['mq'],
@@ -70,7 +66,8 @@ class Plugin:
                            filter=attr.filters.exclude(attr.fields(Plugin).sessions,
                                                        attr.fields(Plugin).description,
                                                        attr.fields(Plugin).mq_details,
-                                                       attr.fields(Plugin).projects))
+                                                       attr.fields(Plugin).projects,
+                                                       attr.fields(Plugin).client_api))
 
 
 @attr.s

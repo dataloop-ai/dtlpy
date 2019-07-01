@@ -1,0 +1,38 @@
+[
+  {
+    "value": {
+      "tag": "Pitch Line",
+      "displayLabel": "Pitch Line",
+      "color": "#617535",
+      "attributes": []
+    },
+    "children": []
+  },
+  {
+    "value": {
+      "tag": "ball",
+      "displayLabel": "Ball",
+      "color": "#01f7a1",
+      "attributes": []
+    },
+    "children": []
+  },
+  {
+    "value": {
+      "tag": "visitor",
+      "displayLabel": "Visitor",
+      "color": "#7facc4",
+      "attributes": []
+    },
+    "children": []
+  },
+  {
+    "value": {
+      "tag": "home",
+      "displayLabel": "Home",
+      "color": "#02268f",
+      "attributes": []
+    },
+    "children": []
+  }
+]

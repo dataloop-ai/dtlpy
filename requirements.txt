@@ -17,3 +17,5 @@ jinja2==2.10.1
 attrs==19.1.0
 attr==0.3.1
 behave==1.2.6
+pystache==0.5.4
+tornado==6.0.2

@@ -305,7 +305,7 @@ class VideoPlayer:
         if not os.path.isdir(os.path.dirname(video_filename)):
             os.makedirs(os.path.dirname(video_filename))
         if not os.path.isfile(video_filename):
-            self.dataset.items.download(item_id=self.item.id, local_path=video_filename)
+            self.dataset.items.download(items=self.item, local_path=video_filename)
         self.video_source = video_filename
         self.video_annotations = self.item.annotations.list()
 
