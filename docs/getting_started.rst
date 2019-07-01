@@ -94,7 +94,7 @@ Upload and download items
 
 	# Upload single image
 	dataset.items.upload(
-		filepath='/images/000000000036.jpg', # can be a filepath
+		local_path='/images/000000000036.jpg', # can be a filepath
 		remote_path='/dog'
 	)
 
