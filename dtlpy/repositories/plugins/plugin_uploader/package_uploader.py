@@ -2,6 +2,7 @@ import os
 from dtlpy.utilities.plugin_bootstraping.util import get_state_json
 import dtlpy
 
+
 class PackageUploader:
     def __init__(self):
         state_json = get_state_json()

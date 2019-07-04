@@ -13,6 +13,7 @@ Dataloop's SDK and CLI documentation
    installation
    getting_started
    examples
+   annotations_types
    filters
    starting_with_plugins
    cli

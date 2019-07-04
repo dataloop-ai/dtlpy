@@ -5,24 +5,27 @@ def main():
     """
     import dtlpy as dl
 
-    # FROM get the annotations from item
+    # Get source project and dataset
     project = dl.projects.get(project_name='FirstProject')
     dataset_from = project.datasets.get(dataset_name='FirstDataset')
-    # ll items from folder
-    pages = dataset_from.items.list(filters=dl.Filters(filenames='/source_folder',  # take files from the directory only
-                                                       itemType='file'  # only files
-                                                       ))
+    # filter to get all files of a specific folder
+    filters = dl.Filters()
+    filters(field='type', value='file')  # get only files
+    filters(field='filename', value='/source_folder/**')  # get all items in folder (recursive)
+    pages = dataset_from.items.list(filters=filters)
 
-    # TO post annotations to other item
+    # Get destination project and annotations
     project = dl.projects.get(project_name='SecondProjects')
     dataset_to = project.datasets.get(dataset_name='SecondDataset')
 
+    # go over all projects and copy file from src to dst
     for page in pages:
         for item in page:
             # download item (without save to disk)
             buffer = item.download(save_locally=False)
+            # give the items name to the buffer
+            buffer.name = item.name
             # upload item
-            new_item = dataset_to.items.upload(filepath=buffer,
-                                               remote_path='/destination_folder',
-                                               uploaded_filename=item.name)
+            new_item = dataset_to.items.upload(local_path=buffer,
+                                               remote_path='/destination_folder')
             print(new_item.filename)

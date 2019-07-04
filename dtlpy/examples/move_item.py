@@ -5,17 +5,19 @@ def main():
     """
     import dtlpy as dl
 
-    # FROM get the annotations from item
-    project = dl.projects.get(project_name='Project')
-    dataset = project.datasets.get(dataset_name='Dataset')
-    # ll items from folder
-    pages = dataset_from.items.list(filters=dl.Filters(filenames='/source_folder',  # take files from the directory only
-                                                       itemType='file'  # only files
-                                                       ))
+    # Get project and dataset
+    project = dl.projects.get(project_name='Ninja Turtles')
+    dataset = project.datasets.get(dataset_name='Splinter')
 
-    new_folder = '/new_folder'
+    # Get all items from the source folder
+    filters = dl.Filters()
+    filters(field='filename', value='/fighting/**')  # take files from the directory only (recursive)
+    filters(field='type', value='file')  # only files
+    pages = dataset.items.list(filters=filters)
+
+    dst_folder = '/fighting_shredder'
     # iterate through items
     for page in pages:
         for item in page:
             # move item
-            item.move(new_path=new_folder)
+            item.move(new_path=dst_folder)

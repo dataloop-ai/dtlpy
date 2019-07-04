@@ -44,33 +44,24 @@ def main():
             predictions = model.predict(batch)
             # get ImageNet labels
             labels = decode_predictions(predictions, top=1)
-            # create batch of annotations
-            batch_annotations = list()
+            # create platform annotations instance
+            builder = item.annotations.builder()
             for i_pred, label in enumerate(labels):
-                # create platform annotations instance
-                builder = item.annotations.builder()
-                # add the class labels
 
+                # add the class labels
                 ##############################
                 # If model is classification #
                 ##############################
-                builder.add(
-                    annotation_definition=dl.Classification(label=label[0][1])
-                )
+                builder.add(annotation_definition=dl.Classification(label=label[0][1]))
                 #############################
                 # If model outputs polygons #
                 #############################
-                builder.add(
-                    annotation_definition=dl.Polyline(geo=pred['polygon_pts'],
-                                                  label=labels[i_pred][0][1])
-                )
+                builder.add(annotation_definition=dl.Polyline(geo=pred['polygon_pts'],
+                                                              label=labels[i_pred][0][1]))
                 #########################
                 # If model outputs mask #
                 #########################
-                builder.add(
-                    annotation_definition=dl.Segmentation(geo=pred['mask'],
-                                                label=labels[i_pred][0][1])
-                )
+                builder.add(annotation_definition=dl.Segmentation(geo=pred['mask'],
+                                                                  label=labels[i_pred][0][1]))
             # upload a annotations to matching items in platform
             builder.upload()
-            

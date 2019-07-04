@@ -12,7 +12,7 @@ def step_impl(context, local_path):
                                    local_path=local_path,
                                    file_types=None,
                                    num_workers=None,
-                                   download_options=None,
+                                   download_options={'to_images_folder': True},
                                    save_locally=True,
                                    annotation_options=['mask', 'instance', 'json'],
                                    opacity=1,

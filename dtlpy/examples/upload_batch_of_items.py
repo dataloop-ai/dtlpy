@@ -1,21 +1,16 @@
-def main():    
+def main():
+    """
+
+    :return:
+    """
     import dtlpy as dl
 
-    project_name='New of your project'
-    dataset_name='New of your dataset'
-
-    # get dataset
-    dataset = dl.projects.get(project_name=project_name).datasets.get(dataset_name=dataset_name)
-
-    # path to a local directory of items to upload
-    dir_path = 'path'
-
-    # remote directory to which item will be uploaded
-    # if remote path given does not exist it will be created automatically when uploading
-    remote_path = '/path'
-
-    # can be 'merge' or 'overwrite'
-    upload_options=None
+    # Get project and dataset
+    project = dl.projects.get(project_name='Curling')
+    dataset = project.datasets.get(dataset_name='Practice')
 
     # upload
-    dataset.upload_batch(filepaths=dir_path, remote_path=remote_path, upload_options=upload_options)
+    dataset.items.upload(local_path=['/home/project/images/John Morris.jpg',
+                                     '/home/project/images/John Benton.jpg',
+                                     '/home/project/images/Liu Jinli.jpg'],
+                         remote_path='/first_batch')

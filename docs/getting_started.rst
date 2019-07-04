@@ -65,7 +65,9 @@ You can create a generator of items with different filters
 	# Get the dataset
 	dataset = project.datasets.get(dataset_name='MyDataset')
 	# Get items in pages (100 item per page)
-	pages = dataset.items.list()
+	filters = dlp.Filters()
+	filters(field='filename', value='/winter/is/coming/*')
+	pages = dataset.items.list(filters=filters)
 	# Count the items
 	print('Number of items in dataset: {}'.format(pages.items_count))
 	# Go over all item and print the properties

@@ -8,13 +8,13 @@ Feature: Items repository delete function testing
     Scenario: Delete item by name
         Given There are no items
         And I upload an item by the name of "/test_item.jpg"
-        When I delete an item by the name of "/test_item.jpg"
+        When I delete the item by name
         Then There are no items
     
     Scenario: Delete item by id
         Given There are no items
         And I upload an item by the name of "/test_item.jpg"
-        When I delete an item by the id of "/test_item.jpg"
+        When I delete the item by id
         Then There are no items
 
     Scenario: Delete a non-existing item by name

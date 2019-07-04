@@ -1,0 +1,6 @@
+Release 1.6.2
+    Features:
+        - started working with platform RQL queries
+        - removed api counter from global cookie file
+    Bugs:
+        - fixed slow upload and download by threading some pre process

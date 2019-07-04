@@ -22,11 +22,13 @@ def step_impl(context, folder_path):
 @behave.when(u'I download an item by the name of "{item_name}" to "{download_path}"')
 def step_impl(context, item_name, download_path):
     download_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], download_path)
-    context.dataset.items.download(filters=context.dl.Filters(filenames=item_name),
+    filters = context.dl.Filters()
+    filters(field='filename', value=item_name)
+    context.dataset.items.download(filters=filters,
                                    items=None,
                                    save_locally=True,
                                    local_path=download_path,
-                                   download_options=None,
+                                   download_options={'to_images_folder': True},
                                    annotation_options=None)
 
 
@@ -39,7 +41,7 @@ def step_impl(context, item_count, local_path):
     assert len(content) == int(item_count)
 
 
-@behave.then(u'Item is correctlly downloaded to "{downloaded_path}" (compared with "{item_to_compare}")')
+@behave.then(u'Item is correctly downloaded to "{downloaded_path}" (compared with "{item_to_compare}")')
 def step_impl(context, downloaded_path, item_to_compare):
     downloaded_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], downloaded_path)
     item_to_compare = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], item_to_compare)
@@ -57,13 +59,13 @@ def step_impl(context, downloaded_path, item_to_compare):
         assert False
 
 
-@behave.when(u'I download an item by the id of "{item_name}" to "{download_path}"')
-def step_impl(context, item_name, download_path):
+@behave.when(u'I download an item by the id to "{download_path}"')
+def step_impl(context, download_path):
     download_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], download_path)
     context.dataset.items.download(items=context.item.id,
                                    save_locally=True,
                                    local_path=download_path,
-                                   download_options=None,
+                                   download_options={'to_images_folder': True},
                                    annotation_options=None)
 
 

@@ -1,7 +1,5 @@
-import json
 import logging
 import traceback
-from urllib.parse import urlencode
 from multiprocessing.pool import ThreadPool
 import attr
 
@@ -36,11 +34,10 @@ class Items:
         :return: list of all items
         """
         if filters is None:
-            filters = {"itemType": "file"}
+            filters = entities.Filters()
+            filters(field='type', value='file')
         page_size = 100
-        pages = self.list(
-            filters=entities.Filters(itemType="file"), page_size=page_size
-        )
+        pages = self.list(filters=filters, page_size=page_size)
 
         num_items = pages.items_count
 
@@ -66,7 +63,8 @@ class Items:
         items = [item for item in items if item is not None]
         return items
 
-    def create_query_string(self, filters, page_offset, page_size):
+    @staticmethod
+    def create_query_dict(filters, page_offset, page_size):
         """
         Create a platform filters string
 
@@ -78,28 +76,16 @@ class Items:
         # using path for backward compatibility
         if filters is None:
             # default value
-            filters = entities.Filters(filenames="/")
-        if isinstance(filters, dict):
-            filters = entities.Filters.from_dict(filters)
+            if filters is None:
+                filters = entities.Filters()
         elif isinstance(filters, entities.Filters):
             pass
         else:
-            self.logger.exception("Unknown filters type: %s" % type(filters))
-            message = "Unknown filters type: %s" % type(filters)
-            raise PlatformException("404", message)
-
-        return (
-            urlencode(
-                {
-                    "query": json.dumps(filters.prepare(), separators=(",", ":")),
-                    "pageOffset": page_offset,
-                    "pageSize": page_size,
-                }
-            )
-            .replace("%3A", ":")
-            .replace("%2F", "/")
-            .replace("%2C", ",")
-        )
+            raise PlatformException(
+                error='400',
+                message='"filters" must be of type "{}", got: "{}"'.format(entities.Filters, type(filters)))
+        rql = repositories.Rql(filters=filters, page_offset=page_offset, page_size=page_size)
+        return rql.prepare()
 
     def get_list(self, filters, page_offset, page_size):
         """
@@ -112,29 +98,22 @@ class Items:
         :return: json response
         """
         # create filters string
-        query_string = self.create_query_string(
-            filters=filters, page_offset=page_offset, page_size=page_size
-        )
+        query_dict = self.create_query_dict(filters=filters,
+                                            page_offset=page_offset,
+                                            page_size=page_size)
 
         # prepare request
-        success, response = self.client_api.gen_request(
-            req_type="get",
-            path="/datasets/%s/items?%s" % (self.dataset.id, query_string),
-        )
+        success, response = self.client_api.gen_request(req_type="POST",
+                                                        path="/datasets/%s/query" % self.dataset.id,
+                                                        json_req=query_dict)
         if not success:
-            self.logger.exception(
-                "Getting items list. dataset id: %s" % self.dataset.id
-            )
             raise PlatformException(response)
         try:
             self.client_api.print_json(response.json()["items"])
-            self.logger.debug(
-                "Page:%d/%d" % (1 + page_offset, response.json()["totalPagesCount"])
-            )
+            self.logger.debug("Page:%d/%d" % (1 + page_offset, response.json()["totalPagesCount"]))
         except ValueError:
             # no JSON returned
             pass
-
         return response.json()
 
     def list(self, filters=None, page_offset=0, page_size=100):
@@ -183,26 +162,20 @@ class Items:
                 )
                 raise PlatformException(response)
         elif filepath is not None:
-            paged_entity = self.list(entities.Filters(filenames=filepath))
+            filters = entities.Filters()
+            filters(field='filename', value=filepath)
+            paged_entity = self.list(filters=filters)
             if len(paged_entity.items) == 0:
-                self.logger.debug("Item not found. filename: %s" % filepath)
-                raise PlatformException("404", "Item not found.")
+                raise PlatformException(error='404', message='Item not found. filepath= "{}"'.format(filepath))
             elif len(paged_entity.items) > 1:
-                self.logger.warning(
-                    'More than one item with same name. Please "get" by id'
-                )
-                raise PlatformException(
-                    "404", 'More than one item with same name. Please "get" by id'
-                )
+                raise PlatformException(error='404',
+                                        message='More than one item found. Please "get" by id. filepath: "{}"'.format(
+                                            filepath))
             else:
                 item = paged_entity.items[0]
         else:
-            self.logger.exception(
-                'Must choose by at least one. "filename" or "item_id"'
-            )
-            raise PlatformException(
-                "400", 'Must choose by at least one. "filename" or "item_id"'
-            )
+            raise PlatformException(error="400",
+                                    message='Must choose by at least one. "filename" or "item_id"')
         return item
 
     def delete(self, filename=None, item_id=None):
@@ -268,19 +241,19 @@ class Items:
             raise PlatformException(response)
 
     def download(
-        self,
-        filters=None,
-        items=None,
-        # download options
-        local_path=None,
-        file_types=None,
-        download_options=None,
-        save_locally=True,
-        num_workers=None,
-        annotation_options=None,
-        opacity=None,
-        with_text=None,
-        thickness=None,
+            self,
+            filters=None,
+            items=None,
+            # download options
+            local_path=None,
+            file_types=None,
+            download_options=None,
+            save_locally=True,
+            num_workers=None,
+            annotation_options=None,
+            opacity=None,
+            with_text=None,
+            thickness=None,
     ):
         """
             Download dataset by filters or by items id (or a list of)
@@ -311,15 +284,15 @@ class Items:
         )
 
     def upload(
-        self,
-        local_path,
-        local_annotations_path=None,
-        # upload options
-        remote_path=None,
-        upload_options=None,
-        file_types=None,
-        # config
-        num_workers=None,
+            self,
+            local_path,
+            local_annotations_path=None,
+            # upload options
+            remote_path=None,
+            upload_options=None,
+            file_types=None,
+            # config
+            num_workers=None,
     ):
         """
         Upload local file/s, folder/s or binary/is to dataset.
@@ -348,4 +321,3 @@ class Items:
             # config
             num_workers=num_workers,
         )
-

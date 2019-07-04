@@ -195,5 +195,5 @@ class Dataset:
 
     def download_annotations(self, local_path, overwrite=False):
         return self.project.datasets.download_annotations(dataset=self,
-                                                   local_path=local_path,
-                                                   overwrite=overwrite)
+                                                          local_path=local_path,
+                                                          overwrite=overwrite)

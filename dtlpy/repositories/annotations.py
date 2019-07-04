@@ -229,7 +229,8 @@ class Annotations:
                 else:
                     raise PlatformException('400',
                                             'unknown annotations type: {}'.format(type(item)))
-
+                annotation.pop('id', None)
+                annotation.pop('_id', None)
                 suc, response = self.client_api.gen_request(
                     req_type='post',
                     path='/datasets/{}/items/{}/annotations'.format(self.dataset.id, self.item.id),

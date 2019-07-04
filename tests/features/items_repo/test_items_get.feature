@@ -31,7 +31,7 @@ Feature: Items repository get function testing
 
     Scenario: Get an existing item by filename when 2 files with the same name exist
         Given There are 2 items by the name of "0000000162.jpg"
-        When I try to get an item by remote path "/0000000162.jpg"
+        When I try to get an item by remote path "**/0000000162.jpg"
         Then "NotFound" exception should be raised
     
     Scenario: Finally

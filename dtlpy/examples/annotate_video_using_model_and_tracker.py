@@ -5,7 +5,6 @@ def main():
     """
     import cv2
     import dtlpy as dl
-    from dtlpy.utilities.annotations import VideoAnnotation
 
     ##########################
     # Load model and tracker #
@@ -28,8 +27,14 @@ def main():
                   int(vid.get(cv2.CAP_PROP_FRAME_HEIGHT)))
     video_frames = int(vid.get(cv2.CAP_PROP_FRAME_COUNT))
 
-    # Dataloop video annotation class
-    video_annotations = VideoAnnotation()
+    ############
+    # Platform #
+    ###########
+    # get the item from platform
+    item = dl.projects.get(project_name='MyProject') \
+        .datasets.get(dataset_name='MyDataset') \
+        .items.get(filepath='/path/to/video.mp4')
+    builder = item.annotations.builder()
 
     #######
     # Run #
@@ -51,15 +56,14 @@ def main():
         for element in tracked_elements:
             # element.bb - format of the bounding box is 2 points in 1 array - [x_left, y_top, x_right, y_bottom])
             # tracking id of each element is in element.id. to keep the ids of the detected elements
-            video_annotations.add_snapshot(
-                element_id=element.id,  # object id for tracking across frames
-                annotation_type='box',  # 'box', 'point' 'binary' etc
-                pts=element.bb,  # points of annotation (bb or [x,y] of a point
-                second=float('%.3f' % (frame_num / video_fps)),  # timestamp of the frame
-                frame_num=frame_num,  #
-                label=element.label
-            )
-
+            left, top, bottom, right = element.bb,  # points bounding box annotation
+            builder.add(annotation_definition=dl.Box(top=top,
+                                                     left=left,
+                                                     right=right,
+                                                     bottom=bottom,
+                                                     label=element.label),
+                        object_id=element.id,
+                        frame_num=frame_num)
         # increase frame number
         frame_num += 1
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -68,12 +72,4 @@ def main():
     ##################################
     # Upload annotations to platform #
     ##################################
-    # Init dataloop platform
-
-    # get the item from platform
-    item = dl.projects.get(project_name='MyProject')\
-        .datasets.get(dataset_name='MyDataset')\
-        .items.get(filepath='/path/to/video.mp4')
-
-    # upload annotations
-    item.annotations.upload(video_annotations.to_platform())
+    item.annotations.upload(builder.to_platform())

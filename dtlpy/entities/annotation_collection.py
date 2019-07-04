@@ -178,7 +178,7 @@ class AnnotationCollection:
         """
         if annotation_format == 'json':
             _json = {'_id': self.item.id,
-                           'filename': self.item.filename}
+                     'filename': self.item.filename}
             annotations = list()
             for ann in self.annotations:
                 annotations.append(ann.to_json())

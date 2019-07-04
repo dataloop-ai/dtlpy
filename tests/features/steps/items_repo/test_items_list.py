@@ -66,7 +66,7 @@ def step_impl(context):
     assert context.list.has_next_page
 
 
-@behave.then(u'PageEntity items has lenght of "{item_count}"')
+@behave.then(u'PageEntity items has length of "{item_count}"')
 def step_impl(context, item_count):
     count = 0
     for item in context.list.items:
@@ -104,9 +104,11 @@ def step_impl(context, item_name):
     )
 
 
-@behave.when(u'I list items with query filename="{filters}"')
-def step_impl(context, filters):
-    context.list = context.dataset.items.list(context.dl.Filters(filenames=filters))
+@behave.when(u'I list items with query filename="{filename_filter}"')
+def step_impl(context, filename_filter):
+    filters = context.dl.Filters()
+    filters(field='filename', value=filename_filter)
+    context.list = context.dataset.items.list(filters=filters)
 
 
 @behave.then(u'PageEntity item received equal to item uploaded with name "test_name"')
@@ -181,9 +183,11 @@ def step_impl(context):
     )
 
 
-@behave.when(u'I list items with query mimetypes="{filters}"')
-def step_impl(context, filters):
-    context.list = context.dataset.items.list(context.dl.Filters(mimetypes=filters))
+@behave.when(u'I list items with query mimetypes="{mimetype_filters}"')
+def step_impl(context, mimetype_filters):
+    filters = context.dl.Filters()
+    filters(field='metadata.system.mimetype', value=mimetype_filters)
+    context.list = context.dataset.items.list(filters=filters)
 
 
 @behave.then(u'And PageEntity item received equal to .png item uploadede')
@@ -206,9 +210,11 @@ def step_impl(context):
     )
 
 
-@behave.when(u'I list items with query itemType="{filters}"')
-def step_impl(context, filters):
-    context.list = context.dataset.items.list(context.dl.Filters(itemType=filters))
+@behave.when(u'I list items with query itemType="{value}"')
+def step_impl(context, value):
+    filters = context.dl.Filters()
+    filters(field='type', value=value)
+    context.list = context.dataset.items.list(filters=filters)
 
 
 @behave.then(u'And PageEntity item received equal to .mp4 item uploadede')

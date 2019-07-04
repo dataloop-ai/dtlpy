@@ -127,10 +127,10 @@ class Ontologies:
 
     def labels_to_roots(self, labels):
         """
-        Converts labels dict to a list of platform represantation of labels
+        Converts labels dict to a list of platform representation of labels
 
         :param labels: labels dict
-        :return: platform represantation of labels
+        :return: platform representation of labels
         """
         roots = list()
         for label, color in labels.items():

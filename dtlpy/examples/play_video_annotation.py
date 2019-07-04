@@ -4,10 +4,10 @@ def run():
     :return:
     """
     from dtlpy.utilities.videos.video_player import VideoPlayer
-    project_name = 'MyProject'
-    dataset_name = 'MyDataset'
-    item_name = '/filename.mp4'
+    project_name = 'Dancing'
+    dataset_name = 'Flossing'
+    item_name = '/first_try.mp4'
 
-    a = VideoPlayer(project_name=project_name,
-                    dataset_name=dataset_name,
-                    item_filepath=item_name)
+    VideoPlayer(project_name=project_name,
+                dataset_name=dataset_name,
+                item_filepath=item_name)

@@ -3,7 +3,6 @@ Dataloop platform calls
 """
 import requests_toolbelt
 import threading
-import mimetypes
 import datetime
 import requests
 import logging
@@ -110,7 +109,8 @@ class ApiClient:
                                  'attributes', 'partitions', 'metadata', 'stream', 'createdAt', 'updatedAt', 'arch']
 
         # API calls counter
-        self.calls_counter = CallsCounter(cookie=self.io)
+        counter_filepath = os.path.join(os.path.dirname(self.io.COOKIE), 'calls_counter.json')
+        self.calls_counter = CallsCounter(filepath=counter_filepath)
 
     @property
     def verify(self):
@@ -127,10 +127,11 @@ class ApiClient:
 
     @property
     def environment(self):
-        environment = self._environment
-        if environment is None:
-            environment = self.io.get('url')
-        return environment
+        _environment = self._environment
+        if _environment is None:
+            _environment = self.io.get('url')
+            self._environment = _environment
+        return _environment
 
     @environment.setter
     def environment(self, env):
@@ -144,13 +145,14 @@ class ApiClient:
         :return:
         """
         # get environment login parameters
-        if self._environments is None:
+        _environments = self._environments
+        if _environments is None:
             # take from cookie
-            env_dict = self.io.get('login_parameters')
+            _environments = self.io.get('login_parameters')
             # if cookie is None  - init with defaultas
-            if env_dict is None:
+            if _environments is None:
                 # default
-                env_dict = {
+                _environments = {
                     'https://dev-gate.dataloop.ai/api/v1':
                         {'alias': 'dev',
                          'audience': 'https://dataloop-development.auth0.com/api/v2/',
@@ -183,9 +185,11 @@ class ApiClient:
                                                                  'token': '',
                                                                  'verify_ssl': False}
                 }
-            # save to local variable
-            self.environments = env_dict
-        return self._environments
+                # save to local variable
+                self.environments = _environments
+            else:
+                self._environments = _environments
+        return _environments
 
     @environments.setter
     def environments(self, env_dict):
@@ -194,11 +198,13 @@ class ApiClient:
 
     @property
     def verbose(self):
-        if self._verbose is None:
-            verbose = self.io.get('verbose')
-            if verbose is None:
-                self.verbose = False
-        return self._verbose
+        _verbose = self._verbose
+        if _verbose is None:
+            _verbose = self.io.get('verbose')
+            if _verbose is None:
+                _verbose = False
+                self.verbose = _verbose
+        return _verbose
 
     @verbose.setter
     def verbose(self, verbose):
@@ -207,13 +213,13 @@ class ApiClient:
 
     @property
     def token(self):
-        token = self._token
-        if token is None:
+        _token = self._token
+        if _token is None:
             environments = self.environments
             if self.environment in environments:
                 if 'token' in environments[self.environment]:
-                    token = environments[self.environment]['token']
-        return token
+                    _token = environments[self.environment]['token']
+        return _token
 
     @token.setter
     def token(self, token):
@@ -665,6 +671,7 @@ class ApiClient:
         from http.server import BaseHTTPRequestHandler, HTTPServer
         from urllib.parse import urlparse, parse_qs
 
+        logger.info('Logging in to Dataloop...')
         login_success = False
         # create a Code Verifier
         n_bytes = 64
@@ -829,3 +836,6 @@ class ApiClient:
             self.token = final_token
             # set status back to pending
             self.renew_status = 'pending'
+
+    def set_api_counter(self, filepath):
+        self.calls_counter = CallsCounter(filepath=filepath)

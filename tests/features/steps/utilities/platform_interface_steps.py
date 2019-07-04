@@ -14,30 +14,26 @@ def before_all(context):
         context.dl = context.feature.dataloop_feature_dl
     else:
         # get cookie name
-        feature_name = context.feature.name
-        feature_name = feature_name.replace(' ', '_')
-        num = random.randint(10000, 100000)
-        cookie_name = 'cookie_{}_{}.json'.format(str(num), feature_name)
-        new_cookie = os.path.join(os.path.dirname(dl.client_api.io.COOKIE), cookie_name)
-        # copy to a new cookie
-        if dl.client_api.io.COOKIE != new_cookie:
-            shutil.copyfile(dl.client_api.io.COOKIE, new_cookie)
-        # init new cookie
-        dl.client_api.io.__init__(new_cookie)
-        # remember cookie location
-        context.feature.cookie_path = new_cookie
-        # set call counter new cookie
-        dl.client_api.calls_counter.cookie = dl.client_api.io
+        feature_name = context.feature.name.replace(' ', '_')
+        api_counter_name = 'api_counter_{}.json'.format(feature_name)
+        api_counter_filepath = os.path.join(os.path.dirname(dl.client_api.io.COOKIE), api_counter_name)
+        # set counter
+        dl.client_api.set_api_counter(api_counter_filepath)
 
-        # regular initiation procedure
+        # set context for run
         context.dl = dl
+
+        # reset api counter
         context.dl.client_api.calls_counter.on()
         context.dl.client_api.calls_counter.reset()
+
+        # set env to dev
         context.dl.setenv('dev')
-        token = context.dl.token()
-        payload = jwt.decode(token, algorithms=['HS256'], verify=False)
-        if payload['email'] != 'oa-test-1@dataloop.ai':
-            assert False, 'Cannot run test on user other than: oa-test-1@dataloop.ai'
+
+        # check token
+        payload = jwt.decode(context.dl.token(), algorithms=['HS256'], verify=False)
+        if payload['email'] not in ['oa-test-1@dataloop.ai', 'oa-test-2@dataloop.ai']:
+            assert False, 'Cannot run test on user: "{}". only test users'.format(payload['email'])
 
         # save to feature level
         context.feature.dataloop_feature_dl = context.dl
@@ -58,12 +54,11 @@ def step_impl(context, project_name):
 
 @behave.given('Clean up "{project_name}"')
 def step_impl(context, project_name):
-    #delete project
+    # delete project
     context.project.delete(True, True)
 
     # update api call json
-    api_calls_path = 'api_calls.json'
-    api_calls_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], api_calls_path)
+    api_calls_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], 'api_calls.json')
     with open(api_calls_path, 'r') as f:
         api_calls = json.load(f)
     if context.feature.name in api_calls:
@@ -72,9 +67,10 @@ def step_impl(context, project_name):
         api_calls[context.feature.name] = context.dl.client_api.calls_counter.number
     with open(api_calls_path, 'w') as f:
         json.dump(api_calls, f)
-    os.remove(context.feature.cookie_path)
+    # os.remove(context.dl.client_api.calls_counter.io.COOKIE)
 
 
 @behave.given('Remove cookie')
 def step_impl(context):
-    os.remove(context.feature.cookie_path)
+    pass
+    # os.remove(context.feature.cookie_path)

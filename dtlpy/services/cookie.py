@@ -3,6 +3,7 @@ Dataloop cookie state
 """
 
 import os
+import time
 import json
 import logging
 
@@ -45,8 +46,18 @@ class CookieIO:
             raise SystemExit
 
     def get(self, key):
-        with open(self.COOKIE, 'r') as fp:
-            cfg = json.load(fp)
+        logger.debug('COOKIE: Reading key: {}'.format(key))
+        num_tries = 3
+        for i in range(num_tries):
+            try:
+                with open(self.COOKIE, 'r') as fp:
+                    cfg = json.load(fp)
+                break
+            except json.decoder.JSONDecodeError:
+                if i == (num_tries-1):
+                    raise
+                time.sleep(0.1)
+                continue
         if key in cfg.keys():
             return cfg[key]
         else:
@@ -54,6 +65,7 @@ class CookieIO:
             return None
 
     def put(self, key, value):
+        logger.debug('COOKIE: Writing key: {}'.format(key))
         with open(self.COOKIE, 'r') as fp:
             cfg = json.load(fp)
         cfg[key] = value

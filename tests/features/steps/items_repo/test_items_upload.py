@@ -23,14 +23,13 @@ def step_impl(context, item_local_path, option):
         assert False, "unknown upload options: {}".format(option)
 
     item_local_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], item_local_path)
-    context.item = context.dataset.items.upload(
-        local_path=item_local_path, remote_path=None, upload_options=option
-    )
+    context.item = context.dataset.items.upload(local_path=item_local_path,
+                                                remote_path=None,
+                                                upload_options=option
+                                                )
 
 
-@behave.when(
-    u'I upload file in path "{item_local_path}" to remote path "{remote_path}"'
-)
+@behave.when(u'I upload file in path "{item_local_path}" to remote path "{remote_path}"')
 def step_impl(context, item_local_path, remote_path):
     item_local_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], item_local_path)
     context.item = context.dataset.items.upload(
@@ -57,15 +56,12 @@ def step_impl(context, item_local_path, download_path):
     download_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], download_path)
     file_to_compare = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], item_local_path)
 
-    options = {
-    'to_images_folder': False
-}
     context.dataset.items.download(
         filters=None,
         items=context.item.id,
         local_path=download_path,
         file_types=None,
-        download_options=options,
+        download_options={'to_images_folder': False},
         save_locally=True,
         num_workers=None,
         annotation_options=None,
@@ -207,7 +203,7 @@ def step_impl(context):
 
 @behave.then(u'There are "{item_count}" items in host')
 def step_impl(context, item_count):
-    context.item_list = context.dataset.items.list(
-        filters=context.dl.Filters(itemType="file")
-    )
+    filters = context.dl.Filters()
+    filters(field='type', value='file')
+    context.item_list = context.dataset.items.list(filters=filters)
     assert len(context.item_list.items) == int(item_count) == context.items_uploaded

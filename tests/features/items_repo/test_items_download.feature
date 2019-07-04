@@ -11,15 +11,15 @@ Feature: Items repository download function testing
         And Folder "test_items_download" is empty
         When I download an item by the name of "/test_item.jpg" to "test_items_download"
         Then There are "1" files in "test_items_download"
-        And Item is correctlly downloaded to "test_items_download/image/test_item.jpg" (compared with "0000000162.jpg")
+        And Item is correctly downloaded to "test_items_download/image/test_item.jpg" (compared with "0000000162.jpg")
 
     Scenario: Download item by id - save locally
         Given There are no items
         And I upload an item by the name of "/test_item.jpg"
         And Folder "test_items_download" is empty
-        When I download an item by the id of "/test_item.jpg" to "test_items_download"
+        When I download an item by the id to "test_items_download"
         Then There are "1" files in "test_items_download"
-        And Item is correctlly downloaded to "test_items_download/image/test_item.jpg" (compared with "0000000162.jpg")
+        And Item is correctly downloaded to "test_items_download/image/test_item.jpg" (compared with "0000000162.jpg")
 
     Scenario: Download item by id - do not save locally
         Given There are no items

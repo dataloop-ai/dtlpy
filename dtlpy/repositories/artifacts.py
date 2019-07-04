@@ -57,10 +57,13 @@ class Artifacts:
         :return: list of artifacts
         """
         if session_id is not None:
-            pages = self.items_repository.list(
-                filters=entities.Filters(directories='/artifacts/sessions/%s' % session_id))
+            filters = entities.Filters()
+            filters(field='filename', value='/artifacts/sessions/{}/*'.format(session_id))
+            pages = self.items_repository.list(filters=filters)
         elif task_id is not None:
-            pages = self.items_repository.list(filters=entities.Filters(directories='/artifacts/tasks/%s' % task_id))
+            filters = entities.Filters()
+            filters(field='filename', value='/artifacts/tasks/{}/*'.format(session_id))
+            pages = self.items_repository.list(filters=filters)
         else:
             raise ValueError('Must input one search parameter')
         items = [item for page in pages for item in page]
@@ -120,12 +123,13 @@ class Artifacts:
 
         if artifact_name is None:
             if session_id is not None:
-                directories = '/artifacts/sessions/%s' % session_id
+                directories = '/artifacts/sessions/{}/*'.format(session_id)
             elif task_id is not None:
-                directories = '/artifacts/tasks/%s' % task_id
+                directories = '/artifacts/tasks/{}/*'.format(task_id)
             else:
-                raise PlatformException('400', 'Must input task or session (id or entity)')
-            filters = entities.Filters(directories=directories)
+                raise PlatformException(error='400', message='Must input task or session (id or entity)')
+            filters = entities.Filters()
+            filters(field='filename', value=directories)
             if not (local_path.endswith('/*') or local_path.endswith(r'\*')):
                 # download directly to folder
                 local_path = os.path.join(local_path, '*')

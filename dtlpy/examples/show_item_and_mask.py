@@ -3,18 +3,15 @@ def main():
     Download and show an image with it's annotations
     :return:
     """
-    import  dtlpy as dl
+    import dtlpy as dl
     from PIL import Image
+    import numpy as np
 
-    project_name = 'MyProject'
-    dataset_name = 'MyDataset'
-    item_name = '/path/to/image.jpg'
-
-    # get dataset from platform
-    dataset = dl.projects.get(project_name=project_name).datasets.get(dataset_name=dataset_name)
-
-    # get item
-    item = dataset.items.get(filepath=item_name)
+    # Get project and dataset
+    project = dl.projects.get(project_name='Ants')
+    dataset = project.datasets.get(dataset_name='Acrobat')
+    # Get item
+    item = dataset.items.get(filepath='/ants/from/house.jpg')
 
     # download item as a buffer
     buffer = item.download(save_locally=False)
@@ -23,8 +20,10 @@ def main():
     image = Image.open(buffer)
 
     # download annotations
-    annotations = item.to_mask(width=image.size[1], height=image.size[0])
-    annotations = Image.fromarray(annotations)
+    annotations = item.annotations.show(width=image.size[0],
+                                        height=image.size[1],
+                                        thickness=3)
+    annotations = Image.fromarray(annotations.astype(np.uint8))
 
     # show separate
     annotations.show()
@@ -33,5 +32,3 @@ def main():
     # plot on top
     image.paste(annotations, (0, 0), annotations)
     image.show()
-
-

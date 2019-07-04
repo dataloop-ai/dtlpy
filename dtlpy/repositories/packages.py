@@ -68,7 +68,9 @@ class Packages:
         :param package_name: package name
         :return: list of versions
         """
-        versions = self.items_repository.list(filters=entities.Filters(directories='/packages/%s' % package_name))
+        filters = entities.Filters()
+        filters(field='filename', value='/packages/{}/*'.format(package_name))
+        versions = self.items_repository.list(filters=filters)
         return versions
 
     def list(self):
@@ -76,7 +78,10 @@ class Packages:
         List all packages
         :return: Paged entity
         """
-        packages = self.items_repository.list(filters=entities.Filters(directories='/packages'))
+        filters = entities.Filters()
+        filters(field='filename', value='/packages/*')
+        filters(field='type', value='dir')
+        packages = self.items_repository.list(filters=filters)
         return packages
 
     def update(self):

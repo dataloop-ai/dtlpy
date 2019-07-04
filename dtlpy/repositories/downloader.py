@@ -19,14 +19,13 @@ DEFAULT_DOWNLOAD_OPTIONS = {
     'overwrite': False,  # merge with existing items
     'relative_path': True,  # maintain platform file system
     'num_tries': 3,  # try to download 3 time before fail on item
-    'to_images_folder': True # download to "images" folder
+    'to_images_folder': True  # download to "images" folder
 }
 
 
 class Downloader:
     def __init__(self, items_repository):
         self.items_repository = items_repository
-        self.annotations_downloaded = False
 
     def download(self,
                  # filter options
@@ -42,8 +41,7 @@ class Downloader:
 
         :param items: download Item entity or item_id (or a list of item)
         :param filters: Filters entity or a dictionary containing filters parameters
-        :param local_path: local folder or filename to save to. if folder ends with * images with be downloaded directly
-                            to folder. else - an "images" folder will be create for the images
+        :param local_path: local folder or filename to save to.
         :param file_types: a list of file type to download. e.g ['.jpg', '.png']
         :param num_workers: default - 32
         :param download_options: {'overwrite': True/False, 'relative_path': True/False}
@@ -71,7 +69,8 @@ class Downloader:
             tmp_options = default_download_options
             for key, val in download_options.items():
                 if key not in tmp_options:
-                    raise PlatformException('400', 'unknown download option: %s. known: %s' % (key, list(tmp_options.keys())))
+                    raise PlatformException('400',
+                                            'unknown download option: %s. known: %s' % (key, list(tmp_options.keys())))
                 tmp_options[key] = val
             download_options = tmp_options
         if num_workers is None:
@@ -125,16 +124,15 @@ class Downloader:
             items_to_download = self.items_repository.list(filters=filters)
             num_items = items_to_download.items_count
 
-        # download annotations' json files
-        dataset_annotated_items = self.items_repository.dataset.annotated
-        if annotation_options and num_items > round(dataset_annotated_items*.1):
+        # download annotations' json files in a new thread
+        # items will start downloading and if json not exists yet - will download for each file
+        if annotation_options:
             # a new folder named 'json' will be created under the "local_path"
             logger.info('Downloading annotations formats: {}'.format(annotation_options))
-            self.download_annotations(dataset=self.items_repository.dataset,
-                                      local_path=local_path)
-            self.annotations_downloaded = True
-        else:
-            self.annotations_downloaded = False
+            thread = threading.Thread(target=self.download_annotations,
+                                      kwargs={'dataset': self.items_repository.dataset,
+                                              'local_path': local_path})
+            thread.start()
         output = [None for _ in range(num_items)]
         success = [False for _ in range(num_items)]
         status = ['' for _ in range(num_items)]
@@ -149,10 +147,9 @@ class Downloader:
                     if item.type == 'dir':
                         continue
                     if save_locally:
-                        item_local_path, item_local_filepath = self.__get_local_filepath(
-                            local_path=local_path,
-                            item=item,
-                            download_options=download_options)
+                        item_local_path, item_local_filepath = self.__get_local_filepath(local_path=local_path,
+                                                                                         item=item,
+                                                                                         download_options=download_options)
                         if os.path.isfile(item_local_filepath) and download_options['overwrite'] is False:
                             logger.info('File Exists: {}'.format(item_local_filepath))
                             status[i_item] = 'exist'
@@ -166,8 +163,7 @@ class Downloader:
                                                        'img_filepath': item_local_filepath,
                                                        'download_options': download_options,
                                                        'annotation_options': annotation_options,
-                                                       'local_path': local_path,
-                                                       'annotation_downloaded': self.annotations_downloaded})
+                                                       'local_path': local_path})
                             continue
 
                     else:
@@ -298,7 +294,7 @@ class Downloader:
                     os.remove(annotations_zip)
 
     @staticmethod
-    def __download_img_annotations(item, img_filepath, local_path, download_options, annotation_options, annotations_downloaded=False):
+    def __download_img_annotations(item, img_filepath, local_path, download_options, annotation_options):
         if local_path.endswith('/image') or local_path.endswith('\\image'):
             local_path = os.path.dirname(local_path)
         overwrite = download_options['overwrite']
@@ -319,35 +315,37 @@ class Downloader:
         else:
             # get from platform
             annotations = item.annotations.list()
-
         if item.width is not None and item.height is not None:
             img_shape = (item.height, item.width)
         else:
             img_shape = Image.open(img_filepath).size[::-1]
 
         for option in annotation_options:
-            if option == 'json' and not annotations_downloaded:
-                annotations_filepath = os.path.join(local_path, 'json')
-                if not os.path.isdir(annotations_filepath):
-                    os.mkdir(annotations_filepath)
-                filepath = os.path.join(annotations_filepath, item.filename[1:]) + '.json'
-                annotations.download(filepath=filepath,
-                                     annotation_format=option,
-                                     height=img_shape[0],
-                                     width=img_shape[1])
-                continue
             annotation_filepath = os.path.join(local_path, option, annotation_rel_path)
+            if not os.path.isdir(os.path.dirname(annotation_filepath)):
+                os.makedirs(os.path.dirname(annotation_filepath), exist_ok=True)
             temp_path, ext = os.path.splitext(annotation_filepath)
-            annotation_filepath = temp_path + '.png'
-            if not os.path.isfile(annotation_filepath) or (os.path.isfile(annotation_filepath) and overwrite):
-                # if not exists OR (exists AND overwrite)
-                if not os.path.exists(os.path.dirname(annotation_filepath)):
-                    # create folder if not exists
-                    os.makedirs(os.path.dirname(annotation_filepath), exist_ok=True)
+
+            if option == 'json' and not os.path.isfile(annotation_filepath):
+                annotation_filepath = temp_path + '.json'
                 annotations.download(filepath=annotation_filepath,
                                      annotation_format=option,
                                      height=img_shape[0],
                                      width=img_shape[1])
+            elif option in ['mask', 'instance']:
+
+                annotation_filepath = temp_path + '.png'
+                if not os.path.isfile(annotation_filepath) or (os.path.isfile(annotation_filepath) and overwrite):
+                    # if not exists OR (exists AND overwrite)
+                    if not os.path.exists(os.path.dirname(annotation_filepath)):
+                        # create folder if not exists
+                        os.makedirs(os.path.dirname(annotation_filepath), exist_ok=True)
+                    annotations.download(filepath=annotation_filepath,
+                                         annotation_format=option,
+                                         height=img_shape[0],
+                                         width=img_shape[1])
+            else:
+                raise PlatformException('400', 'Unknown annotation option: {}'.format(option))
 
     @staticmethod
     def __get_local_filepath(local_path, item, download_options):
@@ -391,7 +389,7 @@ class Downloader:
 
         :param item: Item entity to download
         :param save_locally: bool. save to file or return buffer
-        :param local_path: local folder or filename to save to. if folder ends with * images with be downloaded directly
+        :param local_path: local folder or filename to save to.
          to folder. else - an "images" folder will be create for the images
         :param chunk_size:
         :param verbose:
@@ -491,8 +489,7 @@ class Downloader:
                                                         img_filepath=local_filepath,
                                                         download_options=download_options,
                                                         annotation_options=annotation_options,
-                                                        local_path=local_path,
-                                                        annotations_downloaded=self.annotations_downloaded)
+                                                        local_path=local_path)
             else:
                 # save as byte stream
                 data = io.BytesIO()

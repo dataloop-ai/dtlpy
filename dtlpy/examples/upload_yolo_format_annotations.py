@@ -5,27 +5,26 @@ def main():
     For each image there is a text file with same name that has a list of box location and label index
     """
     import dtlpy as dl
-    from dtlpy.utilities.annotations import ImageAnnotation
     from PIL import Image
     import os
 
-    dataset_path = r'E:\Projects\Images'
-    labels_filepath = r'E:\Projects\obj.names'
+    # Get project and dataset
+    project = dl.projects.get(project_name='Fruits')
+    dataset = project.datasets.get(dataset_name='Rambutan')
 
-    # init platform and get dataset
-    project = dl.projects.get(project_name='MyProject')
-    dataset = project.datasets.get(dataset_name='MyDataset')
+    images_and_annotations_path = '/home/fruits/data'
 
     # read all images from local dataset
     img_filepaths = list()
-    for path, subdirs, files in os.walk(dataset_path):
+    for path, subdirs, files in os.walk(images_and_annotations_path):
         for filename in files:
             striped, ext = os.path.splitext(filename)
             if ext in ['.jpeg']:
                 img_filepaths.append(os.path.join(path, filename))
 
+    classes_filepath = '/home/fruits/classes.txt'
     # get labels from file
-    with open(labels_filepath, 'r') as f:
+    with open(classes_filepath, 'r') as f:
         labels = {i_line: label.strip() for i_line, label in enumerate(f.readlines())}
 
     for filepath in img_filepaths:
@@ -50,22 +49,22 @@ def main():
             elements = annotation.split(" ")
             label_id = elements[0]
 
-            xminAddxmax = float(elements[1]) * (2.0 * float(width))
-            yminAddymax = float(elements[2]) * (2.0 * float(height))
+            xmin_add_xmax = float(elements[1]) * (2.0 * float(width))
+            ymin_add_ymax = float(elements[2]) * (2.0 * float(height))
 
             w = float(elements[3]) * float(width)
             h = float(elements[4]) * float(height)
 
-            left = (xminAddxmax - w) / 2
-            top = (yminAddymax - h) / 2
+            left = (xmin_add_xmax - w) / 2
+            top = (ymin_add_ymax - h) / 2
             right = left + w
             bottom = top + h
 
             # add to annotations
-            builder.add(dl.Box(annotation_definition=dl.Box(top=10,
-                                             left=10,
-                                             bottom=100,
-                                             right=100,
-                                             label='person')))
-        # upload all annotations of an item
-        builder.upload()
+            builder.add(annotation_definition=dl.Box(top=top,
+                                                     left=left,
+                                                     bottom=bottom,
+                                                     right=right,
+                                                     label=labels[label_id]))
+            # upload all annotations of an item
+            builder.upload()

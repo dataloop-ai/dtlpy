@@ -10,7 +10,7 @@ import queue
 import threading
 from progressbar import Bar, ETA, ProgressBar, Timer
 from multiprocessing.pool import ThreadPool
-from .. import PlatformException, entities
+from .. import PlatformException, entities, repositories, exceptions
 
 logger = logging.getLogger('dataloop.repositories.items.uploader')
 
@@ -23,6 +23,7 @@ DEFAULT_UPLOAD_OPTIONS = {
 
 class Uploader:
     def __init__(self, items_repository):
+        assert isinstance(items_repository, repositories.Items)
         self.items_repository = items_repository
 
     def upload(self,
@@ -114,6 +115,35 @@ class Uploader:
                                                   num_workers=num_workers,
                                                   upload_options=upload_options)
 
+    def __create_existence_dict_worker(self, remote_path, remote_existence_dict, item_remote_filepaths):
+        """
+
+        :param remote_path: remote path where file should be uploaded to
+        :param remote_existence_dict: a dictionary that state for each desired remote path if file already exists
+        :param item_remote_filepaths: a list of all desired uploaded filepaths
+        :return:
+        """
+        try:
+            # get pages of item according to remote filepath
+            filters = entities.Filters()
+            filters(field='filename', value=remote_path + '/**')
+            filters(field='type', value='file')
+            pages = self.items_repository.list(filters=filters)
+            # join path and filename for all uploads
+            item_remote_filepaths = [file[0] + file[1] for file in item_remote_filepaths]
+            for page in pages:
+                for item in page:
+                    # check in current remote item filename exists in uploaded list
+                    if item.filename in item_remote_filepaths:
+                        remote_existence_dict[item.filename] = item
+            # after listing all platform file make sure everything in dictionary
+            for item_remote_filepath in item_remote_filepaths:
+                if item_remote_filepath not in remote_existence_dict:
+                    remote_existence_dict[item_remote_filepath] = None
+
+        except Exception as err:
+            logger.error('{}\nerror getting items from platform'.format(traceback.format_exc()))
+
     def __upload_from_files_wrapper(self, local_path_list, local_annotations_path_list, file_types, remote_path,
                                     num_workers,
                                     upload_options):
@@ -124,15 +154,43 @@ class Uploader:
             local_path_list=local_path_list,
             local_annotations_path_list=local_annotations_path_list,
             file_types=file_types)
+        num_files = len(filepaths)
 
-        # get remote items list
-        remote_items = self.items_repository.get_all_items(filters=entities.Filters(filenames=[remote_path],
-                                                                                    itemType='file'))
-        # get all remote filepath to check if exists
-        remote_items_filepaths = [item.filename for item in remote_items]
+        # create remote_filepath list
+        item_remote_filepaths = [list() for _ in range(num_files)]
+        for i_item in range(len(filepaths)):
+            # get file from list
+            filepath = filepaths[i_item]
+            # get file's folder
+            head_directory = head_directories[i_item]
+            # get the remote path according the upload options
+            if upload_options['relative_path']:
+                relative_path = os.path.relpath(filepath, os.path.dirname(head_directory))
+            else:
+                relative_path = os.path.relpath(filepath, head_directory)
+            #################################
+            # get remote file path and name #
+            #################################
+            item_remote_path = os.path.join(remote_path, os.path.dirname(relative_path)).replace('\\', '/')
+            item_remote_name = os.path.basename(filepath)
+            if not item_remote_path.endswith('/'):
+                item_remote_path += '/'
+            item_remote_filepaths[i_item] = [item_remote_path, item_remote_name]
+
+        ##############################
+        # get remote existing items  #
+        ##############################
+        # list for overwriting options
+        # running a thread to get all items from platform but keep uploading until thread finish
+        # thread writing to dict - if value not in dict get for each specific item
+        remote_existence_dict = dict()
+        thread = threading.Thread(target=self.__create_existence_dict_worker,
+                                  kwargs={'remote_existence_dict': remote_existence_dict,
+                                          'remote_path': remote_path,
+                                          'item_remote_filepaths': item_remote_filepaths})
+        thread.start()
 
         # prepare to upload multi threaded
-        num_files = len(filepaths)
         logger.info('Uploading {} items..'.format(num_files))
         output = [0 for _ in range(num_files)]
         status = ['' for _ in range(num_files)]
@@ -142,37 +200,49 @@ class Uploader:
         pool = ThreadPool(processes=num_workers)
         progress.start()
         try:
-            for i_item in range(len(filepaths)):
+            for i_item in range(num_files):
                 # get file from list
                 filepath = filepaths[i_item]
-                # get file's folder
-                head_directory = head_directories[i_item]
+                # get matching remote filepath
+                item_remote_path, item_remote_name = item_remote_filepaths[i_item]
+                item_remote_filepath = item_remote_path + item_remote_name
                 # get matching annotation. None if annotations path was not in inputs
                 annotations_filepath = annotations_filepaths[i_item]
-                # get the remote path according the upload options
-                if upload_options['relative_path']:
-                    relative_path = os.path.relpath(filepath, os.path.dirname(head_directory))
-                else:
-                    relative_path = os.path.relpath(filepath, head_directory)
-                #################################
-                # get remote file path and name #
-                #################################
-                item_remote_path = os.path.join(remote_path, os.path.dirname(relative_path)).replace('\\', '/')
-                item_remote_name = os.path.basename(filepath)
-                if not item_remote_path.endswith('/'):
-                    item_remote_path += '/'
-                item_remote_filepath = item_remote_path + item_remote_name
+
                 ########################
                 # check if file exists #
                 ########################
-                if item_remote_filepath in remote_items_filepaths:
-                    found_item = remote_items[remote_items_filepaths.index(item_remote_filepath)]
+                if item_remote_filepath not in remote_existence_dict:
+                    # item did not found in dict ( thread still running)  - get existence specifically
+                    try:
+                        remote_existence_dict[item_remote_filepath] = self.items_repository.get(
+                            filepath='{}'.format(item_remote_filepath))
+                    except exceptions.NotFound:
+                        remote_existence_dict[item_remote_filepath] = None
+
+                if remote_existence_dict[item_remote_filepath] is not None:
+                    # item exists in platform
+                    found_item = remote_existence_dict[item_remote_filepath]
                     if upload_options['overwrite']:
                         found_item.delete()
                     else:
                         status[i_item] = 'exist'
                         output[i_item] = found_item
                         success[i_item] = True
+                        # upload annotations if exists
+                        if annotations_filepath is not None:
+                            if isinstance(annotations_filepath, str) and os.path.isfile(annotations_filepath):
+                                with open(annotations_filepath, 'r') as f:
+                                    data = json.load(f)
+                                if 'annotations' in data:
+                                    annotations = data['annotations']
+                                else:
+                                    raise PlatformException(
+                                        error='400',
+                                        message='MISSING "annotations" in annotations file, cant upload. item_id: {}, annotations_filepath: {}'.format(
+                                            found_item.id, annotations_filepath)
+                                    )
+                                found_item.annotations.upload(annotations=annotations)
                         continue
                 ##########
                 # upload #
@@ -358,15 +428,13 @@ class Uploader:
                                         item.id, annotations)
                                 )
                         item.annotations.upload(annotations=annotations)
-                    except Exception as err:
+                    except Exception:
                         logger.error(traceback.format_exc())
                 logger.debug('Item uploaded successfully. Item id: %s' % item.id)
                 return item
             else:
-                logger.exception('error uploading')
                 raise PlatformException(response)
-        except Exception as e:
-            logger.exception(e)
+        except Exception:
             raise
 
     def __upload_single_item_wrapper(self, i_item, filepath, annotations, item_remote_path,
@@ -397,11 +465,37 @@ class Uploader:
         def callback(monitor):
             progress.queue.put((monitor.encoder.fields['path'], monitor.bytes_read))
 
-        # get remote items list
-        remote_items = self.items_repository.get_all_items(filters=entities.Filters(filenames=[remote_path],
-                                                                                    itemType='file'))
-        # get all remote filepath to check if exists
-        remote_items_filepaths = [item.filename for item in remote_items]
+        num_files = len(binaries_list)
+        # create remote_filepath list
+        item_remote_filepaths = [list() for _ in range(num_files)]
+        for i_item in range(num_files):
+            buffer = binaries_list[i_item]
+            # get the remote path according the upload options
+            #################################
+            # get remote file path and name #
+            #################################
+            item_remote_path = remote_path
+            if not hasattr(buffer, 'name'):
+                raise PlatformException(
+                    error='400',
+                    message='Must put attribute "name" on buffer (with file name) when uploading buffers')
+            item_remote_name = buffer.name
+            if not item_remote_path.endswith('/'):
+                item_remote_path += '/'
+            item_remote_filepaths[i_item] = [item_remote_path, item_remote_name]
+
+        ##############################
+        # get remote existing items  #
+        ##############################
+        # list for overwriting options
+        # running a thread to get all items from platform but keep uploading until thread finish
+        # thread writing to dict - if value not in dict get for each specific item
+        remote_existence_dict = dict()
+        thread = threading.Thread(target=self.__create_existence_dict_worker,
+                                  kwargs={'remote_existence_dict': remote_existence_dict,
+                                          'remote_path': remote_path + '/**',
+                                          'item_remote_filepaths': item_remote_filepaths})
+        thread.start()
 
         # get size from binaries
         total_size = 0
@@ -410,7 +504,6 @@ class Uploader:
         except Exception:
             logger.warning('Cant get binaries size')
         # prepare to upload multi threaded
-        num_files = len(binaries_list)
         logger.info('Uploading {} items..'.format(num_files))
         output = [0 for _ in range(num_files)]
         status = ['' for _ in range(num_files)]
@@ -423,35 +516,47 @@ class Uploader:
             for i_item in range(num_files):
                 # get buffer from list
                 buffer = binaries_list[i_item]
+                # get matching remote filepath
+                item_remote_path, item_remote_name = item_remote_filepaths[i_item]
+                item_remote_filepath = item_remote_path + item_remote_name
                 # get matching annotation. None if annotations path was not in inputs
                 if annotations_list is None:
                     annotations = None
                 else:
                     annotations = annotations_list[i_item]
-                # get the remote path according the upload options
-                #################################
-                # get remote file path and name #
-                #################################
-                item_remote_path = remote_path
-                if not hasattr(buffer, 'name'):
-                    raise PlatformException(
-                        error='400',
-                        message='Must put attribute "name" on buffer (with file name) when uploading buffers')
-                item_remote_name = buffer.name
-                if not item_remote_path.endswith('/'):
-                    item_remote_path += '/'
-                item_remote_filepath = item_remote_path + item_remote_name
                 ########################
                 # check if file exists #
                 ########################
-                if item_remote_filepath in remote_items_filepaths:
-                    found_item = remote_items[remote_items_filepaths.index(item_remote_filepath)]
+                if item_remote_filepath not in remote_existence_dict:
+                    # item did not found in dict ( thread still running)  - get existence specifically
+                    try:
+                        remote_existence_dict[item_remote_filepath] = self.items_repository.get(filepath=item_remote_filepath)
+                    except exceptions.NotFound:
+                        remote_existence_dict[item_remote_filepath] = None
+
+                if remote_existence_dict[item_remote_filepath] is not None:
+                    # item exists in platform
+                    found_item = remote_existence_dict[item_remote_filepath]
                     if upload_options['overwrite']:
                         found_item.delete()
                     else:
                         status[i_item] = 'exist'
                         output[i_item] = found_item
                         success[i_item] = True
+                        # upload annotations if exists
+                        if annotations is not None:
+                            if isinstance(annotations, str) and os.path.isfile(annotations):
+                                with open(annotations, 'r') as f:
+                                    data = json.load(f)
+                                if 'annotations' in data:
+                                    annotations = data['annotations']
+                                else:
+                                    raise PlatformException(
+                                        error='400',
+                                        message='MISSING "annotations" in annotations file, cant upload. item_id: {}, annotations_filepath: {}'.format(
+                                            found_item.id, annotations)
+                                    )
+                                found_item.annotations.upload(annotations=annotations)
                         continue
                 ##########
                 # upload #

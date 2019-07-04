@@ -6,7 +6,6 @@ fleep==1.0.1
 numpy==1.16.2
 pandas==0.24.2
 tabulate==0.8.3
-pika==1.0.0
 Pillow==6.0.0
 PyJWT==1.7.1
 progressbar2==3.39.3
@@ -18,4 +17,5 @@ attrs==19.1.0
 attr==0.3.1
 behave==1.2.6
 pystache==0.5.4
-tornado==6.0.2
+prompt_toolkit==2.0.9
+fuzzyfinder==2.1.0

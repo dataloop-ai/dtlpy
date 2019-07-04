@@ -125,3 +125,5 @@ pyvenv.cfg
 .venv
 pip-selfcheck.json
 
+# saved logs
+log_*

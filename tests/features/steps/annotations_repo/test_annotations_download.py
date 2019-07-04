@@ -54,7 +54,7 @@ def step_impl(context, file_type, folder_path):
     assert file in items
 
 
-# @behave.then(u'"{file_type}" is correctlly downloaded (compared with "{file_to_compare}")')
+# @behave.then(u'"{file_type}" is correctly downloaded (compared with "{file_to_compare}")')
 # def step_impl(context, file_type, file_to_compare):
 #     path = 'downloaded_annotations'
 #     path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], path)

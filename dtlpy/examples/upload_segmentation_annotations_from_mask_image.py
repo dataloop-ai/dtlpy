@@ -7,18 +7,19 @@ def main():
     from PIL import Image
     import numpy as np
     import dtlpy as dl
-    from dtlpy.utilities.annotations import ImageAnnotation
 
-    # get project and dataset
-    dataset = dl.projects.get('MyProject').datasets.get('MyDataset')
+    # Get project and dataset
+    project = dl.projects.get(project_name='Presidents')
+    dataset = project.datasets.get(dataset_name='William Henry Harrison')
 
     # image filepath
-    image_filepath = r'E:\Images\img_000.png'
+    image_filepath = '/home/images/with_family.png'
     # annotations filepath - RGB with color for each label
-    annotations_filepath = r'E:\annotations\img_000.png'
+    annotations_filepath = '/home/masks/with_family.png'
 
     # upload item to root directory
-    item = dataset.items.update(image_filepath, remote_path='/')
+    item = dataset.items.upload(local_path=image_filepath,
+                                remote_path='/')
 
     # read mask from file
     mask = np.array(Image.open(annotations_filepath))
@@ -36,10 +37,8 @@ def main():
             continue
         # get mask of same color
         class_mask = np.all(color == mask, axis=2)
-        # # plot mask for debug
-        # plt.figure()
-        # plt.imshow(class_mask)
         # add annotation to builder
-        builder.add(annotation_definition=dl.Segmentation(geo=class_mask, label=str(i)))
+        builder.add(annotation_definition=dl.Segmentation(geo=class_mask,
+                                                          label=str(i)))
     # upload all annotations
-    builder.upload()
+    item.annotations.upload(builder)

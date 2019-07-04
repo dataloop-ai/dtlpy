@@ -60,7 +60,7 @@ YOLO
 
 Copy annotations between items
 ------------------------------
-(download annotations from item and upload to differenet item)
+download annotations from item and upload as a new item (new id)
 
 .. literalinclude:: ../dtlpy/examples/copy_annotations.py
 
@@ -86,11 +86,11 @@ Show image and annotations
 
 .. _8:
 
-Upload annotations from differenet formats
+Upload annotations from different formats
 ------------------------------------------
 Generic:
 
-.. literalinclude:: ../dtlpy/examples/upload_items_and_annotations.py
+.. literalinclude:: ../dtlpy/examples/upload_items_and_custom_format_annotations.py
 
 YOlO annotations:
 
@@ -100,13 +100,13 @@ YOlO annotations:
 
 Convert annotations types
 -------------------------
-Polygon to binary:
+Polygon to Segmentation and vice versa:
 
-.. literalinclude:: ../dtlpy/examples/segment_to_binary.py
+.. literalinclude:: ../dtlpy/examples/convert_annotation_types.py
 
-Convert and upload:
+Create Semantic Segmentation from image mask and upload:
 
-.. literalinclude:: ../dtlpy/examples/upload_segmentation_annotations_from_file.py
+.. literalinclude:: ../dtlpy/examples/upload_segmentation_annotations_from_mask_image.py
 
 .. _10:
 
