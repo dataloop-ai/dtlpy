@@ -185,7 +185,6 @@ class AnnotationCollection:
             _json['annotations'] = annotations
             with open(filepath, 'w') as f:
                 json.dump(_json, f)
-
         else:
             mask = self.show(thickness=thickness,
                              with_text=with_text,

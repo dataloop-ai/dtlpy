@@ -26,4 +26,4 @@ from .recipes import Recipes
 from .plugins import Plugins
 from .downloader import Downloader
 from .uploader import Uploader
-from .rql import Rql
+from .time_series import TimeSeries

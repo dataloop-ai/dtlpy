@@ -27,7 +27,7 @@ def step_impl(context, item_count):
 @behave.then(u'Item in PageEntity items equals item uploaded')
 def step_impl(context):
     item_json = context.item.to_json()
-    item_in_list_json = context.list.items[1].to_json()
+    item_in_list_json = context.list.items[0].to_json()
     item_json.pop('metadata')
     item_in_list_json.pop('metadata')
     assert item_json == item_in_list_json
@@ -65,14 +65,14 @@ def step_impl(context, size):
 def step_impl(context):
     assert context.list.has_next_page
 
+@behave.then(u'PageEntity items does not have next page')
+def step_impl(context):
+    assert not context.list.has_next_page
+
 
 @behave.then(u'PageEntity items has length of "{item_count}"')
 def step_impl(context, item_count):
-    count = 0
-    for item in context.list.items:
-        if item.type == 'file':
-            count += 1
-    assert count == int(item_count)
+    assert len(context.list.items) == int(item_count)
 
     # if the is only one item we will same it to use later
     if int(item_count) == 1:
@@ -107,7 +107,7 @@ def step_impl(context, item_name):
 @behave.when(u'I list items with query filename="{filename_filter}"')
 def step_impl(context, filename_filter):
     filters = context.dl.Filters()
-    filters(field='filename', value=filename_filter)
+    filters.add(field='filename', values=filename_filter)
     context.list = context.dataset.items.list(filters=filters)
 
 
@@ -186,7 +186,7 @@ def step_impl(context):
 @behave.when(u'I list items with query mimetypes="{mimetype_filters}"')
 def step_impl(context, mimetype_filters):
     filters = context.dl.Filters()
-    filters(field='metadata.system.mimetype', value=mimetype_filters)
+    filters.add(field='metadata.system.mimetype', values=mimetype_filters)
     context.list = context.dataset.items.list(filters=filters)
 
 
@@ -213,7 +213,7 @@ def step_impl(context):
 @behave.when(u'I list items with query itemType="{value}"')
 def step_impl(context, value):
     filters = context.dl.Filters()
-    filters(field='type', value=value)
+    filters.add(field='type', values=value)
     context.list = context.dataset.items.list(filters=filters)
 
 

@@ -16,18 +16,17 @@ Feature: Items repository list function testing
         Given There are "10" items
         When I list items with size of "5"
         Then I receive a PageEntity object
-        And PageEntity items has length of "4"
+        And PageEntity items has length of "5"
         And PageEntity items has next page
         And PageEntity next page items has length of "5"
-        And PageEntity items has next page
-        And PageEntity next page items has length of "1"
+        And PageEntity items does not have next page
 
     Scenario: List dataset items - with offset
         Given There are "10" items
         When I list items with offset of "1" and size of "5"
         Then I receive a PageEntity object
         And PageEntity items has length of "5"
-        And PageEntity items has next page
+        And PageEntity items does not have next page
 
     Scenario: List dataset items - with query - filename
         Given There are "10" items
@@ -62,4 +61,4 @@ Feature: Items repository list function testing
         And And PageEntity item received equal to .mp4 item uploadede
 
     Scenario: Finally
-        Given Clean up "items_list"
+        Given Clean up

@@ -14,4 +14,4 @@ Feature: Annotation Entity create video annotation from blank
         Then Item in host has video annotation added
 
     Scenario: Finally
-        Given Clean up "Project_test_create_video_annotation_from_blank"
+        Given Clean up

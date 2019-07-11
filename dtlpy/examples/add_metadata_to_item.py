@@ -1,16 +1,21 @@
-def main():
+def main(project_name, dataset_name, item_path):
     """
     Add any metadata to item
     :return:
     """
     # import Dataloop SDK
     import dtlpy as dl
+
     # get dataset
-    dataset = dl.projects.get(project_name='Project').datasets.get(dataset_name='Dataset')
+    dataset = dl.projects.get(project_name=project_name).datasets.get(dataset_name=dataset_name)
+
     # get item
-    item = dataset.items.get(filename='/file')
+    item = dataset.items.upload(local_path=item_path)
 
     # modify metadata
+    item.metadata['user'] = dict()
     item.metadata['user']['MyKey'] = 'MyVal'
-    # update item
-    item.update()
+    # update and reclaim item
+    item = item.update()
+
+    # item in platform should have section 'user' in metadata with field 'MyKey' and value 'MyVal'

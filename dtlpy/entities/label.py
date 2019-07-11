@@ -54,10 +54,12 @@ class Label:
         """
         if self.color is None:
             color = None
-        elif self.color.startswith('rgb'):
+        elif isinstance(self.color, str) and self.color.startswith('rgb'):
             color = tuple(eval(self.color.lstrip('rgb')))
-        elif self.color.startswith('#'):
+        elif isinstance(self.color, str) and self.color.startswith('#'):
             color = tuple(int(self.color.lstrip('#')[i:i + 2], 16) for i in (0, 2, 4))
+        elif isinstance(self.color, tuple) or isinstance(self.color, list):
+            color = self.color
         else:
             logger.warning('Unknown color scheme: %s' % self.color)
             color = (255, 0, 0)

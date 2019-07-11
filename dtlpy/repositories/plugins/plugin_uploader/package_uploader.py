@@ -5,11 +5,12 @@ import dtlpy
 
 class PackageUploader:
     def __init__(self):
-        state_json = get_state_json()
-        self.project_id = state_json['project']
-        self.task_name = state_json['package']
+        pass
 
     def upload_package(self):
+        state_json = get_state_json()
+        project_id = state_json['project']
+        task_name = state_json['package']
         cwd = os.getcwd()
         dataloop_path = os.path.join(cwd, '.dataloop')
 
@@ -19,6 +20,6 @@ class PackageUploader:
 
         src_path = os.path.join(cwd, 'src')
 
-        project = dtlpy.projects.get(project_id=self.project_id)
-        package = project.packages.pack(directory=src_path, name=self.task_name)
+        project = dtlpy.projects.get(project_id=project_id)
+        package = project.packages.pack(directory=src_path, name=task_name)
         return package

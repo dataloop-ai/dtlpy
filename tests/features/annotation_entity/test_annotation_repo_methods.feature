@@ -49,4 +49,4 @@ Feature: Annotation Entity repo functions
         Then Item in host has video annotation entity created
 
     Scenario: Finally
-        Given Clean up "Project_test_annotation_repo_methods"
+        Given Clean up

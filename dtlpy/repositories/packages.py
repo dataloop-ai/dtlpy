@@ -2,6 +2,7 @@ import hashlib
 import traceback
 import logging
 import os
+import shutil
 import io
 
 from .. import entities, utilities, PlatformException, exceptions
@@ -69,7 +70,7 @@ class Packages:
         :return: list of versions
         """
         filters = entities.Filters()
-        filters(field='filename', value='/packages/{}/*'.format(package_name))
+        filters.add(field='filename', values='/packages/{}/*'.format(package_name))
         versions = self.items_repository.list(filters=filters)
         return versions
 
@@ -79,8 +80,8 @@ class Packages:
         :return: Paged entity
         """
         filters = entities.Filters()
-        filters(field='filename', value='/packages/*')
-        filters(field='type', value='dir')
+        filters.add(field='filename', values='/packages/*')
+        filters.add(field='type', values='dir')
         packages = self.items_repository.list(filters=filters)
         return packages
 
@@ -173,6 +174,9 @@ class Packages:
         :param description: package description
         :return: Package object
         """
+
+        cwd = os.getcwd()
+        dist_path = os.path.join(cwd, '.dataloop', 'dist')
         zip_filename = None
         try:
             if not os.path.isdir(directory):
@@ -180,9 +184,14 @@ class Packages:
                 message = ('Not a directory: %s' % directory)
                 raise PlatformException('400', message)
             directory = os.path.abspath(directory)
+
+            if os.path.isdir(dist_path):
+                shutil.rmtree(dist_path)
+            shutil.copytree(directory, dist_path)
+
             # create zipfile
-            utilities.Miscellaneous.zip_directory(directory)
-            zip_filename = directory + '.zip'
+            utilities.Miscellaneous.zip_directory(dist_path)
+            zip_filename = dist_path + '.zip'
             zip_md = self.__file_hash(zip_filename)
 
             # get package name
@@ -231,6 +240,9 @@ class Packages:
             if zip_filename is not None:
                 if os.path.isfile(zip_filename):
                     os.remove(zip_filename)
+
+            if os.path.exists(dist_path):
+                shutil.rmtree(dist_path)
 
     def unpack_single(self, package, download_path, local_path):
         artifact_filepath = self.items_repository.download(items=package.id,

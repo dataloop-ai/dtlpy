@@ -25,4 +25,4 @@ Feature: Datasets repository create function testing
         And No dataset was created
 
     Scenario: Finally
-        Given Clean up "datasets_create"
+        Given Clean up

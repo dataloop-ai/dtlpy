@@ -5,6 +5,11 @@ In this tutorial you will generate a basic plugin, modify it, and test it locall
 
 Bootstraping the plugin
 -----------------------
+Before starting run
+
+.. code::
+
+    $ dlp login
 
 Create a local dataloop repository
 
@@ -18,6 +23,7 @@ Checkout to a local project and dataset
 
     $ dlp checkout project <project_name/project_id>
     $ dlp checkout dataset <dataset_name/dataset_id>
+    $ dlp checkout plugin <plugin name>
 
 
 Create a Plugin from the current directory
@@ -70,4 +76,30 @@ Test the code locally
 Deploy to cloud
 ---------------
 
-To be continued...
+| Push the plugin to the cloud
+
+.. code::
+
+   $ dlp plugins push
+
+| Deploy the plugin to the cloud(i.e: make a running instance out of it)
+
+.. code::
+
+   $ dlp plugins deploy
+
+
+Invoke the plugin in the cloud
+------------------------------
+
+| To use your mock.json as input for the plugin in the cloud, run:
+
+.. code::
+
+   $ dlp plugins invoke
+
+| To use a different file as input(with the same format), run:
+
+.. code::
+
+   $ dlp plugins invoke -f <filename>

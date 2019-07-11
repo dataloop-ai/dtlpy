@@ -18,4 +18,4 @@ Feature: Items repository set_items_entity function testing
         Then "Forbidden" exception should be raised
 
     Scenario: Finally
-        Given Clean up "set_items_entity"
+        Given Clean up

@@ -52,7 +52,7 @@ class Sessions:
             raise PlatformException(response)
         return session
 
-    def create(self, input_parameters):
+    def create(self, input_parameters, sync=False):
         """
         Create a new session
         :param input_parameters: inputs dictionary. keys as specified in Task
@@ -62,8 +62,12 @@ class Sessions:
             raise ValueError('cant create a session without task id')
         if not isinstance(input_parameters, dict):
             raise ValueError('input must be a dictionary')
+
+        path = '/tasks/%s/sessions'
+        if (sync):
+            path = path + '?sync=true'
         success, response = self.client_api.gen_request(req_type='post',
-                                                        path='/tasks/%s/sessions' % self.task.id,
+                                                        path=path % self.task.id,
                                                         json_req=input_parameters)
         if success:
             session = entities.Session.from_json(_json=response.json(),

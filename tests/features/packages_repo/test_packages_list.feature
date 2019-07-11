@@ -26,4 +26,4 @@ Feature: Packages repository List method
         Then I receive a list of "0" packages
 
     Scenario: Finally
-        Given Clean up "packages_list"
+        Given Clean up

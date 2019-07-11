@@ -5,7 +5,7 @@ import os
 @behave.given(u'There are no items')
 def step_impl(context):
     filters = context.dl.Filters()
-    filters(field='type', value='file')
+    filters.add(field='type', values='file')
     assert len(context.dataset.items.list(filters=filters).items) == 0
 
 
@@ -32,7 +32,7 @@ def step_impl(context):
 @behave.then(u'There are no items')
 def step_impl(context):
     filters = context.dl.Filters()
-    filters(field='type', value='file')
+    filters.add(field='type', values='file')
     assert len(context.dataset.items.list(filters=filters).items) == 0
 
 
@@ -53,7 +53,7 @@ def step_impl(context, item_name):
 @behave.then(u'No item was deleted')
 def step_impl(context):
     filters = context.dl.Filters()
-    filters(field='type', value='file')
+    filters.add(field='type', values='file')
     assert len(context.dataset.items.list(filters=filters).items) == context.item_count
 
 

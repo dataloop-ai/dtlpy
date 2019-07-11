@@ -15,7 +15,7 @@ def step_impl(context, package_name):
 def step_impl(context, unpack_path, package_name):
     unpack_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], unpack_path)
     context.package.unpack(local_path=unpack_path)
-    context.unpack_path = os.path.join(unpack_path, context.package_unpack_path)
+    context.unpack_path = os.path.join(unpack_path, 'dist')
 
 
 @behave.when(u'I list versions of package entity "{package_name}"')

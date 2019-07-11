@@ -28,4 +28,4 @@ Feature: Ontology Entity repo functions
         Then Dataset ontology in host equal ontology uploaded
 
     Scenario: Finally
-        Given Clean up "ontology_repo_methods"
+        Given Clean up

@@ -6,6 +6,7 @@ import random
 import shutil
 import os
 import json
+import logging
 
 
 @behave.given('Platform Interface is initialized as dlp and Environment is set to development')
@@ -52,8 +53,8 @@ def step_impl(context, project_name):
     context.dataset_count = 0
 
 
-@behave.given('Clean up "{project_name}"')
-def step_impl(context, project_name):
+@behave.given('Clean up')
+def step_impl(context):
     # delete project
     context.project.delete(True, True)
 

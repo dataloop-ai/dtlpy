@@ -1,4 +1,4 @@
-def main():
+def main(first_project_name, second_project_name, first_dataset_name, second_dataset_name):
     """
     Copy folder from project/dataset/folder
     :return:
@@ -6,17 +6,17 @@ def main():
     import dtlpy as dl
 
     # Get source project and dataset
-    project = dl.projects.get(project_name='FirstProject')
-    dataset_from = project.datasets.get(dataset_name='FirstDataset')
+    project = dl.projects.get(project_name=first_project_name)
+    dataset_from = project.datasets.get(dataset_name=first_dataset_name)
     # filter to get all files of a specific folder
     filters = dl.Filters()
-    filters(field='type', value='file')  # get only files
-    filters(field='filename', value='/source_folder/**')  # get all items in folder (recursive)
+    filters.add(field='type', values='file')  # get only files
+    filters.add(field='filename', values='/source_folder/**')  # get all items in folder (recursive)
     pages = dataset_from.items.list(filters=filters)
 
     # Get destination project and annotations
-    project = dl.projects.get(project_name='SecondProjects')
-    dataset_to = project.datasets.get(dataset_name='SecondDataset')
+    project = dl.projects.get(project_name=second_project_name)
+    dataset_to = project.datasets.get(dataset_name=second_dataset_name)
 
     # go over all projects and copy file from src to dst
     for page in pages:

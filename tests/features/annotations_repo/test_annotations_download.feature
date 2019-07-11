@@ -22,5 +22,5 @@ Feature: Annotaions repository download function testing
         Then Item annotation "instance" has been downloaded to "downloaded_annotations"
 
     Scenario: Finally
-        Given Clean up "Project_annotations_download"
+        Given Clean up
 

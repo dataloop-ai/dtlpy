@@ -14,10 +14,6 @@ class PackageRunner:
 
     def run_local_project(self):
         cwd = os.getcwd()
-        dataloop_path = os.path.join(cwd, '.dataloop')
-
-        if not os.path.exists(dataloop_path):
-            raise Exception('Package not found')
 
         PackageRunner.validate_mock(self.plugin_json, self.mock_json)
 
@@ -38,7 +34,7 @@ class PackageRunner:
         for input in plugin_inputs:
             kwargs[input['name']] = self.get_field(input['name'], input['type'], project, self.mock_json)
 
-        run_function(**kwargs)
+        return run_function(**kwargs)
 
     def get_dataset(self, project, resource_id):
         if ('dataset_id' in resource_id):

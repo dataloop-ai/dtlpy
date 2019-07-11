@@ -79,15 +79,12 @@ class Dataset:
     @property
     def ontology_ids(self):
         if self._ontology_ids is None:
+            self._ontology_ids = list()
             if self.metadata is not None and 'system' in self.metadata and 'recipes' in self.metadata['system']:
                 recipe_ids = self.get_recipe_ids()
-                recipes = list()
                 for rec_id in recipe_ids:
-                    recipes.append(self.recipes.get(recipe_id=rec_id))
-                ontologies = dict()
-                for recipe in recipes:
-                    ontologies[recipe.id] = recipe.ontologyIds
-                self._ontology_ids = ontologies
+                    recipe = self.recipes.get(recipe_id=rec_id)
+                    self._ontology_ids += recipe.ontologyIds
         return self._ontology_ids
 
     @_items.default
@@ -150,21 +147,6 @@ class Dataset:
         for label, color in labels_dict.items():
             dataset_labels_dict[label] = '#%02x%02x%02x' % color
         return dataset_labels_dict
-
-    # def get_classes(self, label_and_color=False):
-    #     if self.metadata is None:
-    #         return list()
-    #     classes = list()
-    #     recipes = self.get_ontology_ids()
-    #     for rec in recipes:
-    #         recipe = self.recipes.get(recipe_id=rec)
-    #         for ont in recipes[rec]:
-    #             ontology = recipe.ontologies.get(ontology_id=ont)
-    #             classes += ontology.roots
-    #     if label_and_color:
-    #         return self.label_and_color(classes=classes)
-    #     else:
-    #         return classes
 
     def get_recipe_ids(self):
         """

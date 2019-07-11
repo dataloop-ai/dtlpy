@@ -49,4 +49,4 @@ Feature: Annotations collection testing
         Then Annotations in host equal annotations uploded
 
     Scenario: Finally
-        Given Clean up "Project_test_annotation_collection"
+        Given Clean up

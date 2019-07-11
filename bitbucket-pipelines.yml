@@ -9,10 +9,11 @@ pipelines:
           - pip install -r requirements.txt
           - python setup.py build
           - python setup.py install
-          # - dlp
           - dlp api setenv -e dev
           - dlp login-secret -e "$TEST_USERNAME" -p "$TEST_PASSWORD" -i "$TEST_CLIENT_ID" -s "$TEST_CLIENT_SECRET"
-          # - exit
+          - pip install gsutil
+          - gsutil -m cp -R gs://sdl-tests-assets/assets tests/
+          - python tests/test_examples.py
           - python tests/test_runner.py
   tags:
     "*":

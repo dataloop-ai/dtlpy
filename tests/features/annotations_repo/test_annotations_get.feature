@@ -22,4 +22,4 @@ Feature: Annotaions repository Get function testing
         Then "InternalServerError" exception should be raised
 
     Scenario: Finally
-        Given Clean up "annotations_get"
+        Given Clean up

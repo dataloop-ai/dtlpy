@@ -22,4 +22,4 @@ Feature: Annotaions repository Delete function testing
         And No annotation was deleted
 
     Scenario: Finally
-        Given Clean up "Project_test_annotations_delete"
+        Given Clean up

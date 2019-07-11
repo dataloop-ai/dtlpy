@@ -16,4 +16,4 @@ Feature: Items repository download_batch function testing
         Then Items are saved in "download_batch/image"
 
     Scenario: Finally
-        Given Clean up "items_download_batch"
+        Given Clean up

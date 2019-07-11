@@ -68,7 +68,7 @@ def step_impl(context, param):
     system_metadata = param == "True"
     context.original_item_json = context.item.to_json()
     context.item.metadata["system"]["modified"] = "True"
-    context.item_update = context.dataset.items.update(context.item, system_metadata)
+    context.item_update = context.dataset.items.update(item=context.item, system_metadata=system_metadata)
 
 
 @behave.then(u"Then I receive an Item object")

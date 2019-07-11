@@ -51,12 +51,12 @@ def step_impl(context, file_path):
         attributes=list())
 
 
-@behave.when(u'I try to create a new ontology with labels "{labels}"')
+@behave.when(u"I try to create a new ontology with labels '{labels}'")
 def step_impl(context, labels):
     context.recipe = context.dataset.recipes.get(recipe_id=context.dataset.metadata["system"]["recipes"][0])
     try:
         context.ontology = context.recipe.ontologies.create(
-            labels=labels,
+            labels=json.loads(labels),
             attributes=list())
         context.error = None
     except Exception as e:

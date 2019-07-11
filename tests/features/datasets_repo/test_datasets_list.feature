@@ -17,4 +17,4 @@ Feature: Datasets repository list function testing
         And The dataset in the list equals the dataset I created
 
     Scenario: Finally
-        Given Clean up "datasets_list"
+        Given Clean up

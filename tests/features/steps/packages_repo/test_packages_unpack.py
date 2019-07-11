@@ -17,14 +17,14 @@ def step_impl(context, package_name):
 def step_impl(context, unpack_path, package_name):
     unpack_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], unpack_path)
     context.packages.unpack(package_name=package_name, local_path=unpack_path)
-    context.unpack_path = os.path.join(unpack_path, context.package_unpack_path)
+    context.unpack_path = os.path.join(unpack_path, 'dist')
 
 
 @behave.when(u'I unpack a package by the id of "{package_name}" to "{unpack_path}"')
 def step_impl(context, unpack_path, package_name):
     unpack_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], unpack_path)
     context.packages.unpack(package_id=context.package.id, local_path=unpack_path)
-    context.unpack_path = os.path.join(unpack_path, context.package_unpack_path)
+    context.unpack_path = os.path.join(unpack_path, 'dist')
 
 
 @behave.then(u'Unpacked package equal to package in "{original_path}"')
@@ -75,7 +75,7 @@ def step_impl(context, version, package_name, unpack_path):
     context.packages.unpack(package_name=package_name,
                             local_path=unpack_path,
                             version=version)
-    context.unpack_path = os.path.join(unpack_path, context.package_unpack_path)
+    context.unpack_path = os.path.join(unpack_path, 'dist')
 
 
 @behave.then(u'I receive all versions in "{unpack_path}" and they are equal to versions in "{original_path}"')
@@ -86,9 +86,9 @@ def step_impl(context, unpack_path, original_path):
     if 'folder_keeper' in dirs_unpack_path:
         dirs_unpack_path.pop(dirs_unpack_path.index('folder_keeper'))
     assert len(dirs_unpack_path) == 2
-    code = os.path.join(os.path.split(os.path.split(original_path)[0])[-1], 'some_code.py')
+    code =  'some_code.py'
     for dir in dirs_unpack_path:
-        version_path = os.path.join(unpack_path, dir)
+        version_path = os.path.join(unpack_path, dir, 'dist')
         code_path = os.path.join(version_path, code)
         if dir == 'v.0':
             with open(code_path, "a") as f:

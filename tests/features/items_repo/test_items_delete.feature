@@ -32,4 +32,4 @@ Feature: Items repository delete function testing
         And No item was deleted
 
     Scenario: Finally
-        Given Clean up "items_delete"
+        Given Clean up

@@ -79,8 +79,8 @@ class BaseConverterFromPlatform:
 
             # get all items (for width and height)
             filters = dl.Filters()
-            filters(field='filename', value=self.remote_path)
-            filters(field='type', value='file')
+            filters.add(field='filename', values=self.remote_path)
+            filters.add(field='type', values='file')
             pages = dataset.items.list(filters=filters)
 
             # init workers and results lists

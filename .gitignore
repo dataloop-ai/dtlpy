@@ -6,6 +6,9 @@ __pycache__/
 dtlpy.2
 .vscode
 
+# tests assets
+tests/assets/
+
 # C extensions
 *.so
 
@@ -125,5 +128,10 @@ pyvenv.cfg
 .venv
 pip-selfcheck.json
 
+tests/assets/package_unpack
+
 # saved logs
 log_*
+
+# dlp history
+.history.txt

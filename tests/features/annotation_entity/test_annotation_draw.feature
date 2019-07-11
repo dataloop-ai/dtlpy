@@ -23,4 +23,4 @@ Feature: Annotation Entity Draw annotation
     #     Then Annotations drawn equal numpy in "draw_image_instance_should_be.npy"
 
     Scenario: Finally
-        Given Clean up "Project_test_annotation_draw"
+        Given Clean up

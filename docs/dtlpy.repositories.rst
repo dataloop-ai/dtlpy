@@ -83,14 +83,6 @@ dtlpy.repositories.recipes module
     :undoc-members:
     :show-inheritance:
 
-dtlpy.repositories.rql module
------------------------------
-
-.. automodule:: dtlpy.repositories.rql
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 dtlpy.repositories.sessions module
 ----------------------------------
 
@@ -103,6 +95,14 @@ dtlpy.repositories.tasks module
 -------------------------------
 
 .. automodule:: dtlpy.repositories.tasks
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+dtlpy.repositories.time\_series module
+--------------------------------------
+
+.. automodule:: dtlpy.repositories.time_series
     :members:
     :undoc-members:
     :show-inheritance:

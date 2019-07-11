@@ -27,4 +27,4 @@ Feature: Packages repository Init
         And Packages dataset equal "Dataset"
 
     Scenario: Finally
-        Given Clean up "packages_init"
+        Given Clean up

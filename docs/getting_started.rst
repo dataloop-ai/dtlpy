@@ -66,7 +66,7 @@ You can create a generator of items with different filters
 	dataset = project.datasets.get(dataset_name='MyDataset')
 	# Get items in pages (100 item per page)
 	filters = dlp.Filters()
-	filters(field='filename', value='/winter/is/coming/*')
+	filters(field='filename', values='/winter/is/coming/*')
 	pages = dataset.items.list(filters=filters)
 	# Count the items
 	print('Number of items in dataset: {}'.format(pages.items_count))
@@ -100,8 +100,21 @@ Upload and download items
 		remote_path='/dog'
 	)
 
-	# Download entire dataset
-	filenames = dataset.download(
+	# if uploading a buffer - you can set the name of the uploaded file
+	filters = dlp.Filters()
+	filters(field='filename', values='/winter/is/coming/arya.jpg')
+	buffer = dataset.items.download(filters=filters, save_locally=False)
+	buffer.name = 'arya_stark.jpg'
+	dataset.items.upload(
+		local_path=buffer, # can be a filepath
+		remote_path='/with_last_name'
+	)
+
+	# Download entire directory with json annotations files
+	filters = dlp.Filters()
+	filters(field='filename', values='/winter/is/coming/**')
+	filenames = dataset.items.download(
+	    filters=filters,
 		local_path='/home/images',
 		download_options={'overwrite': True},
 		annotation_options=['json'] # download with annotations

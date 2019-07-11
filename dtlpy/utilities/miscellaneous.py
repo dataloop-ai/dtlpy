@@ -28,7 +28,8 @@ class List(list):
             remove_keys_list = ['contributors', 'url', 'annotations', 'items', 'export', 'directoryTree',
                                 'attributes', 'partitions', 'metadata', 'stream', 'updatedAt', 'arch',
                                 'input', 'revisions', 'pipeline',  # task fields
-                                'feedbackQueue'  # session fields
+                                'feedbackQueue',  # session fields
+                                '_ontology_ids', '_labels'  # dataset
                                 ]
             if not show_all:
                 for key in remove_keys_list:

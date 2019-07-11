@@ -19,4 +19,4 @@ Feature: Ontologies repository Update function testing
         Then Dataset ontology in host equal ontology uploaded
 
     Scenario: Finally
-        Given Clean up "ontologies_edit"
+        Given Clean up

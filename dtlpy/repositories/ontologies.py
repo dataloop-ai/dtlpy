@@ -10,7 +10,7 @@ class Ontologies:
     """
 
     def __init__(self, client_api, recipe):
-        self.logger = logging.getLogger('dataloop.repositories.ontology')
+        self.logger = logging.getLogger("dataloop.repositories.ontology")
         self.client_api = client_api
         self.recipe = recipe
 
@@ -30,18 +30,18 @@ class Ontologies:
         elif not isinstance(project_ids, list):
             project_ids = [project_ids]
         # convert to platform label format (root)
-        if isinstance(labels, dict):
-            labels = self.labels_to_roots(labels)
-        payload = {'roots': labels, 'projectIds': project_ids, 'attributes': attributes}
-        success, response = self.client_api.gen_request(req_type='post',
-                                                        path='/ontologies',
-                                                        json_req=payload)
+        labels = self.labels_to_roots(labels)
+        payload = {"roots": labels, "projectIds": project_ids, "attributes": attributes}
+        success, response = self.client_api.gen_request(
+            req_type="post", path="/ontologies", json_req=payload
+        )
         if success:
-            self.logger.info('Ontology was created successully')
-            ontology = entities.Ontology.from_json(_json=response.json(), client_api=self.client_api,
-                                                   recipe=self.recipe)
+            self.logger.info("Ontology was created successully")
+            ontology = entities.Ontology.from_json(
+                _json=response.json(), client_api=self.client_api, recipe=self.recipe
+            )
         else:
-            self.logger.exception('Failed to create Ontology')
+            self.logger.exception("Failed to create Ontology")
             raise PlatformException(response)
         return ontology
 
@@ -51,7 +51,7 @@ class Ontologies:
 
         """
         if self.recipe is None:
-            raise ('400', 'Action is not permitted')
+            raise ("400", "Action is not permitted")
 
         ontologies = [ontology_id for ontology_id in self.recipe.ontologyIds]
 
@@ -60,7 +60,7 @@ class Ontologies:
 
         pool = ThreadPool(processes=32)
         for i_ontology in range(len(ontologies)):
-            pool.apply_async(get_single_ontology, kwds={'w_i_ontology': i_ontology})
+            pool.apply_async(get_single_ontology, kwds={"w_i_ontology": i_ontology})
         pool.close()
         pool.join()
         pool.terminate()
@@ -74,13 +74,17 @@ class Ontologies:
         :param ontology_id: ontology id
         :return: Ontology object
         """
-        success, response = self.client_api.gen_request(req_type='get',
-                                                        path='/ontologies/%s' % ontology_id)
+        success, response = self.client_api.gen_request(
+            req_type="get", path="/ontologies/%s" % ontology_id
+        )
         if success:
-            ontology = entities.Ontology.from_json(_json=response.json(), client_api=self.client_api,
-                                                   recipe=self.recipe)
+            ontology = entities.Ontology.from_json(
+                _json=response.json(), client_api=self.client_api, recipe=self.recipe
+            )
         else:
-            self.logger.exception('Unable to get info for ontology. Ontology id: %s' % ontology_id)
+            self.logger.exception(
+                "Unable to get info for ontology. Ontology id: %s" % ontology_id
+            )
             raise PlatformException(response)
         return ontology
 
@@ -91,13 +95,14 @@ class Ontologies:
         :param ontology_id: ontology_id id
         :return: True
         """
-        success, response = self.client_api.gen_request(req_type='delete',
-                                                        path='/ontologies/%s' % ontology_id)
+        success, response = self.client_api.gen_request(
+            req_type="delete", path="/ontologies/%s" % ontology_id
+        )
         if success:
-            self.logger.debug('Ontology was deleted successfully')
+            self.logger.debug("Ontology was deleted successfully")
             return success
         else:
-            self.logger.exception('Failed to delete ontology')
+            self.logger.exception("Failed to delete ontology")
             raise PlatformException(response)
 
     def update(self, ontology, system_metadata=False):
@@ -108,21 +113,22 @@ class Ontologies:
        :param system_metadata: bool
        :return: Ontology object
        """
-        url_path = '/ontologies/%s' % ontology.id
+        url_path = "/ontologies/%s" % ontology.id
         if system_metadata:
-            url_path += '?system=true'
-        success, response = self.client_api.gen_request(req_type='put',
-                                                        path=url_path,
-                                                        json_req=ontology.to_json())
+            url_path += "?system=true"
+        success, response = self.client_api.gen_request(
+            req_type="put", path=url_path, json_req=ontology.to_json()
+        )
         if success:
-            self.logger.debug('Ontology was updated successfully')
+            self.logger.debug("Ontology was updated successfully")
             # update dataset labels
-            ontology = entities.Ontology.from_json(_json=response.json(), client_api=self.client_api,
-                                                   recipe=self.recipe)
+            ontology = entities.Ontology.from_json(
+                _json=response.json(), client_api=self.client_api, recipe=self.recipe
+            )
             self.recipe.dataset.labels = ontology.labels
             return ontology
         else:
-            self.logger.exception('Failed to update ontology')
+            self.logger.exception("Failed to update ontology")
             raise PlatformException(response)
 
     def labels_to_roots(self, labels):
@@ -133,12 +139,37 @@ class Ontologies:
         :return: platform representation of labels
         """
         roots = list()
-        for label, color in labels.items():
-            roots.append({'value': {
-                "tag": label,
-                "color": color,
-                "attributes": []
-            },
-                'children': []
-            })
+        if isinstance(labels, dict):
+            for label in labels:
+                root = {
+                    "value": {
+                        "tag": label,
+                        "color": labels[label],
+                        "attributes": list(),
+                    },
+                    "children": list(),
+                }
+                roots.append(root)
+        elif isinstance(labels, list):
+            for label in labels:
+                if isinstance(label, entities.Label):
+                    root = label.to_root()
+                elif "value" in label:
+                    root = {
+                        "value": label["value"],
+                        "children": label.get("children", list()),
+                    }
+                else:
+                    root = {
+                        "value": {
+                            "tag": label.get("tag", None),
+                            "color": label.get("color", "#FFFFFF"),
+                            "attributes": label.get("attributes", list()),
+                        },
+                        "children": label.get("children", list()),
+                    }
+                roots.append(root)
+        for root in roots:
+            if not isinstance(root["value"]["color"], str):
+                root["value"]["color"] = "#%02x%02x%02x" % root["value"]["color"]
         return roots

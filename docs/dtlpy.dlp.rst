@@ -12,14 +12,6 @@ dtlpy.dlp.dlp module
     :undoc-members:
     :show-inheritance:
 
-dtlpy.dlp.dlp\_new module
--------------------------
-
-.. automodule:: dtlpy.dlp.dlp_new
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 
 Module contents
 ---------------

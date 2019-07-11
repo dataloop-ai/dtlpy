@@ -13,7 +13,8 @@ class PlatformException(Exception):
             '403': Forbidden,
             '400': BadRequest,
             '401': Unauthorized,
-            '408': RequestTimeout
+            '408': RequestTimeout,
+            '600': TokenExpired
         }
 
         if not type(error) == requests.models.Response:
@@ -57,6 +58,10 @@ class Unauthorized(ExceptionMain):
 
 
 class RequestTimeout(ExceptionMain):
+    pass
+
+
+class TokenExpired(ExceptionMain):
     pass
 
 

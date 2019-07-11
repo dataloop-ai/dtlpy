@@ -58,11 +58,11 @@ class Artifacts:
         """
         if session_id is not None:
             filters = entities.Filters()
-            filters(field='filename', value='/artifacts/sessions/{}/*'.format(session_id))
+            filters.add(field='filename', values='/artifacts/sessions/{}/*'.format(session_id))
             pages = self.items_repository.list(filters=filters)
         elif task_id is not None:
             filters = entities.Filters()
-            filters(field='filename', value='/artifacts/tasks/{}/*'.format(session_id))
+            filters.add(field='filename', values='/artifacts/tasks/{}/*'.format(session_id))
             pages = self.items_repository.list(filters=filters)
         else:
             raise ValueError('Must input one search parameter')
@@ -129,7 +129,7 @@ class Artifacts:
             else:
                 raise PlatformException(error='400', message='Must input task or session (id or entity)')
             filters = entities.Filters()
-            filters(field='filename', value=directories)
+            filters.add(field='filename', values=directories)
             if not (local_path.endswith('/*') or local_path.endswith(r'\*')):
                 # download directly to folder
                 local_path = os.path.join(local_path, '*')

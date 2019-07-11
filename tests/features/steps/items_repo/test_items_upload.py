@@ -183,7 +183,7 @@ def step_impl(context):
         if item.type != "dir":
             context.dataset.items.delete(item_id=item.id)
     context.item_list = context.dataset.items.list()
-    assert len(context.item_list.items) == 1
+    assert len(context.item_list.items) == 0
 
 
 @behave.when(u"I upload items from buffer to host")
@@ -204,6 +204,6 @@ def step_impl(context):
 @behave.then(u'There are "{item_count}" items in host')
 def step_impl(context, item_count):
     filters = context.dl.Filters()
-    filters(field='type', value='file')
+    filters.add(field='type', values='file')
     context.item_list = context.dataset.items.list(filters=filters)
     assert len(context.item_list.items) == int(item_count) == context.items_uploaded

@@ -30,7 +30,7 @@ Feature: Datasets repository update function testing
     #     And There is a dataset by the name of "Dataset" in host
 
     Scenario: Finally
-        Given Clean up "datasets_edit"
+        Given Clean up
 
 
 

@@ -27,4 +27,4 @@ Feature: Packages repository List Version method
         Then I receive a list of "0" versions
 
     Scenario: Finally
-        Given Clean up "packages_list_versions"
+        Given Clean up

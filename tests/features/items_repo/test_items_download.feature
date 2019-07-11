@@ -30,5 +30,5 @@ Feature: Items repository download function testing
         Then Item uploaded from data equals initial item uploaded
 
     Scenario: Finally
-        Given Clean up "items_download"
+        Given Clean up
     

@@ -8,16 +8,18 @@ Subpackages
 
     dtlpy.repositories.plugins.assets
     dtlpy.repositories.plugins.package_runner
+    dtlpy.repositories.plugins.plugin_deployer
     dtlpy.repositories.plugins.plugin_generator
+    dtlpy.repositories.plugins.plugin_invoker
     dtlpy.repositories.plugins.plugin_uploader
 
 Submodules
 ----------
 
-dtlpy.repositories.plugins.plugin\_status\_manager module
----------------------------------------------------------
+dtlpy.repositories.plugins.plugin\_status module
+------------------------------------------------
 
-.. automodule:: dtlpy.repositories.plugins.plugin_status_manager
+.. automodule:: dtlpy.repositories.plugins.plugin_status
     :members:
     :undoc-members:
     :show-inheritance:

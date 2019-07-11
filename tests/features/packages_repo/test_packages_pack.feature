@@ -37,4 +37,4 @@ Feature: Packages repository Pack method
         Then There should be "2" versions of the package "package" in host
 
     Scenario: Finally
-        Given Clean up "packages_pack"
+        Given Clean up

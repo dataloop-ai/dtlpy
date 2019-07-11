@@ -33,10 +33,8 @@ class Recipes:
         elif not isinstance(ontology_ids, list):
             ontology_ids = [ontology_ids]
         if recipe_name is None:
-            title = self.dataset.name + " Default Recipe"
-        else:
-            title = recipe_name
-        payload = {'title': title, 'projectIds': project_ids, 'ontologyIds': ontology_ids}
+            recipe_name = self.dataset.name + " Default Recipe"
+        payload = {'title': recipe_name, 'projectIds': project_ids, 'ontologyIds': ontology_ids}
         success, response = self.client_api.gen_request(req_type='post',
                                                         path='/recipes',
                                                         json_req=payload)
@@ -50,7 +48,8 @@ class Recipes:
             self.dataset.metadata['system'] = dict()
         if 'recipes' not in self.dataset.metadata['system']:
             self.dataset.metadata['system']['recipes'] = list()
-        self.dataset.metadata['system']['recipes'].append(recipe.id)
+        self.dataset.metadata['system']['recipes'].insert(0, recipe.id)
+        self.dataset.update(system_metadata=True)
         return recipe
 
     def list(self):

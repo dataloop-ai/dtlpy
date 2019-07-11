@@ -18,10 +18,11 @@ import json
 import jwt
 
 from .exceptions import PlatformException
-from . import services, repositories
+from . import services, repositories, exceptions
 from .__version__ import version as __version__
 from .entities import Box, Point, Segmentation, Polygon, Ellipse, Classification, Polyline
 from .entities import AnnotationCollection, Annotation, Item, Package, Filters, Task, Session, Recipe, Ontology, Label
+from . import examples
 
 """
 Main Platform Interface module for Dataloop

@@ -35,4 +35,4 @@ Feature: Items repository get function testing
         Then "NotFound" exception should be raised
     
     Scenario: Finally
-        Given Clean up "items_get"
+        Given Clean up

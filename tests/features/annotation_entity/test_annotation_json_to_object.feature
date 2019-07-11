@@ -21,4 +21,4 @@ Feature: Annotation Entity Json to Object testing
         And Annotations to_json() equals to Platform json
     
     Scenario: Finally
-        Given Clean up "Project_test_annotation_json_to_object"
+        Given Clean up

@@ -1,4 +1,4 @@
-def main():
+def main(project_name, dataset_name, item_remote_path):
     """
     Download and show an image with it's annotations
     :return:
@@ -8,10 +8,10 @@ def main():
     import numpy as np
 
     # Get project and dataset
-    project = dl.projects.get(project_name='Ants')
-    dataset = project.datasets.get(dataset_name='Acrobat')
+    project = dl.projects.get(project_name=project_name)
+    dataset = project.datasets.get(dataset_name=dataset_name)
     # Get item
-    item = dataset.items.get(filepath='/ants/from/house.jpg')
+    item = dataset.items.get(filepath=item_remote_path)
 
     # download item as a buffer
     buffer = item.download(save_locally=False)

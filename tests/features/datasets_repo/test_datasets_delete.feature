@@ -24,4 +24,4 @@ Feature: Datasets repository delete function testing
         And No dataset was deleted
 
     Scenario: Finally
-        Given Clean up "datasets_delete"
+        Given Clean up

@@ -42,4 +42,4 @@ Feature: Item Entity repo functions
         Then Item in host moved to a new directory
 
     Scenario: Finally
-        Given Clean up "item_repo_methods"
+        Given Clean up

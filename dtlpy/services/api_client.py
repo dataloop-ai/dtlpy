@@ -24,6 +24,8 @@ from functools import wraps
 from .cookie import CookieIO
 from .calls_counter import CallsCounter
 
+from .. import exceptions
+
 logger = logging.getLogger('dataloop.api_client')
 threadLock = threading.Lock()
 
@@ -51,7 +53,7 @@ class Decorators:
         def decorated_method(inst, *args, **kwargs):
             # before the method call
             if inst.token_expired():
-                raise ConnectionRefusedError('Token expired, Please login.')
+                raise exceptions.PlatformException('600', 'Token expired, Please login.')
             # the actual method call
             result = method(inst, *args, **kwargs)
             # after the method call
@@ -149,7 +151,7 @@ class ApiClient:
         if _environments is None:
             # take from cookie
             _environments = self.io.get('login_parameters')
-            # if cookie is None  - init with defaultas
+            # if cookie is None  - init with defaults
             if _environments is None:
                 # default
                 _environments = {
@@ -188,6 +190,7 @@ class ApiClient:
                 # save to local variable
                 self.environments = _environments
             else:
+                # save from cookie to ram
                 self._environments = _environments
         return _environments
 
@@ -202,8 +205,13 @@ class ApiClient:
         if _verbose is None:
             _verbose = self.io.get('verbose')
             if _verbose is None:
+                # set default
                 _verbose = False
+                # put in cookie
                 self.verbose = _verbose
+            else:
+                # save from cookie to ram
+                self._verbose = _verbose
         return _verbose
 
     @verbose.setter
@@ -591,6 +599,8 @@ class ApiClient:
                     'Unknown platform environment: \'%s\'. . known: %s' % (env, ', '.join(known_aliases)))
             env = env[0]
         self.environment = env
+        # reset local token
+        self._token = None
         logger.info('Platform environment: %s' % self.environment)
         if self.token_expired():
             logger.info('Token expired, Please login.')

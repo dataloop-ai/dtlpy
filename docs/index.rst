@@ -10,16 +10,20 @@ Dataloop's SDK and CLI documentation
    :caption: Table of Contents
    :maxdepth: 6
   
-   installation
-   getting_started
-   examples
-   annotations_types
-   filters
-   starting_with_plugins
-   cli
-   repositories
-   entities
-   modules
+   installation.rst
+   getting_started.rst
+   examples.rst
+   notebook_examples.ipynb
+   annotations_types.rst
+   filters.rst
+   starting_with_plugins.rst
+   cli.rst
+   repositories.rst
+   entities.rst
+   modules.rst
+
+
+
 
 Indices and tables
 ==================

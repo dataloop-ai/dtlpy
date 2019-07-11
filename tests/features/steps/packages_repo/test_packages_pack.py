@@ -66,7 +66,7 @@ def step_impl(context, original_path, unpack_path):
     original_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], original_path)
     unpack_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], unpack_path)
     context.packages.unpack(package_id=context.package.id, local_path=unpack_path)
-    unpack_path = os.path.join(unpack_path, os.path.split(original_path)[-1])
+    unpack_path = os.path.join(unpack_path, 'dist')
     dirs = os.listdir(unpack_path)
     if 'folder_keeper' in dirs:
         dirs.pop(dirs.index('folder_keeper'))
@@ -90,7 +90,7 @@ def step_impl(context, original_path, dataset_name, unpack_path):
     original_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], original_path)
     unpack_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], unpack_path)
     context.packages.unpack(package_id=context.package.id, local_path=unpack_path)
-    unpack_path = os.path.join(unpack_path, os.path.split(original_path)[-1])
+    unpack_path = os.path.join(unpack_path, 'dist')
     dirs = os.listdir(unpack_path)
     if 'folder_keeper' in dirs:
         dirs.pop(dirs.index('folder_keeper'))

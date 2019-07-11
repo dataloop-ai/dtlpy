@@ -23,7 +23,7 @@ def step_impl(context, folder_path):
 def step_impl(context, item_name, download_path):
     download_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], download_path)
     filters = context.dl.Filters()
-    filters(field='filename', value=item_name)
+    filters.add(field='filename', values=item_name)
     context.dataset.items.download(filters=filters,
                                    items=None,
                                    save_locally=True,

@@ -26,6 +26,7 @@ class Project:
     _packages = attr.ib()
     _artifacts = attr.ib()
     _plugins = attr.ib()
+    _time_series = attr.ib()
 
     @_projects.default
     def set_projects(self):
@@ -79,6 +80,15 @@ class Project:
     def artifacts(self):
         assert isinstance(self._artifacts, repositories.Artifacts)
         return self._artifacts
+
+    @_time_series.default
+    def set_time_series(self):
+        return repositories.TimeSeries(project=self, client_api=self.client_api)
+
+    @property
+    def time_series(self):
+        assert isinstance(self._time_series, repositories.TimeSeries)
+        return self._time_series
 
     @classmethod
     def from_json(cls, _json, client_api):

@@ -11,8 +11,8 @@ def main():
 
     # Get all items from the source folder
     filters = dl.Filters()
-    filters(field='filename', value='/fighting/**')  # take files from the directory only (recursive)
-    filters(field='type', value='file')  # only files
+    filters.add(field='filename', values='/fighting/**')  # take files from the directory only (recursive)
+    filters.add(field='type', values='file')  # only files
     pages = dataset.items.list(filters=filters)
 
     dst_folder = '/fighting_shredder'

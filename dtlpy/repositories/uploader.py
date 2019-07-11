@@ -5,7 +5,6 @@ import logging
 import traceback
 import numpy as np
 import datetime
-import fleep
 import queue
 import threading
 from progressbar import Bar, ETA, ProgressBar, Timer
@@ -126,8 +125,8 @@ class Uploader:
         try:
             # get pages of item according to remote filepath
             filters = entities.Filters()
-            filters(field='filename', value=remote_path + '/**')
-            filters(field='type', value='file')
+            filters.add(field='filename', values=remote_path + '/**')
+            filters.add(field='type', values='file')
             pages = self.items_repository.list(filters=filters)
             # join path and filename for all uploads
             item_remote_filepaths = [file[0] + file[1] for file in item_remote_filepaths]
@@ -236,6 +235,8 @@ class Uploader:
                                     data = json.load(f)
                                 if 'annotations' in data:
                                     annotations = data['annotations']
+                                elif isinstance(data, list):
+                                    annotations = data
                                 else:
                                     raise PlatformException(
                                         error='400',
@@ -398,11 +399,7 @@ class Uploader:
                         if uploaded_filename is None:
                             logger.exception('Must have filename when uploading bytes array (uploaded_filename)')
                             raise ValueError('Must have filename when uploading bytes array (uploaded_filename)')
-                # read mime type from buffer
-                info = fleep.get(buffer.read(128))
-                # go back to beginning of file
-                buffer.seek(0)
-                files = {'file': (uploaded_filename, buffer, info.mime[0])}
+                files = {'file': (uploaded_filename, buffer)}
                 payload = {'path': os.path.join(remote_path, uploaded_filename).replace('\\', '/'),
                            'type': 'file'}
                 result, response = self.items_repository.client_api.gen_request(
@@ -421,13 +418,15 @@ class Uploader:
                                 data = json.load(f)
                             if 'annotations' in data:
                                 annotations = data['annotations']
+                            elif isinstance(data, list):
+                                annotations = data
                             else:
                                 raise PlatformException(
                                     error='400',
                                     message='MISSING "annotations" in annotations file, cant upload. item_id: {}, annotations_filepath: {}'.format(
                                         item.id, annotations)
                                 )
-                        item.annotations.upload(annotations=annotations)
+                            item.annotations.upload(annotations=annotations)
                     except Exception:
                         logger.error(traceback.format_exc())
                 logger.debug('Item uploaded successfully. Item id: %s' % item.id)
@@ -530,7 +529,8 @@ class Uploader:
                 if item_remote_filepath not in remote_existence_dict:
                     # item did not found in dict ( thread still running)  - get existence specifically
                     try:
-                        remote_existence_dict[item_remote_filepath] = self.items_repository.get(filepath=item_remote_filepath)
+                        remote_existence_dict[item_remote_filepath] = self.items_repository.get(
+                            filepath=item_remote_filepath)
                     except exceptions.NotFound:
                         remote_existence_dict[item_remote_filepath] = None
 
@@ -550,6 +550,8 @@ class Uploader:
                                     data = json.load(f)
                                 if 'annotations' in data:
                                     annotations = data['annotations']
+                                elif isinstance(data, list):
+                                    annotations = data
                                 else:
                                     raise PlatformException(
                                         error='400',
@@ -596,7 +598,7 @@ class Uploader:
             errors_json = {file: error for file, error in zip(files_list, errors_list)}
             with open(log_filepath, 'w') as f:
                 json.dump(errors_json, f, indent=4)
-            logger.warning('Errors in {} files. See %s for full log'.format(n_error, log_filepath))
+            logger.warning('Errors in {} files. See {} for full log'.format(n_error, log_filepath))
         # remove empty cells
         output = [output[i_job] for i_job, suc in enumerate(success) if suc is True]
         if len(output) == 1:

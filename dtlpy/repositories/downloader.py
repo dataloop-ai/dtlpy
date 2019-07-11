@@ -205,7 +205,7 @@ class Downloader:
             errors_json = {item_id: error for item_id, error in zip(ids_list, errors_list)}
             with open(log_filepath, 'w') as f:
                 json.dump(errors_json, f, indent=4)
-            logger.warning('Errors in {} files. See %s for full log'.format(n_error, log_filepath))
+            logger.warning('Errors in {} files. See {} for full log'.format(n_error, log_filepath))
 
         # remove empty cells
         output = [output[i_job] for i_job, suc in enumerate(success) if suc is True]
@@ -303,14 +303,16 @@ class Downloader:
         else:
             annotation_rel_path = item.name
         # find annotations json
-        annotations_filepath = os.path.join(local_path, 'json', item.filename[1:])
-        name, _ = os.path.splitext(annotations_filepath)
-        annotations_filepath = name + '.json'
-        if os.path.isfile(annotations_filepath):
+        annotations_json_filepath = os.path.join(local_path, 'json', item.filename[1:])
+        name, _ = os.path.splitext(annotations_json_filepath)
+        annotations_json_filepath = name + '.json'
+        if os.path.isfile(annotations_json_filepath):
             # if exists take from json file
-            with open(annotations_filepath, 'r') as f:
+            with open(annotations_json_filepath, 'r') as f:
                 data = json.load(f)
-            annotations = entities.AnnotationCollection.from_json(_json=data['annotations'],
+            if 'annotations' in data:
+                data = data['annotations']
+            annotations = entities.AnnotationCollection.from_json(_json=data,
                                                                   item=item)
         else:
             # get from platform
@@ -326,9 +328,10 @@ class Downloader:
                 os.makedirs(os.path.dirname(annotation_filepath), exist_ok=True)
             temp_path, ext = os.path.splitext(annotation_filepath)
 
-            if option == 'json' and not os.path.isfile(annotation_filepath):
-                annotation_filepath = temp_path + '.json'
-                annotations.download(filepath=annotation_filepath,
+            if option == 'json':
+                if os.path.isfile(annotations_json_filepath):
+                    continue
+                annotations.download(filepath=annotations_json_filepath,
                                      annotation_format=option,
                                      height=img_shape[0],
                                      width=img_shape[1])

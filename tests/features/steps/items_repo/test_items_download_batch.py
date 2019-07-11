@@ -31,7 +31,6 @@ def step_impl(context, local_path):
 @behave.then(u"I can upload items from buffer to host")
 def step_impl(context):
     counter = 0
-    context.buffer = context.buffer[1:]
     for buff in context.buffer:
         uploaded_filename = "file" + str(counter) + '.jpg'
         buff.name = uploaded_filename
@@ -43,7 +42,7 @@ def step_impl(context):
         )
 
     context.item_list = context.dataset.items.list()
-    assert len(context.item_list.items) == counter + 1
+    assert len(context.item_list.items) == counter
 
 
 @behave.when(u'I delete all items from host')
@@ -53,7 +52,7 @@ def step_impl(context):
         if item.type != 'dir':
             context.dataset.items.delete(item_id=item.id)
     context.item_list = context.dataset.items.list()
-    assert len(context.item_list.items) == 1
+    assert len(context.item_list.items) == 0
 
 
 @behave.when(u'I download items to local path "{local_path}"')

@@ -28,4 +28,4 @@ Feature: Dataset Entity repo functions
         Then There are no datasets
 
     Scenario: Finally
-        Given Clean up "dataset_repo_methods"
+        Given Clean up

@@ -22,4 +22,4 @@ Feature: Recipes repository create function testing
         Then Dataset recipe in host equals the one created
 
     Scenario: Finally
-        Given Clean up "Project_test_recipes_create"
+        Given Clean up

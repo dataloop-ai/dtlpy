@@ -56,4 +56,4 @@ Feature: Packages repository Get method
         And Package list have lenght of "2"
 
     Scenario: Finally
-        Given Clean up "packages_get"
+        Given Clean up

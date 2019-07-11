@@ -11,4 +11,4 @@ Feature: Items repository upload_batch function testing
         Then Items in "upload_batch/to_upload" should equal items in "upload_batch/to_compare/image"
 
     Scenario: Finally
-        Given Clean up "items_upload_batch"
+        Given Clean up

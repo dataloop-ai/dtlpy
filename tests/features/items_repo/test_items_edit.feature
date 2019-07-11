@@ -31,4 +31,4 @@ Feature: Items repository update function testing
         And Item in host was not changed
 
     Scenario: Finally
-        Given Clean up "items_edit"
+        Given Clean up

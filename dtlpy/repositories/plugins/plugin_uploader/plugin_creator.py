@@ -8,64 +8,61 @@ from .package_uploader import PackageUploader
 
 class PluginCreator:
     def __init__(self):
-        self.state_json = get_state_json()
-        self.project_name = self.state_json['project']
-        self.task_name = self.state_json['package']
         self.plugin_json = get_plugin_json()
 
     def dataset_input_template(self, name):
         return {
-            "path": name + "_44_dataset_id",
-            "resource": "external",
+            "path": name,
+            "resource": "dataset",
             "by": "val",
-            "constValue": "null"
+            "constValue": None
         }
 
     def item_input_template(self, name):
         return {
-            "path": name + "_44_item_id",
-            "resource": "external",
+            "path": name,
+            "resource": "item",
             "by": "val",
-            "constValue": "null"
+            "constValue": None
         }
 
     def annotation_input_template(self, name):
         return {
-            "path": name + "_44_annotation_id",
-            "resource": "external",
+            "path": name,
+            "resource": "annotation",
             "by": "val",
-            "constValue": "null"
+            "constValue": None
         }
 
     def json_input_template(self, name):
         return {
             "path": name,
-            "resource": "external",
+            "resource": "json",
             "by": "val",
-            "constValue": "null"
+            "constValue": None
         }
 
     def dataset_output_template(self, name):
         return {
-            "path": name + "_44_dataset_id",
-            "from": name + "_44_dataset_id",
-            "by": "val",
+            "path": name,
+            "from": name,
+            "by": "dataset",
             "resource": "raw"
         }
 
     def item_output_template(self, name):
         return {
-            "path": name + "_44_item_id",
-            "from": name + "_44_item_id",
-            "by": "val",
+            "path": name,
+            "from": name,
+            "by": "item",
             "resource": "raw"
         }
 
     def annotation_output_template(self, name):
         return {
-            "path": name + "_44_annotation_id",
-            "from": name + "_44_annotation_id",
-            "by": "val",
+            "path": name,
+            "from": name,
+            "by": "annotation",
             "resource": "raw"
         }
 
@@ -73,7 +70,7 @@ class PluginCreator:
         return {
             "path": name,
             "from": name,
-            "by": "val",
+            "by": "json",
             "resource": "raw"
         }
 
@@ -98,11 +95,6 @@ class PluginCreator:
                 'resource': 'project',
                 'by': 'ref',
                 'constValue': project.id
-            },
-            {
-                'path': 'platform_interface',
-                'resource': 'external',
-                'by': 'val'
             }
         ]
 
@@ -112,11 +104,8 @@ class PluginCreator:
             if (input_type == 'Dataset'):
                 base.append(self.dataset_input_template(input_name))
             elif (input_type == 'Item'):
-                base.append(self.dataset_input_template(input_name))
                 base.append(self.item_input_template(input_name))
             elif (input_type == 'Annotation'):
-                base.append(self.dataset_input_template(input_name))
-                base.append(self.item_input_template(input_name))
                 base.append(self.annotation_input_template(input_name))
             elif (input_type == 'Json'):
                 base.append(self.json_input_template(input_name))
@@ -132,11 +121,8 @@ class PluginCreator:
             if (output_type == 'Dataset'):
                 base.append(self.dataset_output_template(output_name))
             elif (output_type == 'Item'):
-                base.append(self.dataset_output_template(output_name))
                 base.append(self.item_output_template(output_name))
             elif (output_type == 'Annotation'):
-                base.append(self.dataset_output_template(output_name))
-                base.append(self.item_output_template(output_name))
                 base.append(self.item_annotation_template(output_name))
             elif (output_type == 'Json'):
                 base.append(self.json_output_template(output_name))
@@ -149,8 +135,20 @@ class PluginCreator:
         file.write(json.dumps(obj))
 
     def create_plugin(self):
+        try:
+            state_json = get_state_json()
+        except:
+            raise Exception('.dataloop/state.json not found, you might have not run dlp plugins init')
+
+        if not 'project' in state_json:
+            raise Exception('Please run "dlp checkout project <project_name>" first')
+
+        if not 'package' in state_json:
+            raise Exception('Please run "dlp checkout plugin <plugin_name>" first')
+
         package_uploader = PackageUploader()
         package = package_uploader.upload_package()
+
         state_json = get_state_json()
         project_id = state_json['project']
         plugin_name = state_json['package']
@@ -163,4 +161,6 @@ class PluginCreator:
         if plugin is None:
             project.plugins.create(state_json['package'], package.id, input_params, output_params)
         else:
+            plugin.input = input_params
+            plugin.output = output_params
             dtlpy.plugins.edit(plugin=plugin, system_metadata=True)

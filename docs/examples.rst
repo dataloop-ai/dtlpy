@@ -137,3 +137,9 @@ Create Video Annotation
 Move items to another folder in platform
 ----------------------------------------
 .. literalinclude:: ../dtlpy/examples/move_item.py
+
+.. _15:
+
+Filters
+----------------------------------------
+.. literalinclude:: ../dtlpy/examples/filters.py

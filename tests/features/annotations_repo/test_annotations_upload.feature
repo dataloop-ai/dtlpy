@@ -25,4 +25,4 @@ Feature: Annotations repository Upload function testing
     #     Then "InternalServerError" exception should be raised
 
     Scenario: Finally
-        Given Clean up "annotations_upload"
+        Given Clean up

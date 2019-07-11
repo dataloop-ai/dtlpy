@@ -35,9 +35,8 @@ class Items:
         """
         if filters is None:
             filters = entities.Filters()
-            filters(field='type', value='file')
-        page_size = 100
-        pages = self.list(filters=filters, page_size=page_size)
+            filters.add(field='type', values='file')
+        pages = self.list(filters=filters)
 
         num_items = pages.items_count
 
@@ -56,61 +55,30 @@ class Items:
             pool.apply_async(
                 get_page, kwds={"i_start": i_item, "w_page": page, "w_items": items}
             )
-            i_item += page_size
+            i_item += filters.page_size
         pool.close()
         pool.join()
         pool.terminate()
         items = [item for item in items if item is not None]
         return items
 
-    @staticmethod
-    def create_query_dict(filters, page_offset, page_size):
-        """
-        Create a platform filters string
-
-        :param filters: Filters entity or a dictionary containing filters parameters
-        :param page_offset: starting page number
-        :param page_size: number of items in each page
-        :return: filters string
-        """
-        # using path for backward compatibility
-        if filters is None:
-            # default value
-            if filters is None:
-                filters = entities.Filters()
-        elif isinstance(filters, entities.Filters):
-            pass
-        else:
-            raise PlatformException(
-                error='400',
-                message='"filters" must be of type "{}", got: "{}"'.format(entities.Filters, type(filters)))
-        rql = repositories.Rql(filters=filters, page_offset=page_offset, page_size=page_size)
-        return rql.prepare()
-
-    def get_list(self, filters, page_offset, page_size):
+    def get_list(self, filters):
         """
         Get dataset items list This is a browsing endpoint, for any given path item count will be returned,
         user is expected to perform another request then for every folder item to actually get the its item list.
 
         :param filters: Filters entity or a dictionary containing filters parameters
-        :param page_offset: starting page number
-        :param page_size: number of items in each page
         :return: json response
         """
-        # create filters string
-        query_dict = self.create_query_dict(filters=filters,
-                                            page_offset=page_offset,
-                                            page_size=page_size)
-
         # prepare request
         success, response = self.client_api.gen_request(req_type="POST",
                                                         path="/datasets/%s/query" % self.dataset.id,
-                                                        json_req=query_dict)
+                                                        json_req=filters.prepare())
         if not success:
             raise PlatformException(response)
         try:
             self.client_api.print_json(response.json()["items"])
-            self.logger.debug("Page:%d/%d" % (1 + page_offset, response.json()["totalPagesCount"]))
+            self.logger.debug("Page:%d/%d" % (1 + filters.page, response.json()["totalPagesCount"]))
         except ValueError:
             # no JSON returned
             pass
@@ -125,13 +93,34 @@ class Items:
         :param page_size:
         :return: Pages object
         """
+        # default filters
+        if filters is None:
+            filters = entities.Filters()
+            filters.page = page_offset
+            filters.page_size = page_size
+
+        # assert type filters
+        if not isinstance(filters, entities.Filters):
+            raise PlatformException('400', 'Unknown filters type')
+
+        # get page
+        if filters.page != page_offset:
+            page_offset = filters.page
+        if filters.page_size != page_size:
+            page_size = filters.page_size
+
+        if filters.resource == 'items':
+            items_entity = self.items_entity
+        else:
+            items_entity = entities.Annotation
+
         paged = entities.PagedEntities(
             items_repository=self,
             filters=filters,
             page_offset=page_offset,
             page_size=page_size,
             client_api=self.client_api,
-            item_entity=self.items_entity,
+            item_entity=items_entity
         )
         paged.get_page()
         return paged
@@ -163,7 +152,7 @@ class Items:
                 raise PlatformException(response)
         elif filepath is not None:
             filters = entities.Filters()
-            filters(field='filename', value=filepath)
+            filters.add(field='filename', values=filepath)
             paged_entity = self.list(filters=filters)
             if len(paged_entity.items) == 0:
                 raise PlatformException(error='404', message='Item not found. filepath= "{}"'.format(filepath))
@@ -178,12 +167,13 @@ class Items:
                                     message='Must choose by at least one. "filename" or "item_id"')
         return item
 
-    def delete(self, filename=None, item_id=None):
+    def delete(self, filename=None, item_id=None, filters=None):
         """
         Delete item from platform
 
+        :param filters: optional - delete items by filter
         :param filename: optional - search item by remote path
-        :param item_id: optional - search item by if
+        :param item_id: optional - search item by id
         :return: True
         """
         if item_id is not None:
@@ -209,36 +199,70 @@ class Items:
                     req_type="delete",
                     path="/datasets/%s/items/%s" % (self.dataset.id, item_id),
                 )
+        elif filters is not None:
+            # prepare request
+            success, response = self.client_api.gen_request(req_type="POST",
+                                                            path="/datasets/%s/query" % self.dataset.id,
+                                                            json_req=filters.prepare(operation='delete'))
         else:
-            raise PlatformException("400", "Must provide item id or filename")
+            raise PlatformException("400", "Must provide item id, filename or filters")
+
+        # check response
         if success:
-            self.logger.debug("Item was deleted successfully. Item id: %s" % item_id)
+            self.logger.debug("Item/s deleted successfully")
             return success
         else:
             raise PlatformException(response)
 
-    def update(self, item, system_metadata=False):
+    def update(self, item=None, filters=None, update_values=None, system_metadata=False):
         """
         Update items metadata
 
+        :param update_values: optional field to be updated and new values
+        :param filters: optional update filtered items by given filter
         :param item: Item object
         :param system_metadata: bool
         :return: Item object
         """
-        url_path = "/datasets/%s/items/%s" % (self.dataset.id, item.id)
-        if system_metadata:
-            url_path += "?system=true"
-        success, response = self.client_api.gen_request(
-            req_type="patch", path=url_path, json_req=item.to_json()
-        )
-        if success:
-            self.logger.debug("Item was updated successfully. Item id: %s" % item.id)
-            return self.items_entity.from_json(
-                client_api=self.client_api, _json=response.json(), dataset=self.dataset
+        # check params
+        if item is None and filters is None:
+            raise PlatformException('400', 'must provide either item or filters')
+        if filters is not None and update_values is None:
+            raise PlatformException('400', 'Must provide fields and values to update when updating by filter')
+        if item is not None and filters is not None:
+            raise PlatformException('400', 'must provide either item or filters')
+
+        # update item
+        if item is not None:
+            url_path = "/datasets/%s/items/%s" % (self.dataset.id, item.id)
+            if system_metadata:
+                url_path += "?system=true"
+            success, response = self.client_api.gen_request(
+                req_type="patch", path=url_path, json_req=item.to_json()
             )
+            if success:
+                self.logger.debug("Item was updated successfully. Item id: %s" % item.id)
+                return self.items_entity.from_json(
+                    client_api=self.client_api, _json=response.json(), dataset=self.dataset
+                )
+            else:
+                self.logger.exception("Error while updating item")
+                raise PlatformException(response)
+        # update by filters
         else:
-            self.logger.exception("Error while updating item")
-            raise PlatformException(response)
+            # prepare request
+            success, response = self.client_api.gen_request(req_type="POST",
+                                                            path="/datasets/%s/query" % self.dataset.id,
+                                                            json_req=filters.prepare(operation='update',
+                                                                                     update=update_values))
+            if not success:
+                raise PlatformException(response)
+            else:
+                self.logger.debug("Items were updated successfully.")
+                # return self.items_entity.from_json(
+                #     client_api=self.client_api, _json=response.json(), dataset=self.dataset
+                # )
+                return response.json()
 
     def download(
             self,
@@ -302,9 +326,9 @@ class Items:
         :param local_annotations_path: path to dataloop format annotations json files or a AnnotationCollection entity
                                        if directory - annotations need to be in same files structure as "local_path"
         :param remote_path: remote path (on dataloop platform) to upload to.
-        :param upload_options: {'overwrite': True/False, 'relative_path': True/False}
+        :param upload_options: {'overwrite': True/False, 'relative_path': True/False} - default -> overwrite = False, relative_path = False
         :param file_types: list of file type to upload. e.g ['.jpg', '.png']. default is all
-        :param num_workers:
+        :param num_workers: number of processes - default = 3
         :return: Output (list)
         """
         if remote_path is not None:

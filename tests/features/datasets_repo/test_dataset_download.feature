@@ -15,4 +15,4 @@ Feature: Datasets repository download function testing
         And There is no "log" file in folder "downloaded_dataset"
 
     Scenario: Finally
-        Given Clean up "datasets_download"
+        Given Clean up

@@ -92,6 +92,14 @@ dtlpy.examples.create\_video\_annotations module
     :undoc-members:
     :show-inheritance:
 
+dtlpy.examples.filters module
+-----------------------------
+
+.. automodule:: dtlpy.examples.filters
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 dtlpy.examples.move\_item module
 --------------------------------
 

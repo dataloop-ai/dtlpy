@@ -19,7 +19,7 @@ Feature: Upload annotation testing
           Then Item video annotations in host equal annotations in file "assets_split/annotations_upload/video_annotations.json"
 
     Scenario: Finally
-        Given Clean up "upload_annotations"
+        Given Clean up
 
 
 

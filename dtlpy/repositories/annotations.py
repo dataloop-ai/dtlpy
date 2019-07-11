@@ -236,6 +236,7 @@ class Annotations:
                     path='/datasets/{}/items/{}/annotations'.format(self.dataset.id, self.item.id),
                     json_req=annotation)
                 if suc:
+                    
                     output[i_item] = entities.Annotation.from_json(_json=response.json(),
                                                                    item=self.item)
                     success[i_item] = True

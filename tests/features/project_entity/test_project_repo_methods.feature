@@ -13,4 +13,4 @@ Feature: Project Entity repo functions
         Then Project in host has name "new_project_name"
 
     Scenario: Finally
-        Given Clean up "project_repo_methods"
+        Given Clean up

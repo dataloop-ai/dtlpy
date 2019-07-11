@@ -21,4 +21,4 @@ Feature: Annotation Entity Add annotation
         Then Item in host has annotation added
 
     Scenario: Finally
-        Given Clean up "Project_test_annotation_add"
+        Given Clean up

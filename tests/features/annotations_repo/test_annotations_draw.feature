@@ -23,4 +23,4 @@ Feature: Annotations repository Draw method testing
     #     Then I receive annotations mask and it is equal to mask in "new_instance_should_be_draw.npy"
 
     Scenario: Finally
-        Given Clean up "Project_annotations_draw"
+        Given Clean up

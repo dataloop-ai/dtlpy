@@ -30,10 +30,6 @@ Feature: Ontologies repository create function testing
     Scenario: Create ontology - wrong project id
         When I try create a new ontology with labels and "some_project_id" from file "labels.json"
         Then "Forbidden" exception should be raised
-    
-    Scenario: Create ontology - invalid labels
-        When I try to create a new ontology with labels "[{'tag': 'vehicle', 'color': '#14638f'}]"
-        Then "BadRequest" exception should be raised
 
     Scenario: Finally
-        Given Clean up "ontologies_create"
+        Given Clean up

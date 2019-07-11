@@ -1,9 +1,9 @@
+import subprocess
 import traceback
 import json
 import time
 import sys
 import os
-from behave.__main__ import main as behave_main
 import dtlpy as dl
 import numpy as np
 from multiprocessing.pool import ThreadPool
@@ -31,15 +31,21 @@ def test_feature_file(w_feature_filename):
         if not os.path.isdir(os.path.dirname(log_filepath)):
             os.makedirs(os.path.dirname(log_filepath), exist_ok=True)
 
-        return_code = 1
-        for i in range(2):
-            return_code = behave_main(
-                [features_path, '-i', w_feature_filename, '--stop', '-o', log_filepath, '--summary', '--no-capture'])
-            if return_code == 0:
+        cmds = ['behave', features_path,
+                '-i', w_feature_filename,
+                '--stop',
+                '-o', log_filepath,
+                '--summary',
+                '--no-capture']
+        for i in range(NUM_TRIES):
+            # need to run a new process to avoid collisions
+            p = subprocess.Popen(cmds)
+            p.communicate()
+            if p.returncode == 0:
                 break
 
         directory, file = os.path.split(log_filepath)
-        if return_code == 0:
+        if p.returncode == 0:
             # passes
             new_log_filepath = os.path.join(directory, 'pass_' + file)
             os.rename(log_filepath, new_log_filepath)

@@ -11,13 +11,16 @@ Filters options (or any combination of them):
 	# create a filters instance
 	filters = Filters()
 	# filter only items
-	filters(field='type', value='file')
+    filters.add(field='type', values='file')
 	# filter specific filename
-	filters(field='filename', value='/morty.jpg')
+	filters.add(field='filename', values='/morty.jpg')
 	# filter specific entire folder
-	filters(field='filename', value='/rick/*')
+	filters.add(field='filename', values='/rick/*')
 
 	# filter multiple directories
-	filters(field='filename', value='/rick/*', operator='or')
-	filters(field='filename', value='/jerry/*', operator='or')
+	filters = Filters()
+	filters.add(field='filename', values='/rick/*')
+	filters.add(field='filename', values='/jerry/*')
+	filters.method = 'or'
+
 

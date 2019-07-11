@@ -50,4 +50,4 @@ Feature: Annotaions repository update function testing
         Then Annotation x coordinates should be changed accordingly
 
     Scenario: Finally
-        Given Clean up "Project_annotations_edit"
+        Given Clean up

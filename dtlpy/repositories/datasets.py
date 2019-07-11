@@ -119,19 +119,21 @@ class Datasets:
             self.logger.exception('Platform error updating dataset. id: %s' % dataset.id)
             raise PlatformException(response)
 
-    def create(self, dataset_name, labels=None, driver=None, attributes=None):
+    def create(self, dataset_name, labels=None, driver=None, attributes=None, ontology_ids=None):
         """
         Create a new dataset
 
+        :param ontology_ids: optional - dataset ontology
         :param dataset_name: name
-        :param attributes:
-        :param labels: dictionary of labels and colors
-        :param driver: dictionary of labels and colors
+        :param attributes: dataset's ontology's attributes
+        :param labels: dictionary of {tag: color} or list of label entities
+        :param driver: optional
         :return: Dataset object
         """
         # labels to list
         if labels is not None:
-            labels = entities.Dataset.serialize_labels(labels)
+            if not all(isinstance(label, entities.Label) for label in labels):
+                labels = entities.Dataset.serialize_labels(labels)
         else:
             labels = list()
         # get creator from token
@@ -150,9 +152,9 @@ class Datasets:
                                                  _json=response.json(),
                                                  project=self.project)
             # create ontology and recipe
-            recipe = dataset.recipes.create(ontology_ids=None, labels=labels, attributes=attributes)
-            # patch recipe to dataset
-            dataset = self.update(dataset=dataset, system_metadata=True)
+            dataset = dataset.recipes.create(ontology_ids=ontology_ids, labels=labels, attributes=attributes).dataset
+            # # patch recipe to dataset
+            # dataset = self.update(dataset=dataset, system_metadata=True)
         else:
             raise PlatformException(response)
         self.logger.info('Dataset was created successfully. Dataset id: %s' % dataset.id)

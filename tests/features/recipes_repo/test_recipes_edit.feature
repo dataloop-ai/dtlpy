@@ -10,4 +10,4 @@ Feature: Recipes repository Update function testing
         Then Recipe in host equals recipe eddited
 
     Scenario: Finally
-        Given Clean up "recipes_edit"
+        Given Clean up

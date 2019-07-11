@@ -154,7 +154,7 @@ class Annotation:
     def color(self):
         label = None
         for label in self.item.dataset.labels:
-            if label.tag == self.label:
+            if label.tag.lower() == self.label.lower():
                 return label.rgb
         if label is None:
             return 255, 255, 255
@@ -526,10 +526,7 @@ class Annotation:
         ############
         if is_video:
             # get fps
-            if item.fps is not None:
-                fps = item.fps
-            else:
-                raise PlatformException('400', 'Video items must have fps.')
+            fps = item.fps
 
             # get video-only attributes    
             automated = None
@@ -686,7 +683,7 @@ class Annotation:
                 if frame_num == first_frame_num:
                     # ignore first frame in snapshots
                     continue
-                snapshots.append(self.frames[frame_num].to_snapshot(to_snapshot=True))
+                snapshots.append(self.frames[frame_num].to_snapshot())
             # add metadata to json
             _json['metadata']['system']['frame'] = self.current_frame
             _json['metadata']['system']['startTime'] = self.start_time
@@ -767,7 +764,7 @@ class FrameAnnotation:
     def color(self):
         label = None
         for label in self.annotation.item.dataset.labels:
-            if label.tag == self.label:
+            if label.tag.lower() == self.label.lower():
                 return label.rgb
         if label is None:
             return 255, 255, 255
@@ -867,7 +864,11 @@ class FrameAnnotation:
         if frame_num is None:
             logger.warning(
                 'Missing frame number from annotation. using time stamp, annotation id: %s' % (_json['id']))
-            frame_num = timestamp * fps
+            if fps is not None:    
+                frame_num = timestamp * fps
+            else:
+                raise PlatformException('400', 'Cannot get annotation becaue it does not have frame num and item does '
+                                               'not have fps')
 
         return cls(
             # annotations
@@ -880,7 +881,7 @@ class FrameAnnotation:
             fixed=_json.get('fixed', False)
         )
 
-    def to_snapshot(self, to_snapshot=False, color=None):
+    def to_snapshot(self):
         snapshot_dict = {'frame': self.frame_num,
                          'startTime': self.timestamp,
                          'fixed': self.fixed,

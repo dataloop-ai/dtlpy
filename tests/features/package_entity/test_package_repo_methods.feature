@@ -18,4 +18,4 @@ Feature: Package Entity repo functions
         Then I receive a list of "2" versions
 
     Scenario: Finally
-        Given Clean up "package_repo_methods"
+        Given Clean up

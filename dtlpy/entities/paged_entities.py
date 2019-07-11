@@ -1,5 +1,6 @@
 import logging
 from .. import entities, utilities
+from multiprocessing.pool import ThreadPool
 import attr
 
 logger = logging.getLogger('dataloop.package')
@@ -35,11 +36,14 @@ class PagedEntities:
         if 'totalPagesCount' in result:
             self.total_pages_count = result['totalPagesCount']
         if 'items' in result:
-            self.items = utilities.List(
-                [self.item_entity.from_json(client_api=self.client_api,
-                                            _json=_json,
-                                            dataset=self.items_repository.dataset)
-                 for _json in result['items']])
+            if self.filters.resource == 'items':
+                self.items = utilities.List(
+                    [self.item_entity.from_json(client_api=self.client_api,
+                                                _json=_json,
+                                                dataset=self.items_repository.dataset)
+                    for _json in result['items']])
+            if self.filters.resource == 'annotations':
+                self.load_annotations(result=result)
 
     def __iter__(self):
         self.page_offset = 0
@@ -50,9 +54,9 @@ class PagedEntities:
             yield self.items
 
     def get_page(self):
-        result = self.items_repository.get_list(filters=self.filters,
-                                                page_offset=self.page_offset,
-                                                page_size=self.page_size)
+        self.filters.page = self.page_offset
+        self.filters.page_size = self.page_size
+        result = self.items_repository.get_list(filters=self.filters)
         self.process_result(result)
 
     def print(self):
@@ -85,3 +89,22 @@ class PagedEntities:
         """
         self.page_offset = page
         self.get_page()
+
+    
+    def load_single_annotation(self, i_json, _json, items, annotations):
+        if _json['itemId'] not in items:
+            items[_json['itemId']] = self.items_repository.get(item_id=_json['itemId'])
+        annotations[i_json] = self.item_entity.from_json(item=items[_json['itemId']], _json=_json)
+    
+    def load_annotations(self, result):
+        items = dict()
+        annotations = [None] * len(result['items'])
+        pool = ThreadPool(processes=32)
+        for i_json, _json in enumerate(result['items']):
+            pool.apply_async(
+                self.load_single_annotation, kwds={"i_json": i_json, "_json": _json, "items": items, "annotations": annotations}
+            )
+        pool.close()
+        pool.join()
+        pool.terminate()
+        self.items = annotations

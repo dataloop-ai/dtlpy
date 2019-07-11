@@ -21,4 +21,4 @@ Feature: Annotaions repository List function testing
         And The annotations in the list equals the annotations uploaded
 
     Scenario: Finally
-        Given Clean up "annotations_list"
+        Given Clean up

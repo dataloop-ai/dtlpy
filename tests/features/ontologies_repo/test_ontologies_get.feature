@@ -16,4 +16,4 @@ Feature: Ontologies repository get function testing
         Then "InternalServerError" exception should be raised
 
     Scenario: Finally
-        Given Clean up "ontologies_get"
+        Given Clean up

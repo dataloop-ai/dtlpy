@@ -3,8 +3,10 @@ import logging
 from dtlpy import entities, utilities, PlatformException
 from dtlpy.repositories.plugins.package_runner.package_runner import PackageRunner
 from dtlpy.repositories.plugins.plugin_uploader import PluginCreator
-from dtlpy.repositories.plugins.plugin_status_manager import get_status
 from dtlpy.repositories.plugins.plugin_generator import generate_plugin
+from dtlpy.repositories.plugins.plugin_invoker import PluginInvoker
+from dtlpy.repositories.plugins.plugin_deployer import PluginDeployer
+
 
 
 class Plugins(object):
@@ -158,16 +160,52 @@ class Plugins(object):
             self.logger.exception('Platform error editing plugin. id: %s' % plugin.id)
             raise PlatformException(response)
 
+    def deploy(self, plugin_id):
+        """
+        Deploy an existing plugin
+        :param plugin_id: Id of plugin to deploy
+        :return:
+        """
+        url_path = '/plugins/%s/deploy' % plugin_id
+
+        success, response = self.client_api.gen_request(req_type='post',
+                                                        path=url_path)
+        if success:
+            return response.text
+        else:
+            self.logger.exception('Platform error deploying plugin. id: %s' % plugin_id)
+            raise PlatformException(response)
+
+    def status(self, plugin_id):
+        url_path = '/plugins/%s/status' % plugin_id
+        success, response = self.client_api.gen_request(req_type='get',
+                                                        path=url_path)
+
+        if success:
+            return response.text
+        else:
+            self.logger.exception('Platform error getting plugin status. id: %s' % plugin_id)
+            raise PlatformException(response)
+
     def test_local_plugin(self):
         package_runner = PackageRunner()
-        package_runner.run_local_project()
+        return package_runner.run_local_project()
 
     def push_local_plugin(self):
         plugin_creator = PluginCreator()
         plugin_creator.create_plugin()
 
-    def get_local_plugin_status(self):
-        get_status()
+    def invoke_plugin(self, input_file_path='./mock.json'):
+        plugin_invoker = PluginInvoker(input_file_path)
+        return plugin_invoker.invoke_plugin()
+
+    def get_status_from_folder(self):
+        import dtlpy.repositories.plugins.plugin_status as plugin_status
+        plugin_status.get_status_from_folder()
+
+    def deploy_plugin_from_folder(self):
+        plugin_deployer = PluginDeployer()
+        return plugin_deployer.deploy_plugin()
 
     def generate_local_plugin(self):
         generate_plugin()

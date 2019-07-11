@@ -1,15 +1,14 @@
 def main():
     """
-    Annotate a batch of images using a model and upload to platform
-    :return:
-    """
+        Annotate a batch of images using a model and upload to platform
+        :return:
+        """
     import numpy as np
     from PIL import Image
     from keras.applications.imagenet_utils import decode_predictions
     from keras.applications.inception_v3 import InceptionV3, preprocess_input
-
-    import dtlpy as dl
     from dtlpy.utilities.annotations import ImageAnnotation
+    import dtlpy as dl
 
     ##############
     # load model #
