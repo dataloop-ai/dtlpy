@@ -18,9 +18,10 @@ logger = logging.getLogger('dataloop.repositories.items.downloader')
 DEFAULT_DOWNLOAD_OPTIONS = {
     'overwrite': False,  # merge with existing items
     'relative_path': True,  # maintain platform file system
-    'num_tries': 3,  # try to download 3 time before fail on item
     'to_images_folder': True  # download to "images" folder
 }
+
+NUM_TRIES = 3  # try to download 3 time before fail on item
 
 
 class Downloader:
@@ -147,9 +148,10 @@ class Downloader:
                     if item.type == 'dir':
                         continue
                     if save_locally:
-                        item_local_path, item_local_filepath = self.__get_local_filepath(local_path=local_path,
-                                                                                         item=item,
-                                                                                         download_options=download_options)
+                        item_local_path, item_local_filepath = self.__get_local_filepath(
+                            local_path=local_path,
+                            item=item,
+                            download_options=download_options)
                         if os.path.isfile(item_local_filepath) and download_options['overwrite'] is False:
                             logger.info('File Exists: {}'.format(item_local_filepath))
                             status[i_item] = 'exist'
@@ -220,7 +222,7 @@ class Downloader:
                                   progress):
         try:
             download = False
-            for i_try in range(download_options['num_tries']):
+            for i_try in range(NUM_TRIES):
                 logger.debug('download item: {}, try {}'.format(item.id, i_try))
                 download = self.__thread_download(item=item,
                                                   save_locally=save_locally,
@@ -563,7 +565,7 @@ class Progress(threading.Thread):
                 if remote_path is None:
                     self.upload_dict = dict()
                     break
-                self.upload_dict[remote_path] = bytes_read
+                self.upload_dict[remote_path] = float(bytes_read)
                 # update bar
                 total_size = np.sum(list(self.upload_dict.values()))
                 if total_size > self.progressbar.max_value:

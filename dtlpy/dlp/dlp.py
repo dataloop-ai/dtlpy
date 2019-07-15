@@ -14,6 +14,16 @@ import dtlpy as dlp
 import shlex
 from dtlpy import exceptions
 
+##########
+# Logger #
+##########
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("dataloop.cli")
+logger.setLevel(logging.DEBUG)
+console = logging.StreamHandler()
+console.setLevel(logging.DEBUG)
+logger.addHandler(console)
+
 keywords = {
     "login": [],
     "login-token": ["-t", "--token"],
@@ -47,7 +57,7 @@ keywords = {
             "--file-types",
             "-nw",
             "--num-workers",
-            "-u",
+            "-uo",
             "--upload-options",
         ],
         "download": [
@@ -58,13 +68,11 @@ keywords = {
             "-r",
             "--remote-path",
             "-ao",
-            "--annotation_options",
+            "--annotation-options",
             "-do",
-            "--download_options",
-            "-di",
-            "--dl_img",
+            "--download-options",
             "-nw",
-            "--num_workers",
+            "--num-workers",
             "-l",
             "--local-path",
             "-s",
@@ -103,7 +111,7 @@ keywords = {
         ],
     },
     "videos": {
-        "play": ["-l", "--item_path", "-d", "--dataset_name", "-p", "--project-name"]
+        "play": ["-l", "--item-path", "-d", "--dataset-name", "-p", "--project-name"]
     },
     "packages": {
         "ls": ["-p", "--project-name", "-g", "--package-id"],
@@ -151,6 +159,22 @@ keywords = {
     },
     "exit": [],
 }
+
+
+class StoreDictKeyPair(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        try:
+            my_dict = {}
+            for kv in values.split(";"):
+
+                k, v = kv.split("=")
+                if v.lower() in ['true', 'false']:
+                    v = v.lower() == 'true'
+                logger.info('Input dict option: {}:{}'.format(k, v))
+                my_dict[k] = v
+            setattr(namespace, self.dest, my_dict)
+        except:
+            raise ValueError('Bad input options. must be KEY=VAL;KEY=VAL...')
 
 
 class DlpCompleter(Completer):
@@ -225,22 +249,14 @@ def get_parser():
 
     a = subparsers.add_parser("login-token", help="Login by passing a valid token")
     required = a.add_argument_group("required named arguments")
-    required.add_argument(
-        "-t", "--token", metavar="", help="valid token", required=True
-    )
+    required.add_argument("-t", "--token", metavar="", help="valid token", required=True)
 
     a = subparsers.add_parser("login-secret", help="Login client id and secret")
     required = a.add_argument_group("required named arguments")
     required.add_argument("-e", "--email", metavar="", help="user email", required=True)
-    required.add_argument(
-        "-p", "--password", metavar="", help="user password", required=True
-    )
-    required.add_argument(
-        "-i", "--client-id", metavar="", help="client id", required=True
-    )
-    required.add_argument(
-        "-s", "--client-secret", metavar="", help="client secret", required=True
-    )
+    required.add_argument("-p", "--password", metavar="", help="user password", required=True)
+    required.add_argument("-i", "--client-id", metavar="", help="client id", required=True)
+    required.add_argument("-s", "--client-secret", metavar="", help="client secret", required=True)
 
     ########
     # Init #
@@ -294,197 +310,90 @@ def get_parser():
     # Datasets #
     ############
     subparser = subparsers.add_parser("datasets", help="Operations with datasets")
-    subparser_parser = subparser.add_subparsers(
-        dest="datasets", help="datasets operations"
-    )
+    subparser_parser = subparser.add_subparsers(dest="datasets", help="datasets operations")
 
     # ACTIONS #
 
     # list
     a = subparser_parser.add_parser("ls", help="List of datasets in project")
     required = a.add_argument_group("required named arguments")
-    required.add_argument(
-        "-p", "--project-name", metavar="", help="project name", required=True
-    )
+    required.add_argument("-p", "--project-name", metavar="", help="project name", required=True)
 
     # create
     a = subparser_parser.add_parser("create", help="Create a new dataset")
     required = a.add_argument_group("required named arguments")
-    required.add_argument(
-        "-p", "--project-name", metavar="", help="project name", required=True
-    )
-    required.add_argument(
-        "-d", "--dataset-name", metavar="", help="dataset name", required=True
-    )
+    required.add_argument("-p", "--project-name", metavar="", help="project name", required=True)
+    required.add_argument("-d", "--dataset-name", metavar="", help="dataset name", required=True)
 
     # upload
     a = subparser_parser.add_parser("upload", help="Upload directory to dataset")
     required = a.add_argument_group("required named arguments")
-    required.add_argument(
-        "-p", "--project-name", metavar="", help="project name", required=True
-    )
-    required.add_argument(
-        "-d", "--dataset-name", metavar="", help="dataset name", required=True
-    )
-    required.add_argument(
-        "-l", "--local-path", metavar="", help="local path", required=True
-    )
+    required.add_argument("-p", "--project-name", metavar="", help="project name", required=True)
+    required.add_argument("-d", "--dataset-name", metavar="", help="dataset name", required=True)
+    required.add_argument("-l", "--local-path", metavar="", help="local path", required=True)
     optional = a.add_argument_group("optional named arguments")
-    optional.add_argument(
-        "-r",
-        "--remote-path",
-        metavar="",
-        help="remote path to upload to. default: /",
-        default="/",
-    )
-    optional.add_argument(
-        "-f",
-        "--file-types",
-        metavar="",
-        help='Comma separated list of file types to upload, e.g ".jpg,.png". default: all',
-        default=None,
-    )
-    optional.add_argument(
-        "-nw", "--num-workers", metavar="", help="num of threads workers", default=None
-    )
-    optional.add_argument(
-        "-u",
-        "--upload-options",
-        metavar="",
-        help='"overwrite" or "merge"',
-        default="merge",
-    )
-
+    optional.add_argument("-r", "--remote-path", metavar="", help="remote path to upload to. default: /", default="/")
+    optional.add_argument("-f", "--file-types", metavar="", default=None,
+                          help='Comma separated list of file types to upload, e.g ".jpg,.png". default: all')
+    optional.add_argument("-nw", "--num-workers", metavar="", help="num of threads workers", default=None)
+    optional.add_argument("-uo", "--upload-options", action=StoreDictKeyPair, metavar="",
+                          help='list of upload options. format: KEY1=VAL1;KEY2=VAL2... . defaults: {}'.format(dlp.repositories.uploader.DEFAULT_UPLOAD_OPTIONS),
+                          default=None)
     # download
-    a = subparser_parser.add_parser(
-        "download", help="Download dataset to a local directory"
-    )
+    a = subparser_parser.add_parser("download", help="Download dataset to a local directory")
     required = a.add_argument_group("required named arguments")
-    required.add_argument(
-        "-p", "--project-name", metavar="", help="project name", required=True
-    )
-    required.add_argument(
-        "-d", "--dataset-name", metavar="", help="dataset name", required=True
-    )
+    required.add_argument("-p", "--project-name", metavar="", help="project name", required=True)
+    required.add_argument("-d", "--dataset-name", metavar="", help="dataset name", required=True)
     optional = a.add_argument_group("optional named arguments")
-    optional.add_argument(
-        "-r",
-        "--remote-path",
-        metavar="",
-        help="remote path to download from. default: /",
-        default="/**",
-    )
-    optional.add_argument(
-        "-ao",
-        "--annotation_options",
-        metavar="",
-        help="which annotation to download. options: json,instance,mask",
-        default="",
-    )
-    optional.add_argument(
-        "-do",
-        "--download_options",
-        metavar="",
-        help="download options CSV : merge/overwrite,relative-path/absolute-path",
-        default="",
-    )
-    optional.add_argument(
-        "-di",
-        "--dl_img",
-        help="download image or not",
-        action="store_true",
-        default=True,
-    )
-    optional.add_argument(
-        "-nw",
-        "--num_workers",
-        metavar="",
-        help="number of download workers",
-        default=None,
-    )
+    optional.add_argument("-r", "--remote-path", metavar="", default="/**",
+                          help="remote path to download from. default: /")
+    optional.add_argument("-ao", "--annotation-options", metavar="", default="",
+                          help="which annotation to download. options: json,instance,mask")
+    optional.add_argument("-do", "--download-options", action=StoreDictKeyPair, metavar="",
+                          default=None,
+                          help='list of download options. format: KEY1=VAL1;KEY2=VAL2... . defaults: {}'.format(dlp.repositories.uploader.DEFAULT_UPLOAD_OPTIONS))
+    optional.add_argument("-nw", "--num-workers", metavar="", default=None, help="number of download workers")
     # optional.add_argument('-o', '--opacity', metavar='', type=float,
     #                       help='opacity when marking image. range:[0,1]. default: 1', default=1)
-    optional.add_argument(
-        "-l", "--local-path", metavar="", help="local path", default=None
-    )
+    optional.add_argument("-l", "--local-path", metavar="", help="local path", default=None)
 
     ###################
     # files and items #
     ###################
     subparser = subparsers.add_parser("files", help="Operations with files and items")
-    subparser_parser = subparser.add_subparsers(
-        dest="files", help="datasets files and items"
-    )
+    subparser_parser = subparser.add_subparsers(dest="files", help="datasets files and items")
 
     # ACTIONS #
 
     # list
     a = subparser_parser.add_parser("ls", help="List of files in dataset")
     required = a.add_argument_group("required named arguments")
-    required.add_argument(
-        "-p", "--project-name", metavar="", help="project name", required=True
-    )
-    required.add_argument(
-        "-d", "--dataset-name", metavar="", help="dataset name", required=True
-    )
+    required.add_argument("-p", "--project-name", metavar="", help="project name", required=True)
+    required.add_argument("-d", "--dataset-name", metavar="", help="dataset name", required=True)
     optional = a.add_argument_group("optional named arguments")
-    optional.add_argument(
-        "-o", "--page", metavar="", help="page number (integer)", default=0
-    )
-    optional.add_argument(
-        "-r", "--remote-path", metavar="", help="remote path", default="/"
-    )
+    optional.add_argument("-o", "--page", metavar="", help="page number (integer)", default=0)
+    optional.add_argument("-r", "--remote-path", metavar="", help="remote path", default="/")
 
     # upload
     a = subparser_parser.add_parser("upload", help="Upload a single file")
     required = a.add_argument_group("required named arguments")
-    required.add_argument(
-        "-f", "--filename", metavar="", help="local filename to upload", required=True
-    )
-    required.add_argument(
-        "-p", "--project-name", metavar="", help="project name", required=True
-    )
-    required.add_argument(
-        "-d", "--dataset-name", metavar="", help="dataset name", required=True
-    )
+    required.add_argument("-f", "--filename", metavar="", help="local filename to upload", required=True)
+    required.add_argument("-p", "--project-name", metavar="", help="project name", required=True)
+    required.add_argument("-d", "--dataset-name", metavar="", help="dataset name", required=True)
     optional = a.add_argument_group("optional named arguments")
-    optional.add_argument(
-        "-r", "--remote-path", metavar="", help="remote path", default="/"
-    )
-    optional.add_argument(
-        "-t", "--item-type", metavar="", help='"folder", "file"', default="file"
-    )
+    optional.add_argument("-r", "--remote-path", metavar="", help="remote path", default="/")
+    optional.add_argument("-t", "--item-type", metavar="", help='"folder", "file"', default="file")
 
     # split video to chunks
-    optional.add_argument(
-        "-sc",
-        "--split-chunks",
-        metavar="",
-        help="Video splitting parameter: Number of chunks to split",
-        default=None,
-    )
-    optional.add_argument(
-        "-ss",
-        "--split-seconds",
-        metavar="",
-        help="Video splitting parameter: Seconds of each chuck",
-        default=None,
-    )
-    optional.add_argument(
-        "-st",
-        "--split-times",
-        metavar="",
-        help="Video splitting parameter: List of seconds to split at. e.g 600,1800,2000",
-        default=None,
-    )
+    optional.add_argument("-sc", "--split-chunks", metavar="", default=None,
+                          help="Video splitting parameter: Number of chunks to split")
+    optional.add_argument("-ss", "--split-seconds", metavar="", default=None,
+                          help="Video splitting parameter: Seconds of each chuck")
+    optional.add_argument("-st", "--split-times", metavar="", default=None,
+                          help="Video splitting parameter: List of seconds to split at. e.g 600,1800,2000")
     # encode
-    optional.add_argument(
-        "-e",
-        "--encode",
-        help="encode video to mp4, remove bframes and upload",
-        action="store_true",
-        default=False,
-    )
+    optional.add_argument("-e", "--encode", action="store_true", default=False,
+                          help="encode video to mp4, remove bframes and upload")
 
     ##########
     # videos #
@@ -497,127 +406,77 @@ def get_parser():
     # play
     a = subparser_parser.add_parser("play", help="Play video")
     optional = a.add_argument_group("optional named arguments")
-    optional.add_argument(
-        "-l",
-        "--item_path",
-        metavar="",
-        help="Video remote path in platform. e.g /dogs/dog.mp4",
-        default=None,
-    )
-    optional.add_argument(
-        "-d", "--dataset_name", metavar="", help="Dataset name", default=None
-    )
-    optional.add_argument(
-        "-p", "--project-name", metavar="", help="Project name", default=None
-    )
+    optional.add_argument("-l", "--item-path", metavar="", default=None,
+                          help="Video remote path in platform. e.g /dogs/dog.mp4")
+    optional.add_argument("-d", "--dataset-name", metavar="", help="Dataset name", default=None)
+    optional.add_argument("-p", "--project-name", metavar="", help="Project name", default=None)
 
     ############
     # packages #
     ############
     subparser = subparsers.add_parser("packages", help="Operations with package")
-    subparser_parser = subparser.add_subparsers(
-        dest="packages", help="package operations"
-    )
+    subparser_parser = subparser.add_subparsers(dest="packages", help="package operations")
 
     # list
     a = subparser_parser.add_parser("ls", help="List all package")
     optional = a.add_argument_group("optional named arguments")
-    optional.add_argument(
-        "-p",
-        "--project-name",
-        metavar="",
-        help="list a project's package",
-        default=None,
-    )
-    optional.add_argument(
-        "-g", "--package-id", metavar="", help="list package's artifacts", default=None
-    )
+    optional.add_argument("-p", "--project-name", metavar="", help="list a project's package", default=None)
+    optional.add_argument("-g", "--package-id", metavar="", help="list package's artifacts", default=None)
 
     # pack
     a = subparser_parser.add_parser("pack", help="Create a new package")
     required = a.add_argument_group("required named arguments")
-    required.add_argument(
-        "-g", "--package-name", metavar="", help="package name", required=True
-    )
-    required.add_argument(
-        "-ds", "--description", metavar="", help="package description", required=True
-    )
-    required.add_argument(
-        "-dir", "--directory", metavar="", help="Local path of packaeg script", required=True
-    )
-    required.add_argument(
-        "-p", "--project-name", metavar="", help="Project name", required=True
-    )
+    required.add_argument("-g", "--package-name", metavar="", help="package name", required=True)
+    required.add_argument("-ds", "--description", metavar="", help="package description", required=True)
+    required.add_argument("-dir", "--directory", metavar="", help="Local path of packaeg script", required=True)
+    required.add_argument("-p", "--project-name", metavar="", help="Project name", required=True)
     optional = a.add_argument_group("optional named arguments")
-    optional.add_argument(
-        "-d", "--dataset_name", metavar="", help="Dataset name", default=None
-    )
+    optional.add_argument("-d", "--dataset-name", metavar="", help="Dataset name", default=None)
 
     # delete
     a = subparser_parser.add_parser("delete", help="Delete a package forever...")
     optional = a.add_argument_group("optional named arguments")
-    optional.add_argument(
-        "-d", "--dataset_name", metavar="", help="Dataset name", default=None
-    )
+    optional.add_argument("-d", "--dataset-name", metavar="", help="Dataset name", default=None)
 
     # unpack
     a = subparser_parser.add_parser("unpack", help="Download and unzip source code")
     required = a.add_argument_group("required named arguments")
-    required.add_argument(
-        "-g", "--package-id", metavar="", help="package id", required=True
-    )
-    required.add_argument(
-        "-p", "--project-name", metavar="", help="Project name", required=True
-    )
+    required.add_argument("-g", "--package-id", metavar="", help="package id", required=True)
+    required.add_argument("-p", "--project-name", metavar="", help="Project name", required=True)
     optional = a.add_argument_group("optional named arguments")
-    optional.add_argument(
-        "-d",
-        "--directory",
-        metavar="",
-        help="source code directory. default: cwd",
-        default=os.getcwd(),
-    )
+    optional.add_argument("-d", "--directory", metavar="", default=os.getcwd(),
+                          help="source code directory. default: cwd")
 
     ############
     # Plugins #
     ############
     subparser = subparsers.add_parser("plugins", help="Operations with plugins")
-    subparser_parser = subparser.add_subparsers(
-        dest="plugins", help="plugin operations"
-    )
+    subparser_parser = subparser.add_subparsers(dest="plugins", help="plugin operations")
 
     # ACTIONS #
 
     # generate
-    subparser_parser.add_parser(
-        "generate", help="Create a boilerplate for a new plugin"
-    )
+    subparser_parser.add_parser("generate", help="Create a boilerplate for a new plugin")
 
     # push
     subparser_parser.add_parser("push", help="Push the plugin to the platform")
 
     a = subparser_parser.add_parser('invoke', help='Invoke plugin with arguments on remote')
     optional = a.add_argument_group('optional named arguments')
-    optional.add_argument('-f', '--file', metavar='', help='Location of file with invokation inputs',
-                          default='./mock.json')
+    optional.add_argument('-f', '--file', metavar='', default='./mock.json',
+                          help='Location of file with invocation inputs')
 
-    a = subparser_parser.add_parser('deploy', help='Deploy plugin on remote')
+    _ = subparser_parser.add_parser('deploy', help='Deploy plugin on remote')
 
-    a = subparser_parser.add_parser('status', help='Get the status of the plugins deployment')
+    _ = subparser_parser.add_parser('status', help='Get the status of the plugins deployment')
     # test
-    subparser_parser.add_parser(
-        "test", help="Tests that plugin locally using mock.json"
-    )
+    subparser_parser.add_parser("test", help="Tests that plugin locally using mock.json")
 
     ############
     # Checkout #
     ############
-    subparser = subparsers.add_parser(
-        "checkout", help="Operations with setting the state of the cli"
-    )
-    subparser_parser = subparser.add_subparsers(
-        dest="checkout", help="package operations"
-    )
+    subparser = subparsers.add_parser("checkout", help="Operations with setting the state of the cli")
+    subparser_parser = subparser.add_subparsers(dest="checkout", help="package operations")
 
     a = subparser_parser.add_parser("project", help="Checks out to a different project")
     required = a.add_argument_group("required named arguments")
@@ -635,81 +494,45 @@ def get_parser():
     # Sessions #
     ############
     subparser = subparsers.add_parser("sessions", help="Operations with sessions")
-    subparser_parser = subparser.add_subparsers(
-        dest="sessions", help="Operations with sessions"
-    )
+    subparser_parser = subparser.add_subparsers(dest="sessions", help="Operations with sessions")
 
     # ACTIONS #
 
     # list
     a = subparser_parser.add_parser("ls", help="List artifacts for session")
     required = a.add_argument_group("required named arguments")
-    required.add_argument(
-        "-p", "--project-name", metavar="", help="project name", required=True
-    )
+    required.add_argument("-p", "--project-name", metavar="", help="project name", required=True)
     optional = a.add_argument_group("optional named arguments")
-    optional.add_argument(
-        "-i", "--session-id", metavar="", help="List artifacts in session id"
-    )
+    optional.add_argument("-i", "--session-id", metavar="", help="List artifacts in session id")
 
     # tree
-    a = subparser_parser.add_parser(
-        "tree", help="Print tree representation of sessions"
-    )
+    a = subparser_parser.add_parser("tree", help="Print tree representation of sessions")
     required = a.add_argument_group("required named arguments")
-    required.add_argument(
-        "-p", "--project-name", metavar="", help="project name", required=True
-    )
+    required.add_argument("-p", "--project-name", metavar="", help="project name", required=True)
 
     # create
     a = subparser_parser.add_parser("create", help="Create a new Session")
     required = a.add_argument_group("required named arguments")
-    required.add_argument(
-        "-s", "--session-name", metavar="", help="session name", required=True
-    )
-    required.add_argument(
-        "-g", "--package-id", metavar="", help="source code", required=True
-    )
-    required.add_argument(
-        "-p", "--pipe-id", metavar="", help="pip to run", required=True
-    )
-    required.add_argument(
-        "-d", "--description", metavar="", help="session description", required=True
-    )
+    required.add_argument("-s", "--session-name", metavar="", help="session name", required=True)
+    required.add_argument("-g", "--package-id", metavar="", help="source code", required=True)
+    required.add_argument("-p", "--pipe-id", metavar="", help="pip to run", required=True)
+    required.add_argument("-d", "--description", metavar="", help="session description", required=True)
 
     # upload
     a = subparser_parser.add_parser("upload", help="Add artifact to session")
     required = a.add_argument_group("required named arguments")
-    required.add_argument(
-        "-s", "--session-id", metavar="", help="session id", required=True
-    )
-    required.add_argument(
-        "-f", "--filename", metavar="", help="local filename to add", required=True
-    )
-    required.add_argument(
-        "-t", "--type", metavar="", help="artifact type", required=True
-    )
+    required.add_argument("-s", "--session-id", metavar="", help="session id", required=True)
+    required.add_argument("-f", "--filename", metavar="", help="local filename to add", required=True)
+    required.add_argument("-t", "--type", metavar="", help="artifact type", required=True)
     optional = a.add_argument_group("optional named arguments")
-    optional.add_argument(
-        "-d",
-        "--description",
-        metavar="",
-        help="file description. default: ''",
-        default="",
-    )
+    optional.add_argument("-d", "--description", metavar="", help="file description. default: ''", default="")
 
     # download
     a = subparser_parser.add_parser("download", help="Download artifact from session")
     required = a.add_argument_group("required named arguments")
-    required.add_argument(
-        "-s", "--session-id", metavar="", help="session id", required=True
-    )
-    required.add_argument(
-        "-a", "--artifact-id", metavar="", help="artifact id", required=True
-    )
-    required.add_argument(
-        "-d", "--local-path", metavar="", help="download to location", required=True
-    )
+    required.add_argument("-s", "--session-id", metavar="", help="session id", required=True)
+    required.add_argument("-a", "--artifact-id", metavar="", help="artifact id", required=True)
+    required.add_argument("-d", "--local-path", metavar="", help="download to location", required=True)
 
     # #########
     # # Pipes #
@@ -876,9 +699,9 @@ def run(args, logger):
             dataset.items.upload(
                 local_path=args.local_path,
                 remote_path=args.remote_path,
-                filet_ypes=args.file_types,
+                file_types=args.file_types,
                 num_workers=args.num_workers,
-                upload_options=args.upload_options,
+                upload_options=args.upload_options
             )
 
         elif args.datasets == "download":
@@ -887,15 +710,6 @@ def run(args, logger):
                 args.num_workers = int(args.num_workers)
             project = dlp.projects.get(project_name=args.project_name)
             dataset = project.datasets.get(dataset_name=args.dataset_name)
-            download_options = {}
-            if len(args.download_options) > 0:
-                do_arr = args.download_options.split(",")
-                if len(do_arr) > 0 and do_arr[0] == "overwrite":
-                    download_options["overwrite"] = True
-                    print("[INFO] Overwrite mode")
-                if len(do_arr) > 1 and do_arr[1] == "relative-path":
-                    download_options["relative_path"] = True
-                    print("[INFO] relative path")
             annotation_options = list()
             if len(args.annotation_options) > 0:
                 annotation_options = args.annotation_options.split(",")
@@ -909,7 +723,7 @@ def run(args, logger):
                 filters=filters,
                 local_path=args.local_path,
                 annotation_options=annotation_options,
-                download_options=download_options,
+                download_options=args.download_options,
                 num_workers=args.num_workers,
             )
         else:
@@ -944,9 +758,8 @@ def run(args, logger):
 
         elif args.files == "upload":
             project = dlp.projects.get(project_name=args.project_name)
-            project.datasets.get(dataset_name=args.dataset_name).items.upload(
-                local_path=args.filename, remote_path=args.remote_path
-            )
+            project.datasets.get(dataset_name=args.dataset_name).items.upload(local_path=args.filename,
+                                                                              remote_path=args.remote_path)
 
         else:
             print('Type "dlp files --help" for options')
@@ -1199,16 +1012,6 @@ def run(args, logger):
 
 
 def main():
-    ##########
-    # Logger #
-    ##########
-    logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger("dataloop.cli")
-    logger.setLevel(logging.DEBUG)
-    console = logging.StreamHandler()
-    console.setLevel(logging.DEBUG)
-    logger.addHandler(console)
-
     parser = get_parser()
     args = parser.parse_args()
 
@@ -1224,6 +1027,7 @@ def main():
                 completer=DlpCompleter(),
             )
             try:
+                parser = get_parser()
                 args = parser.parse_args(shlex.split(text))
                 if args.operation == "exit":
                     print("Goodbye ;)")

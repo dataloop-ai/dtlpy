@@ -16,8 +16,9 @@ logger = logging.getLogger('dataloop.repositories.items.uploader')
 DEFAULT_UPLOAD_OPTIONS = {
     'overwrite': False,  # merge with existing items
     'relative_path': False,  # upload without head folder (only content)
-    'num_tries': 3  # try to upload 3 time before fail on item
 }
+
+NUM_TRIES = 3  # try to upload 3 time before fail on item
 
 
 class Uploader:
@@ -125,7 +126,10 @@ class Uploader:
         try:
             # get pages of item according to remote filepath
             filters = entities.Filters()
-            filters.add(field='filename', values=remote_path + '/**')
+            if remote_path.endswith('/'):
+                filters.add(field='filename', values=remote_path + '**')
+            else:
+                filters.add(field='filename', values=remote_path + '/**')
             filters.add(field='type', values='file')
             pages = self.items_repository.list(filters=filters)
             # join path and filename for all uploads
@@ -174,6 +178,8 @@ class Uploader:
             item_remote_name = os.path.basename(filepath)
             if not item_remote_path.endswith('/'):
                 item_remote_path += '/'
+            if not item_remote_path.startswith('/'):
+                item_remote_path = '/' + item_remote_path
             item_remote_filepaths[i_item] = [item_remote_path, item_remote_name]
 
         ##############################
@@ -253,7 +259,6 @@ class Uploader:
                                                                           'annotations': annotations_filepath,
                                                                           'item_remote_path': item_remote_path,
                                                                           'item_remote_name': item_remote_name,
-                                                                          'num_tries': upload_options['num_tries'],
                                                                           'callback': callback,
                                                                           'status': status,
                                                                           'success': success,
@@ -437,10 +442,10 @@ class Uploader:
             raise
 
     def __upload_single_item_wrapper(self, i_item, filepath, annotations, item_remote_path,
-                                     item_remote_name, num_tries, callback, status, success, output, errors):
+                                     item_remote_name, callback, status, success, output, errors):
         try:
             result = False
-            for i_try in range(num_tries):
+            for i_try in range(NUM_TRIES):
                 logger.debug('upload item: {}, try {}'.format(item_remote_name, i_try))
                 result = self.__upload_single_item(filepath=filepath,
                                                    annotations=annotations,
@@ -568,7 +573,6 @@ class Uploader:
                                                                           'annotations': annotations,
                                                                           'item_remote_path': item_remote_path,
                                                                           'item_remote_name': item_remote_name,
-                                                                          'num_tries': upload_options['num_tries'],
                                                                           'callback': callback,
                                                                           'status': status,
                                                                           'success': success,

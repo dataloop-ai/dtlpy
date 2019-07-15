@@ -9,6 +9,8 @@ import logging
 
 logger = logging.getLogger('dataloop.cookie')
 
+NUM_TRIES = 3
+
 
 class CookieIO:
     """
@@ -47,14 +49,13 @@ class CookieIO:
 
     def get(self, key):
         logger.debug('COOKIE: Reading key: {}'.format(key))
-        num_tries = 3
-        for i in range(num_tries):
+        for i in range(NUM_TRIES):
             try:
                 with open(self.COOKIE, 'r') as fp:
                     cfg = json.load(fp)
                 break
             except json.decoder.JSONDecodeError:
-                if i == (num_tries-1):
+                if i == (NUM_TRIES - 1):
                     raise
                 time.sleep(0.1)
                 continue
