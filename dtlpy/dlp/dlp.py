@@ -162,6 +162,27 @@ class DlpCompleter(Completer):
         finally:
             logging.disable(logging.NOTSET)
 
+    def need_param(self, cmd, word_before_cursor):
+        need_param = False
+        bool_flags_list = ['--overwrite', '--no-relative-path',
+                           '--with-text', '--deploy', '--not-items-folder', '--encode']
+
+        if len(cmd) > 2 and cmd[-2].startswith('--') and word_before_cursor != '':
+            need_param = not self.get_param(cmd=cmd, word_before_cursor=word_before_cursor) in bool_flags_list
+        elif cmd[-1].startswith('-') and word_before_cursor == '':
+            need_param = not self.get_param(cmd=cmd, word_before_cursor=word_before_cursor) in bool_flags_list
+
+        return need_param
+
+    @staticmethod
+    def get_param(cmd, word_before_cursor):
+        if word_before_cursor == '':
+            param = cmd[-1]
+        else:
+            param = cmd[-2]
+
+        return param
+
     def get_completions(self, document, complete_event):
         """
         Get command completion
@@ -182,12 +203,8 @@ class DlpCompleter(Completer):
 
         # suggest keywords
         suggestions = list()
-        if (len(cmd) > 2 and cmd[-2].startswith('-') and word_before_cursor != '') or (
-                cmd[-1].startswith('-') and word_before_cursor == ''):
-            if word_before_cursor == '':
-                param = cmd[-1]
-            else:
-                param = cmd[-2]
+        if self.need_param(cmd=cmd, word_before_cursor=word_before_cursor):
+            param = self.get_param(cmd=cmd, word_before_cursor=word_before_cursor)
             if thread_state in [StateEnum.START, StateEnum.CONTINUE]:
                 if param in ['--project-name', '--dataset-name']:
                     thread = threading.Thread(
