@@ -154,6 +154,7 @@ class DlpCompleter(Completer):
                     param_suggestions = ['mask', 'json', 'instance', '"mask, json"',
                                          '"mask, instance"', '"json, instance"', '"mask, json, instance"']
                 else:
+                    thread_state = StateEnum.START
                     param_suggestions = list()
         except Exception:
             param_suggestions = list()
@@ -402,8 +403,8 @@ def get_parser():
                           help="Path for local annotations to upload with items")
     optional.add_argument("-ow", "--overwrite", dest="overwrite", action='store_true', default=False,
                           help="Overwrite existing item")
-    optional.add_argument("-rp", "--relative-path", dest="relative_path", action='store_true', default=False,
-                          help="Upload with relative path")
+    optional.add_argument("-rp", "--no-relative-path", dest="relative_path", action='store_false', default=True,
+                          help="Upload flatten")
 
     # download
     a = subparser_parser.add_parser("download", help="Download dataset to a local directory")
@@ -416,8 +417,8 @@ def get_parser():
                           help="which annotation to download. options: json,instance,mask", default=None)
     optional.add_argument("-r", "--remote-path", metavar='\b',
                           help="which annotation to download. options: json,instance,mask", default=None)
-    optional.add_argument("-rp", "--relative-path", action='store_true', default=False,
-                          help="download with remote file structure")
+    optional.add_argument("-rp", "--no-relative-path", action='store_false', default=True,
+                          help="download flatten")
     optional.add_argument("-ow", "--overwrite", action='store_true', default=False,
                           help="Overwrite existing item")
     optional.add_argument("-nw", "--num-workers", metavar='\b', default=None,
@@ -435,6 +436,9 @@ def get_parser():
     a = subparser_parser.add_parser("checkout", help="checkout a dataset")
     required = a.add_argument_group("required named arguments")
     required.add_argument("-d", "--dataset-name", metavar='\b', help="dataset name")
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument("-p", "--project-name", metavar='\b', default=None,
+                          help="project name. Default taken from checked out (if checked out)")
 
     #########
     # items #
@@ -860,6 +864,8 @@ def run(args, parser):
             project.datasets.list().print()
 
         elif args.datasets == "checkout":
+            if args.project_name is not None:
+                dlp.projects.checkout(args.project_name)
             dlp.datasets.checkout(args.dataset_name)
 
         elif args.datasets == "web":
@@ -887,7 +893,7 @@ def run(args, parser):
                 file_types=args.file_types,
                 num_workers=args.num_workers,
                 overwrite=args.overwrite,
-                relative_path=args.relative_path,
+                relative_path=not args.no_relative_path,
                 local_annotations_path=args.local_annotations_path,
             )
 
@@ -920,7 +926,7 @@ def run(args, parser):
                 local_path=args.local_path,
                 annotation_options=annotation_options,
                 overwrite=args.overwrite,
-                relative_path=args.relative_path,
+                relative_path=not args.no_relative_path,
                 num_workers=args.num_workers,
                 with_text=args.with_text,
                 thickness=int(args.thickness),
@@ -1110,13 +1116,10 @@ def run(args, parser):
             print(datetime.datetime.utcnow())
 
         elif args.plugins == "push":
-            # deploy?
-            deploy = True if args.deploy.lower() == 'true' else False
-
-            dlp.plugins.push_local_plugin(deploy=deploy, revision=args.revision)
+            dlp.plugins.push_local_plugin(deploy=args.deploy, revision=args.revision)
             print(datetime.datetime.utcnow())
             print("Successfully pushed the plugin to remote")
-
+            
         elif args.plugins == "test":
             print(datetime.datetime.utcnow())
             # dlp.plugins.test_local_plugin()

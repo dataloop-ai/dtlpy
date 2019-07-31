@@ -200,6 +200,9 @@ class Uploader:
                 remote_path=remote_path,
                 relative_path=relative_path,
             )
+
+            # TODO - if not relative path: check for multiple files in filepaths
+
         else:
             num_files = len(binaries_list)
             item_remote_filepaths = self.__create_remote_filepath_list_binaries(
@@ -267,11 +270,7 @@ class Uploader:
                 if item_remote_filepath not in remote_existence_dict:
                     # item did not found in dict ( thread still running)  - get existence specifically
                     try:
-                        remote_existence_dict[
-                            item_remote_filepath
-                        ] = self.items_repository.get(
-                            filepath="{}".format(item_remote_filepath)
-                        )
+                        remote_existence_dict[item_remote_filepath] = self.items_repository.get(filepath="{}".format(item_remote_filepath))
                     except exceptions.NotFound:
                         remote_existence_dict[item_remote_filepath] = None
 

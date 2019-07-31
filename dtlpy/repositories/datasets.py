@@ -62,14 +62,13 @@ class Datasets:
 
     def checkout(self, identifier):
         if self.project is not None:
-            project = self.project.id
-            self.project.checkout(identifier=project)
+            self.project.checkout()
         else:
-            project = self.client_api.state_io.get('project', local=True)
+            project_id = self.client_api.state_io.get('project', local=True)
+            if project_id is None:
+                raise Exception("Please checkout a valid project before trying to checkout a dataset")
             projects = repositories.Projects(client_api=self.client_api, logger=self.logger)
-            self.project = projects.get(project_id=project)
-        if project is None:
-            raise Exception("Please checkout a valid project before trying to checkout a dataset")
+            self.project = projects.get(project_id=project_id)
         dataset = self.__get_by_identifier(identifier)
         self.client_api.state_io.put('dataset', dataset.id, local=True)
         self.logger.info('Checked out to dataset {}'.format(dataset.name))
@@ -217,93 +216,3 @@ class Datasets:
         return downloader.download_annotations(dataset=dataset,
                                                local_path=local_path,
                                                overwrite=overwrite)
-
-    def set_items_metadata(self, dataset_name=None, dataset_id=None, filters=None,
-                           key_val_list=None, percent=None, random=True):
-        """
-        Set of metadata to post on items in filter.
-
-        :param dataset_name: optional - search by name
-        :param dataset_id: optional - search by id
-        :param filters: Filters entity or a dictionary containing filters parameters
-        :param key_val_list: list of dictionary to set in metadata. e.g [{'split': 'training'}, {'split': 'validation'}
-        :param percent: list of percentages to set the key_val_list
-        :param random: bool. shuffle the items before setting the metadata
-        :return: Output (list)
-        """
-
-        def set_single_item(i_item, item, key_val):
-            try:
-                metadata = item.to_json()
-                for key, val in key_val.items():
-                    metadata[key] = val
-                item.from_dict(metadata)
-                dataset.items.update(item)
-                success[i_item] = True
-            except Exception as err:
-                success[i_item] = False
-                errors[i_item] = '%s\n%s' % (err, traceback.format_exc())
-
-        if key_val_list is None or percent is None:
-            self.logger.exception('Must input name and percents')
-            raise PlatformException('400', 'Must input name and percents')
-        if not (isinstance(key_val_list, list) and isinstance(key_val_list[0], dict)):
-            self.logger.exception(
-                '"key_val" must be a list of dictionaries of keys and values to store in items metadata')
-            raise PlatformException(
-                error='400',
-                message='"key_val" must be a list of dictionaries of keys and values to store in items metadata')
-        if np.sum(percent) != 1:
-            self.logger.exception('"percent" must sum up to 1')
-            raise PlatformException('400', '"percent" must sum up to 1')
-        # start
-        dataset = self.get(dataset_name=dataset_name, dataset_id=dataset_id)
-        pages = dataset.items.list(filters=filters)
-        num_items = pages.items_count
-        # get list of number of items for each percent
-        percent_cumsum = num_items * np.cumsum(percent)
-        # add zero at index 0
-        percent_cumsum = np.insert(percent_cumsum, 0, 0).astype(int)
-        if random:
-            indices = np.random.permutation(num_items)
-        else:
-            indices = np.arange(num_items)
-        splits = [indices[percent_cumsum[i]:percent_cumsum[i + 1]] for i in range(len(percent_cumsum) - 1)]
-        success = [False for _ in range(pages.items_count)]
-        output = [None for _ in range(pages.items_count)]
-        errors = [None for _ in range(pages.items_count)]
-        progress = Progress(max_val=num_items, progress_type='download')
-        pool = ThreadPool(processes=32)
-        progress.start()
-        try:
-            i_items = 0
-            for page in pages:
-                for item in page:
-                    if item.type == 'dir':
-                        success[i_items] = True
-                        i_items += 1
-                        continue
-                    item_split_name = [key_val_list[i] for i, inds in enumerate(splits) if i_items in inds]
-                    output[i_items] = item.id
-                    pool.apply_async(set_single_item, kwds={'i_item': i_items,
-                                                            'item': item,
-                                                            'key_val_list': item_split_name})
-                    i_items += 1
-        except Exception as e:
-            self.logger.exception(e)
-        finally:
-            pool.close()
-            pool.join()
-            progress.queue.put((None,))
-            progress.queue.join()
-            progress.finish()
-        # remove None items (dirs)
-        success = [x for x in success if x is not None]
-        output = [x for x in output if x is not None]
-        good = success.count(True)
-        bad = success.count(False)
-        self.logger.info('Set metadata succefully for %d/%d' % (good, good + bad))
-        # log error
-        dummy = [self.logger.exception(errors[i_job]) for i_job, suc in enumerate(success) if suc is False]
-        # remove empty cells
-        return output

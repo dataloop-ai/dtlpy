@@ -246,6 +246,7 @@ class Plugins:
         success, response = self.client_api.gen_request(req_type='post',
                                                         path=url_path)
         if success:
+            logging.info("Successfully deployed the plugin, deployment id is: %s" % response.text)
             return response.text
         else:
             self.logger.exception('Platform error deploying plugin. id: %s' % plugin_id)

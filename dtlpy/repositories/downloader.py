@@ -200,7 +200,7 @@ class Downloader:
                             success[i_item] = True
                             progress.queue.put((status[i_item],))
                             i_item += 1
-                            if annotation_options:
+                            if annotation_options and item.annotated:
                                 # download annotations only
                                 pool.apply_async(
                                     self.__download_img_annotations,
