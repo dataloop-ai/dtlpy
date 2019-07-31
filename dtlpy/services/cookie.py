@@ -16,24 +16,26 @@ class CookieIO:
     """
     Cookie interface for Dataloop parameters
     """
-    cwd = os.getcwd()
-    local_dataloop_dir = os.path.join(cwd, '.dataloop')
-    global_dataloop_dir = os.path.join(os.path.expanduser('~'), '.dataloop')
-    global_cookie_file = os.path.join(global_dataloop_dir, 'cookie.json')
-    local_cookie_file = os.path.join(local_dataloop_dir, 'state.json')
-    local_cookie = None
-    global_cookie = None
+    def __init__(self, path, create=True):
+        self.COOKIE = path
+        if create:
+            self.create()
 
     @staticmethod
     def init():
-        CookieIO.global_cookie = CookieIO(CookieIO.global_cookie_file)
+        global_dataloop_dir = os.path.join(os.path.expanduser('~'), '.dataloop')
+        global_cookie_file = os.path.join(global_dataloop_dir, 'cookie.json')
+        return CookieIO(global_cookie_file)
 
     @staticmethod
-    def init_local_cookie():
-        CookieIO.local_cookie = CookieIO(CookieIO.local_cookie_file)
+    def init_local_cookie(create=False):
+        cwd = os.getcwd()
+        local_dataloop_dir = os.path.join(cwd, '.dataloop')
+        local_cookie_file = os.path.join(local_dataloop_dir, 'state.json')
+        return CookieIO(local_cookie_file, create=create)
 
-    def __init__(self, path):
-        self.COOKIE = path
+    def create(self):
+        logger.debug('COOKIE.crate: File: {}'.format(self.COOKIE))
         # create directory '.dataloop' if not exists
         if not os.path.exists(os.path.dirname(self.COOKIE)):
             os.makedirs(os.path.dirname(self.COOKIE))
@@ -47,11 +49,19 @@ class CookieIO:
             print('{} is corrupted'.format(self.COOKIE))
             raise SystemExit
 
-    def get(self, key):
-        logger.debug('COOKIE: Reading key: {}'.format(key))
+    def read_json(self, local=False):
+        # which cookie
+        if local:
+            local_path = os.getcwd()
+            cookie = os.path.join(local_path, '.dataloop/state.json')
+        else:
+            cookie = self.COOKIE
+
+        # read cookie
+        cfg = None
         for i in range(NUM_TRIES):
             try:
-                with open(self.COOKIE, 'r') as fp:
+                with open(cookie, 'r') as fp:
                     cfg = json.load(fp)
                 break
             except json.decoder.JSONDecodeError:
@@ -59,18 +69,44 @@ class CookieIO:
                     raise
                 time.sleep(0.1)
                 continue
-        if key in cfg.keys():
-            return cfg[key]
-        else:
-            logger.warning(msg='key not in platform cookie file: %s. default is None' % key)
-            return None
+        return cfg
 
-    def put(self, key, value):
-        logger.debug('COOKIE: Writing key: {}'.format(key))
-        with open(self.COOKIE, 'r') as fp:
-            cfg = json.load(fp)
+    def get(self, key, local=False):
+        logger.debug('COOKIE.read: key: {}'.format(key))
+        if local:
+            local_path = os.getcwd()
+            cookie = os.path.join(local_path, '.dataloop/state.json')
+        else:
+            cookie = self.COOKIE
+        # check if file exists
+        if not os.path.isfile(cookie):
+            logger.debug('COOKIE.read: File does not exist: {}. Return None'.format(key))
+            value = None
+        else:
+            cfg = self.read_json(local=local)
+            if key in cfg.keys():
+                value = cfg[key]
+            else:
+                logger.warning(msg='key not in platform cookie file: %s. Return None' % key)
+                value = None
+        return value
+
+    def put(self, key, value, local=False):
+        logger.debug('COOKIE.write: key: {}'.format(key))
+        # check if file exists - and create
+        if not os.path.isfile(self.COOKIE):
+            self.create()
+        # read and write
+        cfg = self.read_json()
         cfg[key] = value
-        with open(self.COOKIE, 'w') as fp:
+        if local:
+            local_path = os.getcwd()
+            if not os.path.isdir(os.path.join(local_path, '.dataloop')):
+                os.mkdir(os.path.join(local_path, '.dataloop'))
+            cookie = os.path.join(local_path, '.dataloop/state.json')
+        else:
+            cookie = self.COOKIE
+        with open(cookie, 'w') as fp:
             json.dump(cfg, fp, indent=4)
 
     def reset(self):

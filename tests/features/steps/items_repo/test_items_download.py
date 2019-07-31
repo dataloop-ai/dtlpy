@@ -28,7 +28,6 @@ def step_impl(context, item_name, download_path):
                                    items=None,
                                    save_locally=True,
                                    local_path=download_path,
-                                   download_options={'to_images_folder': True},
                                    annotation_options=None)
 
 
@@ -65,7 +64,6 @@ def step_impl(context, download_path):
     context.dataset.items.download(items=context.item.id,
                                    save_locally=True,
                                    local_path=download_path,
-                                   download_options={'to_images_folder': True},
                                    annotation_options=None)
 
 
@@ -74,13 +72,12 @@ def step_impl(context, item_name):
     context.item_data = context.dataset.items.download(items=context.item.id,
                                                        save_locally=False,
                                                        local_path=None,
-                                                       download_options=None,
                                                        annotation_options=None)
 
 
 @behave.then(u'I receive item data')
 def step_impl(context):
-    pass
+    assert type(context.item_data) == io.BytesIO
 
 
 @behave.when(u'I upload item data by name of "{item_name}"')
@@ -88,8 +85,7 @@ def step_impl(context, item_name):
     context.item_data.name = item_name
     context.dataset.items.upload(local_path=context.item_data,
                                  local_annotations_path=None,
-                                 remote_path=None,
-                                 upload_options=None)
+                                 remote_path=None)
 
 
 @behave.then(u'Item uploaded from data equals initial item uploaded')

@@ -3,7 +3,7 @@ Feature: Dataset Entity repo functions
     Background: Initiate Platform Interface
         Given Platform Interface is initialized as dlp and Environment is set to development
         And There is a project by the name of "dataset_repo_methods"
-        And I create a dataset by the name of "Dataset"
+        And I create a dataset with a random name
 
     Scenario: Download Annotations
         Given Labels in file: "labels.json" are uploaded to test Dataset
@@ -25,7 +25,7 @@ Feature: Dataset Entity repo functions
 
     Scenario: Delete dataset
         When I delete a dataset entity
-        Then There are no datasets
+        Then Dataset with same name does not exists
 
     Scenario: Finally
         Given Clean up

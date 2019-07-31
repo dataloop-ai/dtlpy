@@ -20,6 +20,7 @@ class Session:
     # params
     input = attr.ib()
     output = attr.ib()
+    error = attr.ib()
     feedbackQueue = attr.ib()
     status = attr.ib()
     metadata = attr.ib()
@@ -46,6 +47,7 @@ class Session:
             updatedAt=_json['updatedAt'],
             input=_json['input'],
             output=_json.get('output', list()),
+            error=_json.get('error', str()),
             feedbackQueue=_json['feedbackQueue'],
             status=_json['status'],
             metadata=_json['metadata'],

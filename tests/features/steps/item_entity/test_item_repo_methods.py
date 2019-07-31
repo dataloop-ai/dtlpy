@@ -8,7 +8,6 @@ def step_impl(context, item_name, download_path):
     download_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], download_path)
     context.item.download(save_locally=True,
                           local_path=download_path,
-                          download_options={'to_images_folder': True},
                           annotation_options=None)
 
 

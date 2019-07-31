@@ -3,7 +3,7 @@ Feature: Annotations repository Draw method testing
     Background: Initiate Platform Interface
         Given Platform Interface is initialized as dlp and Environment is set to development
         And There is a project by the name of "Project_annotations_draw"
-        And I create a dataset by the name of "Dataset"
+        And I create a dataset with a random name
 
     Scenario: Draw mask
         Given Classes in file: "classes_new.json" are uploaded to test Dataset

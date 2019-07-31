@@ -26,4 +26,5 @@ from .recipes import Recipes
 from .plugins import Plugins
 from .downloader import Downloader
 from .uploader import Uploader
-from .time_series import TimeSeries
+from .triggers import Triggers
+from .times_series import TimesSeries

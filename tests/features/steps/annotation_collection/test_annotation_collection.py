@@ -92,7 +92,7 @@ def step_impl(context):
         attributes=["attr1", "attr2"],
     )
     context.annotation_collection.add(annotation_definition=annotation_definition)
-    # poligon
+    # poliygon
     geo = [
         (r.randrange(0, width), r.randrange(0, height)),
         (r.randrange(0, width), r.randrange(0, height)),
@@ -104,15 +104,6 @@ def step_impl(context):
     annotation_definition = context.dl.Polygon(
         geo=geo, label=r.choice(labels).tag, attributes=["attr1", "attr2"]
     )
-    context.annotation_collection.add(annotation_definition=annotation_definition)
-    # polyline
-    geo = [
-        (r.randrange(0, width), r.randrange(0, height)),
-        (r.randrange(0, width), r.randrange(0, height)),
-        (r.randrange(0, width), r.randrange(0, height)),
-        (r.randrange(0, width), r.randrange(0, height)),
-    ]
-    annotation_definition = context.dl.Polyline(geo=geo, label=r.choice(labels).tag)
     context.annotation_collection.add(annotation_definition=annotation_definition)
     # ellipse
     annotation_definition = context.dl.Ellipse(

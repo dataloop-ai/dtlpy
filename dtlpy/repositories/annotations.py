@@ -3,6 +3,7 @@ import logging
 import jwt
 import attr
 from multiprocessing.pool import ThreadPool
+import os
 
 from .. import entities, PlatformException
 
@@ -136,12 +137,12 @@ class Annotations:
         """
             Save annotation format to file
 
-        :param filepath:
-        :param annotation_format:
-        :param height:
-        :param width:
-        :param thickness:
-        :param with_text:
+        :param filepath: Target download directory
+        :param annotation_format: optional - 'mask', 'instance', 'object_id', 'json'
+        :param height: optional - image height
+        :param width: optional - image width
+        :param thickness: optional - annotation format, default =1
+        :param with_text: optional - draw annotation with text, default = False
         :return:
         """
         # get item's annotations
@@ -236,7 +237,6 @@ class Annotations:
                     path='/datasets/{}/items/{}/annotations'.format(self.dataset.id, self.item.id),
                     json_req=annotation)
                 if suc:
-                    
                     output[i_item] = entities.Annotation.from_json(_json=response.json(),
                                                                    item=self.item)
                     success[i_item] = True
@@ -251,6 +251,16 @@ class Annotations:
             annotations = annotations.annotations
         if not isinstance(annotations, list):
             annotations = [annotations]
+            if isinstance(annotations[0], str) and os.path.isfile(annotations[0]):
+                with open(annotations[0], 'r') as f:
+                    annotations = json.load(f)
+                if isinstance(annotations, dict):
+                    if 'annotations' in annotations:
+                        annotations = annotations['annotations']
+                    elif 'data' in annotations:
+                        annotations = annotations['data']
+                    else:
+                        PlatformException('400', 'Unknown annotation file format')
         # call multiprocess wrapper to run function on each item in list
         multi_output, multi_errors = self.multiprocess_wrapper(func=upload_single_annotation,
                                                                items=annotations)

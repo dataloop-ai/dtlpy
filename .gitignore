@@ -135,3 +135,10 @@ log_*
 
 # dlp history
 .history.txt
+
+# dataloop cookie
+.dataloop/
+stats.json
+
+# dlp pckaging
+src/

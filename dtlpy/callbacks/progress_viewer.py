@@ -5,7 +5,7 @@ def main():
     import numpy as np
     import logging
     import time
-    import yaml
+    import json
     import os
 
     class ProgressViewer(Callback):
@@ -46,7 +46,7 @@ def main():
             self.results[epoch] = dict(zip(list(logs.keys()), np.array(list(logs.values())).tolist()))
             self.results[epoch]['runtime'] = time.time() - self.epoch_time_start
             with open(self.filename, 'w') as f:
-                yaml.safe_dump(self.results, f, default_flow_style=False)
+                json.dump(self.results, f)
             self.session.artifacts.upload(filepath=self.filename,
                                           artifact_name='progress.yml',
                                           artifact_type='progress')

@@ -21,6 +21,10 @@ def step_impl(context):
         client_api=context.dataset.items.client_api,
     )
 
+@behave.given(u"Project has packages repositiory")
+def step_impl(context):
+    context.packages = context.project.packages
+
 
 @behave.given(u"I have a packages repository")
 def step_impl(context):

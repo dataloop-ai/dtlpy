@@ -28,7 +28,7 @@ def main():
         # Upload or get annotations from platform (if already exists)
         item = dataset.items.upload(local_path=img_filename,
                                     remote_path='/in_storm',
-                                    upload_options={'overwrite': False})
+                                    overwrite=False)
         assert isinstance(item, dl.Item)
 
         # read annotations from file

@@ -65,8 +65,8 @@ You can create a generator of items with different filters
 	# Get the dataset
 	dataset = project.datasets.get(dataset_name='MyDataset')
 	# Get items in pages (100 item per page)
-	filters = dlp.Filters()
-	filters(field='filename', values='/winter/is/coming/*')
+	filters = dl.Filters()
+	filters.add(field='filename', values='/winter/is/coming/*')
 	pages = dataset.items.list(filters=filters)
 	# Count the items
 	print('Number of items in dataset: {}'.format(pages.items_count))
@@ -83,7 +83,7 @@ Upload and download items
 	dataset.items.upload(
 		local_path=r'C:\home\dogs', #  can be a directory
 		remote_path='/images/dogs',
-		upload_options={'overwrite': False}
+		overwrite=False
 	)
 
 	# Upload entire folder to dataset dataset with annotations
@@ -91,7 +91,7 @@ Upload and download items
 		local_path=r'C:\home\images\dogs', # folder of images
 		local_annotations_path=r'C:\home\json\dogs', # dataloop annotations files (jsons)
 		remote_path='/images/dogs',
-		upload_options={'overwrite': False}
+		overwrite=False
 	)
 
 	# Upload single image
@@ -101,8 +101,8 @@ Upload and download items
 	)
 
 	# if uploading a buffer - you can set the name of the uploaded file
-	filters = dlp.Filters()
-	filters(field='filename', values='/winter/is/coming/arya.jpg')
+	filters = dl.Filters()
+	filters.add(field='filename', values='/winter/is/coming/arya.jpg')
 	buffer = dataset.items.download(filters=filters, save_locally=False)
 	buffer.name = 'arya_stark.jpg'
 	dataset.items.upload(
@@ -111,12 +111,12 @@ Upload and download items
 	)
 
 	# Download entire directory with json annotations files
-	filters = dlp.Filters()
-	filters(field='filename', values='/winter/is/coming/**')
+	filters = dl.Filters()
+	filters.add(field='filename', values='/winter/is/coming/**')
 	filenames = dataset.items.download(
 	    filters=filters,
 		local_path='/home/images',
-		download_options={'overwrite': True},
+		overwrite=True,
 		annotation_options=['json'] # download with annotations
 	)
 

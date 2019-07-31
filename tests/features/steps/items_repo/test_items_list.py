@@ -48,8 +48,7 @@ def step_impl(context, item_count):
             buffer.name = uploaded_filename
         context.dataset.items.upload(
             local_path=buffer,
-            remote_path=None,
-            upload_options=None,
+            remote_path=None
         )
         counter += 1
 
@@ -99,8 +98,7 @@ def step_impl(context, item_name):
         buffer.name = item_name
     context.item = context.dataset.items.upload(
         local_path=buffer,
-        remote_path=None,
-        upload_options=None,
+        remote_path=None
     )
 
 
@@ -136,8 +134,7 @@ def step_impl(context, item_count, remote_path):
 
         context.dataset.items.upload(
             local_path=buffer,
-            remote_path=remote_path,
-            upload_options=None,
+            remote_path=remote_path
         )
         counter += 1
 
@@ -166,8 +163,7 @@ def step_impl(context, item_count):
 
         context.dataset.items.upload(
             local_path=buffer,
-            remote_path=None,
-            upload_options=None,
+            remote_path=None
         )
         counter += 1
 
@@ -178,8 +174,7 @@ def step_impl(context):
     filepath = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], filepath)
     context.png_item = context.dataset.items.upload(
         local_path=filepath,
-        remote_path=None,
-        upload_options=None,
+        remote_path=None
     )
 
 
@@ -205,8 +200,7 @@ def step_impl(context):
     filepath = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], filepath)
     context.item_mp4 = context.dataset.items.upload(
         local_path=filepath,
-        remote_path=None,
-        upload_options=None,
+        remote_path=None
     )
 
 

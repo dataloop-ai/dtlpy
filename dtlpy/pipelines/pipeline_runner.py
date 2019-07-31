@@ -1,4 +1,3 @@
-import yaml
 import json
 import logging
 import traceback
@@ -27,7 +26,7 @@ class PipelineRunner:
                 'Pipe length is more than 1. pipe_id: %s' % pipeline_id)
             assert False
         pipeline_str = pipeline.arch
-        pipeline_dict = yaml.safe_load(pipeline_str)
+        pipeline_dict = json.loads(pipeline_str)
         self.pipeline_builder.from_dict(pipeline_dict)
 
     def run(self, context):

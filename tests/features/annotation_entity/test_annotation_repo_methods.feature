@@ -3,7 +3,7 @@ Feature: Annotation Entity repo functions
     Background: Initiate Platform Interface
         Given Platform Interface is initialized as dlp and Environment is set to development
         And There is a project by the name of "Project_test_annotation_repo_methods"
-        And I create a dataset by the name of "Dataset"
+        And I create a dataset with a random name
 
     Scenario: Annotation delete
         Given Labels in file: "assets_split/annotation_repo/labels.json" are uploaded to test Dataset

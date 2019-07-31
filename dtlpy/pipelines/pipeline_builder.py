@@ -1,4 +1,3 @@
-import yaml
 import json
 from .steps import PipelineStage
 
@@ -30,10 +29,10 @@ class PipelineBuilder(object):
 
     def from_file(self, filename):
         with open(filename, 'r') as f:
-            pipeline_dict = yaml.safe_load(f)
+            pipeline_dict = json.load(f)
         self.from_dict(pipeline_dict=pipeline_dict)
 
-    def to_file(self, filename, file_type='yaml'):
+    def to_file(self, filename):
         stages = self.stages
         stages_list = list()
         for stage in stages:
@@ -43,12 +42,8 @@ class PipelineBuilder(object):
             stages_list.append(stage_dict)
 
         pipeline_dict = {'inputs': self.inputs, 'stages': stages_list}
-        if file_type == 'yaml':
-            with open(filename, 'w') as f:
-                yaml.safe_dump(pipeline_dict, f, default_flow_style=False)
-        else:
-            with open(filename, 'w') as f:
-                json.dump(pipeline_dict, f, indent=4)
+        with open(filename, 'w') as f:
+            json.dump(pipeline_dict, f, indent=4)
 
     def get_context(self):
         input_arg_names = list()

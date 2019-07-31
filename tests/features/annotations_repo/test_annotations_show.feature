@@ -3,7 +3,7 @@ Feature: Annotations repository show method testing
     Background: Initiate Platform Interface
         Given Platform Interface is initialized as dlp and Environment is set to development
         And There is a project by the name of "annotations_show"
-        And I create a dataset by the name of "Dataset"
+        And I create a dataset with a random name
 
     Scenario: Show mask
         Given Classes in file: "assets_split/annotations_show/classes_new.json" are uploaded to test Dataset

@@ -1,3 +1,4 @@
+import datetime
 import logging
 import tkinter
 import json
@@ -194,7 +195,7 @@ class VideoPlayer:
         reader = cv2.VideoCapture(self.video_source)
         width = int(reader.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(reader.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        fps = int(reader.get(cv2.CAP_PROP_FPS))
+        fps = reader.get(cv2.CAP_PROP_FPS)
         encoding = int(reader.get(cv2.CAP_PROP_FOURCC))
         n_frames = int(reader.get(cv2.CAP_PROP_FRAME_COUNT))
         writer = cv2.VideoWriter(output_filename, cv2.VideoWriter_fourcc(*'MP4V'), fps, (width, height))
@@ -305,7 +306,7 @@ class VideoPlayer:
         if not os.path.isdir(os.path.dirname(video_filename)):
             os.makedirs(os.path.dirname(video_filename))
         if not os.path.isfile(video_filename):
-            self.dataset.items.download(items=self.item, local_path=video_filename)
+            self.item.download(local_path=os.path.dirname(video_filename), to_items_folder=False)
         self.video_source = video_filename
         self.video_annotations = self.item.annotations.list()
 
@@ -420,7 +421,7 @@ class VideoPlayer:
             self.playing = True
             self.btn_toggle_play.config(text='Pause')
 
-    def next_frame(selsf):
+    def next_frame(self):
         """
         Get next frame
         :return:
@@ -482,7 +483,12 @@ class VideoPlayer:
             # set timestamp
             self.current_frame_text.configure(text='Frame number:\n%d' % self.vid.frame_number)
             self.current_frame_text.grid(sticky="W", row=12, column=0, columnspan=10)
-            self.frame_timestamp_text.configure(text='Frame timestamp[s]:\n%f' % (self.vid.frame_number / self.vid.fps))
+            millis = int(1000 * self.vid.frame_number / self.vid.fps)
+            seconds = (millis / 1000) % 60
+            minutes = int((millis / (1000 * 60)) % 60)
+            hours = int((millis / (1000 * 60 * 60)) % 24)
+            self.frame_timestamp_text.configure(
+                text='Frame timestamp:\n{:02d}:{:02d}:{:.3f}'.format(hours, minutes, seconds))
             self.frame_timestamp_text.grid(sticky="W", row=8, column=0, columnspan=10)
 
     def update(self):

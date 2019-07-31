@@ -3,7 +3,7 @@ Feature: Annotaions repository download function testing
     Background: Initiate Platform Interface
         Given Platform Interface is initialized as dlp and Environment is set to development
         And There is a project by the name of "Project_annotations_download"
-        And I create a dataset by the name of "Dataset"
+        And I create a dataset with a random name
         
     Scenario: Download item annotations with mask
         Given Labels in file: "assets_split/annotations_download/labels.json" are uploaded to test Dataset

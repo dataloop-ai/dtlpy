@@ -1,15 +1,15 @@
 import behave
 
 
-@behave.when(u'I get a dataset by the name of "{dataset_name}"')
-def step_impl(context, dataset_name):
-    context.dataset_get = context.project.datasets.get(dataset_name=dataset_name)
+@behave.when(u'I get a dataset with the created name')
+def step_impl(context):
+    context.dataset_get = context.project.datasets.get(dataset_name=context.dataset.name)
 
 
-@behave.then(u'I get a dataset by the name of "{dataset_name}"')
-def step_impl(context, dataset_name):
+@behave.then(u'I get a dataset with the created name')
+def step_impl(context):
     assert type(context.dataset_get) == context.dl.entities.Dataset
-    assert context.dataset_get.name == dataset_name
+    assert context.dataset_get.name == context.dataset.name
 
 
 @behave.then(u'The dataset I got is equal to the one created')

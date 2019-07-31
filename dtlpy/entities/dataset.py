@@ -87,6 +87,12 @@ class Dataset:
                     self._ontology_ids += recipe.ontologyIds
         return self._ontology_ids
 
+    @ontology_ids.setter
+    def ontology_ids(self, ids):
+        if not isinstance(ids, list):
+            ids = [ids]
+        self._ontology_ids = ids
+
     @_items.default
     def set_items(self):
         return repositories.Items(dataset=self, client_api=self.client_api)
@@ -179,3 +185,15 @@ class Dataset:
         return self.project.datasets.download_annotations(dataset=self,
                                                           local_path=local_path,
                                                           overwrite=overwrite)
+
+    def checkout(self):
+        """
+        Check - out as dataset
+        :param
+        identifier: project name or partial id
+        :return:
+        """
+        self.project.datasets.checkout(identifier=self.name)
+
+    def open_in_web(self):
+        self.project.datasets.open_in_web(dataset=self)

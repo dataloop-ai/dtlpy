@@ -2,6 +2,7 @@ import os
 
 assets_path = os.path.dirname(__file__)
 main_py_path = os.path.join(assets_path, 'main.py')
+debug_py_path = os.path.join(assets_path, 'debug.py')
 mock_json_path = os.path.join(assets_path, 'mock.json')
 plugin_json_path = os.path.join(assets_path, 'plugin.json')
 task_init_json_path = os.path.join(assets_path, 'task-init.json')

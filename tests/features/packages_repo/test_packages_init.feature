@@ -3,7 +3,7 @@ Feature: Packages repository Init
     Background: Initiate Platform Interface and create a project
         Given Platform Interface is initialized as dlp and Environment is set to development
         And There is a project by the name of "packages_init"
-        And I create a dataset by the name of "Dataset"
+        And I create a dataset with a random name
 
     Scenario: Init packages with param: dataset, project, client_api
         When I init packages with params: project, dataset, client_api

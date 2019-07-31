@@ -6,19 +6,19 @@ Feature: Datasets repository delete function testing
 
     Scenario: Delete dataset by name
         Given There are no datasets
-        And I create a dataset by the name of "Dataset"
-        When I delete a dataset by the name of "Dataset"
-        Then There are no datasets
+        And I create a dataset with a random name
+        When I delete the dataset that was created by name
+        Then Dataset with same name does not exists
     
     Scenario: Delete dataset by id
         Given There are no datasets
-        And I create a dataset by the name of "Dataset"
-        When I delete a dataset by the id of the dataset "Dataset"
-        Then There are no datasets
+        And I create a dataset with a random name
+        When I delete the dataset that was created by id
+        Then Dataset with same name does not exists
 
     Scenario: Delete a non-existing dataset
         Given There are no datasets
-        And I create a dataset by the name of "Dataset"
+        And I create a dataset with a random name
         When I try to delete a dataset by the name of "Some Dataset Name"
         Then "NotFound" exception should be raised
         And No dataset was deleted

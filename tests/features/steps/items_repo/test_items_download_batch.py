@@ -10,7 +10,6 @@ def step_impl(context):
         items=items,
         save_locally=False,
         local_path=None,
-        download_options=None,
         annotation_options=None,
     )
 
@@ -23,7 +22,6 @@ def step_impl(context, local_path):
         items=items,
         save_locally=True,
         local_path=local_path,
-        download_options=None,
         annotation_options=None,
     )
 
@@ -38,7 +36,6 @@ def step_impl(context):
         context.dataset.items.upload(
             buff,
             remote_path=None,
-            upload_options=None,
         )
 
     context.item_list = context.dataset.items.list()
@@ -63,7 +60,6 @@ def step_impl(context, local_path):
         items=items,
         save_locally=True,
         local_path=local_path,
-        download_options=None,
         annotation_options=None,
     )
 

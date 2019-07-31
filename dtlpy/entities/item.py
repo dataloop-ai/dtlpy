@@ -154,25 +154,49 @@ class Item:
     def print(self):
         utilities.List([self]).print()
 
-    def download(self, local_path=None, save_locally=True,
-                 download_options=None,
-                 annotation_options=None):
+    def download(
+            self,
+            # download options
+            local_path=None,
+            file_types=None,
+            save_locally=True,
+            num_workers=None,
+            annotation_options=None,
+            overwrite=False,
+            relative_path=False,
+            to_items_folder=True,
+            thickness=1,
+            with_text=False
+    ):
         """
-        Get item's binary data
-        Calling this method will returns the item body itself , an image for example with the proper mimetype.
-        
-        :param save_locally: bool. save to file or return buffer
-        :param local_path: local folder or filename to save to. if folder ends with * images with be downloaded directly
-         to folder. else - an "images" folder will be create for the images
-        :param download_options: {'overwrite': True/False, 'relative_path': True/False}
+        Download dataset by filters.
+        Filtering the dataset for items and save them local
+        Optional - also download annotation, mask, instance and image mask of the item
+
+        :param local_path: local folder or filename to save to.
+        :param relative_path: optional - save directories relatively to platform, default = True
+        :param to_items_folder: Create 'items' folder and download items to it
+        :param overwrite: optional - default = False
+        :param file_types: a list of file type to download. e.g ['video/webm', 'video/mp4', 'image/jpeg', 'image/png']
+        :param num_workers: default - 32
+        :param save_locally: bool. save to disk or return a buffer
         :param annotation_options: download annotations options: ['mask', 'img_mask', 'instance', 'json']
-        :return: 
+        :param with_text: optional - add text to annotations, default = False
+        :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
+        :return: Output (list)
         """
         return self.dataset.items.download(items=self,
-                                           save_locally=save_locally,
                                            local_path=local_path,
-                                           download_options=download_options,
-                                           annotation_options=annotation_options,)
+                                           file_types=file_types,
+                                           save_locally=save_locally,
+                                           num_workers=num_workers,
+                                           annotation_options=annotation_options,
+                                           overwrite=overwrite,
+                                           relative_path=relative_path,
+                                           to_items_folder=to_items_folder,
+                                           thickness=thickness,
+                                           with_text=with_text
+                                           )
 
     def delete(self):
         """
@@ -207,3 +231,6 @@ class Item:
             self.filename = new_path + '/' + self.name
 
         return self.update(system_metadata=True)
+
+    def open_in_web(self):
+        self.dataset.items.open_in_web(item=self)

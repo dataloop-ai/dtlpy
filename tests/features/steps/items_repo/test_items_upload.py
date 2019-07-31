@@ -9,23 +9,20 @@ import shutil
 def step_impl(context, item_local_path):
     item_local_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], item_local_path)
     context.item = context.dataset.items.upload(
-        local_path=item_local_path, remote_path=None, upload_options=None
+        local_path=item_local_path, remote_path=None
     )
 
 
 @behave.when(u'I upload with "{option}" a file in path "{item_local_path}"')
 def step_impl(context, item_local_path, option):
-    if option == "overwrite":
-        option = {"overwrite": True}
-    elif option == "merge":
-        option = {"overwrite": False}
+    if option == 'overwrite':
+        overwrite = True
     else:
-        assert False, "unknown upload options: {}".format(option)
-
+        overwrite = False
     item_local_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], item_local_path)
     context.item = context.dataset.items.upload(local_path=item_local_path,
                                                 remote_path=None,
-                                                upload_options=option
+                                                overwrite=overwrite
                                                 )
 
 
@@ -33,7 +30,7 @@ def step_impl(context, item_local_path, option):
 def step_impl(context, item_local_path, remote_path):
     item_local_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], item_local_path)
     context.item = context.dataset.items.upload(
-        local_path=item_local_path, remote_path=remote_path, upload_options=None
+        local_path=item_local_path, remote_path=remote_path
     )
 
 
@@ -61,13 +58,11 @@ def step_impl(context, item_local_path, download_path):
         items=context.item.id,
         local_path=download_path,
         file_types=None,
-        download_options={'to_images_folder': False},
         save_locally=True,
         num_workers=None,
         annotation_options=None,
-        opacity=None,
-        with_text=None,
-        thickness=None
+        to_items_folder=False,
+        relative_path=True
     )
     time.sleep(2)
     original = cv2.imread(file_to_compare)
@@ -115,7 +110,7 @@ def step_impl(context, local_path, remote_filename):
         buffer.name = remote_filename
 
     context.item = context.dataset.items.upload(
-        local_path=buffer, remote_path=None, upload_options=None
+        local_path=buffer, remote_path=None
     )
 
 
@@ -139,14 +134,15 @@ def step_impl(context):
 )
 def step_impl(context, local_path, illegal_remote_path):
     local_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], local_path)
+    folder_path = os.path.split(local_path)[0]
     context.error_logs_before = sum(
-        [1 for filename in os.listdir(os.getcwd()) if filename.startswith("log_")]
+        [1 for filename in os.listdir(folder_path) if filename.startswith("log_")]
     )
     context.item = context.dataset.items.upload(
-        local_path=local_path, remote_path=illegal_remote_path, upload_options=None
+        local_path=local_path, remote_path=illegal_remote_path
     )
     context.error_logs_after = sum(
-        [1 for filename in os.listdir(os.getcwd()) if filename.startswith("log_")]
+        [1 for filename in os.listdir(folder_path) if filename.startswith("log_")]
     )
 
 
@@ -157,7 +153,7 @@ def step_impl(context, illegal_local_path):
     )
     try:
         context.item = context.dataset.items.upload(
-            local_path=illegal_local_path, remote_path=None, upload_options=None
+            local_path=illegal_local_path, remote_path=None
         )
         context.error = None
     except Exception as e:
@@ -171,7 +167,6 @@ def step_impl(context):
         items=items,
         save_locally=False,
         local_path=None,
-        download_options=None,
         annotation_options=None,
     )
 
@@ -193,7 +188,7 @@ def step_impl(context):
         uploaded_filename = "file" + str(context.items_uploaded) + ".jpg"
         buff.name = uploaded_filename
         context.items_uploaded += 1
-        context.dataset.items.upload(buff, remote_path=None, upload_options=None)
+        context.dataset.items.upload(buff, remote_path=None)
 
 
 @behave.then(u"Number of error files should be larger by one")

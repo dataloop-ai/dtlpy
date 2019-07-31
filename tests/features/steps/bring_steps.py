@@ -72,3 +72,9 @@ from tests.features.steps.packages_repo import test_packages_list
 from tests.features.steps.package_entity import test_package_repo_methods
 
 from tests.features.steps.utilities import platform_interface_steps
+
+from tests.features.steps.cli_testing import cli_projects
+from tests.features.steps.cli_testing import cli_datasets
+from tests.features.steps.cli_testing import cli_others
+
+from tests.features.steps.checkout_testing import test_checkout

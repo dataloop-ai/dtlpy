@@ -1,14 +1,14 @@
 import behave
 
 
-@behave.when(u'I delete a dataset by the name of "{dataset_name}"')
-def step_impl(context, dataset_name):
-    context.project.datasets.delete(dataset_name=dataset_name,
+@behave.when(u'I delete the dataset that was created by name')
+def step_impl(context):
+    context.project.datasets.delete(dataset_name=context.dataset.name,
                                     sure=True,
                                     really=True)
 
 
-@behave.when(u'I delete a dataset by the id of the dataset "Dataset"')
+@behave.when(u'I delete the dataset that was created by id')
 def step_impl(context):
     context.project.datasets.delete(dataset_id=context.dataset.id,
                                     sure=True,

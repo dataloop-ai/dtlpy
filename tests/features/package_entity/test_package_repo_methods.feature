@@ -3,7 +3,7 @@ Feature: Package Entity repo functions
     Background: Initiate Platform Interface
         Given Platform Interface is initialized as dlp and Environment is set to development
         And There is a project by the name of "package_repo_methods"
-        And I create a dataset by the name of "Dataset"
+        And I create a dataset with a random name
         And There is a Package directory with a python file in path "packages_assets/package_entity"
         And I pack from project.packages directory by name "package_name"
 

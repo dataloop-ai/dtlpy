@@ -48,13 +48,15 @@ def step_impl(context, name):
     local_path = "0000000162.jpg"
     local_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], local_path)
     context.item = context.dataset.items.upload(
-        local_path=local_path, remote_path=None, upload_options=None
-    )
+        local_path=local_path, remote_path=None
+        )
 
 
 @behave.then(u'PageEntity has directory item "{dir_name}"')
 def step_impl(context, dir_name):
-    page = context.dataset.items.list()
+    filters = context.dl.Filters()
+    filters.add(field='type', values='dir')
+    page = context.dataset.items.list(filters=filters)
     dir_exist = False
     for item in page.items:
         if item.filename == dir_name:

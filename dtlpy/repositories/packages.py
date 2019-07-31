@@ -4,6 +4,7 @@ import logging
 import os
 import shutil
 import io
+import random
 
 from .. import entities, utilities, PlatformException, exceptions
 
@@ -43,7 +44,7 @@ class Packages:
                 self._dataset = None
             if self._dataset is None:
                 self.logger.warning(
-                    'Dataset for packages was not found. Creating... dataset name: "Binaries". project_id=%s' % self.project.id)
+                    'Dataset for packages was not found. Creating... dataset name: "Binaries". project_id={}'.format(self.project.id))
                 self._dataset = self.project.datasets.create(dataset_name='Binaries')
                 # add system to metadata
                 if 'metadata' not in self._dataset.to_json():
@@ -176,7 +177,8 @@ class Packages:
         """
 
         cwd = os.getcwd()
-        dist_path = os.path.join(cwd, '.dataloop', 'dist')
+        temp_path = str(random.randrange(1000, 100000))
+        dist_path = os.path.join(cwd, '.dataloop', temp_path, 'dist')
         zip_filename = None
         try:
             if not os.path.isdir(directory):
@@ -216,15 +218,14 @@ class Packages:
                 item = same_version_found
             else:
                 # no matched version was found - create a new version
-                try:
-                    with open(zip_filename, 'rb') as f:
-                        buffer = io.BytesIO(f.read())
-                        buffer.name = str(current_version) + '.zip'
-                    item = self.items_repository.upload(local_path=buffer,
-                                                        remote_path='/packages/%s' % name)
-                except Exception:
-                    self.logger.exception('unable to create package item.')
-                    raise
+
+                with open(zip_filename, 'rb') as f:
+                    buffer = io.BytesIO(f.read())
+                    buffer.name = str(current_version) + '.zip'
+                item = self.items_repository.upload(local_path=buffer,
+                                                    remote_path='/packages/%s' % name)
+                if isinstance(item, list) and len(item) == 0:
+                    raise PlatformException(error='400', message='Failed upload package, check log file for details')
 
                 # add metadata to source code
                 item.metadata['system']['description'] = description
@@ -248,8 +249,8 @@ class Packages:
         artifact_filepath = self.items_repository.download(items=package.id,
                                                            save_locally=True,
                                                            local_path=download_path,
-                                                           download_options={'relative_path': False,
-                                                                             'to_images_folder': False})
+                                                           relative_path=False,
+                                                           to_items_folder=False)
         utilities.Miscellaneous.unzip_directory(zip_filename=artifact_filepath,
                                                 to_directory=local_path)
         os.remove(artifact_filepath)

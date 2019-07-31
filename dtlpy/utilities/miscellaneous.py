@@ -5,6 +5,8 @@ import zipfile
 import pandas
 import os
 
+from .. import exceptions
+
 logger = logging.getLogger('dataloop.List')
 
 
@@ -29,7 +31,9 @@ class List(list):
                                 'attributes', 'partitions', 'metadata', 'stream', 'updatedAt', 'arch',
                                 'input', 'revisions', 'pipeline',  # task fields
                                 'feedbackQueue',  # session fields
-                                '_ontology_ids', '_labels'  # dataset
+                                '_ontology_ids', '_labels',  # dataset
+                                'esInstance', 'esIndex',  # time series fields
+                                'thumbnail' # item thumnail too long
                                 ]
             if not show_all:
                 for key in remove_keys_list:
@@ -37,6 +41,8 @@ class List(list):
                         keys_list.remove(key)
 
             for element in to_print:
+                if 'name' in element:
+                    element['name'] = str(element['name']).encode('utf-8')
                 if 'createdAt' in element:
                     try:
                         str_timestamp = str(element['createdAt'])
@@ -48,11 +54,12 @@ class List(list):
                         pass
 
             df = pandas.DataFrame(to_print, columns=keys_list)
-            print('\n%s' % tabulate.tabulate(df, headers='keys', tablefmt='psql'))
+            if 'name' in list(df.columns.values):
+                df['name'] = df['name'].astype(str)
+            print('\n{}'.format(tabulate.tabulate(df, headers='keys', tablefmt='psql')))
 
         except Exception as err:
-            logger.exception('Printing entity response:')
-            logger.exception(err)
+            raise exceptions.PlatformException('400', 'Printing error')
 
 
 class Miscellaneous:
@@ -61,7 +68,6 @@ class Miscellaneous:
 
     @staticmethod
     def zip_directory(path=None):
-        accepted_file_type = ['.py']
         if not path:
             path = os.getcwd()
         assert os.path.isdir(path), '[ERROR] Directory does not exists: %s' % path
@@ -73,10 +79,9 @@ class Miscellaneous:
         for root, dirs, files in os.walk(path):
             for file in files:
                 filename, file_extension = os.path.splitext(file)
-                if file_extension in accepted_file_type:
-                    # write relative file to zip
-                    zipf.write(os.path.join(root, file),
-                               arcname=os.path.relpath(os.path.join(root, file), os.path.join(path, '..')))
+                # write relative file to zip
+                zipf.write(os.path.join(root, file),
+                           arcname=os.path.relpath(os.path.join(root, file), os.path.join(path, '..')))
         zipf.close()
 
     @staticmethod

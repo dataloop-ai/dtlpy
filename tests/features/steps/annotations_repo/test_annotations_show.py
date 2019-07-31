@@ -16,10 +16,11 @@ def step_impl(context, should_be_path):
         np.save(should_be_path.replace('.npy', '_wrong.npy'), context.mask)
         assert False
 
+
 @behave.when(u'Every annotation has an object id')
 def step_impl(context):
     context.annotaitons = context.item.annotations.list()
-    types = ['ellipse', 'segment', 'box', 'polyline', 'point']
+    types = ['ellipse', 'segment', 'box', 'point']
     for ann in context.annotaitons:
         ann.object_id = types.index(ann.type) + 1
     context.annotaitons = context.annotaitons.update()

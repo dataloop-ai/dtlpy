@@ -1,4 +1,6 @@
 import behave
+import random
+import string
 
 
 @behave.fixture
@@ -16,21 +18,22 @@ def step_impl(context):
     context.dataset_count = 0
 
 
-@behave.when(u'I create a dataset by the name of "{dataset_name}"')
-def step_impl(context, dataset_name):
+@behave.when(u'I create a dataset with a random name')
+def step_impl(context):
+    rand_str = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(5))
+    dataset_name = 'random_dataset_{}'.format(rand_str)
     context.dataset = context.project.datasets.create(dataset_name=dataset_name)
     context.dataset_count += 1
 
 
-@behave.then(u'Dataset object by the name of "{dataset_name}" should be exist')
-def step_impl(context, dataset_name):
-    assert type(context.dataset) == context.dl.entities.Dataset
-    assert context.dataset.name == dataset_name
+@behave.then(u'Dataset object with the same name should be exist')
+def step_impl(context):
+    assert isinstance(context.dataset, context.dl.entities.Dataset)
 
 
-@behave.then(u'Dataset by the name of "{dataset_name}" should exist in host')
-def step_impl(context, dataset_name):
-    dataset_get = context.project.datasets.get(dataset_name=dataset_name)
+@behave.then(u'Dataset object with the same name should be exist in host')
+def step_impl(context):
+    dataset_get = context.project.datasets.get(dataset_name=context.dataset.name)
     assert dataset_get.to_json() == context.dataset.to_json()
 
 
@@ -43,25 +46,30 @@ def step_impl(context):
         context.error = e
 
 
-@behave.then(u'There are no datasets')
+@behave.then(u'Dataset with same name does not exists')
 def step_impl(context):
-    assert len(context.project.datasets.list()) == 0
-
-
-@behave.given(u'I create a dataset by the name of "{dataset_name}"')
-def step_impl(context, dataset_name):
     try:
-        context.project.datasets.delete(dataset_name=dataset_name, sure=True, really=True)
-    except:
+        context.project.datasets.get(dataset_name=context.dataset.name)
+    except context.dl.exceptions.NotFound:
+        # good results
         pass
+    except:
+        # dataset still exists
+        assert False
+
+
+@behave.given(u'I create a dataset with a random name')
+def step_impl(context):
+    rand_str = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(5))
+    dataset_name = 'random_dataset_{}'.format(rand_str)
     context.dataset = context.project.datasets.create(dataset_name=dataset_name)
     context.dataset_count += 1
 
 
-@behave.when(u'I try to create a dataset by the name of "{dataset_name}"')
-def step_impl(context, dataset_name):
+@behave.when(u'I try to create a dataset by the same name')
+def step_impl(context):
     try:
-        context.project.datasets.create(dataset_name=dataset_name)
+        context.project.datasets.create(dataset_name=context.dataset.name)
         context.error = None
     except Exception as e:
         context.error = e

@@ -8,7 +8,7 @@ logger = logging.getLogger('dataloop.plugin')
 @attr.s
 class Plugin:
     """
-    Pipeline object
+    Plugin object
     """
     client_api = attr.ib()
     id = attr.ib()

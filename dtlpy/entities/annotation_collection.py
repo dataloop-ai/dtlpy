@@ -90,7 +90,8 @@ class AnnotationCollection:
         :param annotation_format: how to show thw annotations. options: 'mask'/'instance'
         :return: ndarray of the annotations
         """
-
+        # if 'video' in self.item.mimetype and (annotation_format != 'json' or annotation_format != ['json']):
+        #     raise PlatformException('400', 'Cannot show mask or instance of video item')
         # height/weight
         if height is None:
             if self.item.height is None:
@@ -218,25 +219,35 @@ class AnnotationCollection:
 
         def json_to_annotation(w_i_json, w_json):
             try:
-                annotations[w_i_json] = entities.Annotation.from_json(_json=w_json,
-                                                                      item=item)
-                success[w_i_json] = True
+                # ignore notes
+                if w_json['type'] == 'note':
+                    annotations[w_i_json] = 'note'
+                    success[w_i_json] = False
+                else:
+                    annotations[w_i_json] = entities.Annotation.from_json(_json=w_json,
+                                                                          item=item)
+                    success[w_i_json] = True
             except Exception:
                 logger.warning('{}\nFailed to load annotation. id: {}, item_id:{}'.format(traceback.format_exc(),
-                                                                                          _json['id'],
-                                                                                          _json['itemId']))
+                                                                                          w_json['id'],
+                                                                                          w_json['itemId']))
                 success[w_i_json] = False
 
         pool = ThreadPool(processes=32)
         success = [False for _ in range(len(_json))]
         annotations = [False for _ in range(len(_json))]
-        for i_json, _json in enumerate(_json):
-            pool.apply_async(func=json_to_annotation, kwds={"w_json": _json,
+        for i_json, single_json in enumerate(_json):
+            pool.apply_async(func=json_to_annotation, kwds={"w_json": single_json,
                                                             "w_i_json": i_json})
         pool.close()
         pool.join()
         pool.terminate()
         annotations = [annotation for i_annotation, annotation in enumerate(annotations) if success[i_annotation]]
+
+        # remove notes
+        while 'note' in annotations:
+            annotations.remove('note')
+
         annotations.sort(key=lambda x: x.label)
         return cls(annotations=annotations, item=item)
 
@@ -247,6 +258,7 @@ class AnnotationCollection:
         return [annotation.to_json() for annotation in self.annotations]
 
     #########################
+    # For video annotations #
     # For video annotations #
     #########################
     def get_frame(self, frame_num):

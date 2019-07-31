@@ -25,31 +25,31 @@ class Classification:
 
     @property
     def x(self):
-        return
+        return 0
 
     @property
     def y(self):
-        return
+        return 0
 
     @property
     def geo(self):
-        return
+        return list()
 
     @property
     def left(self):
-        return
+        return 0
 
     @property
     def top(self):
-        return
+        return 0
 
     @property
     def right(self):
-        return
+        return 0
 
     @property
     def bottom(self):
-        return
+        return 0
 
     def show(self, image, thickness, with_text, height, width, annotation_format, color):
         """
@@ -401,6 +401,7 @@ class Polyline:
     """
 
     type = "polyline"
+    is_open = True
     geo = attr.ib()
     label = attr.ib()
     attributes = attr.ib()
@@ -497,6 +498,7 @@ class Polygon:
     geo = attr.ib()
     label = attr.ib()
     attributes = attr.ib()
+    is_open = attr.ib(default=False)
 
     @attributes.default
     def set_attributes(self):
@@ -547,14 +549,26 @@ class Polygon:
         """
         if thickness is None:
             thickness = 2
+        elif thickness == -1 and self.is_open:
+            thickness = 2
+            logger.warning('Cannot fill out open polygon, setting default thickness to 2')
         # draw annotation
-        image = cv2.drawContours(
-            image=image,
-            contours=[np.round(self.geo).astype(int)],
-            contourIdx=-1,
-            color=color,
-            thickness=thickness,
-        )
+        if self.is_open:
+            image = cv2.polylines(
+                img=image,
+                pts=[np.round(self.geo).astype(int)],
+                color=color,
+                isClosed=False,
+                thickness=thickness,
+            )
+        else:
+            image = cv2.drawContours(
+                image=image,
+                contours=[np.round(self.geo).astype(int)],
+                contourIdx=-1,
+                color=color,
+                thickness=thickness,
+            )
         if with_text:
             image = add_text_to_image(image=image, annotation=self)
         return image
@@ -589,6 +603,7 @@ class Polygon:
             geo=new_pts,
             label=label,
             attributes=attributes,
+            is_open=False
         )
 
     @classmethod
@@ -602,11 +617,13 @@ class Polygon:
                 'can not find "coordinates" or "data" in annotation. id: %s'
                 % _json["id"]
             )
+        is_open = _json.get('is_open', False)
         attributes = _json.get("attributes", list())
         return cls(
             geo=geo,
             label=_json["label"],
             attributes=attributes,
+            is_open=is_open
         )
 
 
@@ -753,9 +770,15 @@ class Segmentation:
 
 def add_text_to_image(image, annotation):
     text = '{label}-{attributes}'.format(label=annotation.label, attributes=','.join(annotation.attributes))
+    top = annotation.top
+    left = annotation.left
+    if top == 0:
+        top = image.shape[0] / 10
+    if left == 0:
+        left = image.shape[1] / 10
     return cv2.putText(img=image,
                        text=text,
-                       org=tuple([int(np.round(annotation.top)), int(np.round(annotation.left))]),
+                       org=tuple([int(np.round(top)), int(np.round(left))]),
                        color=(255, 0, 0),
                        fontFace=cv2.FONT_HERSHEY_DUPLEX,
                        fontScale=1,

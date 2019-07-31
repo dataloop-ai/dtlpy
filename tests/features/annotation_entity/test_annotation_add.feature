@@ -3,7 +3,7 @@ Feature: Annotation Entity Add annotation
     Background: Initiate Platform Interface
         Given Platform Interface is initialized as dlp and Environment is set to development
         And There is a project by the name of "Project_test_annotation_add"
-        And I create a dataset by the name of "Dataset"
+        And I create a dataset with a random name
         
     Scenario: Image - using add annotation method
         Given Classes in file: "classes_new.json" are uploaded to test Dataset

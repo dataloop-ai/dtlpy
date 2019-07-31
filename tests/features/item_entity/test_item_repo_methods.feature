@@ -3,7 +3,7 @@ Feature: Item Entity repo functions
     Background: Initiate Platform Interface
         Given Platform Interface is initialized as dlp and Environment is set to development
         And There is a project by the name of "item_repo_methods"
-        And I create a dataset by the name of "Dataset"
+        And I create a dataset with a random name
 
     Scenario: Download item
         Given There are no items
@@ -11,7 +11,7 @@ Feature: Item Entity repo functions
         And Folder "test_download_item_repo_methods" is empty
         When I download an item entity by the name of "/test_item.jpg" to "test_download_item_repo_methods"
         Then There are "1" files in "test_download_item_repo_methods"
-        And Item is correctly downloaded to "test_download_item_repo_methods/image/test_item.jpg" (compared with "0000000162.jpg")
+        And Item is correctly downloaded to "test_download_item_repo_methods/items/test_item.jpg" (compared with "0000000162.jpg")
 
     Scenario: Delete item
         Given There are no items

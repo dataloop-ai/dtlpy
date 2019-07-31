@@ -82,8 +82,10 @@ class ApiClient:
         self.last_request = None
         self.platform_exception = None
         self.last_curl = None
-        CookieIO.init()
-        self.io = CookieIO.global_cookie
+        self.cookie_io = CookieIO.init()
+        assert isinstance(self.cookie_io, CookieIO)
+        self.state_io = CookieIO.init_local_cookie(create=False)
+        assert isinstance(self.state_io, CookieIO)
 
         ##################
         # configurations #
@@ -111,7 +113,7 @@ class ApiClient:
                                  'attributes', 'partitions', 'metadata', 'stream', 'createdAt', 'updatedAt', 'arch']
 
         # API calls counter
-        counter_filepath = os.path.join(os.path.dirname(self.io.COOKIE), 'calls_counter.json')
+        counter_filepath = os.path.join(os.path.dirname(self.cookie_io.COOKIE), 'calls_counter.json')
         self.calls_counter = CallsCounter(filepath=counter_filepath)
 
     @property
@@ -131,14 +133,14 @@ class ApiClient:
     def environment(self):
         _environment = self._environment
         if _environment is None:
-            _environment = self.io.get('url')
+            _environment = self.cookie_io.get('url')
             self._environment = _environment
         return _environment
 
     @environment.setter
     def environment(self, env):
         self._environment = env
-        self.io.put('url', env)
+        self.cookie_io.put('url', env)
 
     @property
     def environments(self):
@@ -150,7 +152,7 @@ class ApiClient:
         _environments = self._environments
         if _environments is None:
             # take from cookie
-            _environments = self.io.get('login_parameters')
+            _environments = self.cookie_io.get('login_parameters')
             # if cookie is None  - init with defaults
             if _environments is None:
                 # default
@@ -197,13 +199,13 @@ class ApiClient:
     @environments.setter
     def environments(self, env_dict):
         self._environments = env_dict
-        self.io.put(key='login_parameters', value=self._environments)
+        self.cookie_io.put(key='login_parameters', value=self._environments)
 
     @property
     def verbose(self):
         _verbose = self._verbose
         if _verbose is None:
-            _verbose = self.io.get('verbose')
+            _verbose = self.cookie_io.get('verbose')
             if _verbose is None:
                 # set default
                 _verbose = False
@@ -217,7 +219,7 @@ class ApiClient:
     @verbose.setter
     def verbose(self, verbose):
         self._verbose = verbose
-        self.io.put(key='verbose', value=verbose)
+        self.cookie_io.put(key='verbose', value=verbose)
 
     @property
     def token(self):

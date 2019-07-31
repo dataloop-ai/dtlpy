@@ -3,7 +3,7 @@ Feature: Ontologies repository create function testing
     Background: Initiate Platform Interface and create a project
         Given Platform Interface is initialized as dlp and Environment is set to development
         And There is a project by the name of "ontologies_create"
-        And I create a dataset by the name of "Dataset"
+        And I create a dataset with a random name
 
     Scenario: Create ontology
         When I create a new ontology with labels from file "labels.json"

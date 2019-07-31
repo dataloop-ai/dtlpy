@@ -14,8 +14,18 @@ def step_impl(context):
                  % (context.item.dataset.id, context.item.id, ann.id),
         )
         ann_json = ann.to_json()
+        response = response.json()
         assert success is True
-        if response.json() != ann_json:
+
+        # remove metadata because response has not metadata
+        if ann.type in ['segment', 'polyline']:
+            if 'metadata' in ann_json:
+                ann_json.pop('metadata')
+            if 'metadata' in response:
+                response.pop('metadata')
+
+        # compare json
+        if response != ann_json:
             logging.error('FAILED: response json is:\n{}\n\nto_json is:\n{}'.format(response.json(), ann_json))
             assert False
 

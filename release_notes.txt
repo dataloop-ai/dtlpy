@@ -1,6 +1,21 @@
+Release 1.6.4
+    Features:
+        - checkout for project and dataset in sdk. no need to enter the project or dataset every time (once checked out)
+    Bug:
+        - remove yaml from packages (caused installations error)
+
+
 Release 1.6.2
     Features:
         - started working with platform RQL queries
         - removed api counter from global cookie file
     Bugs:
         - fixed slow upload and download by threading some pre process
+
+
+Release 1.6.8
+    Bugs:
+        - download/upload bug fix
+        - itmes.print() wont print thumnail in order for line to not be too long
+        - download_annotation bug fix
+        - removed 'shell' from cli autocomplete

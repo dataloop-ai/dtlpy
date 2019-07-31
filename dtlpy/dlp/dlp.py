@@ -1,6 +1,7 @@
 #! /usr/bin/python3
 import argparse
 import logging
+import jwt
 import os
 import subprocess
 import traceback
@@ -13,6 +14,12 @@ from fuzzyfinder.main import fuzzyfinder
 import dtlpy as dlp
 import shlex
 from dtlpy import exceptions
+import datetime
+import threading
+
+if os.name == "nt":
+    # set encoding for windows printing
+    os.environ["PYTHONIOENCODING"] = ":replace"
 
 ##########
 # Logger #
@@ -23,162 +30,148 @@ logger.setLevel(logging.DEBUG)
 console = logging.StreamHandler()
 console.setLevel(logging.DEBUG)
 logger.addHandler(console)
+keywords = dict()
+param_suggestions = list()
 
-keywords = {
-    "login": [],
-    "login-token": ["-t", "--token"],
-    "login-secret": [
-        "-e",
-        "--email",
-        "-p",
-        "--password",
-        "-i",
-        "--client-id",
-        "-s",
-        "--client-secret",
-    ],
-    "init": [],
-    "version": [],
-    "api": {"info": [], "setenv": ["-e", "--env"], "update": ["-u", "--url"]},
-    "projects": {"ls": [], "create": ["-p", "--project-name"]},
-    "datasets": {
-        "ls": ["-p", "--project-name"],
-        "create": ["-p", "--project-name", "-d", "--dataset-name"],
-        "upload": [
-            "-p",
-            "--project-name",
-            "-d",
-            "--dataset-name",
-            "-l",
-            "--local-path",
-            "-r",
-            "--remote-path",
-            "-f",
-            "--file-types",
-            "-nw",
-            "--num-workers",
-            "-uo",
-            "--upload-options",
-        ],
-        "download": [
-            "-p",
-            "--project-name",
-            "-d",
-            "--dataset-name",
-            "-r",
-            "--remote-path",
-            "-ao",
-            "--annotation-options",
-            "-do",
-            "--download-options",
-            "-nw",
-            "--num-workers",
-            "-l",
-            "--local-path",
-            "-s",
-        ],
-    },
-    "files": {
-        "ls": [
-            "-p",
-            "--project-name",
-            "-d",
-            "--dataset-name",
-            "-o",
-            "--page",
-            "-r",
-            "--remote-path",
-        ],
-        "upload": [
-            "-f",
-            "--filename",
-            "-p",
-            "--project-name",
-            "-d",
-            "--dataset-name",
-            "-r",
-            "--remote-path",
-            "-t",
-            "--item-type",
-            "-sc",
-            "--split-chunks",
-            "-ss",
-            "--split-seconds",
-            "-st",
-            "--split-times",
-            "-e",
-            "--encode",
-        ],
-    },
-    "videos": {
-        "play": ["-l", "--item-path", "-d", "--dataset-name", "-p", "--project-name"]
-    },
-    "packages": {
-        "ls": ["-p", "--project-name", "-g", "--package-id"],
-        "pack": [
-            "-p",
-            "--project-name",
-            "-d",
-            "--dataset-name",
-            "-g",
-            "--package-name",
-            "-ds",
-            "--description",
-            "-dir",
-            "--directory"
-        ],
-        "unpack": ["-p", "--project-name", "-g", "--package-id", "-d", "--directory"],
-    },
-    "plugins": {"generate": [], "push": [], "test": [], "status": []},
-    "checkout": {"project": [], "dataset": [], "plugin": []},
-    "sessions": {
-        "ls": ["-p", "--project-name", "-i", "--session-id"],
-        "tree": ["-p", "--project-name", "-s"],
-        "create": [
-            "-s",
-            "--session-name",
-            "--package-name",
-            "-d",
-            "--description",
-            "-g",
-            "--package-id",
-            "-p",
-            "--pipe-id",
-        ],
-        "upload": [
-            "-s",
-            "--session-id",
-            "-f",
-            "--filename",
-            "-t",
-            "--type",
-            "-d",
-            "--description",
-        ],
-        "download": ["-s", "--session-id", "-a", "--artifact-id", "-d", "--local-path"],
-    },
-    "exit": [],
-}
+
+def get_parser_tree(parser):
+    """
+    Creates parser tree for autocomplete
+    :param parser: parser
+    :return: parser tree
+    """
+    if parser._subparsers is None:
+        p_keywords = list()
+        for param in parser._option_string_actions:
+            if param.startswith('--'):
+                p_keywords.append(param)
+    else:
+        p_keywords = dict()
+        subparsers = parser._subparsers._group_actions[0].choices
+        for sub_parser in subparsers:
+            p_keywords[sub_parser] = get_parser_tree(subparsers[sub_parser])
+    if 'shell' in p_keywords:
+        p_keywords.pop('shell')
+    return p_keywords
 
 
 class StoreDictKeyPair(argparse.Action):
+    """
+    Stores dict key pairs
+    """
+
     def __call__(self, parser, namespace, values, option_string=None):
         try:
             my_dict = {}
             for kv in values.split(";"):
 
                 k, v = kv.split("=")
-                if v.lower() in ['true', 'false']:
-                    v = v.lower() == 'true'
-                logger.info('Input dict option: {}:{}'.format(k, v))
+                if v.lower() in ["true", "false"]:
+                    v = v.lower() == "true"
+                logger.info("Input dict option: {}:{}".format(k, v))
                 my_dict[k] = v
             setattr(namespace, self.dest, my_dict)
-        except:
-            raise ValueError('Bad input options. must be KEY=VAL;KEY=VAL...')
+        except Exception:
+            raise ValueError("Bad input options. must be KEY=VAL;KEY=VAL...")
+
+
+class StateEnum:
+    """
+    State enum
+    """
+    START = 0
+    RUNNING = 1
+    DONE = 2
+    CONTINUE = 3
+
+
+thread_state = StateEnum.START
 
 
 class DlpCompleter(Completer):
+    """
+    Autocomplete for dlp shell
+    """
+    # globals
+    global keywords
+    global param_suggestions
+    global thread_state
+
+    @staticmethod
+    def get_param_suggestions(param, word_before_cursor, cmd):
+        """
+        Return parap suggestions
+        :param param:
+        :param word_before_cursor:
+        :param cmd:
+        :return:
+        """
+        # globals
+        global keywords
+        global param_suggestions
+        global thread_state
+        try:
+            logging.disable(level=logging.ERROR)
+            if thread_state in [StateEnum.RUNNING, StateEnum.DONE]:
+                return
+            else:
+                if param == '--project-name':
+                    thread_state = StateEnum.RUNNING
+                    project_list = dlp.projects.list()
+                    param_suggestions = [project.name for project in project_list]
+                    thread_state = StateEnum.DONE
+                elif param == '--dataset-name':
+                    thread_state = StateEnum.RUNNING
+                    if '--project-name' in cmd:
+                        project = dlp.projects.get(project_name=cmd[cmd.index('--project-name') + 1])
+                        dataset_list = project.datasets.list()
+                    else:
+                        if not isinstance(dlp.datasets.project, dlp.entities.Project):
+                            dlp.datasets.project = dlp.projects.get()
+                        dataset_list = dlp.datasets.list()
+                    param_suggestions = [dataset.name for dataset in dataset_list]
+                    thread_state = StateEnum.DONE
+                elif param == '--local-path':
+                    thread_state = StateEnum.CONTINUE
+                    param = word_before_cursor.replace('"', '')
+                    if param.endswith('/') or param.endswith('/'):
+                        param = param[:-1]
+                    if param == '':
+                        param_suggestions = ['"{}'.format(os.path.join(os.path.expanduser('/'), directory)) for
+                                             directory in
+                                             os.listdir(os.path.join(os.path.expanduser('/')))
+                                             if not directory.startswith('.')]
+                    elif os.path.isdir(param):
+                        dirs = os.listdir(param)
+                        param_suggestions = ['"{}'.format(os.path.join(param, directory))
+                                             for directory in dirs if not directory.startswith('.')]
+                    elif os.path.isdir(os.path.join(os.path.join(os.path.expanduser('/')), param)):
+                        dirs = os.listdir(os.path.join(os.path.join(os.path.expanduser('~')), param))
+                        param_suggestions = ['"{}'.format(os.path.join(param, directory))
+                                             for directory in dirs if not directory.startswith('.')]
+                elif param in ['--annotation-options']:
+                    thread_state = StateEnum.CONTINUE
+                    param_suggestions = ['mask', 'json', 'instance', '"mask, json"',
+                                         '"mask, instance"', '"json, instance"', '"mask, json, instance"']
+                else:
+                    param_suggestions = list()
+        except Exception:
+            param_suggestions = list()
+            thread_state = StateEnum.START
+        finally:
+            logging.disable(logging.NOTSET)
+
     def get_completions(self, document, complete_event):
+        """
+        Get command completion
+        :param document:
+        :param complete_event:
+        :return:
+        """
+        global keywords
+        global param_suggestions
+        global thread_state
+
         # fix input
         cmd = " ".join(document.text.split())
         cmd = cmd.split(" ")
@@ -188,7 +181,27 @@ class DlpCompleter(Completer):
 
         # suggest keywords
         suggestions = list()
-        if len(cmd) == 1:
+        if (len(cmd) > 2 and cmd[-2].startswith('-') and word_before_cursor != '') or (
+                cmd[-1].startswith('-') and word_before_cursor == ''):
+            if word_before_cursor == '':
+                param = cmd[-1]
+            else:
+                param = cmd[-2]
+            if thread_state in [StateEnum.START, StateEnum.CONTINUE]:
+                if param in ['--project-name', '--dataset-name']:
+                    thread = threading.Thread(
+                        target=self.get_param_suggestions,
+                        kwargs={
+                            "param": param,
+                            'word_before_cursor': word_before_cursor,
+                            'cmd': cmd})
+                    thread.start()
+                else:
+                    self.get_param_suggestions(param=param, word_before_cursor=word_before_cursor, cmd=cmd)
+            if thread_state in [StateEnum.DONE, StateEnum.CONTINUE]:
+                suggestions = param_suggestions
+        elif len(cmd) == 1:
+            thread_state = StateEnum.START
             if cmd[0] not in keywords.keys():
                 suggestions = list(keywords.keys())
             elif isinstance(keywords[cmd[0]], list):
@@ -196,6 +209,7 @@ class DlpCompleter(Completer):
             elif isinstance(keywords[cmd[0]], dict):
                 suggestions = list(keywords[cmd[0]].keys())
         elif len(cmd) >= 2:
+            thread_state = StateEnum.START
             if cmd[0] not in keywords.keys():
                 suggestions = list()
             elif isinstance(keywords[cmd[0]], list):
@@ -212,8 +226,10 @@ class DlpCompleter(Completer):
 
 
 def login_input():
+    print(datetime.datetime.utcnow())
     print("email:")
     email = input()
+    print(datetime.datetime.utcnow())
     print("password:")
     password = input()
     print()
@@ -229,7 +245,8 @@ def get_parser():
     :return: parser object
     """
     parser = argparse.ArgumentParser(
-        description="CLI for Dataloop", formatter_class=argparse.RawTextHelpFormatter
+        description="CLI for Dataloop",
+        formatter_class=argparse.RawTextHelpFormatter
     )
 
     ###############
@@ -249,19 +266,32 @@ def get_parser():
 
     a = subparsers.add_parser("login-token", help="Login by passing a valid token")
     required = a.add_argument_group("required named arguments")
-    required.add_argument("-t", "--token", metavar="", help="valid token", required=True)
+    required.add_argument(
+        "-t", "--token", metavar='\b', help="valid token", required=True
+    )
 
     a = subparsers.add_parser("login-secret", help="Login client id and secret")
     required = a.add_argument_group("required named arguments")
-    required.add_argument("-e", "--email", metavar="", help="user email", required=True)
-    required.add_argument("-p", "--password", metavar="", help="user password", required=True)
-    required.add_argument("-i", "--client-id", metavar="", help="client id", required=True)
-    required.add_argument("-s", "--client-secret", metavar="", help="client secret", required=True)
+    required.add_argument("-e", "--email", metavar='\b', help="user email", required=True)
+    required.add_argument(
+        "-p", "--password", metavar='\b', help="user password", required=True
+    )
+    required.add_argument(
+        "-i", "--client-id", metavar='\b', help="client id", required=True
+    )
+    required.add_argument(
+        "-s", "--client-secret", metavar='\b', help="client secret", required=True
+    )
 
     ########
     # Init #
     ########
     subparsers.add_parser("init", help="Initialize a .dataloop context")
+
+    ########
+    # Help #
+    ########
+    subparsers.add_parser("help", help="Get help")
 
     ###########
     # version #
@@ -282,19 +312,28 @@ def get_parser():
     # setenv
     a = subparser_parser.add_parser("setenv", help="Set platform environment")
     required = a.add_argument_group("required named arguments")
-    required.add_argument("-e", "--env", metavar="", help="working environment", required=True)
+    required.add_argument(
+        "-e", "--env", metavar='\b', help="working environment", required=True
+    )
 
     # update
     a = subparser_parser.add_parser("update", help="Update dtlpy package")
     optional = a.add_argument_group("optional named arguments")
-    optional.add_argument("-u", "--url", metavar="", help="package url",
-                          default="https://storage.googleapis.com/dtlpy/dev/dtlpy-latest-py3-none-any.whl")
+    optional.add_argument(
+        "-u",
+        "--url",
+        metavar='\b',
+        help="package url",
+        default="dtlpy",
+    )
 
     ############
     # Projects #
     ############
     subparser = subparsers.add_parser("projects", help="Operations with projects")
-    subparser_parser = subparser.add_subparsers(dest="projects", help="projects operations")
+    subparser_parser = subparser.add_subparsers(
+        dest="projects", help="projects operations"
+    )
 
     # ACTIONS #
 
@@ -304,7 +343,17 @@ def get_parser():
     # create
     a = subparser_parser.add_parser("create", help="Create a new project")
     required = a.add_argument_group("required named arguments")
-    required.add_argument("-p", "--project-name", metavar="", help="project name")
+    required.add_argument("-p", "--project-name", metavar='\b', help="project name")
+
+    # checkout
+    a = subparser_parser.add_parser("checkout", help="checkout a project")
+    required = a.add_argument_group("required named arguments")
+    required.add_argument("-p", "--project-name", metavar='\b', help="project name")
+
+    # open web
+    a = subparser_parser.add_parser("web", help="Open in web browser")
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument("-p", "--project-name", metavar='\b', help="project name")
 
     ############
     # Datasets #
@@ -313,87 +362,117 @@ def get_parser():
     subparser_parser = subparser.add_subparsers(dest="datasets", help="datasets operations")
 
     # ACTIONS #
+    # open web
+    a = subparser_parser.add_parser("web", help="Open in web browser")
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument("-p", "--project-name", metavar='\b', help="project name")
+    optional.add_argument("-d", "--dataset-name", metavar='\b', help="dataset name")
 
     # list
     a = subparser_parser.add_parser("ls", help="List of datasets in project")
-    required = a.add_argument_group("required named arguments")
-    required.add_argument("-p", "--project-name", metavar="", help="project name", required=True)
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument("-p", "--project-name", metavar='\b', default=None,
+                          help="project name. Default taken from checked out (if checked out)")
 
     # create
     a = subparser_parser.add_parser("create", help="Create a new dataset")
     required = a.add_argument_group("required named arguments")
-    required.add_argument("-p", "--project-name", metavar="", help="project name", required=True)
-    required.add_argument("-d", "--dataset-name", metavar="", help="dataset name", required=True)
+    required.add_argument("-d", "--dataset-name", metavar='\b', help="dataset name", required=True)
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument("-p", "--project-name", metavar='\b', default=None,
+                          help="project name. Default taken from checked out (if checked out)")
 
     # upload
     a = subparser_parser.add_parser("upload", help="Upload directory to dataset")
     required = a.add_argument_group("required named arguments")
-    required.add_argument("-p", "--project-name", metavar="", help="project name", required=True)
-    required.add_argument("-d", "--dataset-name", metavar="", help="dataset name", required=True)
-    required.add_argument("-l", "--local-path", metavar="", help="local path", required=True)
+    required.add_argument("-l", "--local-path", required=True, metavar='\b',
+                          help="local path")
     optional = a.add_argument_group("optional named arguments")
-    optional.add_argument("-r", "--remote-path", metavar="", help="remote path to upload to. default: /", default="/")
-    optional.add_argument("-f", "--file-types", metavar="", default=None,
+    optional.add_argument("-p", "--project-name", metavar='\b', default=None,
+                          help="project name. Default taken from checked out (if checked out)")
+    optional.add_argument("-d", "--dataset-name", metavar='\b', default=None,
+                          help="dataset name. Default taken from checked out (if checked out)")
+    optional.add_argument("-r", "--remote-path", metavar='\b', default=None,
+                          help="remote path to upload to. default: /")
+    optional.add_argument("-f", "--file-types", metavar='\b', default=None,
                           help='Comma separated list of file types to upload, e.g ".jpg,.png". default: all')
-    optional.add_argument("-nw", "--num-workers", metavar="", help="num of threads workers", default=None)
-    optional.add_argument("-uo", "--upload-options", action=StoreDictKeyPair, metavar="",
-                          help='list of upload options. format: KEY1=VAL1;KEY2=VAL2... . defaults: {}'.format(dlp.repositories.uploader.DEFAULT_UPLOAD_OPTIONS),
-                          default=None)
+    optional.add_argument("-nw", "--num-workers", metavar='\b', default=None,
+                          help="num of threads workers")
+    optional.add_argument("-lap", "--local-annotations-path", metavar='\b', default=None,
+                          help="Path for local annotations to upload with items")
+    optional.add_argument("-ow", "--overwrite", dest="overwrite", action='store_true', default=False,
+                          help="Overwrite existing item")
+    optional.add_argument("-rp", "--relative-path", dest="relative_path", action='store_true', default=False,
+                          help="Upload with relative path")
+
     # download
     a = subparser_parser.add_parser("download", help="Download dataset to a local directory")
-    required = a.add_argument_group("required named arguments")
-    required.add_argument("-p", "--project-name", metavar="", help="project name", required=True)
-    required.add_argument("-d", "--dataset-name", metavar="", help="dataset name", required=True)
     optional = a.add_argument_group("optional named arguments")
-    optional.add_argument("-r", "--remote-path", metavar="", default="/**",
-                          help="remote path to download from. default: /")
-    optional.add_argument("-ao", "--annotation-options", metavar="", default="",
-                          help="which annotation to download. options: json,instance,mask")
-    optional.add_argument("-do", "--download-options", action=StoreDictKeyPair, metavar="",
-                          default=None,
-                          help='list of download options. format: KEY1=VAL1;KEY2=VAL2... . defaults: {}'.format(dlp.repositories.uploader.DEFAULT_UPLOAD_OPTIONS))
-    optional.add_argument("-nw", "--num-workers", metavar="", default=None, help="number of download workers")
-    # optional.add_argument('-o', '--opacity', metavar='', type=float,
-    #                       help='opacity when marking image. range:[0,1]. default: 1', default=1)
-    optional.add_argument("-l", "--local-path", metavar="", help="local path", default=None)
+    optional.add_argument("-p", "--project-name", metavar='\b', default=None,
+                          help="project name. Default taken from checked out (if checked out)")
+    optional.add_argument("-d", "--dataset-name", metavar='\b', default=None,
+                          help="dataset name. Default taken from checked out (if checked out)")
+    optional.add_argument("-ao", "--annotation-options", metavar='\b',
+                          help="which annotation to download. options: json,instance,mask", default=None)
+    optional.add_argument("-r", "--remote-path", metavar='\b',
+                          help="which annotation to download. options: json,instance,mask", default=None)
+    optional.add_argument("-rp", "--relative-path", action='store_true', default=False,
+                          help="download with remote file structure")
+    optional.add_argument("-ow", "--overwrite", action='store_true', default=False,
+                          help="Overwrite existing item")
+    optional.add_argument("-nw", "--num-workers", metavar='\b', default=None,
+                          help="number of download workers")
+    optional.add_argument("-t", "--not-items-folder", action='store_true', default=False,
+                          help="Download WITHOUT 'items' folder")
+    optional.add_argument("-wt", "--with-text", action='store_true', default=False,
+                          help="Annotations will have text in mask")
+    optional.add_argument("-th", "--thickness", metavar='\b', default="1",
+                          help="Annotation line thickness")
+    optional.add_argument("-l", "--local-path", metavar='\b', default=None,
+                          help="local path")
 
-    ###################
-    # files and items #
-    ###################
-    subparser = subparsers.add_parser("files", help="Operations with files and items")
-    subparser_parser = subparser.add_subparsers(dest="files", help="datasets files and items")
+    # checkout
+    a = subparser_parser.add_parser("checkout", help="checkout a dataset")
+    required = a.add_argument_group("required named arguments")
+    required.add_argument("-d", "--dataset-name", metavar='\b', help="dataset name")
+
+    #########
+    # items #
+    #########
+    subparser = subparsers.add_parser("items", help="Operations with items")
+    subparser_parser = subparser.add_subparsers(dest="items", help="items operations"
+                                                )
 
     # ACTIONS #
 
-    # list
-    a = subparser_parser.add_parser("ls", help="List of files in dataset")
+    a = subparser_parser.add_parser("web", help="Open in web browser")
     required = a.add_argument_group("required named arguments")
-    required.add_argument("-p", "--project-name", metavar="", help="project name", required=True)
-    required.add_argument("-d", "--dataset-name", metavar="", help="dataset name", required=True)
+    required.add_argument("-r", "--remote-path", metavar='\b', help="remote path")
     optional = a.add_argument_group("optional named arguments")
-    optional.add_argument("-o", "--page", metavar="", help="page number (integer)", default=0)
-    optional.add_argument("-r", "--remote-path", metavar="", help="remote path", default="/")
+    optional.add_argument("-p", "--project-name", metavar='\b', help="project name")
+    optional.add_argument("-d", "--dataset-name", metavar='\b', help="dataset name")
+
+    # list
+    a = subparser_parser.add_parser("ls", help="List of items in dataset")
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument("-p", "--project-name", metavar='\b', default=None,
+                          help="project name. Default taken from checked out (if checked out)")
+    optional.add_argument("-d", "--dataset-name", metavar='\b', default=None,
+                          help="dataset name. Default taken from checked out (if checked out)")
+    optional.add_argument("-o", "--page", metavar='\b', help="page number (integer)", default=0)
+    optional.add_argument("-r", "--remote-path", metavar='\b', help="remote path", default=None)
 
     # upload
     a = subparser_parser.add_parser("upload", help="Upload a single file")
     required = a.add_argument_group("required named arguments")
-    required.add_argument("-f", "--filename", metavar="", help="local filename to upload", required=True)
-    required.add_argument("-p", "--project-name", metavar="", help="project name", required=True)
-    required.add_argument("-d", "--dataset-name", metavar="", help="dataset name", required=True)
+    required.add_argument("-f", "--filename", metavar='\b', help="local filename to upload", required=True)
     optional = a.add_argument_group("optional named arguments")
-    optional.add_argument("-r", "--remote-path", metavar="", help="remote path", default="/")
-    optional.add_argument("-t", "--item-type", metavar="", help='"folder", "file"', default="file")
-
-    # split video to chunks
-    optional.add_argument("-sc", "--split-chunks", metavar="", default=None,
-                          help="Video splitting parameter: Number of chunks to split")
-    optional.add_argument("-ss", "--split-seconds", metavar="", default=None,
-                          help="Video splitting parameter: Seconds of each chuck")
-    optional.add_argument("-st", "--split-times", metavar="", default=None,
-                          help="Video splitting parameter: List of seconds to split at. e.g 600,1800,2000")
-    # encode
-    optional.add_argument("-e", "--encode", action="store_true", default=False,
-                          help="encode video to mp4, remove bframes and upload")
+    optional.add_argument("-p", "--project-name", metavar='\b', default=None,
+                          help="project name. Default taken from checked out (if checked out)")
+    optional.add_argument("-d", "--dataset-name", metavar='\b', default=None,
+                          help="dataset name. Default taken from checked out (if checked out)")
+    optional.add_argument("-r", "--remote-path", metavar='\b', default="/",
+                          help="remote path")
 
     ##########
     # videos #
@@ -406,195 +485,281 @@ def get_parser():
     # play
     a = subparser_parser.add_parser("play", help="Play video")
     optional = a.add_argument_group("optional named arguments")
-    optional.add_argument("-l", "--item-path", metavar="", default=None,
-                          help="Video remote path in platform. e.g /dogs/dog.mp4")
-    optional.add_argument("-d", "--dataset-name", metavar="", help="Dataset name", default=None)
-    optional.add_argument("-p", "--project-name", metavar="", help="Project name", default=None)
+    optional.add_argument(
+        "-l",
+        "--item-path",
+        metavar='\b',
+        default=None,
+        help="Video remote path in platform. e.g /dogs/dog.mp4",
+    )
+    optional.add_argument(
+        "-p",
+        "--project-name",
+        metavar='\b',
+        default=None,
+        help="project name. Default taken from checked out (if checked out)",
+    )
+    optional.add_argument(
+        "-d",
+        "--dataset-name",
+        metavar='\b',
+        default=None,
+        help="dataset name. Default taken from checked out (if checked out)",
+    )
+
+    # upload
+    a = subparser_parser.add_parser("upload", help="Upload a single video")
+    required = a.add_argument_group("required named arguments")
+    required.add_argument(
+        "-f", "--filename", metavar='\b', help="local filename to upload", required=True
+    )
+    required.add_argument(
+        "-p", "--project-name", metavar='\b', help="project name", required=True
+    )
+    required.add_argument(
+        "-d", "--dataset-name", metavar='\b', help="dataset name", required=True
+    )
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument(
+        "-r", "--remote-path", metavar='\b', help="remote path", default="/"
+    )
+
+    # split video to chunks
+    optional.add_argument(
+        "-sc",
+        "--split-chunks",
+        metavar='\b',
+        default=None,
+        help="Video splitting parameter: Number of chunks to split",
+    )
+    optional.add_argument(
+        "-ss",
+        "--split-seconds",
+        metavar='\b',
+        default=None,
+        help="Video splitting parameter: Seconds of each chuck",
+    )
+    optional.add_argument(
+        "-st",
+        "--split-times",
+        metavar='\b',
+        default=None,
+        help="Video splitting parameter: List of seconds to split at. e.g 600,1800,2000",
+    )
+    # encode
+    optional.add_argument(
+        "-e",
+        "--encode",
+        action="store_true",
+        default=False,
+        help="encode video to mp4, remove bframes and upload",
+    )
 
     ############
     # packages #
     ############
     subparser = subparsers.add_parser("packages", help="Operations with package")
-    subparser_parser = subparser.add_subparsers(dest="packages", help="package operations")
+    subparser_parser = subparser.add_subparsers(
+        dest="packages", help="package operations"
+    )
 
     # list
     a = subparser_parser.add_parser("ls", help="List all package")
     optional = a.add_argument_group("optional named arguments")
-    optional.add_argument("-p", "--project-name", metavar="", help="list a project's package", default=None)
-    optional.add_argument("-g", "--package-id", metavar="", help="list package's artifacts", default=None)
+    optional.add_argument(
+        "-p",
+        "--project-name",
+        metavar='\b',
+        default=None,
+        help="project name. Default taken from checked out (if checked out)",
+    )
+    optional.add_argument(
+        "-g", "--package-id", metavar='\b', help="list package's artifacts", default=None
+    )
 
     # pack
     a = subparser_parser.add_parser("pack", help="Create a new package")
     required = a.add_argument_group("required named arguments")
-    required.add_argument("-g", "--package-name", metavar="", help="package name", required=True)
-    required.add_argument("-ds", "--description", metavar="", help="package description", required=True)
-    required.add_argument("-dir", "--directory", metavar="", help="Local path of packaeg script", required=True)
-    required.add_argument("-p", "--project-name", metavar="", help="Project name", required=True)
+    required.add_argument(
+        "-g", "--package-name", metavar='\b', help="package name", required=True
+    )
+    required.add_argument(
+        "-ds", "--description", metavar='\b', help="package description", required=True
+    )
+    required.add_argument(
+        "-dir",
+        "--directory",
+        metavar='\b',
+        help="Local path of packaeg script",
+        required=True,
+    )
     optional = a.add_argument_group("optional named arguments")
-    optional.add_argument("-d", "--dataset-name", metavar="", help="Dataset name", default=None)
+    optional.add_argument(
+        "-p",
+        "--project-name",
+        metavar='\b',
+        default=None,
+        help="project name. Default taken from checked out (if checked out)",
+    )
+    optional.add_argument(
+        "-d",
+        "--dataset-name",
+        metavar='\b',
+        default=None,
+        help="dataset name. Default taken from checked out (if checked out)",
+    )
 
     # delete
     a = subparser_parser.add_parser("delete", help="Delete a package forever...")
     optional = a.add_argument_group("optional named arguments")
-    optional.add_argument("-d", "--dataset-name", metavar="", help="Dataset name", default=None)
+    optional.add_argument(
+        "-d", "--dataset-name", metavar='\b', help="Dataset name", default=None
+    )
 
     # unpack
     a = subparser_parser.add_parser("unpack", help="Download and unzip source code")
     required = a.add_argument_group("required named arguments")
-    required.add_argument("-g", "--package-id", metavar="", help="package id", required=True)
-    required.add_argument("-p", "--project-name", metavar="", help="Project name", required=True)
+    required.add_argument(
+        "-g", "--package-id", metavar='\b', help="package id", required=True
+    )
     optional = a.add_argument_group("optional named arguments")
-    optional.add_argument("-d", "--directory", metavar="", default=os.getcwd(),
-                          help="source code directory. default: cwd")
+    optional.add_argument(
+        "-p",
+        "--project-name",
+        metavar='\b',
+        default=None,
+        help="project name. Default taken from checked out (if checked out)",
+    )
+    optional.add_argument(
+        "-d",
+        "--directory",
+        metavar='\b',
+        default=os.getcwd(),
+        help="source code directory. default: cwd",
+    )
 
     ############
     # Plugins #
     ############
     subparser = subparsers.add_parser("plugins", help="Operations with plugins")
-    subparser_parser = subparser.add_subparsers(dest="plugins", help="plugin operations")
+    subparser_parser = subparser.add_subparsers(
+        dest="plugins", help="plugin operations"
+    )
 
     # ACTIONS #
 
     # generate
-    subparser_parser.add_parser("generate", help="Create a boilerplate for a new plugin")
+    a = subparser_parser.add_parser(
+        "generate", help="Create a boilerplate for a new plugin"
+    )
+    required = a.add_argument_group("required named arguments")
+    required.add_argument(
+        "-p", "--plugin-name", metavar='\b', help="plugin name", required=True
+    )
+
+    # ls
+    subparser_parser.add_parser("ls", help="List plugins")
 
     # push
-    subparser_parser.add_parser("push", help="Push the plugin to the platform")
+    a = subparser_parser.add_parser("push", help="Push the plugin to the platform")
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument("-d", "--deploy", dest="deploy", action='store_true', default=False,
+                          help="Push and deploy")
+    optional.add_argument("-r", "--revision", metavar='\b', default=None,
+                          help="Revision to deploy if selected True")
 
-    a = subparser_parser.add_parser('invoke', help='Invoke plugin with arguments on remote')
-    optional = a.add_argument_group('optional named arguments')
-    optional.add_argument('-f', '--file', metavar='', default='./mock.json',
-                          help='Location of file with invocation inputs')
+    # invoke
+    a = subparser_parser.add_parser(
+        "invoke", help="Invoke plugin with arguments on remote"
+    )
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument(
+        "-f",
+        "--file",
+        metavar='\b',
+        default="./mock.json",
+        help="Location of file with invocation inputs",
+    )
 
-    _ = subparser_parser.add_parser('deploy', help='Deploy plugin on remote')
+    a = subparser_parser.add_parser("deploy", help="Deploy plugin on remote")
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument("-r", "--revision", metavar='\b', help="plugin revision")
 
-    _ = subparser_parser.add_parser('status', help='Get the status of the plugins deployment')
+    _ = subparser_parser.add_parser(
+        "status", help="Get the status of the plugins deployment"
+    )
     # test
-    subparser_parser.add_parser("test", help="Tests that plugin locally using mock.json")
+    subparser_parser.add_parser(
+        "test", help="Tests that plugin locally using mock.json"
+    )
 
-    ############
-    # Checkout #
-    ############
-    subparser = subparsers.add_parser("checkout", help="Operations with setting the state of the cli")
-    subparser_parser = subparser.add_subparsers(dest="checkout", help="package operations")
-
-    a = subparser_parser.add_parser("project", help="Checks out to a different project")
+    # checkout
+    a = subparser_parser.add_parser("checkout", help="checkout a plugin")
     required = a.add_argument_group("required named arguments")
-    required.add_argument("project", metavar="Project", type=str, help="project name")
-
-    a = subparser_parser.add_parser("dataset", help="Checks out to a different dataset")
-    required = a.add_argument_group("required named arguments")
-    required.add_argument("dataset", metavar="Dataset", type=str, help="dataset name")
-
-    a = subparser_parser.add_parser("plugin", help="Checks out to a different plugin")
-    required = a.add_argument_group("required named arguments")
-    required.add_argument("plugin", metavar="Plugin", type=str, help="plugin name")
+    required.add_argument("-p", "--plugin-name", metavar='\b', help="plugin name")
 
     ############
     # Sessions #
     ############
     subparser = subparsers.add_parser("sessions", help="Operations with sessions")
-    subparser_parser = subparser.add_subparsers(dest="sessions", help="Operations with sessions")
+    subparser_parser = subparser.add_subparsers(
+        dest="sessions", help="Operations with sessions"
+    )
 
     # ACTIONS #
 
     # list
     a = subparser_parser.add_parser("ls", help="List artifacts for session")
-    required = a.add_argument_group("required named arguments")
-    required.add_argument("-p", "--project-name", metavar="", help="project name", required=True)
     optional = a.add_argument_group("optional named arguments")
-    optional.add_argument("-i", "--session-id", metavar="", help="List artifacts in session id")
+    optional.add_argument("-p", "--project-name", metavar='\b', default=None,
+                          help="project name. Default taken from checked out (if checked out)", )
+    optional.add_argument("-i", "--session-id", metavar='\b', help="List artifacts in session id")
 
     # tree
     a = subparser_parser.add_parser("tree", help="Print tree representation of sessions")
-    required = a.add_argument_group("required named arguments")
-    required.add_argument("-p", "--project-name", metavar="", help="project name", required=True)
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument("-p", "--project-name", metavar='\b', default=None,
+                          help="project name. Default taken from checked out (if checked out)", )
 
     # create
     a = subparser_parser.add_parser("create", help="Create a new Session")
     required = a.add_argument_group("required named arguments")
-    required.add_argument("-s", "--session-name", metavar="", help="session name", required=True)
-    required.add_argument("-g", "--package-id", metavar="", help="source code", required=True)
-    required.add_argument("-p", "--pipe-id", metavar="", help="pip to run", required=True)
-    required.add_argument("-d", "--description", metavar="", help="session description", required=True)
+    required.add_argument("-s", "--session-name", metavar='\b', help="session name", required=True)
+    required.add_argument("-g", "--package-id", metavar='\b', help="source code", required=True)
+    required.add_argument("-p", "--pipe-id", metavar='\b', help="pip to run", required=True)
+    required.add_argument("-d", "--description", metavar='\b', help="session description", required=True)
 
     # upload
     a = subparser_parser.add_parser("upload", help="Add artifact to session")
     required = a.add_argument_group("required named arguments")
-    required.add_argument("-s", "--session-id", metavar="", help="session id", required=True)
-    required.add_argument("-f", "--filename", metavar="", help="local filename to add", required=True)
-    required.add_argument("-t", "--type", metavar="", help="artifact type", required=True)
+    required.add_argument("-s", "--session-id", metavar='\b', help="session id", required=True)
+    required.add_argument("-f", "--filename", metavar='\b', help="local filename to add", required=True)
+    required.add_argument("-t", "--type", metavar='\b', help="artifact type", required=True)
     optional = a.add_argument_group("optional named arguments")
-    optional.add_argument("-d", "--description", metavar="", help="file description. default: ''", default="")
+    optional.add_argument("-d", "--description", metavar='\b', help="file description. default: ''", default="")
 
     # download
     a = subparser_parser.add_parser("download", help="Download artifact from session")
     required = a.add_argument_group("required named arguments")
-    required.add_argument("-s", "--session-id", metavar="", help="session id", required=True)
-    required.add_argument("-a", "--artifact-id", metavar="", help="artifact id", required=True)
-    required.add_argument("-d", "--local-path", metavar="", help="download to location", required=True)
+    required.add_argument("-s", "--session-id", metavar='\b', help="session id", required=True)
+    required.add_argument("-a", "--artifact-id", metavar='\b', help="artifact id", required=True)
+    required.add_argument("-d", "--local-path", metavar='\b', help="download to location", required=True)
 
-    # #########
-    # # Pipes #
-    # #########
-    # subparser = subparsers.add_parser("pipes", help="Operations with pipes")
-    # subparser_parser = subparser.add_subparsers(dest="pipes", help="Pipes operations")
-    # subparser_parser.add_parser("ls", help="List all pipes.")
+    #########
+    # Shell #
+    #########
+    # ls
+    subparsers.add_parser("ls", help="List dirs")
+    #
+    # pwd
+    subparsers.add_parser("pwd", help="Get cwd")
 
-    # # ACTIONS #
+    # cd
+    subparser = subparsers.add_parser("cd", help="Change dir")
+    subparser.add_argument(dest='dir')
 
-    # # run
-    # a = subparser_parser.add_parser("run", help="Run a pipe")
-    # optional = a.add_argument_group("optional named arguments")
-    # optional.add_argument(
-    #     "-s", "--session-id", metavar="", help="Current session id to run"
-    # )
-    # optional.add_argument(
-    #     "-ps",
-    #     "--prev-session-id",
-    #     metavar="",
-    #     help="Create new session with revious session id to start from",
-    # )
-    # optional.add_argument(
-    #     "--project-name", metavar="", help="project name. default: None", default=None
-    # )
-    # optional.add_argument(
-    #     "--dataset-name", metavar="", help="dataset name. default: None", default=None
-    # )
-    # optional.add_argument(
-    #     "--pipe-id", metavar="", help="pipe id. default: None", default=None
-    # )
-    # optional.add_argument(
-    #     "--package-id", metavar="", help="package id. default: None", default=None
-    # )
-    # optional.add_argument(
-    #     "--session-name",
-    #     metavar="",
-    #     help="new session name. default: None",
-    #     default=None,
-    # )
-    # optional.add_argument(
-    #     "--config-filename",
-    #     metavar="",
-    #     help="new configuration filename. default: None",
-    #     default=None,
-    # )
-    # optional.add_argument(
-    #     "-r",
-    #     "--remote-run",
-    #     action="store_true",
-    #     help="Run session remotely",
-    #     default=False,
-    # )
-
-    # optional.add_argument(
-    #     "-i",
-    #     "--input",
-    #     action="append",
-    #     type=lambda kv: kv.split("="),
-    #     dest="pipe_kwargs",
-    #     help='Input args for pipe. Use: ["--input key1=val1 --input key2=val2"]',
-    # )
+    # clear
+    subparsers.add_parser("clear", help="Clear shell")
 
     ########
     # Exit #
@@ -604,7 +769,9 @@ def get_parser():
     return parser
 
 
-def run(args, logger):
+def run(args, parser):
+    global logger
+
     #########
     # Login #
     #########
@@ -624,38 +791,48 @@ def run(args, logger):
     # Init  #
     #########
     elif args.operation == "init":
-        from ..utilities.plugin_bootstraping.dataloop_folder_initializator import (
-            init_dataloop_folder,
-        )
-
-        init_dataloop_folder()
+        dlp.init()
 
     ###########
     # Version #
     ###########
     elif args.operation == "version":
+        print(datetime.datetime.utcnow())
         print("[INFO] Dataloop SDK Version: {}".format(dlp.__version__))
+
+    ########
+    # Help #
+    ########
+    elif args.operation == "help":
+        print(datetime.datetime.utcnow())
+        parser.print_help()
+
     #######
     # api #
     #######
     elif args.operation == "api":
         if args.api == "info":
-            print("environment")
-            print(dlp.environment())
-            print("token")
-            print(dlp.token())
+            dlp.info()
 
         if args.api == "setenv":
             dlp.setenv(args.env)
+            print(datetime.datetime.utcnow())
             print("[INFO] Platform environment: {}".format(dlp.environment()))
 
         if args.api == "update":
             url = args.url
-            print("[INFO] Update DTLPy from %s" % url)
+            payload = jwt.decode(dlp.client_api.token, algorithms=['HS256'], verify=False)
+            try:
+                if 'admin' in payload['https://dataloop.ai/authorization']['roles']:
+                    url = "https://storage.googleapis.com/dtlpy/dev/dtlpy-latest-py3-none-any.whl"
+            except Exception:
+                pass
+            print(datetime.datetime.utcnow())
+            print("[INFO] Update DTLPy from {}".format(url))
             print("[INFO] Installing using pip...")
-            cmd = "pip install %s --upgrade " % url
+            cmd = "pip install {} --upgrade".format(url)
             subprocess.Popen(cmd, shell=True)
-            return
+            sys.exit(0)
 
     ############
     # Projects #
@@ -663,9 +840,14 @@ def run(args, logger):
     elif args.operation == "projects":
         if args.projects == "ls":
             dlp.projects.list().print()
+        elif args.projects == "web":
+            dlp.projects.open_in_web(project_name=args.project_name)
         elif args.projects == "create":
             dlp.projects.create(args.project_name).print()
+        elif args.projects == "checkout":
+            dlp.projects.checkout(args.project_name)
         else:
+            print(datetime.datetime.utcnow())
             print('Type "dlp projects --help" for options')
 
     ############
@@ -673,23 +855,26 @@ def run(args, logger):
     ############
     elif args.operation == "datasets":
         if args.datasets == "ls":
-            try:
-                project = dlp.projects.get(project_name=args.project_name)
-            except dlp.exceptions.NotFound:
-                logger.exception("Project wasn't found. name: %s" % args.project_name)
-                raise
+            project = dlp.projects.get(project_name=args.project_name)
+            print(datetime.datetime.utcnow())
             project.datasets.list().print()
 
+        elif args.datasets == "checkout":
+            dlp.datasets.checkout(args.dataset_name)
+
+        elif args.datasets == "web":
+            project = dlp.projects.get(project_name=args.project_name)
+            project.datasets.open_in_web(dataset_name=args.dataset_name)
+
         elif args.datasets == "create":
-            try:
-                project = dlp.projects.get(project_name=args.project_name)
-            except dlp.exceptions.NotFound:
-                logger.exception("Project wasnt found. name: %s" % args.project_name)
-                raise
+            project = dlp.projects.get(project_name=args.project_name)
+            print(datetime.datetime.utcnow())
             project.datasets.create(dataset_name=args.dataset_name).print()
 
         elif args.datasets == "upload":
+            print(datetime.datetime.utcnow())
             print("[INFO] Uploading directory...")
+
             if isinstance(args.num_workers, str):
                 args.num_workers = int(args.num_workers)
             if isinstance(args.file_types, str):
@@ -701,43 +886,59 @@ def run(args, logger):
                 remote_path=args.remote_path,
                 file_types=args.file_types,
                 num_workers=args.num_workers,
-                upload_options=args.upload_options
+                overwrite=args.overwrite,
+                relative_path=args.relative_path,
+                local_annotations_path=args.local_annotations_path,
             )
 
         elif args.datasets == "download":
+            print(datetime.datetime.utcnow())
             print("[INFO] Downloading dataset...")
             if isinstance(args.num_workers, str):
                 args.num_workers = int(args.num_workers)
             project = dlp.projects.get(project_name=args.project_name)
             dataset = project.datasets.get(dataset_name=args.dataset_name)
-            annotation_options = list()
-            if len(args.annotation_options) > 0:
+            annotation_options = None
+            if args.annotation_options is not None:
                 annotation_options = args.annotation_options.split(",")
 
+            # create remote path filters
             filters = dlp.Filters()
-            if isinstance(args.remote_path, list):
-                filters.add(field='filename', values=args.remote_path, operator='in')
-            else:
-                filters.add(field='filename', values=args.remote_path)
+            if args.remote_path is not None:
+                remote_path = args.remote_path.split(",")
+                if len(remote_path) > 1:
+                    filters.add(
+                        field="filename", values=args.remote_path, operator="in"
+                    )
+                else:
+                    filters.add(
+                        field="filename", values=args.remote_path, operator="glob"
+                    )
+
             dataset.items.download(
                 filters=filters,
                 local_path=args.local_path,
                 annotation_options=annotation_options,
-                download_options=args.download_options,
+                overwrite=args.overwrite,
+                relative_path=args.relative_path,
                 num_workers=args.num_workers,
+                with_text=args.with_text,
+                thickness=int(args.thickness),
+                to_items_folder=not args.not_items_folder,
             )
         else:
             print('Type "dlp datasets --help" for options')
 
-    ###################
-    # Files and items #
-    ###################
-    elif args.operation == "files":
+    #########
+    # items #
+    #########
+    elif args.operation == "items":
         if dlp.token_expired():
+            print(datetime.datetime.utcnow())
             print("[ERROR] token expired, please login.")
             return
 
-        if args.files == "ls":
+        if args.items == "ls":
             project = dlp.projects.get(project_name=args.project_name)
             dataset = project.datasets.get(dataset_name=args.dataset_name)
             if isinstance(args.page, str):
@@ -746,29 +947,38 @@ def run(args, logger):
                 except ValueError:
                     raise ValueError("Input --page must be integer")
             filters = dlp.Filters()
-            if isinstance(args.remote_path, list):
-                filters.add(field='filename', values=args.remote_path, operator='in')
+            if args.remote_path is None:
+                filters = None  # default value
+            elif isinstance(args.remote_path, list):
+                filters.add(field="filename", values=args.remote_path, operator="in")
             else:
-                filters.add(field='filename', values=args.remote_path)
-            pages = dataset.items.list(
-                filters=filters, page_offset=args.page
-            )
+                filters.add(field="filename", values=args.remote_path)
+            pages = dataset.items.list(filters=filters, page_offset=args.page)
+            print(datetime.datetime.utcnow())
             pages.print()
             print("Displaying page %d/%d" % (args.page + 1, pages.total_pages_count))
 
-        elif args.files == "upload":
+        elif args.items == "web":
             project = dlp.projects.get(project_name=args.project_name)
-            project.datasets.get(dataset_name=args.dataset_name).items.upload(local_path=args.filename,
-                                                                              remote_path=args.remote_path)
+            dataset = project.datasets.get(dataset_name=args.dataset_name)
+            dataset.items.open_in_web(filepath=args.remote_path)
+
+        elif args.items == "upload":
+            project = dlp.projects.get(project_name=args.project_name)
+            project.datasets.get(dataset_name=args.dataset_name).items.upload(
+                local_path=args.filename, remote_path=args.remote_path
+            )
 
         else:
-            print('Type "dlp files --help" for options')
+            print(datetime.datetime.utcnow())
+            print('Type "dlp items --help" for options')
 
     ##########
     # Videos #
     ##########
     elif args.operation == "videos":
         if dlp.token_expired():
+            print(datetime.datetime.utcnow())
             print("[ERROR] token expired, please login.")
             return
 
@@ -781,68 +991,84 @@ def run(args, logger):
                 project_name=args.project_name,
             )
 
-        elif args.videos == 'upload':
-            if (args.split_chunks is not None) or \
-                    (args.split_seconds is not None) or \
-                    (args.split_times is not None):
+        elif args.videos == "upload":
+            if (
+                    (args.split_chunks is not None)
+                    or (args.split_seconds is not None)
+                    or (args.split_times is not None)
+            ):
                 # upload with split
                 if isinstance(args.split_chunks, str):
                     args.split_chunks = int(args.split_chunks)
                 if isinstance(args.split_seconds, str):
                     args.split_seconds = int(args.split_seconds)
                 if isinstance(args.split_times, str):
-                    args.split_times = [int(sec) for sec in args.split_times.split(',')]
-                dlp.utilities.videos.Videos.split_and_upload(project_name=args.project_name,
-                                                             dataset_name=args.dataset_name,
-                                                             filepath=args.filename,
-                                                             remote_path=args.remote_path,
-                                                             split_chunks=args.split_chunks,
-                                                             split_seconds=args.split_seconds,
-                                                             split_pairs=args.split_times
-                                                             )
+                    args.split_times = [int(sec) for sec in args.split_times.split(",")]
+                dlp.utilities.videos.Videos.split_and_upload(
+                    project_name=args.project_name,
+                    dataset_name=args.dataset_name,
+                    filepath=args.filename,
+                    remote_path=args.remote_path,
+                    split_chunks=args.split_chunks,
+                    split_seconds=args.split_seconds,
+                    split_pairs=args.split_times,
+                )
         else:
-            print('Type "dlp files --help" for options')
+            print(datetime.datetime.utcnow())
+            print('Type "dlp videos --help" for options')
 
     ############
     # Packages #
     ############
     elif args.operation == "packages":
         if dlp.token_expired():
+            print(datetime.datetime.utcnow())
             print("[ERROR] token expired, please login.")
             return
 
         if args.packages == "ls":
             if args.project_name is not None:
                 # list project's packages
+                print(datetime.datetime.utcnow())
                 dlp.projects.get(project_name=args.project_name).packages.list().print()
             elif args.package_id is not None:
                 # list package artifacts
                 if args.project_name is None:
-                    logger.error('Please provide package project name')
-                    raise dlp.PlatformException('400', 'Please provide package project name')
+                    logger.error("Please provide package project name")
+                    raise dlp.PlatformException(
+                        "400", "Please provide package project name"
+                    )
                 project = dlp.projects.get(project_name=args.project_name)
+                print(datetime.datetime.utcnow())
                 project.packages.get(package_id=args.package_id).print()
             else:
                 # list user's package
                 projects = dlp.projects.list()
                 for project in projects:
+                    print(datetime.datetime.utcnow())
                     project.packages.list().print()
 
         elif args.packages == "pack":
             if args.project_name is not None:
                 if args.dataset_name is not None:
                     project = dlp.projects.get(args.project_name)
-                    project.packages._dataset = project.datasets.get(dataset_name=args.dataset_name)
+                    project.packages._dataset = project.datasets.get(
+                        dataset_name=args.dataset_name
+                    )
                     project.packages.pack(
-                        directory=args.directory, name=args.package_name, description=args.description
+                        directory=args.directory,
+                        name=args.package_name,
+                        description=args.description,
                     )
                 else:
                     dlp.projects.get(args.project_name).packages.pack(
-                        directory=args.directory, name=args.package_name, description=args.description
+                        directory=args.directory,
+                        name=args.package_name,
+                        description=args.description,
                     )
             else:
-                logger.error('Please provide project name')
-                raise dlp.PlatformException('400', 'Please provide project name')
+                logger.error("Please provide project name")
+                raise dlp.PlatformException("400", "Please provide project name")
 
         elif args.packages == "delete":
             if args.project_name is not None:
@@ -850,68 +1076,71 @@ def run(args, logger):
                     package_id=args.package_id
                 )
             else:
-                logger.error('Please provide project name')
-                raise dlp.PlatformException('400', 'Please provide project name')
+                logger.error("Please provide project name")
+                raise dlp.PlatformException("400", "Please provide project name")
 
         elif args.packages == "unpack":
+            print(datetime.datetime.utcnow())
             print("Unpacking source code...")
             dlp.projects.get(args.project_name).packages.unpack(
                 package_id=args.package_id, local_directory=args.directory
             )
 
         else:
+            print(datetime.datetime.utcnow())
             print('Type "dlp packages --help" for options')
 
     ############
     # Plugins  #
     ############
-    elif args.operation == 'plugins':
+    elif args.operation == "plugins":
         if dlp.token_expired():
-            print('[ERROR] token expired, please login.')
+            print(datetime.datetime.utcnow())
+            print("[ERROR] token expired, please login.")
             return
 
-        if args.plugins == 'generate':
-            dlp.plugins.generate_local_plugin()
+        if args.plugins == "generate":
+            dlp.plugins.generate_local_plugin(name=args.plugin_name)
 
-        elif args.plugins == 'push':
-            dlp.plugins.push_local_plugin()
-            print('Successfully pushed the plugin to remote')
+        elif args.plugins == "ls":
+            dlp.plugins.list()
 
-        elif args.plugins == 'test':
-            print(dlp.plugins.test_local_plugin())
+        elif args.plugins == "checkout":
+            dlp.plugins.checkout(args.plugin_name)
+            print(datetime.datetime.utcnow())
 
-        elif args.plugins == 'invoke':
+        elif args.plugins == "push":
+            # deploy?
+            deploy = True if args.deploy.lower() == 'true' else False
+
+            dlp.plugins.push_local_plugin(deploy=deploy, revision=args.revision)
+            print(datetime.datetime.utcnow())
+            print("Successfully pushed the plugin to remote")
+
+        elif args.plugins == "test":
+            print(datetime.datetime.utcnow())
+            # dlp.plugins.test_local_plugin()
+            os.chdir('./src')
+            cmd = 'python -m debug'
+            os.system(cmd)
+            os.chdir('..')
+
+        elif args.plugins == "invoke":
+            print(datetime.datetime.utcnow())
             print(dlp.plugins.invoke_plugin(args.file))
 
-        elif args.plugins == 'deploy':
-            deployment_id = dlp.plugins.deploy_plugin_from_folder()
-            print('Successfully deployed the plugin, deployment id is: %s' % deployment_id)
+        elif args.plugins == "deploy":
+            print(datetime.datetime.utcnow())
+            deployment_id = dlp.plugins.deploy_plugin_from_folder(args.revision)
+            print(
+                "Successfully deployed the plugin, deployment id is: %s" % deployment_id
+            )
 
-        elif args.plugins == 'status':
+        elif args.plugins == "status":
             dlp.plugins.get_status_from_folder()
         else:
+            print(datetime.datetime.utcnow())
             print('Type "dlp plugins --help" for options')
-
-    ############
-    # Checkout #
-    ############
-    elif args.operation == "checkout":
-
-        if args.checkout == "project":
-            from dtlpy.utilities.checkout_manager import checkout_project
-
-            checkout_project(dlp, args.project)
-        elif args.checkout == "dataset":
-            from dtlpy.utilities.checkout_manager import checkout_dataset
-
-            checkout_dataset(dlp, args.dataset)
-        elif args.checkout == "plugin":
-            from dtlpy.utilities.checkout_manager import checkout_plugin
-
-            checkout_plugin(args.plugin)
-
-        else:
-            print('Type "dlp packages --help" for options')
 
     ############
     # Sessions #
@@ -920,10 +1149,13 @@ def run(args, logger):
 
         if args.sessions == "ls":
             if args.session_id is not None:
+                print(datetime.datetime.utcnow())
                 dlp.sessions.get(session_id=args.session_id).print()
             elif args.project_name is not None:
+                print(datetime.datetime.utcnow())
                 dlp.projects.get(project_name=args.project_name).sessions.list().print()
             else:
+                print(datetime.datetime.utcnow())
                 print("[ERROR] need to input session-id or project-name.")
 
         elif args.sessions == "tree":
@@ -949,123 +1181,158 @@ def run(args, logger):
                 artifact_type=args.artifact_type, local_directory=args.local_dir
             )
         else:
+            print(datetime.datetime.utcnow())
             print('Type "dlp sessions --help" for options')
-    # #########
-    # # Pipes #
-    # #########
-    # elif args.operation == "pipes":
-    #
-    #     if args.pipes == "ls":
-    #         dlp.pipelines.list().print()
-    #
-    #     elif args.pipes == "run":
-    #         # get input parameters
-    #         kwargs = dict()
-    #         if args.pipe_kwargs is not None:
-    #             kwargs = dict(args.pipe_kwargs)
-    #
-    #         if args.prev_session_id is not None:
-    #             dlp.sessions.run_from_previous(
-    #                 prev_session_id=args.prev_session_id,
-    #                 config_filename=args.config_filename,
-    #                 input_params=kwargs,
-    #                 pipe_id=args.pipe_id,
-    #                 project_name=args.project_name,
-    #                 dataset_name=args.dataset_name,
-    #                 session_name=args.session_name,
-    #                 package_id=args.package_id,
-    #                 remote_run=args.remote_run,
-    #             )
-    #
-    #         elif args.session_id is not None:
-    #             dlp.sessions.run(
-    #                 session_id=args.session_id,
-    #                 input_params=kwargs,
-    #                 remote_run=args.remote_run,
-    #             )
-    #         else:
-    #             print('[INFO] input missing. "session-id" or "prev-session-id"')
-    #     else:
-    #         print('Type "dlp pipes --help" for options')
+
+    #######
+    # pwd #
+    #######
+    elif args.operation == "pwd":
+        print(os.getcwd())
+
+    ######
+    # cd #
+    ######
+    elif args.operation == "cd":
+        directory = args.dir
+        if directory == '..':
+            directory = os.path.split(os.getcwd())[0]
+        os.chdir(directory)
+        print(os.getcwd())
+
+    ######
+    # ls #
+    ######
+    elif args.operation == "ls":
+        print(os.getcwd())
+        dirs = os.listdir(os.getcwd())
+        import pprint
+
+        pp = pprint.PrettyPrinter(indent=3)
+        pp.pprint(dirs)
+
+    #########
+    # clear #
+    #########
+    elif args.operation == "clear":
+        if os.name == "nt":
+            os.system('cls')
+        else:
+            os.system('clear')
 
     ###############
     # Catch typos #
     ###############
     elif args.operation == "project":
+        print(datetime.datetime.utcnow())
         print('dlp: "project" is not an dlp command. Did you mean "projects"?')
     elif args.operation == "dataset":
+        print(datetime.datetime.utcnow())
         print('dlp: "dataset" is not an dlp command. Did you mean "datasets"?')
     elif args.operation == "item":
-        print('dlp: "file" is not an dlp command. Did you mean "files"?')
+        print(datetime.datetime.utcnow())
+        print('dlp: "item" is not an dlp command. Did you mean "items"?')
     elif args.operation == "session":
+        print(datetime.datetime.utcnow())
         print('dlp: "session" is not an dlp command. Did you mean "sessions"?')
     elif args.operation == "package":
+        print(datetime.datetime.utcnow())
         print('dlp: "package" is not an dlp command. Did you mean "packages"?')
 
     #########################
     # Catch rest of options #
     #########################
     else:
+        print(datetime.datetime.utcnow())
         if args.operation:
             print('dlp: "%s" is not an dlp command' % args.operation)
         print('See "dlp --help" for options')
 
 
-def main():
-    parser = get_parser()
-    args = parser.parse_args()
+def dlp_exit():
+    print(datetime.datetime.utcnow())
+    print("Goodbye ;)")
+    sys.exit(0)
 
-    if args.operation == "shell":
-        #######################
-        # Open Dataloop shell #
-        #######################
-        while True:
-            text = prompt(
-                u"dl>",
-                history=FileHistory(".history.txt"),
-                auto_suggest=AutoSuggestFromHistory(),
-                completer=DlpCompleter(),
-            )
-            try:
-                parser = get_parser()
-                args = parser.parse_args(shlex.split(text))
-                if args.operation == "exit":
-                    print("Goodbye ;)")
-                    sys.exit(0)
-                else:
-                    run(args, logger)
-            except exceptions.TokenExpired:
-                print("[ERROR] token expired, please login.")
-                continue
-            except Exception as e:
-                print(traceback.format_exc())
-                print(e)
-                continue
-            except SystemExit as e:
-                # exit
-                if e.code == 0:
-                    sys.exit(0)
-                # error
-                else:
-                    print('"{command}" is not a valid command'.format(command=text))
+
+def main():
+    try:
+        global keywords
+        # parse
+        parser = get_parser()
+        keywords = get_parser_tree(parser=parser)
+        args = parser.parse_args()
+        history_file = os.path.join(os.getcwd(), ".history.txt")
+
+        if args.operation == "shell":
+            #######################
+            # Open Dataloop shell #
+            #######################
+            while True:
+                text = prompt(
+                    u"dl>",
+                    history=FileHistory(history_file),
+                    auto_suggest=AutoSuggestFromHistory(),
+                    completer=DlpCompleter(),
+                )
+                try:
+                    if text in ["-h", "--help"]:
+                        text = "help"
+                    parser = get_parser()
+                    args = parser.parse_args(shlex.split(text))
+                    if args.operation == "exit":
+                        dlp_exit()
+                    else:
+                        run(args=args, parser=parser)
+                except exceptions.TokenExpired:
+                    print(datetime.datetime.utcnow())
+                    print("[ERROR] token expired, please login.")
+                    continue
+                except SystemExit as e:
+                    # exit
+                    if e.code == 0:
+                        if "-h" in text or "--help" in text:
+                            continue
+                        else:
+                            sys.exit(0)
+                    # error
+                    else:
+                        print(datetime.datetime.utcnow())
+                        print('"{command}" is not a valid command'.format(command=text))
+                        continue
+                except Exception as e:
+                    print(datetime.datetime.utcnow())
+                    print(traceback.format_exc())
+                    print(e)
                     continue
 
-    else:
-        ######################
-        # Run single command #
-        ######################
-        try:
-            run(args, logger)
-        except exceptions.TokenExpired:
-            print("[ERROR] token expired, please login.")
-        except Exception as e:
-            print(traceback.format_exc())
-            print(e)
+        else:
+            ######################
+            # Run single command #
+            ######################
+            try:
+                run(args=args, parser=parser)
+                sys.exit(0)
+            except exceptions.TokenExpired:
+                print(datetime.datetime.utcnow())
+                print("[ERROR] token expired, please login.")
+                sys.exit(1)
+            except Exception as e:
+                print(datetime.datetime.utcnow())
+                print(traceback.format_exc())
+                print(e)
+                sys.exit(1)
+    except KeyboardInterrupt:
+        dlp_exit()
+    except Exception:
+        print(traceback.format_exc())
+        dlp_exit()
 
 
 if __name__ == "__main__":
     try:
         main()
     except Exception as err:
+        print(datetime.datetime.utcnow())
         print("[ERROR]\t%s" % err)
     print("Dataloop.ai CLI. Type dlp --help for options")

@@ -3,7 +3,7 @@ Feature: Items repository update function testing
     Background: Initiate Platform Interface and create a project
         Given Platform Interface is initialized as dlp and Environment is set to development
         And There is a project by the name of "items_edit"
-        And I create a dataset by the name of "Dataset"
+        And I create a dataset with a random name
         And There is an item
 
     Scenario: Update items name

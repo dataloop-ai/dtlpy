@@ -159,7 +159,7 @@ class Annotation:
         if label is None:
             return 255, 255, 255
 
-    #####################
+    ####################
     # frame attributes #
     ####################
     @property
@@ -201,6 +201,23 @@ class Annotation:
             return False
         else:
             return True
+
+    ################
+    # polygon only #
+    ################
+    @property
+    def is_open(self):
+        is_open = None
+        if self.type in ['segment', 'polyline']:
+            is_open = self.annotation_definition.is_open
+        return is_open
+
+    @is_open.setter
+    def is_open(self, is_open):
+        if self.type in ['segment']:
+            self.annotation_definition.is_open = is_open
+        else:
+            logger.warning('type {} annotation does not have attribute is_open'.format(self.type))
 
     ##################
     # entity methods #
@@ -490,14 +507,8 @@ class Annotation:
         """
         # get item type
         is_video = False
-        have_snapshots = False
         if 'video' in item.mimetype:
             is_video = True
-            if 'metadata' in _json:
-                if 'system' in _json['metadata']:
-                    if 'snapshots_' in _json['metadata']['system']:
-                        if len(_json['metadata']['system']['snapshots_']) > 0:
-                            have_snapshots = True
 
         # get id
         if 'id' in _json:
@@ -567,12 +578,17 @@ class Annotation:
             # get automated
             automated = None
             if 'system' in metadata:
-                automated = _json['metadata']['system'].get('automated', automated)
+                automated = metadata['system'].get('automated', automated)
             # set annotation definition
             def_dict = {'type': _json['type'],
                         'coordinates': coordinates,
                         'label': _json['label'],
                         'attributes': attributes}
+            if _json['type'] == 'segment':
+                is_open = False
+                if 'system' in metadata:
+                    is_open = metadata['system'].get('isOpen', is_open)
+                def_dict['is_open'] = is_open
             annotation_definition = FrameAnnotation.json_to_annotation_definition(def_dict)
 
         frames = dict()
@@ -611,29 +627,50 @@ class Annotation:
         #################
         # if has frames #
         #################
-        if have_snapshots:
-            # set first snapshot
-            snapshot = {
-                'attributes': first_frame_attributes,
-                'coordinates': first_frame_coordinates,
-                'fixed': True,
-                'frame': first_frame_number,
-                'label': _json['label'],
-                'type': annotation.type,
-                'startTime': first_frame_start_time,
-            }
-            frame = FrameAnnotation.from_snapshot(_json=snapshot,
-                                                  annotation=annotation,
-                                                  fps=fps)
-            annotation.frames[frame.frame_num] = frame
-            annotation.annotation_definition = frame.annotation_definition
-            # add snapshots
-            for snapshot in _json['metadata']['system']['snapshots_']:
+        if is_video:
+            if annotation.type == 'class':
+                # for class type annotation create frames
+                # make copies of the head annotations for all frames in it
+                for frame_num in range(start_frame, end_frame + 1):
+                    snapshot = {
+                        'frame': frame_num,
+                        'startTime': frame_num / fps,
+                        'attributes': first_frame_attributes,
+                        'coordinates': first_frame_coordinates,
+                        'fixed': True,
+                        'label': _json['label'],
+                        'type': annotation.type,
+                    }
+                    frame = FrameAnnotation.from_snapshot(_json=snapshot,
+                                                          annotation=annotation,
+                                                          fps=fps)
+                    annotation.frames[frame.frame_num] = frame
+                    annotation.annotation_definition = annotation.frames[min(frames)].annotation_definition
+            else:
+                # set first frame
+                snapshot = {
+                    'attributes': first_frame_attributes,
+                    'coordinates': first_frame_coordinates,
+                    'fixed': True,
+                    'frame': first_frame_number,
+                    'label': _json['label'],
+                    'type': annotation.type,
+                    'startTime': first_frame_start_time,
+                }
+
+                # add first frame
                 frame = FrameAnnotation.from_snapshot(_json=snapshot,
                                                       annotation=annotation,
                                                       fps=fps)
                 annotation.frames[frame.frame_num] = frame
-                annotation.annotation_definition = frames[min(frames)].annotation_definition
+                annotation.annotation_definition = frame.annotation_definition
+                # put snapshots if there are any
+                for snapshot in _json['metadata']['system']['snapshots_']:
+                    frame = FrameAnnotation.from_snapshot(_json=snapshot,
+                                                          annotation=annotation,
+                                                          fps=fps)
+                    annotation.frames[frame.frame_num] = frame
+                    annotation.annotation_definition = annotation.frames[min(frames)].annotation_definition
 
         return annotation
 
@@ -660,9 +697,17 @@ class Annotation:
         _json['itemId'] = self.item_id
         _json['item'] = self.item_url
         _json['label'] = self.label
-        _json['type'] = self.type
-        _json['coordinates'] = self.coordinates
         _json['attributes'] = self.attributes
+
+        # polyline to segment
+        if self.type == 'polyline':
+            _json['type'] = 'segment'
+        else:
+            _json['type'] = self.type
+        if self.type == 'polyline':
+            _json['coordinates'] = [self.coordinates]
+        else:
+            _json['coordinates'] = self.coordinates
 
         # add system metadata
         if 'system' not in _json['metadata']:
@@ -673,6 +718,8 @@ class Annotation:
             _json['metadata']['system']['objectId'] = self.object_id
         if self.status is not None:
             _json['metadata']['system']['status'] = self.status
+        if self.type in ['segment', 'polyline']:
+            _json['metadata']['system']['isOpen'] = self.is_open
 
         # add frame info
         if self.is_video:
@@ -688,9 +735,12 @@ class Annotation:
             _json['metadata']['system']['frame'] = self.current_frame
             _json['metadata']['system']['startTime'] = self.start_time
             _json['metadata']['system']['endTime'] = self.end_time
-            _json['metadata']['system']['snapshots_'] = snapshots
             if self.end_frame is not None:
                 _json['metadata']['system']['endFrame'] = self.end_frame
+
+            # add snapshots only if classification
+            if self.type != 'class':
+                _json['metadata']['system']['snapshots_'] = snapshots
         else:
             # remove metadata if empty
             if len(_json['metadata']['system']) == 0:
@@ -864,7 +914,7 @@ class FrameAnnotation:
         if frame_num is None:
             logger.warning(
                 'Missing frame number from annotation. using time stamp, annotation id: %s' % (_json['id']))
-            if fps is not None:    
+            if fps is not None:
                 frame_num = timestamp * fps
             else:
                 raise PlatformException('400', 'Cannot get annotation becaue it does not have frame num and item does '

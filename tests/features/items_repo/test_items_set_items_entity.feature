@@ -3,7 +3,7 @@ Feature: Items repository set_items_entity function testing
     Background: Initiate Platform Interface and create a project
         Given Platform Interface is initialized as dlp and Environment is set to development
         And There is a project by the name of "set_items_entity"
-        And I create a dataset by the name of "Dataset"
+        And I create a dataset with a random name
 
     Scenario: Change items entity to legal entity
         When I change entity to "Artifact"

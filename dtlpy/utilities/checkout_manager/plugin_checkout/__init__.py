@@ -1,1 +1,0 @@
-from .plugin_checkout import checkout_plugin

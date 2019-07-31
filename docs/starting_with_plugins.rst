@@ -21,9 +21,9 @@ Checkout to a local project and dataset
 
 .. code::
 
-    $ dlp checkout project <project_name/project_id>
-    $ dlp checkout dataset <dataset_name/dataset_id>
-    $ dlp checkout plugin <plugin name>
+    $ dlp projects checkout <project_name/project_id>
+    $ dlp datasets checkout <dataset_name/dataset_id>
+    $ dlp plugins checkout <plugin name>
 
 
 Create a Plugin from the current directory

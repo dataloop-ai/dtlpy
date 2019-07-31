@@ -3,7 +3,7 @@ Feature: Packages repository Pack method
     Background: Initiate Platform Interface and create a project
         Given Platform Interface is initialized as dlp and Environment is set to development
         And There is a project by the name of "packages_pack"
-        And I create a dataset by the name of "Dataset"
+        And I create a dataset with a random name
 
     Scenario: Unpack a Package (init param: dataset, project, client_api)
         Given There is a Package directory with a python file in path "packages_assets/packages_pack"

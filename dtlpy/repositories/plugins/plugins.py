@@ -1,25 +1,78 @@
 import logging
+import os
+from shutil import copyfile
+import json
 
-from dtlpy import entities, utilities, PlatformException
-from dtlpy.repositories.plugins.package_runner.package_runner import PackageRunner
-from dtlpy.repositories.plugins.plugin_uploader import PluginCreator
-from dtlpy.repositories.plugins.plugin_generator import generate_plugin
-from dtlpy.repositories.plugins.plugin_invoker import PluginInvoker
-from dtlpy.repositories.plugins.plugin_deployer import PluginDeployer
+from ... import entities, utilities, PlatformException, repositories
+from .assets import plugin_json_path, main_py_path, mock_json_path, src_init_file_path, debug_py_path
+from .package_runner import PackageRunner
+from .plugin_creator import PluginCreator
 
 
-
-class Plugins(object):
+class Plugins:
     """
-        Plugins repository
+    Plugins repository
     """
 
     def __init__(self, client_api, project=None):
         self.logger = logging.getLogger('dataloop.plugins')
         self.client_api = client_api
-        self.project = project
+        self._project = project
+
+    @property
+    def project(self):
+        if self._project is None:
+            projects = repositories.Projects(client_api=self.client_api)
+            try:
+                self._project = projects.get()
+            except Exception:
+                logging.warning('Please checkout project')
+
+        return self._project
+
+    @project.setter
+    def project(self, project):
+        self._project = project
+
+    @staticmethod
+    def generate_local_plugin(name='defaul_plugin'):
+        """
+        Generate new plugin environment
+        :return:
+        """
+        cwd = os.getcwd()
+
+        src_dir = os.path.join(cwd, 'src')
+        os.mkdir(src_dir)
+
+        with open(plugin_json_path, 'r') as f:
+            plugin_asset = json.load(f)
+        plugin_asset['name'] = name
+
+        with open(os.path.join(cwd, 'plugin.json'), 'w+') as f:
+            json.dump(plugin_asset, f)
+
+        copyfile(main_py_path, os.path.join(src_dir, 'main.py'))
+        copyfile(debug_py_path, os.path.join(src_dir, 'debug.py'))
+        copyfile(mock_json_path, os.path.join(cwd, 'mock.json'))
+        copyfile(src_init_file_path, os.path.join(src_dir, '__init__.py'))
+
+        print('Successfully generated plugin')
+
+    def test_local_plugin(self):
+        """
+        Test local plugin
+        :return:
+        """
+        package_runner = PackageRunner(client_api=self.client_api)
+        package_runner.run_local_project()
+
+    def checkout(self, plugin_name):
+        self.client_api.state_io.put('plugin', plugin_name, local=True)
+        self.logger.info("Checkout out to plugin {}".format(plugin_name))
 
     def create(self, name, package, input_parameters, output_parameters):
+
         """
         Create a new plugin
         :param name: plugin name
@@ -30,12 +83,10 @@ class Plugins(object):
         """
         if isinstance(input_parameters, entities.PluginInput):
             input_parameters = [input_parameters]
+
         if not isinstance(input_parameters, list):
             raise TypeError('must be a list of PluginInput')
-        # if not all(isinstance(n, entities.PluginInput) for n in input_parameters):
-        #     raise TypeError('must be a list of PluginInput')
 
-        # input_parameters = [p.to_json for p in input_parameters]
         input_parameters.append({'path': 'package',
                                  'resource': 'package',
                                  'by': 'ref',
@@ -58,7 +109,30 @@ class Plugins(object):
         else:
             self.logger.exception('Platform error creating new plugin:')
             raise PlatformException(response)
+
         return plugin
+
+    def list(self):
+        """
+        List all plugin.
+        :return: List of Plugin objects
+        """
+        if self.project is None:
+            success, response = self.client_api.gen_request(req_type='get',
+                                                            path='/tasks')
+        else:
+            success, response = self.client_api.gen_request(req_type='get',
+                                                            path='/tasks?projects=%s' % self.project.id)
+
+        if success:
+            plugins = utilities.List(
+                [entities.Plugin.from_json(client_api=self.client_api,
+                                           _json=_json)
+                 for _json in response.json()['items']])
+            return plugins
+        else:
+            self.logger.exception('Platform error getting plugins')
+            raise PlatformException(response)
 
     def get(self, plugin_id=None, plugin_name=None):
         """
@@ -87,12 +161,12 @@ class Plugins(object):
                 plugin = None
             elif len(plugin) > 1:
                 self.logger.warning('More than one plugin with same name. Please "get" by id')
-                raise ValueError('More than one plugin with same name. Please "get" by id')
+                raise PlatformException('404', 'More than one plugin with same name. Please "get" by id')
             else:
                 plugin = plugin[0]
         else:
             self.logger.exception('Must input one search parameter!')
-            raise ValueError('Must input one search parameter!')
+            raise PlatformException('404', 'Must input one search parameter!')
         return plugin
 
     def delete(self, plugin_name=None, plugin_id=None):
@@ -100,7 +174,7 @@ class Plugins(object):
         Delete remote item
         :param plugin_name: optional - search item by remote path
         :param plugin_id: optional - search item by id
-        :return:
+        :return: True
         """
         if plugin_id is not None:
             success, response = self.client_api.gen_request(req_type='delete',
@@ -109,34 +183,12 @@ class Plugins(object):
             plugin = self.get(plugin_name=plugin_name)
             if plugin is None:
                 self.logger.warning('plugin name was not found: name: %s' % plugin_name)
-                raise ValueError('plugin name was not found: name: %s' % plugin_name)
+                raise PlatformException('400', 'plugin name was not found: name: %s' % plugin_name)
             success, response = self.client_api.gen_request(req_type='delete',
                                                             path='/tasks/%s' % plugin.id)
         else:
-            assert False
+            raise PlatformException('400', 'must provide either plugin name or plugin id')
         return success
-
-    def list(self):
-        """
-        List all plugin.
-        :return: List of Pipeline objects
-        """
-        if self.project is None:
-            success, response = self.client_api.gen_request(req_type='get',
-                                                            path='/tasks')
-        else:
-            success, response = self.client_api.gen_request(req_type='get',
-                                                            path='/tasks?projects=%s' % self.project.id)
-
-        if success:
-            plugins = utilities.List(
-                [entities.Plugin.from_json(client_api=self.client_api,
-                                           _json=_json)
-                 for _json in response.json()['items']])
-            return plugins
-        else:
-            self.logger.exception('Platform error getting plugins')
-            raise PlatformException(response)
 
     def edit(self, plugin, system_metadata=False):
         """
@@ -160,13 +212,36 @@ class Plugins(object):
             self.logger.exception('Platform error editing plugin. id: %s' % plugin.id)
             raise PlatformException(response)
 
-    def deploy(self, plugin_id):
+    def deploy_plugin(self, revision):
+        """
+        Deploy local plugin
+        :param revision: revision
+        :return:
+        """
+        plugin_name = self.client_api.state_io.get('plugin', local=True)
+
+        if plugin_name is None:
+            raise PlatformException('400', 'Please run "dlp checkout plugin <plugin_name>" first')
+
+        try:
+            tasks = repositories.Tasks(client_api=self.client_api, project=self.project)
+            plugin = tasks.get(task_name=plugin_name)
+        except Exception:
+            raise PlatformException('404', 'Plugin not found, you should run dlp plugins push first')
+
+        return self.deploy(plugin.id, revision)
+
+    def deploy(self, plugin_id, revision=None):
         """
         Deploy an existing plugin
+        :param revision: optional - revision
         :param plugin_id: Id of plugin to deploy
         :return:
         """
-        url_path = '/plugins/%s/deploy' % plugin_id
+        url_path = '/plugins/%s/deploy?' % plugin_id
+
+        if revision is not None:
+            url_path += 'revision=%s' % revision
 
         success, response = self.client_api.gen_request(req_type='post',
                                                         path=url_path)
@@ -177,6 +252,11 @@ class Plugins(object):
             raise PlatformException(response)
 
     def status(self, plugin_id):
+        """
+        Return plugin's status
+        :param plugin_id:
+        :return:
+        """
         url_path = '/plugins/%s/status' % plugin_id
         success, response = self.client_api.gen_request(req_type='get',
                                                         path=url_path)
@@ -187,25 +267,80 @@ class Plugins(object):
             self.logger.exception('Platform error getting plugin status. id: %s' % plugin_id)
             raise PlatformException(response)
 
-    def test_local_plugin(self):
-        package_runner = PackageRunner()
-        return package_runner.run_local_project()
-
-    def push_local_plugin(self):
-        plugin_creator = PluginCreator()
-        plugin_creator.create_plugin()
+    def push_local_plugin(self, deploy=False, revision=None):
+        """
+        Push local plugin to platform
+        :param deploy: optional - True/False - deploy after pushing
+        :param revision: optional - revision
+        :return:
+        """
+        plugin_creator = PluginCreator(client_api=self.client_api)
+        plugin = plugin_creator.create_plugin()
+        if deploy:
+            if self.project is None:
+                projects = repositories.Projects(client_api=self.client_api)
+                self._project = projects.get()
+            self.project.plugins.deploy(plugin_id=plugin.id, revision=revision)
 
     def invoke_plugin(self, input_file_path='./mock.json'):
-        plugin_invoker = PluginInvoker(input_file_path)
-        return plugin_invoker.invoke_plugin()
+        """
+        Invoke local plugin
+        :param input_file_path:
+        :return:
+        """
+        input_path = os.path.abspath(input_file_path)
+        file_as_str = open(input_path, 'r').read()
+        file_as_obj = json.loads(file_as_str)
+        inputs = file_as_obj['inputs']
+        parsed_inputs = {}
+
+        assert isinstance(inputs, list)
+        for input_field in inputs:
+            parsed_inputs[input_field['name']] = input_field['value']
+
+        project_id = self.client_api.state_io.get('project', local=True)
+        task_name = self.client_api.state_io.get('plugin', local=True)
+
+        projects = repositories.Projects(client_api=self.client_api)
+        project = projects.get(project_id=project_id)
+        task = project.tasks.get(task_name=task_name)
+        session = task.sessions.create(parsed_inputs, True)
+
+        if session.latestStatus['status'] == 'success':
+            return session.output
+        else:
+            raise PlatformException('400', session.latestStatus['error'])
+
+    def deploy_plugin_from_folder(self, revision):
+        """
+        Deploy plugin from folder
+        :param revision: revision
+        :return:
+        """
+        plugin_name = self.client_api.state_io.get('plugin', local=True)
+        if plugin_name is None:
+            raise Exception('Please run "dlp checkout plugin <plugin_name>" first')
+
+        try:
+            tasks = repositories.Tasks(client_api=self.client_api, project=self.project)
+            plugin = tasks.get(task_name=plugin_name)
+        except Exception:
+            raise PlatformException('404', 'Plugin not found, you should run dlp plugins push first')
+
+        return self.deploy(plugin.id, revision)
 
     def get_status_from_folder(self):
-        import dtlpy.repositories.plugins.plugin_status as plugin_status
-        plugin_status.get_status_from_folder()
+        """
+        Get status from folder
+        :return:
+        """
+        plugin_name = self.client_api.state_io.get('plugin', local=True)
+        if plugin_name is None:
+            raise PlatformException('400', 'Please run "dlp checkout plugin <plugin_name>" first')
+        try:
+            tasks = repositories.Tasks(client_api=self.client_api, project=self.project)
+            plugin = tasks.get(task_name=plugin_name)
+        except Exception:
+            raise PlatformException('400', 'Plugin not found, you should run dlp plugins push first')
 
-    def deploy_plugin_from_folder(self):
-        plugin_deployer = PluginDeployer()
-        return plugin_deployer.deploy_plugin()
-
-    def generate_local_plugin(self):
-        generate_plugin()
+        print(self.status(plugin.id))

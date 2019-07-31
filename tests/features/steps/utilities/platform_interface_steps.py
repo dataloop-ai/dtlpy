@@ -17,7 +17,7 @@ def before_all(context):
         # get cookie name
         feature_name = context.feature.name.replace(' ', '_')
         api_counter_name = 'api_counter_{}.json'.format(feature_name)
-        api_counter_filepath = os.path.join(os.path.dirname(dl.client_api.io.COOKIE), api_counter_name)
+        api_counter_filepath = os.path.join(os.path.dirname(dl.client_api.cookie_io.COOKIE), api_counter_name)
         # set counter
         dl.client_api.set_api_counter(api_counter_filepath)
 
@@ -68,7 +68,6 @@ def step_impl(context):
         api_calls[context.feature.name] = context.dl.client_api.calls_counter.number
     with open(api_calls_path, 'w') as f:
         json.dump(api_calls, f)
-    # os.remove(context.dl.client_api.calls_counter.io.COOKIE)
 
 
 @behave.given('Remove cookie')

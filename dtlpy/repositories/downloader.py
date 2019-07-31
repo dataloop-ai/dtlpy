@@ -8,18 +8,22 @@ from PIL import Image
 import queue
 import threading
 import logging
-from progressbar import Bar, ETA, ProgressBar, Timer, FileTransferSpeed, DataSize, Percentage, FormatLabel
+from progressbar import (
+    Bar,
+    ETA,
+    ProgressBar,
+    Timer,
+    FileTransferSpeed,
+    DataSize,
+    Percentage,
+    FormatLabel,
+)
 from multiprocessing.pool import ThreadPool
+import dtlpy as dl
 
 from .. import entities, PlatformException, utilities
 
-logger = logging.getLogger('dataloop.repositories.items.downloader')
-
-DEFAULT_DOWNLOAD_OPTIONS = {
-    'overwrite': False,  # merge with existing items
-    'relative_path': True,  # maintain platform file system
-    'to_images_folder': True  # download to "images" folder
-}
+logger = logging.getLogger("dataloop.repositories.items.downloader")
 
 NUM_TRIES = 3  # try to download 3 time before fail on item
 
@@ -28,96 +32,108 @@ class Downloader:
     def __init__(self, items_repository):
         self.items_repository = items_repository
 
-    def download(self,
-                 # filter options
-                 filters=None, items=None,
-                 # download options
-                 local_path=None, file_types=None, download_options=None, save_locally=True,
-                 num_workers=None,
-                 annotation_options=None):
+    def download(
+            self,
+            # filter options
+            filters=None,
+            items=None,
+            # download options
+            local_path=None,
+            file_types=None,
+            save_locally=True,
+            num_workers=32,
+            overwrite=False,
+            relative_path=True,
+            annotation_options=None,
+            to_items_folder=True,
+            thickness=1,
+            with_text=False
+    ):
         """
-            Download dataset by filters.
-            Filtering the dataset for items and save them local
-            Optional - also download annotation, mask, instance and image mask of the item
+        Download dataset by filters.
+        Filtering the dataset for items and save them local
+        Optional - also download annotation, mask, instance and image mask of the item
 
+        :param to_items_folder: Create 'items' folder and download items to it
+        :param relative_path: optional - save directories relatively to platform, default = True
+        :param overwrite: optional - default = False
         :param items: download Item entity or item_id (or a list of item)
         :param filters: Filters entity or a dictionary containing filters parameters
         :param local_path: local folder or filename to save to.
-        :param file_types: a list of file type to download. e.g ['.jpg', '.png']
+        :param file_types: a list of file type to download. e.g ['video/webm', 'video/mp4', 'image/jpeg', 'image/png']
         :param num_workers: default - 32
-        :param download_options: {'overwrite': True/False, 'relative_path': True/False}
         :param save_locally: bool. save to disk or return a buffer
         :param annotation_options: download annotations options: ['mask', 'img_mask', 'instance', 'json']
+        :param with_text: optional - add text to annotations, default = False
+        :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :return: Output (list)
         """
 
         ###################
         # Default options #
         ###################
-        if file_types is None:
-            # default
-            # TODO
-            pass
+
+        # filters
+        if filters is None:
+            filters = dl.Filters()
+
+        # file types
+        if file_types is not None:
+            filters.add(field='metadata.system.mimetype', values=file_types, operator='in')
+
+        # annotation options
         if annotation_options is None:
             annotation_options = list()
-        default_download_options = DEFAULT_DOWNLOAD_OPTIONS
-        if download_options is None:
-            download_options = default_download_options
-        else:
-            if not isinstance(download_options, dict):
-                msg = '"download_options" must be a dict. {<option>:<value>}. default: %s' % default_download_options
-                raise PlatformException('400', msg)
-            tmp_options = default_download_options
-            for key, val in download_options.items():
-                if key not in tmp_options:
-                    raise PlatformException('400',
-                                            'unknown download option: %s. known: %s' % (key, list(tmp_options.keys())))
-                tmp_options[key] = val
-            download_options = tmp_options
-        if num_workers is None:
-            num_workers = 32
-        logger.debug('Download workers number:{}'.format(num_workers))
-        # create default path
-        if local_path is None:
-            if self.items_repository.dataset.project is None:
-                local_path = os.path.join(os.path.expanduser('~'),
-                                          '.dataloop',
-                                          'datasets',
-                                          '%s_%s' % (
-                                              self.items_repository.dataset.name, self.items_repository.dataset.id))
-            else:
-                local_path = os.path.join(os.path.expanduser('~'),
-                                          '.dataloop',
-                                          'projects',
-                                          self.items_repository.dataset.project.name,
-                                          'datasets',
-                                          self.items_repository.dataset.name)
-        logger.info('Downloading to: {}'.format(local_path))
-        folder_to_check = local_path
-        if local_path.endswith('/*') or local_path.endswith(r'\*'):
-            folder_to_check = local_path[:-2]
-        if os.path.isdir(folder_to_check):
-            logger.info('Local folder already exists:{}. merge/overwrite according to "download_options"'.format(
-                folder_to_check))
-        else:
-            logger.info('Creating new directory for download: {}'.format(folder_to_check))
-            os.makedirs(folder_to_check, exist_ok=True)
+        elif not isinstance(annotation_options, list):
+            annotation_options = [annotation_options]
 
-        # Which items to download
+        ##############
+        # local path #
+        ##############
+
+        if local_path is None:
+            # create default local path
+            local_path = self.__default_local_path()
+        else:
+            # fix given local path
+            if local_path.endswith("/*") or local_path.endswith(r"\*"):
+                local_path = local_path[:-2]
+
+        if os.path.isdir(local_path):
+            logger.info(
+                'Local folder already exists:{}. merge/overwrite according to "overwrite option"'.format(
+                    local_path
+                )
+            )
+        else:
+            logger.info(
+                "Creating new directory for download: {}".format(local_path)
+            )
+            os.makedirs(local_path, exist_ok=True)
+
+        #####################
+        # items to download #
+        #####################
+
         if items is not None:
             # convert input to a list
             if not isinstance(items, list):
                 items = [items]
+            # get items by id
             if isinstance(items[0], str):
-                items = [self.items_repository.get(item_id=item_id) for item_id in items]
+                items = [
+                    self.items_repository.get(item_id=item_id) for item_id in items
+                ]
             elif isinstance(items[0], entities.Item):
                 pass
             else:
                 raise PlatformException(
-                    error='400',
-                    message='Unknown items type to download. expecting (str) or entities.Items. Got "{}" instead'.format(
-                        type(items[0]))
+                    error="400",
+                    message='Unknown items type to download. expecting str or Item entities. Got "{}" instead'.format(
+                        type(items[0])
+                    ),
                 )
+
             # convert to list of list (like pages and page)
             num_items = len(items)
             items_to_download = [items]
@@ -125,65 +141,108 @@ class Downloader:
             items_to_download = self.items_repository.list(filters=filters)
             num_items = items_to_download.items_count
 
+        ####################
+        # annotations json #
+        ####################
+
         # download annotations' json files in a new thread
         # items will start downloading and if json not exists yet - will download for each file
         if annotation_options:
             # a new folder named 'json' will be created under the "local_path"
-            logger.info('Downloading annotations formats: {}'.format(annotation_options))
-            thread = threading.Thread(target=self.download_annotations,
-                                      kwargs={'dataset': self.items_repository.dataset,
-                                              'local_path': local_path})
+            logger.info(
+                "Downloading annotations formats: {}".format(annotation_options)
+            )
+            thread = threading.Thread(
+                target=self.download_annotations,
+                kwargs={
+                    "dataset": self.items_repository.dataset,
+                    "local_path": local_path,
+                    'overwrite': overwrite
+                },
+            )
             thread.start()
+
+        ###############
+        # downloading #
+        ###############
+
+        # create result lists
         output = [None for _ in range(num_items)]
         success = [False for _ in range(num_items)]
-        status = ['' for _ in range(num_items)]
+        status = ["" for _ in range(num_items)]
         errors = [None for _ in range(num_items)]
-        progress = Progress(max_val=num_items, progress_type='download')
+
+        # progress bar and pool
+        progress = Progress(max_val=num_items, progress_type="download")
         pool = ThreadPool(processes=num_workers)
         progress.start()
+
+        # download
         try:
             i_item = 0
             for page in items_to_download:
                 for item in page:
-                    if item.type == 'dir':
+                    if item.type == "dir":
                         continue
                     if save_locally:
+                        # get local file path
                         item_local_path, item_local_filepath = self.__get_local_filepath(
                             local_path=local_path,
                             item=item,
-                            download_options=download_options)
-                        if os.path.isfile(item_local_filepath) and download_options['overwrite'] is False:
-                            logger.info('File Exists: {}'.format(item_local_filepath))
-                            status[i_item] = 'exist'
+                            relative_path=relative_path,
+                            to_items_folder=to_items_folder
+                        )
+
+                        if os.path.isfile(item_local_filepath) and not overwrite:
+                            logger.info("File Exists: {}".format(item_local_filepath))
+                            status[i_item] = "exist"
                             output[i_item] = item_local_filepath
                             success[i_item] = True
                             progress.queue.put((status[i_item],))
                             i_item += 1
                             if annotation_options:
-                                pool.apply_async(self.__download_img_annotations,
-                                                 kwds={'item': item,
-                                                       'img_filepath': item_local_filepath,
-                                                       'download_options': download_options,
-                                                       'annotation_options': annotation_options,
-                                                       'local_path': local_path})
+                                # download annotations only
+                                pool.apply_async(
+                                    self.__download_img_annotations,
+                                    kwds={
+                                        "item": item,
+                                        "img_filepath": item_local_filepath,
+                                        "relative_path": relative_path,
+                                        "overwrite": overwrite,
+                                        "annotation_options": annotation_options,
+                                        "local_path": local_path,
+                                        "thickness": thickness,
+                                        "with_text": with_text
+                                    },
+                                )
                             continue
 
                     else:
                         item_local_path = None
                         item_local_filepath = None
-                    logger.info('File Download: {}'.format(item.filename))
-                    pool.apply_async(self.__thread_download_wrapper, kwds={'i_item': i_item,
-                                                                           'item': item,
-                                                                           'item_local_path': item_local_path,
-                                                                           'item_local_filepath': item_local_filepath,
-                                                                           'save_locally': save_locally,
-                                                                           'download_options': download_options,
-                                                                           'annotation_options': annotation_options,
-                                                                           'status': status,
-                                                                           'output': output,
-                                                                           'success': success,
-                                                                           'errors': errors,
-                                                                           'progress': progress})
+
+                    # download single item
+                    logger.info("File Download: {}".format(item.filename))
+                    pool.apply_async(
+                        self.__thread_download_wrapper,
+                        kwds={
+                            "i_item": i_item,
+                            "item": item,
+                            "item_local_path": item_local_path,
+                            "item_local_filepath": item_local_filepath,
+                            "save_locally": save_locally,
+                            "annotation_options": annotation_options,
+                            "status": status,
+                            "output": output,
+                            "success": success,
+                            "errors": errors,
+                            "progress": progress,
+                            "overwrite": overwrite,
+                            "relative_path": relative_path,
+                            "thickness": thickness,
+                            "with_text": with_text
+                        },
+                    )
                     i_item += 1
         except Exception as e:
             logger.exception(e)
@@ -193,322 +252,378 @@ class Downloader:
             progress.queue.put((None,))
             progress.queue.join()
             progress.finish()
-        n_upload = status.count('download')
-        n_exist = status.count('exist')
-        n_error = status.count('error')
-        logger.info('Number of files downloaded:{}'.format(n_upload))
-        logger.info('Number of files exists: {}'.format(n_exist))
-        logger.info('Total number of files: {}'.format(n_upload + n_exist))
+
+        # reporting
+        n_download = status.count("download")
+        n_exist = status.count("exist")
+        n_error = status.count("error")
+        logger.info("Number of files downloaded:{}".format(n_download))
+        logger.info("Number of files exists: {}".format(n_exist))
+        logger.info("Total number of files: {}".format(n_download + n_exist))
+
         # log error
         if n_error > 0:
-            log_filepath = os.path.join('log_%s.txt' % datetime.datetime.now().strftime('%Y%m%d_%H%M%S'))
-            errors_list = [errors[i_job] for i_job, suc in enumerate(success) if suc is False]
-            ids_list = [output[i_job] for i_job, suc in enumerate(success) if suc is False]
-            errors_json = {item_id: error for item_id, error in zip(ids_list, errors_list)}
-            with open(log_filepath, 'w') as f:
+            log_file_path = os.path.join(
+                local_path,
+                "log_%s.txt" % datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            )
+            errors_list = [
+                errors[i_job] for i_job, suc in enumerate(success) if suc is False
+            ]
+            ids_list = [
+                output[i_job] for i_job, suc in enumerate(success) if suc is False
+            ]
+            errors_json = {
+                item_id: error for item_id, error in zip(ids_list, errors_list)
+            }
+            with open(log_file_path, "w") as f:
                 json.dump(errors_json, f, indent=4)
-            logger.warning('Errors in {} files. See {} for full log'.format(n_error, log_filepath))
+            logger.warning(
+                "Errors in {} files. See {} for full log".format(n_error, log_file_path)
+            )
 
-        # remove empty cells
-        output = [output[i_job] for i_job, suc in enumerate(success) if suc is True]
         if len(output) == 1:
-            output = output[0]
-        return output
+            return output[0]
+        else:
+            return output
 
-    def __thread_download_wrapper(self, i_item, item,
-                                  item_local_path, item_local_filepath,
-                                  save_locally, download_options, annotation_options,
-                                  status, output, success, errors,
-                                  progress):
-        try:
-            download = False
-            for i_try in range(NUM_TRIES):
-                logger.debug('download item: {}, try {}'.format(item.id, i_try))
-                download = self.__thread_download(item=item,
-                                                  save_locally=save_locally,
-                                                  local_path=item_local_path,
-                                                  local_filepath=item_local_filepath,
-                                                  download_options=download_options,
-                                                  annotation_options=annotation_options,
-                                                  verbose=False,
-                                                  show_progress=True)
+    def __thread_download_wrapper(
+            self,
+            i_item,
+            item,
+            item_local_path,
+            item_local_filepath,
+            save_locally,
+            annotation_options,
+            status,
+            output,
+            success,
+            errors,
+            progress,
+            overwrite,
+            relative_path,
+            thickness,
+            with_text
+    ):
+
+        download = False
+        err = None
+        for i_try in range(NUM_TRIES):
+            logger.debug("download item: {}, try {}".format(item.id, i_try))
+            try:
+                download = self.__thread_download(
+                    item=item,
+                    save_locally=save_locally,
+                    local_path=item_local_path,
+                    local_filepath=item_local_filepath,
+                    annotation_options=annotation_options,
+                    overwrite=overwrite,
+                    relative_path=relative_path,
+                    thickness=thickness,
+                    with_text=with_text
+                )
                 if download:
                     break
-            if not download:
-                raise self.items_repository.client_api.platform_exception
-            status[i_item] = 'download'
-            output[i_item] = download
-            success[i_item] = True
-        except Exception as err:
-            status[i_item] = 'error'
+            except Exception as e:
+                err = e
+        if not download:
+            if err is None:
+                err = self.items_repository.client_api.platform_exception
+            status[i_item] = "error"
             output[i_item] = item.id
             success[i_item] = False
-            errors[i_item] = '%s\n%s' % (err, traceback.format_exc())
-        finally:
-            progress.queue.put((status[i_item],))
+            errors[i_item] = "%s\n%s" % (err, traceback.format_exc())
+        else:
+            status[i_item] = "download"
+            output[i_item] = download
+            success[i_item] = True
+        progress.queue.put((status[i_item],))
 
-    def download_annotations(self, dataset, local_path, overwrite=False):
+    @staticmethod
+    def download_annotations(dataset, local_path, overwrite=False):
         """
         Download annotations json for entire dataset
 
-        :param dataset: optional - search by name
-        :param overwrite:
+        :param dataset: Dataset entity
+        :param overwrite: optional - overwrite annotations if exist, default = false
         :param local_path:
         :return:
         """
-        # create local path to download and save to
-        if local_path.endswith('/*') or local_path.endswith(r'\*'):
-            # if end with * download directly to folder
-            local_path = local_path[:-2]
-        else:
-            local_path = os.path.join(local_path, 'json')
 
-        if not os.path.isdir(local_path) or os.path.isdir(local_path) and overwrite:
-            # if folder not exists OR (exists and overwrite)
-            # get zip from platform
-            success, response = self.items_repository.client_api.gen_request(
-                req_type='get',
-                path='/datasets/%s/annotations/zip' % dataset.id)
-
-            if not success:
-                # platform error
-                logger.exception('Downloading annotations zip')
-                raise PlatformException(response)
-            # zip filepath
-            annotations_zip = os.path.join(local_path, 'annotations.zip')
-            if not os.path.isdir(local_path):
-                os.makedirs(local_path)
+        def download_single_chunk(w_filepath, w_url):
             try:
+                # remove heading of the url
+                w_url = w_url[w_url.find('/dataset'):]
+                # get zip from platform
+                success, response = dataset.client_api.gen_request(req_type="get",
+                                                                   path=w_url,
+                                                                   stream=True)
+
+                if not success:
+                    # platform error
+                    logger.exception("Downloading annotations zip failed")
+                    raise PlatformException(response)
+
                 # downloading zip from platform
-                with open(annotations_zip, 'wb') as f:
+                with open(w_filepath, "wb") as f:
                     for chunk in response.iter_content(chunk_size=8192):
                         if chunk:  # filter out keep-alive new chunks
                             f.write(chunk)
                 # unzipping annotations to directory
-                utilities.Miscellaneous.unzip_directory(zip_filename=annotations_zip, to_directory=local_path)
-
+                utilities.Miscellaneous.unzip_directory(zip_filename=w_filepath,
+                                                        to_directory=local_path)
             except Exception:
-                logger.exception('Getting annotations from zip ')
-                raise
+                raise PlatformException(error='400',
+                                        message="Getting annotations from zip failed: {}".format(w_url))
             finally:
                 # cleanup
-                if os.path.isfile(annotations_zip):
-                    os.remove(annotations_zip)
+                if os.path.isfile(w_filepath):
+                    os.remove(w_filepath)
+
+        local_path = os.path.join(local_path, "json")
+        # only if json folder does not exist or exist and overwrite
+        if not os.path.isdir(os.path.join(local_path, 'json')) or overwrite:
+            # create local path to download and save to
+            if not os.path.isdir(local_path):
+                os.makedirs(local_path)
+        urls = list()
+        if isinstance(dataset.export['zip'], str):
+            urls.append(dataset.export['zip'])
+        elif isinstance(dataset.export['zip'], dict):
+            for url in dataset.export['zip']['chunks']:
+                urls.append(url)
+        pool = ThreadPool(processes=32)
+        for i_url, url in enumerate(urls):
+            # zip filepath
+            zip_filepath = os.path.join(local_path, "annotations_{}.zip".format(i_url))
+            # send url to pool
+            pool.apply_async(download_single_chunk, kwds={'w_url': url,
+                                                          'w_filepath': zip_filepath})
+        pool.close()
+        pool.join()
+        pool.terminate()
 
     @staticmethod
-    def __download_img_annotations(item, img_filepath, local_path, download_options, annotation_options):
-        if local_path.endswith('/image') or local_path.endswith('\\image'):
+    def __download_img_annotations(
+            item, img_filepath, local_path, relative_path, overwrite, annotation_options, thickness=1, with_text=False
+    ):
+
+        # fix local path
+        if local_path.endswith("/items") or local_path.endswith("\\items"):
             local_path = os.path.dirname(local_path)
-        overwrite = download_options['overwrite']
-        if download_options['relative_path']:
+
+        # get relative path
+        if relative_path:
             annotation_rel_path = item.filename[1:]
         else:
             annotation_rel_path = item.name
+
         # find annotations json
-        annotations_json_filepath = os.path.join(local_path, 'json', item.filename[1:])
+        annotations_json_filepath = os.path.join(local_path, "json", item.filename[1:])
         name, _ = os.path.splitext(annotations_json_filepath)
-        annotations_json_filepath = name + '.json'
+        annotations_json_filepath = name + ".json"
+
         if os.path.isfile(annotations_json_filepath):
+
             # if exists take from json file
-            with open(annotations_json_filepath, 'r') as f:
+            with open(annotations_json_filepath, "r") as f:
                 data = json.load(f)
-            if 'annotations' in data:
-                data = data['annotations']
-            annotations = entities.AnnotationCollection.from_json(_json=data,
-                                                                  item=item)
+            if "annotations" in data:
+                data = data["annotations"]
+            annotations = entities.AnnotationCollection.from_json(_json=data, item=item)
         else:
-            # get from platform
+
+            # if doesnt exist get from platform
             annotations = item.annotations.list()
+
+        # get image shape
         if item.width is not None and item.height is not None:
             img_shape = (item.height, item.width)
-        else:
+        elif 'image' in item.mimetype:
             img_shape = Image.open(img_filepath).size[::-1]
+        else:
+            img_shape = (0, 0)
 
+        # download all annotation options
         for option in annotation_options:
+            # get path and create dirs
             annotation_filepath = os.path.join(local_path, option, annotation_rel_path)
             if not os.path.isdir(os.path.dirname(annotation_filepath)):
                 os.makedirs(os.path.dirname(annotation_filepath), exist_ok=True)
             temp_path, ext = os.path.splitext(annotation_filepath)
 
-            if option == 'json':
-                if os.path.isfile(annotations_json_filepath):
-                    continue
-                annotations.download(filepath=annotations_json_filepath,
-                                     annotation_format=option,
-                                     height=img_shape[0],
-                                     width=img_shape[1])
-            elif option in ['mask', 'instance']:
-
-                annotation_filepath = temp_path + '.png'
-                if not os.path.isfile(annotation_filepath) or (os.path.isfile(annotation_filepath) and overwrite):
+            if option == "json":
+                if not os.path.isfile(annotations_json_filepath):
+                    annotations.download(
+                        filepath=annotations_json_filepath,
+                        annotation_format=option,
+                        height=img_shape[0],
+                        width=img_shape[1],
+                    )
+            elif option in ["mask", "instance"]:
+                annotation_filepath = temp_path + ".png"
+                if not os.path.isfile(annotation_filepath) or overwrite:
                     # if not exists OR (exists AND overwrite)
                     if not os.path.exists(os.path.dirname(annotation_filepath)):
                         # create folder if not exists
                         os.makedirs(os.path.dirname(annotation_filepath), exist_ok=True)
-                    annotations.download(filepath=annotation_filepath,
-                                         annotation_format=option,
-                                         height=img_shape[0],
-                                         width=img_shape[1])
+                    annotations.download(
+                        filepath=annotation_filepath,
+                        annotation_format=option,
+                        height=img_shape[0],
+                        width=img_shape[1],
+                        thickness=thickness,
+                        with_text=with_text
+                    )
             else:
-                raise PlatformException('400', 'Unknown annotation option: {}'.format(option))
+                raise PlatformException(
+                    "400", "Unknown annotation option: {}".format(option)
+                )
 
     @staticmethod
-    def __get_local_filepath(local_path, item, download_options):
+    def __get_local_filepath(local_path, item, relative_path, to_items_folder):
         # create paths
-        if local_path is None:
-            # create default local file
-            local_path = os.path.join(os.path.expanduser('~'),
-                                      '.dataloop',
-                                      'datasets',
-                                      item.dataset.id,
-                                      'image')
-            if download_options['relative_path']:
+        _, ext = os.path.splitext(local_path)
+        if ext:
+            # local_path is a filename
+            local_filepath = local_path
+            local_path = os.path.dirname(local_filepath)
+        else:
+            # if directory - get item's filename
+            if to_items_folder:
+                local_path = os.path.join(local_path, "items")
+            if relative_path:
                 local_filepath = os.path.join(local_path, item.filename[1:])
             else:
                 local_filepath = os.path.join(local_path, item.name)
-
-        else:
-            _, ext = os.path.splitext(local_path)
-            if ext:
-                # local_path is a filename
-                local_filepath = local_path
-                local_path = os.path.dirname(local_filepath)
-            else:
-                # if directory - get item's filename
-                if download_options['to_images_folder']:
-                    local_path = os.path.join(local_path, 'image')
-                if download_options['relative_path']:
-                    local_filepath = os.path.join(local_path, item.filename[1:])
-                else:
-                    local_filepath = os.path.join(local_path, item.name)
         return local_path, local_filepath
 
-    def __thread_download(self, item,
-                          save_locally, local_path, local_filepath,
-                          chunk_size=8192, download_options=None,
-                          download_item=True, annotation_options=None,
-                          verbose=True, show_progress=False):
+    def __thread_download(
+            self,
+            item,
+            save_locally,
+            local_path,
+            local_filepath,
+            overwrite,
+            relative_path,
+            annotation_options,
+            chunk_size=8192,
+            thickness=1,
+            with_text=False
+    ):
         """
         Get a single item's binary data
         Calling this method will returns the item body itself , an image for example with the proper mimetype.
 
         :param item: Item entity to download
         :param save_locally: bool. save to file or return buffer
-        :param local_path: local folder or filename to save to.
-         to folder. else - an "images" folder will be create for the images
-        :param chunk_size:
-        :param verbose:
-        :param show_progress:
-        :param download_options: {'overwrite': True/False, 'relative_path': True/False}
-        :param download_item:
+        :param local_path: optional - local folder or filename to save to.
+        :param chunk_size: size of chunks to download - optional. default = 8192
         :param annotation_options: download annotations options: ['mask', 'img_mask', 'instance', 'json']
         :return:
         """
-        try:
-            # default settings
-            if annotation_options is None:
-                annotation_options = list()
-            if download_options is None:
-                download_options = DEFAULT_DOWNLOAD_OPTIONS
-            else:
-                if not isinstance(download_options, dict):
-                    raise PlatformException('400', '"download_options" must be a dict. {<option>:<value>}')
-                tmp_options = DEFAULT_DOWNLOAD_OPTIONS
-                for key, val in download_options.items():
-                    if key not in tmp_options:
-                        raise PlatformException(
-                            error='400',
-                            message='unknown download option: %s. known: %s' % (key, list(tmp_options.keys()))
-                        )
-                    tmp_options[key] = val
-                download_options = tmp_options
-            overwrite = False
-            if 'overwrite' in download_options and download_options['overwrite']:
-                overwrite = True
+        # check if need to download image binary from platform
+        need_to_download = True
+        if save_locally and os.path.isfile(local_filepath):
+            need_to_download = overwrite
 
-            # check if need to download image binary from platform
-            if save_locally:
-                # save
-                if download_item:
-                    # get image
-                    if os.path.isfile(local_filepath):
-                        # local file exists
-                        if overwrite:
-                            # overwrite local file
-                            need_to_download = True
-                        else:
-                            need_to_download = False
-                    else:
-                        # local file is missing
-                        need_to_download = True
-                else:
-                    need_to_download = False
-            else:
-                # get image buffer
-                need_to_download = True
-
-            response = None
-            if need_to_download:
-                result, response = self.items_repository.client_api.gen_request(req_type='get',
-                                                                                path='/datasets/%s/items/%s/stream' % (
-                                                                                    item.dataset.id, item.id),
-                                                                                stream=True)
-                if not result:
-                    raise PlatformException(response)
-
-            if save_locally:
-                # download
-                if download_item:
-                    if not os.path.isfile(local_filepath) or (os.path.isfile(local_filepath) and overwrite):
-                        # if not exists OR (exists AND overwrite)
-                        if not os.path.exists(os.path.dirname(local_filepath)):
-                            # create folder if not exists
-                            os.makedirs(os.path.dirname(local_filepath), exist_ok=True)
-                        # download and save locally
-                        if show_progress:
-                            total_length = response.headers.get('content-length')
-                            pbar = ProgressBar(
-                                widgets=[' [', Timer(), '] ', Bar(), FormatLabel(item.name), ' (', FileTransferSpeed(),
-                                         ' | ', DataSize(), ' | ', Percentage(), ' | ', ETA(), ')'])
-                            pbar.max_value = int(total_length)
-                            dl = 0
-                        else:
-                            pbar = None
-                            dl = None
-                        with open(local_filepath, 'wb') as f:
-                            for chunk in response.iter_content(chunk_size=chunk_size):
-                                if chunk:  # filter out keep-alive new chunks
-                                    if show_progress:
-                                        dl += len(chunk)
-                                        pbar.update(dl, force=True)
-                                    f.write(chunk)
-                            if show_progress:
-                                pbar.finish()
-
-                # save to output variable
-                data = local_filepath
-                # if image - can download annotation mask
-                if 'image' in item.mimetype and item.annotated:
-                    if annotation_options:
-                        self.__download_img_annotations(item=item,
-                                                        img_filepath=local_filepath,
-                                                        download_options=download_options,
-                                                        annotation_options=annotation_options,
-                                                        local_path=local_path)
-            else:
-                # save as byte stream
-                data = io.BytesIO()
+        response = None
+        if need_to_download:
+            result, response = self.items_repository.client_api.gen_request(
+                req_type="get",
+                path="/datasets/%s/items/%s/stream" % (item.dataset.id, item.id),
+                stream=True,
+            )
+            if not result:
+                raise PlatformException(response)
+        if save_locally:
+            # save to file
+            if not os.path.exists(os.path.dirname(local_filepath)):
+                # create folder if not exists
+                os.makedirs(os.path.dirname(local_filepath), exist_ok=True)
+            # download and save locally
+            total_length = response.headers.get("content-length")
+            pbar = ProgressBar(
+                widgets=[
+                    " [",
+                    Timer(),
+                    "] ",
+                    Bar(),
+                    FormatLabel(item.name),
+                    " (",
+                    FileTransferSpeed(),
+                    " | ",
+                    DataSize(),
+                    " | ",
+                    Percentage(),
+                    " | ",
+                    ETA(),
+                    ")",
+                ]
+            )
+            pbar.max_value = int(total_length)
+            with open(local_filepath, "wb") as f:
+                chunk_progress = 0
                 for chunk in response.iter_content(chunk_size=chunk_size):
                     if chunk:  # filter out keep-alive new chunks
-                        data.write(chunk)
-                # go back to the beginning of the stream
-                data.seek(0)
-                data.name = item.name
-            return data
-        except Exception as e:
-            if verbose:
-                logger.exception(e)
-            raise
+                        chunk_progress += len(chunk)
+                        pbar.update(chunk_progress, force=True)
+                        f.write(chunk)
+                pbar.finish()
+
+            # save to output variable
+            data = local_filepath
+
+            # if image - can download annotation mask
+            if item.annotated and annotation_options:
+                self.__download_img_annotations(
+                    item=item,
+                    img_filepath=local_filepath,
+                    annotation_options=annotation_options,
+                    local_path=local_path,
+                    relative_path=relative_path,
+                    overwrite=overwrite,
+                    thickness=thickness,
+                    with_text=with_text
+                )
+        else:
+            # save as byte stream
+            data = io.BytesIO()
+            for chunk in response.iter_content(chunk_size=chunk_size):
+                if chunk:  # filter out keep-alive new chunks
+                    data.write(chunk)
+            # go back to the beginning of the stream
+            data.seek(0)
+            data.name = item.name
+        return data
+
+    def __default_local_path(self):
+
+        # create default local path
+        if self.items_repository.dataset.project is None:
+            # by dataset name
+            local_path = os.path.join(
+                os.path.expanduser("~"),
+                ".dataloop",
+                "datasets",
+                "%s_%s"
+                % (
+                    self.items_repository.dataset.name,
+                    self.items_repository.dataset.id,
+                ),
+            )
+        else:
+            # by dataset and project name
+            local_path = os.path.join(
+                os.path.expanduser("~"),
+                ".dataloop",
+                "projects",
+                self.items_repository.dataset.project.name,
+                "datasets",
+                self.items_repository.dataset.name,
+            )
+        logger.info("Downloading to: {}".format(local_path))
+        return local_path
 
 
 class Progress(threading.Thread):
@@ -520,10 +635,8 @@ class Progress(threading.Thread):
         threading.Thread.__init__(self)
         self.progress_type = progress_type
         self.progressbar = None
-
         self.queue = queue.Queue(maxsize=0)
         self.progressbar_init(max_val=max_val)
-        #############
         self.upload_dict = dict()
         self.download = 0
         self.exist = 0
@@ -536,10 +649,11 @@ class Progress(threading.Thread):
         :param max_val:
         :return:
         """
-        self.progressbar = ProgressBar(widgets=[' [', Timer(), '] ', Bar(), ' (', ETA(), ')'],
-                                       redirect_stdout=True,
-                                       redirect_stderr=True
-                                       )
+        self.progressbar = ProgressBar(
+            widgets=[" [", Timer(), "] ", Bar(), " (", ETA(), ")"],
+            redirect_stdout=True,
+            redirect_stderr=True,
+        )
         self.progressbar.max_value = max_val
 
     def finish(self):
@@ -594,14 +708,14 @@ class Progress(threading.Thread):
                 msg, = decoded_body
                 if msg is None:
                     break
-                if msg == 'download':
+                if msg == "download":
                     self.download += 1
-                elif msg == 'exist':
+                elif msg == "exist":
                     self.exist += 1
-                elif msg == 'error':
+                elif msg == "error":
                     self.error += 1
                 else:
-                    logger.exception('Unknown message type: %s', msg)
+                    logger.exception("Unknown message type: %s", msg)
                     # update bar
                 self.progressbar.update(self.download + self.exist)
             except Exception as error:
@@ -610,9 +724,9 @@ class Progress(threading.Thread):
                 self.queue.task_done()
 
     def run(self):
-        if self.progress_type == 'upload':
+        if self.progress_type == "upload":
             self.run_upload()
-        elif self.progress_type == 'download':
+        elif self.progress_type == "download":
             self.run_download()
         else:
             assert False

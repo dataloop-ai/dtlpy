@@ -60,3 +60,4 @@ def step_impl(context, project_name):
 def step_impl(context, error_text):
     assert error_text in str(context.error)
     context.project.delete(True, True)
+

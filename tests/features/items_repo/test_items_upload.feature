@@ -3,7 +3,7 @@ Feature: Items repository upload function testing
     Background: Initiate Platform Interface and create a project
         Given Platform Interface is initialized as dlp and Environment is set to development
         And There is a project by the name of "items_upload"
-        And I create a dataset by the name of "Dataset"
+        And I create a dataset with a random name
 
     Scenario: Upload a single item
         When I upload a file in path "assets_split/items_upload/0000000162.jpg"
@@ -47,7 +47,7 @@ Feature: Items repository upload function testing
         And Item in host when downloaded to "test_items_upload_downloaded_item" equals item in "assets_split/items_upload/0000000162.jpg"
         And Item was merged to host
 
-    Scenario: Upload a single item to a specific remote path
+    Scenario: Upload an item with an illegal name
         When I try to upload file in path "assets_split/items_upload/0000000162.jpg" to remote path "/fol.der"
         Then Number of error files should be larger by one
 

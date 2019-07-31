@@ -29,7 +29,7 @@ class Filters:
                 "page": self.page,
                 "filter": {
                     "$and": [
-                        {"filename": {"$glob": "/*"}},
+                        {"type": "file"},
                         {"filename": {"$glob": "!/.**"}},
                         {"filename": {"$glob": "!/.*/**"}},
                     ]

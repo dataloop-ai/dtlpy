@@ -7,8 +7,7 @@ def step_impl(context):
     filepath = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], filepath)
     context.item = context.dataset.items.upload(
         local_path=filepath,
-        remote_path=None,
-        upload_options=None,
+        relative_path=False
     )
 
 
@@ -70,13 +69,11 @@ def step_impl(context, file_name):
 
     context.dataset.items.upload(
         local_path=filepath,
-        remote_path=None,
-        upload_options=None,
+        remote_path=None
     )
 
     remote_path = '/folder_name/'
     context.dataset.items.upload(
         local_path=filepath,
-        remote_path=remote_path,
-        upload_options=None,
+        remote_path=remote_path
     )

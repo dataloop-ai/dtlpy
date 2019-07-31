@@ -14,20 +14,31 @@
 # You should have received a copy of the GNU General Public License
 # along with DTLPY.  If not, see <http://www.gnu.org/licenses/>.
 import logging
-import json
 import jwt
+import sys
+import os
 
 from .exceptions import PlatformException
 from . import services, repositories, exceptions
 from .__version__ import version as __version__
 from .entities import Box, Point, Segmentation, Polygon, Ellipse, Classification, Polyline
-from .entities import AnnotationCollection, Annotation, Item, Package, Filters, Task, Session, Recipe, Ontology, Label
+from .entities import AnnotationCollection, Annotation, Item, Package, Filters, Task, Session, Recipe, Ontology,\
+    Label, Trigger
 from . import examples
+from .utilities import Converter
 
 """
 Main Platform Interface module for Dataloop
 """
+# check python version
+if sys.version_info.major != 3:
+    if sys.version_info.minor not in [5, 6]:
+        sys.stderr.write(
+            'Error: Your Python version "{}.{}" is NOT supported by Dataloop SDK dtlpy. Supported version are 3.5, 3.6)\n'.format(
+                sys.version_info.major, sys.version_info.minor))
+        sys.exit(-1)
 
+# Create repositories instances
 client_api = services.ApiClient()
 projects = repositories.Projects(client_api=client_api)
 datasets = repositories.Datasets(client_api=client_api, project=None)
@@ -121,5 +132,17 @@ def environment():
 
 
 def info():
-    payload = jwt.decode(token(), algorithms=['HS256'], verify=False)
-    print('{}'.format(json.dumps(payload, indent=4)))
+    payload = jwt.decode(client_api.token, algorithms=['HS256'], verify=False)
+    user_email = payload['email']
+    env = client_api.environment
+    print('-- Dataloop info --')
+    print('-- Working environment: {environment}'.format(environment=env))
+    print('-- User: {email}'.format(email=user_email))
+    print('-- Token: {token}'.format(token=client_api.token))
+
+
+def init():
+    from .services import CookieIO
+    client_api.state_io = CookieIO.init_local_cookie(create=True)
+    assert isinstance(client_api.state_io, CookieIO)
+    logger.info('.Dataloop directory initiated successfully in {}'.format(os.getcwd()))

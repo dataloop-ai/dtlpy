@@ -3,7 +3,7 @@ Feature: Items repository delete function testing
     Background: Initiate Platform Interface and create a project
         Given Platform Interface is initialized as dlp and Environment is set to development
         And There is a project by the name of "items_delete"
-        And I create a dataset by the name of "Dataset"
+        And I create a dataset with a random name
 
     Scenario: Delete item by name
         Given There are no items
@@ -28,7 +28,7 @@ Feature: Items repository delete function testing
         Given There are no items
         And I upload an item by the name of "/test_item.jpg"
         When I try to delete an item by the id of "Some_id"
-        Then "InternalServerError" exception should be raised
+        Then "NotFound" exception should be raised
         And No item was deleted
 
     Scenario: Finally

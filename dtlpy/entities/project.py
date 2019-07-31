@@ -26,11 +26,21 @@ class Project:
     _packages = attr.ib()
     _artifacts = attr.ib()
     _plugins = attr.ib()
-    _time_series = attr.ib()
+    _triggers = attr.ib()
+    _times_series = attr.ib()
 
     @_projects.default
     def set_projects(self):
         return repositories.Projects(client_api=self.client_api)
+
+    @_triggers.default
+    def set_triggers(self):
+        return repositories.Triggers(client_api=self.client_api, project=self)
+
+    @property
+    def triggers(self):
+        assert isinstance(self._triggers, repositories.Triggers)
+        return self._triggers
 
     @property
     def projects(self):
@@ -57,6 +67,7 @@ class Project:
 
     @property
     def plugins(self):
+        assert isinstance(self._plugins, repositories.Plugins)
         return self._plugins
 
     @_plugins.default
@@ -81,14 +92,14 @@ class Project:
         assert isinstance(self._artifacts, repositories.Artifacts)
         return self._artifacts
 
-    @_time_series.default
-    def set_time_series(self):
-        return repositories.TimeSeries(project=self, client_api=self.client_api)
+    @_times_series.default
+    def set_times_series(self):
+        return repositories.TimesSeries(project=self, client_api=self.client_api)
 
     @property
-    def time_series(self):
-        assert isinstance(self._time_series, repositories.TimeSeries)
-        return self._time_series
+    def times_series(self):
+        assert isinstance(self._times_series, repositories.TimesSeries)
+        return self._times_series
 
     @classmethod
     def from_json(cls, _json, client_api):
@@ -145,3 +156,17 @@ class Project:
         :return: Project object
         """
         return self.projects.update(project=self, system_metadata=system_metadata)
+
+    def checkout(self):
+        """
+        Check - out as project
+        :param
+        identifier: project
+        name or partial
+        id
+        :return:
+        """
+        self.projects.checkout(identifier=self.name)
+
+    def open_in_web(self):
+        self.projects.open_in_web(project=self)

@@ -12,7 +12,7 @@ def step_impl(context):
         context.recipe.ontologies.get(ontology_id=context.ontology.id)
         assert False
     except Exception as e:
-        assert "InternalServerError" in str(type(e))
+        assert "NotFound" in str(type(e))
 
 
 @behave.when(u'I try to delete ontology by "{some_id}"')

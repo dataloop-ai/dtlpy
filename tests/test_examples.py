@@ -11,8 +11,6 @@ project = dl.projects.create('project_examples_tester_{}'.format(random.randrang
 dataset = project.datasets.create('dataset_examples_tester_{}'.format(random.randrange(1000, 100000)))
 item = dataset.items.upload(local_path=image_path, local_annotations_path=annotations_path)
 
-
-
 # add labels
 dl.examples.add_labels.main(project_name=project.name, dataset_name=dataset.name)
 
@@ -30,19 +28,16 @@ dl.examples.copy_annotations.main(first_project_name=project.name,
                                   first_remote_filepath=item.filename,
                                   second_remote_filepath=second_item.filename)
 
-
 # copy folder
 dl.examples.copy_folder.main(first_project_name=project.name,
-                                  second_project_name=second_project.name,
-                                  first_dataset_name=dataset.name,
-                                  second_dataset_name=second_dataset.name)
+                             second_project_name=second_project.name,
+                             first_dataset_name=dataset.name,
+                             second_dataset_name=second_dataset.name)
 
 # show item and mask
 dl.examples.show_item_and_mask.main(project_name=project.name,
-                                  dataset_name=dataset.name,
-                                  item_remote_path=item.filename)
-
-
+                                    dataset_name=dataset.name,
+                                    item_remote_path=item.filename)
 
 project.delete(True, True)
 second_project.delete(True, True)

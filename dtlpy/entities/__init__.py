@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with DTLPY.  If not, see <http://www.gnu.org/licenses/>.
 from .item import Item
+from .trigger import Trigger
 from .project import Project
 from .artifact import Artifact
 from .task import Task
@@ -29,3 +30,4 @@ from .ontology import Ontology
 from .annotation_definitions import Box, Point, Segmentation, Polygon, Ellipse, Classification, Polyline
 from .label import Label
 from .plugin import Plugin, PluginInput, PluginOutput
+from .time_series import TimeSeries

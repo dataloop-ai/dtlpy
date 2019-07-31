@@ -9,7 +9,7 @@ import numpy as np
 from multiprocessing.pool import ThreadPool
 
 TEST_DIR = os.path.dirname(os.path.realpath(__file__))
-NUM_TRIES = 2
+NUM_TRIES = 3
 
 
 def clean_feature_log_file(log_filepath):
@@ -130,8 +130,11 @@ if __name__ == '__main__':
         for feature, result in results.items():
             status, log_filename = result
             if status is False:
-                with open(log_filename, 'r') as output:
-                    print(output.read())
+                try:
+                    with open(log_filename, 'r') as output:
+                        print(output.read())
+                except:
+                    continue
 
     # return success/failure
     if passed:

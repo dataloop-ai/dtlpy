@@ -6,16 +6,16 @@ Feature: Datasets repository get function testing
 
     Scenario: Get an existing dataset by name
         Given There are no datasets
-        And I create a dataset by the name of "Dataset"
-        When I get a dataset by the name of "Dataset"
-        Then I get a dataset by the name of "Dataset"
+        And I create a dataset with a random name
+        When I get a dataset with the created name
+        Then I get a dataset with the created name
         And The dataset I got is equal to the one created
 
     Scenario: Get an existing project by id
         Given There are no datasets
-        And I create a dataset by the name of "Dataset"
+        And I create a dataset with a random name
         When I get a dataset by the id of the dataset "Dataset"
-        Then I get a dataset by the name of "Dataset"
+        Then I get a dataset with the created name
         And The dataset I got is equal to the one created
 
     Scenario: Get non-existing dataset by name
@@ -26,7 +26,7 @@ Feature: Datasets repository get function testing
     Scenario: Get non-existing dataset by id
         Given There are no datasets
         When I try to get a dataset by id
-        Then "InternalServerError" exception should be raised
+        Then "NotFound" exception should be raised
 
     Scenario: Finally
         Given Clean up

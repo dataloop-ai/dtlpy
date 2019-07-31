@@ -7,8 +7,7 @@ import cv2
 def step_impl(context, local_path):
     local_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], local_path)
     context.dataset.items.upload(local_path=local_path,
-                                 remote_path=None,
-                                 upload_options=None)
+                                 remote_path=None)
 
 
 @behave.then(u'Items in "{download_path}" should equal items in "{upload_path}"')

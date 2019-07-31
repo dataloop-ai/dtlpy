@@ -12,10 +12,8 @@ def step_impl(context, local_path):
                                    local_path=local_path,
                                    file_types=None,
                                    num_workers=None,
-                                   download_options={'to_images_folder': True},
                                    save_locally=True,
                                    annotation_options=['mask', 'instance', 'json'],
-                                   opacity=1,
                                    with_text=False,
                                    thickness=3)
 
@@ -34,7 +32,7 @@ def step_impl(context, download_path, should_be_path):
     download_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], download_path)
     should_be_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], should_be_path)
     files = os.listdir(download_path)
-    excepted_dirs = ['image', 'instance', 'json', 'mask']
+    excepted_dirs = ['items', 'instance', 'json', 'mask']
     for file in excepted_dirs:
         assert file in files
 

@@ -3,7 +3,7 @@ Feature: Annotation Entity Json to Object testing
     Background: Initiate Platform Interface
         Given Platform Interface is initialized as dlp and Environment is set to development
         And There is a project by the name of "Project_test_annotation_json_to_object"
-        And I create a dataset by the name of "Dataset"
+        And I create a dataset with a random name
 
     Scenario: Image 
         Given Classes in file: "assets_split/ann_json_to_object/classes_new.json" are uploaded to test Dataset

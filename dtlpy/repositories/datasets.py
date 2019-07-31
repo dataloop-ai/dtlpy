@@ -20,6 +20,60 @@ class Datasets:
     project = attr.ib()
     logger = attr.ib(default=logging.getLogger('dataloop.repositories.datasets'))
 
+    def __get_by_id(self, dataset_id):
+        success, response = self.client_api.gen_request(req_type='get',
+                                                        path='/datasets/%s' % dataset_id)
+        if success:
+            dataset = entities.Dataset.from_json(client_api=self.client_api,
+                                                 _json=response.json(),
+                                                 project=self.project)
+        else:
+            raise PlatformException(response)
+        return dataset
+
+    def __get_by_identifier(self, identifier):
+        datasets = self.list()
+        datasets_by_name = [dataset for dataset in datasets if dataset.name == identifier]
+        if len(datasets_by_name) == 1:
+            return datasets_by_name[0]
+        elif len(datasets_by_name) > 1:
+            raise Exception('Multiple datasets with this name exist')
+
+        datasets_by_partial_id = [dataset for dataset in datasets if dataset.id.startswith(identifier)]
+        if len(datasets_by_partial_id) == 1:
+            return datasets_by_partial_id[0]
+        elif len(datasets_by_partial_id) > 1:
+            raise Exception("Multiple datasets whose id begins with {} exist".format(identifier))
+
+        raise Exception("Dataset not found")
+
+    def open_in_web(self, dataset_name=None, dataset_id=None, dataset=None):
+        import webbrowser
+        if self.client_api.environment == 'https://gate.dataloop.ai/api/v1':
+            head = 'https://console.dataloop.ai'
+        elif self.client_api.environment == 'https://dev-gate.dataloop.ai/api/v1':
+            head = 'https://dev-con.dataloop.ai'
+        else:
+            raise PlatformException('400', 'Unknown environment')
+        if dataset is None:
+            dataset = self.get(dataset_name=dataset_name, dataset_id=dataset_id)
+        dataset_url = head + '/projects/{}/datasets/{}'.format(dataset.project.id, dataset.id)
+        webbrowser.open(url=dataset_url, new=2, autoraise=True)
+
+    def checkout(self, identifier):
+        if self.project is not None:
+            project = self.project.id
+            self.project.checkout(identifier=project)
+        else:
+            project = self.client_api.state_io.get('project', local=True)
+            projects = repositories.Projects(client_api=self.client_api, logger=self.logger)
+            self.project = projects.get(project_id=project)
+        if project is None:
+            raise Exception("Please checkout a valid project before trying to checkout a dataset")
+        dataset = self.__get_by_identifier(identifier)
+        self.client_api.state_io.put('dataset', dataset.id, local=True)
+        self.logger.info('Checked out to dataset {}'.format(dataset.name))
+
     def list(self):
         """
         List all datasets.
@@ -50,14 +104,7 @@ class Datasets:
         :return: Dataset object
         """
         if dataset_id is not None:
-            success, response = self.client_api.gen_request(req_type='get',
-                                                            path='/datasets/%s' % dataset_id)
-            if success:
-                dataset = entities.Dataset.from_json(client_api=self.client_api,
-                                                     _json=response.json(),
-                                                     project=self.project)
-            else:
-                raise PlatformException(response)
+            dataset = self.__get_by_id(dataset_id)
         elif dataset_name is not None:
             datasets = self.list()
             dataset = [dataset for dataset in datasets if dataset.name == dataset_name]
@@ -73,8 +120,12 @@ class Datasets:
             else:
                 dataset = dataset[0]
         else:
-            self.logger.exception('Must choose by at least one. "dataset_id" or "dataset_name"')
-            raise PlatformException('400', 'Must choose by at least one. "dataset_id" or "dataset_name"')
+            # get from state cookie
+            state_dataset_id = self.client_api.state_io.get('dataset', local=True)
+            if state_dataset_id is None:
+                raise PlatformException('400', 'Must choose by "dataset_id" or "dataset_name" OR checkout a dataset')
+            else:
+                dataset = self.__get_by_id(state_dataset_id)
         return dataset
 
     def delete(self, dataset_name=None, dataset_id=None, sure=False, really=False):
@@ -158,6 +209,7 @@ class Datasets:
         else:
             raise PlatformException(response)
         self.logger.info('Dataset was created successfully. Dataset id: %s' % dataset.id)
+        assert isinstance(dataset, entities.Dataset)
         return dataset
 
     def download_annotations(self, dataset, local_path, overwrite=False):

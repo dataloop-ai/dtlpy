@@ -73,7 +73,7 @@ def step_impl(context):
 
 @behave.when(u'I download dataset annotations')
 def step_impl(context):
-    context.dataset.download_annotations(local_path=os.environ['DATALOOP_TEST_ASSETS'])
+    context.dataset.download_annotations(local_path=os.environ['DATALOOP_TEST_ASSETS'], overwrite=True)
 
 
 @behave.then(u'I get a folder named "{folder_name}" in assets folder')

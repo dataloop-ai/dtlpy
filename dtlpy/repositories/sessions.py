@@ -56,6 +56,7 @@ class Sessions:
         """
         Create a new session
         :param input_parameters: inputs dictionary. keys as specified in Task
+        :param sync:
         :return: Session object
         """
         if self.task is None:
@@ -64,7 +65,7 @@ class Sessions:
             raise ValueError('input must be a dictionary')
 
         path = '/tasks/%s/sessions'
-        if (sync):
+        if sync:
             path = path + '?sync=true'
         success, response = self.client_api.gen_request(req_type='post',
                                                         path=path % self.task.id,

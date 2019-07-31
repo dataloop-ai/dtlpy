@@ -8,12 +8,12 @@ class PlatformException(Exception):
         self.message = message
 
         exceptions = {
-            '404': NotFound,
-            '500': InternalServerError,
-            '403': Forbidden,
             '400': BadRequest,
             '401': Unauthorized,
+            '403': Forbidden,
+            '404': NotFound,
             '408': RequestTimeout,
+            '500': InternalServerError,
             '600': TokenExpired
         }
 
