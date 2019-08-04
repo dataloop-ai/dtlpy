@@ -23,26 +23,6 @@ Feature: Cli Datasets
         Then I succeed
         And "cli_datasets_dataset_<random>" in output
 
-    Scenario: Datasets upload - maximum param given
-        When I perform command:
-            |datasets|upload|-p|cli_datasets_project_<random>|-d|cli_datasets_dataset_<random>|-l|<rel_path>/upload_batch/to_upload|-lap|<rel_path>/annotations_for_cli_upload|-nw|32|-f|.jpg,.png|-r|/items|-rp|
-        Then I succeed
-
-    Scenario: Datasets upload - minimum param given
-        When I perform command:
-            |datasets|upload|-p|cli_datasets_project_<random>|-d|cli_datasets_dataset_<random>|-l|<rel_path>/upload_batch/to_upload|-ow
-        Then I succeed
-
-    Scenario: Datasets download - maximum param given
-        When I perform command:
-            |datasets|download|-p|cli_datasets_project_<random>|-d|cli_datasets_dataset_<random>|-l|<rel_path>/cli_dataset_download|-ao|mask,instance,json|-nw|32|-r|/**|-rp|-th|-1|-wt|
-        Then I succeed
-
-    Scenario: Datasets download - minimum param given
-        When I perform command:
-            |datasets|download|-p|cli_datasets_project_<random>|-d|cli_datasets_dataset_<random>|-l|<rel_path>/cli_dataset_download|-ow
-        Then I succeed
-
     Scenario: Finally
         Given I delete the project by the name of "cli_datasets_project_<random>"
         And I clean folder "<rel_path>/cli_dataset_download"

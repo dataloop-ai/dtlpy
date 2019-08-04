@@ -505,6 +505,10 @@ class Annotation:
         :param item: item
         :return: annotation object
         """
+        # handle 'note'
+        if _json['type'] == 'note':
+            return None
+
         # get item type
         is_video = False
         if 'video' in item.mimetype:

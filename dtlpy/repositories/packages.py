@@ -246,11 +246,14 @@ class Packages:
                 shutil.rmtree(dist_path)
 
     def unpack_single(self, package, download_path, local_path):
+        # downloading with specific filename
         artifact_filepath = self.items_repository.download(items=package.id,
                                                            save_locally=True,
-                                                           local_path=download_path,
-                                                           relative_path=False,
+                                                           local_path=os.path.join(download_path, package.name),
                                                            to_items_folder=False)
+        if not os.path.isfile(artifact_filepath):
+            raise PlatformException(error='404',
+                                    message='error downloading package. see above for more information')
         utilities.Miscellaneous.unzip_directory(zip_filename=artifact_filepath,
                                                 to_directory=local_path)
         os.remove(artifact_filepath)
@@ -270,7 +273,7 @@ class Packages:
         if isinstance(package, entities.PagedEntities):
             for page in package:
                 for item in page:
-                    local_path = download_path + '/v.' + item.name.split('.')[0]
+                    local_path = os.path.join(download_path, 'v.' + item.name.split('.')[0])
                     self.unpack_single(package=item, download_path=download_path, local_path=local_path)
             return os.path.dirname(local_path)
         elif isinstance(package, entities.Package):

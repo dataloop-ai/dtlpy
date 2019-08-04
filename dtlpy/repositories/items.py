@@ -276,7 +276,6 @@ class Items:
             num_workers=None,
             annotation_options=None,
             overwrite=False,
-            relative_path=True,
             to_items_folder=True,
             thickness=1,
             with_text=False
@@ -287,7 +286,6 @@ class Items:
         Optional - also download annotation, mask, instance and image mask of the item
 
         :param local_path: local folder or filename to save to.
-        :param relative_path: optional - save directories relatively to platform, default = True
         :param filters: Filters entity or a dictionary containing filters parameters
         :param to_items_folder: Create 'items' folder and download items to it
         :param overwrite: optional - default = False
@@ -310,7 +308,6 @@ class Items:
             num_workers=num_workers,
             annotation_options=annotation_options,
             overwrite=overwrite,
-            relative_path=relative_path,
             to_items_folder=to_items_folder,
             thickness=thickness,
             with_text=with_text
@@ -326,14 +323,12 @@ class Items:
             file_types=None,
             num_workers=32,
             overwrite=False,
-            relative_path=True,
     ):
         """
         Upload local file to dataset.
         Local filesystem will remain.
         If "*" at the end of local_path (e.g. "/images/*") items will be uploaded without head directory
 
-        :param relative_path: optional - upload with relative path, default = True
         :param overwrite: optional - default = False
         :param local_path: local file or folder to upload
         :param local_annotations_path: path to dataloop format annotations json files.
@@ -358,7 +353,6 @@ class Items:
             # config
             num_workers=num_workers,
             overwrite=overwrite,
-            relative_path=relative_path
         )
 
     def open_in_web(self, filepath=None, item_id=None, item=None):

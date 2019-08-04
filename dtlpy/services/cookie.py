@@ -16,8 +16,9 @@ class CookieIO:
     """
     Cookie interface for Dataloop parameters
     """
-    def __init__(self, path, create=True):
+    def __init__(self, path, create=True, local=False):
         self.COOKIE = path
+        self.local = local
         if create:
             self.create()
 
@@ -29,13 +30,11 @@ class CookieIO:
 
     @staticmethod
     def init_local_cookie(create=False):
-        cwd = os.getcwd()
-        local_dataloop_dir = os.path.join(cwd, '.dataloop')
-        local_cookie_file = os.path.join(local_dataloop_dir, 'state.json')
-        return CookieIO(local_cookie_file, create=create)
+        local_cookie_file = os.path.join(os.getcwd(), '.dataloop', 'state.json')
+        return CookieIO(local_cookie_file, create=create, local=True)
 
     def create(self):
-        logger.debug('COOKIE.crate: File: {}'.format(self.COOKIE))
+        logger.debug('COOKIE.create: File: {}'.format(self.COOKIE))
         # create directory '.dataloop' if not exists
         if not os.path.exists(os.path.dirname(self.COOKIE)):
             os.makedirs(os.path.dirname(self.COOKIE))
@@ -49,64 +48,50 @@ class CookieIO:
             print('{} is corrupted'.format(self.COOKIE))
             raise SystemExit
 
-    def read_json(self, local=False):
+    def read_json(self, create=False):
         # which cookie
-        if local:
-            local_path = os.getcwd()
-            cookie = os.path.join(local_path, '.dataloop/state.json')
-        else:
-            cookie = self.COOKIE
+        if self.local:
+            self.COOKIE = os.path.join(os.getcwd(), '.dataloop', 'state.json')
 
-        # read cookie
-        cfg = None
-        for i in range(NUM_TRIES):
-            try:
-                with open(cookie, 'r') as fp:
-                    cfg = json.load(fp)
-                break
-            except json.decoder.JSONDecodeError:
-                if i == (NUM_TRIES - 1):
-                    raise
-                time.sleep(0.1)
-                continue
+        # check if file exists - and create
+        if not os.path.isfile(self.COOKIE) and create:
+            self.create()
+
+        # check if file exists
+        if not os.path.isfile(self.COOKIE):
+            logger.debug('COOKIE.read: File does not exist: {}. Return None'.format(self.COOKIE))
+            cfg = {}
+        else:
+            # read cookie
+            cfg = {}
+            for i in range(NUM_TRIES):
+                try:
+                    with open(self.COOKIE, 'r') as fp:
+                        cfg = json.load(fp)
+                    break
+                except json.decoder.JSONDecodeError:
+                    if i == (NUM_TRIES - 1):
+                        raise
+                    time.sleep(0.1)
+                    continue
         return cfg
 
-    def get(self, key, local=False):
+    def get(self, key):
         logger.debug('COOKIE.read: key: {}'.format(key))
-        if local:
-            local_path = os.getcwd()
-            cookie = os.path.join(local_path, '.dataloop/state.json')
+        cfg = self.read_json()
+        if key in cfg.keys():
+            value = cfg[key]
         else:
-            cookie = self.COOKIE
-        # check if file exists
-        if not os.path.isfile(cookie):
-            logger.debug('COOKIE.read: File does not exist: {}. Return None'.format(key))
+            logger.warning(msg='key not in platform cookie file: %s. Return None' % key)
             value = None
-        else:
-            cfg = self.read_json(local=local)
-            if key in cfg.keys():
-                value = cfg[key]
-            else:
-                logger.warning(msg='key not in platform cookie file: %s. Return None' % key)
-                value = None
         return value
 
-    def put(self, key, value, local=False):
+    def put(self, key, value):
         logger.debug('COOKIE.write: key: {}'.format(key))
-        # check if file exists - and create
-        if not os.path.isfile(self.COOKIE):
-            self.create()
         # read and write
-        cfg = self.read_json()
+        cfg = self.read_json(create=True)
         cfg[key] = value
-        if local:
-            local_path = os.getcwd()
-            if not os.path.isdir(os.path.join(local_path, '.dataloop')):
-                os.mkdir(os.path.join(local_path, '.dataloop'))
-            cookie = os.path.join(local_path, '.dataloop/state.json')
-        else:
-            cookie = self.COOKIE
-        with open(cookie, 'w') as fp:
+        with open(self.COOKIE, 'w') as fp:
             json.dump(cfg, fp, indent=4)
 
     def reset(self):

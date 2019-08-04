@@ -98,13 +98,12 @@ class Artifacts:
 
     def download(self, artifact_id=None, artifact_name=None,
                  session_id=None, task_id=None,
-                 local_path=None, overwrite=False, relative_path=False):
+                 local_path=None, overwrite=False):
         """
 
         Download artifact binary.
         Get artifact by name, id or type
 
-        :param relative_path: optional - download with relative path, default = Flase
         :param overwrite: optional - default = False
         :param artifact_id: optional - search by id
         :param local_path: artifact will be saved to this filepath
@@ -117,8 +116,7 @@ class Artifacts:
             artifact = self.items_repository.download(item_id=artifact_id,
                                                       save_locally=True,
                                                       local_path=local_path,
-                                                      overwrite=overwrite,
-                                                      relative_path=relative_path)
+                                                      overwrite=overwrite)
             return artifact
 
         if artifact_name is None:
@@ -136,8 +134,7 @@ class Artifacts:
             self.dataset.items.download(filters=filters,
                                         save_locally=True,
                                         local_path=local_path,
-                                        overwrite=overwrite,
-                                        relative_path=relative_path)
+                                        overwrite=overwrite)
 
         else:
             artifact = self.get(artifact_id=artifact_id,
@@ -148,8 +145,7 @@ class Artifacts:
             artifact = self.items_repository.download(item_id=artifact.id,
                                                       save_locally=True,
                                                       local_path=local_path,
-                                                      overwrite=overwrite,
-                                                      relative_path=relative_path)
+                                                      overwrite=overwrite)
             return artifact
 
     def upload(self,
@@ -158,14 +154,13 @@ class Artifacts:
                # where to upload
                task_id=None, task=None, session_id=None, session=None,
                # add information
-               overwrite=False, relative_path=False):
+               overwrite=False):
         """
 
         Upload binary file to artifact. get by name, id or type.
         If artifact exists - overwriting binary
         Else and if create==True a new artifact will be created and uploaded
 
-        :param relative_path: optional - default = False
         :param overwrite: optional - default = False
         :param filepath: local binary file
         :param task_id:
@@ -188,16 +183,14 @@ class Artifacts:
         if os.path.isfile(filepath):
             artifact = self.items_repository.upload(filepath=filepath,
                                                     remote_path=remote_path,
-                                                    overwrite=overwrite,
-                                                    relative_path=relative_path)
+                                                    overwrite=overwrite)
         elif os.path.isdir(filepath):
             if not (filepath.endswith('/*') or filepath.endswith(r'\*')):
                 # upload directly to folder
                 filepath = os.path.join(filepath, '*')
             artifact = self.dataset.items.upload(local_path=filepath,
                                                  remote_path=remote_path,
-                                                 overwrite=overwrite,
-                                                 relative_path=relative_path)
+                                                 overwrite=overwrite)
         else:
             raise ValueError('Missing file or directory: %s' % filepath)
         self.logger.debug('Artifact uploaded successfully')

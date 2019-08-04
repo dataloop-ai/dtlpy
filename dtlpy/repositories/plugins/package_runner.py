@@ -43,7 +43,7 @@ class PackageRunner:
         self.validate_mock(self.plugin_json, self.mock_json)
         run_function = self.get_mainpy_run_function()
         try:
-            project_id = self.client_api.state_io.get('project', local=True)
+            project_id = self.client_api.state_io.get('project')
         except Exception:
             raise PlatformException('400', "Please checkout to a project")
 
@@ -72,7 +72,7 @@ class PackageRunner:
         if 'dataset_id' in resource_id:
             dataset_id = resource_id['dataset_id']
         else:
-            dataset_id = self.client_api.state_io.get('dataset', local=True)
+            dataset_id = self.client_api.state_io.get('dataset')
 
         return project.datasets.get(dataset_id=dataset_id)
 

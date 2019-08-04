@@ -22,7 +22,7 @@ from .exceptions import PlatformException
 from . import services, repositories, exceptions
 from .__version__ import version as __version__
 from .entities import Box, Point, Segmentation, Polygon, Ellipse, Classification, Polyline
-from .entities import AnnotationCollection, Annotation, Item, Package, Filters, Task, Session, Recipe, Ontology,\
+from .entities import AnnotationCollection, Annotation, Item, Package, Filters, Task, Session, Recipe, Ontology, \
     Label, Trigger
 from . import examples
 from .utilities import Converter
@@ -46,6 +46,7 @@ tasks = repositories.Tasks(client_api=client_api)
 plugins = repositories.Plugins(client_api=client_api)
 sessions = repositories.Sessions(client_api=client_api, task=None)
 
+logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 logger = logging.getLogger(name='dataloop.platform_interface')
 
 if client_api.token_expired():
@@ -146,3 +147,10 @@ def init():
     client_api.state_io = CookieIO.init_local_cookie(create=True)
     assert isinstance(client_api.state_io, CookieIO)
     logger.info('.Dataloop directory initiated successfully in {}'.format(os.getcwd()))
+
+
+def checkout_state():
+    state = client_api.state_io.read_json()
+    print('Checked-out:')
+    for key, val in state.items():
+        print('{}: {}'.format(key, val))

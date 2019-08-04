@@ -1,7 +1,20 @@
+Release 1.7.3
+    Features:
+        - Moved cli download and upload from "datasets" to "items"
+        - Upload option with *
+        - Removed ProgressBar and using tqdm instead
+        - cd autocomplete iun cli
+        - utc timestamp in SDK logger
+    Bugs:
+        - Fixed video player
+        - Fixed video annotations with time classification
+        - upload note annotation now dont return an error
+
+
 Release 1.6.4
     Features:
         - checkout for project and dataset in sdk. no need to enter the project or dataset every time (once checked out)
-    Bug:
+    Bugs:
         - remove yaml from packages (caused installations error)
 
 

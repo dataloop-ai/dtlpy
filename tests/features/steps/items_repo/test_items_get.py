@@ -5,10 +5,7 @@ import os
 def step_impl(context):
     filepath = "0000000162.jpg"
     filepath = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], filepath)
-    context.item = context.dataset.items.upload(
-        local_path=filepath,
-        relative_path=False
-    )
+    context.item = context.dataset.items.upload(local_path=filepath)
 
 
 @behave.when(u"I get the item by id")

@@ -103,8 +103,9 @@ class PluginCreator:
         Create plugin
         :return: plugin entity
         """
-        project_id = self.client_api.state_io.get('project', local=True)
-        plugin_name = self.client_api.state_io.get('plugin', local=True)
+        project_id = self.client_api.state_io.get('project')
+        # plugin_name = self.client_api.state_io.get('plugin')
+        plugin_name = self.plugin_json['name']
 
         if project_id is None:
             raise PlatformException('400', 'Please run "dlp checkout project <project_name>" first')
@@ -138,8 +139,8 @@ class PluginCreator:
         Upload plugin source code
         :return:
         """
-        project_id = self.client_api.state_io.get('project', local=True)
-        plugin_name = self.client_api.state_io.get('plugin', local=True)
+        project_id = self.client_api.state_io.get('project')
+        plugin_name = self.client_api.state_io.get('plugin')
         cwd = os.getcwd()
         dataloop_path = os.path.join(cwd, '.dataloop')
 

@@ -8,6 +8,7 @@ import requests
 import logging
 import hashlib
 import base64
+import tqdm
 import json
 import jwt
 import os
@@ -15,7 +16,6 @@ import os
 import pandas as pd
 import numpy as np
 
-from progressbar import Bar, ETA, ProgressBar, Timer, FileTransferSpeed, DataSize
 from requests.packages.urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
 from urllib.parse import urlencode
@@ -383,10 +383,7 @@ class ApiClient:
                 # create callback
                 if callback is None:
                     if statinfo.st_size > 10e6:
-                        pbar = ProgressBar(
-                            widgets=[' [', Timer(), '] ', Bar(), ' (', FileTransferSpeed(), ' | ', DataSize(),
-                                     ' | ', ETA(), ')'])
-                        pbar.max_value = file.len
+                        pbar = tqdm.tqdm(total=statinfo.st_size, unit="B", unit_scale=True, unit_divisor=1024)
 
                         def callback(monitor):
                             pbar.update(monitor.bytes_read)

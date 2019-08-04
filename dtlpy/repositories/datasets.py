@@ -2,11 +2,8 @@
 Datasets Repository
 """
 
-from multiprocessing.pool import ThreadPool
 import logging
-import traceback
 from urllib.parse import urlencode
-import numpy as np
 from .. import entities, repositories, utilities, PlatformException, exceptions
 import attr
 
@@ -64,13 +61,13 @@ class Datasets:
         if self.project is not None:
             self.project.checkout()
         else:
-            project_id = self.client_api.state_io.get('project', local=True)
+            project_id = self.client_api.state_io.get('project')
             if project_id is None:
                 raise Exception("Please checkout a valid project before trying to checkout a dataset")
             projects = repositories.Projects(client_api=self.client_api, logger=self.logger)
             self.project = projects.get(project_id=project_id)
         dataset = self.__get_by_identifier(identifier)
-        self.client_api.state_io.put('dataset', dataset.id, local=True)
+        self.client_api.state_io.put('dataset', dataset.id)
         self.logger.info('Checked out to dataset {}'.format(dataset.name))
 
     def list(self):
@@ -120,7 +117,7 @@ class Datasets:
                 dataset = dataset[0]
         else:
             # get from state cookie
-            state_dataset_id = self.client_api.state_io.get('dataset', local=True)
+            state_dataset_id = self.client_api.state_io.get('dataset')
             if state_dataset_id is None:
                 raise PlatformException('400', 'Must choose by "dataset_id" or "dataset_name" OR checkout a dataset')
             else:

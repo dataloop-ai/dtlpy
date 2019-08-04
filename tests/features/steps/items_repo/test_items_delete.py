@@ -11,8 +11,7 @@ def step_impl(context):
 
 @behave.given(u'I upload an item by the name of "{item_name}"')
 def step_impl(context, item_name):
-    local_path = '0000000162.jpg'
-    local_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], local_path)
+    local_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], '0000000162.jpg')
 
     import io
     with open(local_path, 'rb') as f:
@@ -20,7 +19,7 @@ def step_impl(context, item_name):
         buffer.name = item_name
 
     context.item = context.dataset.items.upload(local_path=buffer)
-    context.item = context.dataset.items.get(filepath=item_name)
+    context.item = context.dataset.items.get(filepath='/' + item_name)
     context.item_count = 1
 
 

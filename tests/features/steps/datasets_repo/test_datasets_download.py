@@ -40,7 +40,7 @@ def step_impl(context, download_path, should_be_path):
 @behave.given(u'There are no folder or files in folder "{dir_path}"')
 def step_impl(context, dir_path):
     dir_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], dir_path)
-    dir_path = dir_path + "/*"
+    dir_path = os.path.join(dir_path, "*")
 
     files = glob.glob(dir_path)
     for f in files:

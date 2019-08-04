@@ -8,9 +8,9 @@ import shutil
 @behave.when(u'I upload a file in path "{item_local_path}"')
 def step_impl(context, item_local_path):
     item_local_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], item_local_path)
-    context.item = context.dataset.items.upload(
-        local_path=item_local_path, remote_path=None
-    )
+    context.item = context.dataset.items.upload(local_path=item_local_path,
+                                                remote_path=None
+                                                )
 
 
 @behave.when(u'I upload with "{option}" a file in path "{item_local_path}"')
@@ -29,9 +29,8 @@ def step_impl(context, item_local_path, option):
 @behave.when(u'I upload file in path "{item_local_path}" to remote path "{remote_path}"')
 def step_impl(context, item_local_path, remote_path):
     item_local_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], item_local_path)
-    context.item = context.dataset.items.upload(
-        local_path=item_local_path, remote_path=remote_path
-    )
+    context.item = context.dataset.items.upload(local_path=item_local_path,
+                                                remote_path=remote_path)
 
 
 @behave.then(u"Item exist in host")
@@ -62,7 +61,6 @@ def step_impl(context, item_local_path, download_path):
         num_workers=None,
         annotation_options=None,
         to_items_folder=False,
-        relative_path=True
     )
     time.sleep(2)
     original = cv2.imread(file_to_compare)
@@ -72,9 +70,9 @@ def step_impl(context, item_local_path, download_path):
         difference = cv2.subtract(original, downloaded)
         b, g, r = cv2.split(difference)
         if (
-            cv2.countNonZero(b) == 0
-            and cv2.countNonZero(g) == 0
-            and cv2.countNonZero(r) == 0
+                cv2.countNonZero(b) == 0
+                and cv2.countNonZero(g) == 0
+                and cv2.countNonZero(r) == 0
         ):
             assert True
         else:
@@ -97,9 +95,7 @@ def step_impl(context, remote_path):
     assert remote_path in context.dataset.items.get(item_id=context.item.id).filename
 
 
-@behave.when(
-    u'I upload the file in path "{local_path}" with remote name "{remote_filename}"'
-)
+@behave.when(u'I upload the file in path "{local_path}" with remote name "{remote_filename}"')
 def step_impl(context, local_path, remote_filename):
     local_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], local_path)
 
@@ -129,21 +125,16 @@ def step_impl(context):
     assert context.item_get.id != context.item.id
 
 
-@behave.when(
-    u'I try to upload file in path "{local_path}" to remote path "{illegal_remote_path}"'
-)
+@behave.when(u'I try to upload file in path "{local_path}" to remote path "{illegal_remote_path}"')
 def step_impl(context, local_path, illegal_remote_path):
     local_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], local_path)
-    folder_path = os.path.split(local_path)[0]
-    context.error_logs_before = sum(
-        [1 for filename in os.listdir(folder_path) if filename.startswith("log_")]
-    )
-    context.item = context.dataset.items.upload(
-        local_path=local_path, remote_path=illegal_remote_path
-    )
-    context.error_logs_after = sum(
-        [1 for filename in os.listdir(folder_path) if filename.startswith("log_")]
-    )
+    # count error logs before
+    context.error_logs_before = sum([1 for filename in os.listdir(os.getcwd()) if filename.startswith("log_")])
+    # upload
+    context.item = context.dataset.items.upload(local_path=local_path,
+                                                remote_path=illegal_remote_path)
+    # count error logs after
+    context.error_logs_after = sum([1 for filename in os.listdir(os.getcwd()) if filename.startswith("log_")])
 
 
 @behave.when(u'I try to upload file in path "{illegal_local_path}"')

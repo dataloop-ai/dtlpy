@@ -77,6 +77,21 @@ You can create a generator of items with different filters
 
 Upload and download items
 -------------------------
+You can upload a:
+
+    - folder (recursively upload all its content)
+    - list of folders
+    - filepath (upload one single item)
+    - list of filepaths
+    - buffer (BytesIO buffer object)
+    - list of buffers
+
+Specifying the remote path will upload the items to a specific remote folder (in platform).
+
+Any of the objects can be uploaded with a Dataloop format annotations file.
+
+For upload the content of a folder (without the head) use "\*" at the end of the path, e.g /image/\*.
+
 .. code-block:: python
 
 	# Upload entire folder to dataset dataset
@@ -110,6 +125,19 @@ Upload and download items
 		remote_path='/with_last_name'
 	)
 
+
+Downloading items by providing a filter of items or Dataloop Item entity (or a list of).
+
+You can download items with annotations in several formats:
+
+    - json will download a Dataloop formatted json annotations file
+    - mask will download a png file with the annotations marked on it (same color as in platform)
+    - instance will download a 2D annotation image with the label instance id as the pixel value
+
+The download file will be split to directories ('items', 'mask' etc.). To avoid this behavior use to_items_folder argument with False.
+
+.. code-block:: python
+
 	# Download entire directory with json annotations files
 	filters = dl.Filters()
 	filters.add(field='filename', values='/winter/is/coming/**')
@@ -117,7 +145,16 @@ Upload and download items
 	    filters=filters,
 		local_path='/home/images',
 		overwrite=True,
-		annotation_options=['json'] # download with annotations
+		annotation_options=['json', 'mask', 'instance] # download with annotations
+	)
+
+	# Download to specific location
+	filters = dl.Filters()
+	filters.add(field='filename', values='/images/best_one.jpg')
+	filenames = dataset.items.download(
+	    filters=filters,
+		local_path='/home/images/best_one.jpg',
+		overwrite=True
 	)
 
 Move item between folders

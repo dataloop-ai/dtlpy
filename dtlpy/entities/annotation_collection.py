@@ -243,11 +243,6 @@ class AnnotationCollection:
         pool.join()
         pool.terminate()
         annotations = [annotation for i_annotation, annotation in enumerate(annotations) if success[i_annotation]]
-
-        # remove notes
-        while 'note' in annotations:
-            annotations.remove('note')
-
         annotations.sort(key=lambda x: x.label)
         return cls(annotations=annotations, item=item)
 

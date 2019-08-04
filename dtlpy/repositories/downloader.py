@@ -1,23 +1,13 @@
 import io
 import os
 import json
+import tqdm
 import traceback
-import numpy as np
 import datetime
 from PIL import Image
-import queue
 import threading
 import logging
-from progressbar import (
-    Bar,
-    ETA,
-    ProgressBar,
-    Timer,
-    FileTransferSpeed,
-    DataSize,
-    Percentage,
-    FormatLabel,
-)
+
 from multiprocessing.pool import ThreadPool
 import dtlpy as dl
 
@@ -32,38 +22,35 @@ class Downloader:
     def __init__(self, items_repository):
         self.items_repository = items_repository
 
-    def download(
-            self,
-            # filter options
-            filters=None,
-            items=None,
-            # download options
-            local_path=None,
-            file_types=None,
-            save_locally=True,
-            num_workers=32,
-            overwrite=False,
-            relative_path=True,
-            annotation_options=None,
-            to_items_folder=True,
-            thickness=1,
-            with_text=False
-    ):
+    def download(self,
+                 # filter options
+                 filters=None,
+                 items=None,
+                 # download options
+                 local_path=None,
+                 file_types=None,
+                 save_locally=True,
+                 num_workers=32,
+                 overwrite=False,
+                 annotation_options=None,
+                 to_items_folder=True,
+                 thickness=1,
+                 with_text=False
+                 ):
         """
         Download dataset by filters.
         Filtering the dataset for items and save them local
         Optional - also download annotation, mask, instance and image mask of the item
 
-        :param to_items_folder: Create 'items' folder and download items to it
-        :param relative_path: optional - save directories relatively to platform, default = True
-        :param overwrite: optional - default = False
-        :param items: download Item entity or item_id (or a list of item)
         :param filters: Filters entity or a dictionary containing filters parameters
+        :param items: download Item entity or item_id (or a list of item)
+        :param overwrite: optional - default = False
         :param local_path: local folder or filename to save to.
         :param file_types: a list of file type to download. e.g ['video/webm', 'video/mp4', 'image/jpeg', 'image/png']
         :param num_workers: default - 32
         :param save_locally: bool. save to disk or return a buffer
         :param annotation_options: download annotations options: ['mask', 'img_mask', 'instance', 'json']
+        :param to_items_folder: Create 'items' folder and download items to it
         :param with_text: optional - add text to annotations, default = False
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :return: Output (list)
@@ -72,7 +59,6 @@ class Downloader:
         ###################
         # Default options #
         ###################
-
         # filters
         if filters is None:
             filters = dl.Filters()
@@ -94,36 +80,27 @@ class Downloader:
         if local_path is None:
             # create default local path
             local_path = self.__default_local_path()
-        else:
-            # fix given local path
-            if local_path.endswith("/*") or local_path.endswith(r"\*"):
-                local_path = local_path[:-2]
 
         if os.path.isdir(local_path):
-            logger.info(
-                'Local folder already exists:{}. merge/overwrite according to "overwrite option"'.format(
-                    local_path
-                )
-            )
+            logger.info('Local folder already exists:{}. merge/overwrite according to "overwrite option"'.format(
+                local_path))
         else:
-            logger.info(
-                "Creating new directory for download: {}".format(local_path)
-            )
-            os.makedirs(local_path, exist_ok=True)
+            # check if filename
+            _, ext = os.path.splitext(local_path)
+            if not ext:
+                logger.info("Creating new directory for download: {}".format(local_path))
+                os.makedirs(local_path, exist_ok=True)
 
         #####################
         # items to download #
         #####################
-
         if items is not None:
             # convert input to a list
             if not isinstance(items, list):
                 items = [items]
             # get items by id
             if isinstance(items[0], str):
-                items = [
-                    self.items_repository.get(item_id=item_id) for item_id in items
-                ]
+                items = [self.items_repository.get(item_id=item_id) for item_id in items]
             elif isinstance(items[0], entities.Item):
                 pass
             else:
@@ -135,8 +112,8 @@ class Downloader:
                 )
 
             # convert to list of list (like pages and page)
-            num_items = len(items)
             items_to_download = [items]
+            num_items = len(items)
         else:
             items_to_download = self.items_repository.list(filters=filters)
             num_items = items_to_download.items_count
@@ -144,115 +121,95 @@ class Downloader:
         ####################
         # annotations json #
         ####################
-
         # download annotations' json files in a new thread
         # items will start downloading and if json not exists yet - will download for each file
         if annotation_options:
             # a new folder named 'json' will be created under the "local_path"
-            logger.info(
-                "Downloading annotations formats: {}".format(annotation_options)
-            )
-            thread = threading.Thread(
-                target=self.download_annotations,
-                kwargs={
-                    "dataset": self.items_repository.dataset,
-                    "local_path": local_path,
-                    'overwrite': overwrite
-                },
-            )
+            logger.info("Downloading annotations formats: {}".format(annotation_options))
+            thread = threading.Thread(target=self.download_annotations,
+                                      kwargs={"dataset": self.items_repository.dataset,
+                                              "local_path": local_path,
+                                              'overwrite': overwrite},
+                                      )
             thread.start()
-
         ###############
         # downloading #
         ###############
-
         # create result lists
         output = [None for _ in range(num_items)]
         success = [False for _ in range(num_items)]
         status = ["" for _ in range(num_items)]
         errors = [None for _ in range(num_items)]
 
-        # progress bar and pool
-        progress = Progress(max_val=num_items, progress_type="download")
+        # pool
         pool = ThreadPool(processes=num_workers)
-        progress.start()
-
         # download
-        try:
-            i_item = 0
-            for page in items_to_download:
-                for item in page:
-                    if item.type == "dir":
-                        continue
-                    if save_locally:
-                        # get local file path
-                        item_local_path, item_local_filepath = self.__get_local_filepath(
-                            local_path=local_path,
-                            item=item,
-                            relative_path=relative_path,
-                            to_items_folder=to_items_folder
-                        )
-
-                        if os.path.isfile(item_local_filepath) and not overwrite:
-                            logger.info("File Exists: {}".format(item_local_filepath))
-                            status[i_item] = "exist"
-                            output[i_item] = item_local_filepath
-                            success[i_item] = True
-                            progress.queue.put((status[i_item],))
-                            i_item += 1
-                            if annotation_options and item.annotated:
-                                # download annotations only
-                                pool.apply_async(
-                                    self.__download_img_annotations,
-                                    kwds={
-                                        "item": item,
-                                        "img_filepath": item_local_filepath,
-                                        "relative_path": relative_path,
-                                        "overwrite": overwrite,
-                                        "annotation_options": annotation_options,
-                                        "local_path": local_path,
-                                        "thickness": thickness,
-                                        "with_text": with_text
-                                    },
-                                )
+        with tqdm.tqdm(total=num_items) as pbar:
+            try:
+                i_item = 0
+                for page in items_to_download:
+                    for item in page:
+                        if item.type == "dir":
                             continue
+                        if save_locally:
+                            # get local file path
+                            item_local_path, item_local_filepath = self.__get_local_filepath(local_path=local_path,
+                                                                                             item=item,
+                                                                                             to_items_folder=to_items_folder)
 
-                    else:
-                        item_local_path = None
-                        item_local_filepath = None
+                            if os.path.isfile(item_local_filepath) and not overwrite:
+                                logger.debug("File Exists: {}".format(item_local_filepath))
+                                status[i_item] = "exist"
+                                output[i_item] = item_local_filepath
+                                success[i_item] = True
+                                i_item += 1
+                                if annotation_options and item.annotated:
+                                    # download annotations only
+                                    pool.apply_async(
+                                        self.__download_img_annotations,
+                                        kwds={
+                                            "item": item,
+                                            "img_filepath": item_local_filepath,
+                                            "overwrite": overwrite,
+                                            "annotation_options": annotation_options,
+                                            "local_path": local_path,
+                                            "thickness": thickness,
+                                            "with_text": with_text
+                                        },
+                                    )
+                                continue
 
-                    # download single item
-                    logger.info("File Download: {}".format(item.filename))
-                    pool.apply_async(
-                        self.__thread_download_wrapper,
-                        kwds={
-                            "i_item": i_item,
-                            "item": item,
-                            "item_local_path": item_local_path,
-                            "item_local_filepath": item_local_filepath,
-                            "save_locally": save_locally,
-                            "annotation_options": annotation_options,
-                            "status": status,
-                            "output": output,
-                            "success": success,
-                            "errors": errors,
-                            "progress": progress,
-                            "overwrite": overwrite,
-                            "relative_path": relative_path,
-                            "thickness": thickness,
-                            "with_text": with_text
-                        },
-                    )
-                    i_item += 1
-        except Exception as e:
-            logger.exception(e)
-        finally:
-            pool.close()
-            pool.join()
-            progress.queue.put((None,))
-            progress.queue.join()
-            progress.finish()
+                        else:
+                            item_local_path = None
+                            item_local_filepath = None
 
+                        # download single item
+                        logger.debug("File Download: {}".format(item.filename))
+                        pool.apply_async(
+                            self.__thread_download_wrapper,
+                            kwds={
+                                "i_item": i_item,
+                                "item": item,
+                                "item_local_path": item_local_path,
+                                "item_local_filepath": item_local_filepath,
+                                "save_locally": save_locally,
+                                "annotation_options": annotation_options,
+                                "status": status,
+                                "output": output,
+                                "success": success,
+                                "errors": errors,
+                                "pbar": pbar,
+                                "overwrite": overwrite,
+                                "thickness": thickness,
+                                "with_text": with_text
+                            },
+                        )
+                        i_item += 1
+            except Exception as e:
+                logger.exception(e)
+            finally:
+                pool.close()
+                pool.join()
         # reporting
         n_download = status.count("download")
         n_exist = status.count("exist")
@@ -263,48 +220,34 @@ class Downloader:
 
         # log error
         if n_error > 0:
-            log_file_path = os.path.join(
-                local_path,
-                "log_%s.txt" % datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            )
-            errors_list = [
-                errors[i_job] for i_job, suc in enumerate(success) if suc is False
-            ]
-            ids_list = [
-                output[i_job] for i_job, suc in enumerate(success) if suc is False
-            ]
-            errors_json = {
-                item_id: error for item_id, error in zip(ids_list, errors_list)
-            }
-            with open(log_file_path, "w") as f:
+            log_filepath = "log_%s.txt" % datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            errors_list = [errors[i_job] for i_job, suc in enumerate(success) if suc is False]
+            ids_list = [output[i_job] for i_job, suc in enumerate(success) if suc is False]
+            errors_json = {item_id: error for item_id, error in zip(ids_list, errors_list)}
+            with open(log_filepath, "w") as f:
                 json.dump(errors_json, f, indent=4)
-            logger.warning(
-                "Errors in {} files. See {} for full log".format(n_error, log_file_path)
-            )
-
+            logger.warning("Errors in {} files. See {} for full log".format(n_error, log_filepath))
         if len(output) == 1:
             return output[0]
         else:
             return output
 
-    def __thread_download_wrapper(
-            self,
-            i_item,
-            item,
-            item_local_path,
-            item_local_filepath,
-            save_locally,
-            annotation_options,
-            status,
-            output,
-            success,
-            errors,
-            progress,
-            overwrite,
-            relative_path,
-            thickness,
-            with_text
-    ):
+    def __thread_download_wrapper(self,
+                                  i_item,
+                                  item,
+                                  item_local_path,
+                                  item_local_filepath,
+                                  save_locally,
+                                  annotation_options,
+                                  status,
+                                  output,
+                                  success,
+                                  errors,
+                                  pbar,
+                                  overwrite,
+                                  thickness,
+                                  with_text
+                                  ):
 
         download = False
         err = None
@@ -318,7 +261,6 @@ class Downloader:
                     local_filepath=item_local_filepath,
                     annotation_options=annotation_options,
                     overwrite=overwrite,
-                    relative_path=relative_path,
                     thickness=thickness,
                     with_text=with_text
                 )
@@ -326,6 +268,7 @@ class Downloader:
                     break
             except Exception as e:
                 err = e
+        pbar.update()
         if not download:
             if err is None:
                 err = self.items_repository.client_api.platform_exception
@@ -337,7 +280,6 @@ class Downloader:
             status[i_item] = "download"
             output[i_item] = download
             success[i_item] = True
-        progress.queue.put((status[i_item],))
 
     @staticmethod
     def download_annotations(dataset, local_path, overwrite=False):
@@ -360,8 +302,6 @@ class Downloader:
                                                                    stream=True)
 
                 if not success:
-                    # platform error
-                    logger.exception("Downloading annotations zip failed")
                     raise PlatformException(response)
 
                 # downloading zip from platform
@@ -404,19 +344,14 @@ class Downloader:
         pool.terminate()
 
     @staticmethod
-    def __download_img_annotations(
-            item, img_filepath, local_path, relative_path, overwrite, annotation_options, thickness=1, with_text=False
-    ):
+    def __download_img_annotations(item, img_filepath, local_path, overwrite, annotation_options,
+                                   thickness=1, with_text=False):
 
         # fix local path
         if local_path.endswith("/items") or local_path.endswith("\\items"):
             local_path = os.path.dirname(local_path)
 
-        # get relative path
-        if relative_path:
-            annotation_rel_path = item.filename[1:]
-        else:
-            annotation_rel_path = item.name
+        annotation_rel_path = item.filename[1:]
 
         # find annotations json
         annotations_json_filepath = os.path.join(local_path, "json", item.filename[1:])
@@ -481,7 +416,7 @@ class Downloader:
                 )
 
     @staticmethod
-    def __get_local_filepath(local_path, item, relative_path, to_items_folder):
+    def __get_local_filepath(local_path, item, to_items_folder):
         # create paths
         _, ext = os.path.splitext(local_path)
         if ext:
@@ -492,25 +427,20 @@ class Downloader:
             # if directory - get item's filename
             if to_items_folder:
                 local_path = os.path.join(local_path, "items")
-            if relative_path:
-                local_filepath = os.path.join(local_path, item.filename[1:])
-            else:
-                local_filepath = os.path.join(local_path, item.name)
+            local_filepath = os.path.join(local_path, item.filename[1:])
         return local_path, local_filepath
 
-    def __thread_download(
-            self,
-            item,
-            save_locally,
-            local_path,
-            local_filepath,
-            overwrite,
-            relative_path,
-            annotation_options,
-            chunk_size=8192,
-            thickness=1,
-            with_text=False
-    ):
+    def __thread_download(self,
+                          item,
+                          save_locally,
+                          local_path,
+                          local_filepath,
+                          overwrite,
+                          annotation_options,
+                          chunk_size=8192,
+                          thickness=1,
+                          with_text=False
+                          ):
         """
         Get a single item's binary data
         Calling this method will returns the item body itself , an image for example with the proper mimetype.
@@ -543,37 +473,12 @@ class Downloader:
                 os.makedirs(os.path.dirname(local_filepath), exist_ok=True)
             # download and save locally
             total_length = response.headers.get("content-length")
-            pbar = ProgressBar(
-                widgets=[
-                    " [",
-                    Timer(),
-                    "] ",
-                    Bar(),
-                    FormatLabel(item.name),
-                    " (",
-                    FileTransferSpeed(),
-                    " | ",
-                    DataSize(),
-                    " | ",
-                    Percentage(),
-                    " | ",
-                    ETA(),
-                    ")",
-                ]
-            )
-            pbar.max_value = int(total_length)
             with open(local_filepath, "wb") as f:
-                chunk_progress = 0
                 for chunk in response.iter_content(chunk_size=chunk_size):
                     if chunk:  # filter out keep-alive new chunks
-                        chunk_progress += len(chunk)
-                        pbar.update(chunk_progress, force=True)
                         f.write(chunk)
-                pbar.finish()
-
             # save to output variable
             data = local_filepath
-
             # if image - can download annotation mask
             if item.annotated and annotation_options:
                 self.__download_img_annotations(
@@ -581,7 +486,6 @@ class Downloader:
                     img_filepath=local_filepath,
                     annotation_options=annotation_options,
                     local_path=local_path,
-                    relative_path=relative_path,
                     overwrite=overwrite,
                     thickness=thickness,
                     with_text=with_text
@@ -624,109 +528,3 @@ class Downloader:
             )
         logger.info("Downloading to: {}".format(local_path))
         return local_path
-
-
-class Progress(threading.Thread):
-    """
-    Progressing class for downloading and uploading items
-    """
-
-    def __init__(self, max_val, progress_type):
-        threading.Thread.__init__(self)
-        self.progress_type = progress_type
-        self.progressbar = None
-        self.queue = queue.Queue(maxsize=0)
-        self.progressbar_init(max_val=max_val)
-        self.upload_dict = dict()
-        self.download = 0
-        self.exist = 0
-        self.error = 0
-
-    def progressbar_init(self, max_val):
-        """
-        init progress bar
-
-        :param max_val:
-        :return:
-        """
-        self.progressbar = ProgressBar(
-            widgets=[" [", Timer(), "] ", Bar(), " (", ETA(), ")"],
-            redirect_stdout=True,
-            redirect_stderr=True,
-        )
-        self.progressbar.max_value = max_val
-
-    def finish(self):
-        """
-        close the progress bar
-
-        :return:
-        """
-        self.progressbar.finish()
-
-    def run_upload(self):
-        """
-        queue handling function for upload
-
-        :return:
-        """
-        self.upload_dict = dict()
-        while True:
-            try:
-                # get item from queue
-                decoded_body = self.queue.get()
-                remote_path, bytes_read = decoded_body
-                if remote_path is None:
-                    self.upload_dict = dict()
-                    break
-                self.upload_dict[remote_path] = float(bytes_read)
-                # update bar
-                total_size = np.sum(list(self.upload_dict.values()))
-                if total_size > self.progressbar.max_value:
-                    self.progressbar.max_value = total_size
-                self.progressbar.update(total_size)
-
-            except Exception as e:
-                logger.exception(e)
-                logger.exception(traceback.format_exc())
-            finally:
-                self.queue.task_done()
-
-    def run_download(self):
-        """
-        queue handling function for downloads
-
-        :return:
-        """
-        self.download = 0
-        self.exist = 0
-        self.error = 0
-        while True:
-            try:
-                # get item from queue
-                decoded_body = self.queue.get()
-                msg, = decoded_body
-                if msg is None:
-                    break
-                if msg == "download":
-                    self.download += 1
-                elif msg == "exist":
-                    self.exist += 1
-                elif msg == "error":
-                    self.error += 1
-                else:
-                    logger.exception("Unknown message type: %s", msg)
-                    # update bar
-                self.progressbar.update(self.download + self.exist)
-            except Exception as error:
-                logger.exception(error)
-            finally:
-                self.queue.task_done()
-
-    def run(self):
-        if self.progress_type == "upload":
-            self.run_upload()
-        elif self.progress_type == "download":
-            self.run_download()
-        else:
-            assert False

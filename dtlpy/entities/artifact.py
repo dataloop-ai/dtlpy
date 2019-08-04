@@ -51,11 +51,10 @@ class Artifact(entities.Item):
         """
         utilities.List([self]).print()
 
-    def download(self, session_id=None, task_id=None, local_path=None, overwrite=False, relative_path=False):
+    def download(self, session_id=None, task_id=None, local_path=None, overwrite=False):
         """
         Download artifact binary. Get artifact by name, id or type
         :param local_path: artifact will be saved to this filepath
-        :param relative_path: optional - default = False
         :param overwrite: optional - default = False
         :param session_id:
         :param task_id:
@@ -64,5 +63,4 @@ class Artifact(entities.Item):
 
         return self.dataset.project.artifacts.download(artifact_id=self.id, artifact_name=self.name,
                                                        session_id=session_id, task_id=task_id,
-                                                       local_path=local_path, overwrite=overwrite,
-                                                       relative_path=relative_path)
+                                                       local_path=local_path, overwrite=overwrite)

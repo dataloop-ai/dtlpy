@@ -7,7 +7,7 @@ Feature: Item Entity repo functions
 
     Scenario: Download item
         Given There are no items
-        And I upload an item by the name of "/test_item.jpg"
+        And I upload an item by the name of "test_item.jpg"
         And Folder "test_download_item_repo_methods" is empty
         When I download an item entity by the name of "/test_item.jpg" to "test_download_item_repo_methods"
         Then There are "1" files in "test_download_item_repo_methods"
@@ -15,7 +15,7 @@ Feature: Item Entity repo functions
 
     Scenario: Delete item
         Given There are no items
-        And I upload an item by the name of "/test_item.jpg"
+        And I upload an item by the name of "test_item.jpg"
         When I delete the item
         Then There are no items
 

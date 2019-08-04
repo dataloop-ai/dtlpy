@@ -55,26 +55,6 @@ def get_parser_tree(parser):
     return p_keywords
 
 
-class StoreDictKeyPair(argparse.Action):
-    """
-    Stores dict key pairs
-    """
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        try:
-            my_dict = {}
-            for kv in values.split(";"):
-
-                k, v = kv.split("=")
-                if v.lower() in ["true", "false"]:
-                    v = v.lower() == "true"
-                logger.info("Input dict option: {}:{}".format(k, v))
-                my_dict[k] = v
-            setattr(namespace, self.dest, my_dict)
-        except Exception:
-            raise ValueError("Bad input options. must be KEY=VAL;KEY=VAL...")
-
-
 class StateEnum:
     """
     State enum
@@ -134,25 +114,34 @@ class DlpCompleter(Completer):
                 elif param == '--local-path':
                     thread_state = StateEnum.CONTINUE
                     param = word_before_cursor.replace('"', '')
-                    if param.endswith('/') or param.endswith('/'):
-                        param = param[:-1]
                     if param == '':
-                        param_suggestions = ['"{}'.format(os.path.join(os.path.expanduser('/'), directory)) for
-                                             directory in
-                                             os.listdir(os.path.join(os.path.expanduser('/')))
+                        param, path = os.path.splitdrive(os.getcwd())
+                        param += os.path.sep
+                        param_suggestions = ['"{}'.format(os.path.join(param, directory))
+                                             for directory in os.listdir(param)
+                                             if not directory.startswith('.')]
+                    elif param.endswith('/') or param.endswith('\\'):
+                        param = param[:-1]
+                        param_suggestions = ['"{}'.format(os.path.join(param, directory))
+                                             for directory in os.listdir(param)
                                              if not directory.startswith('.')]
                     elif os.path.isdir(param):
-                        dirs = os.listdir(param)
                         param_suggestions = ['"{}'.format(os.path.join(param, directory))
-                                             for directory in dirs if not directory.startswith('.')]
-                    elif os.path.isdir(os.path.join(os.path.join(os.path.expanduser('/')), param)):
-                        dirs = os.listdir(os.path.join(os.path.join(os.path.expanduser('~')), param))
-                        param_suggestions = ['"{}'.format(os.path.join(param, directory))
-                                             for directory in dirs if not directory.startswith('.')]
+                                             for directory in os.listdir(param)
+                                             if not directory.startswith('.')]
                 elif param in ['--annotation-options']:
                     thread_state = StateEnum.CONTINUE
                     param_suggestions = ['mask', 'json', 'instance', '"mask, json"',
                                          '"mask, instance"', '"json, instance"', '"mask, json, instance"']
+                elif param in ['cd']:
+                    thread_state = StateEnum.CONTINUE
+                    if word_before_cursor != '' and os.path.isdir(os.path.join(os.getcwd(), word_before_cursor)):
+                        param_suggestions = [os.path.join(word_before_cursor, directory)
+                                             for directory in os.listdir(os.path.join(os.getcwd(), word_before_cursor))
+                                             if os.path.isdir(os.path.join(os.getcwd(), word_before_cursor, directory))]
+                    else:
+                        param_suggestions = [directory for directory in os.listdir(os.getcwd()) if
+                                             os.path.isdir(directory)]
                 else:
                     thread_state = StateEnum.START
                     param_suggestions = list()
@@ -164,19 +153,20 @@ class DlpCompleter(Completer):
 
     def need_param(self, cmd, word_before_cursor):
         need_param = False
-        bool_flags_list = ['--overwrite', '--no-relative-path',
-                           '--with-text', '--deploy', '--not-items-folder', '--encode']
+        bool_flags_list = ['--overwrite', '--with-text', '--deploy', '--not-items-folder', '--encode']
 
         if len(cmd) > 2 and cmd[-2].startswith('--') and word_before_cursor != '':
             need_param = not self.get_param(cmd=cmd, word_before_cursor=word_before_cursor) in bool_flags_list
         elif cmd[-1].startswith('-') and word_before_cursor == '':
             need_param = not self.get_param(cmd=cmd, word_before_cursor=word_before_cursor) in bool_flags_list
+        elif cmd[0] in ['cd']:
+            need_param = True
 
         return need_param
 
     @staticmethod
     def get_param(cmd, word_before_cursor):
-        if word_before_cursor == '':
+        if word_before_cursor == '' or len(cmd) < 2:
             param = cmd[-1]
         else:
             param = cmd[-2]
@@ -207,12 +197,10 @@ class DlpCompleter(Completer):
             param = self.get_param(cmd=cmd, word_before_cursor=word_before_cursor)
             if thread_state in [StateEnum.START, StateEnum.CONTINUE]:
                 if param in ['--project-name', '--dataset-name']:
-                    thread = threading.Thread(
-                        target=self.get_param_suggestions,
-                        kwargs={
-                            "param": param,
-                            'word_before_cursor': word_before_cursor,
-                            'cmd': cmd})
+                    thread = threading.Thread(target=self.get_param_suggestions,
+                                              kwargs={"param": param,
+                                                      'word_before_cursor': word_before_cursor,
+                                                      'cmd': cmd})
                     thread.start()
                 else:
                     self.get_param_suggestions(param=param, word_before_cursor=word_before_cursor, cmd=cmd)
@@ -305,6 +293,11 @@ def get_parser():
     # Init #
     ########
     subparsers.add_parser("init", help="Initialize a .dataloop context")
+
+    ##################
+    # Checkout state #
+    ##################
+    subparsers.add_parser("checkout-state", help="Print checkout state")
 
     ########
     # Help #
@@ -400,55 +393,6 @@ def get_parser():
     optional.add_argument("-p", "--project-name", metavar='\b', default=None,
                           help="project name. Default taken from checked out (if checked out)")
 
-    # upload
-    a = subparser_parser.add_parser("upload", help="Upload directory to dataset")
-    required = a.add_argument_group("required named arguments")
-    required.add_argument("-l", "--local-path", required=True, metavar='\b',
-                          help="local path")
-    optional = a.add_argument_group("optional named arguments")
-    optional.add_argument("-p", "--project-name", metavar='\b', default=None,
-                          help="project name. Default taken from checked out (if checked out)")
-    optional.add_argument("-d", "--dataset-name", metavar='\b', default=None,
-                          help="dataset name. Default taken from checked out (if checked out)")
-    optional.add_argument("-r", "--remote-path", metavar='\b', default=None,
-                          help="remote path to upload to. default: /")
-    optional.add_argument("-f", "--file-types", metavar='\b', default=None,
-                          help='Comma separated list of file types to upload, e.g ".jpg,.png". default: all')
-    optional.add_argument("-nw", "--num-workers", metavar='\b', default=None,
-                          help="num of threads workers")
-    optional.add_argument("-lap", "--local-annotations-path", metavar='\b', default=None,
-                          help="Path for local annotations to upload with items")
-    optional.add_argument("-ow", "--overwrite", dest="overwrite", action='store_true', default=False,
-                          help="Overwrite existing item")
-    optional.add_argument("-rp", "--no-relative-path", dest="relative_path", action='store_false', default=True,
-                          help="Upload flatten")
-
-    # download
-    a = subparser_parser.add_parser("download", help="Download dataset to a local directory")
-    optional = a.add_argument_group("optional named arguments")
-    optional.add_argument("-p", "--project-name", metavar='\b', default=None,
-                          help="project name. Default taken from checked out (if checked out)")
-    optional.add_argument("-d", "--dataset-name", metavar='\b', default=None,
-                          help="dataset name. Default taken from checked out (if checked out)")
-    optional.add_argument("-ao", "--annotation-options", metavar='\b',
-                          help="which annotation to download. options: json,instance,mask", default=None)
-    optional.add_argument("-r", "--remote-path", metavar='\b',
-                          help="which annotation to download. options: json,instance,mask", default=None)
-    optional.add_argument("-rp", "--no-relative-path", action='store_false', default=True,
-                          help="download flatten")
-    optional.add_argument("-ow", "--overwrite", action='store_true', default=False,
-                          help="Overwrite existing item")
-    optional.add_argument("-nw", "--num-workers", metavar='\b', default=None,
-                          help="number of download workers")
-    optional.add_argument("-t", "--not-items-folder", action='store_true', default=False,
-                          help="Download WITHOUT 'items' folder")
-    optional.add_argument("-wt", "--with-text", action='store_true', default=False,
-                          help="Annotations will have text in mask")
-    optional.add_argument("-th", "--thickness", metavar='\b', default="1",
-                          help="Annotation line thickness")
-    optional.add_argument("-l", "--local-path", metavar='\b', default=None,
-                          help="local path")
-
     # checkout
     a = subparser_parser.add_parser("checkout", help="checkout a dataset")
     required = a.add_argument_group("required named arguments")
@@ -461,8 +405,7 @@ def get_parser():
     # items #
     #########
     subparser = subparsers.add_parser("items", help="Operations with items")
-    subparser_parser = subparser.add_subparsers(dest="items", help="items operations"
-                                                )
+    subparser_parser = subparser.add_subparsers(dest="items", help="items operations")
 
     # ACTIONS #
 
@@ -484,16 +427,49 @@ def get_parser():
     optional.add_argument("-r", "--remote-path", metavar='\b', help="remote path", default=None)
 
     # upload
-    a = subparser_parser.add_parser("upload", help="Upload a single file")
+    a = subparser_parser.add_parser("upload", help="Upload directory to dataset")
     required = a.add_argument_group("required named arguments")
-    required.add_argument("-f", "--filename", metavar='\b', help="local filename to upload", required=True)
+    required.add_argument("-l", "--local-path", required=True, metavar='\b',
+                          help="local path")
     optional = a.add_argument_group("optional named arguments")
     optional.add_argument("-p", "--project-name", metavar='\b', default=None,
                           help="project name. Default taken from checked out (if checked out)")
     optional.add_argument("-d", "--dataset-name", metavar='\b', default=None,
                           help="dataset name. Default taken from checked out (if checked out)")
-    optional.add_argument("-r", "--remote-path", metavar='\b', default="/",
-                          help="remote path")
+    optional.add_argument("-r", "--remote-path", metavar='\b', default=None,
+                          help="remote path to upload to. default: /")
+    optional.add_argument("-f", "--file-types", metavar='\b', default=None,
+                          help='Comma separated list of file types to upload, e.g ".jpg,.png". default: all')
+    optional.add_argument("-nw", "--num-workers", metavar='\b', default=None,
+                          help="num of threads workers")
+    optional.add_argument("-lap", "--local-annotations-path", metavar='\b', default=None,
+                          help="Path for local annotations to upload with items")
+    optional.add_argument("-ow", "--overwrite", dest="overwrite", action='store_true', default=False,
+                          help="Overwrite existing item")
+
+    # download
+    a = subparser_parser.add_parser("download", help="Download dataset to a local directory")
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument("-p", "--project-name", metavar='\b', default=None,
+                          help="project name. Default taken from checked out (if checked out)")
+    optional.add_argument("-d", "--dataset-name", metavar='\b', default=None,
+                          help="dataset name. Default taken from checked out (if checked out)")
+    optional.add_argument("-ao", "--annotation-options", metavar='\b',
+                          help="which annotation to download. options: json,instance,mask", default=None)
+    optional.add_argument("-r", "--remote-path", metavar='\b', default=None,
+                          help="remote path to upload to. default: /")
+    optional.add_argument("-ow", "--overwrite", action='store_true', default=False,
+                          help="Overwrite existing item")
+    optional.add_argument("-nw", "--num-workers", metavar='\b', default=None,
+                          help="number of download workers")
+    optional.add_argument("-t", "--not-items-folder", action='store_true', default=False,
+                          help="Download WITHOUT 'items' folder")
+    optional.add_argument("-wt", "--with-text", action='store_true', default=False,
+                          help="Annotations will have text in mask")
+    optional.add_argument("-th", "--thickness", metavar='\b', default="1",
+                          help="Annotation line thickness")
+    optional.add_argument("-l", "--local-path", metavar='\b', default=None,
+                          help="local path")
 
     ##########
     # videos #
@@ -808,11 +784,17 @@ def run(args, parser):
             client_secret=args.client_secret,
         )
 
-    #########
-    # Init  #
-    #########
+    ########
+    # Init #
+    ########
     elif args.operation == "init":
         dlp.init()
+
+    ##################
+    # checkout state #
+    ##################
+    elif args.operation == "checkout-state":
+        dlp.checkout_state()
 
     ###########
     # Version #
@@ -893,62 +875,6 @@ def run(args, parser):
             project = dlp.projects.get(project_name=args.project_name)
             print(datetime.datetime.utcnow())
             project.datasets.create(dataset_name=args.dataset_name).print()
-
-        elif args.datasets == "upload":
-            print(datetime.datetime.utcnow())
-            print("[INFO] Uploading directory...")
-
-            if isinstance(args.num_workers, str):
-                args.num_workers = int(args.num_workers)
-            if isinstance(args.file_types, str):
-                args.file_types = args.file_types.split(",")
-            project = dlp.projects.get(project_name=args.project_name)
-            dataset = project.datasets.get(dataset_name=args.dataset_name)
-            dataset.items.upload(
-                local_path=args.local_path,
-                remote_path=args.remote_path,
-                file_types=args.file_types,
-                num_workers=args.num_workers,
-                overwrite=args.overwrite,
-                relative_path=not args.no_relative_path,
-                local_annotations_path=args.local_annotations_path,
-            )
-
-        elif args.datasets == "download":
-            print(datetime.datetime.utcnow())
-            print("[INFO] Downloading dataset...")
-            if isinstance(args.num_workers, str):
-                args.num_workers = int(args.num_workers)
-            project = dlp.projects.get(project_name=args.project_name)
-            dataset = project.datasets.get(dataset_name=args.dataset_name)
-            annotation_options = None
-            if args.annotation_options is not None:
-                annotation_options = args.annotation_options.split(",")
-
-            # create remote path filters
-            filters = dlp.Filters()
-            if args.remote_path is not None:
-                remote_path = args.remote_path.split(",")
-                if len(remote_path) > 1:
-                    filters.add(
-                        field="filename", values=args.remote_path, operator="in"
-                    )
-                else:
-                    filters.add(
-                        field="filename", values=args.remote_path, operator="glob"
-                    )
-
-            dataset.items.download(
-                filters=filters,
-                local_path=args.local_path,
-                annotation_options=annotation_options,
-                overwrite=args.overwrite,
-                relative_path=not args.no_relative_path,
-                num_workers=args.num_workers,
-                with_text=args.with_text,
-                thickness=int(args.thickness),
-                to_items_folder=not args.not_items_folder,
-            )
         else:
             print('Type "dlp datasets --help" for options')
 
@@ -987,10 +913,52 @@ def run(args, parser):
             dataset.items.open_in_web(filepath=args.remote_path)
 
         elif args.items == "upload":
+            print(datetime.datetime.utcnow())
+            print("[INFO] Uploading directory...")
+            if isinstance(args.num_workers, str):
+                args.num_workers = int(args.num_workers)
+            if isinstance(args.file_types, str):
+                args.file_types = [t.strip() for t in args.file_types.split(",")]
             project = dlp.projects.get(project_name=args.project_name)
-            project.datasets.get(dataset_name=args.dataset_name).items.upload(
-                local_path=args.filename, remote_path=args.remote_path
-            )
+            dataset = project.datasets.get(dataset_name=args.dataset_name)
+
+            dataset.items.upload(local_path=args.local_path,
+                                 remote_path=args.remote_path,
+                                 file_types=args.file_types,
+                                 num_workers=args.num_workers,
+                                 overwrite=args.overwrite,
+                                 local_annotations_path=args.local_annotations_path)
+
+        elif args.items == "download":
+            print(datetime.datetime.utcnow())
+            print("[INFO] Downloading dataset...")
+
+            if isinstance(args.num_workers, str):
+                args.num_workers = int(args.num_workers)
+
+            project = dlp.projects.get(project_name=args.project_name)
+            dataset = project.datasets.get(dataset_name=args.dataset_name)
+            annotation_options = None
+            if args.annotation_options is not None:
+                annotation_options = [t.strip() for t in args.annotation_options.split(",")]
+
+            # create remote path filters
+            filters = dlp.Filters()
+            if args.remote_path is not None:
+                remote_path = [t.strip() for t in args.remote_path.split(",")]
+                if len(remote_path) > 1:
+                    filters.add(field="filename", values=args.remote_path, operator="in")
+                else:
+                    filters.add(field="filename", values=args.remote_path, operator="glob")
+
+            dataset.items.download(filters=filters,
+                                   local_path=args.local_path,
+                                   annotation_options=annotation_options,
+                                   overwrite=args.overwrite,
+                                   num_workers=args.num_workers,
+                                   with_text=args.with_text,
+                                   thickness=int(args.thickness),
+                                   to_items_folder=not args.not_items_folder)
 
         else:
             print(datetime.datetime.utcnow())
@@ -1136,7 +1104,7 @@ def run(args, parser):
             dlp.plugins.push_local_plugin(deploy=args.deploy, revision=args.revision)
             print(datetime.datetime.utcnow())
             print("Successfully pushed the plugin to remote")
-            
+
         elif args.plugins == "test":
             print(datetime.datetime.utcnow())
             # dlp.plugins.test_local_plugin()
@@ -1152,9 +1120,7 @@ def run(args, parser):
         elif args.plugins == "deploy":
             print(datetime.datetime.utcnow())
             deployment_id = dlp.plugins.deploy_plugin_from_folder(args.revision)
-            print(
-                "Successfully deployed the plugin, deployment id is: %s" % deployment_id
-            )
+            print("Successfully deployed the plugin, deployment id is: %s" % deployment_id)
 
         elif args.plugins == "status":
             dlp.plugins.get_status_from_folder()
@@ -1289,12 +1255,14 @@ def main():
             # Open Dataloop shell #
             #######################
             while True:
-                text = prompt(
-                    u"dl>",
-                    history=FileHistory(history_file),
-                    auto_suggest=AutoSuggestFromHistory(),
-                    completer=DlpCompleter(),
-                )
+                text = prompt(u"dl>",
+                              history=FileHistory(history_file),
+                              auto_suggest=AutoSuggestFromHistory(),
+                              completer=DlpCompleter())
+                if text == '':
+                    # in new line
+                    continue
+
                 try:
                     if text in ["-h", "--help"]:
                         text = "help"

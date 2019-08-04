@@ -64,11 +64,15 @@ class Plugins:
         Test local plugin
         :return:
         """
-        package_runner = PackageRunner(client_api=self.client_api)
+        package_runner = PackageRunner()
         package_runner.run_local_project()
 
     def checkout(self, plugin_name):
-        self.client_api.state_io.put('plugin', plugin_name, local=True)
+        with open(os.path.join(os.getcwd(), 'plugin.json'), 'w+') as f:
+            plugin_json = json.load(f)
+            plugin_json['name'] = plugin_name
+            json.dump(plugin_json, f)
+        # self.client_api.state_io.put('plugin', plugin_name)
         self.logger.info("Checkout out to plugin {}".format(plugin_name))
 
     def create(self, name, package, input_parameters, output_parameters):
@@ -212,25 +216,6 @@ class Plugins:
             self.logger.exception('Platform error editing plugin. id: %s' % plugin.id)
             raise PlatformException(response)
 
-    def deploy_plugin(self, revision):
-        """
-        Deploy local plugin
-        :param revision: revision
-        :return:
-        """
-        plugin_name = self.client_api.state_io.get('plugin', local=True)
-
-        if plugin_name is None:
-            raise PlatformException('400', 'Please run "dlp checkout plugin <plugin_name>" first')
-
-        try:
-            tasks = repositories.Tasks(client_api=self.client_api, project=self.project)
-            plugin = tasks.get(task_name=plugin_name)
-        except Exception:
-            raise PlatformException('404', 'Plugin not found, you should run dlp plugins push first')
-
-        return self.deploy(plugin.id, revision)
-
     def deploy(self, plugin_id, revision=None):
         """
         Deploy an existing plugin
@@ -299,8 +284,11 @@ class Plugins:
         for input_field in inputs:
             parsed_inputs[input_field['name']] = input_field['value']
 
-        project_id = self.client_api.state_io.get('project', local=True)
-        task_name = self.client_api.state_io.get('plugin', local=True)
+        project_id = self.client_api.state_io.get('project')
+        # task_name = self.client_api.state_io.get('plugin')
+        with open(os.path.join(os.getcwd(), 'plugin.json'), 'r') as f:
+            plugin_json = json.load(f)
+            task_name = plugin_json['name']
 
         projects = repositories.Projects(client_api=self.client_api)
         project = projects.get(project_id=project_id)
@@ -318,7 +306,10 @@ class Plugins:
         :param revision: revision
         :return:
         """
-        plugin_name = self.client_api.state_io.get('plugin', local=True)
+        # plugin_name = self.client_api.state_io.get('plugin')
+        with open(os.path.join(os.getcwd(), 'plugin.json'), 'r') as f:
+            plugin_json = json.load(f)
+        plugin_name = plugin_json['name']
         if plugin_name is None:
             raise Exception('Please run "dlp checkout plugin <plugin_name>" first')
 
@@ -335,7 +326,7 @@ class Plugins:
         Get status from folder
         :return:
         """
-        plugin_name = self.client_api.state_io.get('plugin', local=True)
+        plugin_name = self.client_api.state_io.get('plugin')
         if plugin_name is None:
             raise PlatformException('400', 'Please run "dlp checkout plugin <plugin_name>" first')
         try:

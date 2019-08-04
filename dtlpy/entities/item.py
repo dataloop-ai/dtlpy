@@ -163,7 +163,6 @@ class Item:
             num_workers=None,
             annotation_options=None,
             overwrite=False,
-            relative_path=False,
             to_items_folder=True,
             thickness=1,
             with_text=False
@@ -174,7 +173,6 @@ class Item:
         Optional - also download annotation, mask, instance and image mask of the item
 
         :param local_path: local folder or filename to save to.
-        :param relative_path: optional - save directories relatively to platform, default = True
         :param to_items_folder: Create 'items' folder and download items to it
         :param overwrite: optional - default = False
         :param file_types: a list of file type to download. e.g ['video/webm', 'video/mp4', 'image/jpeg', 'image/png']
@@ -192,7 +190,6 @@ class Item:
                                            num_workers=num_workers,
                                            annotation_options=annotation_options,
                                            overwrite=overwrite,
-                                           relative_path=relative_path,
                                            to_items_folder=to_items_folder,
                                            thickness=thickness,
                                            with_text=with_text

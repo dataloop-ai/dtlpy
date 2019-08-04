@@ -1,4 +1,5 @@
 import datetime
+import traceback
 import tabulate
 import logging
 import zipfile
@@ -11,6 +12,7 @@ logger = logging.getLogger('dataloop.List')
 
 
 class List(list):
+
     def print(self, show_all=False):
         try:
             to_print = list()
@@ -33,16 +35,31 @@ class List(list):
                                 'feedbackQueue',  # session fields
                                 '_ontology_ids', '_labels',  # dataset
                                 'esInstance', 'esIndex',  # time series fields
-                                'thumbnail' # item thumnail too long
+                                'thumbnail'  # item thumnail too long
                                 ]
             if not show_all:
                 for key in remove_keys_list:
                     if key in keys_list:
                         keys_list.remove(key)
 
+            is_cli = False
+            if 'dlp.py' in ''.join(traceback.format_stack()):
+                # running from command line
+                is_cli = True
+            print(traceback.format_stack())
+            print('is CLI: {}'.format(is_cli))
             for element in to_print:
-                if 'name' in element:
-                    element['name'] = str(element['name']).encode('utf-8')
+
+                if is_cli:
+                    # handle printing errors for not ascii string when in cli
+                    if 'name' in element:
+                        try:
+                            # check if ascii
+                            element['name'].encode('ascii')
+                        except UnicodeEncodeError:
+                            # if not - print bytes instead
+                            element['name'] = str(element['name']).encode('utf-8')
+
                 if 'createdAt' in element:
                     try:
                         str_timestamp = str(element['createdAt'])

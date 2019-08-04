@@ -7,7 +7,7 @@ Feature: Items repository download function testing
 
     # Scenario: Download item by name - save locally
     #     Given There are no items
-    #     And I upload an item by the name of "/test_item.jpg"
+    #     And I upload an item by the name of "test_item.jpg"
     #     And Folder "test_items_download" is empty
     #     When I download an item by the name of "/test_item.jpg" to "test_items_download"
     #     Then There are "1" files in "test_items_download"
@@ -15,7 +15,7 @@ Feature: Items repository download function testing
 
     # Scenario: Download item by id - save locally
     #     Given There are no items
-    #     And I upload an item by the name of "/test_item.jpg"
+    #     And I upload an item by the name of "test_item.jpg"
     #     And Folder "test_items_download" is empty
     #     When I download an item by the id to "test_items_download"
     #     Then There are "1" files in "test_items_download"
@@ -23,7 +23,7 @@ Feature: Items repository download function testing
 
     Scenario: Download item by id - do not save locally
         Given There are no items
-        And I upload an item by the name of "/test_item.jpg"
+        And I upload an item by the name of "test_item.jpg"
         When I download without saving an item by the id of "/test_item.jpg"
         Then I receive item data
         When I upload item data by name of "/test_item2.jpg"

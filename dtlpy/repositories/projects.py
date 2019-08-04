@@ -57,7 +57,7 @@ class Projects:
         :return:
         """
         project = self.__get_by_identifier(identifier)
-        self.client_api.state_io.put('project', project.id, local=True)
+        self.client_api.state_io.put('project', project.id)
         self.logger.info('Checked out to project {}'.format(project.name))
 
     def list(self):
@@ -104,7 +104,7 @@ class Projects:
                 project = project[0]
         else:
             # get from state cookie
-            state_project_id = self.client_api.state_io.get('project', local=True)
+            state_project_id = self.client_api.state_io.get('project')
             if state_project_id is None:
                 raise PlatformException('400', 'Must choose by "project_id" or "project_name" OR checkout a project')
             else:

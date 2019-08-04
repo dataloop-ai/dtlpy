@@ -7,7 +7,7 @@ import os
 def step_impl(context):
     assert isinstance(context.project, dtlpy.entities.Project)
     context.plugin = context.project.plugins.create(name='plugin',
-                                                    package=context.package
+                                                    package=context.package.id
                                                     )
 
 
@@ -31,9 +31,10 @@ def step_impl(context):
 
 @behave.given(u'Feature: I pack to project directory in "{plugin_package}"')
 def step_impl(context, plugin_package):
+    plugin_package = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], plugin_package)
     context.package = context.project.packages.pack(
-        directory=context.package_local_dir,
-        name=plugin_package,
+        directory=plugin_package,
+        name='plugin_package',
         description="some description",
     )
 
@@ -53,10 +54,15 @@ def step_impl(context, dataset_name):
 
 @behave.given(u'Get feature entities')
 def step_impl(context):
-    for param in context.table.headings:
-        if param == 'dataset':
-            context.dataset = context.feature.dataset
-        elif param == 'package':
-            context.dataset = context.feature.dataset
-        elif param == 'plugin':
-            context.dataset = context.feature.dataset
+    if hasattr(context.feature, 'done_setting') and context.feature.done_setting:
+        for param in context.table.headings:
+            if param == 'dataset':
+                context.dataset = context.feature.dataset
+            elif param == 'package':
+                context.dataset = context.feature.dataset
+            elif param == 'plugin':
+                context.dataset = context.feature.dataset
+
+@behave.given(u'Done setting')
+def step_impl(context):
+    context.feature.done_setting = True

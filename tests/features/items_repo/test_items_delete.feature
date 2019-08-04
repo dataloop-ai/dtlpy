@@ -7,26 +7,26 @@ Feature: Items repository delete function testing
 
     Scenario: Delete item by name
         Given There are no items
-        And I upload an item by the name of "/test_item.jpg"
+        And I upload an item by the name of "test_item.jpg"
         When I delete the item by name
         Then There are no items
     
     Scenario: Delete item by id
         Given There are no items
-        And I upload an item by the name of "/test_item.jpg"
+        And I upload an item by the name of "test_item.jpg"
         When I delete the item by id
         Then There are no items
 
     Scenario: Delete a non-existing item by name
         Given There are no items
-        And I upload an item by the name of "/test_item.jpg"
+        And I upload an item by the name of "test_item.jpg"
         When I try to delete an item by the name of "Some_item_name"
         Then "NotFound" exception should be raised
         And No item was deleted
 
     Scenario: Delete a non-existing item by id
         Given There are no items
-        And I upload an item by the name of "/test_item.jpg"
+        And I upload an item by the name of "test_item.jpg"
         When I try to delete an item by the id of "Some_id"
         Then "NotFound" exception should be raised
         And No item was deleted
