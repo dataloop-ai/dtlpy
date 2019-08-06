@@ -8,9 +8,11 @@
 
 #    Scenario: Feature entities
 #      Given Feature: I create a dataset by the name of "Dataset"
-#      And Feature: There is a Package directory with a python file in path "plugin_package"
-#      And Feature: I pack to project directory in "plugin_package"
-#      And Feature: There is a plugin
+#      When I checkout
+#        |project|
+#     #  And Feature: There is a Package directory with a python file in path "plugin_package"
+#     #  And Feature: I pack to project directory in "plugin_package"
+#      Given Feature: There is a plugin
 #      And Done setting
 
 #    Scenario: Projects

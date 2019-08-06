@@ -111,7 +111,7 @@ class DlpCompleter(Completer):
                         dataset_list = dlp.datasets.list()
                     param_suggestions = [dataset.name for dataset in dataset_list]
                     thread_state = StateEnum.DONE
-                elif param == '--local-path':
+                elif param in ['--local-path', '--local-annotations-path']:
                     thread_state = StateEnum.CONTINUE
                     param = word_before_cursor.replace('"', '')
                     if param == '':
@@ -755,6 +755,10 @@ def get_parser():
     subparser = subparsers.add_parser("cd", help="Change dir")
     subparser.add_argument(dest='dir')
 
+    # cd
+    subparser = subparsers.add_parser("mkdir", help="Make dir")
+    subparser.add_argument(dest='name')
+
     # clear
     subparsers.add_parser("clear", help="Clear shell")
 
@@ -1185,6 +1189,13 @@ def run(args, parser):
             directory = os.path.split(os.getcwd())[0]
         os.chdir(directory)
         print(os.getcwd())
+
+    #########
+    # mkdir #
+    #########
+    elif args.operation == "mkdir":
+        os.mkdir(args.name)
+        os.chdir(os.path.join(os.getcwd(), args.name))
 
     ######
     # ls #

@@ -1,14 +1,12 @@
 import behave
-import dtlpy
 import os
 
 
 @behave.given(u'Feature: There is a plugin')
 def step_impl(context):
-    assert isinstance(context.project, dtlpy.entities.Project)
-    context.plugin = context.project.plugins.create(name='plugin',
-                                                    package=context.package.id
-                                                    )
+    context.project.plugins.generate_local_plugin(name='plugin')
+    context.plugin = context.project.plugins.create(name='plugin')
+    context.feature.plugin = context.plugin
 
 
 @behave.when(u'I checkout')
@@ -16,17 +14,25 @@ def step_impl(context):
     entity = context.table.headings[0]
     if entity == 'project':
         context.dl.projects.checkout(identifier=context.project.name)
-    elif entity == 'project':
+    elif entity == 'dataset':
         context.project.datasets.checkout(identifier=context.dataset.name)
-    elif entity == 'project':
-        context.project.plugins.checkout(identifier=context.plugin.name)
+    elif entity == 'plugin':
+        context.project.plugins.checkout(plugin_name='plugin')
     else:
         assert False, 'Unknown entity param'
 
 
 @behave.then(u'I am checked out')
 def step_impl(context):
-    raise NotImplementedError(u'STEP: Then I an checked out')
+    entity = context.table.headings[0]
+    if entity == 'project':
+        assert context.dl.projects.get().id == context.project.id
+    elif entity == 'dataset':
+        assert context.project.datasets.get().id == context.dataset.id
+    elif entity == 'plugin':
+        assert context.project.plugins.get().id == context.plugin.id
+    else:
+        assert False, 'Unknown entity param'
 
 
 @behave.given(u'Feature: I pack to project directory in "{plugin_package}"')
@@ -58,10 +64,8 @@ def step_impl(context):
         for param in context.table.headings:
             if param == 'dataset':
                 context.dataset = context.feature.dataset
-            elif param == 'package':
-                context.dataset = context.feature.dataset
             elif param == 'plugin':
-                context.dataset = context.feature.dataset
+                context.plugin = context.feature.plugin
 
 @behave.given(u'Done setting')
 def step_impl(context):

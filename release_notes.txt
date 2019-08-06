@@ -1,3 +1,11 @@
+Release 1.7.8
+    Features:
+        - ability to upload from url
+        - ability to create directory in cli
+    Bugs:
+        - fix plugins create
+        - plugins get() if checked out
+
 Release 1.7.3
     Features:
         - Moved cli download and upload from "datasets" to "items"

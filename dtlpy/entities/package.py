@@ -1,5 +1,6 @@
 import logging
 import attr
+import copy
 
 from .. import utilities, entities, PlatformException
 
@@ -50,7 +51,9 @@ class Package(entities.Item):
                 width=None,
                 height=None,
                 md5=md5,
-                annotations=None)
+                annotations=None,
+                platform_dict=copy.deepcopy(_json),
+                created_at=_json.get('createdAt', None))
         elif _json['type'] == 'file':
             return cls(
                 client_api=client_api,
@@ -72,7 +75,10 @@ class Package(entities.Item):
                 width=None,
                 height=None,
                 md5=md5,
-                annotations=None)
+                annotations=None,
+                platform_dict=copy.deepcopy(_json),
+                created_at=_json.get('createdAt', None)
+            )
         else:
             message = 'Unknown item type: %s' % _json['type']
             raise PlatformException('404', message)

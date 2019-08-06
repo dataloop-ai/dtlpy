@@ -1,6 +1,7 @@
 import logging
 from .. import utilities, entities
 import attr
+import copy
 
 logger = logging.getLogger('dataloop.artifact')
 
@@ -41,7 +42,9 @@ class Artifact(entities.Item):
             annotations=None,
             height=None,
             width=None,
-            fps=None
+            fps=None,
+            platform_dict=copy.deepcopy(_json),
+            created_at=_json.get('createdAt', None)
         )
 
     def print(self):

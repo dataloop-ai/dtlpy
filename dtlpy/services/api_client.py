@@ -62,6 +62,26 @@ class Decorators:
         return decorated_method
 
 
+class PluginIO:
+    def read_json(self):
+        plugin_file_path = os.path.join(os.getcwd(), 'plugin.json')
+        with open(plugin_file_path, 'r') as fp:
+            cfg = json.load(fp)
+        return cfg
+
+    def get(self, key):
+        cfg = self.read_json()
+        return cfg[key]
+
+    def put(self, key, value):
+        cfg = self.read_json()
+        cfg[key] = value
+
+        plugin_file_path = os.path.join(os.getcwd(), 'plugin.json')
+        with open(plugin_file_path, 'w') as fp:
+            json.dump(cfg, fp, indent=4)
+
+
 class ApiClient:
     """
     API calls to Dataloop gate
@@ -85,6 +105,7 @@ class ApiClient:
         self.cookie_io = CookieIO.init()
         assert isinstance(self.cookie_io, CookieIO)
         self.state_io = CookieIO.init_local_cookie(create=False)
+        self.plugin_io = PluginIO()
         assert isinstance(self.state_io, CookieIO)
 
         ##################

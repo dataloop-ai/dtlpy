@@ -33,6 +33,11 @@ class CookieIO:
         local_cookie_file = os.path.join(os.getcwd(), '.dataloop', 'state.json')
         return CookieIO(local_cookie_file, create=create, local=True)
 
+    @staticmethod
+    def init_plugin_json_cookie(create=False):
+        plugin_json_file = os.path.join(os.getcwd(), 'plugin.json')
+        return CookieIO(plugin_json_file, create=create, local=True)
+
     def create(self):
         logger.debug('COOKIE.create: File: {}'.format(self.COOKIE))
         # create directory '.dataloop' if not exists

@@ -1,18 +1,16 @@
 import os
 import sys
 import json
-from ... import repositories, PlatformException
+from ... import repositories, PlatformException, services
 
 
 class PackageRunner:
     """
     Package Runner Class
     """
-    def __init__(self, client_api=None):
+    def __init__(self, client_api):
         self.client_api = client_api
         self.cwd = os.getcwd()
-        with open(os.path.join(self.cwd, 'plugin.json'), 'r') as f:
-            self.plugin_json = json.load(f)
         with open(os.path.join(self.cwd, 'mock.json'), 'r') as f:
             self.mock_json = json.load(f)
 
@@ -40,9 +38,11 @@ class PackageRunner:
         return src.run
 
     def run_local_project(self):
-        self.validate_mock(self.plugin_json, self.mock_json)
+        assert isinstance(self.client_api, services.ApiClient)
+        self.validate_mock(self.client_api.plugin_io.read_json(), self.mock_json)
         run_function = self.get_mainpy_run_function()
         try:
+            # project_id = self.client_api.state_io.get('project')
             project_id = self.client_api.state_io.get('project')
         except Exception:
             raise PlatformException('400', "Please checkout to a project")
@@ -53,11 +53,12 @@ class PackageRunner:
         except Exception:
             raise PlatformException('404', "Project not found")
 
-        plugin_inputs = self.plugin_json['inputs']
+        # plugin_inputs = self.plugin_json['inputs']
+        plugin_inputs = self.client_api.plugin_io.get('inputs')
         kwargs = {}
-        for plug_input in plugin_inputs:
-            kwargs[plug_input['name']] = self.get_field(plug_input['name'],
-                                                        plug_input['type'],
+        for plugin_input in plugin_inputs:
+            kwargs[plugin_input['name']] = self.get_field(plugin_input['name'],
+                                                        plugin_input['type'],
                                                         project, self.mock_json)
 
         return run_function(**kwargs)

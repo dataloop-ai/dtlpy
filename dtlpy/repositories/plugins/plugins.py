@@ -3,7 +3,7 @@ import os
 from shutil import copyfile
 import json
 
-from ... import entities, utilities, PlatformException, repositories
+from ... import entities, utilities, PlatformException, repositories, services
 from .assets import plugin_json_path, main_py_path, mock_json_path, src_init_file_path, debug_py_path
 from .package_runner import PackageRunner
 from .plugin_creator import PluginCreator
@@ -43,7 +43,8 @@ class Plugins:
         cwd = os.getcwd()
 
         src_dir = os.path.join(cwd, 'src')
-        os.mkdir(src_dir)
+        if not os.path.isdir(src_dir):
+            os.mkdir(src_dir)
 
         with open(plugin_json_path, 'r') as f:
             plugin_asset = json.load(f)
@@ -64,18 +65,18 @@ class Plugins:
         Test local plugin
         :return:
         """
-        package_runner = PackageRunner()
+        package_runner = PackageRunner(self.client_api)
         package_runner.run_local_project()
 
     def checkout(self, plugin_name):
-        with open(os.path.join(os.getcwd(), 'plugin.json'), 'w+') as f:
-            plugin_json = json.load(f)
-            plugin_json['name'] = plugin_name
-            json.dump(plugin_json, f)
-        # self.client_api.state_io.put('plugin', plugin_name)
-        self.logger.info("Checkout out to plugin {}".format(plugin_name))
+        assert isinstance(self.client_api, services.ApiClient)
+        try:
+            self.client_api.plugin_io.put('name', plugin_name)
+            self.logger.info("Checked out to plugin {}".format(plugin_name))
+        except Exception:
+            self.logger.error('Cant checkout to different plugin name before generating a plugin')
 
-    def create(self, name, package, input_parameters, output_parameters):
+    def create(self, name, package=None, input_parameters=None, output_parameters=None, from_creator=False):
 
         """
         Create a new plugin
@@ -83,8 +84,13 @@ class Plugins:
         :param input_parameters: inputs for the plugin's sessions
         :param output_parameters: outputs for the plugin's sessions
         :param package: packageId:version
+        :param from_creator: optional - called from plugin creator function
         :return: plugin entity
         """
+        if not from_creator and (input_parameters is None or output_parameters is None or package is None):
+            plugin_creator = PluginCreator(client_api=self.client_api)
+            return plugin_creator.create_plugin()
+
         if isinstance(input_parameters, entities.PluginInput):
             input_parameters = [input_parameters]
 
@@ -169,8 +175,13 @@ class Plugins:
             else:
                 plugin = plugin[0]
         else:
-            self.logger.exception('Must input one search parameter!')
-            raise PlatformException('404', 'Must input one search parameter!')
+            assert isinstance(self.client_api, services.ApiClient)
+            plugin_name = self.client_api.plugin_io.get(value='name')
+            if plugin_name is not None:
+                plugin = self.get(plugin_name=plugin_name)
+            else:
+                self.logger.exception('Must input one search parameter or checkout a plugin!')
+                raise PlatformException('Must input one search parameter or checkout a plugin!')
         return plugin
 
     def delete(self, plugin_name=None, plugin_id=None):
@@ -286,13 +297,12 @@ class Plugins:
 
         project_id = self.client_api.state_io.get('project')
         # task_name = self.client_api.state_io.get('plugin')
-        with open(os.path.join(os.getcwd(), 'plugin.json'), 'r') as f:
-            plugin_json = json.load(f)
-            task_name = plugin_json['name']
+        assert isinstance(self.client_api, services.ApiClient)
+        plugin_name = self.client_api.plugin_io.get('name')
 
         projects = repositories.Projects(client_api=self.client_api)
         project = projects.get(project_id=project_id)
-        task = project.tasks.get(task_name=task_name)
+        task = project.tasks.get(task_name=plugin_name)
         session = task.sessions.create(parsed_inputs, True)
 
         if session.latestStatus['status'] == 'success':
@@ -306,10 +316,9 @@ class Plugins:
         :param revision: revision
         :return:
         """
+        assert isinstance(self.client_api, services.ApiClient)
         # plugin_name = self.client_api.state_io.get('plugin')
-        with open(os.path.join(os.getcwd(), 'plugin.json'), 'r') as f:
-            plugin_json = json.load(f)
-        plugin_name = plugin_json['name']
+        plugin_name = self.client_api.plugin_io.get('name')
         if plugin_name is None:
             raise Exception('Please run "dlp checkout plugin <plugin_name>" first')
 
@@ -326,7 +335,8 @@ class Plugins:
         Get status from folder
         :return:
         """
-        plugin_name = self.client_api.state_io.get('plugin')
+        assert isinstance(self.client_api, services.ApiClient)
+        plugin_name = self.client_api.plugin_io.get('name')
         if plugin_name is None:
             raise PlatformException('400', 'Please run "dlp checkout plugin <plugin_name>" first')
         try:

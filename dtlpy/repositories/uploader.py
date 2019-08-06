@@ -8,6 +8,12 @@ import datetime
 import threading
 from multiprocessing.pool import ThreadPool
 from .. import PlatformException, entities, repositories, exceptions
+import requests
+from requests.packages.urllib3.util.retry import Retry
+from requests.adapters import HTTPAdapter
+import validators
+import tempfile
+import shutil
 
 logger = logging.getLogger("dataloop.repositories.items.uploader")
 
@@ -110,7 +116,8 @@ class Uploader:
                                 else:
                                     annotations_filepath = None
                                 if with_head_folder:
-                                    remote_filepath = remote_path + os.path.relpath(filepath, os.path.dirname(upload_item_element))
+                                    remote_filepath = remote_path + os.path.relpath(filepath, os.path.dirname(
+                                        upload_item_element))
                                 else:
                                     remote_filepath = remote_path + os.path.relpath(filepath, upload_item_element)
                                 element = UploadElement(element_type='file',
@@ -141,8 +148,15 @@ class Uploader:
                                             remote_filepath=remote_filepath,
                                             annotations_filepath=annotations_filepath)
                     elements.append(element)
+                elif self.is_url(upload_item_element):
+                    remote_filepath = remote_path + upload_item_element.split('/')[-1]
+                    element = UploadElement(element_type='url',
+                                            buffer=upload_item_element,
+                                            remote_filepath=remote_filepath,
+                                            annotations_filepath=upload_annotations_element)
+                    elements.append(element)
                 else:
-                    raise PlatformException("404", "Directory or file doest exists: %s" % local_path)
+                    raise PlatformException("404", "Unknown local path: %s" % local_path)
             else:
                 # binary element
                 if not hasattr(upload_item_element, "name"):
@@ -232,6 +246,7 @@ class Uploader:
         logger.info("Number of files exists: {}".format(n_exist))
         logger.info("Number of errors: {}".format(n_error))
         logger.info("Total number of files: {}".format(n_upload + n_exist))
+
         # log error
         if n_error > 0:
             log_filepath = "log_%s.txt" % datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -240,10 +255,12 @@ class Uploader:
                 f.write("\n".join(errors_list))
             logger.warning("Errors in {n_error} files. See {log_filepath} for full log".format(
                 n_error=n_error, log_filepath=log_filepath))
+
         # remove empty cells
         output = [output[i_job] for i_job, suc in enumerate(success) if suc is True]
         if len(output) == 1:
             output = output[0]
+
         return output
 
     def __create_existence_dict_worker(self, remote_existence_dict, item_remote_filepaths):
@@ -361,10 +378,14 @@ class Uploader:
         assert isinstance(element, UploadElement)
         result = False
         err = None
+        saved_locally = False
+        temp_dir = None
         remote_folder, remote_filename = os.path.split(element.remote_filepath)
         for i_try in range(NUM_TRIES):
             logger.debug("upload item: {}, try {}".format(remote_filename, i_try))
             try:
+                if element.type == 'url':
+                    saved_locally, element.buffer, temp_dir = self.url_to_data(element.buffer)
                 result = self.__upload_single_item(
                     filepath=element.buffer,
                     annotations=element.annotations_filepath,
@@ -375,6 +396,9 @@ class Uploader:
                     break
             except Exception as e:
                 err = e
+            finally:
+                if saved_locally and os.path.isdir(temp_dir):
+                    shutil.rmtree(temp_dir)
         if result:
             status[i_item] = "upload"
             output[i_item] = result
@@ -408,3 +432,54 @@ class Uploader:
                             "annotations_filepath: {}".format(item.id, annotations),
                 )
             item.annotations.upload(annotations=annotations)
+
+    @staticmethod
+    def url_to_data(url):
+        chunk_size = 8192
+        max_size = 30000000
+        temp_dir = None
+
+        prepared_request = requests.Request(method='GET', url=url).prepare()
+        with requests.Session() as s:
+            retry = Retry(
+                total=3,
+                read=3,
+                connect=3,
+                backoff_factor=0.3,
+            )
+            adapter = HTTPAdapter(max_retries=retry)
+            s.mount('http://', adapter)
+            s.mount('https://', adapter)
+            response = s.send(request=prepared_request, stream=True)
+
+        total_length = response.headers.get("content-length")
+        save_locally = int(total_length) > max_size
+
+        if save_locally:
+            # save to file
+            temp_dir = tempfile.mkdtemp()
+            temp_path = os.path.join(temp_dir, url.split('/')[-1])
+            with open(temp_path, "wb") as f:
+                for chunk in response.iter_content(chunk_size=chunk_size):
+                    if chunk:  # filter out keep-alive new chunks
+                        f.write(chunk)
+            # save to output variable
+            data = temp_path
+        else:
+            # save as byte stream
+            data = io.BytesIO()
+            for chunk in response.iter_content(chunk_size=chunk_size):
+                if chunk:  # filter out keep-alive new chunks
+                    data.write(chunk)
+            # go back to the beginning of the stream
+            data.seek(0)
+            data.name = url.split('/')[-1]
+
+        return save_locally, data, temp_dir
+
+    @staticmethod
+    def is_url(url):
+        try:
+            return validators.url(url)
+        except Exception:
+            return False

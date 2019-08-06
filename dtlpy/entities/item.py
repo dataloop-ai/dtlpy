@@ -1,4 +1,5 @@
 import logging
+import copy
 from .. import repositories, utilities, PlatformException
 import attr
 
@@ -19,6 +20,8 @@ class Item:
     metadata = attr.ib()
     url = attr.ib()
     system = attr.ib()
+    platform_dict = attr.ib()
+    created_at = attr.ib()
 
     # params
     annotated = attr.ib()
@@ -65,7 +68,9 @@ class Item:
                 size=None,
                 system=None,
                 type=_json['type'],
-                fps=None)
+                fps=None,
+                platform_dict=copy.deepcopy(_json),
+                created_at=_json.get('createdAt', None))
         elif _json['type'] == 'file':
             fps = _json.get('fps', None)
             if fps is None and 'metadata' in _json:
@@ -86,7 +91,9 @@ class Item:
                 size=_json['metadata']['system']['size'],
                 system=_json['metadata']['system'],
                 type=_json['type'],
-                fps=fps)
+                fps=fps,
+                platform_dict=copy.deepcopy(_json),
+                created_at=_json.get('createdAt', None))
         else:
             message = 'Unknown item type: %s' % _json['type']
             raise PlatformException('404', message)
@@ -145,6 +152,7 @@ class Item:
         else:
             message = 'Unknown item type: %s' % self.type
             raise PlatformException('404', message)
+        _json['createdAt'] = self.created_at
         return _json
 
     def from_dict(self, metadata):

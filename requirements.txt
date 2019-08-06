@@ -14,4 +14,5 @@ attr==0.3.1
 prompt_toolkit==2.0.9
 fuzzyfinder==2.1.0
 behave==1.2.6
-
+dictdiffer==0.8.0
+validators==0.13.0

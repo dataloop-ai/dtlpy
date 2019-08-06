@@ -3,7 +3,7 @@ import traceback
 from multiprocessing.pool import ThreadPool
 import attr
 
-from .. import entities, PlatformException, repositories
+from .. import entities, PlatformException, repositories, utilities
 
 
 @attr.s
@@ -235,11 +235,14 @@ class Items:
 
         # update item
         if item is not None:
+            json_req = utilities.miscellaneous.DictDiffer.diff(origin=item.platform_dict, modified=item.to_json())
+            if not json_req:
+                return item
             url_path = "/datasets/%s/items/%s" % (self.dataset.id, item.id)
             if system_metadata:
                 url_path += "?system=true"
             success, response = self.client_api.gen_request(
-                req_type="patch", path=url_path, json_req=item.to_json()
+                req_type="patch", path=url_path, json_req=json_req
             )
             if success:
                 self.logger.debug("Item was updated successfully. Item id: %s" % item.id)
@@ -330,7 +333,7 @@ class Items:
         If "*" at the end of local_path (e.g. "/images/*") items will be uploaded without head directory
 
         :param overwrite: optional - default = False
-        :param local_path: local file or folder to upload
+        :param local_path: list of local file, local folder, BufferIO, or url to upload
         :param local_annotations_path: path to dataloop format annotations json files.
         :param remote_path: remote path to save.
         :param file_types: list of file type to upload. e.g ['.jpg', '.png']. default is all

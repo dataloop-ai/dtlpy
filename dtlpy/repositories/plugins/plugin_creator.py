@@ -10,8 +10,6 @@ class PluginCreator:
     def __init__(self, client_api=None):
         self.client_api = client_api
         assert isinstance(self.client_api, services.ApiClient)
-        with open(os.path.join(os.getcwd(), 'plugin.json'), 'r') as f:
-            self.plugin_json = json.load(f)
 
     @staticmethod
     def input_template(name, entity):
@@ -54,6 +52,8 @@ class PluginCreator:
         :param package:
         :return:
         """
+        assert isinstance(self.client_api, services.ApiClient)
+
         projects = repositories.Projects(client_api=self.client_api)
         project = projects.get(project_id=project_id)
 
@@ -78,7 +78,7 @@ class PluginCreator:
             }
         ]
 
-        for input_filed in self.plugin_json['inputs']:
+        for input_filed in self.client_api.plugin_io.get('inputs'):
             input_name = input_filed['name']
             input_type = input_filed['type']
             base.append(self.input_template(name=input_name, entity=input_type))
@@ -90,8 +90,10 @@ class PluginCreator:
         Create output parameters
         :return:
         """
+        assert isinstance(self.client_api, services.ApiClient)
+
         base = []
-        for output in self.plugin_json['outputs']:
+        for output in self.client_api.plugin_io.get('outputs'):
             output_name = output['name']
             output_type = output['type']
             base.append(self.output_template(name=output_name, entity=output_type))
@@ -103,9 +105,10 @@ class PluginCreator:
         Create plugin
         :return: plugin entity
         """
+        assert isinstance(self.client_api, services.ApiClient)
         project_id = self.client_api.state_io.get('project')
         # plugin_name = self.client_api.state_io.get('plugin')
-        plugin_name = self.plugin_json['name']
+        plugin_name = self.client_api.plugin_io.get('name')
 
         if project_id is None:
             raise PlatformException('400', 'Please run "dlp checkout project <project_name>" first')
@@ -126,7 +129,8 @@ class PluginCreator:
             plugin = project.plugins.create(name=plugin_name,
                                             package=package.id,
                                             input_parameters=input_params,
-                                            output_parameters=output_params)
+                                            output_parameters=output_params,
+                                            from_creator=True)
         else:
             plugin.input = input_params
             plugin.output = output_params
@@ -139,8 +143,9 @@ class PluginCreator:
         Upload plugin source code
         :return:
         """
+        assert isinstance(self.client_api, services.ApiClient)
         project_id = self.client_api.state_io.get('project')
-        plugin_name = self.client_api.state_io.get('plugin')
+        plugin_name = self.client_api.plugin_io.get('name')
         cwd = os.getcwd()
         dataloop_path = os.path.join(cwd, '.dataloop')
 

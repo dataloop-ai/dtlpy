@@ -40,6 +40,7 @@ add_module_names = False
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    # 'sphinxprettysearchresults',
     'sphinx.ext.autodoc',
     'sphinx.ext.doctest',
     'sphinx.ext.intersphinx',
@@ -51,7 +52,9 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
     'sphinxarg.ext',
-    'nbsphinx'
+    'nbsphinx',
+    'sphinx_rtd_theme',
+
 ]
 
 # Add any paths that contain templates here, relative to this directory.
