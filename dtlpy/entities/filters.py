@@ -1,5 +1,6 @@
 import logging
 from ..exceptions import PlatformException
+import os
 
 logger = logging.getLogger('dataloop.items.filters')
 
@@ -45,6 +46,31 @@ class Filters:
         return default_filter[self.resource]
 
     def add(self, field, values, operator=None):
+        """
+        Add filter
+        :param field: Metadata field
+        :param values: field values
+        :param operator: optional - $in, $gt, $lt, $eq, $ne - default = $eq
+        :return:
+        """
+        # add ** if doesnt exist
+        if field == 'filename':
+            if isinstance(values, str):
+                if not values.endswith('*') and not os.path.splitext(values)[-1].startswith('.'):
+                    if values.endswith('/'):
+                        values = values + '**'
+                    else:
+                        values = values + '/**'
+            elif isinstance(values, list):
+                for i_value, value in enumerate(values):
+                    if isinstance(value, str):
+                        if not value.endswith('*') and not os.path.splitext(value)[-1].startswith('.'):
+                            if value.endswith('/'):
+                                values[i_value] = value + '**'
+                            else:
+                                values[i_value] = value + '/**'
+
+        # create SingleFilter object and add to self.filter_list
         self.filter_list.append(
             SingleFilter(field=field, values=values, operator=operator)
         )

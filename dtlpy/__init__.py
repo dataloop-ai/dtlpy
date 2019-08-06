@@ -46,7 +46,7 @@ tasks = repositories.Tasks(client_api=client_api)
 plugins = repositories.Plugins(client_api=client_api)
 sessions = repositories.Sessions(client_api=client_api, task=None)
 
-logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 logger = logging.getLogger(name='dataloop.platform_interface')
 
 if client_api.token_expired():

@@ -2,6 +2,7 @@ import logging
 import copy
 from .. import repositories, utilities, PlatformException
 import attr
+import os
 
 logger = logging.getLogger('dataloop.item')
 
@@ -191,6 +192,13 @@ class Item:
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :return: Output (list)
         """
+        # if dir - concatenate local path and item name
+        if local_path is not None:
+                _, ext = os.path.splitext(local_path)
+                if not ext:
+                    local_path = os.path.join(local_path, self.name)
+
+        # download
         return self.dataset.items.download(items=self,
                                            local_path=local_path,
                                            file_types=file_types,

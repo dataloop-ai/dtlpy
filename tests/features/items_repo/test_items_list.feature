@@ -30,8 +30,8 @@ Feature: Items repository list function testing
 
     Scenario: List dataset items - with query - filename
         Given There are "10" items
-        And There is one item by the name of "test_name"
-        When I list items with query filename="/test_name"
+        And There is one item by the name of "test_name.jpg"
+        When I list items with query filename="/test_name.jpg"
         Then I receive a PageEntity object
         And PageEntity items has length of "1"
         And PageEntity item received equal to item uploaded with name "test_name"
