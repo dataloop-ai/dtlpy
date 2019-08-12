@@ -18,7 +18,6 @@ dtlpy.repositories.plugins.package\_runner module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.repositories.plugins.plugin\_creator module
 -------------------------------------------------
 
@@ -26,7 +25,6 @@ dtlpy.repositories.plugins.plugin\_creator module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.repositories.plugins.plugins module
 -----------------------------------------
 

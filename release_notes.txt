@@ -1,3 +1,9 @@
+Release 1.7.11
+    Bugs:
+        - some dlp shell bug fix
+    Features:
+        - dlp shell except any cmd commands
+
 Release 1.7.9
     Bugs:
         - item.download() - not to relative path

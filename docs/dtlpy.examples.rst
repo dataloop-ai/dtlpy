@@ -11,7 +11,6 @@ dtlpy.examples.add\_labels module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.examples.add\_metadata\_to\_item module
 ---------------------------------------------
 
@@ -19,7 +18,6 @@ dtlpy.examples.add\_metadata\_to\_item module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.examples.annotate\_items\_using\_model module
 ---------------------------------------------------
 
@@ -27,7 +25,6 @@ dtlpy.examples.annotate\_items\_using\_model module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.examples.annotate\_video\_using\_model\_and\_tracker module
 -----------------------------------------------------------------
 
@@ -35,7 +32,6 @@ dtlpy.examples.annotate\_video\_using\_model\_and\_tracker module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.examples.annotations\_convert\_to\_voc module
 ---------------------------------------------------
 
@@ -43,7 +39,6 @@ dtlpy.examples.annotations\_convert\_to\_voc module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.examples.annotations\_convert\_to\_yolo module
 ----------------------------------------------------
 
@@ -51,7 +46,6 @@ dtlpy.examples.annotations\_convert\_to\_yolo module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.examples.convert\_annotation\_types module
 ------------------------------------------------
 
@@ -59,7 +53,6 @@ dtlpy.examples.convert\_annotation\_types module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.examples.converter module
 -------------------------------
 
@@ -67,7 +60,6 @@ dtlpy.examples.converter module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.examples.copy\_annotations module
 ---------------------------------------
 
@@ -75,7 +67,6 @@ dtlpy.examples.copy\_annotations module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.examples.copy\_folder module
 ----------------------------------
 
@@ -83,7 +74,6 @@ dtlpy.examples.copy\_folder module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.examples.create\_annotations module
 -----------------------------------------
 
@@ -91,7 +81,6 @@ dtlpy.examples.create\_annotations module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.examples.create\_video\_annotations module
 ------------------------------------------------
 
@@ -99,7 +88,6 @@ dtlpy.examples.create\_video\_annotations module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.examples.filters module
 -----------------------------
 
@@ -107,7 +95,6 @@ dtlpy.examples.filters module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.examples.move\_item module
 --------------------------------
 
@@ -115,7 +102,6 @@ dtlpy.examples.move\_item module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.examples.play\_video\_annotation module
 ---------------------------------------------
 
@@ -123,7 +109,6 @@ dtlpy.examples.play\_video\_annotation module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.examples.show\_item\_and\_mask module
 -------------------------------------------
 
@@ -131,7 +116,6 @@ dtlpy.examples.show\_item\_and\_mask module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.examples.triggers module
 ------------------------------
 
@@ -139,7 +123,6 @@ dtlpy.examples.triggers module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.examples.upload\_batch\_of\_items module
 ----------------------------------------------
 
@@ -147,7 +130,6 @@ dtlpy.examples.upload\_batch\_of\_items module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.examples.upload\_items\_and\_custom\_format\_annotations module
 ---------------------------------------------------------------------
 
@@ -155,7 +137,6 @@ dtlpy.examples.upload\_items\_and\_custom\_format\_annotations module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.examples.upload\_segmentation\_annotations\_from\_mask\_image module
 --------------------------------------------------------------------------
 
@@ -163,7 +144,6 @@ dtlpy.examples.upload\_segmentation\_annotations\_from\_mask\_image module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.examples.upload\_yolo\_format\_annotations module
 -------------------------------------------------------
 

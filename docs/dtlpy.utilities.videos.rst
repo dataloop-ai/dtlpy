@@ -11,7 +11,6 @@ dtlpy.utilities.videos.video\_player module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.utilities.videos.videos module
 ------------------------------------
 

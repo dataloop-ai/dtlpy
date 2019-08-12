@@ -19,7 +19,6 @@ dtlpy.utilities.converter module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.utilities.miscellaneous module
 ------------------------------------
 
@@ -27,7 +26,6 @@ dtlpy.utilities.miscellaneous module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.utilities.session\_builder module
 ---------------------------------------
 

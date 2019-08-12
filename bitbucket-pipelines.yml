@@ -15,6 +15,10 @@ pipelines:
           - gsutil -m cp -R gs://sdl-tests-assets/assets tests/
           - python tests/test_examples.py
           - python tests/test_runner.py
+          # - rm -rf dist
+          # - python setup.py bdist_wheel
+          # - mv dist/* dist/dtlpy-latest-py3-none-any.whl
+          # - gsutil cp dist/dtlpy-latest-py3-none-any.whl gs://dtlpy/dev
   tags:
     "*":
       - step:

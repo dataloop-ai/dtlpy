@@ -18,7 +18,6 @@ dtlpy.repositories.annotations module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.repositories.artifacts module
 -----------------------------------
 
@@ -26,7 +25,6 @@ dtlpy.repositories.artifacts module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.repositories.datasets module
 ----------------------------------
 
@@ -34,7 +32,6 @@ dtlpy.repositories.datasets module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.repositories.downloader module
 ------------------------------------
 
@@ -42,7 +39,6 @@ dtlpy.repositories.downloader module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.repositories.items module
 -------------------------------
 
@@ -50,7 +46,6 @@ dtlpy.repositories.items module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.repositories.ontologies module
 ------------------------------------
 
@@ -58,7 +53,6 @@ dtlpy.repositories.ontologies module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.repositories.packages module
 ----------------------------------
 
@@ -66,7 +60,6 @@ dtlpy.repositories.packages module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.repositories.projects module
 ----------------------------------
 
@@ -74,7 +67,6 @@ dtlpy.repositories.projects module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.repositories.recipes module
 ---------------------------------
 
@@ -82,7 +74,6 @@ dtlpy.repositories.recipes module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.repositories.sessions module
 ----------------------------------
 
@@ -90,7 +81,6 @@ dtlpy.repositories.sessions module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.repositories.tasks module
 -------------------------------
 
@@ -98,7 +88,6 @@ dtlpy.repositories.tasks module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.repositories.times\_series module
 ---------------------------------------
 
@@ -106,7 +95,6 @@ dtlpy.repositories.times\_series module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.repositories.triggers module
 ----------------------------------
 
@@ -114,7 +102,6 @@ dtlpy.repositories.triggers module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.repositories.uploader module
 ----------------------------------
 

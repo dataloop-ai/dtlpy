@@ -28,7 +28,7 @@ Feature: Items repository delete function testing
         Given There are no items
         And I upload an item by the name of "test_item.jpg"
         When I try to delete an item by the id of "Some_id"
-        Then "NotFound" exception should be raised
+        Then "BadRequest" exception should be raised
         And No item was deleted
 
     Scenario: Finally

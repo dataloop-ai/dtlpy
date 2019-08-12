@@ -53,6 +53,7 @@ class Package(entities.Item):
                 md5=md5,
                 annotations=None,
                 platform_dict=copy.deepcopy(_json),
+                dataset_url=_json.get('dataset', None),
                 created_at=_json.get('createdAt', None))
         elif _json['type'] == 'file':
             return cls(
@@ -72,6 +73,7 @@ class Package(entities.Item):
                 system=_json['metadata']['system'],
                 type=_json['type'],
                 fps=None,
+                dataset_url=_json.get('dataset', None),
                 width=None,
                 height=None,
                 md5=md5,

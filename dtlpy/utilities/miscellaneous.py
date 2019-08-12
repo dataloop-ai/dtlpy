@@ -44,11 +44,10 @@ class List(list):
                         keys_list.remove(key)
 
             is_cli = False
-            if 'dlp.py' in ''.join(traceback.format_stack()):
+            tr = ''.join(traceback.format_stack())
+            if 'dlp.exe' in tr:
                 # running from command line
                 is_cli = True
-            print(traceback.format_stack())
-            print('is CLI: {}'.format(is_cli))
             for element in to_print:
 
                 if is_cli:

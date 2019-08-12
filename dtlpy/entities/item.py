@@ -23,6 +23,7 @@ class Item:
     system = attr.ib()
     platform_dict = attr.ib()
     created_at = attr.ib()
+    dataset_url = attr.ib()
 
     # params
     annotated = attr.ib()
@@ -70,6 +71,7 @@ class Item:
                 system=None,
                 type=_json['type'],
                 fps=None,
+                dataset_url=_json.get('dataset', None),
                 platform_dict=copy.deepcopy(_json),
                 created_at=_json.get('createdAt', None))
         elif _json['type'] == 'file':
@@ -93,6 +95,7 @@ class Item:
                 system=_json['metadata']['system'],
                 type=_json['type'],
                 fps=fps,
+                dataset_url=_json.get('dataset', None),
                 platform_dict=copy.deepcopy(_json),
                 created_at=_json.get('createdAt', None))
         else:
@@ -154,6 +157,8 @@ class Item:
             message = 'Unknown item type: %s' % self.type
             raise PlatformException('404', message)
         _json['createdAt'] = self.created_at
+        _json['dataset'] = self.dataset_url
+        _json['datasetId'] = self.dataset.id
         return _json
 
     def from_dict(self, metadata):

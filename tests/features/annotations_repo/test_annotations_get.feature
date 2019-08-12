@@ -19,7 +19,7 @@ Feature: Annotaions repository Get function testing
         And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"
         And Item is annotated with annotations in file: "assets_split/annotations_crud/0162_annotations.json"
         When I try to get a non-existing annotation
-        Then "NotFound" exception should be raised
+        Then "BadRequest" exception should be raised
 
     Scenario: Finally
         Given Clean up

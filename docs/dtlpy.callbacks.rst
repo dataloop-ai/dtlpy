@@ -11,7 +11,6 @@ dtlpy.callbacks.piper\_progress\_reporter module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.callbacks.progress\_viewer module
 ---------------------------------------
 

@@ -163,6 +163,7 @@ class Downloader:
                                 output[i_item] = item_local_filepath
                                 success[i_item] = True
                                 i_item += 1
+                                pbar.update()
                                 if annotation_options and item.annotated:
                                     # download annotations only
                                     pool.apply_async(

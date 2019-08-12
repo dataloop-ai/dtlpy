@@ -191,14 +191,11 @@ class Items:
             if len(items) == 0:
                 raise PlatformException("404", "Item not found")
             elif len(items) > 1:
-                raise PlatformException(
-                    "404", "More the 1 item exist by the name provided"
-                )
+                raise PlatformException(error="404",message="More the 1 item exist by the name provided")
             else:
                 item_id = items[0].id
-                success, response = self.client_api.gen_request(
-                    req_type="delete",
-                    path="/datasets/%s/items/%s" % (self.dataset.id, item_id),
+                success, response = self.client_api.gen_request(req_type="delete",
+                                                                path="/datasets/%s/items/%s" % (self.dataset.id, item_id),
                 )
         elif filters is not None:
             # prepare request
@@ -241,14 +238,14 @@ class Items:
             url_path = "/datasets/%s/items/%s" % (self.dataset.id, item.id)
             if system_metadata:
                 url_path += "?system=true"
-            success, response = self.client_api.gen_request(
-                req_type="patch", path=url_path, json_req=json_req
-            )
+            success, response = self.client_api.gen_request(req_type="patch",
+                                                            path=url_path,
+                                                            json_req=json_req)
             if success:
                 self.logger.debug("Item was updated successfully. Item id: %s" % item.id)
-                return self.items_entity.from_json(
-                    client_api=self.client_api, _json=response.json(), dataset=self.dataset
-                )
+                return self.items_entity.from_json(client_api=self.client_api,
+                                                   _json=response.json(),
+                                                   dataset=self.dataset)
             else:
                 self.logger.exception("Error while updating item")
                 raise PlatformException(response)

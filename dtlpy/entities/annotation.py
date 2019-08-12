@@ -30,6 +30,7 @@ class Annotation:
     updatedBy = attr.ib()
     updatedAt = attr.ib()
     type = attr.ib()
+    dataset_url = attr.ib()
 
     # meta
     metadata = attr.ib()
@@ -384,6 +385,11 @@ class Annotation:
         if annotation_definition is not None:
             ann_type = annotation_definition.type
 
+        # dataset
+        dataset_url = None
+        if item is not None:
+            dataset_url = item.dataset_url
+
         return cls(
             # annotation_definition
             annotation_definition=annotation_definition,
@@ -400,6 +406,7 @@ class Annotation:
             updatedAt=None,
             object_id=object_id,
             type=ann_type,
+            dataset_url=dataset_url,
 
             # meta
             metadata=metadata,
@@ -609,6 +616,7 @@ class Annotation:
             item_url=_json.get('item', item.url),
             item=item,
             item_id=_json.get('itemId', item.id),
+            dataset_url=_json.get('dataset', item.dataset_url),
             creator=_json['creator'],
             createdAt=_json['createdAt'],
             updatedBy=_json['updatedBy'],
@@ -702,6 +710,8 @@ class Annotation:
         _json['item'] = self.item_url
         _json['label'] = self.label
         _json['attributes'] = self.attributes
+        _json['dataset'] = self.dataset_url
+        _json['datasetId'] = self.item.dataset.id
 
         # polyline to segment
         if self.type == 'polyline':

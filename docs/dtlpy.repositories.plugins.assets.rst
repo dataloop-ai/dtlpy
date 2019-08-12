@@ -11,7 +11,6 @@ dtlpy.repositories.plugins.assets.debug module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.repositories.plugins.assets.main module
 ---------------------------------------------
 
@@ -19,7 +18,6 @@ dtlpy.repositories.plugins.assets.main module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.repositories.plugins.assets.src\_init\_file module
 --------------------------------------------------------
 

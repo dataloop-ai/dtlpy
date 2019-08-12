@@ -18,7 +18,6 @@ dtlpy.pipelines.misc module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.pipelines.pipeline\_builder module
 ----------------------------------------
 
@@ -26,7 +25,6 @@ dtlpy.pipelines.pipeline\_builder module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.pipelines.pipeline\_runner module
 ---------------------------------------
 

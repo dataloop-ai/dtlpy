@@ -31,7 +31,7 @@ Feature: Packages repository Unpack method
          And I init packages with params project, dataset, client_api
          And I pack directory by name "package_name"
          When I try to unpack a package by the id of "some_id" to "packages_assets/package_unpack"
-         Then "NotFound" exception should be raised
+         Then "BadRequest" exception should be raised
 
      Scenario: Unpack - specific version
          Given There is a Package directory with a python file in path "packages_assets/packages_unpack"

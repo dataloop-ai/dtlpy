@@ -11,7 +11,6 @@ dtlpy.services.api\_client module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.services.calls\_counter module
 ------------------------------------
 
@@ -19,7 +18,6 @@ dtlpy.services.calls\_counter module
    :members:
    :undoc-members:
    :show-inheritance:
-
 dtlpy.services.cookie module
 ----------------------------
 

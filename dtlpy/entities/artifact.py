@@ -43,6 +43,7 @@ class Artifact(entities.Item):
             height=None,
             width=None,
             fps=None,
+            dataset_url=_json.get('dataset', None),
             platform_dict=copy.deepcopy(_json),
             created_at=_json.get('createdAt', None)
         )

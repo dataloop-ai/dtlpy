@@ -98,18 +98,18 @@ class DlpCompleter(Completer):
                 if param == '--project-name':
                     thread_state = StateEnum.RUNNING
                     project_list = dlp.projects.list()
-                    param_suggestions = [project.name for project in project_list]
+                    param_suggestions = ['"{}'.format(project.name) for project in project_list]
                     thread_state = StateEnum.DONE
                 elif param == '--dataset-name':
                     thread_state = StateEnum.RUNNING
                     if '--project-name' in cmd:
-                        project = dlp.projects.get(project_name=cmd[cmd.index('--project-name') + 1])
+                        project = dlp.projects.get(project_name=cmd[cmd.index('--project-name') + 1].replace('"', ''))
                         dataset_list = project.datasets.list()
                     else:
                         if not isinstance(dlp.datasets.project, dlp.entities.Project):
                             dlp.datasets.project = dlp.projects.get()
                         dataset_list = dlp.datasets.list()
-                    param_suggestions = [dataset.name for dataset in dataset_list]
+                    param_suggestions = ['"{}'.format(dataset.name) for dataset in dataset_list]
                     thread_state = StateEnum.DONE
                 elif param in ['--local-path', '--local-annotations-path']:
                     thread_state = StateEnum.CONTINUE
@@ -208,7 +208,10 @@ class DlpCompleter(Completer):
                 suggestions = param_suggestions
         elif len(cmd) == 1:
             thread_state = StateEnum.START
-            if cmd[0] not in keywords.keys():
+            if cmd[0] not in keywords.keys() and cmd[0] != '':
+                if not word_before_cursor == '':
+                    suggestions = list(keywords.keys())
+            elif cmd[0] == '':
                 suggestions = list(keywords.keys())
             elif isinstance(keywords[cmd[0]], list):
                 suggestions = keywords[cmd[0]]
@@ -909,7 +912,7 @@ def run(args, parser):
             pages = dataset.items.list(filters=filters, page_offset=args.page)
             print(datetime.datetime.utcnow())
             pages.print()
-            print("Displaying page %d/%d" % (args.page + 1, pages.total_pages_count))
+            print("Displaying page %d/%d" % (args.page, pages.total_pages_count))
 
         elif args.items == "web":
             project = dlp.projects.get(project_name=args.project_name)
@@ -1240,6 +1243,7 @@ def run(args, parser):
     # Catch rest of options #
     #########################
     else:
+
         print(datetime.datetime.utcnow())
         if args.operation:
             print('dlp: "%s" is not an dlp command' % args.operation)
@@ -1277,8 +1281,13 @@ def main():
                 try:
                     if text in ["-h", "--help"]:
                         text = "help"
+                    text = shlex.split(text)
+                    if text[0] not in keywords:
+                        p = subprocess.Popen(text)
+                        p.communicate()
+                        continue
                     parser = get_parser()
-                    args = parser.parse_args(shlex.split(text))
+                    args = parser.parse_args(text)
                     if args.operation == "exit":
                         dlp_exit()
                     else:
