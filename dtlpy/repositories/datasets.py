@@ -4,26 +4,42 @@ Datasets Repository
 
 import logging
 from urllib.parse import urlencode
-from .. import entities, repositories, utilities, PlatformException, exceptions
-import attr
+from .. import entities, repositories, utilities, PlatformException
+
+logger = logging.getLogger(name=__name__)
 
 
-@attr.s
 class Datasets:
     """
     Datasets repository
     """
-    client_api = attr.ib()
-    project = attr.ib()
-    logger = attr.ib(default=logging.getLogger('dataloop.repositories.datasets'))
+
+    def __init__(self, client_api, project=None):
+        self._client_api = client_api
+        self._project = project
+
+    @property
+    def project(self):
+        if self._project is None:
+            raise PlatformException(
+                error='400',
+                message='Cannot perform action WITHOUT Project entity in Datasets repository. Please set a project')
+        assert isinstance(self._project, entities.Project)
+        return self._project
+
+    @project.setter
+    def project(self, project):
+        if not isinstance(project, entities.Project):
+            raise ValueError('Must input a valid Project entity')
+        self._project = project
 
     def __get_by_id(self, dataset_id):
-        success, response = self.client_api.gen_request(req_type='get',
-                                                        path='/datasets/%s' % dataset_id)
+        success, response = self._client_api.gen_request(req_type='get',
+                                                         path='/datasets/{}'.format(dataset_id))
         if success:
-            dataset = entities.Dataset.from_json(client_api=self.client_api,
+            dataset = entities.Dataset.from_json(client_api=self._client_api,
                                                  _json=response.json(),
-                                                 project=self.project)
+                                                 project=self._project)
         else:
             raise PlatformException(response)
         return dataset
@@ -46,9 +62,9 @@ class Datasets:
 
     def open_in_web(self, dataset_name=None, dataset_id=None, dataset=None):
         import webbrowser
-        if self.client_api.environment == 'https://gate.dataloop.ai/api/v1':
+        if self._client_api.environment == 'https://gate.dataloop.ai/api/v1':
             head = 'https://console.dataloop.ai'
-        elif self.client_api.environment == 'https://dev-gate.dataloop.ai/api/v1':
+        elif self._client_api.environment == 'https://dev-gate.dataloop.ai/api/v1':
             head = 'https://dev-con.dataloop.ai'
         else:
             raise PlatformException('400', 'Unknown environment')
@@ -58,17 +74,17 @@ class Datasets:
         webbrowser.open(url=dataset_url, new=2, autoraise=True)
 
     def checkout(self, identifier):
-        if self.project is not None:
+        if self._project is not None:
             self.project.checkout()
         else:
-            project_id = self.client_api.state_io.get('project')
+            project_id = self._client_api.state_io.get('project')
             if project_id is None:
                 raise Exception("Please checkout a valid project before trying to checkout a dataset")
-            projects = repositories.Projects(client_api=self.client_api, logger=self.logger)
+            projects = repositories.Projects(client_api=self._client_api)
             self.project = projects.get(project_id=project_id)
         dataset = self.__get_by_identifier(identifier)
-        self.client_api.state_io.put('dataset', dataset.id)
-        self.logger.info('Checked out to dataset {}'.format(dataset.name))
+        self._client_api.state_io.put('dataset', dataset.id)
+        logger.info('Checked out to dataset {}'.format(dataset.name))
 
     def list(self):
         """
@@ -76,14 +92,11 @@ class Datasets:
 
         :return: List of datasets
         """
-        if self.project is None:
-            self.logger.exception('Cant list datasets with no project. Try same command from a "project" entity')
-            raise ValueError('Cant list datasets with no project. Try same command from a "project" entity')
         query_string = urlencode({'name': '', 'creator': '', 'projects': self.project.id}, doseq=True)
-        success, response = self.client_api.gen_request(req_type='get',
-                                                        path='/datasets?%s' % query_string)
+        success, response = self._client_api.gen_request(req_type='get',
+                                                         path='/datasets?{}'.format(query_string))
         if success:
-            datasets = utilities.List([entities.Dataset.from_json(client_api=self.client_api,
+            datasets = utilities.List([entities.Dataset.from_json(client_api=self._client_api,
                                                                   _json=_json,
                                                                   project=self.project)
                                        for _json in response.json()])
@@ -106,22 +119,22 @@ class Datasets:
             dataset = [dataset for dataset in datasets if dataset.name == dataset_name]
             if not dataset:
                 # empty list
-                self.logger.info('Dataset not found. dataset_name: %s', dataset_name)
-                raise PlatformException('404', 'Dataset not found.')
+                raise PlatformException('404', 'Dataset not found. Name: {}'.format(dataset_name))
                 # dataset = None
             elif len(dataset) > 1:
                 # more than one dataset
-                self.logger.warning('More than one dataset with same name. Please "get" by id')
+                logger.warning('More than one dataset with same name. Please "get" by id')
                 raise PlatformException('400', 'More than one dataset with same name.')
             else:
                 dataset = dataset[0]
         else:
             # get from state cookie
-            state_dataset_id = self.client_api.state_io.get('dataset')
+            state_dataset_id = self._client_api.state_io.get('dataset')
             if state_dataset_id is None:
                 raise PlatformException('400', 'Must choose by "dataset_id" or "dataset_name" OR checkout a dataset')
             else:
                 dataset = self.__get_by_id(state_dataset_id)
+        assert isinstance(dataset, entities.Dataset)
         return dataset
 
     def delete(self, dataset_name=None, dataset_id=None, sure=False, really=False):
@@ -136,11 +149,11 @@ class Datasets:
         """
         if sure and really:
             dataset = self.get(dataset_name=dataset_name, dataset_id=dataset_id)
-            success, response = self.client_api.gen_request(req_type='delete',
-                                                            path='/datasets/%s' % dataset.id)
+            success, response = self._client_api.gen_request(req_type='delete',
+                                                             path='/datasets/{}'.format(dataset.id))
             if not success:
                 raise PlatformException(response)
-            self.logger.info('Dataset was deleted successfully')
+            logger.info('Dataset was deleted successfully')
             return True
         else:
             raise PlatformException(error='403',
@@ -153,17 +166,16 @@ class Datasets:
         :param system_metadata: bool
         :return: Dataset object
         """
-        url_path = '/datasets/%s' % dataset.id
+        url_path = '/datasets/{}'.format(dataset.id)
         if system_metadata:
             url_path += '?system=true'
-        success, response = self.client_api.gen_request(req_type='patch',
-                                                        path=url_path,
-                                                        json_req=dataset.to_json())
+        success, response = self._client_api.gen_request(req_type='patch',
+                                                         path=url_path,
+                                                         json_req=dataset.to_json())
         if success:
-            self.logger.info('Dataset was updated successfully')
+            logger.info('Dataset was updated successfully')
             return dataset
         else:
-            self.logger.exception('Platform error updating dataset. id: %s' % dataset.id)
             raise PlatformException(response)
 
     def create(self, dataset_name, labels=None, driver=None, attributes=None, ontology_ids=None):
@@ -184,18 +196,15 @@ class Datasets:
         else:
             labels = list()
         # get creator from token
-        if self.project is None:
-            self.logger.exception('Cant create dataset with no project. Try same command from a "project" entity')
-            raise ValueError('Cant create dataset with no project. Try same command from a "project" entity')
         payload = {'name': dataset_name,
                    'projects': [self.project.id]}
         if driver is not None:
             payload['driver'] = driver
-        success, response = self.client_api.gen_request(req_type='post',
-                                                        path='/datasets',
-                                                        json_req=payload)
+        success, response = self._client_api.gen_request(req_type='post',
+                                                         path='/datasets',
+                                                         json_req=payload)
         if success:
-            dataset = entities.Dataset.from_json(client_api=self.client_api,
+            dataset = entities.Dataset.from_json(client_api=self._client_api,
                                                  _json=response.json(),
                                                  project=self.project)
             # create ontology and recipe
@@ -204,7 +213,7 @@ class Datasets:
             # dataset = self.update(dataset=dataset, system_metadata=True)
         else:
             raise PlatformException(response)
-        self.logger.info('Dataset was created successfully. Dataset id: %s' % dataset.id)
+        logger.info('Dataset was created successfully. Dataset id: {}'.format(dataset.id))
         assert isinstance(dataset, entities.Dataset)
         return dataset
 

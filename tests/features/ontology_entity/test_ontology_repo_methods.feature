@@ -27,5 +27,4 @@ Feature: Ontology Entity repo functions
         When I update ontology entity system metadata
         Then Dataset ontology in host equal ontology uploaded
 
-    Scenario: Finally
-        Given Clean up
+

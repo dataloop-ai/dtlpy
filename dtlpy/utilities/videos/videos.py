@@ -1,13 +1,9 @@
 import time
 import numpy as np
 import os
-import json
-import ffmpeg
-import subprocess
-import shlex
 import logging
 
-logger = logging.getLogger('dataloop.videos')
+logger = logging.getLogger(name=__name__)
 
 
 ##########
@@ -19,6 +15,7 @@ class Videos:
 
     @staticmethod
     def get_info(filepath):
+        import ffmpeg
         probe = ffmpeg.probe(filepath)
         return probe
 
@@ -32,6 +29,7 @@ class Videos:
         :param loglevel: ffmpeg loglevel
         :return:
         """
+        import ffmpeg
         if not os.path.isfile(filepath):
             logger.exception('File doesnt exists')
             raise IOError
@@ -66,6 +64,7 @@ class Videos:
         :param loglevel: ffmpeg loglevel
         :return:
         """
+        import ffmpeg
         if not os.path.isfile(filepath):
             logger.exception('File doesnt exists')
             raise IOError
@@ -116,6 +115,7 @@ class Videos:
         :param loglevel: ffmpeg loglevel
         :return:
         """
+        import ffmpeg
         # https://www.ffmpeg.org/ffmpeg-formats.html#Examples-9
 
         if not os.path.isfile(filepath):

@@ -8,7 +8,7 @@ import time
 def step_impl(context):
     annotations_list = context.item.annotations.list()
     for ann in annotations_list:
-        success, response = context.item.client_api.gen_request(
+        success, response = context.item._client_api.gen_request(
             req_type="get",
             path="/datasets/%s/items/%s/annotations/%s"
                  % (context.item.dataset.id, context.item.id, ann.id),

@@ -16,5 +16,3 @@ Feature: Datasets repository list function testing
         Then I receive a datasets list of "1" dataset
         And The dataset in the list equals the dataset I created
 
-    Scenario: Finally
-        Given Clean up

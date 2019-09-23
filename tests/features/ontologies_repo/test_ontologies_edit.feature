@@ -18,5 +18,3 @@ Feature: Ontologies repository Update function testing
         When I update ontology system metadata
         Then Dataset ontology in host equal ontology uploaded
 
-    Scenario: Finally
-        Given Clean up

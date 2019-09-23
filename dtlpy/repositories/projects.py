@@ -1,25 +1,25 @@
 import logging
 from .. import entities, utilities, PlatformException
-import attr
+
+logger = logging.getLogger(name=__name__)
 
 
-@attr.s
 class Projects:
     """
     Projects repository
     """
-    client_api = attr.ib()
-    logger = attr.ib(default=logging.getLogger('dataloop.repositories.projects'))
+
+    def __init__(self, client_api):
+        self._client_api = client_api
 
     def __get_by_id(self, project_id):
-        success, response = self.client_api.gen_request(req_type='get',
-                                                        path='/projects/%s' % project_id)
+        success, response = self._client_api.gen_request(req_type='get',
+                                                         path='/projects/{}'.format(project_id))
         if success:
-            project = entities.Project.from_json(client_api=self.client_api,
+            project = entities.Project.from_json(client_api=self._client_api,
                                                  _json=response.json())
         else:
-            self.logger.exception('Platform error getting project. id: %s', project_id)
-            raise PlatformException('404', 'Project not found.')
+            raise PlatformException('404', 'Project not found. Id: {}'.format(project_id))
         return project
 
     def __get_by_identifier(self, identifier):
@@ -39,9 +39,9 @@ class Projects:
 
     def open_in_web(self, project_name=None, project_id=None, project=None):
         import webbrowser
-        if self.client_api.environment == 'https://gate.dataloop.ai/api/v1':
+        if self._client_api.environment == 'https://gate.dataloop.ai/api/v1':
             head = 'https://console.dataloop.ai'
-        elif self.client_api.environment == 'https://dev-gate.dataloop.ai/api/v1':
+        elif self._client_api.environment == 'https://dev-gate.dataloop.ai/api/v1':
             head = 'https://dev-con.dataloop.ai'
         else:
             raise PlatformException('400', 'Unknown environment')
@@ -57,23 +57,23 @@ class Projects:
         :return:
         """
         project = self.__get_by_identifier(identifier)
-        self.client_api.state_io.put('project', project.id)
-        self.logger.info('Checked out to project {}'.format(project.name))
+        self._client_api.state_io.put('project', project.id)
+        logger.info('Checked out to project {}'.format(project.name))
 
     def list(self):
         """
         Get users project's list.
         :return: List of Project objects
         """
-        success, response = self.client_api.gen_request(req_type='get',
-                                                        path='/projects')
+        success, response = self._client_api.gen_request(req_type='get',
+                                                         path='/projects')
         if success:
             projects = utilities.List(
-                [entities.Project.from_json(client_api=self.client_api,
+                [entities.Project.from_json(client_api=self._client_api,
                                             _json=_json)
                  for _json in response.json()])
         else:
-            self.logger.exception('Platform error getting projects')
+            logger.exception('Platform error getting projects')
             raise PlatformException(response)
         return projects
 
@@ -93,18 +93,16 @@ class Projects:
             project = [project for project in projects if project.name == project_name]
             if not project:
                 # list is empty
-                self.logger.info('Project not found. project_name: %s', project_name)
-                raise PlatformException('404', 'Project not found.')
+                raise PlatformException('404', 'Project not found. Name: {}'.format(project_name))
                 # project = None
             elif len(project) > 1:
                 # more than one matching project
-                self.logger.exception('More than one project with same name. Please "get" by id')
                 raise PlatformException('404', 'More than one project with same name. Please "get" by id')
             else:
                 project = project[0]
         else:
             # get from state cookie
-            state_project_id = self.client_api.state_io.get('project')
+            state_project_id = self._client_api.state_io.get('project')
             if state_project_id is None:
                 raise PlatformException('400', 'Must choose by "project_id" or "project_name" OR checkout a project')
             else:
@@ -123,9 +121,9 @@ class Projects:
         """
         if sure and really:
             project = self.get(project_name=project_name, project_id=project_id)
-            success, response = self.client_api.gen_request('delete', '/projects/%s' % project.id)
+            success, response = self._client_api.gen_request(req_type='delete',
+                                                             path='/projects/{}'.format(project.id))
             if not success:
-                self.logger.exception('Platform error deleting a project')
                 raise PlatformException(response)
             return True
 
@@ -138,16 +136,15 @@ class Projects:
         Update a project
         :return: Project object
         """
-        url_path = '/projects/%s' % project.id
+        url_path = '/projects/{}'.format(project.id)
         if system_metadata:
             url_path += '?system=true'
-        success, response = self.client_api.gen_request(req_type='patch',
-                                                        path=url_path,
-                                                        json_req=project.to_json())
+        success, response = self._client_api.gen_request(req_type='patch',
+                                                         path=url_path,
+                                                         json_req=project.to_json())
         if success:
             return project
         else:
-            self.logger.exception('Platform error updating dataset. id: %s' % project.id)
             raise PlatformException(response)
 
     def create(self, project_name):
@@ -157,14 +154,13 @@ class Projects:
         :return: Project object
         """
         payload = {'name': project_name}
-        success, response = self.client_api.gen_request(req_type='post',
-                                                        path='/projects',
-                                                        data=payload)
+        success, response = self._client_api.gen_request(req_type='post',
+                                                         path='/projects',
+                                                         data=payload)
         if success:
-            project = entities.Project.from_json(client_api=self.client_api,
+            project = entities.Project.from_json(client_api=self._client_api,
                                                  _json=response.json())
         else:
-            self.logger.exception('Platform error creating a project')
             raise PlatformException(response)
         assert isinstance(project, entities.Project)
         return project

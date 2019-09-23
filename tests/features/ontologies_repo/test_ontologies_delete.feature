@@ -14,5 +14,3 @@ Feature: Ontologies repository Delete function testing
         When I try to delete ontology by "some_id"
         Then "BadRequest" exception should be raised
 
-    Scenario: Finally
-        Given Clean up

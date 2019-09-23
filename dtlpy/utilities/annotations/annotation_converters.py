@@ -10,6 +10,8 @@ from jinja2 import Environment, PackageLoader
 from multiprocessing.pool import ThreadPool
 import dtlpy as dl
 
+logger = logging.getLogger(name=__name__)
+
 
 class BaseConverterFromPlatform:
     def __init__(self, project_name, dataset_name, output_directory, remote_path):
@@ -44,9 +46,6 @@ class BaseConverterFromPlatform:
             self.results[i_item] = False
 
     def run(self):
-        logger = logging.getLogger('dataloop.utilities.annotations.converter.%s' % self.name)
-
-
         # create temp path to save dataloop annotations
         local_annotations_path = os.path.join(tempfile.gettempdir(),
                                               'dataloop_annotations_{}'.format(hash(os.times())))

@@ -1,10 +1,11 @@
-import os
+from collections import namedtuple
 import logging
 import attr
+import os
 
-from .. import repositories, utilities
+from .. import repositories, utilities, entities, services
 
-logger = logging.getLogger('dataloop.dataset')
+logger = logging.getLogger(name=__name__)
 
 
 @attr.s
@@ -12,7 +13,7 @@ class Dataset:
     """
     Dataset object
     """
-    client_api = attr.ib()
+    # dataset information
     id = attr.ib()
     url = attr.ib()
     name = attr.ib()
@@ -21,16 +22,18 @@ class Dataset:
     projects = attr.ib()
     itemsCount = attr.ib()
     metadata = attr.ib()
-    items_url = attr.ib()
+    items_url = attr.ib()  # name change when to_json
     directoryTree = attr.ib()
     export = attr.ib()
 
+    # api
+    _client_api = attr.ib(type=services.ApiClient)
+
     # entities
-    project = attr.ib()
+    _project = attr.ib(default=None)
 
     # repositories
-    _items = attr.ib()
-    _recipes = attr.ib()
+    _repositories = attr.ib()
 
     # defaults
     _ontology_ids = attr.ib(default=None)
@@ -41,40 +44,46 @@ class Dataset:
         """
         Build a Dataset entity object from a json
 
-        :param _json: _json respons form host
+        :param _json: _json response form host
         :param project: dataset's project
         :param client_api: client_api
         :return: Dataset object
         """
-        if 'metadata' in _json:
-            metadata = _json['metadata']
-        else:
-            metadata = None
+        return cls(metadata=_json.get('metadata', None),
+                   directoryTree=_json['directoryTree'],
+                   itemsCount=_json['itemsCount'],
+                   annotated=_json['annotated'],
+                   projects=_json['projects'],
+                   creator=_json['creator'],
+                   items_url=_json['items'],
+                   export=_json['export'],
+                   name=_json['name'],
+                   url=_json['url'],
+                   id=_json['id'],
 
-        return cls(
-            client_api=client_api,
-            annotated=_json['annotated'],
-            creator=_json['creator'],
-            directoryTree=_json['directoryTree'],
-            export=_json['export'],
-            id=_json['id'],
-            items_url=_json['items'],
-            itemsCount=_json['itemsCount'],
-            name=_json['name'],
-            projects=_json['projects'],
-            url=_json['url'],
-            project=project,
-            metadata=metadata)
+                   client_api=client_api,
+                   project=project)
+
+    def to_json(self):
+        """
+        Returns platform _json format of object
+
+        :return: platform json format of object
+        """
+        _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(Dataset)._client_api,
+                                                              attr.fields(Dataset)._project,
+                                                              attr.fields(Dataset)._repositories,
+                                                              attr.fields(Dataset)._ontology_ids,
+                                                              attr.fields(Dataset)._labels,
+                                                              attr.fields(Dataset).items_url))
+        _json.update({'items': self.items_url})
+        return _json
 
     @property
     def labels(self):
         if self._labels is None:
             self._labels = self.recipes.list()[0].ontologies.list()[0].labels
         return self._labels
-
-    @labels.setter
-    def labels(self, labels):
-        self._labels = labels
 
     @property
     def ontology_ids(self):
@@ -87,50 +96,54 @@ class Dataset:
                     self._ontology_ids += recipe.ontologyIds
         return self._ontology_ids
 
-    @ontology_ids.setter
-    def ontology_ids(self, ids):
-        if not isinstance(ids, list):
-            ids = [ids]
-        self._ontology_ids = ids
+    @_repositories.default
+    def set_repositories(self):
+        reps = namedtuple('repositories',
+                          field_names=['items', 'recipes', 'datasets'])
+        if self._project is None:
+            datasets = repositories.Datasets(client_api=self._client_api, project=self._project)
+        else:
+            datasets = self._project.datasets
 
-    @_items.default
-    def set_items(self):
-        return repositories.Items(dataset=self, client_api=self.client_api)
+        r = reps(items=repositories.Items(client_api=self._client_api, dataset=self),
+                 recipes=repositories.Recipes(client_api=self._client_api, dataset=self),
+                 datasets=datasets)
+        return r
 
     @property
     def items(self):
-        assert isinstance(self._items, repositories.Items)
-        return self._items
-
-    @_recipes.default
-    def set_recipes(self):
-        return repositories.Recipes(dataset=self, client_api=self.client_api)
+        assert isinstance(self._repositories.items, repositories.Items)
+        return self._repositories.items
 
     @property
     def recipes(self):
-        assert isinstance(self._recipes, repositories.Recipes)
-        return self._recipes
+        assert isinstance(self._repositories.recipes, repositories.Recipes)
+        return self._repositories.recipes
+
+    @property
+    def datasets(self):
+        assert isinstance(self._repositories.datasets, repositories.Datasets)
+        return self._repositories.datasets
+
+    @property
+    def project(self):
+        if self._project is None:
+            # get project from the dataset information
+            self._project = repositories.Projects(client_api=self._client_api).get(project_id=self.projects[0])
+        assert isinstance(self._project, entities.Project)
+        return self._project
+
+    @project.setter
+    def project(self, project):
+        self._project = project
 
     def __copy__(self):
-        return Dataset.from_json(_json=self.to_json(), project=self.project, client_api=self.client_api)
-
-    def to_json(self):
-        """
-        Returns platform _json format of object
-
-        :return: platform json format of object
-        """
-        _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(Dataset)._items,
-                                                              attr.fields(Dataset).items_url,
-                                                              attr.fields(Dataset).project,
-                                                              attr.fields(Dataset)._recipes,
-                                                              attr.fields(Dataset).client_api))
-        _json.update({'items': self.items_url})
-        return _json
+        return Dataset.from_json(_json=self.to_json(), project=self._project, client_api=self._client_api)
 
     def __get_local_path__(self):
-        if self.project is not None:
-            local_path = os.path.join(os.path.expanduser('~'), '.dataloop',
+        if self._project is not None:
+            local_path = os.path.join(os.path.expanduser('~'),
+                                      '.dataloop',
                                       'projects', self.project.name,
                                       'datasets', self.name)
         else:
@@ -165,35 +178,53 @@ class Dataset:
     def delete(self, sure=False, really=False):
         """
         Delete a dataset forever!
+
         :param sure: are you sure you want to delete?
         :param really: really really?
         :return:
         """
-        return self.project.datasets.delete(dataset_id=self.id,
-                                            sure=sure,
-                                            really=really)
+        return self.datasets.delete(dataset_id=self.id,
+                                    sure=sure,
+                                    really=really)
 
     def update(self, system_metadata=False):
         """
         Update dataset field
+
         :param system_metadata: bool - True, if you want to change metadata system
         :return:
         """
-        return self.project.datasets.update(dataset=self, system_metadata=system_metadata)
+        return self.datasets.update(dataset=self,
+                                    system_metadata=system_metadata)
 
     def download_annotations(self, local_path, overwrite=False):
-        return self.project.datasets.download_annotations(dataset=self,
-                                                          local_path=local_path,
-                                                          overwrite=overwrite)
+        return self.datasets.download_annotations(dataset=self,
+                                                  local_path=local_path,
+                                                  overwrite=overwrite)
 
     def checkout(self):
         """
-        Check - out as dataset
-        :param
-        identifier: project name or partial id
+        Checkout the dataset
+
         :return:
         """
-        self.project.datasets.checkout(identifier=self.name)
+        self.datasets.checkout(identifier=self.name)
 
     def open_in_web(self):
-        self.project.datasets.open_in_web(dataset=self)
+        """
+        Open the dataset in web platform
+
+        :return:
+        """
+        self.datasets.open_in_web(dataset=self)
+
+    def add_label(self, label_name, color=None, children=None, attributes=None, display_label=None):
+        recipe = self.recipes.get(recipe_id=self.get_recipe_ids()[0])
+        ontology = recipe.ontologies.get(ontology_id=recipe.ontologyIds[0])
+        ontology.add_label(label_name=label_name,
+                           color=color,
+                           children=children,
+                           attributes=attributes,
+                           display_label=display_label)
+        ontology = ontology.update(system_metadata=True)
+        self._labels = ontology.labels

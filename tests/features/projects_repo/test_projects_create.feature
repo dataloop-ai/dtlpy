@@ -17,6 +17,3 @@ Feature: Projects repository create function testing
         When I try to create a project by the name of "project_create_same_name"
         Then "InternalServerError" exception should be raised
         And Error message includes "already created"
-
-    Scenario: Finally
-        Given Remove cookie

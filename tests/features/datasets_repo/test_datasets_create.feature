@@ -24,5 +24,3 @@ Feature: Datasets repository create function testing
         Then "BadRequest" exception should be raised
         And No dataset was created
 
-    Scenario: Finally
-        Given Clean up

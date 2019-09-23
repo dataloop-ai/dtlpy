@@ -21,6 +21,5 @@ Feature: Annotaions repository download function testing
         When I download items annotations with instance to "downloaded_annotations/instance.png"
         Then Item annotation "instance" has been downloaded to "downloaded_annotations"
 
-    Scenario: Finally
-        Given Clean up
+
 

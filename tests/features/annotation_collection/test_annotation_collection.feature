@@ -48,5 +48,3 @@ Feature: Annotations collection testing
         When I upload annotation collection
         Then Annotations in host equal annotations uploded
 
-    Scenario: Finally
-        Given Clean up

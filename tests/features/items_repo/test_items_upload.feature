@@ -70,5 +70,3 @@ Feature: Items repository upload function testing
         #todo
         # And vidoe download from host equal video in "sample_video.mp4"
 
-    Scenario: Finally
-        Given Clean up

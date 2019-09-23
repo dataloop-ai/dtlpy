@@ -3,10 +3,11 @@ import logging
 import traceback
 from . import PipelineBuilder
 
+logger = logging.getLogger(name=__name__)
+
 
 class PipelineRunner:
     def __init__(self, platform_interface, reporter):
-        self.logger = logging.getLogger('dataloop.pipeline_runner')
         # login with input token
         self.platform_interface = platform_interface
         self.pipeline_builder = PipelineBuilder()
@@ -22,8 +23,7 @@ class PipelineRunner:
         pipeline = self.platform_interface.pipelines.get(
             pipeline_id=pipeline_id)
         if pipeline is None:
-            self.logger.exception(
-                'Pipe length is more than 1. pipe_id: %s' % pipeline_id)
+            logger.exception('Pipe length is more than 1. pipe_id: %s' % pipeline_id)
             assert False
         pipeline_str = pipeline.arch
         pipeline_dict = json.loads(pipeline_str)
@@ -43,8 +43,7 @@ class PipelineRunner:
             for in_param in self.pipeline_builder.inputs:
                 if in_param not in context:
                     missing = True
-                    self.logger.exception(
-                        'Missing input parameter for pipe: %s' % in_param)
+                    logger.exception('Missing input parameter for pipe: %s' % in_param)
             if missing:
                 raise ValueError(
                     'Input parameters missing. See above for information')
@@ -73,7 +72,7 @@ class PipelineRunner:
                 except FileNotFoundError as err:
                     err_msg = '%s\n%s' % (traceback.format_exc(),
                                           'Custom file wasn\'t found. It needs to be is a different stage from the Unpack step')
-                    self.logger.exception(err_msg)
+                    logger.exception(err_msg)
                     raise FileNotFoundError(err_msg)
 
                 # if stage is multiple - load all generator
@@ -122,14 +121,15 @@ class PipelineRunner:
                                   'name: {}'.format(step.name)
                             total_progress = (i_stage / self.pipeline_builder.n_stages) + \
                                              (i_batch_in_gen / n_batch_in_gen / self.pipeline_builder.n_stages) + \
-                                             (i_step / len(stage.steps) / n_batch_in_gen / self.pipeline_builder.n_stages)
+                                             (i_step / len(
+                                                 stage.steps) / n_batch_in_gen / self.pipeline_builder.n_stages)
 
                             self.reporter.send_progress({'percent_complete': int(100 * total_progress),
                                                          'message': 'running ' + msg})
-                            self.logger.info(msg)
+                            logger.info(msg)
 
                             # for debug
-                            # self.logger.debug(context)
+                            # logger.debug(context)
                             ################
                             # execute step #
                             ################
@@ -139,7 +139,7 @@ class PipelineRunner:
                             # check if stop pipe initiated
                             if 'stop_pipe' in context and context['stop_pipe']:
                                 self.reporter.send_progress({'status': 'canceled'})
-                                self.logger.info('Pipe stopped. stop_pipe initiated.')
+                                logger.info('Pipe stopped. stop_pipe initiated.')
                                 return
                         i_batch_in_gen += 1
                         if stage.type.lower() != 'multiple':
@@ -154,8 +154,8 @@ class PipelineRunner:
                     for g in g_list:
                         del g
         except Exception as err:
-            self.logger.exception(traceback.format_exc())
-            self.logger.exception(err)
+            logger.exception(traceback.format_exc())
+            logger.exception(err)
             self.reporter.send_progress({'status': 'failed',
                                          'error': '%s' % traceback.format_exc()})
             raise

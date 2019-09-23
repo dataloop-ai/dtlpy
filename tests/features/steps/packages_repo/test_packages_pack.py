@@ -18,7 +18,7 @@ def step_impl(context):
     context.packages = context.dl.repositories.Packages(
         project=context.project,
         dataset=context.dataset,
-        client_api=context.dataset.items.client_api,
+        client_api=context.dataset.items._client_api,
     )
 
 @behave.given(u"Project has packages repositiory")
@@ -31,20 +31,20 @@ def step_impl(context):
     context.packages = context.dl.repositories.Packages(
         project=context.project,
         dataset=context.dataset,
-        client_api=context.dataset.items.client_api,
+        client_api=context.dataset.items._client_api,
     )
 
 
 @behave.given(u"I init packages with params project, client_api")
 def step_impl(context):
     context.packages = context.dl.repositories.Packages(
-        project=context.project, client_api=context.dataset.items.client_api
+        project=context.project, client_api=context.dataset.items._client_api
     )
 
 
 @behave.when(u'I pack directory by name "{package_name}"')
 def step_impl(context, package_name):
-    context.package = context.packages.pack(
+    context.package = context.project.packages.pack(
         directory=context.package_local_dir,
         name=package_name,
         description="some description",
@@ -53,7 +53,7 @@ def step_impl(context, package_name):
 
 @behave.when(u"I pack directory - nameless")
 def step_impl(context):
-    context.package = context.packages.pack(
+    context.package = context.project.packages.pack(
         directory=context.package_local_dir
         # name="Package_name",
         # description="some description"
@@ -69,7 +69,7 @@ def step_impl(context):
 def step_impl(context, original_path, unpack_path):
     original_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], original_path)
     unpack_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], unpack_path)
-    context.packages.unpack(package_id=context.package.id, local_path=unpack_path)
+    context.project.packages.unpack(package_id=context.package.id, local_path=unpack_path)
     unpack_path = os.path.join(unpack_path, 'dist')
     dirs = os.listdir(unpack_path)
     if 'folder_keeper' in dirs:
@@ -93,7 +93,7 @@ def step_impl(context, binaries_dataset_name):
 def step_impl(context, original_path, dataset_name, unpack_path):
     original_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], original_path)
     unpack_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], unpack_path)
-    context.packages.unpack(package_id=context.package.id, local_path=unpack_path)
+    context.project.packages.unpack(package_id=context.package.id, local_path=unpack_path)
     unpack_path = os.path.join(unpack_path, 'dist')
     dirs = os.listdir(unpack_path)
     if 'folder_keeper' in dirs:
@@ -109,7 +109,7 @@ def step_impl(context, original_path, dataset_name, unpack_path):
 @behave.then(u'There should be "{version_count}" versions of the package "{package_name}" in host')
 def step_impl(context, version_count, package_name):
     package_name = os.path.split(os.path.split(context.package.filename)[0])[-1]
-    package_get = context.packages.get(package_name=package_name, version="all")
+    package_get = context.project.packages.get(package_name=package_name, version="all")
     assert package_get.items_count == int(version_count)
 
 

@@ -32,6 +32,10 @@ Content
 
 :ref:`14`
 
+:ref:`15`
+
+:ref:`16`
+
 .. _1:
 
 Add metadata to items
@@ -143,3 +147,9 @@ Move items to another folder in platform
 Filters
 ----------------------------------------
 .. literalinclude:: ../dtlpy/examples/filters.py
+
+.. _16:
+
+Delete Annotations
+----------------------------------------
+.. literalinclude:: ../dtlpy/examples/delete_annotations.py

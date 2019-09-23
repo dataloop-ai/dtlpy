@@ -17,5 +17,3 @@ Feature: Items repository set_items_entity function testing
         When I try to change entity to "Dataset"
         Then "Forbidden" exception should be raised
 
-    Scenario: Finally
-        Given Clean up

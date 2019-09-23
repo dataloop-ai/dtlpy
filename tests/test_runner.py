@@ -2,6 +2,7 @@ import subprocess
 import traceback
 import json
 import time
+import jwt
 import sys
 import os
 import dtlpy as dl
@@ -23,45 +24,53 @@ def clean_feature_log_file(log_filepath):
 
 
 def test_feature_file(w_feature_filename):
-    log_filepath = os.path.join(TEST_DIR, 'logs', os.path.basename(w_feature_filename) + '.log')
+    log_path = os.path.join(TEST_DIR, 'logs')
+    if not os.path.isdir(log_path):
+        os.makedirs(log_path, exist_ok=True)
     print('Starting feature file: {}'.format(feature_filepath))
-
+    log_filepath = None
     try:
-        clean_feature_log_file(log_filepath)
-        if not os.path.isdir(os.path.dirname(log_filepath)):
-            os.makedirs(os.path.dirname(log_filepath), exist_ok=True)
-
-        cmds = ['behave', features_path,
-                '-i', w_feature_filename,
-                '--stop',
-                '-o', log_filepath,
-                '--summary',
-                '--no-capture']
         for i in range(NUM_TRIES):
+            log_filepath = os.path.join(log_path, os.path.basename(w_feature_filename) + '_try_{}.log'.format(i + 1))
+            clean_feature_log_file(log_filepath)
+            cmds = ['behave', features_path,
+                    '-i', w_feature_filename,
+                    '--stop',
+                    '-o', log_filepath,
+                    '--logging-level=DEBUG',
+                    '--summary',
+                    '--no-capture']
             # need to run a new process to avoid collisions
             p = subprocess.Popen(cmds)
             p.communicate()
             if p.returncode == 0:
                 break
 
-        directory, file = os.path.split(log_filepath)
-        if p.returncode == 0:
-            # passes
-            new_log_filepath = os.path.join(directory, 'pass_' + file)
-            os.rename(log_filepath, new_log_filepath)
-            results[w_feature_filename] = (True, new_log_filepath)
+        if log_filepath is None:
+            results[w_feature_filename] = (False, '')
         else:
-            # failed
-            new_log_filepath = os.path.join(directory, 'fail_' + file)
-            os.rename(log_filepath, new_log_filepath)
-            results[w_feature_filename] = (False, new_log_filepath)
+            directory, file = os.path.split(log_filepath)
+            if p.returncode == 0:
+                # passes
+                new_log_filepath = os.path.join(directory, 'pass_' + file)
+                if os.path.isfile(log_filepath):
+                    os.rename(log_filepath, new_log_filepath)
+                results[w_feature_filename] = (True, new_log_filepath)
+            else:
+                # failed
+                new_log_filepath = os.path.join(directory, 'fail_' + file)
+                if os.path.isfile(log_filepath):
+                    os.rename(log_filepath, new_log_filepath)
+                results[w_feature_filename] = (False, new_log_filepath)
     except:
         print(traceback.format_exc())
         results[w_feature_filename] = (False, log_filepath)
 
 
 if __name__ == '__main__':
+    print('########################################')
     print('Running test from directory: {}'.format(TEST_DIR))
+    print('########################################')
 
     # reset SDK api calls
     dl.client_api.calls_counter.reset()
@@ -80,7 +89,12 @@ if __name__ == '__main__':
 
     # set timer and environment
     start_time = time.time()
+    # set env to dev
     dl.setenv('dev')
+    # check token
+    payload = jwt.decode(dl.token(), algorithms=['HS256'], verify=False)
+    if payload['email'] not in ['oa-test-1@dataloop.ai', 'oa-test-2@dataloop.ai']:
+        assert False, 'Cannot run test on user: "{}". only test users'.format(payload['email'])
 
     # run tests
     pool = ThreadPool(processes=32)
@@ -117,9 +131,9 @@ if __name__ == '__main__':
     passed = all(all_results)
     print('-------------- Summary --------------')
     print('Current loop api calls: ', str(api_calls))
-    print('Tests took: ' + str(int((end_time - start_time) / 100)) + ' minutes')
+    print('Tests took: {:.2f}[s]'.format(end_time - start_time))
     if passed:
-        print('All scenarios passed!:')
+        print('All scenarios passed! {}/{}:'.format(np.sum([1 for res in all_results if res is True]), len(all_results)))
     else:
         print('Failed {}/{}:'.format(np.sum([1 for res in all_results if res is False]), len(all_results)))
         for feature, result in results.items():

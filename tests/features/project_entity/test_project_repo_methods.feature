@@ -12,5 +12,4 @@ Feature: Project Entity repo functions
         When I change project name to "new_project_name"
         Then Project in host has name "new_project_name"
 
-    Scenario: Finally
-        Given Clean up
+

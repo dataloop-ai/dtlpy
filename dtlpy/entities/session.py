@@ -1,65 +1,51 @@
-import logging
-from .. import utilities
 import attr
-
-logger = logging.getLogger('dataloop.package')
+from .. import repositories, entities, services
 
 
 @attr.s
 class Session:
     """
-    Session object
+    Deployment session entity
     """
     # platform
     id = attr.ib()
+    url = attr.ib()
     createdAt = attr.ib()
     updatedAt = attr.ib()
-    url = attr.ib()
-    taskId = attr.ib()
-
-    # params
     input = attr.ib()
     output = attr.ib()
-    error = attr.ib()
     feedbackQueue = attr.ib()
     status = attr.ib()
-    metadata = attr.ib()
-    latestStatus = attr.ib()
-    reporting_exchange = attr.ib()
-    reporting_route = attr.ib()
+    triggerId = attr.ib()
+    deploymentId = attr.ib()
+    syncReplyTo = attr.ib()
 
-    # entities
-    task = attr.ib()
+    # name changed
+    project_id = attr.ib()
+
+    # sdk
+    _client_api = attr.ib(type=services.ApiClient)
+    _deployment = attr.ib()
 
     @classmethod
-    def from_json(cls, _json, task):
-        """
-        Build a Session entity object from a json
+    def from_json(cls, _json, client_api, deployment=None):
 
-        :param _json: _json respons form host
-        :param task: session's task
-        :return: Session object
-        """
         return cls(
-            task=task,
-            id=_json['id'],
-            createdAt=_json['createdAt'],
-            updatedAt=_json['updatedAt'],
-            input=_json['input'],
-            output=_json.get('output', list()),
-            error=_json.get('error', str()),
-            feedbackQueue=_json['feedbackQueue'],
-            status=_json['status'],
-            metadata=_json['metadata'],
-            latestStatus=_json['latestStatus'],
-            url=_json['url'],
-            taskId=_json['metadata']['system']['taskId'],
-            reporting_exchange=_json['feedbackQueue']['exchange'],
-            reporting_route=_json['feedbackQueue']['routing']
+            feedbackQueue=_json.get('feedbackQueue', None),
+            deploymentId=_json.get('deploymentId', None),
+            syncReplyTo=_json.get('syncReplyTo', None),
+            project_id=_json.get('project', None),
+            createdAt=_json.get('createdAt', None),
+            updatedAt=_json.get('updatedAt', None),
+            triggerId=_json.get('triggerId', None),
+            output=_json.get('output', None),
+            status=_json.get('status', None),
+            input=_json.get('input', None),
+            url=_json.get('url', None),
+            id=_json.get('id', None),
+            client_api=client_api,
+            deployment=deployment
         )
-
-    def print(self):
-        utilities.List([self]).print()
 
     def to_json(self):
         """
@@ -67,7 +53,39 @@ class Session:
 
         :return: platform json format of object
         """
-        return attr.asdict(self,
-                           filter=attr.filters.exclude(attr.fields(Session).taskId,
-                                                       attr.fields(Session).reporting_exchange,
-                                                       attr.fields(Session).reporting_route))
+        # get excluded
+        _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(Session)._client_api,
+                                                              attr.fields(Session).project_id,
+                                                              attr.fields(Session)._deployment))
+        # rename
+        _json['project'] = self.project_id
+        return _json
+
+    @property
+    def deployment(self):
+        if self._deployment is None:
+            deployments = repositories.Deployments(client_api=self._client_api)
+            self._deployment = deployments.get(deployment_id=self.deploymentId)
+        assert isinstance(self._deployment, entities.Deployment)
+        return self._deployment
+
+    @deployment.setter
+    def deployment(self, deployment):
+        assert isinstance(deployment, entities.Deployment)
+        self._deployment = deployment
+
+    def progress_update(self, status=None, percent_complete=None, message=None, output=None):
+        """
+        Update Session Progress
+
+        :param status:
+        :param percent_complete:
+        :param message:
+        :param output:
+        :return:
+        """
+        return self.deployment.sessions.progress_update(session_id=self.id,
+                                                        status=status,
+                                                        percent_complete=percent_complete,
+                                                        message=message,
+                                                        output=output)

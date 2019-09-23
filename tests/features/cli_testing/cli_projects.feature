@@ -14,10 +14,10 @@ Feature: Cli Projects
 
     Scenario: Projects Create
         When I perform command:
-            |projects|create|-p|cli_project_<random>|
+            |projects|create|-p|test_<random>_cli_project|
         Then I succeed
-        And There is a project by the name of "cli_project_<random>"
-        And "cli_project_<random>" in output
+        And There is a project by the name of "test_<random>_cli_project"
+        And "test_<random>_cli_project" in output
 
     Scenario: Finally
-        Given I delete the project by the name of "cli_project_<random>"
+        Given I delete the project by the name of "test_<random>_cli_project"

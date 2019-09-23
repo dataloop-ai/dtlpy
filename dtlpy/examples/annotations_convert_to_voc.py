@@ -1,8 +1,9 @@
 def main():
-    from dtlpy.utilities.annotations import DtlpyToVoc
+    import dtlpy as dl
 
-    converter = DtlpyToVoc(project_name='MyProject',
-                           dataset_name='MyDataset',
-                           output_annotations_path='/local/path/to/save/annotations',
-                           remote_path='/remote/platform/path/to/convert')
-    converter.run()
+    project = dl.projects.get(project_name='Ocean')
+    dataset = project.datasets.get(dataset_name='Sharks')
+
+    converter = dl.Converter()
+    converter.convert_dataset(dataset=dataset, to_format='voc',
+                              local_path='home/voc_annotations/sharks')

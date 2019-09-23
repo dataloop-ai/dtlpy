@@ -1,4 +1,3 @@
-import cv2
 import base64
 import logging
 import io
@@ -6,7 +5,7 @@ from PIL import Image
 import attr
 import numpy as np
 
-logger = logging.getLogger("dataloop.annotations.objects")
+logger = logging.getLogger(name=__name__)
 
 
 @attr.s
@@ -67,7 +66,7 @@ class Classification:
             image = add_text_to_image(image=image, annotation=self)
         return image
 
-    def to_coordinates(self):
+    def to_coordinates(self, color):
         return list()
 
     @classmethod
@@ -131,6 +130,13 @@ class Point:
         :param color: color
         :return: ndarray
         """
+        try:
+            import cv2
+        except ImportError:
+            logger.error(
+                'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
+            raise
+
         # point cant have thickness 1
         if thickness is None or thickness == -1:
             thickness = 5
@@ -148,7 +154,7 @@ class Point:
             image = add_text_to_image(image=image, annotation=self)
         return image
 
-    def to_coordinates(self):
+    def to_coordinates(self, color):
         return {"x": float(self.x), "y": float(self.y), "z": float(self.z)}
 
     @staticmethod
@@ -238,6 +244,13 @@ class Ellipse:
         :param color: color
         :return: ndarray
         """
+        try:
+            import cv2
+        except ImportError:
+            logger.error(
+                'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
+            raise
+
         if thickness is None:
             thickness = 2
 
@@ -257,7 +270,7 @@ class Ellipse:
             image = add_text_to_image(image=image, annotation=self)
         return image
 
-    def to_coordinates(self):
+    def to_coordinates(self, color):
         return {'angle': float(self.angle),
                 'center': {'x': float(self.x),
                            'y': float(self.y),
@@ -343,6 +356,13 @@ class Box:
         :param color: color
         :return: ndarray
         """
+        try:
+            import cv2
+        except ImportError:
+            logger.error(
+                'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
+            raise
+
         if thickness is None:
             thickness = 2
 
@@ -359,7 +379,7 @@ class Box:
             image = add_text_to_image(image=image, annotation=self)
         return image
 
-    def to_coordinates(self):
+    def to_coordinates(self, color):
         return [{"x": float(x), "y": float(y), "z": 0} for x, y in self.geo]
 
     @staticmethod
@@ -434,7 +454,7 @@ class Polyline:
     def bottom(self):
         return np.max(self.y)
 
-    def to_coordinates(self):
+    def to_coordinates(self, color):
         return [{"x": float(x), "y": float(y)} for x, y in self.geo]
 
     @staticmethod
@@ -453,7 +473,14 @@ class Polyline:
         :param color: color
         :return: ndarray
         """
-        # poloyline cant have thickness -1
+        try:
+            import cv2
+        except ImportError:
+            logger.error(
+                'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
+            raise
+
+        # polyline cant have thickness -1
         if thickness is None or thickness == -1:
             thickness = 1
 
@@ -528,7 +555,7 @@ class Polygon:
     def bottom(self):
         return np.max(self.y)
 
-    def to_coordinates(self):
+    def to_coordinates(self, color):
         return [[{"x": float(x), "y": float(y)} for x, y in self.geo]]
 
     @staticmethod
@@ -547,6 +574,13 @@ class Polygon:
         :param color: color
         :return: ndarray
         """
+        try:
+            import cv2
+        except ImportError:
+            logger.error(
+                'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
+            raise
+
         if thickness is None:
             thickness = 2
         elif thickness == -1 and self.is_open:
@@ -575,6 +609,13 @@ class Polygon:
 
     @classmethod
     def from_segmentation(cls, mask, label, attributes=None, epsilon=None):
+        try:
+            import cv2
+        except ImportError:
+            logger.error(
+                'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
+            raise
+
         # mask float
         mask = 1. * mask
         # normalize to 1
@@ -724,6 +765,13 @@ class Segmentation:
         :param attributes:
         :return:
         """
+        try:
+            import cv2
+        except ImportError:
+            logger.error(
+                'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
+            raise
+
         # plot polygon on a blank mask with thickness -1 to fill the polyline
         mask = np.zeros(shape=shape)
         mask = cv2.drawContours(image=mask,
@@ -769,6 +817,13 @@ class Segmentation:
 
 
 def add_text_to_image(image, annotation):
+    try:
+        import cv2
+    except ImportError:
+        logger.error(
+            'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
+        raise
+
     text = '{label}-{attributes}'.format(label=annotation.label, attributes=','.join(annotation.attributes))
     top = annotation.top
     left = annotation.left

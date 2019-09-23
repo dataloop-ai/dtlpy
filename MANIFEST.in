@@ -1,4 +1,4 @@
 include README.rst
 include docs/*.txt
 include dtlpy/assets/*
-include dtlpy/repositories/plugins/assets/*
+include dtlpy/repositories/plugins_assets/*

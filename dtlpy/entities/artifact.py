@@ -3,16 +3,14 @@ from .. import utilities, entities
 import attr
 import copy
 
-logger = logging.getLogger('dataloop.artifact')
+logger = logging.getLogger(name=__name__)
 
 
 @attr.s
 class Artifact(entities.Item):
-    description = attr.ib(default=None)
-    creator = attr.ib(default=None)
 
     @classmethod
-    def from_json(cls, _json, dataset, client_api):
+    def from_json(cls, _json, client_api, dataset=None):
         """
         Build an Artifact entity object from a json
         :param _json: _json response form host
@@ -22,31 +20,24 @@ class Artifact(entities.Item):
         """
 
         return cls(
+            # sdk
+            platform_dict=copy.deepcopy(_json),
             client_api=client_api,
             dataset=dataset,
-            creator=_json.get('creator', None),
-            description=_json.get('description', None),
-            annotated=_json.get('annotated', None),
+            # params
             annotations_link=_json.get('annotations_link', None),
-            stream=_json.get('stream', None),
+            createdAt=_json.get('createdAt', None),
+            datasetId=_json.get('datasetId', None),
             thumbnail=_json.get('thumbnail', None),
-            url=_json.get('url', None),
-            filename=_json.get('filename', None),
-            id=_json['id'],
-            metadata=_json.get('metadata', None),
-            mimetype=None,
-            name=_json.get('name', None),
-            size=None,
-            system=None,
-            type=_json.get('type', None),
-            annotations=None,
-            height=None,
-            width=None,
-            fps=None,
+            annotated=_json.get('annotated', None),
             dataset_url=_json.get('dataset', None),
-            platform_dict=copy.deepcopy(_json),
-            created_at=_json.get('createdAt', None)
-        )
+            filename=_json.get('filename', None),
+            metadata=_json.get('metadata', None),
+            stream=_json.get('stream', None),
+            name=_json.get('name', None),
+            type=_json.get('type', None),
+            url=_json.get('url', None),
+            id=_json['id'])
 
     def print(self):
         """
@@ -55,16 +46,3 @@ class Artifact(entities.Item):
         """
         utilities.List([self]).print()
 
-    def download(self, session_id=None, task_id=None, local_path=None, overwrite=False):
-        """
-        Download artifact binary. Get artifact by name, id or type
-        :param local_path: artifact will be saved to this filepath
-        :param overwrite: optional - default = False
-        :param session_id:
-        :param task_id:
-        :return: Artifact object
-        """
-
-        return self.dataset.project.artifacts.download(artifact_id=self.id, artifact_name=self.name,
-                                                       session_id=session_id, task_id=task_id,
-                                                       local_path=local_path, overwrite=overwrite)

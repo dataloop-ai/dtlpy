@@ -30,5 +30,3 @@ Feature: Annotations repository show method testing
         And I show items annotations with param "object_id"
         Then I receive annotations mask and it is equal to mask in "new_object_id_should_be.npy"
 
-    Scenario: Finally
-        Given Clean up

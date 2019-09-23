@@ -23,5 +23,3 @@ Feature: Datasets repository delete function testing
         Then "NotFound" exception should be raised
         And No dataset was deleted
 
-    Scenario: Finally
-        Given Clean up

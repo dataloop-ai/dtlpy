@@ -1,7 +1,7 @@
 import attr
 import logging
 
-logger = logging.getLogger('dataloop.label')
+logger = logging.getLogger(name=__name__)
 
 
 @attr.s

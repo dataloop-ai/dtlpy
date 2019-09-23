@@ -17,8 +17,6 @@ from .item import Item
 from .trigger import Trigger
 from .project import Project
 from .artifact import Artifact
-from .task import Task
-from .session import Session
 from .dataset import Dataset
 from .package import Package
 from .annotation import Annotation, FrameAnnotation
@@ -31,3 +29,5 @@ from .annotation_definitions import Box, Point, Segmentation, Polygon, Ellipse, 
 from .label import Label
 from .plugin import Plugin, PluginInput, PluginOutput
 from .time_series import TimeSeries
+from .deployment import Deployment
+from .session import Session

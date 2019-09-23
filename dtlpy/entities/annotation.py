@@ -1,14 +1,14 @@
-import logging
 import numpy as np
-import cv2
+import logging
+import attr
 import json
 
 from PIL import Image
+from collections import namedtuple
 
 from .. import utilities, entities, PlatformException
-import attr
 
-logger = logging.getLogger("dataloop.annotation")
+logger = logging.getLogger(name=__name__)
 
 
 @attr.s
@@ -56,7 +56,8 @@ class Annotation:
     ####################################
     @property
     def coordinates(self):
-        return self.annotation_definition.to_coordinates()
+        coordinates = self.annotation_definition.to_coordinates(color=self.color)
+        return coordinates
 
     @property
     def x(self):
@@ -304,6 +305,13 @@ class Annotation:
         :param color: optional
         :return: ndarray of the annotations
         """
+        try:
+            import cv2
+        except ImportError:
+            logger.error(
+                'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
+            raise
+
         # height/width
         if height is None:
             if self.item.height is None:
@@ -515,6 +523,10 @@ class Annotation:
         # handle 'note'
         if _json['type'] == 'note':
             return None
+        if item is None:
+            logger.info('Using Dummy item for loading annotations')
+            named = namedtuple('Item', field_names=['mimetype', 'url', 'id', 'dataset_url'])
+            item = named('image/jpeg', '', '', '')
 
         # get item type
         is_video = False
@@ -835,10 +847,7 @@ class FrameAnnotation:
 
     @property
     def coordinates(self):
-        if self.annotation_definition.type == 'binary':
-            coordinates = self.annotation_definition.to_coordinates(color=self.color)
-        else:
-            coordinates = self.annotation_definition.to_coordinates()
+        coordinates = self.annotation_definition.to_coordinates(color=self.color)
         return coordinates
 
     @property

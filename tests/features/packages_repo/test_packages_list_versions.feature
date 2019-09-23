@@ -7,7 +7,6 @@ Feature: Packages repository List Version method
 
     Scenario: List all versions when 2 exist
         Given There is a Package directory with a python file in path "packages_assets/packages_list_versions"
-        And I init packages with params project, dataset, client_api
         When I pack directory by name "package_name"
         And I modify python file - (change version) in path "packages_assets/packages_list_versions/some_code.py"
         And I pack directory by name "package_name"
@@ -16,15 +15,11 @@ Feature: Packages repository List Version method
 
     Scenario: List all versions when 1 exist
         Given There is a Package directory with a python file in path "packages_assets/packages_list_versions"
-        And I init packages with params project, dataset, client_api
-        When I pack directory by name "package_name"
-        When I list versions of "package_name"
+        When I pack directory by name "package_name1"
+        When I list versions of "package_name1"
         Then I receive a list of "1" versions
 
     Scenario: List all versions when 0 exist
-        Given I init packages with params project, dataset, client_api
-        When I list versions of "package_name"
+        When I list versions of "package_name2"
         Then I receive a list of "0" versions
 
-    Scenario: Finally
-        Given Clean up

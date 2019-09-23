@@ -7,7 +7,7 @@ import time
 import json
 import logging
 
-logger = logging.getLogger('dataloop.cookie')
+logger = logging.getLogger(name=__name__)
 
 NUM_TRIES = 3
 
@@ -16,6 +16,7 @@ class CookieIO:
     """
     Cookie interface for Dataloop parameters
     """
+
     def __init__(self, path, create=True, local=False):
         self.COOKIE = path
         self.local = local
@@ -39,12 +40,12 @@ class CookieIO:
         return CookieIO(plugin_json_file, create=create, local=True)
 
     def create(self):
-        logger.debug('COOKIE.create: File: {}'.format(self.COOKIE))
         # create directory '.dataloop' if not exists
-        if not os.path.exists(os.path.dirname(self.COOKIE)):
+        if not os.path.isdir(os.path.dirname(self.COOKIE)):
             os.makedirs(os.path.dirname(self.COOKIE))
 
-        if not os.path.exists(self.COOKIE) or os.path.getsize(self.COOKIE) == 0:
+        if not os.path.isfile(self.COOKIE) or os.path.getsize(self.COOKIE) == 0:
+            logger.debug('COOKIE.create: File: {}'.format(self.COOKIE))
             self.reset()
         try:
             with open(self.COOKIE, 'r') as f:
@@ -82,17 +83,21 @@ class CookieIO:
         return cfg
 
     def get(self, key):
-        logger.debug('COOKIE.read: key: {}'.format(key))
+        if key not in ['calls_counter']:
+            # ignore logging for some keys
+            logger.debug('COOKIE.read: key: {}'.format(key))
         cfg = self.read_json()
         if key in cfg.keys():
             value = cfg[key]
         else:
-            logger.warning(msg='key not in platform cookie file: %s. Return None' % key)
+            logger.warning(msg='Key not in platform cookie file: %s. Return None' % key)
             value = None
         return value
 
     def put(self, key, value):
-        logger.debug('COOKIE.write: key: {}'.format(key))
+        if key not in ['calls_counter']:
+            # ignore logging for some keys
+            logger.debug('COOKIE.write: key: {}'.format(key))
         # read and write
         cfg = self.read_json(create=True)
         cfg[key] = value

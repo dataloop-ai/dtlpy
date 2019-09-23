@@ -21,5 +21,3 @@ Feature: Annotaions repository Delete function testing
         Then "NotFound" exception should be raised
         And No annotation was deleted
 
-    Scenario: Finally
-        Given Clean up

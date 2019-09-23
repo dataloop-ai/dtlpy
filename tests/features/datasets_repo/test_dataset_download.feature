@@ -14,5 +14,3 @@ Feature: Datasets repository download function testing
         Then Dataset downloaded to "downloaded_dataset" is equal to dataset in "downloaded_dataset-should_be"
         And There is no "log" file in folder "downloaded_dataset"
 
-    Scenario: Finally
-        Given Clean up

@@ -20,6 +20,3 @@ Feature: Recipes repository create function testing
         When I create a new plain recipe with existing ontology id
         And I update dataset recipe to the new recipe
         Then Dataset recipe in host equals the one created
-
-    Scenario: Finally
-        Given Clean up

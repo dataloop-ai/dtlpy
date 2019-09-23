@@ -2,7 +2,7 @@ import logging
 from ..exceptions import PlatformException
 import os
 
-logger = logging.getLogger('dataloop.items.filters')
+logger = logging.getLogger(name=__name__)
 
 
 class Filters:

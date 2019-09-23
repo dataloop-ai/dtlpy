@@ -20,5 +20,3 @@ Feature: Annotation Entity Add annotation
         And I upload annotation created
         Then Item in host has annotation added
 
-    Scenario: Finally
-        Given Clean up

@@ -1,9 +1,10 @@
 import logging
-from .. import entities, utilities
-from multiprocessing.pool import ThreadPool
 import attr
+from multiprocessing.pool import ThreadPool
 
-logger = logging.getLogger('dataloop.package')
+from .. import entities, utilities, services
+
+logger = logging.getLogger(name=__name__)
 
 
 @attr.s
@@ -11,11 +12,14 @@ class PagedEntities:
     """
     Pages object
     """
+    # api
+    _client_api = attr.ib(type=services.ApiClient)
+
+    # params
     page_offset = attr.ib()
     page_size = attr.ib()
     filters = attr.ib()
     items_repository = attr.ib()
-    client_api = attr.ib()
     item_entity = attr.ib(default=entities.Item)
     has_next_page = attr.ib(default=False)
     total_pages_count = attr.ib(default=0)
@@ -38,7 +42,7 @@ class PagedEntities:
         if 'items' in result:
             if self.filters.resource == 'items':
                 self.items = utilities.List(
-                    [self.item_entity.from_json(client_api=self.client_api,
+                    [self.item_entity.from_json(client_api=self._client_api,
                                                 _json=_json,
                                                 dataset=self.items_repository.dataset)
                      for _json in result['items']])
@@ -51,6 +55,15 @@ class PagedEntities:
         while self.has_next_page:
             self.get_page()
             self.page_offset += 1
+            yield self.items
+
+    def __reversed__(self):
+        self.page_offset = self.total_pages_count - 1
+        has_next = self.page_offset != 0
+        while has_next:
+            self.get_page()
+            self.page_offset -= 1
+            has_next = self.page_offset != 0
             yield self.items
 
     def get_page(self):

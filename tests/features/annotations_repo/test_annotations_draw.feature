@@ -22,5 +22,3 @@ Feature: Annotations repository Draw method testing
     #     And I draw items annotations with param "instance"
     #     Then I receive annotations mask and it is equal to mask in "new_instance_should_be_draw.npy"
 
-    Scenario: Finally
-        Given Clean up

@@ -78,3 +78,8 @@ from tests.features.steps.cli_testing import cli_datasets
 from tests.features.steps.cli_testing import cli_others
 
 from tests.features.steps.checkout_testing import test_checkout
+
+from tests.features.steps.plugins_repo import plugins_generate
+from tests.features.steps.plugins_repo import plugins_push
+from tests.features.steps.plugins_repo import plugins_get
+from tests.features.steps.plugins_repo import plugins_list

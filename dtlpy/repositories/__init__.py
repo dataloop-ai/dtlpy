@@ -18,9 +18,7 @@ from .artifacts import Artifacts
 from .datasets import Datasets
 from .items import Items
 from .packages import Packages
-from .tasks import Tasks
 from .projects import Projects
-from .sessions import Sessions
 from .ontologies import Ontologies
 from .recipes import Recipes
 from .plugins import Plugins
@@ -28,3 +26,5 @@ from .downloader import Downloader
 from .uploader import Uploader
 from .triggers import Triggers
 from .times_series import TimesSeries
+from .deployments import Deployments
+from .sessions import Sessions

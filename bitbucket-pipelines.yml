@@ -15,7 +15,7 @@ pipelines:
           - gsutil -m cp -R gs://sdl-tests-assets/assets tests/
           - python tests/test_examples.py
           - python tests/test_runner.py
-          # - rm -rf dist
+          # - docker login -u _json_key -p "$GCP_KEY" https://gcr.io
           # - python setup.py bdist_wheel
           # - mv dist/* dist/dtlpy-latest-py3-none-any.whl
           # - gsutil cp dist/dtlpy-latest-py3-none-any.whl gs://dtlpy/dev

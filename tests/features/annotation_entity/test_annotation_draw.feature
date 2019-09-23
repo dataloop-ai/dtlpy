@@ -22,5 +22,3 @@ Feature: Annotation Entity Draw annotation
     #     And I draw to image in "0000000162.jpg" all annotations with param "instance"
     #     Then Annotations drawn equal numpy in "draw_image_instance_should_be.npy"
 
-    Scenario: Finally
-        Given Clean up

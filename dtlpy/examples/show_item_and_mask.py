@@ -4,8 +4,8 @@ def main(project_name, dataset_name, item_remote_path):
     :return:
     """
     import dtlpy as dl
-    from PIL import Image
     import numpy as np
+    from PIL import Image
 
     # Get project and dataset
     project = dl.projects.get(project_name=project_name)
@@ -32,3 +32,22 @@ def main(project_name, dataset_name, item_remote_path):
     # plot on top
     image.paste(annotations, (0, 0), annotations)
     image.show()
+
+    #####################################################
+    # show annotations from json file (Dataloop format) #
+    #####################################################
+    # import dtlpy as dl
+    # from PIL import Image
+    # import json
+    #
+    # with open('annotations.json', 'r') as f:
+    #     data = json.load(f)
+    #
+    # for annotation in data['annotations']:
+    #     annotations = dl.Annotation.from_json(annotation)
+    #     mask = annotations.show(width=640,
+    #                             height=480,
+    #                             thickness=3,
+    #                             color=(255, 0, 0))
+    #     mask = Image.fromarray(mask.astype(np.uint8))
+    #     mask.show()

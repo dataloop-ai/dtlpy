@@ -49,5 +49,4 @@ Feature: Annotaions repository update function testing
         When I update annotation
         Then Annotation x coordinates should be changed accordingly
 
-    Scenario: Finally
-        Given Clean up
+

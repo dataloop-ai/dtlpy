@@ -20,5 +20,4 @@ Feature: Datasets repository download_annotations function testing
     #     Then I get a folder named "json" in assets folder
     #     And The folder named "json" in folder assets is empty
 
-    Scenario: Finally
-        Given Clean up
+

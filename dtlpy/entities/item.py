@@ -1,10 +1,12 @@
+from collections import namedtuple
 import logging
-import copy
-from .. import repositories, utilities, PlatformException
 import attr
+import copy
 import os
 
-logger = logging.getLogger('dataloop.item')
+from .. import repositories, utilities, entities, services, PlatformException
+
+logger = logging.getLogger(name=__name__)
 
 
 @attr.s
@@ -12,40 +14,33 @@ class Item:
     """
     Item object
     """
-    # platform
-    client_api = attr.ib()
-    id = attr.ib()
+    # item information
     annotations_link = attr.ib()
-    stream = attr.ib()
-    thumbnail = attr.ib()
-    metadata = attr.ib()
-    url = attr.ib()
-    system = attr.ib()
-    platform_dict = attr.ib()
-    created_at = attr.ib()
     dataset_url = attr.ib()
-
-    # params
+    thumbnail = attr.ib()
+    createdAt = attr.ib()
+    datasetId = attr.ib()
     annotated = attr.ib()
+    metadata = attr.ib()
     filename = attr.ib()
-    mimetype = attr.ib()
+    stream = attr.ib()
     name = attr.ib()
-    size = attr.ib()
     type = attr.ib()
-    fps = attr.ib()
+    url = attr.ib()
+    id = attr.ib()
+
+    # api
+    _client_api = attr.ib(type=services.ApiClient)
+    _platform_dict = attr.ib()
 
     # entities
-    dataset = attr.ib()
+    _dataset = attr.ib()
 
     # repositories
-    _annotations = attr.ib()
-
-    # defaults
-    width = attr.ib()
-    height = attr.ib()
+    _repositories = attr.ib()
 
     @classmethod
-    def from_json(cls, _json, dataset, client_api):
+    def from_json(cls, _json, client_api, dataset=None):
         """
         Build an item entity object from a json
         :param _json: _json response form host
@@ -53,118 +48,121 @@ class Item:
         :param client_api: client_api
         :return: Item object
         """
-        if _json['type'] == 'dir':
-            return cls(
-                client_api=client_api,
-                dataset=dataset,
-                annotated=None,
-                annotations_link=None,
-                stream=None,
-                thumbnail=None,
-                url=_json['url'],
-                filename=_json['filename'],
-                id=_json['id'],
-                metadata=_json['metadata'],
-                mimetype=None,
-                name=_json['name'],
-                size=None,
-                system=None,
-                type=_json['type'],
-                fps=None,
-                dataset_url=_json.get('dataset', None),
-                platform_dict=copy.deepcopy(_json),
-                created_at=_json.get('createdAt', None))
-        elif _json['type'] == 'file':
-            fps = _json.get('fps', None)
-            if fps is None and 'metadata' in _json:
-                fps = _json['metadata'].get('fps', None)
-            return cls(
-                client_api=client_api,
-                dataset=dataset,
-                annotated=_json['annotated'],
-                annotations_link=_json['annotations'],
-                stream=_json['stream'],
-                thumbnail=_json['thumbnail'],
-                url=_json['url'],
-                filename=_json['filename'],
-                id=_json['id'],
-                metadata=_json['metadata'],
-                mimetype=_json['metadata']['system']['mimetype'],
-                name=_json['name'],
-                size=_json['metadata']['system']['size'],
-                system=_json['metadata']['system'],
-                type=_json['type'],
-                fps=fps,
-                dataset_url=_json.get('dataset', None),
-                platform_dict=copy.deepcopy(_json),
-                created_at=_json.get('createdAt', None))
-        else:
-            message = 'Unknown item type: %s' % _json['type']
-            raise PlatformException('404', message)
-
-    @_annotations.default
-    def set_annotations(self):
-        return repositories.Annotations(dataset=self.dataset, item=self, client_api=self.client_api)
-
-    @property
-    def annotations(self):
-        assert isinstance(self._annotations, repositories.Annotations)
-        return self._annotations
-
-    @height.default
-    def set_height(self):
-        height = None
-        if self.system is not None and 'height' in self.system:
-            height = self.system['height']
-        return height
-
-    @width.default
-    def set_width(self):
-        width = None
-        if self.system is not None and 'width' in self.system:
-            width = self.system['width']
-        return width
-
-    def set_metadata(self, metadata):
-        self.metadata = metadata
+        return cls(
+            # sdk
+            platform_dict=copy.deepcopy(_json),
+            client_api=client_api,
+            dataset=dataset,
+            # params
+            annotations_link=_json.get('annotations', None),
+            thumbnail=_json.get('thumbnail', None),
+            datasetId=_json.get('datasetId', None),
+            annotated=_json.get('annotated', None),
+            dataset_url=_json.get('dataset', None),
+            createdAt=_json.get('createdAt', None),
+            stream=_json.get('stream', None),
+            filename=_json['filename'],
+            metadata=_json['metadata'],
+            name=_json['name'],
+            type=_json['type'],
+            url=_json['url'],
+            id=_json['id'])
 
     def to_json(self):
         """
         Returns platform _json format of object
         :return: platform json format of object
         """
-        if self.type == 'dir':
-            _json = attr.asdict(self,
-                                filter=attr.filters.include(attr.fields(Item).id,
-                                                            attr.fields(Item).filename,
-                                                            attr.fields(Item).type,
-                                                            attr.fields(Item).metadata,
-                                                            attr.fields(Item).name,
-                                                            attr.fields(Item).url))
-        elif self.type == 'file':
-            _json = attr.asdict(self,
-                                filter=attr.filters.include(attr.fields(Item).id,
-                                                            attr.fields(Item).filename,
-                                                            attr.fields(Item).type,
-                                                            attr.fields(Item).metadata,
-                                                            attr.fields(Item).name,
-                                                            attr.fields(Item).url,
-                                                            attr.fields(Item).annotated,
-                                                            attr.fields(Item).thumbnail,
-                                                            attr.fields(Item).stream))
-            _json.update({'annotations': self.annotations_link})
-        else:
-            message = 'Unknown item type: %s' % self.type
-            raise PlatformException('404', message)
-        _json['createdAt'] = self.created_at
-        _json['dataset'] = self.dataset_url
-        _json['datasetId'] = self.dataset.id
+        _json = attr.asdict(self,
+                            filter=attr.filters.exclude(attr.fields(Item)._repositories,
+                                                        attr.fields(Item)._dataset,
+                                                        attr.fields(Item)._client_api,
+                                                        attr.fields(Item)._platform_dict,
+                                                        attr.fields(Item).dataset_url,
+                                                        attr.fields(Item).annotations_link))
+
+        _json.update({'annotations': self.annotations_link,
+                      'dataset': self.dataset_url})
         return _json
 
-    def from_dict(self, metadata):
-        # does nothing
-        return
+    @_repositories.default
+    def set_repositories(self):
+        reps = namedtuple('repositories',
+                          field_names=['annotations', 'items', 'packages', 'artifacts'])
+        reps.__new__.__defaults__ = (None, None, None, None)
 
+        if self._dataset is None:
+            items = repositories.Items(client_api=self._client_api, dataset=None)
+        else:
+            items = self.dataset.items
+
+        r = reps(annotations=repositories.Annotations(client_api=self._client_api, item=self),
+                 items=items)
+        return r
+
+    ##############
+    # Properties #
+    ##############
+    @property
+    def height(self):
+        return self.metadata.get('system', dict()).get('height', None)
+
+    @height.setter
+    def height(self, val):
+        if 'system' not in self.metadata:
+            self.metadata['system'] = dict()
+        self.metadata['system']['height'] = val
+
+    @property
+    def width(self):
+        return self.metadata.get('system', dict()).get('width', None)
+
+    @width.setter
+    def width(self, val):
+        if 'system' not in self.metadata:
+            self.metadata['system'] = dict()
+        self.metadata['system']['width'] = val
+
+    @property
+    def fps(self):
+        return self.metadata.get('fps', None)
+
+    @fps.setter
+    def fps(self, val):
+        self.metadata['fps'] = val
+
+    @property
+    def mimetype(self):
+        return self.metadata.get('system', dict()).get('mimetype', None)
+
+    @property
+    def size(self):
+        return self.metadata.get('system', dict()).get('size', None)
+
+    @property
+    def system(self):
+        return self.metadata.get('system', dict())
+
+    @property
+    def annotations(self):
+        assert isinstance(self._repositories.annotations, repositories.Annotations)
+        return self._repositories.annotations
+
+    @property
+    def items(self):
+        assert isinstance(self._repositories.items, repositories.Items)
+        return self._repositories.items
+
+    @property
+    def dataset(self):
+        if self._dataset is None:
+            self._dataset = repositories.Datasets(client_api=self._client_api).get(dataset_id=self.datasetId)
+        assert isinstance(self._dataset, entities.Dataset)
+        return self._dataset
+
+    ###########
+    # Methods #
+    ###########
     def print(self):
         utilities.List([self]).print()
 
@@ -199,29 +197,28 @@ class Item:
         """
         # if dir - concatenate local path and item name
         if local_path is not None:
-                _, ext = os.path.splitext(local_path)
-                if not ext:
-                    local_path = os.path.join(local_path, self.name)
+            _, ext = os.path.splitext(local_path)
+            if not ext:
+                local_path = os.path.join(local_path, self.name)
 
         # download
-        return self.dataset.items.download(items=self,
-                                           local_path=local_path,
-                                           file_types=file_types,
-                                           save_locally=save_locally,
-                                           num_workers=num_workers,
-                                           annotation_options=annotation_options,
-                                           overwrite=overwrite,
-                                           to_items_folder=to_items_folder,
-                                           thickness=thickness,
-                                           with_text=with_text
-                                           )
+        return self.items.download(items=self,
+                                   local_path=local_path,
+                                   file_types=file_types,
+                                   save_locally=save_locally,
+                                   num_workers=num_workers,
+                                   annotation_options=annotation_options,
+                                   overwrite=overwrite,
+                                   to_items_folder=to_items_folder,
+                                   thickness=thickness,
+                                   with_text=with_text)
 
     def delete(self):
         """
         Delete item from platform
         :return: True
         """
-        return self.dataset.items.delete(item_id=self.id)
+        return self.items.delete(item_id=self.id)
 
     def update(self, system_metadata=False):
         """
@@ -229,7 +226,7 @@ class Item:
         :param system_metadata: bool
         :return: Item object
         """
-        return self.dataset.items.update(item=self, system_metadata=system_metadata)
+        return self.items.update(item=self, system_metadata=system_metadata)
 
     def move(self, new_path):
         """
@@ -251,4 +248,4 @@ class Item:
         return self.update(system_metadata=True)
 
     def open_in_web(self):
-        self.dataset.items.open_in_web(item=self)
+        self.items.open_in_web(item=self)

@@ -19,6 +19,3 @@ Feature: Annotaions repository List function testing
         When I list all annotations
         Then I receive a list of all annotations
         And The annotations in the list equals the annotations uploaded
-
-    Scenario: Finally
-        Given Clean up

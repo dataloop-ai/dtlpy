@@ -1,21 +1,22 @@
-import io
-import os
-import tqdm
-import json
-import logging
+import validators
+import threading
 import traceback
 import datetime
-import threading
-from multiprocessing.pool import ThreadPool
-from .. import PlatformException, entities, repositories, exceptions
-import requests
-from requests.packages.urllib3.util.retry import Retry
-from requests.adapters import HTTPAdapter
-import validators
 import tempfile
+import requests
+import logging
 import shutil
+import json
+import tqdm
+import os
+import io
+from multiprocessing.pool import ThreadPool
+from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
 
-logger = logging.getLogger("dataloop.repositories.items.uploader")
+from .. import PlatformException, entities, repositories, exceptions
+
+logger = logging.getLogger(name=__name__)
 
 NUM_TRIES = 3  # try to upload 3 time before fail on item
 
@@ -34,6 +35,7 @@ class Uploader:
     def __init__(self, items_repository):
         assert isinstance(items_repository, repositories.Items)
         self.items_repository = items_repository
+        self.__stop_create_existence_dict = False
 
     def upload(
             self,
@@ -73,6 +75,7 @@ class Uploader:
         ##########################
         # Convert inputs to list #
         ##########################
+        local_annotations_path_list = None
         if not isinstance(local_path, list):
             local_path_list = [local_path]
             if local_annotations_path is not None:
@@ -149,6 +152,7 @@ class Uploader:
                                             annotations_filepath=annotations_filepath)
                     elements.append(element)
                 elif self.is_url(upload_item_element):
+                    # noinspection PyTypeChecker
                     remote_filepath = remote_path + upload_item_element.split('/')[-1]
                     element = UploadElement(element_type='url',
                                             buffer=upload_item_element,
@@ -156,12 +160,13 @@ class Uploader:
                                             annotations_filepath=upload_annotations_element)
                     elements.append(element)
                 else:
-                    raise PlatformException("404", "Unknown local path: %s" % local_path)
+                    raise PlatformException("404", "Unknown local path: {}".format(local_path))
             else:
                 # binary element
                 if not hasattr(upload_item_element, "name"):
                     raise PlatformException(error="400",
-                                            message='Must put attribute "name" on buffer (with file name) when uploading buffers')
+                                            message='Must put attribute "name" on buffer (with file name) '
+                                                    'when uploading buffers')
                 remote_filepath = remote_path + upload_item_element.name
                 element = UploadElement(element_type='buffer',
                                         buffer=upload_item_element,
@@ -179,6 +184,7 @@ class Uploader:
         # get remote existence dictionary #
         ###################################
         remote_existence_dict = dict()
+        self.__stop_create_existence_dict = False  # used to break and kill the thread
         thread = threading.Thread(
             target=self.__create_existence_dict_worker,
             kwargs={
@@ -239,6 +245,10 @@ class Uploader:
                                  )
             pool.close()
             pool.join()
+        # kill dictionary
+        self.__stop_create_existence_dict = True
+        thread.join()
+        # summary
         n_upload = status.count("upload")
         n_exist = status.count("exist")
         n_error = status.count("error")
@@ -249,7 +259,8 @@ class Uploader:
 
         # log error
         if n_error > 0:
-            log_filepath = "log_%s.txt" % datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            log_filepath = os.path.join(os.getcwd(),
+                                        "log_{}.txt".format(datetime.datetime.now().strftime("%Y%m%d_%H%M%S")))
             errors_list = [errors[i_job] for i_job, suc in enumerate(success) if suc is False]
             with open(log_filepath, "w") as f:
                 f.write("\n".join(errors_list))
@@ -272,15 +283,29 @@ class Uploader:
         """
         try:
             # get pages of item according to remote filepath
+
+            item_remote_paths = list()
+            for filepath in item_remote_filepaths:
+                path = os.path.dirname(filepath)
+                if path not in item_remote_paths:
+                    item_remote_paths.append(path)
+
+            # filters.add(field="type", values="file")
+            # add remote paths to check existence
             filters = entities.Filters()
-            filters.add(field="type", values="file")
+            filters.show_hidden = True
+            for remote_path in item_remote_paths:
+                if not remote_path.endswith('/'):
+                    remote_path += '/'
+                filters.add(field='filename', values={'$glob': remote_path + '*'})
+            filters.method = 'or'
             pages = self.items_repository.list(filters=filters)
 
             # join path and filename for all uploads
-            item_remote_filepaths = [
-                file[0] + file[1] for file in item_remote_filepaths
-            ]
+
             for page in pages:
+                if self.__stop_create_existence_dict:
+                    break
                 for item in page:
                     # check in current remote item filename exists in uploaded list
                     if item.filename in item_remote_filepaths:
@@ -292,13 +317,14 @@ class Uploader:
                     remote_existence_dict[item_remote_filepath] = None
 
         except Exception:
-            logger.error("{}\nerror getting items from platform".format(traceback.format_exc()))
+            logger.error('{}\nCant create existence dictionary when uploading'.format(traceback.format_exc()))
 
     def __upload_single_item(self,
                              filepath,
                              annotations,
                              remote_path,
                              uploaded_filename,
+                             last_try
                              ):
         """
         Upload an item to dataset
@@ -307,31 +333,34 @@ class Uploader:
         :param filepath: local filepath of the item
         :param remote_path: remote directory of filepath to upload
         :param uploaded_filename: optional - remote filename
+        :param last_try: print log error only if last try
         :return: Item object
         """
+        need_close = False
         if isinstance(filepath, str):
             # upload local file
             if not os.path.isfile(filepath):
                 raise PlatformException(error="404", message="Filepath doesnt exists. file: {}".format(filepath))
             if uploaded_filename is None:
                 uploaded_filename = os.path.basename(filepath)
-            remote_url = "/datasets/%s/items" % self.items_repository.dataset.id
-            result, response = self.items_repository.client_api.upload_local_file(
-                filepath=filepath,
-                remote_url=remote_url,
-                uploaded_filename=uploaded_filename,
-                remote_path=remote_path,
-            )
+            if os.path.isfile(filepath):
+                item_type = 'file'
+            else:
+                item_type = 'dir'
+            item_size = os.stat(filepath).st_size
+            to_upload = open(filepath, 'rb')
+            need_close = True
+
         else:
             # upload from buffer
             if isinstance(filepath, bytes):
-                buffer = io.BytesIO(filepath)
+                to_upload = io.BytesIO(filepath)
             elif isinstance(filepath, io.BytesIO):
-                buffer = filepath
+                to_upload = filepath
             elif isinstance(filepath, io.BufferedReader):
-                buffer = filepath
+                to_upload = filepath
             elif isinstance(filepath, io.TextIOWrapper):
-                buffer = filepath
+                to_upload = filepath
             else:
                 raise PlatformException("400", "unknown file type")
 
@@ -341,73 +370,82 @@ class Uploader:
                 else:
                     raise PlatformException(error="400",
                                             message="Must have filename when uploading bytes array (uploaded_filename)")
-            files = {"file": (uploaded_filename, buffer)}
-            payload = {"path": os.path.join(remote_path, uploaded_filename).replace("\\", "/"),
-                       "type": "file"}
-            result, response = self.items_repository.client_api.gen_request(
-                req_type="post",
-                path="/datasets/%s/items" % self.items_repository.dataset.id,
-                files=files,
-                data=payload,
-            )
+
+            item_size = to_upload.seek(0, 2)
+            to_upload.seek(0)
+            item_type = 'file'
+        remote_url = "/datasets/{}/items".format(self.items_repository.dataset.id)
+        try:
+            result, response = self.items_repository._client_api.upload_from_local(to_upload=to_upload,
+                                                                                   item_size=item_size,
+                                                                                   item_type=item_type,
+                                                                                   remote_url=remote_url,
+                                                                                   uploaded_filename=uploaded_filename,
+                                                                                   remote_path=remote_path,
+                                                                                   log_error=last_try)
+        except:
+            raise
+        finally:
+            if need_close:
+                to_upload.close()
+
         if result:
-            item = self.items_repository.items_entity.from_json(
-                client_api=self.items_repository.client_api,
-                _json=response.json(),
-                dataset=self.items_repository.dataset,
-            )
+            item = self.items_repository.items_entity.from_json(client_api=self.items_repository._client_api,
+                                                                _json=response.json(),
+                                                                dataset=self.items_repository.dataset)
             if annotations is not None:
                 try:
                     self.__upload_annotations(annotations=annotations, item=item)
                 except Exception:
                     logger.error(traceback.format_exc())
-            logger.debug("Item uploaded successfully. Item id: {}".format(item.id))
-            return item
         else:
             raise PlatformException(response)
+        return item
 
-    def __upload_single_item_wrapper(self,
-                                     i_item,
-                                     element,
-                                     pbar,
-                                     status,
-                                     success,
-                                     output,
-                                     errors,
-                                     ):
+    def __upload_single_item_wrapper(self, i_item, element, pbar, status, success, output, errors, ):
         assert isinstance(element, UploadElement)
-        result = False
+        item = False
         err = None
+        trace = None
         saved_locally = False
         temp_dir = None
         remote_folder, remote_filename = os.path.split(element.remote_filepath)
         for i_try in range(NUM_TRIES):
-            logger.debug("upload item: {}, try {}".format(remote_filename, i_try))
             try:
+                logger.debug("Upload item: {path}. Try {i}/{n}. Starting..".format(path=remote_filename,
+                                                                                   i=i_try + 1,
+                                                                                   n=NUM_TRIES))
                 if element.type == 'url':
                     saved_locally, element.buffer, temp_dir = self.url_to_data(element.buffer)
-                result = self.__upload_single_item(
-                    filepath=element.buffer,
-                    annotations=element.annotations_filepath,
-                    remote_path=remote_folder,
-                    uploaded_filename=remote_filename,
-                )
-                if result:
+                item = self.__upload_single_item(filepath=element.buffer,
+                                                 annotations=element.annotations_filepath,
+                                                 remote_path=remote_folder,
+                                                 uploaded_filename=remote_filename,
+                                                 last_try=(i_try + 1) == NUM_TRIES)
+                logger.debug("Upload item: {path}. Try {i}/{n}. Success. Item id: {id}".format(path=remote_filename,
+                                                                                               i=i_try + 1,
+                                                                                               n=NUM_TRIES,
+                                                                                               id=item.id))
+                if isinstance(item, entities.Item):
                     break
             except Exception as e:
+                logger.debug("Upload item: {path}. Try {i}/{n}. Fail.".format(path=remote_filename,
+                                                                              i=i_try + 1,
+                                                                              n=NUM_TRIES))
                 err = e
+                trace = traceback.format_exc()
             finally:
                 if saved_locally and os.path.isdir(temp_dir):
                     shutil.rmtree(temp_dir)
-        if result:
+        if item:
             status[i_item] = "upload"
-            output[i_item] = result
+            output[i_item] = item
             success[i_item] = True
         else:
             status[i_item] = "error"
             output[i_item] = remote_folder + remote_filename
             success[i_item] = False
-            errors[i_item] = "%s\n%s" % (err, traceback.format_exc())
+            errors[i_item] = "{}\n{}".format(err, trace)
         pbar.update()
 
     @staticmethod
@@ -439,6 +477,7 @@ class Uploader:
         max_size = 30000000
         temp_dir = None
 
+        # This will download the binaries from the URL user provided
         prepared_request = requests.Request(method='GET', url=url).prepare()
         with requests.Session() as s:
             retry = Retry(

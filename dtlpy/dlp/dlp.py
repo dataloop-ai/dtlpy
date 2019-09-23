@@ -7,7 +7,7 @@ import subprocess
 import traceback
 import sys
 from prompt_toolkit import prompt
-from prompt_toolkit.history import FileHistory
+from prompt_toolkit.history import History
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.completion import Completer, Completion
 from fuzzyfinder.main import fuzzyfinder
@@ -24,12 +24,11 @@ if os.name == "nt":
 ##########
 # Logger #
 ##########
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("dataloop.cli")
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger(name=__name__)
 console = logging.StreamHandler()
-console.setLevel(logging.DEBUG)
+console.setLevel(logging.INFO)
 logger.addHandler(console)
+
 keywords = dict()
 param_suggestions = list()
 
@@ -66,6 +65,54 @@ class StateEnum:
 
 
 thread_state = StateEnum.START
+
+
+class FileHistory(History):
+    """
+    :class:`.History` class that stores all strings in a file.
+    """
+
+    def __init__(self, filename):
+        self.filename = filename
+        super(FileHistory, self).__init__()
+
+    def load_history_strings(self):
+        strings = []
+        lines = []
+
+        def add():
+            if lines:
+                # Join and drop trailing newline.
+                string = ''.join(lines)[:-1]
+                hide = any(field in string for field in ['password', 'secret'])
+                if not hide:
+                    strings.append(string)
+
+        if os.path.exists(self.filename):
+            with open(self.filename, 'rb') as f:
+                for line in f:
+                    line = line.decode('utf-8')
+
+                    if line.startswith('+'):
+                        lines.append(line[1:])
+                    else:
+                        add()
+                        lines = []
+
+                add()
+
+        # Reverse the order, because newest items have to go first.
+        return reversed(strings)
+
+    def store_string(self, string):
+        # Save to file.
+        with open(self.filename, 'ab') as f:
+            def write(t):
+                f.write(t.encode('utf-8'))
+
+            write('\n# %s\n' % datetime.datetime.now())
+            for line in string.split('\n'):
+                write('+%s\n' % line)
 
 
 class DlpCompleter(Completer):
@@ -555,92 +602,55 @@ def get_parser():
         help="encode video to mp4, remove bframes and upload",
     )
 
-    ############
-    # packages #
-    ############
-    subparser = subparsers.add_parser("packages", help="Operations with package")
+    ###############
+    # Deployments #
+    ###############
+    subparser = subparsers.add_parser("deployments", help="Operations with deployments")
     subparser_parser = subparser.add_subparsers(
-        dest="packages", help="package operations"
+        dest="deployments", help="deployments operations"
     )
 
-    # list
-    a = subparser_parser.add_parser("ls", help="List all package")
-    optional = a.add_argument_group("optional named arguments")
-    optional.add_argument(
-        "-p",
-        "--project-name",
-        metavar='\b',
-        default=None,
-        help="project name. Default taken from checked out (if checked out)",
-    )
-    optional.add_argument(
-        "-g", "--package-id", metavar='\b', help="list package's artifacts", default=None
-    )
+    # ACTIONS #
 
-    # pack
-    a = subparser_parser.add_parser("pack", help="Create a new package")
-    required = a.add_argument_group("required named arguments")
-    required.add_argument(
-        "-g", "--package-name", metavar='\b', help="package name", required=True
-    )
-    required.add_argument(
-        "-ds", "--description", metavar='\b', help="package description", required=True
-    )
-    required.add_argument(
-        "-dir",
-        "--directory",
-        metavar='\b',
-        help="Local path of packaeg script",
-        required=True,
+    # generate
+    a = subparser_parser.add_parser(
+        "generate", help="Generate deployment.json file"
     )
     optional = a.add_argument_group("optional named arguments")
-    optional.add_argument(
-        "-p",
-        "--project-name",
-        metavar='\b',
-        default=None,
-        help="project name. Default taken from checked out (if checked out)",
-    )
-    optional.add_argument(
-        "-d",
-        "--dataset-name",
-        metavar='\b',
-        default=None,
-        help="dataset name. Default taken from checked out (if checked out)",
-    )
+    optional.add_argument("-l", "--local-path", dest="local_path", default=None,
+                          help="path to deployment.json file")
 
-    # delete
-    a = subparser_parser.add_parser("delete", help="Delete a package forever...")
-    optional = a.add_argument_group("optional named arguments")
-    optional.add_argument(
-        "-d", "--dataset-name", metavar='\b', help="Dataset name", default=None
-    )
-
-    # unpack
-    a = subparser_parser.add_parser("unpack", help="Download and unzip source code")
-    required = a.add_argument_group("required named arguments")
-    required.add_argument(
-        "-g", "--package-id", metavar='\b', help="package id", required=True
+    # deploy
+    a = subparser_parser.add_parser(
+        "deploy", help="Deploy deployment from deployment.json file"
     )
     optional = a.add_argument_group("optional named arguments")
-    optional.add_argument(
-        "-p",
-        "--project-name",
-        metavar='\b',
-        default=None,
-        help="project name. Default taken from checked out (if checked out)",
-    )
-    optional.add_argument(
-        "-d",
-        "--directory",
-        metavar='\b',
-        default=os.getcwd(),
-        help="source code directory. default: cwd",
-    )
+    optional.add_argument("-l", "--local-path", dest="local_path", default=None,
+                          help="path to deployment.json file")
+    optional.add_argument("-pr", "--project-name", dest="project_name", default=None,
+                          help="Project name")
 
-    ############
+    # tear-down
+    a = subparser_parser.add_parser(
+        "tear-down", help="tear-down deployment of deployment.json file"
+    )
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument("-l", "--local-path", dest="local_path", default=None,
+                          help="path to deployment.json file")
+    optional.add_argument("-pr", "--project-name", dest="project_name", default=None,
+                          help="Project name")
+
+    # ls
+    a = subparser_parser.add_parser(
+        "ls", help="List project's deployments"
+    )
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument("-pr", "--project-name", dest="project_name", default=None,
+                          help="Project name")
+
+    ###########
     # Plugins #
-    ############
+    ###########
     subparser = subparsers.add_parser("plugins", help="Operations with plugins")
     subparser_parser = subparser.add_subparsers(
         dest="plugins", help="plugin operations"
@@ -652,42 +662,31 @@ def get_parser():
     a = subparser_parser.add_parser(
         "generate", help="Create a boilerplate for a new plugin"
     )
-    required = a.add_argument_group("required named arguments")
-    required.add_argument(
-        "-p", "--plugin-name", metavar='\b', help="plugin name", required=True
-    )
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument("-pr", "--project-name", dest="project_name", default=None,
+                          help="Project name")
+    optional.add_argument("-p", "--plugin-name", dest="plugin_name", default=None,
+                          help="Plugin name")
 
     # ls
-    subparser_parser.add_parser("ls", help="List plugins")
+    a = subparser_parser.add_parser("ls", help="List plugins")
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument("-p", "--project-name", dest="project_name", default=None,
+                          help="Project name")
 
     # push
-    a = subparser_parser.add_parser("push", help="Push the plugin to the platform")
+    a = subparser_parser.add_parser("push", help="Create plugin in platform")
+
     optional = a.add_argument_group("optional named arguments")
-    optional.add_argument("-d", "--deploy", dest="deploy", action='store_true', default=False,
-                          help="Push and deploy")
-    optional.add_argument("-r", "--revision", metavar='\b', default=None,
+    optional.add_argument("-src", "--src-path", metavar='\b', default=None,
                           help="Revision to deploy if selected True")
+    optional.add_argument("-pkg", "--package-id", metavar='\b', default=None,
+                          help="Revision to deploy if selected True")
+    optional.add_argument("-pr", "--project-name", metavar='\b', default=None,
+                          help="Project name")
+    optional.add_argument("-p", "--plugin-name", metavar='\b', default=None,
+                          help="Plugin name")
 
-    # invoke
-    a = subparser_parser.add_parser(
-        "invoke", help="Invoke plugin with arguments on remote"
-    )
-    optional = a.add_argument_group("optional named arguments")
-    optional.add_argument(
-        "-f",
-        "--file",
-        metavar='\b',
-        default="./mock.json",
-        help="Location of file with invocation inputs",
-    )
-
-    a = subparser_parser.add_parser("deploy", help="Deploy plugin on remote")
-    optional = a.add_argument_group("optional named arguments")
-    optional.add_argument("-r", "--revision", metavar='\b', help="plugin revision")
-
-    _ = subparser_parser.add_parser(
-        "status", help="Get the status of the plugins deployment"
-    )
     # test
     subparser_parser.add_parser(
         "test", help="Tests that plugin locally using mock.json"
@@ -698,68 +697,21 @@ def get_parser():
     required = a.add_argument_group("required named arguments")
     required.add_argument("-p", "--plugin-name", metavar='\b', help="plugin name")
 
-    ############
-    # Sessions #
-    ############
-    subparser = subparsers.add_parser("sessions", help="Operations with sessions")
-    subparser_parser = subparser.add_subparsers(
-        dest="sessions", help="Operations with sessions"
-    )
-
-    # ACTIONS #
-
-    # list
-    a = subparser_parser.add_parser("ls", help="List artifacts for session")
-    optional = a.add_argument_group("optional named arguments")
-    optional.add_argument("-p", "--project-name", metavar='\b', default=None,
-                          help="project name. Default taken from checked out (if checked out)", )
-    optional.add_argument("-i", "--session-id", metavar='\b', help="List artifacts in session id")
-
-    # tree
-    a = subparser_parser.add_parser("tree", help="Print tree representation of sessions")
-    optional = a.add_argument_group("optional named arguments")
-    optional.add_argument("-p", "--project-name", metavar='\b', default=None,
-                          help="project name. Default taken from checked out (if checked out)", )
-
-    # create
-    a = subparser_parser.add_parser("create", help="Create a new Session")
-    required = a.add_argument_group("required named arguments")
-    required.add_argument("-s", "--session-name", metavar='\b', help="session name", required=True)
-    required.add_argument("-g", "--package-id", metavar='\b', help="source code", required=True)
-    required.add_argument("-p", "--pipe-id", metavar='\b', help="pip to run", required=True)
-    required.add_argument("-d", "--description", metavar='\b', help="session description", required=True)
-
-    # upload
-    a = subparser_parser.add_parser("upload", help="Add artifact to session")
-    required = a.add_argument_group("required named arguments")
-    required.add_argument("-s", "--session-id", metavar='\b', help="session id", required=True)
-    required.add_argument("-f", "--filename", metavar='\b', help="local filename to add", required=True)
-    required.add_argument("-t", "--type", metavar='\b', help="artifact type", required=True)
-    optional = a.add_argument_group("optional named arguments")
-    optional.add_argument("-d", "--description", metavar='\b', help="file description. default: ''", default="")
-
-    # download
-    a = subparser_parser.add_parser("download", help="Download artifact from session")
-    required = a.add_argument_group("required named arguments")
-    required.add_argument("-s", "--session-id", metavar='\b', help="session id", required=True)
-    required.add_argument("-a", "--artifact-id", metavar='\b', help="artifact id", required=True)
-    required.add_argument("-d", "--local-path", metavar='\b', help="download to location", required=True)
-
     #########
     # Shell #
     #########
     # ls
-    subparsers.add_parser("ls", help="List dirs")
+    subparsers.add_parser("ls", help="List directories")
     #
     # pwd
-    subparsers.add_parser("pwd", help="Get cwd")
+    subparsers.add_parser("pwd", help="Get current working directory")
 
     # cd
-    subparser = subparsers.add_parser("cd", help="Change dir")
+    subparser = subparsers.add_parser("cd", help="Change current working directory")
     subparser.add_argument(dest='dir')
 
-    # cd
-    subparser = subparsers.add_parser("mkdir", help="Make dir")
+    # mkdir
+    subparser = subparsers.add_parser("mkdir", help="Make directory")
     subparser.add_argument(dest='name')
 
     # clear
@@ -768,7 +720,7 @@ def get_parser():
     ########
     # Exit #
     ########
-    subparsers.add_parser("exit", help="Exit bash")
+    subparsers.add_parser("exit", help="Exit interactive shell")
 
     return parser
 
@@ -781,16 +733,16 @@ def run(args, parser):
     #########
     if args.operation == "login":
         dlp.login()
+        dlp.info(with_token=False)
     elif args.operation == "login-token":
         dlp.login_token(args.token)
+        dlp.info(with_token=False)
     elif args.operation == "login-secret":
-        dlp.login_secret(
-            email=args.email,
-            password=args.password,
-            client_id=args.client_id,
-            client_secret=args.client_secret,
-        )
-
+        dlp.login_secret(email=args.email,
+                         password=args.password,
+                         client_id=args.client_id,
+                         client_secret=args.client_secret)
+        dlp.info(with_token=False)
     ########
     # Init #
     ########
@@ -1015,82 +967,45 @@ def run(args, parser):
             print(datetime.datetime.utcnow())
             print('Type "dlp videos --help" for options')
 
-    ############
-    # Packages #
-    ############
-    elif args.operation == "packages":
+    ###############
+    # Deployments #
+    ###############
+    elif args.operation == "deployments":
         if dlp.token_expired():
             print(datetime.datetime.utcnow())
             print("[ERROR] token expired, please login.")
             return
 
-        if args.packages == "ls":
-            if args.project_name is not None:
-                # list project's packages
-                print(datetime.datetime.utcnow())
-                dlp.projects.get(project_name=args.project_name).packages.list().print()
-            elif args.package_id is not None:
-                # list package artifacts
-                if args.project_name is None:
-                    logger.error("Please provide package project name")
-                    raise dlp.PlatformException(
-                        "400", "Please provide package project name"
-                    )
-                project = dlp.projects.get(project_name=args.project_name)
-                print(datetime.datetime.utcnow())
-                project.packages.get(package_id=args.package_id).print()
-            else:
-                # list user's package
-                projects = dlp.projects.list()
-                for project in projects:
-                    print(datetime.datetime.utcnow())
-                    project.packages.list().print()
-
-        elif args.packages == "pack":
-            if args.project_name is not None:
-                if args.dataset_name is not None:
-                    project = dlp.projects.get(args.project_name)
-                    project.packages._dataset = project.datasets.get(
-                        dataset_name=args.dataset_name
-                    )
-                    project.packages.pack(
-                        directory=args.directory,
-                        name=args.package_name,
-                        description=args.description,
-                    )
-                else:
-                    dlp.projects.get(args.project_name).packages.pack(
-                        directory=args.directory,
-                        name=args.package_name,
-                        description=args.description,
-                    )
-            else:
-                logger.error("Please provide project name")
-                raise dlp.PlatformException("400", "Please provide project name")
-
-        elif args.packages == "delete":
-            if args.project_name is not None:
-                dlp.projects.get(args.project_name).packages.delete(
-                    package_id=args.package_id
-                )
-            else:
-                logger.error("Please provide project name")
-                raise dlp.PlatformException("400", "Please provide project name")
-
-        elif args.packages == "unpack":
-            print(datetime.datetime.utcnow())
-            print("Unpacking source code...")
-            dlp.projects.get(args.project_name).packages.unpack(
-                package_id=args.package_id, local_directory=args.directory
-            )
-
+        if args.project_name is not None:
+            project = dlp.projects.get(project_name=args.project_name)
         else:
-            print(datetime.datetime.utcnow())
-            print('Type "dlp packages --help" for options')
+            project = dlp.projects.get()
 
-    ############
-    # Plugins  #
-    ############
+        if args.deployments == "generate":
+            dlp.deployments.generate_deployments_json(path=args.local_path)
+        elif args.deployments == "deploy":
+            if project is None:
+                logging.exception('Please provide project name or check out a project')
+                return
+            else:
+                project.deployments.deploy_pipeline(deployment_json_path=args.local_path, project=args.project_name)
+        elif args.deployments == "tear_down":
+            if project is None:
+                logging.exception('Please provide project name or check out a project')
+                return
+            else:
+                project.deployments.tear_down(deployment_json_path=args.local_path, project=args.project_name)
+        elif args.deployments == "ls":
+            if args.project_name is not None:
+                project = dlp.projects.get(project_name=args.project_name)
+            else:
+                project = dlp.projects.get()
+            print(datetime.datetime.utcnow())
+            project.deployments.list().print()
+
+    ###########
+    # Plugins #
+    ###########
     elif args.operation == "plugins":
         if dlp.token_expired():
             print(datetime.datetime.utcnow())
@@ -1098,84 +1013,70 @@ def run(args, parser):
             return
 
         if args.plugins == "generate":
-            dlp.plugins.generate_local_plugin(name=args.plugin_name)
+            if args.project_name is not None:
+                plugins = dlp.projects.get(project_name=args.project_name).plugins
+            else:
+                try:
+                    project = dlp.projects.get()
+                    plugins = project.plugins
+                except Exception:
+                    plugins = dlp.plugins
+            plugins.generate(name=args.plugin_name, src_path=os.getcwd())
+            print('Successfully generated plugin')
 
         elif args.plugins == "ls":
-            dlp.plugins.list()
+            if args.project_name is not None:
+                plugins = dlp.projects.get(project_name=args.project_name).plugins
+            else:
+                try:
+                    project = dlp.projects.get()
+                    plugins = project.plugins
+                except Exception:
+                    plugins = dlp.plugins
+            plugins.list().print()
 
         elif args.plugins == "checkout":
             dlp.plugins.checkout(args.plugin_name)
             print(datetime.datetime.utcnow())
 
         elif args.plugins == "push":
-            dlp.plugins.push_local_plugin(deploy=args.deploy, revision=args.revision)
+            if args.project_name is None:
+                plugins = dlp.plugins
+            else:
+                plugins = dlp.projects.get(project_name=args.project_name).plugins
+
+            plugin = plugins.push(package_id=args.package_id,
+                                  src_path=args.src_path,
+                                  plugin_name=args.plugin_name)
+
             print(datetime.datetime.utcnow())
-            print("Successfully pushed the plugin to remote")
+            print("Successfully pushed plugin to platform\nPlugin id:{}".format(plugin.id))
 
         elif args.plugins == "test":
             print(datetime.datetime.utcnow())
-            # dlp.plugins.test_local_plugin()
-            os.chdir('./src')
-            cmd = 'python -m debug'
-            os.system(cmd)
-            os.chdir('..')
-
-        elif args.plugins == "invoke":
-            print(datetime.datetime.utcnow())
-            print(dlp.plugins.invoke_plugin(args.file))
+            go_back = False
+            if 'src' in os.listdir(os.getcwd()):
+                go_back = True
+                os.chdir('./src')
+            try:
+                dlp.plugins.test_local_plugin()
+            finally:
+                if go_back:
+                    os.chdir('..')
 
         elif args.plugins == "deploy":
             print(datetime.datetime.utcnow())
-            deployment_id = dlp.plugins.deploy_plugin_from_folder(args.revision)
-            print("Successfully deployed the plugin, deployment id is: %s" % deployment_id)
+            if args.revision is not None and args.revision != 'latest':
+                args.revision = int(args.revision)
+            else:
+                args.revision = None
+            deployment_name = dlp.deployments.deploy_from_local_folder().name
 
-        elif args.plugins == "status":
-            dlp.plugins.get_status_from_folder()
+            print("Successfully deployed the plugin, deployment name is: %s" % deployment_name)
+
         else:
             print(datetime.datetime.utcnow())
             print('Type "dlp plugins --help" for options')
-
-    ############
-    # Sessions #
-    ############
-    elif args.operation == "sessions":
-
-        if args.sessions == "ls":
-            if args.session_id is not None:
-                print(datetime.datetime.utcnow())
-                dlp.sessions.get(session_id=args.session_id).print()
-            elif args.project_name is not None:
-                print(datetime.datetime.utcnow())
-                dlp.projects.get(project_name=args.project_name).sessions.list().print()
-            else:
-                print(datetime.datetime.utcnow())
-                print("[ERROR] need to input session-id or project-name.")
-
-        elif args.sessions == "tree":
-            dlp.projects.get(project_name=args.project_name).sessions.tree()
-
-        elif args.sessions == "create":
-            dlp.projects.get(project_name=args.project_name).sessions.create(
-                session_name=args.session_name,
-                dataset_name=args.dataset_name,
-                pipe_id=args.pipe_id,
-                package_id=args.package_id,
-            )
-
-        elif args.sessions == "upload":
-            dlp.sessions.get(session_id=args.session_id).artifacts.upload(
-                filepath=args.filename,
-                artifact_type=args.type,
-                description=args.description,
-            )
-
-        elif args.sessions == "download":
-            dlp.sessions.get(session_id=args.session_id).artifacts.download(
-                artifact_type=args.artifact_type, local_directory=args.local_dir
-            )
-        else:
-            print(datetime.datetime.utcnow())
-            print('Type "dlp sessions --help" for options')
 
     #######
     # pwd #
@@ -1198,7 +1099,6 @@ def run(args, parser):
     #########
     elif args.operation == "mkdir":
         os.mkdir(args.name)
-        os.chdir(os.path.join(os.getcwd(), args.name))
 
     ######
     # ls #

@@ -1,8 +1,10 @@
+from collections import namedtuple
 import logging
-from .. import repositories, utilities
 import attr
 
-logger = logging.getLogger('dataloop.project')
+from .. import repositories, utilities, services
+
+logger = logging.getLogger(name=__name__)
 
 
 @attr.s
@@ -10,7 +12,7 @@ class Project:
     """
     Project entity
     """
-    client_api = attr.ib()
+
     contributors = attr.ib()
     createdAt = attr.ib()
     creator = attr.ib()
@@ -19,87 +21,73 @@ class Project:
     org = attr.ib()
     updatedAt = attr.ib()
 
+    # api
+    _client_api = attr.ib(type=services.ApiClient)
+
     # repositories
-    _projects = attr.ib()
-    _datasets = attr.ib()
-    _tasks = attr.ib()
-    _packages = attr.ib()
-    _artifacts = attr.ib()
-    _plugins = attr.ib()
-    _triggers = attr.ib()
-    _times_series = attr.ib()
+    _repositories = attr.ib()
 
-    @_projects.default
-    def set_projects(self):
-        return repositories.Projects(client_api=self.client_api)
+    @_repositories.default
+    def set_repositories(self):
+        reps = namedtuple('repositories',
+                          'projects triggers datasets plugins packages artifacts times_series deployments '
+                          'sessions')
 
-    @_triggers.default
-    def set_triggers(self):
-        return repositories.Triggers(client_api=self.client_api, project=self)
+        r = reps(projects=repositories.Projects(client_api=self._client_api),
+                 sessions=repositories.Sessions(client_api=self._client_api),
+                 triggers=repositories.Triggers(client_api=self._client_api, project=self),
+                 datasets=repositories.Datasets(client_api=self._client_api, project=self),
+                 plugins=repositories.Plugins(project=self, client_api=self._client_api),
+                 packages=repositories.Packages(project=self, client_api=self._client_api),
+                 artifacts=repositories.Artifacts(project=self, client_api=self._client_api),
+                 times_series=repositories.TimesSeries(project=self, client_api=self._client_api),
+                 deployments=repositories.Deployments(client_api=self._client_api, project=self))
+        return r
 
     @property
     def triggers(self):
-        assert isinstance(self._triggers, repositories.Triggers)
-        return self._triggers
+        assert isinstance(self._repositories.triggers, repositories.Triggers)
+        return self._repositories.triggers
+
+    @property
+    def deployments(self):
+        assert isinstance(self._repositories.deployments, repositories.Deployments)
+        return self._repositories.deployments
+
+    @property
+    def sessions(self):
+        assert isinstance(self._repositories.sessions, repositories.Sessions)
+        return self._repositories.sessions
 
     @property
     def projects(self):
-        assert isinstance(self._projects, repositories.Projects)
-        return self._projects
-
-    @_datasets.default
-    def set_datasets(self):
-        return repositories.Datasets(project=self, client_api=self.client_api)
+        assert isinstance(self._repositories.projects, repositories.Projects)
+        return self._repositories.projects
 
     @property
     def datasets(self):
-        assert isinstance(self._datasets, repositories.Datasets)
-        return self._datasets
-
-    @_tasks.default
-    def set_tasks(self):
-        return repositories.Tasks(project=self, client_api=self.client_api)
-
-    @property
-    def tasks(self):
-        assert isinstance(self._tasks, repositories.Tasks)
-        return self._tasks
+        assert isinstance(self._repositories.datasets, repositories.Datasets)
+        return self._repositories.datasets
 
     @property
     def plugins(self):
-        assert isinstance(self._plugins, repositories.Plugins)
-        return self._plugins
-
-    @_plugins.default
-    def set_plugin(self):
-        return repositories.Plugins(project=self, client_api=self.client_api)
-
-    @_packages.default
-    def set_packages(self):
-        return repositories.Packages(project=self, client_api=self.client_api)
+        assert isinstance(self._repositories.plugins, repositories.Plugins)
+        return self._repositories.plugins
 
     @property
     def packages(self):
-        assert isinstance(self._packages, repositories.Packages)
-        return self._packages
-
-    @_artifacts.default
-    def set_artifacts(self):
-        return repositories.Artifacts(project=self, client_api=self.client_api)
+        assert isinstance(self._repositories.packages, repositories.Packages)
+        return self._repositories.packages
 
     @property
     def artifacts(self):
-        assert isinstance(self._artifacts, repositories.Artifacts)
-        return self._artifacts
-
-    @_times_series.default
-    def set_times_series(self):
-        return repositories.TimesSeries(project=self, client_api=self.client_api)
+        assert isinstance(self._repositories.artifacts, repositories.Artifacts)
+        return self._repositories.artifacts
 
     @property
     def times_series(self):
-        assert isinstance(self._times_series, repositories.TimesSeries)
-        return self._times_series
+        assert isinstance(self._repositories.times_series, repositories.TimesSeries)
+        return self._repositories.times_series
 
     @classmethod
     def from_json(cls, _json, client_api):
@@ -110,16 +98,15 @@ class Project:
         :param client_api: client_api
         :return: Project object
         """
-        return cls(
-            client_api=client_api,
-            contributors=_json['contributors'],
-            createdAt=_json['createdAt'],
-            creator=_json['creator'],
-            id=_json['id'],
-            name=_json['name'],
-            org=_json['org'],
-            updatedAt=_json['updatedAt']
-        )
+        return cls(contributors=_json['contributors'],
+                   createdAt=_json['createdAt'],
+                   updatedAt=_json['updatedAt'],
+                   creator=_json['creator'],
+                   name=_json['name'],
+                   org=_json['org'],
+                   id=_json['id'],
+
+                   client_api=client_api)
 
     def to_json(self):
         """
@@ -128,20 +115,16 @@ class Project:
         :return: platform json format of object
         """
         return attr.asdict(self,
-                           filter=attr.filters.include(attr.fields(Project).contributors,
-                                                       attr.fields(Project).createdAt,
-                                                       attr.fields(Project).creator,
-                                                       attr.fields(Project).id,
-                                                       attr.fields(Project).name,
-                                                       attr.fields(Project).org,
-                                                       attr.fields(Project).updatedAt))
+                           filter=attr.filters.exclude(attr.fields(Project)._client_api,
+                                                       attr.fields(Project)._repositories))
 
     def print(self):
         utilities.List([self]).print()
 
     def delete(self, sure=False, really=False):
         """
-        Delete a project forever!
+        Delete the project forever!
+
         :param sure: are you sure you want to delete?
         :param really: really really?
         :return: True
@@ -152,21 +135,24 @@ class Project:
 
     def update(self, system_metadata=False):
         """
-        Update a project
+        Update the project
+
         :return: Project object
         """
         return self.projects.update(project=self, system_metadata=system_metadata)
 
     def checkout(self):
         """
-        Check - out as project
-        :param
-        identifier: project
-        name or partial
-        id
+        Checkout the project
+
         :return:
         """
         self.projects.checkout(identifier=self.name)
 
     def open_in_web(self):
+        """
+        Open the project in web platform
+
+        :return:
+        """
         self.projects.open_in_web(project=self)

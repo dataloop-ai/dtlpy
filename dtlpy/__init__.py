@@ -21,11 +21,10 @@ import os
 from .exceptions import PlatformException
 from . import services, repositories, exceptions
 from .__version__ import version as __version__
-from .entities import Box, Point, Segmentation, Polygon, Ellipse, Classification, Polyline
-from .entities import AnnotationCollection, Annotation, Item, Package, Filters, Task, Session, Recipe, Ontology, \
-    Label, Trigger
+from .entities import Box, Point, Segmentation, Polygon, Ellipse, Classification, Polyline, Filters, Trigger, \
+    AnnotationCollection, Annotation, Item, Package, Filters, Session, Recipe, Ontology, Label
 from . import examples
-from .utilities import Converter
+from .utilities import Converter, BasePluginRunner, Progress
 
 """
 Main Platform Interface module for Dataloop
@@ -34,20 +33,32 @@ Main Platform Interface module for Dataloop
 if sys.version_info.major != 3:
     if sys.version_info.minor not in [5, 6]:
         sys.stderr.write(
-            'Error: Your Python version "{}.{}" is NOT supported by Dataloop SDK dtlpy. Supported version are 3.5, 3.6)\n'.format(
+            'Error: Your Python version "{}.{}" is NOT supported by Dataloop SDK dtlpy. '
+            'Supported version are 3.5, 3.6)\n'.format(
                 sys.version_info.major, sys.version_info.minor))
         sys.exit(-1)
 
+"""
+Main Platform Interface module for Dataloop
+"""
+
+##########
+# Logger #
+##########
+logger = logging.getLogger(name=__name__)
+logger = services.create_logger(logger)
+
+################
+# Repositories #
+################
 # Create repositories instances
 client_api = services.ApiClient()
 projects = repositories.Projects(client_api=client_api)
 datasets = repositories.Datasets(client_api=client_api, project=None)
-tasks = repositories.Tasks(client_api=client_api)
+items = repositories.Items(client_api=client_api)
 plugins = repositories.Plugins(client_api=client_api)
-sessions = repositories.Sessions(client_api=client_api, task=None)
-
-logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-logger = logging.getLogger(name='dataloop.platform_interface')
+sessions = repositories.Sessions(client_api=client_api)
+deployments = repositories.Deployments(client_api=client_api)
 
 if client_api.token_expired():
     logger.error('Token expired. Please login')
@@ -64,6 +75,7 @@ def login(audience=None, auth0_url=None, client_id=None):
     client_api.login(audience=audience, auth0_url=auth0_url, client_id=client_id)
 
 
+# noinspection PyShadowingNames
 def login_token(token):
     """
     Login with a token string
@@ -89,6 +101,7 @@ def login_secret(email, password, client_id, client_secret):
                             client_secret=client_secret)
 
 
+# noinspection PyShadowingNames
 def add_environment(environment, audience, client_id, auth0_url, verify_ssl=True, token=None, alias=None):
     client_api.add_environment(environment=environment,
                                audience=audience,
@@ -132,14 +145,15 @@ def environment():
     return client_api.environment
 
 
-def info():
+def info(with_token=True):
     payload = jwt.decode(client_api.token, algorithms=['HS256'], verify=False)
     user_email = payload['email']
     env = client_api.environment
     print('-- Dataloop info --')
     print('-- Working environment: {environment}'.format(environment=env))
     print('-- User: {email}'.format(email=user_email))
-    print('-- Token: {token}'.format(token=client_api.token))
+    if with_token:
+        print('-- Token: {token}'.format(token=client_api.token))
 
 
 def init():

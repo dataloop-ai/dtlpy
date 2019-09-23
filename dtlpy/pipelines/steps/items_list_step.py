@@ -1,6 +1,8 @@
 import logging
 from . import pipeline_step
 
+logger = logging.getLogger(name=__name__)
+
 
 class ItemsListStep(pipeline_step.PipelineStep):
     """
@@ -10,7 +12,6 @@ class ItemsListStep(pipeline_step.PipelineStep):
     def __init__(self, step_dict=None):
         super(ItemsListStep, self).__init__()
         self.name = 'ItemsList'
-        self.logger = logging.getLogger('dataloop.pipeline.step.%s' % self.name)
         if step_dict is not None:
             self.inputs = step_dict['inputs']
             self.kwargs = step_dict['kwargs']
@@ -18,7 +19,7 @@ class ItemsListStep(pipeline_step.PipelineStep):
             self.outputs = step_dict['outputs']
         else:
             self.inputs = [{'name': 'dataset', 'from': 'dataset', 'by': 'ref', 'type': 'object'},
-                           {'name': 'query', 'from': 'query',  'by': 'ref','type': 'string'}]
+                           {'name': 'query', 'from': 'query', 'by': 'ref', 'type': 'string'}]
             self.kwargs = dict()
             self.args = list()
             self.outputs = [{'name': 'pages', 'type': 'List'}]
@@ -32,7 +33,7 @@ class ItemsListStep(pipeline_step.PipelineStep):
         # prepare
         dataset_from = [input_arg['from'] for input_arg in self.inputs if input_arg['name'] == 'dataset']
         if len(dataset_from) != 1:
-            self.logger.exception('"dataset" is missing from context')
+            logger.exception('"dataset" is missing from context')
             raise ValueError('"dataset" is missing from context')
         dataset = pipeline_dict.get(dataset_from[0])
 

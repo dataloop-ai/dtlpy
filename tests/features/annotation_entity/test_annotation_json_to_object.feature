@@ -20,5 +20,4 @@ Feature: Annotation Entity Json to Object testing
         Then Item annotations in host equal annotations in file "assets_split/ann_json_to_object/video_annotations.json"
         And Annotations to_json() equals to Platform json
     
-    Scenario: Finally
-        Given Clean up
+

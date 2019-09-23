@@ -15,5 +15,3 @@ Feature: Items repository download_batch function testing
         When I download items to local path "download_batch"
         Then Items are saved in "download_batch/image"
 
-    Scenario: Finally
-        Given Clean up

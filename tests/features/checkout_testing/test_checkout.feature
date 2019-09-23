@@ -32,6 +32,3 @@
 #        |plugin|
 #      Then I am checked out
 #        |plugin|
-
-#    Scenario: Finally
-#      Given Clean up

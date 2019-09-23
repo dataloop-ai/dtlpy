@@ -7,7 +7,6 @@ def main():
     from PIL import Image
     from keras.applications.imagenet_utils import decode_predictions
     from keras.applications.inception_v3 import InceptionV3, preprocess_input
-    from dtlpy.utilities.annotations import ImageAnnotation
     import dtlpy as dl
 
     ##############

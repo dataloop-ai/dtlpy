@@ -1,5 +1,4 @@
 def main():
-
     from keras.callbacks import Callback
     import dtlpy as dl
     import numpy as np
@@ -8,10 +7,11 @@ def main():
     import json
     import os
 
+    logger = logging.getLogger(name=__name__)
+
     class ProgressViewer(Callback):
         def __init__(self, session_id, directory=None):
             super(ProgressViewer, self).__init__()
-            self.logger = logging.getLogger('dataloop.callback')
             # init Dataloop instance
             # get sessions artifact
             self.session = dl.sessions.get(session_id=session_id)
@@ -20,14 +20,14 @@ def main():
             for artifact in artifacts:
                 if artifact.type == 'progress':
                     self.artifact = artifact
-                    self.logger.info('Progress artifact found. overwriting. artifact_id: %s' % self.artifact.id)
+                    logger.info('Progress artifact found. overwriting. artifact_id: %s' % self.artifact.id)
                     break
             if self.artifact is None:
                 self.artifact = self.session.artifacts.create(artifact_name='progress.yml',
                                                               artifact_type='progress',
                                                               description='update progress on each epoch')
 
-                self.logger.info('[INFO] Creating progress artifact. artifact_id: %s' % self.artifact.id)
+                logger.info('[INFO] Creating progress artifact. artifact_id: %s' % self.artifact.id)
             if directory is None:
                 directory = './results'
             if not os.path.isdir(directory):

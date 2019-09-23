@@ -30,5 +30,3 @@ Feature: Items repository update function testing
         Then Then I receive an Item object
         And Item in host was not changed
 
-    Scenario: Finally
-        Given Clean up

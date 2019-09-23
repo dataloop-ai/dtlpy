@@ -1,15 +1,15 @@
-def main():
-
+def get_callback(progress):
     from keras.callbacks import Callback
     import numpy as np
     import logging
     import time
 
+    logger = logging.getLogger(name=__name__)
+
     class PiperProgressReporter(Callback):
-        def __init__(self, context_reporter):
+        def __init__(self, progress):
             super(PiperProgressReporter, self).__init__()
-            self.logger = logging.getLogger('dataloop.callback')
-            self.context_reporter = context_reporter
+            self.progress = progress
             self.results = dict()
             self.epoch_time_start = None
 
@@ -23,7 +23,7 @@ def main():
             logs_dict = dict(zip(list(logs.keys()), [float(num) for num in np.array(list(logs.values())).tolist()]))
             self.results[epoch] = logs_dict
             self.results[epoch]['runtime'] = time.time() - self.epoch_time_start
-            self.context_reporter.report_output(output={'epoch': epoch,
-                                                        'logs': logs_dict})
+            self.progress.report_output(output={'epoch': epoch,
+                                                'logs': logs_dict})
 
-    return PiperProgressReporter
+    return PiperProgressReporter(progress)

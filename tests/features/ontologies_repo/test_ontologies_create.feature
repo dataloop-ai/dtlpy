@@ -31,5 +31,4 @@ Feature: Ontologies repository create function testing
         When I try create a new ontology with labels and "some_project_id" from file "labels.json"
         Then "Forbidden" exception should be raised
 
-    Scenario: Finally
-        Given Clean up
+

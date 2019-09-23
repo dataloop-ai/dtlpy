@@ -13,5 +13,4 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with DTLPY.  If not, see <http://www.gnu.org/licenses/>.
-from .annotation_builder import VideoAnnotation, ImageAnnotation
 from .annotation_converters import DtlpyToVoc, DtlpyToYolo

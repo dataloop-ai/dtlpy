@@ -28,5 +28,3 @@ Feature: Datasets repository get function testing
         When I try to get a dataset by id
         Then "NotFound" exception should be raised
 
-    Scenario: Finally
-        Given Clean up

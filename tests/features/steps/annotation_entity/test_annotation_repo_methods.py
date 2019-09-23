@@ -90,8 +90,9 @@ def step_impl(context):
     labels = context.dataset.labels
     context.annotation_point = context.dl.Annotation.new(item=context.item, annotation_definition=context.dl.Point(x=100, y=150, label=labels[0].tag, attributes=['attr1']))
     context.annotation_box = context.dl.Annotation.new(item=context.item, annotation_definition=context.dl.Box(left=100, top=200, right=140, bottom=120, label=labels[1].tag))
-    context.annotation_ellipse = context.dl.Annotation.new(item=context.item, annotation_definition=context.dl.Ellipse(x=300, y=300, angle=50, ry=20, rx=10, label=labels[2], attributes=['attr2']))
-    context.annotation_poligon = context.dl.Annotation.new(item=context.item, annotation_definition=context.dl.Polygon(geo=[(300, 300), (320, 200), (350, 400), (300, 300)], label=labels[0].tag))
+    context.annotation_ellipse = context.dl.Annotation.new(item=context.item, annotation_definition=context.dl.Ellipse(x=300, y=300, angle=50, ry=20, rx=10, label=labels[2].tag, attributes=['attr2']))
+    context.annotation_polygon = context.dl.Annotation.new(item=context.item, annotation_definition=context.dl.Polygon(geo=[(300, 300), (320, 200), (350, 400), (300, 300)], label=labels[0].tag))
+    context.num_annotations = 4
 
 
 @behave.when(u'I upload annotation entity to item')
@@ -99,11 +100,12 @@ def step_impl(context):
     context.annotation_point.upload()
     context.annotation_box.upload()
     context.annotation_ellipse.upload()
-    context.annotation_poligon.upload()
+    context.annotation_polygon.upload()
 
 @behave.then(u'Item in host has annotation entity created')
 def step_impl(context):
     annotations = context.item.annotations.list()
+    assert len(annotations) == context.num_annotations, 'Missing annotation: uploaded: {}, found on item: {}'.format(len(annotations), context.num_annotations)
     for ann in annotations:
         if ann.type == 'box':
             assert context.annotation_box.label == ann.label
@@ -119,9 +121,9 @@ def step_impl(context):
             assert context.annotation_ellipse.coordinates == ann.coordinates
             assert context.annotation_ellipse.attributes == ann.attributes
         if ann.type == 'segment':
-            assert context.annotation_poligon.label == ann.label
-            assert context.annotation_poligon.coordinates == ann.coordinates
-            assert context.annotation_poligon.attributes == ann.attributes
+            assert context.annotation_polygon.label == ann.label
+            assert context.annotation_polygon.coordinates == ann.coordinates
+            assert context.annotation_polygon.attributes == ann.attributes
 
 
 @behave.given(u'I create a video annotation')

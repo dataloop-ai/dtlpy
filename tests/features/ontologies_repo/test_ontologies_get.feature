@@ -15,5 +15,3 @@ Feature: Ontologies repository get function testing
         When I try to get Ontology by "some_id"
         Then "BadRequest" exception should be raised
 
-    Scenario: Finally
-        Given Clean up

@@ -21,5 +21,3 @@ Feature: Annotaions repository Get function testing
         When I try to get a non-existing annotation
         Then "BadRequest" exception should be raised
 
-    Scenario: Finally
-        Given Clean up

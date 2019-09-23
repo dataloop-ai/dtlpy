@@ -26,5 +26,3 @@ Feature: Packages repository Init
         Then I receive a packages repository object
         And Packages dataset equal "Dataset"
 
-    Scenario: Finally
-        Given Clean up

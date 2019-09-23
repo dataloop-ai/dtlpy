@@ -3,6 +3,8 @@ from multiprocessing.pool import ThreadPool
 
 from .. import entities, utilities, repositories, PlatformException
 
+logger = logging.getLogger(name=__name__)
+
 
 class Recipes:
     """
@@ -10,9 +12,13 @@ class Recipes:
     """
 
     def __init__(self, client_api, dataset):
-        self.logger = logging.getLogger('dataloop.repositories.recipes')
-        self.client_api = client_api
-        self.dataset = dataset
+        self._client_api = client_api
+        self._dataset = dataset
+
+    @property
+    def dataset(self):
+        assert isinstance(self._dataset, entities.Dataset)
+        return self._dataset
 
     def create(self, project_ids=None, ontology_ids=None, labels=None, recipe_name=None, attributes=None):
         """
@@ -27,28 +33,37 @@ class Recipes:
         if project_ids is None:
             project_ids = [self.dataset.project.id]
         if ontology_ids is None:
-            ontolgies = repositories.Ontologies(client_api=self.client_api, recipe=None)
-            ontology = ontolgies.create(labels=labels, project_ids=[self.dataset.project.id], attributes=attributes)
+            ontolgies = repositories.Ontologies(client_api=self._client_api,
+                                                recipe=None)
+            ontology = ontolgies.create(labels=labels,
+                                        project_ids=[self.dataset.project.id],
+                                        attributes=attributes)
             ontology_ids = [ontology.id]
         elif not isinstance(ontology_ids, list):
             ontology_ids = [ontology_ids]
         if recipe_name is None:
             recipe_name = self.dataset.name + " Default Recipe"
-        payload = {'title': recipe_name, 'projectIds': project_ids, 'ontologyIds': ontology_ids}
-        success, response = self.client_api.gen_request(req_type='post',
-                                                        path='/recipes',
-                                                        json_req=payload)
+        payload = {'title': recipe_name,
+                   'projectIds': project_ids,
+                   'ontologyIds': ontology_ids}
+        success, response = self._client_api.gen_request(req_type='post',
+                                                         path='/recipes',
+                                                         json_req=payload)
         if success:
-            recipe = entities.Recipe.from_json(client_api=self.client_api, _json=response.json(), dataset=self.dataset)
+            recipe = entities.Recipe.from_json(client_api=self._client_api,
+                                               _json=response.json(),
+                                               dataset=self.dataset)
         else:
-            self.logger.exception('Failed to create Recipe')
+            logger.exception('Failed to create Recipe')
             raise PlatformException(response)
-        # add recipe id to dataset system metadad
+
+        # add recipe id to dataset system metadata
         if 'system' not in self.dataset.metadata:
             self.dataset.metadata['system'] = dict()
         if 'recipes' not in self.dataset.metadata['system']:
             self.dataset.metadata['system']['recipes'] = list()
-        self.dataset.metadata['system']['recipes'].insert(0, recipe.id)
+        # TODO - supposed to be append but it doesn't work in platform
+        self.dataset.metadata['system']['recipes'] = [recipe.id]
         self.dataset.update(system_metadata=True)
         return recipe
 
@@ -81,12 +96,12 @@ class Recipes:
         :param recipe_id: recipe id
         :return: Recipe object
         """
-        success, response = self.client_api.gen_request(req_type='get',
-                                                        path='/recipes/%s' % recipe_id)
+        success, response = self._client_api.gen_request(req_type='get',
+                                                         path='/recipes/%s' % recipe_id)
         if success:
-            recipe = entities.Recipe.from_json(client_api=self.client_api, _json=response.json(), dataset=self.dataset)
+            recipe = entities.Recipe.from_json(client_api=self._client_api, _json=response.json(), dataset=self.dataset)
         else:
-            self.logger.exception(
+            logger.exception(
                 'Unable to get info from recipe. dataset id: %s, recipe_id id: %s' % (self.dataset.id, recipe_id))
             raise PlatformException(response)
 
@@ -99,8 +114,8 @@ class Recipes:
         :param recipe_id: recipe id
         :return: True
         """
-        success, response = self.client_api.gen_request(req_type='delete',
-                                                        path='/recipes/%s' % recipe_id)
+        success, response = self._client_api.gen_request(req_type='delete',
+                                                         path='/recipes/%s' % recipe_id)
 
         return success
 
@@ -115,11 +130,11 @@ class Recipes:
         url_path = '/recipes/%s' % recipe.id
         if system_metadata:
             url_path += '?system=true'
-        success, response = self.client_api.gen_request(req_type='patch',
-                                                        path=url_path,
-                                                        json_req=recipe.to_json())
+        success, response = self._client_api.gen_request(req_type='patch',
+                                                         path=url_path,
+                                                         json_req=recipe.to_json())
         if success:
-            return entities.Recipe.from_json(client_api=self.client_api, _json=response.json(), dataset=self.dataset)
+            return entities.Recipe.from_json(client_api=self._client_api, _json=response.json(), dataset=self.dataset)
         else:
-            self.logger.exception('Error while updating item')
+            logger.exception('Error while updating item')
             raise PlatformException(response)

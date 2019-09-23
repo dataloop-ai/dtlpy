@@ -13,5 +13,3 @@ Feature: Annotation Entity create video annotation from blank
         And I upload annotation created
         Then Item in host has video annotation added
 
-    Scenario: Finally
-        Given Clean up

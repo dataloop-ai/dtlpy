@@ -48,5 +48,3 @@ Feature: Annotation Entity repo functions
         When I upload video annotation entity to item
         Then Item in host has video annotation entity created
 
-    Scenario: Finally
-        Given Clean up

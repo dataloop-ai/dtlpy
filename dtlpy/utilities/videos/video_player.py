@@ -3,13 +3,20 @@ import logging
 import tkinter
 import json
 import time
-import cv2
 import os
 import PIL.ImageTk
 import PIL.Image
 import numpy as np
 import dtlpy as dl
 
+logger = logging.getLogger(name=__name__)
+
+try:
+    import cv2
+except ImportError:
+    logger.error(
+        'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
+    raise
 
 class VideoPlayer:
     """
@@ -19,7 +26,6 @@ class VideoPlayer:
     def __init__(self, project_name=None, project_id=None,
                  dataset_name=None, dataset_id=None,
                  item_filepath=None, item_id=None):
-        self.logger = logging.getLogger('dataloop.videoplayer')
         # init tkinter window
         self.window = tkinter.Tk()
         self.window.title('Dataloop Player')
@@ -288,17 +294,17 @@ class VideoPlayer:
         if dataset_id is None:
             self.project = dl.projects.get(project_name=project_name, project_id=project_id)
             if self.project is None:
-                self.logger.exception('Project doesnt exists. name: %s, id: %s', project_name, project_id)
+                logger.exception('Project doesnt exists. name: %s, id: %s', project_name, project_id)
                 raise ValueError('Project doesnt exists. name: %s, id: %s' % (project_name, project_id))
             self.dataset = self.project.datasets.get(dataset_name=dataset_name, dataset_id=dataset_id)
         else:
             self.dataset = dl.datasets.get(dataset_id=dataset_id)
         if self.dataset is None:
-            self.logger.exception('Dataset doesnt exists. name: %s, id: %s', dataset_name, dataset_id)
+            logger.exception('Dataset doesnt exists. name: %s, id: %s', dataset_name, dataset_id)
             raise ValueError('Dataset doesnt exists. name: %s, id: %s' % (dataset_name, dataset_id))
         self.item = self.dataset.items.get(filepath=item_filepath, item_id=item_id)
         if self.item is None:
-            self.logger.exception('Item doesnt exists. name: %s, id: %s', item_filepath, item_id)
+            logger.exception('Item doesnt exists. name: %s, id: %s', item_filepath, item_id)
             raise ValueError('Item doesnt exists. name: %s, id: %s' % (item_filepath, item_id))
         self.labels = {label.tag: label.rgb for label in self.dataset.labels}
         _, ext = os.path.splitext(self.item.filename[1:])

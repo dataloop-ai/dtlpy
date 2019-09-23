@@ -41,5 +41,3 @@ Feature: Item Entity repo functions
         When I move item to "main_dir/sub_dir/new_name.jpg"
         Then Item in host moved to a new directory
 
-    Scenario: Finally
-        Given Clean up

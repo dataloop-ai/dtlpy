@@ -1,22 +1,38 @@
 import json
 import logging
+import traceback
 import jwt
-import attr
 from multiprocessing.pool import ThreadPool
 import os
 
 from .. import entities, PlatformException
 
+logger = logging.getLogger(name=__name__)
 
-@attr.s
+
 class Annotations:
     """
         Annotations repository
     """
-    logger = logging.getLogger('dataloop.annotations')
-    client_api = attr.ib()
-    dataset = attr.ib()
-    item = attr.ib()
+
+    def __init__(self, client_api, item=None):
+        self._client_api = client_api
+        self._item = item
+
+    @property
+    def item(self):
+        if self._item is None:
+            raise PlatformException(
+                error='400',
+                message='Cannot perform action WITHOUT Item entity in Annotations repository. Please set an item')
+        assert isinstance(self._item, entities.Item)
+        return self._item
+
+    @item.setter
+    def item(self, item):
+        if not isinstance(item, entities.Item):
+            raise ValueError('Must input a valid Item entity')
+        self._item = item
 
     @staticmethod
     def multiprocess_wrapper(func, items, params=None):
@@ -55,9 +71,8 @@ class Annotations:
         :param annotation_id:
         :return: Annotation object or None
         """
-        success, response = self.client_api.gen_request(req_type='get',
-                                                        path='/datasets/%s/items/%s/annotations/%s' %
-                                                             (self.dataset.id, self.item.id, annotation_id))
+        success, response = self._client_api.gen_request(req_type='get',
+                                                         path='/annotations/{}'.format(annotation_id))
         if success:
             annotation = entities.Annotation.from_json(_json=response.json(),
                                                        item=self.item)
@@ -72,9 +87,8 @@ class Annotations:
         :return: List of Annotation objects
         """
 
-        success, response = self.client_api.gen_request(req_type='get',
-                                                        path='/datasets/%s/items/%s/annotations' %
-                                                             (self.dataset.id, self.item.id))
+        success, response = self._client_api.gen_request(req_type='get',
+                                                         path='/items/{}/annotations'.format(self.item.id))
         if success:
             annotations = entities.AnnotationCollection.from_json(_json=response.json(),
                                                                   item=self.item)
@@ -119,18 +133,14 @@ class Annotations:
         else:
             assert False
         # get creator from token
-        creator = jwt.decode(self.client_api.token, algorithms=['HS256'], verify=False)['email']
+        creator = jwt.decode(self._client_api.token, algorithms=['HS256'], verify=False)['email']
         payload = {'username': creator}
-        success, response = self.client_api.gen_request(
-            req_type='delete',
-            path='/datasets/{dataset_id}/items/{item_id}/annotations/{annotations_id}'.format(
-                dataset_id=self.dataset.id,
-                item_id=self.item.id,
-                annotations_id=annotation_id),
-            json_req=payload)
+        success, response = self._client_api.gen_request(req_type='delete',
+                                                         path='/annotations/{}'.format(annotation_id),
+                                                         json_req=payload)
         if not success:
             raise PlatformException(response)
-        self.logger.info('Annotation %s deleted successfully')
+        logger.info('Annotation {} deleted successfully'.format(annotation_id))
         return True
 
     def download(self, filepath, annotation_format='mask', height=None, width=None, thickness=1, with_text=False):
@@ -183,12 +193,12 @@ class Annotations:
                     raise PlatformException('400',
                                             'unknown annotations type: {}'.format(type(item)))
 
-                url_path = '/datasets/%s/items/%s/annotations/%s' % (self.dataset.id, self.item.id, annotation_id)
+                url_path = '/annotations/{}'.format(annotation_id)
                 if params['system_metadata']:
                     url_path += '?system=true'
-                suc, response = self.client_api.gen_request(req_type='put',
-                                                            path=url_path,
-                                                            json_req=annotation)
+                suc, response = self._client_api.gen_request(req_type='put',
+                                                             path=url_path,
+                                                             json_req=annotation)
                 if suc:
                     success[i_item] = True
                     output[i_item] = entities.Annotation.from_json(_json=response.json(),
@@ -202,13 +212,14 @@ class Annotations:
 
         if not isinstance(annotations, list):
             annotations = [annotations]
-        multi_errors, multi_output = self.multiprocess_wrapper(func=update_single_annotation,
+        multi_output, multi_errors = self.multiprocess_wrapper(func=update_single_annotation,
                                                                items=annotations,
                                                                params={'system_metadata': system_metadata})
         if len(multi_errors) == 0:
-            self.logger.debug('Annotation/s uploaded with {} errors'.format(len(multi_errors)))
+            logger.debug('Annotation/s updated successfully. {}/{}'.format(len(multi_output), len(multi_output)))
         else:
-            self.logger.debug('Annotation/s uploaded successfully')
+            logger.error(multi_errors)
+            logger.error('Annotation/s updated with {} errors'.format(len(multi_errors)))
         return multi_output
 
     def upload(self, annotations):
@@ -232,10 +243,9 @@ class Annotations:
                                             'unknown annotations type: {}'.format(type(item)))
                 annotation.pop('id', None)
                 annotation.pop('_id', None)
-                suc, response = self.client_api.gen_request(
-                    req_type='post',
-                    path='/datasets/{}/items/{}/annotations'.format(self.dataset.id, self.item.id),
-                    json_req=annotation)
+                suc, response = self._client_api.gen_request(req_type='post',
+                                                             path='/items/{}/annotations'.format(self.item.id),
+                                                             json_req=annotation)
                 if suc:
                     output[i_item] = entities.Annotation.from_json(_json=response.json(),
                                                                    item=self.item)
@@ -244,7 +254,7 @@ class Annotations:
                     raise PlatformException(response)
             except Exception as e:
                 success[i_item] = False
-                errors[i_item] = e
+                errors[i_item] = traceback.format_exc()
 
         # make list if not list
         if isinstance(annotations, entities.AnnotationCollection):
@@ -265,10 +275,10 @@ class Annotations:
         multi_output, multi_errors = self.multiprocess_wrapper(func=upload_single_annotation,
                                                                items=annotations)
         if len(multi_errors) == 0:
-            self.logger.debug('Annotation/s uploaded successfully')
+            logger.debug('Annotation/s uploaded successfully. {}/{}'.format(len(multi_output), len(multi_output)))
         else:
-            self.logger.error(multi_errors)
-            self.logger.error('Annotation/s uploaded with {} errors'.format(len(multi_errors)))
+            logger.error(multi_errors)
+            logger.error('Annotation/s uploaded with {} errors'.format(len(multi_errors)))
         return multi_output
 
     def builder(self):

@@ -1,8 +1,9 @@
 def main():
-    from dtlpy.utilities.annotations import DtlpyToYolo
+    import dtlpy as dl
+    
+    project = dl.projects.get(project_name='Jungle')
+    dataset = project.datasets.get(dataset_name='Tigers')
 
-    converter = DtlpyToYolo(project_name='MyProject',
-                            dataset_name='MyDataset',
-                            output_annotations_path='/local/path/to/save/annotations',
-                            remote_path='/remote/platform/path/to/convert')
-    converter.run()
+    converter = dl.Converter()
+    converter.convert_dataset(dataset=dataset, to_format='yolo',
+                              local_path='home/yolo_annotations/tigers')

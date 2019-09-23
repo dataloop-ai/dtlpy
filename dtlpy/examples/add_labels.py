@@ -1,5 +1,3 @@
-
-
 def main(project_name, dataset_name):
     # Imports the SDK package
     import dtlpy as dl
@@ -7,6 +5,11 @@ def main(project_name, dataset_name):
     # prep
     project = dl.projects.get(project_name=project_name)
     dataset = project.datasets.get(dataset_name=dataset_name)
+
+    ###############################
+    # add label to dataset entity #
+    ###############################
+    dataset.add_label(label_name='Horse', color=(2, 43, 123))
 
     ########################################
     # Copy dataset labels to a new dataset #
@@ -37,15 +40,18 @@ def main(project_name, dataset_name):
 
     # Add the labels to the dataset
     ontology.add_labels(label_list=dataset.labels)
+    ontology.update()
 
-    ################################################
-    # Copy dataset ontology to an existing dataset #
-    ################################################
+    #########################################################
+    # Copy dataset ontology to an existing dataset's recipe #
+    #########################################################
     new_dataset = project.datasets.create(dataset_name='new_dataset_without_ontology')
+    # get recipe
+    new_dataset_recipe = new_dataset.recipes.list()[0]
     # Copy from a different dataset
-    new_dataset.ontology_ids = dataset.ontology_ids
+    new_dataset_recipe.ontologyIds = dataset.ontology_ids
     # Update the new dataset
-    new_dataset.update()
+    new_dataset_recipe.update()
 
     ##########################
     # update existing recipe #
@@ -77,8 +83,4 @@ def main(project_name, dataset_name):
     # Label list
     labels = [{'tag': 'Dog', 'color': (1, 1, 1)}, {'tag': 'Cat', 'color': (34, 56, 7)},
               {'tag': 'Bird', 'color': (100, 14, 150)}]
-    dataset.recipes.create(recipe_name='My Recipe', labels=labels)
-
-    # Update the dataset
-    dataset = dataset.update()
-
+    recipe = dataset.recipes.create(recipe_name='My Recipe', labels=labels)

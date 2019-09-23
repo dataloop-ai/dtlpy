@@ -10,5 +10,3 @@ Feature: Items repository upload_batch function testing
         And I download items to local path "upload_batch/to_compare"
         Then Items in "upload_batch/to_upload" should equal items in "upload_batch/to_compare/image"
 
-    Scenario: Finally
-        Given Clean up

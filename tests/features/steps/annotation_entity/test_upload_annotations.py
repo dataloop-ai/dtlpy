@@ -20,7 +20,7 @@ def step_impl(context, annotations_path):
     with open(annotations_path, 'r') as f:
         context.annotations = json.load(f)
     context.item.annotations.upload(context.annotations)
-    context.last_response = context.item.client_api.last_response.json()
+    context.last_response = context.item._client_api.last_response.json()
 
 
 @then(u'Item video annotations in host equal annotations in file "{annotations_path}"')

@@ -4,18 +4,30 @@ Getting Started
 *dtlpy* enables python connection to Dataloop's environment
 dtlpy package provides two interfaces: python SDK and CLI tool. The common use cases :
 Python SDK: If you wish to automate data ops directly from your code.
-CLI(Command line interface): Usually used for uploading or downloading data in a more fault tolerant way comapred to browser.
+CLI(Command line interface): Usually used for uploading or downloading data in a more fault tolerant way compared to browser.
+
+Import
+------
+.. code-block:: python
+
+	# Import Dataloop SDK package
+	import dtlpy as dl
 
 Login
 -----
 .. code-block:: python
 
-	# Import Dataloop SDK package
-	import dtlpy as dl
 	# Login to Dataloop platform
 	dl.login()
 	# Print all your projects
 	dl.projects.list().print()
+
+Machine to Machine Login
+------------------------
+.. code-block:: python
+
+	# Login to Dataloop platform
+	dl.login_secret(email, password, client_id, client_secret)
 
 Create project and dataset
 --------------------------
@@ -57,7 +69,6 @@ List projects, datasets
 Iterator of items
 -----------------
 You can create a generator of items with different filters
-
 .. code-block:: python
 
 	# Get the project
@@ -115,7 +126,7 @@ For upload the content of a folder (without the head) use "\*" at the end of the
 		remote_path='/dog'
 	)
 
-	# if uploading a buffer - you can set the name of the uploaded file
+	# If uploading a buffer - you can set the name of the uploaded file
 	filters = dl.Filters()
 	filters.add(field='filename', values='/winter/is/coming/arya.jpg')
 	buffer = dataset.items.download(filters=filters, save_locally=False)
@@ -124,6 +135,25 @@ For upload the content of a folder (without the head) use "\*" at the end of the
 		local_path=buffer, # can be a filepath
 		remote_path='/with_last_name'
 	)
+
+	# Upload image from code using Pillow
+	from PIL import Image
+	import io
+	image = Image.open('/cats/whiskers.jpg')
+	# image.show()
+	buffer = io.BytesIO()
+	image.save(buffer, format='jpeg')
+	buffer.name = 'whiskers.jpg'
+	dataset.items.upload(local_path=buffer)
+
+	# Upload image from code using OpenCV
+	import cv2
+	import io
+	image = cv2.imread('/cats/whiskers.jpg')
+	buffer = io.BytesIO(cv2.imencode('.jpg', image)[1])
+	buffer.name = 'whiskers.jpg'
+	dataset.items.upload(local_path=buffer,
+	                     remote_path='/cats)
 
 
 Downloading items by providing a filter of items or Dataloop Item entity (or a list of).

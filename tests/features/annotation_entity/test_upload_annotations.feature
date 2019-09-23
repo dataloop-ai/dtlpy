@@ -18,8 +18,7 @@ Feature: Upload annotation testing
           When Item is annotated with annotations in file: "assets_split/annotations_upload/video_annotations.json"
           Then Item video annotations in host equal annotations in file "assets_split/annotations_upload/video_annotations.json"
 
-    Scenario: Finally
-        Given Clean up
+
 
 
 

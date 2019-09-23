@@ -3,11 +3,13 @@ Dataloop platform calls
 """
 import requests_toolbelt
 import threading
+import traceback
 import datetime
 import requests
 import logging
 import hashlib
 import base64
+import time
 import tqdm
 import json
 import jwt
@@ -16,17 +18,17 @@ import os
 import pandas as pd
 import numpy as np
 
-from requests.packages.urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
 from urllib.parse import urlencode
+from urllib3.util import Retry
 from tabulate import tabulate
 from functools import wraps
-from .cookie import CookieIO
-from .calls_counter import CallsCounter
 
+from .calls_counter import CallsCounter
+from .cookie import CookieIO
 from .. import exceptions
 
-logger = logging.getLogger('dataloop.api_client')
+logger = logging.getLogger(name=__name__)
 threadLock = threading.Lock()
 
 
@@ -38,11 +40,11 @@ class PlatformError(Exception):
     def __init__(self, resp):
         msg = ''
         if hasattr(resp, 'status_code'):
-            msg += '\nstatus_code:%s' % resp.status_code
+            msg += '<Response [{}]>'.format(resp.status_code)
         if hasattr(resp, 'reason'):
-            msg += '\nreason:%s' % resp.reason
-        if hasattr(resp, 'text'):
-            msg += '\ntext:%s' % resp.text
+            msg += '<Reason [{}]>'.format(resp.reason)
+        elif hasattr(resp, 'text'):
+            msg += '<Reason [{}]>'.format(resp.text)
         super().__init__(msg)
 
 
@@ -62,26 +64,6 @@ class Decorators:
         return decorated_method
 
 
-class PluginIO:
-    def read_json(self):
-        plugin_file_path = os.path.join(os.getcwd(), 'plugin.json')
-        with open(plugin_file_path, 'r') as fp:
-            cfg = json.load(fp)
-        return cfg
-
-    def get(self, key):
-        cfg = self.read_json()
-        return cfg[key]
-
-    def put(self, key, value):
-        cfg = self.read_json()
-        cfg[key] = value
-
-        plugin_file_path = os.path.join(os.getcwd(), 'plugin.json')
-        with open(plugin_file_path, 'w') as fp:
-            json.dump(cfg, fp, indent=4)
-
-
 class ApiClient:
     """
     API calls to Dataloop gate
@@ -92,6 +74,7 @@ class ApiClient:
         # Initiate #
         ############
         # define local params - read only once from cookie file
+        self.session = None
         self._token = None
         self._environments = None
         self._environment = None
@@ -105,7 +88,6 @@ class ApiClient:
         self.cookie_io = CookieIO.init()
         assert isinstance(self.cookie_io, CookieIO)
         self.state_io = CookieIO.init_local_cookie(create=False)
-        self.plugin_io = PluginIO()
         assert isinstance(self.state_io, CookieIO)
 
         ##################
@@ -124,7 +106,6 @@ class ApiClient:
         # set token if input
         if token is not None:
             self.token = token
-        self.renew_status = 'pending'
 
         # validate token
         self.token_expired()
@@ -136,6 +117,11 @@ class ApiClient:
         # API calls counter
         counter_filepath = os.path.join(os.path.dirname(self.cookie_io.COOKIE), 'calls_counter.json')
         self.calls_counter = CallsCounter(filepath=counter_filepath)
+
+        # start refresh token thread
+        self.refresh_token_thread = RefreshTimer(client_api=self)
+        self.refresh_token_thread.daemon = True
+        self.refresh_token_thread.start()
 
     @property
     def verify(self):
@@ -340,19 +326,7 @@ class ApiClient:
         self.last_curl = command.format(method=method, headers=headers, data=data, uri=uri)
         self.last_request = prepared
         # send request
-        with requests.Session() as s:
-            retry = Retry(
-                total=3,
-                read=3,
-                connect=3,
-                backoff_factor=0.3,
-            )
-            adapter = HTTPAdapter(max_retries=retry)
-            s.mount('http://', adapter)
-            s.mount('https://', adapter)
-            resp = s.send(request=prepared, stream=stream, verify=self.verify)
-            with threadLock:
-                self.calls_counter.add()
+        resp = self.send_session(prepared=prepared, stream=stream)
         self.last_response = resp
         # handle output
         if not resp.ok:
@@ -369,88 +343,95 @@ class ApiClient:
             return_type = True
         return return_type, resp
 
-    def upload_local_file(self, filepath, remote_url, uploaded_filename=None, remote_path=None, callback=None):
+    def upload_from_local(self, to_upload, item_type, item_size, remote_url, uploaded_filename, remote_path=None,
+                          callback=None, log_error=True):
         """
         Upload a file (Streaming..)
-        :param filepath:
-        :param remote_url:
-        :param uploaded_filename:
-        :param remote_path:
+
+        :param to_upload: filepath of buufer to upload
+        :param item_type: 'file' or 'directory'
+        :param item_size: size of item in bytes
+        :param remote_url: url for request
+        :param uploaded_filename: filename to save in platform
+        :param remote_path: remote path to upload to
+        :param log_error: print error log (to use when trying request more than once)
         :param callback:
         :return:
         """
-        if uploaded_filename is None:
-            uploaded_filename = os.path.basename(filepath)
         if remote_path is None:
             remote_path = '/'
-        if os.path.isfile(filepath):
-            item_type = 'file'
-        else:
-            item_type = 'dir'
-        statinfo = os.stat(filepath)
-        try:
-            # multipart uploading of the file
-            with open(filepath, 'rb') as f:
-                file = requests_toolbelt.MultipartEncoder(fields={
-                    'file': (uploaded_filename, f),
-                    'type': item_type,
-                    'path': os.path.join(remote_path, uploaded_filename).replace('\\', '/'),
-                })
-                # move file to last part
-                lens = [part.len for part in file.parts]
-                temp = file.parts[2]
-                file.parts[2] = file.parts[np.argmax(lens)]
-                file.parts[np.argmax(lens)] = temp
-                # create callback
-                if callback is None:
-                    if statinfo.st_size > 10e6:
-                        pbar = tqdm.tqdm(total=statinfo.st_size, unit="B", unit_scale=True, unit_divisor=1024)
+        # multipart uploading of the file
+        file = requests_toolbelt.MultipartEncoder(fields={
+            'file': (uploaded_filename, to_upload),
+            'type': item_type,
+            'path': os.path.join(remote_path, uploaded_filename).replace('\\', '/'),
+        })
+        # move file to last part
+        lens = [part.len for part in file.parts]
+        temp = file.parts[2]
+        file.parts[2] = file.parts[np.argmax(lens)]
+        file.parts[np.argmax(lens)] = temp
+        # create callback
+        if callback is None:
+            if item_size > 10e6:
+                # size larger than 10MB
+                pbar = tqdm.tqdm(total=item_size,
+                                 unit="B",
+                                 unit_scale=True,
+                                 unit_divisor=1024,
+                                 position=1)
 
-                        def callback(monitor):
-                            pbar.update(monitor.bytes_read)
-                    else:
-                        def callback(monitor):
-                            pass
-                monitor = requests_toolbelt.MultipartEncoderMonitor(file, callback)
-                headers = {'Content-Type': monitor.content_type}
-                req = requests.Request('POST', self.environment + remote_url,
-                                       headers={**self.auth, **headers},
-                                       data=monitor)
-                # prepare to send
-                prepared = req.prepare()
-                with requests.Session() as s:
-                    retry = Retry(
-                        total=3,
-                        read=3,
-                        connect=3,
-                        backoff_factor=0.3,
-                    )
-                    adapter = HTTPAdapter(max_retries=retry)
-                    s.mount('http://', adapter)
-                    s.mount('https://', adapter)
-                    resp = s.send(prepared, verify=self.verify)
-                    with threadLock:
-                        self.calls_counter.add()
-            self.last_response = resp
-            self.last_request = prepared
-            # handle output
-            if not resp.ok:
-                self.print_bad_response(resp)
-                success = False
+                def callback(monitor):
+                    pbar.update(monitor.bytes_read - pbar.n)
             else:
-                try:
-                    # print only what is printable (dont print get steam etc..)
-                    self.print_json(resp.json())
-                except ValueError:
-                    # no JSON returned
+                def callback(monitor):
                     pass
-                success = True
-        except Exception as e:
-            logger.exception(e)
-
+        monitor = requests_toolbelt.MultipartEncoderMonitor(file, callback)
+        headers = {'Content-Type': monitor.content_type}
+        req = requests.Request('POST', self.environment + remote_url,
+                               headers={**self.auth, **headers},
+                               data=monitor)
+        # prepare to send
+        prepared = req.prepare()
+        resp = self.send_session(prepared)
+        self.last_response = resp
+        self.last_request = prepared
+        # handle output
+        if not resp.ok:
+            self.print_bad_response(resp, log_error)
             success = False
-            resp = None
+        else:
+            try:
+                # print only what is printable (dont print get steam etc..)
+                self.print_json(resp.json())
+            except ValueError:
+                # no JSON returned
+                pass
+            success = True
         return success, resp
+
+    def send_session(self, prepared, stream=None):
+        if self.session is None:
+            self.session = requests.Session()
+            retry = Retry(
+                total=5,
+                read=5,
+                connect=5,
+                backoff_factor=3,
+                # use on any request type
+                method_whitelist=False,
+                # force retry on those status responses
+                status_forcelist=(501, 502, 503, 504, 505, 506, 507, 508, 510, 511),
+                raise_on_status=False
+            )
+            adapter = HTTPAdapter(max_retries=retry, pool_maxsize=128, pool_connections=128)
+            self.session.mount('http://', adapter)
+            self.session.mount('https://', adapter)
+        resp = self.session.send(request=prepared, stream=stream, verify=self.verify, timeout=None)
+
+        with threadLock:
+            self.calls_counter.add()
+        return resp
 
     @staticmethod
     def check_proxy():
@@ -491,15 +472,9 @@ class ApiClient:
             payload = jwt.decode(self.token, algorithms=['HS256'], verify=False)
             now = datetime.datetime.now().timestamp()
             exp = payload['exp']
-
             if now < exp:
                 return False
             else:
-                # check if need to renew
-                if (exp - now) < 3600 and self.renew_status == 'pending':
-                    # 1 hour till expiration and not already in renew process
-                    self.renew_status = 'working'
-                    self.renew_token()
                 return True
         except jwt.exceptions.DecodeError as err:
             logger.exception('Invalid token.')
@@ -559,37 +534,64 @@ class ApiClient:
             logger.exception('Printing response from gate:')
             logger.exception(err)
 
-    def print_bad_response(self, resp=None):
+    def print_bad_response(self, resp=None, log_error=True):
         """
         Print error from platform
         :param resp:
+        :param log_error: print error log (to use when trying request more than once)
         :return:
         """
         if resp is None:
             resp = self.last_response
+        msg = ''
         if hasattr(resp, 'status_code'):
-            logger.exception('status_code:%s' % resp.status_code)
+            msg += '[Response <{val}>]'.format(val=resp.status_code)
         if hasattr(resp, 'reason'):
-            logger.exception('reason:%s' % resp.reason)
+            msg += '[Reason: {val}]'.format(val=resp.reason)
         if hasattr(resp, 'text'):
-            logger.exception('text:%s' % resp.text)
-        logger.exception(resp)
+            msg += '[Text: {val}]'.format(val=resp.text)
+        if log_error:
+            logger.error(msg)
+        else:
+            logger.debug(msg)
+        logger.debug(self.print_request(req=resp.request, to_return=True))
         self.platform_exception = PlatformError(resp)
 
-    def print_request(self, req=None, to_return=False):
+    def print_request(self, req=None, to_return=False, with_auth=False):
         """
         Print a request to the platform
         :param req:
-        :param to_return:
+        :param to_return: return string instead of printing
+        :param with_auth: print authentication
         :return:
         """
         if not req:
             req = self.last_request
+
+        headers = list()
+        for k, v in req.headers.items():
+            if k == 'authorization' and not with_auth:
+                continue
+            headers.append('{}: {}'.format(k, v))
+        body = req.body
+
+        # remove secrets and passwords
+        try:
+            body = json.loads(body)
+            if isinstance(body, dict):
+                for key, value in body.items():
+                    print(key)
+                    hide = any([field in key for field in ['secret', 'password']])
+                    if hide:
+                        body[key] = '*' * len(value)
+        except:
+            pass
+
         msg = '{}\n{}\n{}\n\n{}'.format(
             '-----------START-----------',
             req.method + ' ' + req.url,
-            '\n'.join('{}: {}'.format(k, v) for k, v in req.headers.items()),
-            req.body,
+            '\n'.join(headers),
+            body,
         )
         if to_return:
             return msg
@@ -611,13 +613,12 @@ class ApiClient:
                 logger.exception('Unknown environment. Please add environment to SDK ("add_environment" method)')
                 raise ConnectionError('Unknown environment. Please add environment to SDK ("add_environment" method)')
         else:
-            env = [env_url for env_url, env_dict in environments.items() if env_dict['alias'] == env]
-            if len(env) != 1:
+            matched_env = [env_url for env_url, env_dict in environments.items() if env_dict['alias'] == env]
+            if len(matched_env) != 1:
                 known_aliases = [env_dict['alias'] for env_url, env_dict in environments.items()]
-                logger.exception('Unknown environment alias: \'%s\'. known: %s' % (env, ', '.join(known_aliases)))
                 raise ConnectionError(
-                    'Unknown platform environment: \'%s\'. . known: %s' % (env, ', '.join(known_aliases)))
-            env = env[0]
+                    'Unknown platform environment: "{}". Known: {}'.format(env, ', '.join(known_aliases)))
+            env = matched_env[0]
         self.environment = env
         # reset local token
         self._token = None
@@ -628,15 +629,30 @@ class ApiClient:
     ##########
     # Log in #
     ##########
-    def login_secret(self, email, password, client_id, client_secret):
+    def login_secret(self, email, password, client_id, client_secret, force=False):
         """
         Login with email and password from environment variables
-        :param email:
-        :param password:
+        :param email: user email. if already logged in with same user - login will NOT happen. see "force"
+        :param password: user password
         :param client_id:
         :param client_secret:
+        :param force: force login. in case login with same user but want to get a new JWT
         :return:
         """
+        # check if already logged in with SAME email
+        if self.token is not None:
+            try:
+                payload = jwt.decode(self.token, algorithms=['HS256'], verify=False)
+                if 'email' in payload and \
+                        payload['email'] == email and \
+                        not self.token_expired() and \
+                        not force:
+                    logger.info('Trying to login with same email but token not expired. Not doing anything... '
+                                'Set "force" flag to True to login anyway.')
+                    return True
+            except jwt.exceptions.DecodeError:
+                logger.debug('{}\n{}'.format(traceback.format_exc(), 'Cant decode token. Force login is user'))
+
         environment = self.environment
         audience = None
         auth0_url = None
@@ -836,12 +852,29 @@ class ApiClient:
             server.server_close()
         return login_success
 
+    def set_api_counter(self, filepath):
+        self.calls_counter = CallsCounter(filepath=filepath)
+
+
+class RefreshTimer(threading.Thread):
+
+    def __init__(self, client_api):
+        super(RefreshTimer, self).__init__()
+        self.client_api = client_api
+        self.kill = False
+        self.renew_status = 'pending'
+        self.times = {
+            'before_expired': 60 * 60,  # 60 min
+            'on_fail': 10 * 60,  # 10 min
+            'wake_margin': 30 * 60  # 30 min
+        }
+
     def renew_token(self):
-        if self.refresh_token is None:
+        if self.client_api.refresh_token is None:
             self.renew_status = 'failed'
             return
-        if self.environment in self.environments.keys():
-            env_params = self.environments[self.environment]
+        if self.client_api.environment in self.client_api.environments.keys():
+            env_params = self.client_api.environments[self.client_api.environment]
             client_id = env_params['client_id']
             auth0_url = env_params['auth0_url']
         else:
@@ -851,21 +884,56 @@ class ApiClient:
 
         payload = {'grant_type': 'refresh_token',
                    'client_id': client_id,
-                   'refresh_token': self.refresh_token}
+                   'refresh_token': self.client_api.refresh_token}
         resp = requests.request("POST",
                                 auth0_url + '/oauth/token',
                                 json=payload,
                                 headers={'content-type': 'application/json'})
         if not resp.ok:
-            self.print_bad_response(resp)
+            self.client_api.print_bad_response(resp)
             self.renew_status = 'failed'
         else:
             response_dict = resp.json()
             # get new token
             final_token = response_dict['id_token']
-            self.token = final_token
+            self.client_api.token = final_token
             # set status back to pending
             self.renew_status = 'pending'
 
-    def set_api_counter(self, filepath):
-        self.calls_counter = CallsCounter(filepath=filepath)
+    def run(self):
+        while True:
+            try:
+                logger.debug('RefreshToken: Started')
+                if self.kill:
+                    logger.debug('RefreshToken: Killed. Breaking..')
+                    break
+                if self.client_api.token is None or self.client_api.token == '':
+                    logger.debug('RefreshToken: Bad token.')
+                    next_wake = self.times['on_fail']
+                else:
+                    payload = jwt.decode(self.client_api.token, algorithms=['HS256'], verify=False)
+                    now = datetime.datetime.now().timestamp()
+                    exp = payload['exp']
+                    # check if need to renew
+                    if now > (exp - self.times['before_expired']):
+                        # 1 hour till expiration and not already in renew process
+                        logger.debug('RefreshToken: Refreshing...')
+                        self.renew_status = 'working'
+                        self.renew_token()
+                        if self.renew_status == 'failed':
+                            logger.debug('RefreshToken: Failed')
+                        else:
+                            logger.debug('RefreshToken: Success')
+                        payload = jwt.decode(self.client_api.token, algorithms=['HS256'], verify=False)
+                        now = datetime.datetime.now().timestamp()
+                        exp = payload['exp']
+                    if self.renew_status == 'failed':
+                        next_wake = self.times['on_fail']
+                    else:
+                        next_wake = int(exp - now - self.times['wake_margin'])
+                logger.debug('RefreshToken: Sleeping for: {}[s]'.format(next_wake))
+                time.sleep(next_wake)
+            except:
+                logger.debug(traceback.format_exc())
+                logger.debug('RefreshToken: Non Fatal Error: refresh token failed. Sleeping for: {}'.format(self.times['on_fail']))
+                time.sleep(self.times['on_fail'])

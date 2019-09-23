@@ -1,2 +1,0 @@
-class SessionBuilder:
-    pass

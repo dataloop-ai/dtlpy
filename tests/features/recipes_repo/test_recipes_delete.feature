@@ -10,5 +10,3 @@ Feature: Recipes repository Delete function testing
         When I delete recipe
         Then Dataset has no recipes
 
-    Scenario: Finally
-        Given Clean up

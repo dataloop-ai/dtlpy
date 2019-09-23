@@ -1,31 +1,45 @@
 import logging
 import traceback
 from multiprocessing.pool import ThreadPool
-import attr
 
 from .. import entities, PlatformException, repositories, utilities
 
+logger = logging.getLogger(name=__name__)
 
-@attr.s
+
 class Items:
     """
     Items repository
     """
 
-    client_api = attr.ib()
-    dataset = attr.ib()
-    logger = attr.ib(default=logging.getLogger("dataloop.repositories.items"))
-    # set items entity to represent the item (Item, Package, Artifact etc...)
-    items_entity = attr.ib(default=entities.Item)
+    def __init__(self, client_api, dataset=None, items_entity=None):
+        self._client_api = client_api
+        self._dataset = dataset
+        # set items entity to represent the item (Item, Package, Artifact etc...)
+        if items_entity is None:
+            self.items_entity = entities.Item
+
+    @property
+    def dataset(self):
+        if self._dataset is None:
+            raise PlatformException(
+                error='400',
+                message='Cannot perform action WITHOUT Dataset entity in Items repository. Please set a dataset')
+        assert isinstance(self._dataset, entities.Dataset)
+        return self._dataset
+
+    @dataset.setter
+    def dataset(self, dataset):
+        if not isinstance(dataset, entities.Dataset):
+            raise ValueError('Must input a valid Dataset entity')
+        self._dataset = dataset
 
     def set_items_entity(self, entity):
         if entity in [entities.Item, entities.Artifact, entities.Package]:
             self.items_entity = entity
         else:
-            self.logger.exception(
-                "Unable to se to given entity. Entity give: %s" % entity
-            )
-            raise PlatformException("403", "Unable to se to given entity.")
+            raise PlatformException(error="403",
+                                    message="Unable to set given entity. Entity give: {}".format(entity))
 
     def get_all_items(self, filters=None):
         """
@@ -46,15 +60,15 @@ class Items:
                     w_items[i_start] = item
                     i_start += 1
             except Exception:
-                self.logger.exception(traceback.format_exc())
+                logger.exception(traceback.format_exc())
 
         items = [None for _ in range(num_items)]
         pool = ThreadPool(processes=32)
         i_item = 0
         for page in pages:
-            pool.apply_async(
-                get_page, kwds={"i_start": i_item, "w_page": page, "w_items": items}
-            )
+            pool.apply_async(get_page, kwds={"i_start": i_item,
+                                             "w_page": page,
+                                             "w_items": items})
             i_item += filters.page_size
         pool.close()
         pool.join()
@@ -71,14 +85,14 @@ class Items:
         :return: json response
         """
         # prepare request
-        success, response = self.client_api.gen_request(req_type="POST",
-                                                        path="/datasets/%s/query" % self.dataset.id,
-                                                        json_req=filters.prepare())
+        success, response = self._client_api.gen_request(req_type="POST",
+                                                         path="/datasets/{}/query".format(self.dataset.id),
+                                                         json_req=filters.prepare())
         if not success:
             raise PlatformException(response)
         try:
-            self.client_api.print_json(response.json()["items"])
-            self.logger.debug("Page:%d/%d" % (1 + filters.page, response.json()["totalPagesCount"]))
+            self._client_api.print_json(response.json()["items"])
+            logger.debug("Page:{}/{}".format(1 + filters.page, response.json()["totalPagesCount"]))
         except ValueError:
             # no JSON returned
             pass
@@ -114,14 +128,12 @@ class Items:
         else:
             items_entity = entities.Annotation
 
-        paged = entities.PagedEntities(
-            items_repository=self,
-            filters=filters,
-            page_offset=page_offset,
-            page_size=page_size,
-            client_api=self.client_api,
-            item_entity=items_entity
-        )
+        paged = entities.PagedEntities(items_repository=self,
+                                       filters=filters,
+                                       page_offset=page_offset,
+                                       page_size=page_size,
+                                       client_api=self._client_api,
+                                       item_entity=items_entity)
         paged.get_page()
         return paged
 
@@ -134,24 +146,17 @@ class Items:
         :return: Item object
         """
         if item_id is not None:
-            success, response = self.client_api.gen_request(
-                req_type="get",
-                path="/datasets/%s/items/%s" % (self.dataset.id, item_id),
-            )
+            success, response = self._client_api.gen_request(req_type="get",
+                                                             path="/items/{}".format(item_id))
             if success:
-                item = self.items_entity.from_json(
-                    client_api=self.client_api,
-                    _json=response.json(),
-                    dataset=self.dataset,
-                )
+                item = self.items_entity.from_json(client_api=self._client_api,
+                                                   _json=response.json(),
+                                                   dataset=self._dataset)
             else:
-                self.logger.exception(
-                    "Unable to get info from item. dataset id: %s, item id: %s"
-                    % (self.dataset.id, item_id)
-                )
                 raise PlatformException(response)
         elif filepath is not None:
             filters = entities.Filters()
+            filters.show_hidden = True
             filters.add(field='filename', values=filepath)
             paged_entity = self.list(filters=filters)
             if len(paged_entity.items) == 0:
@@ -178,10 +183,9 @@ class Items:
         :return: True
         """
         if item_id is not None:
-            success, response = self.client_api.gen_request(
-                req_type="delete",
-                path="/datasets/%s/items/%s" % (self.dataset.id, item_id),
-            )
+            success, response = self._client_api.gen_request(req_type="delete",
+                                                             path="/items/{}".format(item_id),
+                                                             )
         elif filename is not None:
             if not filename.startswith("/"):
                 filename = "/" + filename
@@ -191,23 +195,22 @@ class Items:
             if len(items) == 0:
                 raise PlatformException("404", "Item not found")
             elif len(items) > 1:
-                raise PlatformException(error="404",message="More the 1 item exist by the name provided")
+                raise PlatformException(error="404", message="More the 1 item exist by the name provided")
             else:
                 item_id = items[0].id
-                success, response = self.client_api.gen_request(req_type="delete",
-                                                                path="/datasets/%s/items/%s" % (self.dataset.id, item_id),
-                )
+                success, response = self._client_api.gen_request(req_type="delete",
+                                                                 path="/items/{}".format(item_id))
         elif filters is not None:
             # prepare request
-            success, response = self.client_api.gen_request(req_type="POST",
-                                                            path="/datasets/%s/query" % self.dataset.id,
-                                                            json_req=filters.prepare(operation='delete'))
+            success, response = self._client_api.gen_request(req_type="POST",
+                                                             path="/datasets/{}/query".format(self.dataset.id),
+                                                             json_req=filters.prepare(operation='delete'))
         else:
             raise PlatformException("400", "Must provide item id, filename or filters")
 
         # check response
         if success:
-            self.logger.debug("Item/s deleted successfully")
+            logger.debug("Item/s deleted successfully")
             return success
         else:
             raise PlatformException(response)
@@ -232,36 +235,37 @@ class Items:
 
         # update item
         if item is not None:
-            json_req = utilities.miscellaneous.DictDiffer.diff(origin=item.platform_dict, modified=item.to_json())
+            json_req = utilities.miscellaneous.DictDiffer.diff(origin=item._platform_dict,
+                                                               modified=item.to_json())
             if not json_req:
                 return item
-            url_path = "/datasets/%s/items/%s" % (self.dataset.id, item.id)
+            url_path = "/items/{}".format(item.id)
             if system_metadata:
                 url_path += "?system=true"
-            success, response = self.client_api.gen_request(req_type="patch",
-                                                            path=url_path,
-                                                            json_req=json_req)
+            success, response = self._client_api.gen_request(req_type="patch",
+                                                             path=url_path,
+                                                             json_req=json_req)
             if success:
-                self.logger.debug("Item was updated successfully. Item id: %s" % item.id)
-                return self.items_entity.from_json(client_api=self.client_api,
+                logger.debug("Item was updated successfully. Item id: {}".format(item.id))
+                return self.items_entity.from_json(client_api=self._client_api,
                                                    _json=response.json(),
-                                                   dataset=self.dataset)
+                                                   dataset=self._dataset)
             else:
-                self.logger.exception("Error while updating item")
+                logger.exception("Error while updating item")
                 raise PlatformException(response)
         # update by filters
         else:
             # prepare request
-            success, response = self.client_api.gen_request(req_type="POST",
-                                                            path="/datasets/%s/query" % self.dataset.id,
-                                                            json_req=filters.prepare(operation='update',
-                                                                                     update=update_values))
+            success, response = self._client_api.gen_request(req_type="POST",
+                                                             path="/datasets/{}/query".format(self.dataset.id),
+                                                             json_req=filters.prepare(operation='update',
+                                                                                      update=update_values))
             if not success:
                 raise PlatformException(response)
             else:
-                self.logger.debug("Items were updated successfully.")
+                logger.debug("Items were updated successfully.")
                 # return self.items_entity.from_json(
-                #     client_api=self.client_api, _json=response.json(), dataset=self.dataset
+                #     client_api=self._client_api, _json=response.json(), dataset=self.dataset
                 # )
                 return response.json()
 
@@ -357,9 +361,9 @@ class Items:
 
     def open_in_web(self, filepath=None, item_id=None, item=None):
         import webbrowser
-        if self.client_api.environment == 'https://gate.dataloop.ai/api/v1':
+        if self._client_api.environment == 'https://gate.dataloop.ai/api/v1':
             head = 'https://console.dataloop.ai'
-        elif self.client_api.environment == 'https://dev-gate.dataloop.ai/api/v1':
+        elif self._client_api.environment == 'https://dev-gate.dataloop.ai/api/v1':
             head = 'https://dev-con.dataloop.ai'
         else:
             raise PlatformException('400', 'Please provide environment')

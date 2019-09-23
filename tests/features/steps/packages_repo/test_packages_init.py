@@ -6,7 +6,7 @@ def step_impl(context):
     context.packages = context.dl.repositories.Packages(
         project=context.project,
         dataset=context.dataset,
-        client_api=context.dataset.items.client_api
+        client_api=context.dataset.items._client_api
     )
 
 
@@ -14,7 +14,7 @@ def step_impl(context):
 def step_impl(context):
     context.packages = context.dl.repositories.Packages(
         project=context.project,
-        client_api=context.dataset.items.client_api
+        client_api=context.dataset.items._client_api
     )
 
 
@@ -27,7 +27,7 @@ def step_impl(context):
 def step_impl(context):
     try:
         context.packages = context.dl.repositories.Packages(
-            client_api=context.dataset.items.client_api
+            client_api=context.dataset.items._client_api
         )
         context.error = None
     except Exception as e:
@@ -38,7 +38,7 @@ def step_impl(context):
 def step_impl(context):
     context.packages = context.dl.repositories.Packages(
         dataset=context.dataset,
-        client_api=context.dataset.items.client_api
+        client_api=context.dataset.items._client_api
     )
 
 

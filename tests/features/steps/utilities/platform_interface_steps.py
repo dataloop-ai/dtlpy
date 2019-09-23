@@ -1,12 +1,9 @@
-import time
-import behave
-import dtlpy as dl
-import jwt
 import random
-import shutil
+import behave
+import time
+import jwt
 import os
-import json
-import logging
+import dtlpy as dl
 
 
 @behave.given('Platform Interface is initialized as dlp and Environment is set to development')
@@ -51,26 +48,3 @@ def step_impl(context, project_name):
         context.feature.dataloop_feature_project = context.project
         time.sleep(5)
     context.dataset_count = 0
-
-
-@behave.given('Clean up')
-def step_impl(context):
-    # delete project
-    context.project.delete(True, True)
-
-    # update api call json
-    api_calls_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], 'api_calls.json')
-    with open(api_calls_path, 'r') as f:
-        api_calls = json.load(f)
-    if context.feature.name in api_calls:
-        api_calls[context.feature.name] += context.dl.client_api.calls_counter.number
-    else:
-        api_calls[context.feature.name] = context.dl.client_api.calls_counter.number
-    with open(api_calls_path, 'w') as f:
-        json.dump(api_calls, f)
-
-
-@behave.given('Remove cookie')
-def step_impl(context):
-    pass
-    # os.remove(context.feature.cookie_path)

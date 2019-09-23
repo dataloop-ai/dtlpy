@@ -7,14 +7,14 @@ tabulate==0.8.3
 tqdm==4.32.2
 Pillow==6.0.0
 PyJWT==1.7.1
-scikit-image==0.15.0
 jinja2==2.10.1
 attrs==19.1.0
 attr==0.3.1
 prompt_toolkit==2.0.9
 fuzzyfinder==2.1.0
+dictdiffer==0.8.0
+validators==0.13.0
+pathspec
 sphinx-argparse==0.2.5
 sphinxcontrib-websupport==1.1.2
 nbsphinx==0.4.2
-dictdiffer==0.8.0
-validators==0.13.0

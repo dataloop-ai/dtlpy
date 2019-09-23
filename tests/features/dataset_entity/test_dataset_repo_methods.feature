@@ -27,5 +27,4 @@ Feature: Dataset Entity repo functions
         When I delete a dataset entity
         Then Dataset with same name does not exists
 
-    Scenario: Finally
-        Given Clean up
+

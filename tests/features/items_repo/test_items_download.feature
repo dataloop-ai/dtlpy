@@ -29,6 +29,5 @@ Feature: Items repository download function testing
         When I upload item data by name of "/test_item2.jpg"
         Then Item uploaded from data equals initial item uploaded
 
-    Scenario: Finally
-        Given Clean up
+
     

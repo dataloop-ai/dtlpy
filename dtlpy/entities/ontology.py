@@ -1,9 +1,11 @@
+from collections import namedtuple
 import logging
-from .. import utilities, entities, PlatformException
-import attr
 import random
+import attr
 
-logger = logging.getLogger("dataloop.item")
+from .. import utilities, entities, PlatformException, repositories, services
+
+logger = logging.getLogger(name=__name__)
 
 
 @attr.s
@@ -11,22 +13,52 @@ class Ontology:
     """
     Ontology object
     """
+    # api
+    _client_api = attr.ib(type=services.ApiClient)
 
+    # params
     id = attr.ib()
     creator = attr.ib()
     url = attr.ib()
     labels = attr.ib()
     metadata = attr.ib()
     attributes = attr.ib()
-    recipe = attr.ib()
-    client_api = attr.ib()
+
+    # entities
+    _recipe = attr.ib()
+
+    # repositories
+    _repositories = attr.ib()
+
+    @_repositories.default
+    def set_repositories(self):
+        reps = namedtuple('repositories',
+                          field_names=['ontologies'])
+
+        if self._recipe is None:
+            ontologies = repositories.Ontologies(client_api=self._client_api, recipe=self._recipe)
+        else:
+            ontologies = self.recipe.ontologies
+
+        r = reps(ontologies=ontologies)
+        return r
+
+    @property
+    def recipe(self):
+        assert isinstance(self._recipe, entities.Recipe)
+        return self._recipe
+
+    @property
+    def ontologies(self):
+        assert isinstance(self._repositories.ontologies, repositories.Ontologies)
+        return self._repositories.ontologies
 
     @classmethod
     def from_json(cls, _json, client_api, recipe):
         """
         Build an Ontology entity object from a json
 
-        :param _json: _json respons from host
+        :param _json: _json response from host
         :param recipe: ontology's recipe
         :param client_api: client_api
         :return: Ontology object
@@ -41,14 +73,14 @@ class Ontology:
             labels.append(entities.Label.from_root(root=root))
 
         return cls(
-            id=_json["id"],
+            metadata=_json["metadata"],
             creator=_json["creator"],
             url=_json["url"],
-            labels=labels,
-            metadata=_json["metadata"],
+            id=_json["id"],
             attributes=attributes,
             client_api=client_api,
             recipe=recipe,
+            labels=labels,
         )
 
     def to_json(self):
@@ -58,12 +90,9 @@ class Ontology:
         :return: platform json format of object
         """
         roots = [label.to_root() for label in self.labels]
-        _json = attr.asdict(
-            self,
-            filter=attr.filters.exclude(
-                attr.fields(Ontology).client_api, attr.fields(Ontology).recipe
-            ),
-        )
+        _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(Ontology)._client_api,
+                                                              attr.fields(Ontology)._recipe,
+                                                              attr.fields(Ontology)._repositories))
         _json["roots"] = roots
         return _json
 
@@ -73,10 +102,10 @@ class Ontology:
     def delete(self):
         """
         Delete recipe from platform
- 
+
         :return: True
         """
-        return self.recipe.ontologies.delete(self.id)
+        return self.ontologies.delete(self.id)
 
     def update(self, system_metadata=False):
         """
@@ -85,7 +114,7 @@ class Ontology:
         :param system_metadata: bool
         :return: Ontology object
         """
-        return self.recipe.ontologies.update(self, system_metadata=system_metadata)
+        return self.ontologies.update(self, system_metadata=system_metadata)
 
     def add_label(self, label_name, color=None, children=None, attributes=None, display_label=None):
         """
@@ -135,12 +164,23 @@ class Ontology:
         """
         Adds a list of labels to ontology
 
-        :param label_list: list of labels [{"value": {"tag": "tag", "displayLabel": "displayLabel", 
+        :param label_list: list of labels [{"value": {"tag": "tag", "displayLabel": "displayLabel",
                                             "color": "#color", "attributes": [attributes]}, "children": [children]}]
         :return: True if labels were added
         """
         labels = list()
         for label in label_list:
+            if isinstance(label, entities.Label):
+                labels.append(
+                    {
+                        "label_name": label.tag,
+                        "color": label.color,
+                        "children": label.children,
+                        "attributes": label.attributes,
+                        "display_label": label.display_label,
+                    }
+                )
+                continue
             children = label.get("children", None)
             label = label.get("value", label)
             if "tag" in label:

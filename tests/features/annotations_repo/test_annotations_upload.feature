@@ -24,5 +24,4 @@ Feature: Annotations repository Upload function testing
     #     When I try to upload annotation description to Item
     #     Then "InternalServerError" exception should be raised
 
-    Scenario: Finally
-        Given Clean up
+

@@ -34,5 +34,3 @@ Feature: Items repository get function testing
         When I try to get an item by remote path "**/0000000162.jpg"
         Then "NotFound" exception should be raised
     
-    Scenario: Finally
-        Given Clean up

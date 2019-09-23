@@ -17,5 +17,3 @@ Feature: Package Entity repo functions
         When I list versions of package entity "package_name"
         Then I receive a list of "2" versions
 
-    Scenario: Finally
-        Given Clean up

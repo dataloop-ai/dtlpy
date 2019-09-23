@@ -9,7 +9,7 @@ def main(project_name, dataset_name, item_path):
     # get dataset
     dataset = dl.projects.get(project_name=project_name).datasets.get(dataset_name=dataset_name)
 
-    # get item
+    # upload and claim item
     item = dataset.items.upload(local_path=item_path)
 
     # modify metadata

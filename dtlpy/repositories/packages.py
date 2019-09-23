@@ -2,11 +2,12 @@ import hashlib
 import traceback
 import logging
 import os
-import shutil
 import io
 import random
 
-from .. import entities, utilities, PlatformException, exceptions
+from .. import entities, utilities, PlatformException, exceptions, repositories
+
+logger = logging.getLogger(name=__name__)
 
 
 class Packages:
@@ -15,24 +16,27 @@ class Packages:
     """
 
     def __init__(self, client_api, project=None, dataset=None):
-        self.logger = logging.getLogger('dataloop.packages')
-        self.client_api = client_api
+        self._client_api = client_api
         if project is None and dataset is None:
-            self.logger.exception('at least one must be not None: dataset or project')
             raise PlatformException('400', 'at least one must be not None: dataset or project')
-        self.project = project
+        self._project = project
         self._dataset = dataset
         self._items_repository = None
 
     @property
     def items_repository(self):
         if self._items_repository is None:
-            # load Binaries dataset
-
-            # load items repository
             self._items_repository = self.dataset.items
             self._items_repository.set_items_entity(entities.Package)
+        assert isinstance(self._items_repository, repositories.Items)
         return self._items_repository
+
+    @property
+    def project(self):
+        if self._project is None:
+            self._project = self.dataset.project
+        assert isinstance(self._project, entities.Project)
+        return self._project
 
     @property
     def dataset(self):
@@ -43,8 +47,9 @@ class Packages:
             except exceptions.NotFound:
                 self._dataset = None
             if self._dataset is None:
-                self.logger.warning(
-                    'Dataset for packages was not found. Creating... dataset name: "Binaries". project_id={}'.format(self.project.id))
+                logger.debug(
+                    'Dataset for packages was not found. Creating... dataset name: "Binaries". project_id={}'.format(
+                        self.project.id))
                 self._dataset = self.project.datasets.create(dataset_name='Binaries')
                 # add system to metadata
                 if 'metadata' not in self._dataset.to_json():
@@ -53,7 +58,12 @@ class Packages:
                     self._dataset.metadata['system'] = dict()
                 self._dataset.metadata['system']['scope'] = 'system'
                 self.project.datasets.update(dataset=self._dataset, system_metadata=True)
+        assert isinstance(self._dataset, entities.Dataset)
         return self._dataset
+
+    @dataset.setter
+    def dataset(self, dataset):
+        self._dataset = dataset
 
     @staticmethod
     def __file_hash(filepath):
@@ -86,16 +96,6 @@ class Packages:
         packages = self.items_repository.list(filters=filters)
         return packages
 
-    def update(self):
-        pass
-
-    def delete(self):
-        pass
-        # # delete all
-        # return self.gen_request('delete', '/packages/%s' % package_id)
-        # # delete from project
-        # return self.gen_request('delete', '/projects/%s/packages/%s' % (project_id, package_id))
-
     def get(self, package_name=None, package_id=None, version=None):
         """
         Get a Package object
@@ -109,25 +109,23 @@ class Packages:
             return matched_version
 
         if package_name is None:
-            raise PlatformException('400', 'Either "package_name" or "package_id" is needed')
+            raise PlatformException(error='400', message='Either "package_name" or "package_id" is needed')
         if version is None:
             version = 'latest'
 
         if version not in ['all', 'latest']:
             try:
-                matched_version = self.items_repository.get(filepath='/packages/%s/%s.zip' % (package_name, version))
+                matched_version = self.items_repository.get(
+                    filepath='/packages/{}/{}.zip'.format(package_name, version))
             except Exception:
-                self.logger.warning('No matching version was found. version: %s' % version)
-                message = ('No matching version was found. version: %s' % version)
-                raise PlatformException('404', message)
+                raise PlatformException(error='404',
+                                        message='No matching version was found. version: {}'.format(version))
             return matched_version
 
         # get all or latest
         versions_pages = self.list_versions(package_name=package_name)
         if versions_pages.items_count == 0:
-            self.logger.warning('No package was found. name: %s' % package_name)
-            message = ('No package was found. name: %s' % package_name)
-            raise PlatformException('404', message)
+            raise PlatformException(error='404', message='No package was found. name: {}'.format(package_name))
         else:
             if version == 'all':
                 matched_version = versions_pages
@@ -144,15 +142,14 @@ class Packages:
                             max_ver = ver_int
                             matched_version = ver
                 if matched_version is None:
-                    message = ('No package was found. name: %s' % package_name)
-                    raise PlatformException('404', message)
+                    raise PlatformException(error='404', message='No package was found. name: {}'.format(package_name))
             else:
-                message = ('unknown version string: %s' % version)
-                raise PlatformException('404', message)
+                raise PlatformException(error='404', message='Unknown version string: {}'.format(version))
 
         return matched_version
 
-    def get_current_version(self, all_versions_pages, zip_md):
+    @staticmethod
+    def get_current_version(all_versions_pages, zip_md):
         latest_version = 0
         same_version_found = None
         # go over all existing versions
@@ -175,30 +172,27 @@ class Packages:
         :param description: package description
         :return: Package object
         """
-
+        # create/get .dataloop dir
         cwd = os.getcwd()
-        temp_path = str(random.randrange(1000, 100000))
-        dist_path = os.path.join(cwd, '.dataloop', temp_path, 'dist')
-        zip_filename = None
+        dl_dir = os.path.join(cwd, '.dataloop')
+        if not os.path.isdir(dl_dir):
+            os.mkdir(dl_dir)
+
+        # get package name
+        if name is None:
+            name = os.path.basename(directory)
+
+        # create/get dist folder
+        zip_filename = os.path.join(dl_dir, '{}_{}.zip'.format(name, str(random.randrange(0, 1000))))
+
         try:
             if not os.path.isdir(directory):
-                self.logger.exception('Not a directory: %s' % directory)
-                message = ('Not a directory: %s' % directory)
-                raise PlatformException('400', message)
+                raise PlatformException(error='400', message='Not a directory: {}'.format(directory))
             directory = os.path.abspath(directory)
 
-            if os.path.isdir(dist_path):
-                shutil.rmtree(dist_path)
-            shutil.copytree(directory, dist_path)
-
             # create zipfile
-            utilities.Miscellaneous.zip_directory(dist_path)
-            zip_filename = dist_path + '.zip'
+            utilities.Miscellaneous.zip_directory(zip_filename=zip_filename, directory=directory)
             zip_md = self.__file_hash(zip_filename)
-
-            # get package name
-            if name is None:
-                name = os.path.basename(directory)
 
             # get latest version
             same_version_found = None
@@ -218,32 +212,49 @@ class Packages:
                 item = same_version_found
             else:
                 # no matched version was found - create a new version
-
+                # read from zipped file
                 with open(zip_filename, 'rb') as f:
                     buffer = io.BytesIO(f.read())
                     buffer.name = str(current_version) + '.zip'
+
+                # upload item
                 item = self.items_repository.upload(local_path=buffer,
-                                                    remote_path='/packages/%s' % name)
+                                                    remote_path='/packages/{}'.format(name))
                 if isinstance(item, list) and len(item) == 0:
                     raise PlatformException(error='400', message='Failed upload package, check log file for details')
 
-                # add metadata to source code
+                # add source code to metadata
+                if 'system' not in item.metadata:
+                    item.metadata['system'] = dict()
                 item.metadata['system']['description'] = description
                 item.metadata['system']['md5'] = zip_md
+
+                # add git info to metadata
+                if utilities.miscellaneous.GitUtils.is_git_repo(path=directory):
+                    # create 'git' field in metadata
+                    if 'git' not in item.metadata:
+                        item.metadata['git'] = dict()
+
+                    # get info
+                    log = utilities.miscellaneous.GitUtils.git_log(path=directory)
+                    status = utilities.miscellaneous.GitUtils.git_status(path=directory)
+
+                    # add to metadata
+                    item.metadata['git']['status'] = status
+                    item.metadata['git']['log'] = log
+
+                # update item
                 item = self.items_repository.update(item=item, system_metadata=True)
-            return item
 
         except Exception as e:
-            self.logger.exception('%s\n%s' % (e, traceback.format_exc()))
+            logger.exception('{}\n{}'.format(e, traceback.format_exc()))
             raise
         finally:
             # cleanup
             if zip_filename is not None:
                 if os.path.isfile(zip_filename):
                     os.remove(zip_filename)
-
-            if os.path.exists(dist_path):
-                shutil.rmtree(dist_path)
+        return item
 
     def unpack_single(self, package, download_path, local_path):
         # downloading with specific filename
@@ -278,7 +289,7 @@ class Packages:
             return os.path.dirname(local_path)
         elif isinstance(package, entities.Package):
             artifact_filepath = self.unpack_single(package=package, download_path=download_path, local_path=local_path)
-            self.logger.info('Source code was unpacked to: %s' % os.path.dirname(artifact_filepath))
+            logger.info('Source code was unpacked to: {}'.format(os.path.dirname(artifact_filepath)))
         else:
             raise PlatformException(
                 error='404',

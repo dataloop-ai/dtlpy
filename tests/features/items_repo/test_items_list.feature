@@ -60,5 +60,3 @@ Feature: Items repository list function testing
         And PageEntity items has length of "1"
         And And PageEntity item received equal to .mp4 item uploadede
 
-    Scenario: Finally
-        Given Clean up

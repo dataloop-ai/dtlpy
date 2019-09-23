@@ -13,7 +13,7 @@ import dtlpy as dl
 
 from .. import entities, PlatformException, utilities
 
-logger = logging.getLogger("dataloop.repositories.items.downloader")
+logger = logging.getLogger(name=__name__)
 
 NUM_TRIES = 3  # try to download 3 time before fail on item
 
@@ -144,73 +144,73 @@ class Downloader:
         # pool
         pool = ThreadPool(processes=num_workers)
         # download
-        with tqdm.tqdm(total=num_items) as pbar:
-            try:
-                i_item = 0
-                for page in items_to_download:
-                    for item in page:
-                        if item.type == "dir":
+        pbar = tqdm.tqdm(total=num_items)
+        try:
+            i_item = 0
+            for page in items_to_download:
+                for item in page:
+                    if item.type == "dir":
+                        continue
+                    if save_locally:
+                        # get local file path
+                        item_local_path, item_local_filepath = self.__get_local_filepath(local_path=local_path,
+                                                                                         item=item,
+                                                                                         to_items_folder=to_items_folder)
+
+                        if os.path.isfile(item_local_filepath) and not overwrite:
+                            logger.debug("File Exists: {}".format(item_local_filepath))
+                            status[i_item] = "exist"
+                            output[i_item] = item_local_filepath
+                            success[i_item] = True
+                            i_item += 1
+                            pbar.update()
+                            if annotation_options and item.annotated:
+                                # download annotations only
+                                pool.apply_async(
+                                    self.__download_img_annotations,
+                                    kwds={
+                                        "item": item,
+                                        "img_filepath": item_local_filepath,
+                                        "overwrite": overwrite,
+                                        "annotation_options": annotation_options,
+                                        "local_path": local_path,
+                                        "thickness": thickness,
+                                        "with_text": with_text
+                                    },
+                                )
                             continue
-                        if save_locally:
-                            # get local file path
-                            item_local_path, item_local_filepath = self.__get_local_filepath(local_path=local_path,
-                                                                                             item=item,
-                                                                                             to_items_folder=to_items_folder)
 
-                            if os.path.isfile(item_local_filepath) and not overwrite:
-                                logger.debug("File Exists: {}".format(item_local_filepath))
-                                status[i_item] = "exist"
-                                output[i_item] = item_local_filepath
-                                success[i_item] = True
-                                i_item += 1
-                                pbar.update()
-                                if annotation_options and item.annotated:
-                                    # download annotations only
-                                    pool.apply_async(
-                                        self.__download_img_annotations,
-                                        kwds={
-                                            "item": item,
-                                            "img_filepath": item_local_filepath,
-                                            "overwrite": overwrite,
-                                            "annotation_options": annotation_options,
-                                            "local_path": local_path,
-                                            "thickness": thickness,
-                                            "with_text": with_text
-                                        },
-                                    )
-                                continue
+                    else:
+                        item_local_path = None
+                        item_local_filepath = None
 
-                        else:
-                            item_local_path = None
-                            item_local_filepath = None
-
-                        # download single item
-                        logger.debug("File Download: {}".format(item.filename))
-                        pool.apply_async(
-                            self.__thread_download_wrapper,
-                            kwds={
-                                "i_item": i_item,
-                                "item": item,
-                                "item_local_path": item_local_path,
-                                "item_local_filepath": item_local_filepath,
-                                "save_locally": save_locally,
-                                "annotation_options": annotation_options,
-                                "status": status,
-                                "output": output,
-                                "success": success,
-                                "errors": errors,
-                                "pbar": pbar,
-                                "overwrite": overwrite,
-                                "thickness": thickness,
-                                "with_text": with_text
-                            },
-                        )
-                        i_item += 1
-            except Exception as e:
-                logger.exception(e)
-            finally:
-                pool.close()
-                pool.join()
+                    # download single item
+                    pool.apply_async(
+                        self.__thread_download_wrapper,
+                        kwds={
+                            "i_item": i_item,
+                            "item": item,
+                            "item_local_path": item_local_path,
+                            "item_local_filepath": item_local_filepath,
+                            "save_locally": save_locally,
+                            "annotation_options": annotation_options,
+                            "status": status,
+                            "output": output,
+                            "success": success,
+                            "errors": errors,
+                            "pbar": pbar,
+                            "overwrite": overwrite,
+                            "thickness": thickness,
+                            "with_text": with_text
+                        },
+                    )
+                    i_item += 1
+        except Exception as e:
+            logger.exception(e)
+        finally:
+            pbar.close()
+            pool.close()
+            pool.join()
         # reporting
         n_download = status.count("download")
         n_exist = status.count("exist")
@@ -221,7 +221,8 @@ class Downloader:
 
         # log error
         if n_error > 0:
-            log_filepath = "log_%s.txt" % datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            log_filepath = os.path.join(os.getcwd(),
+                                        "log_{}.txt".format(datetime.datetime.now().strftime("%Y%m%d_%H%M%S")))
             errors_list = [errors[i_job] for i_job, suc in enumerate(success) if suc is False]
             ids_list = [output[i_job] for i_job, suc in enumerate(success) if suc is False]
             errors_json = {item_id: error for item_id, error in zip(ids_list, errors_list)}
@@ -233,50 +234,50 @@ class Downloader:
         else:
             return output
 
-    def __thread_download_wrapper(self,
-                                  i_item,
-                                  item,
-                                  item_local_path,
-                                  item_local_filepath,
-                                  save_locally,
-                                  annotation_options,
-                                  status,
-                                  output,
-                                  success,
-                                  errors,
-                                  pbar,
-                                  overwrite,
-                                  thickness,
-                                  with_text
-                                  ):
+    def __thread_download_wrapper(self, i_item,
+                                  # item params
+                                  item, item_local_path, item_local_filepath, save_locally, overwrite,
+                                  # annotations params
+                                  annotation_options, with_text, thickness,
+                                  # threading params
+                                  status, output, success, errors, pbar):
 
         download = False
         err = None
+        trace = None
         for i_try in range(NUM_TRIES):
-            logger.debug("download item: {}, try {}".format(item.id, i_try))
             try:
-                download = self.__thread_download(
-                    item=item,
-                    save_locally=save_locally,
-                    local_path=item_local_path,
-                    local_filepath=item_local_filepath,
-                    annotation_options=annotation_options,
-                    overwrite=overwrite,
-                    thickness=thickness,
-                    with_text=with_text
-                )
+                logger.debug("Download item: {path}. Try {i}/{n}. Starting..".format(path=item.filename,
+                                                                                     i=i_try + 1,
+                                                                                     n=NUM_TRIES))
+                download = self.__thread_download(item=item,
+                                                  save_locally=save_locally,
+                                                  local_path=item_local_path,
+                                                  local_filepath=item_local_filepath,
+                                                  annotation_options=annotation_options,
+                                                  overwrite=overwrite,
+                                                  thickness=thickness,
+                                                  with_text=with_text)
+                logger.debug("Download item: {path}. Try {i}/{n}. Success. Item id: {id}".format(path=item.filename,
+                                                                                                 i=i_try + 1,
+                                                                                                 n=NUM_TRIES,
+                                                                                                 id=item.id))
                 if download:
                     break
             except Exception as e:
+                logger.debug("Download item: {path}. Try {i}/{n}. Fail.".format(path=item.filename,
+                                                                                i=i_try + 1,
+                                                                                n=NUM_TRIES))
                 err = e
+                trace = traceback.format_exc()
         pbar.update()
         if not download:
             if err is None:
-                err = self.items_repository.client_api.platform_exception
+                err = self.items_repository._client_api.platform_exception
             status[i_item] = "error"
             output[i_item] = item.id
             success[i_item] = False
-            errors[i_item] = "%s\n%s" % (err, traceback.format_exc())
+            errors[i_item] = "{}\n{}".format(err, trace)
         else:
             status[i_item] = "download"
             output[i_item] = download
@@ -298,9 +299,9 @@ class Downloader:
                 # remove heading of the url
                 w_url = w_url[w_url.find('/dataset'):]
                 # get zip from platform
-                success, response = dataset.client_api.gen_request(req_type="get",
-                                                                   path=w_url,
-                                                                   stream=True)
+                success, response = dataset._client_api.gen_request(req_type="get",
+                                                                    path=w_url,
+                                                                    stream=True)
 
                 if not success:
                     raise PlatformException(response)
@@ -460,11 +461,9 @@ class Downloader:
 
         response = None
         if need_to_download:
-            result, response = self.items_repository.client_api.gen_request(
-                req_type="get",
-                path="/datasets/%s/items/%s/stream" % (item.dataset.id, item.id),
-                stream=True,
-            )
+            result, response = self.items_repository._client_api.gen_request(req_type="get",
+                                                                             path="/items/{}/stream".format(item.id),
+                                                                             stream=True)
             if not result:
                 raise PlatformException(response)
         if save_locally:
@@ -472,25 +471,40 @@ class Downloader:
             if not os.path.exists(os.path.dirname(local_filepath)):
                 # create folder if not exists
                 os.makedirs(os.path.dirname(local_filepath), exist_ok=True)
-            # download and save locally
+
+            # decide if create progress bar for item
             total_length = response.headers.get("content-length")
+            one_file_pbar = None
+            try:
+                one_file_progress_bar = total_length is not None and int(total_length) > 10e6  # size larger than 10 MB
+                if one_file_progress_bar:
+                    one_file_pbar = tqdm.tqdm(total=int(total_length), unit='B',
+                                              unit_scale=True, unit_divisor=1024, position=1)
+            except Exception as err:
+                one_file_progress_bar = False
+                logger.debug('Cant decide downloaded file length, bar will not be presented: {}'.format(err))
+
+            # start download
             with open(local_filepath, "wb") as f:
                 for chunk in response.iter_content(chunk_size=chunk_size):
                     if chunk:  # filter out keep-alive new chunks
                         f.write(chunk)
+                        if one_file_progress_bar:
+                            one_file_pbar.update(len(chunk))
+            if one_file_progress_bar:
+                one_file_pbar.close()
             # save to output variable
             data = local_filepath
             # if image - can download annotation mask
             if item.annotated and annotation_options:
-                self.__download_img_annotations(
-                    item=item,
-                    img_filepath=local_filepath,
-                    annotation_options=annotation_options,
-                    local_path=local_path,
-                    overwrite=overwrite,
-                    thickness=thickness,
-                    with_text=with_text
-                )
+                self.__download_img_annotations(item=item,
+                                                img_filepath=local_filepath,
+                                                annotation_options=annotation_options,
+                                                local_path=local_path,
+                                                overwrite=overwrite,
+                                                thickness=thickness,
+                                                with_text=with_text
+                                                )
         else:
             # save as byte stream
             data = io.BytesIO()
@@ -511,11 +525,7 @@ class Downloader:
                 os.path.expanduser("~"),
                 ".dataloop",
                 "datasets",
-                "%s_%s"
-                % (
-                    self.items_repository.dataset.name,
-                    self.items_repository.dataset.id,
-                ),
+                "{}_{}".format(self.items_repository.dataset.name, self.items_repository.dataset.id),
             )
         else:
             # by dataset and project name

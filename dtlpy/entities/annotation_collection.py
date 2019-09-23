@@ -1,6 +1,5 @@
 from multiprocessing.pool import ThreadPool
 from PIL import Image
-import cv2
 import numpy as np
 import traceback
 import logging
@@ -9,7 +8,7 @@ import json
 
 from .. import utilities, entities, PlatformException
 
-logger = logging.getLogger('dataloop.itemAnnotation')
+logger = logging.getLogger(name=__name__)
 
 
 @attr.s
@@ -93,6 +92,13 @@ class AnnotationCollection:
         # if 'video' in self.item.mimetype and (annotation_format != 'json' or annotation_format != ['json']):
         #     raise PlatformException('400', 'Cannot show mask or instance of video item')
         # height/weight
+        try:
+            import cv2
+        except ImportError:
+            logger.error(
+                'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
+            raise
+
         if height is None:
             if self.item.height is None:
                 raise PlatformException('400', 'Height must be provided')

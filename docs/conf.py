@@ -54,7 +54,7 @@ extensions = [
     'sphinxarg.ext',
     'nbsphinx',
     'sphinx_rtd_theme',
-
+    # 'sphinxcontrib.lunrsearch',
 ]
 
 # Add any paths that contain templates here, relative to this directory.

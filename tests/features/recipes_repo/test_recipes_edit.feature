@@ -9,5 +9,3 @@ Feature: Recipes repository Update function testing
         When I update recipe
         Then Recipe in host equals recipe eddited
 
-    Scenario: Finally
-        Given Clean up

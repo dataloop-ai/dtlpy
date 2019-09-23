@@ -31,5 +31,3 @@ Feature: Items repository delete function testing
         Then "BadRequest" exception should be raised
         And No item was deleted
 
-    Scenario: Finally
-        Given Clean up

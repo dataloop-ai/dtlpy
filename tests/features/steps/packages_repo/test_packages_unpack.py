@@ -6,7 +6,7 @@ import shutil
 
 @behave.given(u'I pack directory by name "{package_name}"')
 def step_impl(context, package_name):
-    context.package = context.packages.pack(
+    context.package = context.project.packages.pack(
         directory=context.package_local_dir,
         name=package_name,
         description="some description"
@@ -16,14 +16,14 @@ def step_impl(context, package_name):
 @behave.when(u'I unpack a package by the name of "{package_name}" to "{unpack_path}"')
 def step_impl(context, unpack_path, package_name):
     unpack_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], unpack_path)
-    context.packages.unpack(package_name=package_name, local_path=unpack_path)
+    context.project.packages.unpack(package_name=package_name, local_path=unpack_path)
     context.unpack_path = os.path.join(unpack_path, 'dist')
 
 
 @behave.when(u'I unpack a package by the id of "{package_name}" to "{unpack_path}"')
 def step_impl(context, unpack_path, package_name):
     unpack_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], unpack_path)
-    context.packages.unpack(package_id=context.package.id, local_path=unpack_path)
+    context.project.packages.unpack(package_id=context.package.id, local_path=unpack_path)
     context.unpack_path = os.path.join(unpack_path, 'dist')
 
 
@@ -42,7 +42,7 @@ def step_impl(context, original_path):
 def step_impl(context, unpack_path, package_name):
     unpack_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], unpack_path)
     try:
-        context.packages.unpack(package_name=package_name,
+        context.project.packages.unpack(package_name=package_name,
                                 local_path=unpack_path)
         context.error = None
     except Exception as e:
@@ -53,7 +53,7 @@ def step_impl(context, unpack_path, package_name):
 def step_impl(context, unpack_path, wrong_id):
     unpack_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], unpack_path)
     try:
-        context.packages.unpack(package_id=wrong_id,
+        context.project.packages.unpack(package_id=wrong_id,
                                 local_path=unpack_path)
         context.error = None
     except Exception as e:
@@ -72,7 +72,7 @@ def step_impl(context, file_path):
 @behave.when(u'I unpack a package "{package_name}" version "{version}" to "{unpack_path}"')
 def step_impl(context, version, package_name, unpack_path):
     unpack_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], unpack_path)
-    context.packages.unpack(package_name=package_name,
+    context.project.packages.unpack(package_name=package_name,
                             local_path=unpack_path,
                             version=version)
     context.unpack_path = os.path.join(unpack_path, 'dist')
@@ -102,7 +102,7 @@ def step_impl(context, unpack_path, original_path):
 def step_impl(context, version, package_name, unpack_path):
     unpack_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], unpack_path)
     try:
-        context.packages.unpack(package_name=package_name,
+        context.project.packages.unpack(package_name=package_name,
                                 local_path=unpack_path,
                                 version=version)
         context.error = None
