@@ -39,6 +39,13 @@ dtlpy.entities.dataset module
    :members:
    :undoc-members:
    :show-inheritance:
+dtlpy.entities.deployment module
+--------------------------------
+
+.. automodule:: dtlpy.entities.deployment
+   :members:
+   :undoc-members:
+   :show-inheritance:
 dtlpy.entities.filters module
 -----------------------------
 
@@ -106,13 +113,6 @@ dtlpy.entities.session module
 -----------------------------
 
 .. automodule:: dtlpy.entities.session
-   :members:
-   :undoc-members:
-   :show-inheritance:
-dtlpy.entities.task module
---------------------------
-
-.. automodule:: dtlpy.entities.task
    :members:
    :undoc-members:
    :show-inheritance:
