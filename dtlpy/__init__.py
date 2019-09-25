@@ -24,6 +24,7 @@ from .__version__ import version as __version__
 from .entities import Box, Point, Segmentation, Polygon, Ellipse, Classification, Polyline, Filters, Trigger, \
     AnnotationCollection, Annotation, Item, Package, Filters, Session, Recipe, Ontology, Label
 from . import examples
+from .services.check_sdk import check
 from .utilities import Converter, BasePluginRunner, Progress
 
 """
@@ -60,9 +61,13 @@ plugins = repositories.Plugins(client_api=client_api)
 sessions = repositories.Sessions(client_api=client_api)
 deployments = repositories.Deployments(client_api=client_api)
 
-
 if client_api.token_expired():
     logger.error('Token expired. Please login')
+
+try:
+    check(version=__version__, client_api=client_api)
+except:
+    logger.debug('Failed to check SDK! Continue without')
 
 
 def login(audience=None, auth0_url=None, client_id=None):

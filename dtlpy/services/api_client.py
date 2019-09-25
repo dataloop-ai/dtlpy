@@ -288,7 +288,8 @@ class ApiClient:
         self.environments = environments
 
     @Decorators.token_expired_decorator
-    def gen_request(self, req_type, path, data=None, json_req=None, files=None, stream=False, headers=None):
+    def gen_request(self, req_type, path, data=None, json_req=None, files=None, stream=False, headers=None,
+                    log_error=True):
         """
         Generic request from platform
         :param req_type:
@@ -298,6 +299,7 @@ class ApiClient:
         :param files:
         :param stream:
         :param headers:
+        :param log_error:
         :return:
         """
         req_type = req_type.upper()
@@ -331,7 +333,7 @@ class ApiClient:
         self.last_response = resp
         # handle output
         if not resp.ok:
-            self.print_bad_response(resp, log_error=not self.is_cli)
+            self.print_bad_response(resp, log_error=log_error and not self.is_cli)
             return_type = False
         else:
             try:

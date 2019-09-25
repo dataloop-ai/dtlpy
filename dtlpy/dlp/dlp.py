@@ -29,10 +29,8 @@ if os.name == "nt":
 # Logger #
 ##########
 # set levels for CLI
-logging.basicConfig(level='INFO')
-logger = logging.getLogger(name=__name__)
-logger = services.create_logger(logger, level=logging.INFO)
-
+logger = logging.getLogger(name='dtlpy')
+logger.handlers[1].setLevel(logging.INFO)
 
 keywords = dict()
 param_suggestions = list()
