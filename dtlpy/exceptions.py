@@ -24,7 +24,7 @@ class PlatformException(Exception):
             if hasattr(error, 'status_code'):
                 self.status_code = str(error.status_code)
             if hasattr(error, 'text'):
-                self.message = '\ntext: %s' % error.text
+                self.message = error.json().get('message', error.text)
 
         if self.status_code in exceptions:
             raise exceptions[self.status_code](self.status_code, self.message)
@@ -34,6 +34,8 @@ class PlatformException(Exception):
 
 class ExceptionMain(Exception):
     def __init__(self, status_code='Unknown Status Code', message='Unknown Error Message'):
+        self.status_code = status_code
+        self.message = message
         super().__init__(status_code, message)
 
 

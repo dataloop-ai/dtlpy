@@ -36,6 +36,8 @@ Content
 
 :ref:`16`
 
+:ref:`17`
+
 .. _1:
 
 Add metadata to items
@@ -153,3 +155,9 @@ Filters
 Delete Annotations
 ----------------------------------------
 .. literalinclude:: ../dtlpy/examples/delete_annotations.py
+
+.. _17:
+
+Add Labels
+----------------------------------------
+.. literalinclude:: ../dtlpy/examples/add_labels.py

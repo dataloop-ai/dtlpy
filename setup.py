@@ -26,7 +26,7 @@ with open('requirements.txt') as f:
     requirements = f.read()
 
 setup(name='dtlpy',
-      version='1.7.35',
+      version='1.7.38',
       description='SDK and CLI for Dataloop platform',
       author='Or Shabtay',
       author_email='or@dataloop.ai',
@@ -35,7 +35,7 @@ setup(name='dtlpy',
       long_description=readme,
       long_description_content_type='text/markdown',
       packages=find_packages(exclude=('tests', 'docs', 'samples')),
-        setup_requires=['wheel'],
+      setup_requires=['wheel'],
       install_requires=requirements,
       test_suite='tests',
       scripts=['dtlpy/dlp/dlp.py', 'dtlpy/dlp/dlp.bat', 'dtlpy/dlp/dlp'],

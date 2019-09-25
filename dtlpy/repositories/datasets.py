@@ -36,6 +36,9 @@ class Datasets:
     def __get_by_id(self, dataset_id):
         success, response = self._client_api.gen_request(req_type='get',
                                                          path='/datasets/{}'.format(dataset_id))
+        if dataset_id is None or dataset_id == '':
+            raise PlatformException('400', 'Please checkout a dataset')
+
         if success:
             dataset = entities.Dataset.from_json(client_api=self._client_api,
                                                  _json=response.json(),

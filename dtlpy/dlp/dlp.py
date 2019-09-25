@@ -1,21 +1,25 @@
 #! /usr/bin/python3
+import subprocess
+import threading
+import traceback
 import argparse
+import datetime
 import logging
+import shlex
+import sys
+import csv
 import jwt
 import os
-import subprocess
-import traceback
-import sys
-from prompt_toolkit import prompt
-from prompt_toolkit.history import History
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.completion import Completer, Completion
+from prompt_toolkit.history import History
 from fuzzyfinder.main import fuzzyfinder
+from prompt_toolkit import prompt
+from dtlpy import exceptions, services
+
 import dtlpy as dlp
-import shlex
-from dtlpy import exceptions
-import datetime
-import threading
+
+dlp.client_api.is_cli = True
 
 if os.name == "nt":
     # set encoding for windows printing
@@ -24,10 +28,11 @@ if os.name == "nt":
 ##########
 # Logger #
 ##########
+# set levels for CLI
+logging.basicConfig(level='INFO')
 logger = logging.getLogger(name=__name__)
-console = logging.StreamHandler()
-console.setLevel(logging.INFO)
-logger.addHandler(console)
+logger = services.create_logger(logger, level=logging.INFO)
+
 
 keywords = dict()
 param_suggestions = list()
@@ -203,9 +208,9 @@ class DlpCompleter(Completer):
         bool_flags_list = ['--overwrite', '--with-text', '--deploy', '--not-items-folder', '--encode']
 
         if len(cmd) > 2 and cmd[-2].startswith('--') and word_before_cursor != '':
-            need_param = not self.get_param(cmd=cmd, word_before_cursor=word_before_cursor) in bool_flags_list
+            need_param = self.get_param(cmd=cmd, word_before_cursor=word_before_cursor) not in bool_flags_list
         elif cmd[-1].startswith('-') and word_before_cursor == '':
-            need_param = not self.get_param(cmd=cmd, word_before_cursor=word_before_cursor) in bool_flags_list
+            need_param = self.get_param(cmd=cmd, word_before_cursor=word_before_cursor) not in bool_flags_list
         elif cmd[0] in ['cd']:
             need_param = True
 
@@ -232,8 +237,7 @@ class DlpCompleter(Completer):
         global thread_state
 
         # fix input
-        cmd = " ".join(document.text.split())
-        cmd = cmd.split(" ")
+        cmd = next(csv.reader([" ".join(document.text.split())], delimiter=' '))
 
         # get current word
         word_before_cursor = document.get_word_before_cursor(WORD=True)
@@ -373,12 +377,10 @@ def get_parser():
     # setenv
     a = subparser_parser.add_parser("setenv", help="Set platform environment")
     required = a.add_argument_group("required named arguments")
-    required.add_argument(
-        "-e", "--env", metavar='\b', help="working environment", required=True
-    )
+    required.add_argument("-e", "--env", metavar='\b', help="working environment", required=True)
 
-    # update
-    a = subparser_parser.add_parser("update", help="Update dtlpy package")
+    # upgrade
+    a = subparser_parser.add_parser("upgrade", help="Update dtlpy package")
     optional = a.add_argument_group("optional named arguments")
     optional.add_argument(
         "-u",
@@ -405,6 +407,7 @@ def get_parser():
     a = subparser_parser.add_parser("create", help="Create a new project")
     required = a.add_argument_group("required named arguments")
     required.add_argument("-p", "--project-name", metavar='\b', help="project name")
+    required.add_argument("-c", "--checkout", action='store_true', default=False, help="checkout the new project")
 
     # checkout
     a = subparser_parser.add_parser("checkout", help="checkout a project")
@@ -442,6 +445,7 @@ def get_parser():
     optional = a.add_argument_group("optional named arguments")
     optional.add_argument("-p", "--project-name", metavar='\b', default=None,
                           help="project name. Default taken from checked out (if checked out)")
+    required.add_argument("-c", "--checkout", action='store_true', default=False, help="checkout the new dataset")
 
     # checkout
     a = subparser_parser.add_parser("checkout", help="checkout a dataset")
@@ -648,6 +652,7 @@ def get_parser():
     optional.add_argument("-pr", "--project-name", dest="project_name", default=None,
                           help="Project name")
 
+
     ###########
     # Plugins #
     ###########
@@ -657,6 +662,11 @@ def get_parser():
     )
 
     # ACTIONS #
+
+    # deploy
+    a = subparser_parser.add_parser(
+        "deploy", help="Deploy plugin from local directory"
+    )
 
     # generate
     a = subparser_parser.add_parser(
@@ -781,7 +791,7 @@ def run(args, parser):
             print(datetime.datetime.utcnow())
             print("[INFO] Platform environment: {}".format(dlp.environment()))
 
-        if args.api == "update":
+        if args.api == "upgrade":
             url = args.url
             payload = jwt.decode(dlp.client_api.token, algorithms=['HS256'], verify=False)
             try:
@@ -805,7 +815,10 @@ def run(args, parser):
         elif args.projects == "web":
             dlp.projects.open_in_web(project_name=args.project_name)
         elif args.projects == "create":
-            dlp.projects.create(args.project_name).print()
+            project = dlp.projects.create(args.project_name)
+            project.print()
+            if args.checkout:
+                dlp.projects.checkout(project.name)
         elif args.projects == "checkout":
             dlp.projects.checkout(args.project_name)
         else:
@@ -833,7 +846,10 @@ def run(args, parser):
         elif args.datasets == "create":
             project = dlp.projects.get(project_name=args.project_name)
             print(datetime.datetime.utcnow())
-            project.datasets.create(dataset_name=args.dataset_name).print()
+            dataset = project.datasets.create(dataset_name=args.dataset_name)
+            dataset.print()
+            if args.checkout:
+                dlp.datasets.checkout(dataset.name)
         else:
             print('Type "dlp datasets --help" for options')
 
@@ -1060,18 +1076,15 @@ def run(args, parser):
                 os.chdir('./src')
             try:
                 dlp.plugins.test_local_plugin()
+            except Exception as e:
+                print(traceback.format_exc())
             finally:
                 if go_back:
                     os.chdir('..')
 
         elif args.plugins == "deploy":
             print(datetime.datetime.utcnow())
-            if args.revision is not None and args.revision != 'latest':
-                args.revision = int(args.revision)
-            else:
-                args.revision = None
             deployment_name = dlp.deployments.deploy_from_local_folder().name
-
             print("Successfully deployed the plugin, deployment name is: %s" % deployment_name)
 
         else:
@@ -1210,8 +1223,10 @@ def main():
                         continue
                 except Exception as e:
                     print(datetime.datetime.utcnow())
-                    print(traceback.format_exc())
-                    print(e)
+                    if hasattr(e, 'message'):
+                        print(e.message)
+                    else:
+                        print(e.__str__())
                     continue
 
         else:

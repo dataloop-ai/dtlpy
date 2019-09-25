@@ -46,7 +46,7 @@ Main Platform Interface module for Dataloop
 # Logger #
 ##########
 logger = logging.getLogger(name=__name__)
-logger = services.create_logger(logger)
+logger = services.create_logger(logger, level=logging.WARNING)
 
 ################
 # Repositories #
@@ -59,6 +59,7 @@ items = repositories.Items(client_api=client_api)
 plugins = repositories.Plugins(client_api=client_api)
 sessions = repositories.Sessions(client_api=client_api)
 deployments = repositories.Deployments(client_api=client_api)
+
 
 if client_api.token_expired():
     logger.error('Token expired. Please login')

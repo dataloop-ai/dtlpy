@@ -7,52 +7,60 @@ Bootstraping the plugin
 -----------------------
 Before starting run
 
-.. code::
-
-    $ dlp login
-
-Create a local dataloop repository
-
-.. code::
-
-   $ dlp init
-
 Checkout to a local project and dataset
 
 .. code::
 
     $ dlp projects checkout <project_name/project_id>
     $ dlp datasets checkout <dataset_name/dataset_id>
-    $ dlp plugins checkout <plugin name>
 
 
-Create a Plugin from the current directory
+Create a Plugin at the current directory
 
 .. code::
 
-   $ dlp plugins generate
+   $ dlp plugins generate --plugin-name
+
+
+The above command should generate the following files in the current working directory:
+
+1. plugin.json
+2. main.py
+3. mock.json
+4. deployment.json
+5. .gitignore
 
 Developing the plugin
+=====================
+Plugin Json
 ---------------------
-| The plugin folder contains the following components:
-| 1) A .dataloop folder containing the local state, you should not touch it.
-| 2) A plugin.json file which defines the inputs and outputs of the plugin.
-| 3) A mock.json file which defines sample entities to be used for the test command.
-| 4) A src folder containing the code to be executed, the run method of main.py is the entry
-|  point of the plugin.
-|
-| We currently support 4 types of entites: Dataset, Item, Annotation and a
-| special Json entity for passing arbitrary jsons.
-|
-| The plugin.json file contains 2 fields:
-| 1) An inputs field which contains an array of the entities that will be passed to src/main:run.
-|  as named arguments
-| 2) An outputs field which contains an array of the entities that will be returned from src/main:run
-|  as a tuple.
-|
-| The mock.json file currently has only the field inputs which defines the inputs given to
-| src/main:run when running **"dlp plugins test"**.
-| The array in the mock.json file should correspond to the input field of the plugin.json file.
+| The plugin.json should look something like this:
+| {
+|     "inputs": [
+|         {
+|             "type": "Item",
+|             "name": "item"
+|         }
+|     ],
+|     "outputs": [
+|     ],
+|     "name": "myPlugin"
+| }
+
+| It defines the plugin inputs, outputs and name.
+| In this case, the plugin name is: myPlugin and it expects an item input.
+| Input can be of types, item, dataset, annotation and json
+
+| The value of an dataset entity should be in the form:
+| {
+|   "dataset_id": <dataset_id>
+| }
+
+| The value of an item entity should be in the form:
+| {
+|   "dataset_id": <dataset_id>,
+|   "item_id": <item_id>
+| }
 
 | The value of an annotation entity should be in the form:
 | {
@@ -60,46 +68,155 @@ Developing the plugin
 |   "item_id": <item_id>,
 |   "annotation_id": <annotation_id>
 | }
-| And the values of dataset and item entities should look accordingly.
+
 | The value of a Json entity can be any json.
 
-Test the code locally
+Plugin Source Code
+---------------------
+Your main.py file should look something like this:
+
+.. code::
+
+    import dtlpy as dl
+    import logging
+    logger = logging.getLogger(name=__name__)
+
+    class PluginRunner(dl.BasePluginRunner):
+        """
+        Plugin runner class
+
+        """
+        def __init__(self, **kwargs):
+            """
+            Init plugin attributes here
+            
+            :param kwargs: config params
+            :return:
+            """
+            self.message = kwargs['message']
+
+        def run(self, item, progress=None):
+            """
+            Write your main plugin function here
+
+            :param progress: Use this to update the progress of your plugin
+            :return:
+            """
+            assert isinstance(progress, dl.Progress)
+            progress.update(status='inProgress', progress=0)
+            item.metadata['message']['user']['firstPlugin'] = self.message
+            item.update()
+            progress.update(status='inProgress', progress=100)
+
+    if __name__ == "__main__":
+        """
+        Run this main to locally debug your plugin
+        """
+        # config param for local testing
+        kwargs = dict()
+        dl.plugins.test_local_plugin(kwargs)
+
+| The plugin configuration will run the code in init method once.
+| And each plugin session will perform the code in the run method.
+
+| In this case, the init will set global attribute 'message' and the session will add this
+| message to the item's metadata.
+
+| Run method receives a progress object which allows us to update session progress.
+
+| DO NOT MAKE CHANGES TO THE main.py LAYOUT!
+| Changes we are allowed to make are:
+| 1. run() params (as long as it still receive progress and inputs defined in plugin.json).
+| 2. Code within run and init methods.
+| 3. Addition of other methods and classes
+| 4. Additional imports
+
+Testing Plugin
 ---------------------
 
-| Once you have a mock.json specifying existing items/annotations in your checked out
-| project and dataset, test the plugin locally with:
+Your mock.json exists in-order to allow local plugin tests.
+By providing plugin inputs in the "input" field of mock.json
+And providing init params in the "config" field of mock.json
+You can perform:
 
 .. code::
 
    $ dlp plugins test
 
-Deploy to cloud
----------------
+This will run the init method followed by the run method with params provided in the mock.json.
 
-| Push the plugin to the cloud
+For example:
+| {
+|   "inputs": [
+|     {
+|       "name": "item",
+|       "value": {
+|         "dataset_id": "5d8b1d0ecb5bbd508b64f491",
+|         "item_id": "5d8b1d1bba74a0f7717c500b"
+|       }
+|     }
+|   ],
+|   "config": {
+|     "message": "My first plugin"
+|   }
+| }
+
+| the init method will receive {"message": "My first plugin"}
+| and run method will receive item with id provided from dataset with id provided.
+
+| Meaning, this item's metadata will be updated with the following:
+|   "firstPlugin" = "My first plugin"
+
+Deploy to cloud
+=====================
+First push the pluging by performing:
 
 .. code::
 
    $ dlp plugins push
 
-| Deploy the plugin to the cloud(i.e: make a running instance out of it)
+Secondly, edit the deployment.json file:
+
+|   {
+|     "name": "deployment-json",
+|     "plugin": "deploymentJsonPlugin",
+|     "runtime": {
+|       "gpu": false,
+|       "replicas": 1,
+|       "concurrency": 32,
+|       "image": ""
+|     },
+|     "triggers": [
+|       {
+|         "name": "deploymentJsonPlugin",
+|         "filter": {},
+|         "resource": "Item",
+|         "actions": [
+|           "Created"
+|         ],
+|         "active": true,
+|         "executionMode": "Once"
+|       }
+|     ],
+|     "config": {
+|       "message": "My first plugin with deployment.json"
+|     },
+|     "pluginRevision": "latest"
+|   }
+
+| In this case:
+|     - deployment name is: deployment
+|     - it is attached to plugin "deploymentJsonPlugin"
+|     - deployment will work on cpu and allow 32 procecces to run simultaneously
+|     - container autoscale limit is 1
+|     - plugin version is latest
+|     - a trigger by the name of deploymentJsonPlugin will be created and will trigger this deployment
+|       anytime an Item is created in the project.
+
+
+| Now we can deploy the plugin to the cloud(i.e: make a running instance out of it)
 
 .. code::
 
    $ dlp plugins deploy
 
-
-Invoke the plugin in the cloud
-------------------------------
-
-| To use your mock.json as input for the plugin in the cloud, run:
-
-.. code::
-
-   $ dlp plugins invoke
-
-| To use a different file as input(with the same format), run:
-
-.. code::
-
-   $ dlp plugins invoke -f <filename>

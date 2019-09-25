@@ -16,7 +16,6 @@ class Deployments:
 
     @property
     def plugin(self):
-        assert isinstance(self._plugin, entities.Plugin)
         return self._plugin
 
     @property
@@ -232,7 +231,7 @@ class Deployments:
         :param runtime:
         :return:
         """
-        deployments = {deployment.name: deployment for deployment in self.project.deployments.list()}
+        deployments = {deployment.name: deployment for deployment in self.list()}
         if deployment_name in deployments:
             deployment = deployments[deployment_name]
             if runtime is not None:
@@ -262,7 +261,6 @@ class Deployments:
         else:
             raise exceptions.PlatformException('400', 'Could not find deployment.json in path: {}'.format(cwd))
 
-        deployment_json = deployment_json[0]
         deployment_triggers = deployment_json.get('triggers', list())
 
         # get attributes

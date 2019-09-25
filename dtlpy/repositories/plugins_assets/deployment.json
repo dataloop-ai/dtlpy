@@ -17,8 +17,7 @@
                     "Created"
                 ],
                 "active": true,
-                "executionMode": "Once",
-                "deploymentId": ""
+                "executionMode": "Once"
             }
         ],
         "config": {},

@@ -218,13 +218,67 @@ class Dataset:
         """
         self.datasets.open_in_web(dataset=self)
 
-    def add_label(self, label_name, color=None, children=None, attributes=None, display_label=None):
-        recipe = self.recipes.get(recipe_id=self.get_recipe_ids()[0])
-        ontology = recipe.ontologies.get(ontology_id=recipe.ontologyIds[0])
-        ontology.add_label(label_name=label_name,
-                           color=color,
-                           children=children,
-                           attributes=attributes,
-                           display_label=display_label)
+    def add_label(self, label_name, color=None, children=None, attributes=None, display_label=None, label=None,
+                  recipe_id=None, ontology_id=None):
+        """
+        Add single label to dataset
+
+        :param label_name:
+        :param color:
+        :param children:
+        :param attributes:
+        :param display_label:
+        :param label:
+        :param recipe_id: optional
+        :param ontology_id: optional
+        :return: label entity
+        """
+        # get recipe
+        if recipe_id is None:
+            recipe_id = self.get_recipe_ids()[0]
+        recipe = self.recipes.get(recipe_id=recipe_id)
+
+        # get ontology
+        if ontology_id is None:
+            ontology_id = recipe.ontologyIds[0]
+        ontology = recipe.ontologies.get(ontology_id=ontology_id)
+
+        # add label
+        added_label = ontology.add_label(label_name=label_name,
+                                         color=color,
+                                         children=children,
+                                         attributes=attributes,
+                                         display_label=display_label,
+                                         label=label)
+
+        # update and return
         ontology = ontology.update(system_metadata=True)
         self._labels = ontology.labels
+        return added_label
+
+    def add_labels(self, label_list, ontology_id=None, recipe_id=None):
+        """
+        Add labels to dataset
+
+        :param label_list:
+        :param recipe_id: optional
+        :param ontology_id: optional
+        :return: label entities
+        """
+        # get recipe
+        if recipe_id is None:
+            recipe_id = self.get_recipe_ids()[0]
+        recipe = self.recipes.get(recipe_id=recipe_id)
+
+        # get ontology
+        if ontology_id is None:
+            ontology_id = recipe.ontologyIds[0]
+        ontology = recipe.ontologies.get(ontology_id=ontology_id)
+
+        # add labels to ontology
+        added_labels = ontology.add_labels(label_list=label_list)
+
+        # update and return
+        ontology = ontology.update(system_metadata=True)
+        self._labels = ontology.labels
+        return added_labels

@@ -20,12 +20,13 @@ class Label:
         :param root: _json representation of a label as it is in host
         :return: Label object
         """
+        children = [Label.from_root(child) for child in root['children']]
         return cls(
             tag=root['value']['tag'],
             color=root['value']['color'],
             display_label=root['value']['displayLabel'],
             attributes=root['value']['attributes'],
-            children=root['children']
+            children=children
         )
 
     def to_root(self):
@@ -39,9 +40,10 @@ class Label:
                                                               attr.fields(Label).display_label))
         value['displayLabel'] = self.display_label
         value['color'] = self.hex
+        children = [child.to_root() for child in self.children]
         _json = {
             'value': value,
-            'children': self.children
+            'children': children
         }
         return _json
 

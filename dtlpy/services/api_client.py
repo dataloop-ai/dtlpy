@@ -74,6 +74,7 @@ class ApiClient:
         # Initiate #
         ############
         # define local params - read only once from cookie file
+        self.is_cli = False
         self.session = None
         self._token = None
         self._environments = None
@@ -330,7 +331,7 @@ class ApiClient:
         self.last_response = resp
         # handle output
         if not resp.ok:
-            self.print_bad_response(resp)
+            self.print_bad_response(resp, log_error=not self.is_cli)
             return_type = False
         else:
             try:
@@ -550,6 +551,7 @@ class ApiClient:
             msg += '[Reason: {val}]'.format(val=resp.reason)
         if hasattr(resp, 'text'):
             msg += '[Text: {val}]'.format(val=resp.text)
+
         if log_error:
             logger.error(msg)
         else:
@@ -647,8 +649,8 @@ class ApiClient:
                         payload['email'] == email and \
                         not self.token_expired() and \
                         not force:
-                    logger.info('Trying to login with same email but token not expired. Not doing anything... '
-                                'Set "force" flag to True to login anyway.')
+                    logger.warning('Trying to login with same email but token not expired. Not doing anything... '
+                                   'Set "force" flag to True to login anyway.')
                     return True
             except jwt.exceptions.DecodeError:
                 logger.debug('{}\n{}'.format(traceback.format_exc(), 'Cant decode token. Force login is user'))

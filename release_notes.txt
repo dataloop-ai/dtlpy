@@ -1,3 +1,15 @@
+Release 1.7.36
+    Bugs:
+        - CLI logging now working
+        - Added Retries on >500 status codes
+    Features:
+        - Plugins and Deployments
+        - Added support for sub labels
+        - Converters - working VOC
+    Examples:
+        - Converted
+        - Filtering with metadata
+
 Release 1.7.11
     Bugs:
         - some dlp shell bug fix
@@ -7,7 +19,7 @@ Release 1.7.11
 Release 1.7.9
     Bugs:
         - item.download() - not to relative path
-        - filters -  add /* to end of romote_path
+        - filters -  add /* to end of remote_path
         
 Release 1.7.8
     Features:

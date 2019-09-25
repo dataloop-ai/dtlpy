@@ -73,7 +73,7 @@ class DataloopLogger(handlers.BaseRotatingHandler):
         return 0
 
 
-def create_logger(logger):
+def create_logger(logger, level=logging.WARNING):
     log_filepath = DataloopLogger.get_log_filepath()
     # set main logger
     formatter = logging.Formatter(fmt="%(asctime)s.%(msecs)03d [%(levelname)s]- %(name)s: %(message)s",
@@ -82,7 +82,7 @@ def create_logger(logger):
 
     # set steam handler for viewing
     sh = logging.StreamHandler()
-    sh.setLevel(logging.WARNING)
+    sh.setLevel(level)
     sh.setFormatter(formatter)
 
     # set file handler to save all logs to file

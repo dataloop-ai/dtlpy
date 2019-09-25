@@ -154,12 +154,24 @@ class Annotation:
 
     @property
     def color(self):
-        label = None
-        for label in self.item.dataset.labels:
-            if label.tag.lower() == self.label.lower():
-                return label.rgb
-        if label is None:
-            return 255, 255, 255
+        def find_tag_in_labels(search_tag, labels):
+            for label in labels:
+                if label.tag.lower() == search_tag.lower():
+                    return label
+            return None
+
+        dataset_labels = self.item.dataset.labels
+        split_tag = self.label.lower().split('.')
+        for i_tag, tag in enumerate(split_tag):
+            if i_tag == 0:
+                # first tag in split - search in main dataset labels
+                dataset_labels = find_tag_in_labels(tag, dataset_labels)
+            else:
+                # search in label's children
+                dataset_labels = find_tag_in_labels(tag, dataset_labels.children)
+            if dataset_labels is None:
+                return None
+        return dataset_labels.rgb
 
     ####################
     # frame attributes #
@@ -327,7 +339,7 @@ class Annotation:
             if self.color is not None:
                 color = self.color
             else:
-                logger.warning('No color given, random color will be selected')
+                logger.warning('No color given for label: {}, random color will be selected'.format(self.label))
                 color = (127, 127, 127)
         if (isinstance(color, list) or isinstance(color, tuple)) and len(color) == 3:
             # if color is a list or tuple and size of 3 - add alpha

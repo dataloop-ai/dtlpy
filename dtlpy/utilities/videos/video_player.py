@@ -60,7 +60,7 @@ class VideoPlayer:
         ########################
         self.window_width = self.vid.width
         self.window_height = self.vid.height
-        self.buttons_window = tkinter.Tk()
+        self.buttons_window = tkinter.Toplevel(master=self.window)
         self.buttons_window.title('Controls')
         self.buttons_window.geometry()
 

@@ -4,8 +4,45 @@ pipelines:
   default:
     - step:
         image: python:3.5
-        name: Tests
+        name: Tests3.5
         script:
+          - python --version
+          - pip install -r requirements.txt
+          - python setup.py build
+          - python setup.py install
+          - dlp api setenv -e dev
+          - dlp login-secret -e "$TEST_USERNAME" -p "$TEST_PASSWORD" -i "$TEST_CLIENT_ID" -s "$TEST_CLIENT_SECRET"
+          - pip install gsutil
+          - gsutil -m cp -R gs://sdl-tests-assets/assets tests/
+          - python tests/test_examples.py
+          - python tests/test_runner.py
+          # - docker login -u _json_key -p "$GCP_KEY" https://gcr.io
+          # - python setup.py bdist_wheel
+          # - mv dist/* dist/dtlpy-latest-py3-none-any.whl
+          # - gsutil cp dist/dtlpy-latest-py3-none-any.whl gs://dtlpy/dev
+    - step:
+        image: python:3.6
+        name: Tests3.6
+        script:
+          - python --version
+          - pip install -r requirements.txt
+          - python setup.py build
+          - python setup.py install
+          - dlp api setenv -e dev
+          - dlp login-secret -e "$TEST_USERNAME" -p "$TEST_PASSWORD" -i "$TEST_CLIENT_ID" -s "$TEST_CLIENT_SECRET"
+          - pip install gsutil
+          - gsutil -m cp -R gs://sdl-tests-assets/assets tests/
+          - python tests/test_examples.py
+          - python tests/test_runner.py
+          # - docker login -u _json_key -p "$GCP_KEY" https://gcr.io
+          # - python setup.py bdist_wheel
+          # - mv dist/* dist/dtlpy-latest-py3-none-any.whl
+          # - gsutil cp dist/dtlpy-latest-py3-none-any.whl gs://dtlpy/dev
+    - step:
+        image: python:3.7
+        name: Tests3.7
+        script:
+          - python --version
           - pip install -r requirements.txt
           - python setup.py build
           - python setup.py install

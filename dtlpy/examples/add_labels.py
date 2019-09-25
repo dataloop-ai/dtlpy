@@ -2,6 +2,19 @@ def main(project_name, dataset_name):
     # Imports the SDK package
     import dtlpy as dl
 
+    """
+    Label dictionary format:
+    
+    {
+        'label_name': 'dog',
+        'displayLabel': 'Dog',
+        'attributes': ['list of attributes'],
+        'color': (34, 6, 231),
+        'children': ['list of label dictionaries']
+    }
+
+    """
+
     # prep
     project = dl.projects.get(project_name=project_name)
     dataset = project.datasets.get(dataset_name=dataset_name)
@@ -10,6 +23,28 @@ def main(project_name, dataset_name):
     # add label to dataset entity #
     ###############################
     dataset.add_label(label_name='Horse', color=(2, 43, 123))
+
+    #############################
+    # add label with sub-labels #
+    #############################
+    dataset.add_label(label_name='CEO', color=(2, 43, 123),
+                      children=[{'label_name': 'Manager',
+                                 'children': [{'label_name': 'Employee'}]}])
+
+    ################################
+    # add labels to dataset entity #
+    ################################
+    labels = [
+        {'label_name': 'Dog',
+         'color': (34, 6, 231),
+         'children': [{'label_name': 'Puppy',
+                       'color': (24, 16, 130)}]},
+        {'label_name': 'Cat',
+         'color': (24, 25, 31),
+         'children': [{'label_name': 'Kitten',
+                       'color': (124, 116, 140)}]}
+    ]
+    dataset.add_labels(label_list=labels)
 
     ########################################
     # Copy dataset labels to a new dataset #
@@ -70,8 +105,8 @@ def main(project_name, dataset_name):
     ontology.add_label(label_name='Lion', color=(35, 234, 123))
 
     # Add a list of labels
-    labels = [{'tag': 'Dog', 'color': (1, 1, 1)}, {'tag': 'Cat', 'color': (34, 56, 7)},
-              {'tag': 'Bird', 'color': (100, 14, 150)}]
+    labels = [{'label_name': 'Shark', 'color': (1, 1, 1)}, {'label_name': 'Whale', 'color': (34, 56, 7)},
+              {'label_name': 'Dolphin', 'color': (100, 14, 150)}]
     ontology.add_labels(label_list=labels)
 
     # After adding - update ontology
@@ -81,6 +116,6 @@ def main(project_name, dataset_name):
     # Create new recipe #
     #####################
     # Label list
-    labels = [{'tag': 'Dog', 'color': (1, 1, 1)}, {'tag': 'Cat', 'color': (34, 56, 7)},
+    labels = [{'tag': 'Donkey', 'color': (1, 1, 1)}, {'tag': 'Mammoth', 'color': (34, 56, 7)},
               {'tag': 'Bird', 'color': (100, 14, 150)}]
     recipe = dataset.recipes.create(recipe_name='My Recipe', labels=labels)
