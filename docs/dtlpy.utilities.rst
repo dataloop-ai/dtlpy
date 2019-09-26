@@ -12,13 +12,6 @@ Subpackages
 Submodules
 ----------
 
-dtlpy.utilities.base\_plugin\_runner module
--------------------------------------------
-
-.. automodule:: dtlpy.utilities.base_plugin_runner
-   :members:
-   :undoc-members:
-   :show-inheritance:
 dtlpy.utilities.converter module
 --------------------------------
 
@@ -30,6 +23,13 @@ dtlpy.utilities.miscellaneous module
 ------------------------------------
 
 .. automodule:: dtlpy.utilities.miscellaneous
+   :members:
+   :undoc-members:
+   :show-inheritance:
+dtlpy.utilities.session\_builder module
+---------------------------------------
+
+.. automodule:: dtlpy.utilities.session_builder
    :members:
    :undoc-members:
    :show-inheritance:

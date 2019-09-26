@@ -56,7 +56,7 @@ class Deployment:
         reps = namedtuple('repositories',
                           field_names=['sessions', 'deployments'])
         if self._plugin is None:
-            deployments = repositories.Datasets(client_api=self._client_api, project=self._plugin)
+            deployments = repositories.Deployments(client_api=self._client_api, project=self._plugin)
         else:
             deployments = self._plugin.deployments
 

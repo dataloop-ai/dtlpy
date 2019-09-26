@@ -32,6 +32,4 @@ if __name__ == "__main__":
     """
     Run this main to locally debug your plugin
     """
-    # config param for local testing
-    kwargs = dict()
-    dl.plugins.test_local_plugin(kwargs)
+    dl.plugins.test_local_plugin()

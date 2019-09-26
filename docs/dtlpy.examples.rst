@@ -88,13 +88,6 @@ dtlpy.examples.create\_video\_annotations module
    :members:
    :undoc-members:
    :show-inheritance:
-dtlpy.examples.delete\_annotations module
------------------------------------------
-
-.. automodule:: dtlpy.examples.delete_annotations
-   :members:
-   :undoc-members:
-   :show-inheritance:
 dtlpy.examples.filters module
 -----------------------------
 

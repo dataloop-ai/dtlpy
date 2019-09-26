@@ -25,13 +25,6 @@ dtlpy.services.cookie module
    :members:
    :undoc-members:
    :show-inheritance:
-dtlpy.services.create\_logger module
-------------------------------------
-
-.. automodule:: dtlpy.services.create_logger
-   :members:
-   :undoc-members:
-   :show-inheritance:
 
 
 Module contents

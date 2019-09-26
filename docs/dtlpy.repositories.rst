@@ -6,7 +6,7 @@ Subpackages
 
 .. toctree::
 
-   dtlpy.repositories.plugins_assets
+   dtlpy.repositories.plugins
 
 Submodules
 ----------
@@ -29,13 +29,6 @@ dtlpy.repositories.datasets module
 ----------------------------------
 
 .. automodule:: dtlpy.repositories.datasets
-   :members:
-   :undoc-members:
-   :show-inheritance:
-dtlpy.repositories.deployments module
--------------------------------------
-
-.. automodule:: dtlpy.repositories.deployments
    :members:
    :undoc-members:
    :show-inheritance:
@@ -67,13 +60,6 @@ dtlpy.repositories.packages module
    :members:
    :undoc-members:
    :show-inheritance:
-dtlpy.repositories.plugins module
----------------------------------
-
-.. automodule:: dtlpy.repositories.plugins
-   :members:
-   :undoc-members:
-   :show-inheritance:
 dtlpy.repositories.projects module
 ----------------------------------
 
@@ -92,6 +78,13 @@ dtlpy.repositories.sessions module
 ----------------------------------
 
 .. automodule:: dtlpy.repositories.sessions
+   :members:
+   :undoc-members:
+   :show-inheritance:
+dtlpy.repositories.tasks module
+-------------------------------
+
+.. automodule:: dtlpy.repositories.tasks
    :members:
    :undoc-members:
    :show-inheritance:

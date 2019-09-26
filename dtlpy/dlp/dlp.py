@@ -78,6 +78,7 @@ class FileHistory(History):
     def __init__(self, filename):
         self.filename = filename
         super(FileHistory, self).__init__()
+        self.to_hide = ['password', 'secret']
 
     def load_history_strings(self):
         strings = []
@@ -87,7 +88,7 @@ class FileHistory(History):
             if lines:
                 # Join and drop trailing newline.
                 string = ''.join(lines)[:-1]
-                hide = any(field in string for field in ['password', 'secret'])
+                hide = any(field in string for field in self.to_hide)
                 if not hide:
                     strings.append(string)
 
@@ -115,7 +116,9 @@ class FileHistory(History):
 
             write('\n# %s\n' % datetime.datetime.now())
             for line in string.split('\n'):
-                write('+%s\n' % line)
+                hide = any(field in line for field in self.to_hide)
+                if not hide:
+                    write('+%s\n' % line)
 
 
 class DlpCompleter(Completer):

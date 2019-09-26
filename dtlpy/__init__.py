@@ -91,20 +91,22 @@ def login_token(token):
     client_api.login_token(token=token)
 
 
-def login_secret(email, password, client_id, client_secret):
+def login_secret(email, password, client_id, client_secret, force=False):
     """
     Login with Auth0 clientID and secret
     :param email: user email
     :param password: user password
     :param client_id: auth0 client-id
     :param client_secret: auth0 secret
+    :param force: force the login (if user did not change and token still valid)
     :return:
     """
 
     client_api.login_secret(email=email,
                             password=password,
                             client_id=client_id,
-                            client_secret=client_secret)
+                            client_secret=client_secret,
+                            force=force)
 
 
 # noinspection PyShadowingNames

@@ -26,7 +26,7 @@ from functools import wraps
 
 from .calls_counter import CallsCounter
 from .cookie import CookieIO
-from .. import exceptions
+from .. import exceptions, __version__
 
 logger = logging.getLogger(name=__name__)
 threadLock = threading.Lock()
@@ -308,9 +308,12 @@ class ApiClient:
 
         # prepare request
         headers_req = self.auth
+        headers_req['User-Agent'] = requests_toolbelt.user_agent('dtlpy', __version__.version)
         if headers is not None:
-            # combine input headers with auth
-            headers_req = {**self.auth, **headers}
+            if not isinstance(headers, dict):
+                raise exceptions.PlatformException(error=400, message="Input 'headers' must be a dictionary")
+            for k, v in headers.items():
+                headers_req[k] = v
         req = requests.Request(method=req_type,
                                url=self.environment + path,
                                json=json_req,
@@ -390,9 +393,12 @@ class ApiClient:
                 def callback(monitor):
                     pass
         monitor = requests_toolbelt.MultipartEncoderMonitor(file, callback)
-        headers = {'Content-Type': monitor.content_type}
+        # prepare request
+        headers = self.auth
+        headers['User-Agent'] = requests_toolbelt.user_agent('dtlpy', __version__.version)
+        headers['Content-Type'] = monitor.content_type
         req = requests.Request('POST', self.environment + remote_url,
-                               headers={**self.auth, **headers},
+                               headers=headers,
                                data=monitor)
         # prepare to send
         prepared = req.prepare()
@@ -420,7 +426,7 @@ class ApiClient:
                 total=5,
                 read=5,
                 connect=5,
-                backoff_factor=3,
+                backoff_factor=0.3,
                 # use on any request type
                 method_whitelist=False,
                 # force retry on those status responses
