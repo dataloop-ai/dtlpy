@@ -302,3 +302,7 @@ pip-selfcheck.json
 
 ### h5 ###
 *.h5
+
+### dataloop ###
+.dataloop/
+**/.dataloop/**

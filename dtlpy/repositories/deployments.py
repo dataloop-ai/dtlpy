@@ -2,6 +2,7 @@ import logging
 import os
 import json
 from .plugins_assets import deployment_json_local_path
+import datetime
 
 from .. import utilities, exceptions, entities, repositories
 
@@ -220,6 +221,56 @@ class Deployments:
                                              client_api=self._client_api,
                                              plugin=plugin)
 
+    def log(self, deployment, size=None, checkpoint=None, start=None, end=None):
+        """
+        Get deployment logs
+
+        :param end:
+        :param start:
+        :param checkpoint:
+        :param size:
+        :param deployment: Deployment entity
+        :return: Deployment entity
+        """
+        assert isinstance(deployment, entities.Deployment)
+
+        payload = {
+            'direction': 'asc'
+        }
+
+        if size is not None:
+            payload['size'] = size
+
+        if checkpoint is not None:
+            payload['checkpoint'] = checkpoint
+
+        if start is not None:
+            payload['start'] = start
+        else:
+            payload['start'] = datetime.datetime(datetime.date.today().year,
+                                                 datetime.date.today().month,
+                                                 1,
+                                                 0,
+                                                 0,
+                                                 0).isoformat()
+
+        if end is not None:
+            payload['end'] = end
+
+        # request
+        success, response = self._client_api.gen_request(req_type='post',
+                                                         path='/deployments/{}/logs'.format(deployment.id),
+                                                         json_req=payload)
+
+        # exception handling
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        return DeploymentLog(_json=response.json(),
+                             deployment=deployment,
+                             deployments=self,
+                             start=payload['start'])
+
     def deploy(self, deployment_name=None, plugin=None, revision=None, config=None, runtime=None):
         """
         Deploy deployment
@@ -433,3 +484,28 @@ class Deployments:
             json.dump(deployment_file, f)
 
         return path
+
+
+class DeploymentLog:
+    """
+    Deployment Log
+    """
+
+    def __init__(self, _json, deployment, deployments, start=None):
+        self.logs = _json.get('logs', list())
+        self.checkpoint = _json.get('checkpoint', None)
+        self.stop = _json.get('stop', False)
+        self.deployment = deployment
+        self.deployments = deployments
+        self.start = start
+
+    def get_next_log(self):
+        log = self.deployments.log(deployment=self.deployment, checkpoint=self.checkpoint, start=self.start)
+        self.logs = log.logs
+        self.checkpoint = log.checkpoint
+        self.stop = log.stop
+
+    def __iter__(self):
+        while not self.stop:
+            yield self.logs
+            self.get_next_log()

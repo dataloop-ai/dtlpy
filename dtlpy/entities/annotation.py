@@ -918,6 +918,8 @@ class FrameAnnotation:
             annotation = entities.Classification.from_json(_json)
         elif _json['type'] == 'ellipse':
             annotation = entities.Ellipse.from_json(_json)
+        elif _json['type'] == 'comparison':
+            annotation = entities.Comparison.from_json(_json)
         else:
             raise ValueError('Type not implemented: %s' % _json['type'])
         return annotation

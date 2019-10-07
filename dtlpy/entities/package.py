@@ -34,6 +34,7 @@ class Package(entities.Item):
             annotated=_json.get('annotated', None),
             thumbnail=_json.get('thumbnail', None),
             dataset_url=_json.get('dataset', None),
+            hidden=_json.get('hidden', False),
             stream=_json.get('stream', None),
             filename=_json['filename'],
             metadata=_json['metadata'],

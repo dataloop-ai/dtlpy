@@ -28,6 +28,7 @@ class Item:
     type = attr.ib()
     url = attr.ib()
     id = attr.ib()
+    hidden = attr.ib()
 
     # api
     _client_api = attr.ib(type=services.ApiClient)
@@ -60,6 +61,7 @@ class Item:
             annotated=_json.get('annotated', None),
             dataset_url=_json.get('dataset', None),
             createdAt=_json.get('createdAt', None),
+            hidden=_json.get('hidden', False),
             stream=_json.get('stream', None),
             filename=_json['filename'],
             metadata=_json['metadata'],

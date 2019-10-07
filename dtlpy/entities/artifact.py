@@ -33,6 +33,7 @@ class Artifact(entities.Item):
             dataset_url=_json.get('dataset', None),
             filename=_json.get('filename', None),
             metadata=_json.get('metadata', None),
+            hidden=_json.get('hidden', False),
             stream=_json.get('stream', None),
             name=_json.get('name', None),
             type=_json.get('type', None),

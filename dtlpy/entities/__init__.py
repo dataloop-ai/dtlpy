@@ -25,9 +25,11 @@ from .paged_entities import PagedEntities
 from .filters import Filters
 from .recipe import Recipe
 from .ontology import Ontology
-from .annotation_definitions import Box, Point, Segmentation, Polygon, Ellipse, Classification, Polyline
+from .annotation_definitions import Box, Point, Segmentation, Polygon, Ellipse, Classification, Polyline, Comparison
 from .label import Label
 from .plugin import Plugin, PluginInput, PluginOutput
 from .time_series import TimeSeries
 from .deployment import Deployment
 from .session import Session
+from .assignment import Assignment
+from .annotation_task import AnnotationTask

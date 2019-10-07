@@ -31,7 +31,7 @@ class Project:
     def set_repositories(self):
         reps = namedtuple('repositories',
                           'projects triggers datasets plugins packages artifacts times_series deployments '
-                          'sessions')
+                          'sessions assignments annotation_tasks')
 
         r = reps(projects=repositories.Projects(client_api=self._client_api),
                  sessions=repositories.Sessions(client_api=self._client_api),
@@ -41,7 +41,9 @@ class Project:
                  packages=repositories.Packages(project=self, client_api=self._client_api),
                  artifacts=repositories.Artifacts(project=self, client_api=self._client_api),
                  times_series=repositories.TimesSeries(project=self, client_api=self._client_api),
-                 deployments=repositories.Deployments(client_api=self._client_api, project=self))
+                 deployments=repositories.Deployments(client_api=self._client_api, project=self),
+                 assignments=repositories.Assignments(project=self, client_api=self._client_api),
+                 annotation_tasks=repositories.AnnotationTasks(client_api=self._client_api, project=self))
         return r
 
     @property
@@ -88,6 +90,16 @@ class Project:
     def times_series(self):
         assert isinstance(self._repositories.times_series, repositories.TimesSeries)
         return self._repositories.times_series
+
+    @property
+    def assignments(self):
+        assert isinstance(self._repositories.assignments, repositories.Assignments)
+        return self._repositories.assignments
+
+    @property
+    def annotation_tasks(self):
+        assert isinstance(self._repositories.annotation_tasks, repositories.AnnotationTasks)
+        return self._repositories.annotation_tasks
 
     @classmethod
     def from_json(cls, _json, client_api):

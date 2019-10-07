@@ -31,8 +31,7 @@ class Filters:
                 'filter': {
                     '$and': [
                         {'type': 'file'},
-                        {'filename': {'$glob': '!/.**'}},
-                        {'filename': {'$glob': '!/.*/**'}},
+                        {'hidden': False},
                     ]
                 },
                 'sort': {'type': 'ascending', 'createdAt': 'descending'},

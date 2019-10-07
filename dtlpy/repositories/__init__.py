@@ -28,3 +28,5 @@ from .triggers import Triggers
 from .times_series import TimesSeries
 from .deployments import Deployments
 from .sessions import Sessions
+from .annotation_tasks import AnnotationTasks
+from .assignments import Assignments
