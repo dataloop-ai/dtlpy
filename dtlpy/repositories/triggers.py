@@ -59,9 +59,15 @@ class Triggers:
         if resource is not None:
             payload['resource'] = resource
         if actions is not None:
+            if not isinstance(actions, list):
+                actions = [actions]
             payload['actions'] = actions
+        else:
+            payload['actions'] = ['Created']
         if executionMode is not None:
             payload['executionMode'] = executionMode
+        else:
+            payload['executionMode'] = 'Once'
 
         # request
         success, response = self._client_api.gen_request(req_type='post',
@@ -116,13 +122,19 @@ class Triggers:
 
         return trigger
 
-    def delete(self, trigger_id):
+    def delete(self, trigger_id=None, trigger_name=None):
         """
         Delete Trigger object
 
+        :param trigger_name:
         :param trigger_id:
         :return: True
         """
+        if trigger_id is None:
+            if trigger_name is None:
+                raise exceptions.PlatformException('400', 'Must provide either trigger name or trigger id')
+            else:
+                trigger_id = self.get(trigger_name=trigger_name).id
         # request
         success, response = self._client_api.gen_request(
             req_type="delete",

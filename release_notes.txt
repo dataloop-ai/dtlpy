@@ -1,3 +1,30 @@
+Release 1.7.44
+    Bugs:
+        - dtlpy converter bug fix
+        - test local plugin - can test local plugin from any directory
+        - annotations type can be of any kind
+        - some bugs in deploments repository
+        - fixed plugin example in docs
+        - fixed bug of exception raised while typing space in shell after items ls
+        - callback_get_step import issue
+    Features:
+        - annotation object dont have to include item
+        - assignments repository
+        - annotation tasks repository
+        - assignment entity
+        - annotation task entity
+        - filters ignores 'hidden=True' rather than .dataloop
+        - modified plugin generate files
+        - deployments logs added
+        - plugins push - if param 'name' is given push will ignore name in plugin.json
+        - dataset.download_annotations() can now accept filters and annotation options
+        - items list accepts item type as well
+        - deployments logs to cli
+        - removed error of deployment object with no plugin
+        - default page size was raised to 1000
+    Tests:
+        - Plugin flow
+        - Triggers repo
 Release 1.7.36
     Bugs:
         - CLI logging now working

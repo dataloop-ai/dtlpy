@@ -98,7 +98,7 @@ class Items:
             pass
         return response.json()
 
-    def list(self, filters=None, page_offset=0, page_size=100):
+    def list(self, filters=None, page_offset=None, page_size=None):
         """
         List items
 
@@ -110,18 +110,24 @@ class Items:
         # default filters
         if filters is None:
             filters = entities.Filters()
-            filters.page = page_offset
-            filters.page_size = page_size
 
         # assert type filters
         if not isinstance(filters, entities.Filters):
             raise PlatformException('400', 'Unknown filters type')
 
-        # get page
-        if filters.page != page_offset:
-            page_offset = filters.page
-        if filters.page_size != page_size:
+        # page size
+        if page_size is None:
+            # take from default
             page_size = filters.page_size
+        else:
+            filters.page_size = page_size
+
+        # page offset
+        if page_offset is None:
+            # take from default
+            page_offset = filters.page
+        else:
+            filters.page = page_offset
 
         if filters.resource == 'items':
             items_entity = self.items_entity

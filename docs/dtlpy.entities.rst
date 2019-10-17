@@ -25,6 +25,13 @@ dtlpy.entities.annotation\_definitions module
    :members:
    :undoc-members:
    :show-inheritance:
+dtlpy.entities.annotation\_task module
+--------------------------------------
+
+.. automodule:: dtlpy.entities.annotation_task
+   :members:
+   :undoc-members:
+   :show-inheritance:
 dtlpy.entities.artifact module
 ------------------------------
 
@@ -32,10 +39,24 @@ dtlpy.entities.artifact module
    :members:
    :undoc-members:
    :show-inheritance:
+dtlpy.entities.assignment module
+--------------------------------
+
+.. automodule:: dtlpy.entities.assignment
+   :members:
+   :undoc-members:
+   :show-inheritance:
 dtlpy.entities.dataset module
 -----------------------------
 
 .. automodule:: dtlpy.entities.dataset
+   :members:
+   :undoc-members:
+   :show-inheritance:
+dtlpy.entities.deployment module
+--------------------------------
+
+.. automodule:: dtlpy.entities.deployment
    :members:
    :undoc-members:
    :show-inheritance:
@@ -106,13 +127,6 @@ dtlpy.entities.session module
 -----------------------------
 
 .. automodule:: dtlpy.entities.session
-   :members:
-   :undoc-members:
-   :show-inheritance:
-dtlpy.entities.task module
---------------------------
-
-.. automodule:: dtlpy.entities.task
    :members:
    :undoc-members:
    :show-inheritance:

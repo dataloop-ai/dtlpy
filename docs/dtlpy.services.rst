@@ -18,10 +18,24 @@ dtlpy.services.calls\_counter module
    :members:
    :undoc-members:
    :show-inheritance:
+dtlpy.services.check\_sdk module
+--------------------------------
+
+.. automodule:: dtlpy.services.check_sdk
+   :members:
+   :undoc-members:
+   :show-inheritance:
 dtlpy.services.cookie module
 ----------------------------
 
 .. automodule:: dtlpy.services.cookie
+   :members:
+   :undoc-members:
+   :show-inheritance:
+dtlpy.services.create\_logger module
+------------------------------------
+
+.. automodule:: dtlpy.services.create_logger
    :members:
    :undoc-members:
    :show-inheritance:

@@ -59,12 +59,12 @@ class PagedEntities:
 
     def __reversed__(self):
         self.page_offset = self.total_pages_count - 1
-        has_next = self.page_offset != 0
-        while has_next:
+        while True:
             self.get_page()
-            self.page_offset -= 1
-            has_next = self.page_offset != 0
             yield self.items
+            if self.page_offset == 0:
+                break
+            self.page_offset -= 1
 
     def get_page(self):
         self.filters.page = self.page_offset

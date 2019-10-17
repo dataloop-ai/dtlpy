@@ -35,6 +35,7 @@ class Annotation:
     # meta
     metadata = attr.ib()
     fps = attr.ib()
+    dataset_id = attr.ib(default=None)
     status = attr.ib(default=None)
     object_id = attr.ib(default=None)
     automated = attr.ib(default=None)
@@ -154,24 +155,27 @@ class Annotation:
 
     @property
     def color(self):
-        def find_tag_in_labels(search_tag, labels):
-            for label in labels:
-                if label.tag.lower() == search_tag.lower():
-                    return label
-            return None
-
-        dataset_labels = self.item.dataset.labels
-        split_tag = self.label.lower().split('.')
-        for i_tag, tag in enumerate(split_tag):
-            if i_tag == 0:
-                # first tag in split - search in main dataset labels
-                dataset_labels = find_tag_in_labels(tag, dataset_labels)
-            else:
-                # search in label's children
-                dataset_labels = find_tag_in_labels(tag, dataset_labels.children)
-            if dataset_labels is None:
+        if self.item is not None:
+            def find_tag_in_labels(search_tag, labels):
+                for label in labels:
+                    if label.tag.lower() == search_tag.lower():
+                        return label
                 return None
-        return dataset_labels.rgb
+
+            dataset_labels = self.item.dataset.labels
+            split_tag = self.label.lower().split('.')
+            for i_tag, tag in enumerate(split_tag):
+                if i_tag == 0:
+                    # first tag in split - search in main dataset labels
+                    dataset_labels = find_tag_in_labels(tag, dataset_labels)
+                else:
+                    # search in label's children
+                    dataset_labels = find_tag_in_labels(tag, dataset_labels.children)
+                if dataset_labels is None:
+                    return None
+            return dataset_labels.rgb
+        else:
+            return None
 
     ####################
     # frame attributes #
@@ -375,7 +379,7 @@ class Annotation:
     # I/O #
     #######
     @classmethod
-    def new(cls, item, annotation_definition=None, object_id=None, automated=None, metadata=None, frame_num=0):
+    def new(cls, item=None, annotation_definition=None, object_id=None, automated=None, metadata=None, frame_num=0):
         """
         Create a new annotation object annotations
 
@@ -395,7 +399,7 @@ class Annotation:
         frames = dict()
 
         # handle fps
-        if item.fps is not None:
+        if item is not None and item.fps is not None:
             fps = item.fps
         else:
             fps = None
@@ -407,8 +411,10 @@ class Annotation:
 
         # dataset
         dataset_url = None
+        dataset_id = None
         if item is not None:
             dataset_url = item.dataset_url
+            dataset_id = item.datasetId
 
         return cls(
             # annotation_definition
@@ -427,6 +433,7 @@ class Annotation:
             object_id=object_id,
             type=ann_type,
             dataset_url=dataset_url,
+            dataset_id=dataset_id,
 
             # meta
             metadata=metadata,
@@ -641,6 +648,7 @@ class Annotation:
             item=item,
             item_id=_json.get('itemId', item.id),
             dataset_url=_json.get('dataset', item.dataset_url),
+            dataset_id=_json.get('datasetId', item.datasetId),
             creator=_json['creator'],
             createdAt=_json['createdAt'],
             updatedBy=_json['updatedBy'],
@@ -735,7 +743,11 @@ class Annotation:
         _json['label'] = self.label
         _json['attributes'] = self.attributes
         _json['dataset'] = self.dataset_url
-        _json['datasetId'] = self.item.dataset.id
+
+        if self.item is not None and self.dataset_id is None:
+            _json['datasetId'] = self.item.datasetId
+        else:
+            _json['datasetId'] = self.dataset_id
 
         # polyline to segment
         if self.type == 'polyline':
@@ -921,7 +933,7 @@ class FrameAnnotation:
         elif _json['type'] == 'comparison':
             annotation = entities.Comparison.from_json(_json)
         else:
-            raise ValueError('Type not implemented: %s' % _json['type'])
+            annotation = entities.UndefinedAnnotationType.from_json(_json)
         return annotation
 
     #######

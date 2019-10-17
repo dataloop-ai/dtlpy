@@ -743,6 +743,9 @@ class Segmentation:
     def to_coordinates(self, color=None):
         if color is None:
             color = (255, 255, 255)
+        max_val = np.max(self.geo)
+        if max_val > 1:
+            self.geo = self.geo/max_val
         png_ann = np.stack((color[0] * self.geo,
                             color[1] * self.geo,
                             color[2] * self.geo,
@@ -912,5 +915,82 @@ class Comparison:
         return cls(
             coordinates=coordinates,
             label=_json.get("label", None),
+            attributes=attributes
+        )
+
+
+@attr.s
+class UndefinedAnnotationType:
+    """
+    UndefinedAnnotationType annotation object
+    """
+
+    type = attr.ib()
+    label = attr.ib()
+    coordinates = attr.ib()
+    attributes = attr.ib()
+
+    @attributes.default
+    def set_attributes(self):
+        return list()
+
+    @property
+    def geo(self):
+        return 0
+
+    @property
+    def left(self):
+        return 0
+
+    @property
+    def top(self):
+        return 0
+
+    @property
+    def right(self):
+        return 0
+
+    @property
+    def bottom(self):
+        return 0
+
+    @property
+    def z(self):
+        return 0
+
+    def show(self, image, thickness, with_text, height, width, annotation_format, color):
+        """
+        Show annotation as ndarray
+        :param image: empty or image to draw on
+        :param thickness:
+        :param with_text: not required
+        :param height: item height
+        :param width: item width
+        :param annotation_format: ['mask', 'instance']
+        :param color: color
+        :return: ndarray
+        """
+        if with_text:
+            image = add_text_to_image(image=image, annotation=self)
+        return image
+
+    def to_coordinates(self, color):
+        return self.coordinates
+
+    @classmethod
+    def from_json(cls, _json):
+        if "coordinates" in _json:
+            coordinates = _json["coordinates"]
+        elif "data" in _json:
+            coordinates = _json["data"]
+        else:
+            coordinates = dict()
+
+        attributes = _json.get("attributes", list())
+
+        return cls(
+            coordinates=coordinates,
+            label=_json.get("label", None),
+            type=_json.get('type', None),
             attributes=attributes
         )

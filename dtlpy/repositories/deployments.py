@@ -98,9 +98,6 @@ class Deployments:
             raise exceptions.PlatformException(response)
 
         # return triggers list
-        if self.plugin is None:
-            logging.warning('Listing deployments with project entity will return deployment objects with no plugin.\n'
-                            'to properly list deployments use plugin.deployments.list() method')
         deployments = utilities.List()
         for deployment in response.json()['items']:
             deployments.append(entities.Deployment.from_json(client_api=self._client_api,
@@ -299,12 +296,13 @@ class Deployments:
                                config=config,
                                runtime=runtime)
 
-    def deploy_from_local_folder(self):
+    def deploy_from_local_folder(self, cwd=None):
         """
         Deploy from local folder
         :return:
         """
-        cwd = os.getcwd()
+        if cwd is None:
+            cwd = os.getcwd()
 
         if 'deployment.json' in os.listdir(cwd):
             with open(os.path.join(cwd, 'deployment.json'), 'r') as f:

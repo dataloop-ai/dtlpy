@@ -30,11 +30,19 @@ def after_feature(context, feature):
 
 @fixture
 def after_tag(context, tag):
+    
+    if tag == 'deployments.delete':
+        try:
+            use_fixture(delete_deployments, context)
+        except:
+            pass
+
     if tag == 'plugins.delete':
         try:
             use_fixture(delete_plugins, context)
         except:
             pass
+
 
 @fixture
 def delete_plugins(context):
@@ -43,3 +51,12 @@ def delete_plugins(context):
 
     if hasattr(context, 'second_plugin'):
         context.second_plugin.delete()
+
+    if hasattr(context, 'plugin'):
+        context.plugin.delete()
+
+
+@fixture
+def delete_deployments(context):
+    if hasattr(context, 'deployment'):
+        context.deployment.delete()

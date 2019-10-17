@@ -167,7 +167,7 @@ class Downloader:
                             if annotation_options and item.annotated:
                                 # download annotations only
                                 pool.apply_async(
-                                    self.__download_img_annotations,
+                                    self._download_img_annotations,
                                     kwds={
                                         "item": item,
                                         "img_filepath": item_local_filepath,
@@ -346,8 +346,8 @@ class Downloader:
         pool.terminate()
 
     @staticmethod
-    def __download_img_annotations(item, img_filepath, local_path, overwrite, annotation_options,
-                                   thickness=1, with_text=False):
+    def _download_img_annotations(item, img_filepath, local_path, overwrite, annotation_options,
+                                  thickness=1, with_text=False):
 
         # fix local path
         if local_path.endswith("/items") or local_path.endswith("\\items"):
@@ -376,7 +376,7 @@ class Downloader:
         # get image shape
         if item.width is not None and item.height is not None:
             img_shape = (item.height, item.width)
-        elif 'image' in item.mimetype:
+        elif 'image' in item.mimetype and img_filepath is not None:
             img_shape = Image.open(img_filepath).size[::-1]
         else:
             img_shape = (0, 0)
@@ -497,14 +497,14 @@ class Downloader:
             data = local_filepath
             # if image - can download annotation mask
             if item.annotated and annotation_options:
-                self.__download_img_annotations(item=item,
-                                                img_filepath=local_filepath,
-                                                annotation_options=annotation_options,
-                                                local_path=local_path,
-                                                overwrite=overwrite,
-                                                thickness=thickness,
-                                                with_text=with_text
-                                                )
+                self._download_img_annotations(item=item,
+                                               img_filepath=local_filepath,
+                                               annotation_options=annotation_options,
+                                               local_path=local_path,
+                                               overwrite=overwrite,
+                                               thickness=thickness,
+                                               with_text=with_text
+                                               )
         else:
             # save as byte stream
             data = io.BytesIO()

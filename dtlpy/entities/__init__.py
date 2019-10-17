@@ -25,7 +25,8 @@ from .paged_entities import PagedEntities
 from .filters import Filters
 from .recipe import Recipe
 from .ontology import Ontology
-from .annotation_definitions import Box, Point, Segmentation, Polygon, Ellipse, Classification, Polyline, Comparison
+from .annotation_definitions import Box, Point, Segmentation, Polygon, Ellipse, Classification, Polyline, Comparison, \
+    UndefinedAnnotationType
 from .label import Label
 from .plugin import Plugin, PluginInput, PluginOutput
 from .time_series import TimeSeries

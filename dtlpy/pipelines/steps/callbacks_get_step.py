@@ -2,7 +2,7 @@ import logging
 from . import pipeline_step
 
 # callback and mapping
-from ...callbacks.piper_progress_reporter import main as piper_progress_reporter
+from ...callbacks.piper_progress_reporter import get_callback as piper_progress_reporter
 from ...callbacks.progress_viewer import main as progress_viewer
 
 mapping = {'progress_viewer': progress_viewer,

@@ -5,8 +5,8 @@ import os
 from shutil import copyfile
 
 from .. import entities, repositories, exceptions, utilities, services
-from .plugins_assets import plugin_json_path, main_py_path, mock_json_path, src_init_file_path, debug_py_path, \
-    deployment_json_local_path, plugin_default_gitignore
+from .plugins_assets import plugin_json_path, main_py_path, mock_json_path, deployment_json_local_path, \
+    plugin_default_gitignore
 
 
 class Plugins:
@@ -126,14 +126,6 @@ class Plugins:
                 plugin_name = plugin_json['name']
             else:
                 plugin_name = 'default_plugin'
-        elif 'name' in plugin_json:
-            if plugin_name != plugin_json['name']:
-                raise exceptions.PlatformException('400',
-                                                   'Plugin name given is different than plugin name in plugin.json.\n'
-                                                   'Plugin name given: {given_name}\n'
-                                                   'Plugin name in plugin.json: {plugin_json_name}'.format(
-                                                       given_name=plugin_name,
-                                                       plugin_json_name=plugin_json['name']))
 
         # inputs/outputs
         if inputs is None:
@@ -343,7 +335,7 @@ class Plugins:
         copyfile(main_py_path, os.path.join(src_path, 'main.py'))
         # copyfile(debug_py_path, os.path.join(src_path, 'debug.py'))
         # copyfile(src_init_file_path, os.path.join(src_path, '__init__.py'))
-        
+
         with open(deployment_json_local_path, 'r') as f:
             deployment_json = json.load(f)
         deployment_json = deployment_json[0]
@@ -352,12 +344,14 @@ class Plugins:
 
         logging.info('Successfully generated plugin')
 
-    def test_local_plugin(self):
+    def test_local_plugin(self, cwd=None):
         """
         Test local plugin
         :return:
         """
-        local_runner = LocalPluginRunner(self.client_api, plugin=self)
+        if cwd is None:
+            cwd = os.getcwd()
+        local_runner = LocalPluginRunner(self.client_api, plugins=self, cwd=cwd)
         local_runner.run_local_project()
 
     def checkout(self, plugin_name):
@@ -377,10 +371,16 @@ class LocalPluginRunner:
     Package Runner Class
     """
 
-    def __init__(self, client_api, plugin):
+    def __init__(self, client_api, plugins, cwd=None):
+        if cwd is None:
+            self.cwd = os.getcwd()
+        else:
+            self.cwd = cwd
+
         self._client_api = client_api
-        self._plugin = plugin
-        self.cwd = os.getcwd()
+        self._plugins = plugins
+        self.plugin_io = PluginIO(cwd=self.cwd)
+
         with open(os.path.join(self.cwd, 'mock.json'), 'r') as f:
             self.mock_json = json.load(f)
 
@@ -401,8 +401,7 @@ class LocalPluginRunner:
         Get mainpy run function
         :return:
         """
-        cwd = os.getcwd()
-        sys.path.insert(0, cwd)
+        sys.path.insert(0, self.cwd)
         # noinspection PyUnresolvedReferences
         from main import PluginRunner
         kwargs = self.mock_json.get('config', dict())
@@ -410,23 +409,19 @@ class LocalPluginRunner:
 
     def run_local_project(self):
         assert isinstance(self._client_api, services.ApiClient)
-        self.validate_mock(self._plugin.plugin_io.read_json(), self.mock_json)
+        self.validate_mock(self.plugin_io.read_json(), self.mock_json)
         plugin_runner = self.get_mainpy_run_function()
-        try:
-            # project_id = self._client_api.state_io.get('project')
-            project_id = self._client_api.state_io.get('project')
-        except Exception:
-            raise exceptions.PlatformException('400', "Please checkout to a project")
 
         try:
             projects = repositories.Projects(client_api=self._client_api)
-            project = projects.get(project_id=project_id)
+            project = projects.get()
         except Exception:
-            raise exceptions.PlatformException('404', "Project not found")
+            raise exceptions.PlatformException('400', "Please checkout to a valid project")
 
-        # plugin_inputs = self.plugin_json['inputs']
-        plugin_inputs = self._plugin.plugin_io.get('inputs')
+        plugin_inputs = self.plugin_io.get('inputs')
         kwargs = dict()
+        progress = utilities.Progress()
+        kwargs['progress'] = progress
         for plugin_input in plugin_inputs:
             kwargs[plugin_input['name']] = self.get_field(plugin_input['name'],
                                                           plugin_input['type'],
@@ -505,10 +500,15 @@ class LocalPluginRunner:
 
 
 class PluginIO:
-    @staticmethod
-    def read_json():
-        plugin_file_path = os.path.join(os.getcwd(), 'plugin.json')
-        with open(plugin_file_path, 'r') as fp:
+
+    def __init__(self, cwd=None):
+        if cwd is None:
+            cwd = os.getcwd()
+
+        self.plugin_file_path = os.path.join(cwd, 'plugin.json')
+
+    def read_json(self):
+        with open(self.plugin_file_path, 'r') as fp:
             cfg = json.load(fp)
         return cfg
 
@@ -520,6 +520,5 @@ class PluginIO:
         cfg = self.read_json()
         cfg[key] = value
 
-        plugin_file_path = os.path.join(os.getcwd(), 'plugin.json')
-        with open(plugin_file_path, 'w') as fp:
+        with open(self.plugin_file_path, 'w') as fp:
             json.dump(cfg, fp, indent=4)

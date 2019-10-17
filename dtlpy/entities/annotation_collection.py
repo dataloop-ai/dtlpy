@@ -256,7 +256,21 @@ class AnnotationCollection:
         utilities.List([self.annotations]).print()
 
     def to_json(self):
-        return [annotation.to_json() for annotation in self.annotations]
+
+        if self.item is None:
+            item_id = None
+            item_name = None
+        else:
+            item_id = self.item.id
+            item_name = self.item.filename
+
+        _json = {
+            "_id": item_id,
+            "filename": item_name,
+            'annotations': [annotation.to_json() for annotation in self.annotations]
+        }
+
+        return _json
 
     #########################
     # For video annotations #

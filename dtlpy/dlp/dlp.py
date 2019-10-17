@@ -15,7 +15,7 @@ from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.history import History
 from fuzzyfinder.main import fuzzyfinder
 from prompt_toolkit import prompt
-from dtlpy import exceptions, services
+from dtlpy import exceptions
 
 import dtlpy as dlp
 
@@ -206,14 +206,18 @@ class DlpCompleter(Completer):
 
     def need_param(self, cmd, word_before_cursor):
         need_param = False
-        bool_flags_list = ['--overwrite', '--with-text', '--deploy', '--not-items-folder', '--encode']
 
-        if len(cmd) > 2 and cmd[-2].startswith('--') and word_before_cursor != '':
-            need_param = self.get_param(cmd=cmd, word_before_cursor=word_before_cursor) not in bool_flags_list
-        elif cmd[-1].startswith('-') and word_before_cursor == '':
-            need_param = self.get_param(cmd=cmd, word_before_cursor=word_before_cursor) not in bool_flags_list
-        elif cmd[0] in ['cd']:
-            need_param = True
+        try:
+            bool_flags_list = ['--overwrite', '--with-text', '--deploy', '--not-items-folder', '--encode']
+
+            if len(cmd) > 2 and cmd[-2].startswith('--') and word_before_cursor != '':
+                need_param = self.get_param(cmd=cmd, word_before_cursor=word_before_cursor) not in bool_flags_list
+            elif cmd[-1].startswith('-') and word_before_cursor == '':
+                need_param = self.get_param(cmd=cmd, word_before_cursor=word_before_cursor) not in bool_flags_list
+            elif cmd[0] in ['cd']:
+                need_param = True
+        except Exception:
+            need_param = False
 
         return need_param
 
@@ -480,6 +484,7 @@ def get_parser():
                           help="dataset name. Default taken from checked out (if checked out)")
     optional.add_argument("-o", "--page", metavar='\b', help="page number (integer)", default=0)
     optional.add_argument("-r", "--remote-path", metavar='\b', help="remote path", default=None)
+    optional.add_argument("-t", "--type", metavar='\b', help="Item type", default=None)
 
     # upload
     a = subparser_parser.add_parser("upload", help="Upload directory to dataset")
@@ -525,6 +530,8 @@ def get_parser():
                           help="Annotation line thickness")
     optional.add_argument("-l", "--local-path", metavar='\b', default=None,
                           help="local path")
+    optional.add_argument("-wb", "--without-binaries", action='store_true', default=False,
+                          help="Don't download item binaries")
 
     ##########
     # videos #
@@ -653,6 +660,19 @@ def get_parser():
     optional.add_argument("-pr", "--project-name", dest="project_name", default=None,
                           help="Project name")
 
+    # log
+    a = subparser_parser.add_parser(
+        "log", help="Get deployments log"
+    )
+    required = a.add_argument_group("required named arguments")
+    required.add_argument("-pr", "--project-name", dest="project_name", default=None,
+                          help="Project name", required=True)
+    required.add_argument("-d", "--deployment-name", dest="deployment_name", default=None,
+                          help="Project name", required=True)
+
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument("-t", "--start", dest="start", default=None,
+                          help="Log start time")
 
     ###########
     # Plugins #
@@ -665,7 +685,7 @@ def get_parser():
     # ACTIONS #
 
     # deploy
-    a = subparser_parser.add_parser(
+    subparser_parser.add_parser(
         "deploy", help="Deploy plugin from local directory"
     )
 
@@ -872,12 +892,19 @@ def run(args, parser):
                 except ValueError:
                     raise ValueError("Input --page must be integer")
             filters = dlp.Filters()
-            if args.remote_path is None:
-                filters = None  # default value
-            elif isinstance(args.remote_path, list):
-                filters.add(field="filename", values=args.remote_path, operator="in")
-            else:
-                filters.add(field="filename", values=args.remote_path)
+
+            # add filters
+            if args.remote_path is not None:
+                if isinstance(args.remote_path, list):
+                    filters.add(field="filename", values=args.remote_path, operator="in")
+                else:
+                    filters.add(field="filename", values=args.remote_path)
+            if args.type is not None:
+                if isinstance(args.type, list):
+                    filters.add(field='metadata.system.mimetype', values=args.type, operator="in")
+                else:
+                    filters.add(field="metadata.system.mimetype", values=args.type)
+
             pages = dataset.items.list(filters=filters, page_offset=args.page)
             print(datetime.datetime.utcnow())
             pages.print()
@@ -927,14 +954,22 @@ def run(args, parser):
                 else:
                     filters.add(field="filename", values=args.remote_path, operator="glob")
 
-            dataset.items.download(filters=filters,
-                                   local_path=args.local_path,
-                                   annotation_options=annotation_options,
-                                   overwrite=args.overwrite,
-                                   num_workers=args.num_workers,
-                                   with_text=args.with_text,
-                                   thickness=int(args.thickness),
-                                   to_items_folder=not args.not_items_folder)
+            if not args.without_binaries:
+                dataset.items.download(filters=filters,
+                                       local_path=args.local_path,
+                                       annotation_options=annotation_options,
+                                       overwrite=args.overwrite,
+                                       num_workers=args.num_workers,
+                                       with_text=args.with_text,
+                                       thickness=int(args.thickness),
+                                       to_items_folder=not args.not_items_folder)
+            else:
+                dataset.download_annotations(filters=filters,
+                                             local_path=args.local_path,
+                                             annotation_options=annotation_options,
+                                             overwrite=args.overwrite,
+                                             with_text=args.with_text,
+                                             thickness=int(args.thickness))
 
         else:
             print(datetime.datetime.utcnow())
@@ -1019,6 +1054,20 @@ def run(args, parser):
                 project = dlp.projects.get()
             print(datetime.datetime.utcnow())
             project.deployments.list().print()
+        elif args.deployments == "log":
+            project = dlp.projects.get(project_name=args.project_name)
+            deployment = project.deployments.get(deployment_name=args.deployment_name)
+
+            logs = deployment.log(start=args.start)
+            try:
+                for log in logs:
+                    if isinstance(log, list):
+                        for log_record in log:
+                            print(log_record)
+                    else:
+                        print(log)
+            except KeyboardInterrupt:
+                pass
 
     ###########
     # Plugins #
@@ -1077,7 +1126,7 @@ def run(args, parser):
                 os.chdir('./src')
             try:
                 dlp.plugins.test_local_plugin()
-            except Exception as e:
+            except Exception:
                 print(traceback.format_exc())
             finally:
                 if go_back:

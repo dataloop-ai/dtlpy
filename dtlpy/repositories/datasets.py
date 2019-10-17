@@ -5,6 +5,9 @@ Datasets Repository
 import logging
 from urllib.parse import urlencode
 from .. import entities, repositories, utilities, PlatformException
+import os
+import tqdm
+from multiprocessing.pool import ThreadPool
 
 logger = logging.getLogger(name=__name__)
 
@@ -220,8 +223,90 @@ class Datasets:
         assert isinstance(dataset, entities.Dataset)
         return dataset
 
-    def download_annotations(self, dataset, local_path, overwrite=False):
-        downloader = repositories.Downloader(self)
-        return downloader.download_annotations(dataset=dataset,
-                                               local_path=local_path,
-                                               overwrite=overwrite)
+    @staticmethod
+    def download_annotations(dataset,
+                             local_path=None,
+                             filters=None,
+                             annotation_options=None,
+                             overwrite=False,
+                             thickness=1,
+                             with_text=False,
+                             num_workers=32):
+
+        def download_single(i_item, i_img_filepath, i_local_path, i_overwrite, i_annotation_options,
+                            i_thickness, i_with_text):
+            try:
+                repositories.Downloader._download_img_annotations(item=i_item, img_filepath=i_img_filepath,
+                                                                  local_path=i_local_path, overwrite=i_overwrite,
+                                                                  annotation_options=i_annotation_options,
+                                                                  thickness=i_thickness, with_text=i_with_text)
+            except Exception:
+                logger.error('Failed to download annotation for item: {}'.format(item.name))
+
+            progress.update(1)
+
+        if local_path is None:
+            if dataset.project is None:
+                # by dataset name
+                local_path = os.path.join(
+                    os.path.expanduser("~"),
+                    ".dataloop",
+                    "datasets",
+                    "{}_{}".format(dataset.name, dataset.id),
+                )
+            else:
+                # by dataset and project name
+                local_path = os.path.join(
+                    os.path.expanduser("~"),
+                    ".dataloop",
+                    "projects",
+                    dataset.project.name,
+                    "datasets",
+                    dataset.name,
+                )
+
+        # check if need to only download zip
+        if filters is None:
+            filters = entities.Filters()
+            if annotation_options is None:
+                repositories.Downloader.download_annotations(dataset=dataset,
+                                                             local_path=local_path,
+                                                             overwrite=overwrite)
+                return local_path
+
+        filters.add(field='annotated', values=True)
+
+        if annotation_options is None:
+            annotation_options = ['json']
+        if not isinstance(annotation_options, list):
+            annotation_options = [annotation_options]
+
+        pages = dataset.items.list(filters=filters)
+
+        if pages.items_count > dataset.annotated / 10:
+            repositories.Downloader.download_annotations(dataset=dataset,
+                                                         local_path=local_path,
+                                                         overwrite=overwrite)
+
+        pool = ThreadPool(processes=num_workers)
+        progress = tqdm.tqdm(total=pages.items_count)
+        for page in pages:
+            for item in page:
+                pool.apply_async(
+                    func=download_single,
+                    kwds={
+                        'i_item': item,
+                        'i_img_filepath': None,
+                        'i_local_path': local_path,
+                        'i_overwrite': overwrite,
+                        'i_annotation_options': annotation_options,
+                        'i_thickness': thickness,
+                        'i_with_text': with_text
+                    }
+                )
+
+        pool.close()
+        pool.join()
+        pool.terminate()
+
+        return local_path

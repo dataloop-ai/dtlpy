@@ -77,9 +77,11 @@ class Trigger:
         _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(Trigger)._client_api,
                                                               attr.fields(Trigger).project_id,
                                                               attr.fields(Trigger)._project,
-                                                              attr.fields(Trigger).special))
+                                                              attr.fields(Trigger).special,
+                                                              attr.fields(Trigger).filters))
         # rename
         _json['project'] = self.project_id
+        _json['filter'] = self.filters
 
         return _json
 

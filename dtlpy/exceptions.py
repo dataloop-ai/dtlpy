@@ -24,7 +24,10 @@ class PlatformException(Exception):
             if hasattr(error, 'status_code'):
                 self.status_code = str(error.status_code)
             if hasattr(error, 'text'):
-                self.message = error.json().get('message', error.text)
+                try:
+                    self.message = error.json().get('message', error.text)
+                except:
+                    self.message = error.text
 
         if self.status_code in exceptions:
             raise exceptions[self.status_code](self.status_code, self.message)

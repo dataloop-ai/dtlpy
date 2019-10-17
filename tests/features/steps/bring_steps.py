@@ -83,3 +83,10 @@ from tests.features.steps.plugins_repo import plugins_generate
 from tests.features.steps.plugins_repo import plugins_push
 from tests.features.steps.plugins_repo import plugins_get
 from tests.features.steps.plugins_repo import plugins_list
+from tests.features.steps.plugins_flow import plugins_flow
+
+from tests.features.steps.triggers_repo import test_triggers_create
+from tests.features.steps.triggers_repo import test_triggers_get
+from tests.features.steps.triggers_repo import test_triggers_list
+from tests.features.steps.triggers_repo import test_triggers_update
+from tests.features.steps.triggers_repo import test_triggers_delete

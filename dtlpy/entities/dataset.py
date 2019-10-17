@@ -197,10 +197,22 @@ class Dataset:
         return self.datasets.update(dataset=self,
                                     system_metadata=system_metadata)
 
-    def download_annotations(self, local_path, overwrite=False):
+    def download_annotations(self,
+                             local_path=None,
+                             filters=None,
+                             annotation_options=None,
+                             overwrite=False,
+                             thickness=1,
+                             with_text=False,
+                             num_workers=32):
         return self.datasets.download_annotations(dataset=self,
                                                   local_path=local_path,
-                                                  overwrite=overwrite)
+                                                  overwrite=overwrite,
+                                                  filters=filters,
+                                                  annotation_options=annotation_options,
+                                                  thickness=thickness,
+                                                  with_text=with_text,
+                                                  num_workers=num_workers)
 
     def checkout(self):
         """

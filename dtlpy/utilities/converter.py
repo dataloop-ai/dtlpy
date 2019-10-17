@@ -418,6 +418,7 @@ class Converter:
 
         annotations[i_annotation] = ann
 
-    @staticmethod
-    def custom_format(annotation, i_annotation, conversion_func, annotations=None):
+    def custom_format(self, annotation, i_annotation, conversion_func, annotations=None):
         annotations[i_annotation] = conversion_func(annotation)
+        if isinstance(annotations[i_annotation], entities.Annotation) and annotations[i_annotation].item is None:
+            annotations[i_annotation].item = self.item

@@ -15,7 +15,7 @@ class Filters:
         self.known_operators = ['or', 'and', 'in', 'ne', 'eq', 'gt', 'glob', 'lt']
         self.resource = 'items'
         self.page = 0
-        self.page_size = 100
+        self.page_size = 1000
         self.method = 'and'
         self.sort = dict()
         self.show_hidden = False
@@ -123,15 +123,15 @@ class Filters:
             # add to json
             _json['filter'] = filters_dict
 
-            ########
-            # join #
-            ########
-            if self.join is not None:
-                _json['join'] = self.join
-
         # no filters
         else:
             _json = self.default_filter
+
+        ########
+        # join #
+        ########
+        if self.join is not None:
+            _json['join'] = self.join
 
         #############
         # operation #
