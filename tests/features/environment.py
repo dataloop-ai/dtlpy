@@ -58,5 +58,11 @@ def delete_plugins(context):
 
 @fixture
 def delete_deployments(context):
+    if hasattr(context, 'first_deployment'):
+        context.first_deployment.delete()
+
+    if hasattr(context, 'second_deployment'):
+        context.second_deployment.delete()
+
     if hasattr(context, 'deployment'):
         context.deployment.delete()

@@ -8,9 +8,10 @@ class Triggers:
     Triggers repository
     """
 
-    def __init__(self, client_api, project=None):
+    def __init__(self, client_api, project=None, deployment=None):
         self._client_api = client_api
         self._project = project
+        self.deployment = deployment
 
     @property
     def project(self):
@@ -170,15 +171,31 @@ class Triggers:
                                           client_api=self._client_api,
                                           project=self.project)
 
-    def list(self):
+    def list(self, active=None, page_offset=None, resource=None):
         """
         List project triggers
         :return:
         """
         url_path = '/triggers'
+        query = list()
 
+        # either project or deployment
         if self.project is not None:
-            url_path += '?projects={}'.format(self.project.id)
+            query.append('projects={}'.format(self.project.id))
+        elif self.deployment is not None:
+            query.append('deploymentId={}'.format(self.deployment.id))
+
+        # other queries
+        if active is not None:
+            query.append('active={}'.format(active).lower())
+        if page_offset is not None:
+            query.append('pageOffset={}'.format(page_offset))
+        if resource is not None:
+            query.append('resource={}'.format(resource))
+
+        if len(query) > 0:
+            query_string = '&'.join(query)
+            url_path = '{}?{}'.format(url_path, query_string)
 
         # request
         success, response = self._client_api.gen_request(req_type='get',

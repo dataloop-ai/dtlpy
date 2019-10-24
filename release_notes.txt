@@ -1,3 +1,21 @@
+Release 1.7.45
+    Bugs:
+        - fixed bug in cli auto-complete fro dir path and datasets names
+        - fixed: empty filters dont add join
+        - fixed: not empty filters add blob and type dir
+        - fixed: deploy from local dont add filter
+        - fixed: deployment.to_json() dont ignore project
+        - fixed: refresh token for m2m learning
+        - fixed: token expired error ad import
+        - try/catch to self.project in deployment
+        - packages list uses filters.show_dirs = True
+    Features:
+        - added option to deploy plugin from a specified deployment.json file
+        - triggers list with params: active, resource, page_offset
+        - method pop() to filters
+        - method pop_join() to filters
+    Test:
+        - Deployments repo testing
 Release 1.7.44
     Bugs:
         - dtlpy converter bug fix

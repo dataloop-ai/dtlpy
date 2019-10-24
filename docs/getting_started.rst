@@ -111,6 +111,10 @@ For upload the content of a folder (without the head) use "\*" at the end of the
 		remote_path='/images/dogs',
 		overwrite=False
 	)
+	# or upload just the content of that folder using "*":
+	dataset.items.upload(
+		local_path=r'C:\home\dogs\*', #  can be a directory
+	)
 
 	# Upload entire folder to dataset dataset with annotations
 	dataset.items.upload(

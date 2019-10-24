@@ -1,4 +1,4 @@
-Feature: Plugins repository push function testing
+Feature: Plugins repository get function testing
 
     Background: Initiate Platform Interface and create a project
         Given Platform Interface is initialized as dlp and Environment is set to development

@@ -14,8 +14,6 @@ def step_impl(context, project_name):
             if i >= 6:
                 raise
 
-
-
 @behave.then(u'I get a project by the name of "{project_name}"')
 def step_impl(context, project_name):
     assert context.project_get.name == context.project_name

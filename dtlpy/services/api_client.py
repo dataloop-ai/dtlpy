@@ -684,7 +684,7 @@ class ApiClient:
                    'password': password,
                    'grant_type': 'password',
                    'audience': audience,
-                   'scope': 'openid email',
+                   'scope': 'openid email offline_access',
                    'client_id': client_id,
                    'client_secret': client_secret
                    }
@@ -699,8 +699,12 @@ class ApiClient:
             self.print_bad_response(resp)
             return False
         else:
-            token = resp.json()['id_token']
-            self.token = token
+            response_dict = resp.json()
+            self.token = response_dict['id_token']
+            if 'refresh_token' in response_dict:
+                self.refresh_token = response_dict['refresh_token']
+            else:
+                self.refresh_token = None
             payload = jwt.decode(self.token, algorithms=['HS256'], verify=False)
             if 'email' in payload:
                 logger.info('Logged in: %s' % payload['email'])
@@ -845,6 +849,8 @@ class ApiClient:
                     self.token = final_token
                     if 'refresh_token' in response_dict:
                         self.refresh_token = response_dict['refresh_token']
+                    else:
+                        self.refresh_token = None
                     payload = jwt.decode(self.token, algorithms=['HS256'], verify=False)
                     if 'email' in payload:
                         logger.info('Logged in: %s' % payload['email'])
@@ -881,6 +887,7 @@ class RefreshTimer(threading.Thread):
 
     def renew_token(self):
         if self.client_api.refresh_token is None:
+            logger.error('missing "refresh_token" for user')
             self.renew_status = 'failed'
             return
         if self.client_api.environment in self.client_api.environments.keys():
@@ -888,7 +895,7 @@ class RefreshTimer(threading.Thread):
             client_id = env_params['client_id']
             auth0_url = env_params['auth0_url']
         else:
-            logger.error('missing params for refreshing token')
+            logger.error('missing environments params for refreshing token')
             self.renew_status = 'failed'
             return
 

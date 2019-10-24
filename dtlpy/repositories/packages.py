@@ -93,6 +93,7 @@ class Packages:
         filters = entities.Filters()
         filters.add(field='filename', values='/packages/*')
         filters.add(field='type', values='dir')
+        filters.show_dirs = True
         packages = self.items_repository.list(filters=filters)
         return packages
 

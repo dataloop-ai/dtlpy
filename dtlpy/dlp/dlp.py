@@ -159,12 +159,14 @@ class DlpCompleter(Completer):
                         project = dlp.projects.get(project_name=cmd[cmd.index('--project-name') + 1].replace('"', ''))
                         dataset_list = project.datasets.list()
                     else:
-                        if not isinstance(dlp.datasets.project, dlp.entities.Project):
-                            dlp.datasets.project = dlp.projects.get()
-                        dataset_list = dlp.datasets.list()
+                        try:
+                            project = dlp.projects.get()
+                            dataset_list = project.datasets.list()
+                        except Exception:
+                            dataset_list = list()
                     param_suggestions = ['"{}'.format(dataset.name) for dataset in dataset_list]
                     thread_state = StateEnum.DONE
-                elif param in ['--local-path', '--local-annotations-path']:
+                elif param in ['--local-path', '--local-annotations-path', '--deployment-file']:
                     thread_state = StateEnum.CONTINUE
                     param = word_before_cursor.replace('"', '')
                     if param == '':
@@ -173,15 +175,12 @@ class DlpCompleter(Completer):
                         param_suggestions = ['"{}'.format(os.path.join(param, directory))
                                              for directory in os.listdir(param)
                                              if not directory.startswith('.')]
-                    elif param.endswith('/') or param.endswith('\\'):
-                        param = param[:-1]
-                        param_suggestions = ['"{}'.format(os.path.join(param, directory))
-                                             for directory in os.listdir(param)
-                                             if not directory.startswith('.')]
-                    elif os.path.isdir(param):
-                        param_suggestions = ['"{}'.format(os.path.join(param, directory))
-                                             for directory in os.listdir(param)
-                                             if not directory.startswith('.')]
+                    elif os.path.isdir(os.path.dirname(param)):
+                        base_dir = os.path.dirname(param)
+                        param_suggestions = ['"{}'.format(os.path.join(base_dir, directory))
+                                             for directory in os.listdir(base_dir)
+                                             if (not directory.startswith('.') and
+                                                 param in '"{}'.format(os.path.join(base_dir, directory)))]
                 elif param in ['--annotation-options']:
                     thread_state = StateEnum.CONTINUE
                     param_suggestions = ['mask', 'json', 'instance', '"mask, json"',
@@ -685,9 +684,12 @@ def get_parser():
     # ACTIONS #
 
     # deploy
-    subparser_parser.add_parser(
+    a = subparser_parser.add_parser(
         "deploy", help="Deploy plugin from local directory"
     )
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument("-df", "--deployment-file", dest="deployment_file", default=None,
+                          help="Path to deployment file")
 
     # generate
     a = subparser_parser.add_parser(
@@ -908,7 +910,7 @@ def run(args, parser):
             pages = dataset.items.list(filters=filters, page_offset=args.page)
             print(datetime.datetime.utcnow())
             pages.print()
-            print("Displaying page %d/%d" % (args.page, pages.total_pages_count))
+            print("Displaying page %d/%d" % (args.page, pages.total_pages_count - 1))
 
         elif args.items == "web":
             project = dlp.projects.get(project_name=args.project_name)
@@ -1134,7 +1136,7 @@ def run(args, parser):
 
         elif args.plugins == "deploy":
             print(datetime.datetime.utcnow())
-            deployment_name = dlp.deployments.deploy_from_local_folder().name
+            deployment_name = dlp.deployments.deploy_from_local_folder(deployment_file=args.deployment_file).name
             print("Successfully deployed the plugin, deployment name is: %s" % deployment_name)
 
         else:

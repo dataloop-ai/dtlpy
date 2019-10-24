@@ -10,9 +10,14 @@ Feature: Packages repository List method
         When I list all packages
         Then I receive a list of "0" packages
 
-    Scenario: List all packages when 2 exist
+    Scenario: List all packages when 1 exist
         Given There is a Package directory with a python file in path "packages_assets/packages_list"
         When I pack directory by name "package1_name"
+        When I list all packages
+        Then I receive a list of "1" packages
+
+    Scenario: List all packages when 2 exist
+        Given There is a Package directory with a python file in path "packages_assets/packages_list"
         And I pack directory by name "package2_name"
         When I list all packages
         Then I receive a list of "2" packages

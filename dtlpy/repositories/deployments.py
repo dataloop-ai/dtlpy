@@ -86,10 +86,10 @@ class Deployments:
         """
         url_path = '/deployments'
 
-        if self.project is not None:
+        if self.plugin is not None:
+            url_path += '?pluginId={}'.format(self.plugin.id)
+        elif self.project is not None:
             url_path += '?projects={}'.format(self.project.id)
-        elif self.plugin is not None and self.plugin.project is not None:
-            url_path += '?projects={}'.format(self.plugin.project.id)
 
         # request
         success, response = self._client_api.gen_request(req_type='get',
@@ -296,15 +296,26 @@ class Deployments:
                                config=config,
                                runtime=runtime)
 
-    def deploy_from_local_folder(self, cwd=None):
+    def deploy_from_local_folder(self, cwd=None, deployment_file=None):
         """
         Deploy from local folder
         :return:
+
+        :param cwd: optional - plugin working directory. Default=cwd
+        :param deployment_file: optional - deployment file. Default=None
         """
         if cwd is None:
             cwd = os.getcwd()
 
-        if 'deployment.json' in os.listdir(cwd):
+        if deployment_file is not None:
+            file_path = deployment_file
+            if not os.path.isfile(file_path):
+                file_path = os.path.join(cwd, file_path)
+                if not os.path.isfile(file_path):
+                    raise exceptions.PlatformException('404', 'File not found: {}'.format(deployment_file))
+            with open(file_path, 'r') as f:
+                deployment_json = json.load(f)
+        elif 'deployment.json' in os.listdir(cwd):
             with open(os.path.join(cwd, 'deployment.json'), 'r') as f:
                 deployment_json = json.load(f)
         else:
@@ -329,7 +340,7 @@ class Deployments:
         triggers = repositories.Triggers(client_api=self._client_api, project=self.project)
         for trigger in deployment_triggers:
             name = trigger.get('name', None)
-            filters = trigger.get('filters', dict())
+            filters = trigger.get('filter', dict())
             resource = trigger['resource']
             actions = trigger.get('actions', list())
             active = trigger.get('active', True)

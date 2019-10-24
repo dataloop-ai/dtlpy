@@ -19,20 +19,25 @@ class Filters:
         self.method = 'and'
         self.sort = dict()
         self.show_hidden = False
+        self.show_dirs = False
         self.join = None
 
     @property
     def default_filter(self):
+        and_list = list()
+        if self.resource == 'items':
+            if not self.show_hidden:
+                and_list.append({'hidden': False})
+            if not self.show_dirs:
+                and_list.append({'type': 'file'})
+
         default_filter = {
             'items': {
                 'resource': 'items',
                 'pageSize': self.page_size,
                 'page': self.page,
                 'filter': {
-                    '$and': [
-                        {'type': 'file'},
-                        {'hidden': False},
-                    ]
+                    '$and': and_list
                 },
                 'sort': {'type': 'ascending', 'createdAt': 'descending'},
             },
@@ -73,6 +78,17 @@ class Filters:
         self.filter_list.append(
             SingleFilter(field=field, values=values, operator=operator)
         )
+
+    def pop(self, field):
+        for single_filter in self.filter_list:
+            if single_filter.field == field:
+                self.filter_list.remove(single_filter)
+
+    def pop_join(self, field):
+        if self.join is not None:
+            for single_filter in self.join['filter']['$and']:
+                if field in single_filter:
+                    self.join['filter']['$and'].remove(single_filter)
 
     def add_join(self, field, values, operator=None):
         if self.resource == 'annotations':
@@ -115,11 +131,17 @@ class Filters:
             filters_dict['${}'.format(self.method)] = filters
 
             # add items defaults
-            if not self.show_hidden and self.resource == 'items':
-                if self.method == 'or':
-                    filters_dict['$and'] = Filters.hidden()
-                else:
-                    filters_dict['$and'] += Filters.hidden()
+            if self.resource == 'items':
+                if not self.show_hidden:
+                    if self.method == 'or':
+                        filters_dict['$and'] = Filters.hidden()
+                    else:
+                        filters_dict['$and'] += Filters.hidden()
+                if not self.show_dirs:
+                    if self.method == 'or':
+                        filters_dict['$and'] = Filters.no_dirs()
+                    else:
+                        filters_dict['$and'] += Filters.no_dirs()
             # add to json
             _json['filter'] = filters_dict
 
@@ -161,9 +183,15 @@ class Filters:
 
     @staticmethod
     def hidden():
-        hidden = [{'filename': {'$glob': '!/.**'}}, {'filename': {'$glob': '!/.*/**'}}]
+        hidden = [{'hidden': False}]
         assert isinstance(hidden, list)
         return hidden
+
+    @staticmethod
+    def no_dirs():
+        no_dirs = [{'type': 'file'}]
+        assert isinstance(no_dirs, list)
+        return no_dirs
 
 
 class SingleFilter:

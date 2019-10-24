@@ -90,3 +90,10 @@ from tests.features.steps.triggers_repo import test_triggers_get
 from tests.features.steps.triggers_repo import test_triggers_list
 from tests.features.steps.triggers_repo import test_triggers_update
 from tests.features.steps.triggers_repo import test_triggers_delete
+
+from tests.features.steps.deployments_repo import test_deployments_deploy
+from tests.features.steps.deployments_repo import test_deployments_create
+from tests.features.steps.deployments_repo import test_deployments_get
+from tests.features.steps.deployments_repo import test_deployments_delete
+from tests.features.steps.deployments_repo import test_deployments_list
+from tests.features.steps.deployments_repo import test_deployments_update

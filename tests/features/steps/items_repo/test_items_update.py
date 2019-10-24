@@ -55,7 +55,7 @@ def step_impl(context, name):
 @behave.then(u'PageEntity has directory item "{dir_name}"')
 def step_impl(context, dir_name):
     filters = context.dl.Filters()
-    filters.add(field='type', values='dir')
+    filters.show_dirs = True
     page = context.dataset.items.list(filters=filters)
     dir_exist = False
     for item in page.items:

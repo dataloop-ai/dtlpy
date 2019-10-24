@@ -65,13 +65,18 @@ class Deployment:
     def set_repositories(self):
         reps = namedtuple('repositories',
                           field_names=['sessions', 'deployments', 'triggers'])
+        try:
+            project = self.project
+        except Exception:
+            project = None
+
         if self._plugin is None:
             deployments = repositories.Deployments(client_api=self._client_api, plugin=self._plugin,
-                                                   project=self.project)
+                                                   project=project)
         else:
             deployments = self._plugin.deployments
 
-        triggers = repositories.Triggers(client_api=self._client_api, project=self.project)
+        triggers = repositories.Triggers(client_api=self._client_api, project=project, deployment=self)
 
         r = reps(sessions=repositories.Sessions(client_api=self._client_api, deployment=self),
                  deployments=deployments, triggers=triggers)
@@ -103,6 +108,7 @@ class Deployment:
         _json = attr.asdict(
             self,
             filter=attr.filters.exclude(
+                attr.fields(Deployment)._project,
                 attr.fields(Deployment)._plugin,
                 attr.fields(Deployment)._client_api,
                 attr.fields(Deployment)._repositories,

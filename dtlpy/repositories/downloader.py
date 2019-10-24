@@ -208,9 +208,9 @@ class Downloader:
         except Exception as e:
             logger.exception(e)
         finally:
-            pbar.close()
             pool.close()
             pool.join()
+            pbar.close()
         # reporting
         n_download = status.count("download")
         n_exist = status.count("exist")

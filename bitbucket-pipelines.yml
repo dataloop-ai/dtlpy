@@ -34,10 +34,6 @@ pipelines:
           - gsutil -m cp -R gs://sdl-tests-assets/assets tests/
           - python tests/test_examples.py
           - python tests/test_runner.py
-          # - docker login -u _json_key -p "$GCP_KEY" https://gcr.io
-          # - python setup.py bdist_wheel
-          # - mv dist/* dist/dtlpy-latest-py3-none-any.whl
-          # - gsutil cp dist/dtlpy-latest-py3-none-any.whl gs://dtlpy/dev
     - step:
         image: python:3.7
         name: Tests3.7
@@ -52,10 +48,6 @@ pipelines:
           - gsutil -m cp -R gs://sdl-tests-assets/assets tests/
           - python tests/test_examples.py
           - python tests/test_runner.py
-          # - docker login -u _json_key -p "$GCP_KEY" https://gcr.io
-          # - python setup.py bdist_wheel
-          # - mv dist/* dist/dtlpy-latest-py3-none-any.whl
-          # - gsutil cp dist/dtlpy-latest-py3-none-any.whl gs://dtlpy/dev
   tags:
     "*":
       - step:
