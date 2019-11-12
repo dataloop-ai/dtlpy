@@ -111,7 +111,7 @@ glob -> string global expressions such as !, *, **
 
 eq -> equal
 
-nq -> not equal
+ne -> not equal
 
 gt -> greater than
 
