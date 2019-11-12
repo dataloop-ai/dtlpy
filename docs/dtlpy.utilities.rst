@@ -26,13 +26,6 @@ dtlpy.utilities.converter module
    :members:
    :undoc-members:
    :show-inheritance:
-dtlpy.utilities.miscellaneous module
-------------------------------------
-
-.. automodule:: dtlpy.utilities.miscellaneous
-   :members:
-   :undoc-members:
-   :show-inheritance:
 
 
 Module contents

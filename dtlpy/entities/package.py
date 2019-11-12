@@ -2,7 +2,7 @@ import logging
 import attr
 import copy
 
-from .. import utilities, entities, repositories
+from .. import miscellaneous, entities, repositories
 
 logger = logging.getLogger(name=__name__)
 
@@ -12,6 +12,7 @@ class Package(entities.Item):
     """
     Package object
     """
+
     @classmethod
     def from_json(cls, _json, client_api, dataset=None):
         """
@@ -36,6 +37,7 @@ class Package(entities.Item):
             dataset_url=_json.get('dataset', None),
             hidden=_json.get('hidden', False),
             stream=_json.get('stream', None),
+            dir=_json.get('dir', None),
             filename=_json['filename'],
             metadata=_json['metadata'],
             name=_json['name'],
@@ -103,4 +105,4 @@ class Package(entities.Item):
         return self.packages.list_versions(package_name=package_name)
 
     def print(self):
-        utilities.List([self]).print()
+        miscellaneous.List([self]).print()

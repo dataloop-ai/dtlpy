@@ -1,7 +1,6 @@
 import logging
-from .. import exceptions
-from .. import entities
-from .. import utilities
+
+from .. import exceptions, miscellaneous, entities
 
 logger = logging.getLogger(name=__name__)
 
@@ -42,7 +41,7 @@ class Assignments:
             raise ('400', 'Must provide project')
         project_ids = ','.join(project_ids)
         query.append('projects={}'.format(project_ids))
-        
+
         if status is not None:
             query.append('status={}'.format(status))
         if name is not None:
@@ -61,7 +60,7 @@ class Assignments:
         success, response = self._client_api.gen_request(req_type='get',
                                                          path=url)
         if success:
-            assignments = utilities.List(
+            assignments = miscellaneous.List(
                 [entities.Assignment.from_json(client_api=self._client_api,
                                                _json=_json)
                  for _json in response.json()['items']])
@@ -167,10 +166,10 @@ class Assignments:
 
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/assignments',
-                                                         data=payload)
+                                                         json_req=payload)
         if success:
             assignment = entities.Assignment.from_json(client_api=self._client_api,
-                                                    _json=response.json())
+                                                       _json=response.json())
         else:
             raise exceptions.PlatformException(response)
         assert isinstance(assignment, entities.Assignment)

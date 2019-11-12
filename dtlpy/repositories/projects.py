@@ -1,5 +1,5 @@
 import logging
-from .. import entities, utilities, PlatformException
+from .. import entities, miscellaneous, PlatformException
 
 logger = logging.getLogger(name=__name__)
 
@@ -19,7 +19,9 @@ class Projects:
             project = entities.Project.from_json(client_api=self._client_api,
                                                  _json=response.json())
         else:
-            raise PlatformException('404', 'Project not found. Id: {}'.format(project_id))
+            # raise PlatformException(response)
+            # TODO because of a bug in gate wrong error is returned so for now manually raise not found
+            raise PlatformException(error="404", message="Project not found")
         return project
 
     def __get_by_identifier(self, identifier):
@@ -68,7 +70,7 @@ class Projects:
         success, response = self._client_api.gen_request(req_type='get',
                                                          path='/projects')
         if success:
-            projects = utilities.List(
+            projects = miscellaneous.List(
                 [entities.Project.from_json(client_api=self._client_api,
                                             _json=_json)
                  for _json in response.json()])
@@ -125,6 +127,7 @@ class Projects:
                                                              path='/projects/{}'.format(project.id))
             if not success:
                 raise PlatformException(response)
+            logger.info('Project {} deleted successfully'.format(project.name))
             return True
 
         else:

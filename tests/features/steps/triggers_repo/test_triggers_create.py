@@ -61,14 +61,13 @@ def step_impl(context, item_type):
     triggered = False
 
     for i in range(num_try):
-        time.sleep(3)
+        time.sleep(5)
         if is_item:
             item = context.dataset.items.get(item_id=item.id)
-            if 'user' in item.metadata:
-                if 'plugins' in item.metadata['user']:
-                    if context.plugin.name in item.metadata['user']['plugins']:
-                        triggered = True
-                        break
+            if 'plugins' in item.system:
+                if context.plugin.name in item.system['plugins']:
+                    triggered = True
+                    break
         else:
             item = item.update()
             if item.label == "Edited":

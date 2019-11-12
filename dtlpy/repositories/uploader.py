@@ -1,3 +1,6 @@
+import multiprocessing
+from io import BytesIO
+
 import validators
 import threading
 import traceback
@@ -10,7 +13,6 @@ import json
 import tqdm
 import os
 import io
-from multiprocessing.pool import ThreadPool
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
@@ -22,13 +24,14 @@ NUM_TRIES = 3  # try to upload 3 time before fail on item
 
 
 class UploadElement:
-    def __init__(self, element_type, buffer, remote_filepath, annotations_filepath):
+    def __init__(self, element_type, buffer, remote_filepath, annotations_filepath, link_dataset_id=None):
         self.type = element_type
         self.buffer = buffer
         self.remote_filepath = remote_filepath
         self.exists_in_remote = False
         self.checked_in_remote = False
         self.annotations_filepath = annotations_filepath
+        self.link_dataset_id = link_dataset_id
 
 
 class Uploader:
@@ -161,6 +164,28 @@ class Uploader:
                     elements.append(element)
                 else:
                     raise PlatformException("404", "Unknown local path: {}".format(local_path))
+            elif isinstance(upload_item_element, entities.Item):
+                remote_filepath = '{}{}_link.json'.format(remote_path, upload_item_element.name)
+                link_dataset_id = upload_item_element.datasetId
+
+                element = UploadElement(element_type='link',
+                                        buffer=upload_item_element.id,
+                                        remote_filepath=remote_filepath,
+                                        annotations_filepath=upload_annotations_element,
+                                        link_dataset_id=link_dataset_id)
+                elements.append(element)
+            elif isinstance(upload_item_element, entities.Similarity):
+                if upload_item_element.name is None:
+                    upload_item_element.name = '{}_similarity.json'.format(upload_item_element.ref)
+                    remote_filepath = '{}{}'.format(remote_path, upload_item_element.name)
+                else:
+                    remote_filepath = '{}{}.json'.format(remote_path, upload_item_element.name)
+
+                element = UploadElement(element_type='similarity',
+                                        buffer=upload_item_element,
+                                        remote_filepath=remote_filepath,
+                                        annotations_filepath=upload_annotations_element)
+                elements.append(element)
             else:
                 # binary element
                 if not hasattr(upload_item_element, "name"):
@@ -200,8 +225,9 @@ class Uploader:
         status = ["" for _ in range(num_files)]
         success = [False for _ in range(num_files)]
         errors = ["" for _ in range(num_files)]
-        pool = ThreadPool(processes=num_workers)
-        with tqdm.tqdm(total=num_files) as pbar:
+        jobs = [None for _ in range(num_files)]
+        pool = self.items_repository._client_api.thread_pool
+        with tqdm.tqdm(total=num_files, disable=self.items_repository._client_api.verbose.disable_progress_bar) as pbar:
             for i_item in range(num_files):
                 element = elements[i_item]
                 # check if file exists
@@ -227,24 +253,24 @@ class Uploader:
 
                         # upload annotations if exists
                         if element.annotations_filepath is not None:
-                            pool.apply_async(self.__upload_annotations,
-                                             kwds={'annotations': element.annotations_filepath,
-                                                   'item': found_item})
+                            jobs[i_item] = pool.apply_async(self.__upload_annotations,
+                                                            kwds={'annotations': element.annotations_filepath,
+                                                                  'item': found_item})
                         pbar.update()
                         continue
                 # upload
-                pool.apply_async(self.__upload_single_item_wrapper,
-                                 kwds={"i_item": i_item,
-                                       "element": element,
-                                       "pbar": pbar,
-                                       "status": status,
-                                       "success": success,
-                                       "output": output,
-                                       "errors": errors,
-                                       },
-                                 )
-            pool.close()
-            pool.join()
+                jobs[i_item] = pool.apply_async(self.__upload_single_item_wrapper,
+                                                kwds={"i_item": i_item,
+                                                      "element": element,
+                                                      "pbar": pbar,
+                                                      "status": status,
+                                                      "success": success,
+                                                      "output": output,
+                                                      "errors": errors,
+                                                      },
+                                                )
+
+            _ = [j.wait() for j in jobs if isinstance(j, multiprocessing.pool.ApplyResult)]
         # kill dictionary
         self.__stop_create_existence_dict = True
         thread.join()
@@ -417,6 +443,10 @@ class Uploader:
                                                                                    n=NUM_TRIES))
                 if element.type == 'url':
                     saved_locally, element.buffer, temp_dir = self.url_to_data(element.buffer)
+                elif element.type == 'link':
+                    element.buffer = self.link(item_id=element.buffer, dataset_id=element.link_dataset_id)
+                elif element.type == 'similarity':
+                    element.buffer = element.buffer.to_bytes_io()
                 item = self.__upload_single_item(filepath=element.buffer,
                                                  annotations=element.annotations_filepath,
                                                  remote_path=remote_folder,
@@ -428,6 +458,16 @@ class Uploader:
                                                                                                id=item.id))
                 if isinstance(item, entities.Item):
                     break
+            except exceptions.BadRequest as e:
+                if 'Item already exist'.lower() in e.message:
+                    logger.debug("Upload item: {path}. Try {i}/{n}. Fail. NOT RETRYING".format(path=remote_filename,
+                                                                                               i=i_try + 1,
+                                                                                               n=NUM_TRIES))
+                    err = e
+                    trace = traceback.format_exc()
+                    break
+                else:
+                    raise
             except Exception as e:
                 logger.debug("Upload item: {path}. Try {i}/{n}. Fail.".format(path=remote_filename,
                                                                               i=i_try + 1,
@@ -522,3 +562,22 @@ class Uploader:
             return validators.url(url)
         except Exception:
             return False
+
+    @staticmethod
+    def link(item_id, dataset_id=None):
+
+        link_info = {'type': 'id',
+                     'ref': item_id}
+        if dataset_id is not None:
+            link_info['datasetId'] = dataset_id
+
+        _json = {'type': 'link',
+                 'shebang': 'dataloop',
+                 'metadata': {'dltype': 'link',
+                              'linkInfo': link_info}}
+
+        uploaded_byte_io = BytesIO()
+        uploaded_byte_io.write(json.dumps(_json).encode())
+        uploaded_byte_io.seek(0)
+
+        return uploaded_byte_io

@@ -97,3 +97,5 @@ from tests.features.steps.deployments_repo import test_deployments_get
 from tests.features.steps.deployments_repo import test_deployments_delete
 from tests.features.steps.deployments_repo import test_deployments_list
 from tests.features.steps.deployments_repo import test_deployments_update
+
+from tests.features.steps.filters_entity import test_filters

@@ -1,3 +1,38 @@
+Release 1.8.0
+    Features:
+        - similarity
+        - links
+        - checkout state shows project name and dataset name
+        - test local plugin in multithreading
+        - test local plugin in multithreading in cli
+        - PluginInput class
+        - moved plugins assets to assets folder
+        - do_reset to base plugin runner
+    Bugs:
+        - filters or
+        - global threadpool
+        - withou-binaries autocompletion
+    Docs:
+        - Triggers
+        - Converters
+        - Filters
+
+Release 1.7.53
+    Features:
+        - directory tree entity
+        - dataset entity has now deirectory tree attribute
+        - cli now suggest remote path
+        - cli fix up
+    Bugs:
+        -
+
+Release 1.7.50
+    Features:
+        - using global ThreadPool instead of using one in each method. able to control the number
+              of workers in the package level
+        - added special exception for annotations show errors
+        - using verbose in entire package and logging (also progress bars)
+
 Release 1.7.45
     Bugs:
         - fixed bug in cli auto-complete fro dir path and datasets names

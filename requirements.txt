@@ -5,7 +5,7 @@ numpy==1.16.2
 pandas==0.24.2
 tabulate==0.8.3
 tqdm==4.32.2
-Pillow==6.0.0
+Pillow==6.2.0
 PyJWT==1.7.1
 jinja2==2.10.1
 attrs==19.1.0

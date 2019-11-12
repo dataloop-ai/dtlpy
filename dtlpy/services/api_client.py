@@ -2,6 +2,7 @@
 Dataloop platform calls
 """
 import requests_toolbelt
+import multiprocessing
 import threading
 import traceback
 import datetime
@@ -9,24 +10,24 @@ import requests
 import logging
 import hashlib
 import base64
+import enum
 import time
 import tqdm
 import json
 import jwt
 import os
 
-import pandas as pd
 import numpy as np
 
+from multiprocessing.pool import ThreadPool
 from requests.adapters import HTTPAdapter
 from urllib.parse import urlencode
 from urllib3.util import Retry
-from tabulate import tabulate
 from functools import wraps
 
 from .calls_counter import CallsCounter
 from .cookie import CookieIO
-from .. import exceptions, __version__
+from .. import miscellaneous, exceptions, __version__
 
 logger = logging.getLogger(name=__name__)
 threadLock = threading.Lock()
@@ -46,6 +47,64 @@ class PlatformError(Exception):
         elif hasattr(resp, 'text'):
             msg += '<Reason [{}]>'.format(resp.text)
         super().__init__(msg)
+
+
+class Verbose:
+    __DEFAULT_LOGGING_LEVEL = 'warning'
+    __DEFAULT_DISABLE_PROGRESS_BAR = False
+    __DEFAULT_PRINT_ALL_RESPONSES = False
+
+    def __init__(self, cookie):
+        self.cookie = cookie
+        dictionary = self.cookie.get('verbose')
+        if isinstance(dictionary, dict):
+            self.from_cookie(dictionary)
+        else:
+            self._logging_level = self.__DEFAULT_LOGGING_LEVEL
+            self._disable_progress_bar = self.__DEFAULT_DISABLE_PROGRESS_BAR
+            self._print_all_responses = self.__DEFAULT_PRINT_ALL_RESPONSES
+            self.to_cookie()
+
+    def to_cookie(self):
+        dictionary = {'logging_level': self._logging_level,
+                      'disable_progress_bar': self._disable_progress_bar,
+                      'print_all_responses': self._print_all_responses}
+        self.cookie.put(key='verbose', value=dictionary)
+
+    def from_cookie(self, dictionary):
+        self._logging_level = dictionary.get('logging_level', self.__DEFAULT_LOGGING_LEVEL)
+        self._disable_progress_bar = dictionary.get('disable_progress_bar', self.__DEFAULT_DISABLE_PROGRESS_BAR)
+        self._print_all_responses = dictionary.get('print_all_responses', self.__DEFAULT_PRINT_ALL_RESPONSES)
+
+    @property
+    def disable_progress_bar(self):
+        return self._disable_progress_bar
+
+    @disable_progress_bar.setter
+    def disable_progress_bar(self, val):
+        self._disable_progress_bar = val
+        self.to_cookie()
+
+    @property
+    def logging_level(self):
+        return self._logging_level
+
+    @logging_level.setter
+    def logging_level(self, val):
+        self._logging_level = val
+        # set log level
+        logging.getLogger('dtlpy').handlers[1].setLevel(logging._nameToLevel[self._logging_level.upper()])
+        # write to cookie
+        self.to_cookie()
+
+    @property
+    def print_all_responses(self):
+        return self._print_all_responses
+
+    @print_all_responses.setter
+    def print_all_responses(self, val):
+        self._print_all_responses = val
+        self.to_cookie()
 
 
 class Decorators:
@@ -69,7 +128,7 @@ class ApiClient:
     API calls to Dataloop gate
     """
 
-    def __init__(self, token=None):
+    def __init__(self, token=None, num_processes=None):
         ############
         # Initiate #
         ############
@@ -124,6 +183,25 @@ class ApiClient:
         self.refresh_token_thread.daemon = True
         self.refresh_token_thread.start()
 
+        # create a global thread pool to run multi threading
+        if num_processes is None:
+            num_processes = 8 * multiprocessing.cpu_count()
+        self._num_processes = num_processes
+        logger.debug('Creating global ThreadPool with {} workers'.format(self._num_processes))
+        self._thread_pool = ThreadPool(processes=self._num_processes)
+
+        # set logging level
+        logging.getLogger('dtlpy').handlers[1].setLevel(logging._nameToLevel[self.verbose.logging_level.upper()])
+
+    @property
+    def thread_pool(self):
+        assert isinstance(self._thread_pool, multiprocessing.pool.ThreadPool)
+        if self._thread_pool._state != multiprocessing.pool.RUN:
+            # pool is closed, open a new one
+            logger.debug('Global ThreadPool is not running. Creating a new one')
+            self._thread_pool = ThreadPool(processes=self._num_processes)
+        return self._thread_pool
+
     @property
     def verify(self):
         environments = self.environments
@@ -170,31 +248,36 @@ class ApiClient:
                          'audience': 'https://dataloop-development.auth0.com/api/v2/',
                          'client_id': 'I4Arr9ixs5RT4qIjOGtIZ30MVXzEM4w8',
                          'auth0_url': 'https://dataloop-development.auth0.com',
-                         'token': '',
+                         'token': None,
+                         'refresh_token': None,
                          'verify_ssl': True},
                     'https://gate.dataloop.ai/api/v1': {'alias': 'prod',
                                                         'audience': 'https://dataloop-production.auth0.com/userinfo',
                                                         'client_id': 'FrG0HZga1CK5UVUSJJuDkSDqItPieWGW',
                                                         'auth0_url': 'https://dataloop-production.auth0.com',
-                                                        'token': '',
+                                                        'token': None,
+                                                        'refresh_token': None,
                                                         'verify_ssl': True},
                     'https://localhost:8443/api/v1': {'alias': 'local',
                                                       'audience': 'https://dataloop-local.auth0.com/userinfo',
                                                       'client_id': 'ewGhbg5brMHOoL2XZLHBzhEanapBIiVO',
                                                       'auth0_url': 'https://dataloop-local.auth0.com',
-                                                      'token': '',
+                                                      'token': None,
+                                                      'refresh_token': None,
                                                       'verify_ssl': False},
                     'https://172.17.0.1:8443/api/v1': {'alias': 'docker_linux',
                                                        'audience': 'https://dataloop-local.auth0.com/userinfo',
                                                        'client_id': 'ewGhbg5brMHOoL2XZLHBzhEanapBIiVO',
                                                        'auth0_url': 'https://dataloop-local.auth0.com',
-                                                       'token': '',
+                                                       'token': None,
+                                                       'refresh_token': None,
                                                        'verify_ssl': False},
                     'https://host.docker.internal:8443/api/v1': {'alias': 'docker_windows',
                                                                  'audience': 'https://dataloop-local.auth0.com/userinfo',
                                                                  'client_id': 'ewGhbg5brMHOoL2XZLHBzhEanapBIiVO',
                                                                  'auth0_url': 'https://dataloop-local.auth0.com',
-                                                                 'token': '',
+                                                                 'token': None,
+                                                                 'refresh_token': None,
                                                                  'verify_ssl': False}
                 }
                 # save to local variable
@@ -211,23 +294,10 @@ class ApiClient:
 
     @property
     def verbose(self):
-        _verbose = self._verbose
-        if _verbose is None:
-            _verbose = self.cookie_io.get('verbose')
-            if _verbose is None:
-                # set default
-                _verbose = False
-                # put in cookie
-                self.verbose = _verbose
-            else:
-                # save from cookie to ram
-                self._verbose = _verbose
-        return _verbose
-
-    @verbose.setter
-    def verbose(self, verbose):
-        self._verbose = verbose
-        self.cookie_io.put(key='verbose', value=verbose)
+        if self._verbose is None:
+            self._verbose = Verbose(cookie=self.cookie_io)
+        assert isinstance(self._verbose, Verbose)
+        return self._verbose
 
     @property
     def token(self):
@@ -243,6 +313,7 @@ class ApiClient:
     def token(self, token):
         # set to variable
         self._token = token
+        self.refresh_token = None
         # set to cookie file
         environments = self.environments
         if self.environment in environments:
@@ -275,9 +346,9 @@ class ApiClient:
         if environment in environments:
             logger.warning('Environment exists. Overwriting. env: %s' % environment)
         if token is None:
-            token = ''
+            token = None
         if alias is None:
-            alias = ''
+            alias = None
         environments[environment] = {'audience': audience,
                                      'client_id': client_id,
                                      'auth0_url': auth0_url,
@@ -342,7 +413,7 @@ class ApiClient:
             try:
                 # print only what is printable (dont print get steam etc..)
                 if not stream:
-                    self.print_json(resp.json())
+                    self.print_response(resp)
             except ValueError:
                 # no JSON returned
                 pass
@@ -385,7 +456,8 @@ class ApiClient:
                                  unit="B",
                                  unit_scale=True,
                                  unit_divisor=1024,
-                                 position=1)
+                                 position=1,
+                                 disable=self.verbose.disable_progress_bar)
 
                 def callback(monitor):
                     pbar.update(monitor.bytes_read - pbar.n)
@@ -412,7 +484,7 @@ class ApiClient:
         else:
             try:
                 # print only what is printable (dont print get steam etc..)
-                self.print_json(resp.json())
+                self.print_response(resp)
             except ValueError:
                 # no JSON returned
                 pass
@@ -433,7 +505,9 @@ class ApiClient:
                 status_forcelist=(501, 502, 503, 504, 505, 506, 507, 508, 510, 511),
                 raise_on_status=False
             )
-            adapter = HTTPAdapter(max_retries=retry, pool_maxsize=128, pool_connections=128)
+            adapter = HTTPAdapter(max_retries=retry,
+                                  pool_maxsize=self._num_processes,
+                                  pool_connections=self._num_processes)
             self.session.mount('http://', adapter)
             self.session.mount('https://', adapter)
         resp = self.session.send(request=prepared, stream=stream, verify=self.verify, timeout=None)
@@ -487,61 +561,44 @@ class ApiClient:
                 return True
         except jwt.exceptions.DecodeError as err:
             logger.exception('Invalid token.')
-            logger.exception(err)
             return True
         except Exception as err:
-            logger.exception(err)
+            logger.exception('Unknown error:')
             return True
+
+    @staticmethod
+    def is_json_serializable(response):
+        try:
+            response_json = response.json()
+            return True, response_json
+        except json.decoder.JSONDecodeError:
+            return False, None
 
     ##########
     # STDOUT #
     ##########
-    def print_json(self, to_print):
+    def print_response(self, resp):
         """
         Print tabulate response
-        :param to_print:
+        :param resp: response from requests
         :return:
         """
         try:
-            if self.verbose is False:
-                return
-            import collections
-            if isinstance(to_print, dict):
-                keys_list = list(to_print.keys())
-                to_print = [to_print]
-            elif isinstance(to_print, list):
-                if len(to_print) == 0:
-                    keys_list = ['']
+            is_json_serializable, results = self.is_json_serializable(response=resp)
+            if self.verbose.print_all_responses and is_json_serializable:
+                if isinstance(results, dict):
+                    to_print = miscellaneous.List([results])
+                elif isinstance(results, list):
+                    to_print = miscellaneous.List(results)
                 else:
-                    keys_list = list()
-                    for item in to_print:
-                        [keys_list.append(key) for key in list(item.keys()) if key not in keys_list]
-            else:
-                msg = 'Unknown printing input type: %s' % type(to_print)
-                logger.exception(msg)
-                raise ValueError(msg)
-
-            try:
-                # try sorting bt creation date
-                to_print = sorted(to_print, key=lambda k: k['createdAt'])
-            except KeyError:
-                pass
-            except Exception as err:
-                logger.exception(err)
-
-            if self.minimal_print:
-                for key in self.remove_keys_list:
-                    if key in keys_list:
-                        keys_list.remove(key)
-
-            # keys_list = ['name']#, 'id']
-
-            df = pd.DataFrame(to_print, columns=keys_list)
-            logger.debug('\n%s' % tabulate(df, headers='keys', tablefmt='psql'))
-
-        except Exception as err:
+                    logger.debug('Unknown response type: {}. cant print'.format(type(results)))
+                    return
+                logger.debug('-- Request --')
+                logger.debug(self.print_request(req=resp.request, to_return=True))
+                logger.debug('-- Response --')
+                to_print.print(show_all=False, level='debug')
+        except Exception:
             logger.exception('Printing response from gate:')
-            logger.exception(err)
 
     def print_bad_response(self, resp=None, log_error=True):
         """
@@ -560,11 +617,14 @@ class ApiClient:
         if hasattr(resp, 'text'):
             msg += '[Text: {val}]'.format(val=resp.text)
 
+        logger.debug('-- Request --')
+        logger.debug(self.print_request(req=resp.request, to_return=True))
+        logger.debug('-- Response --')
         if log_error:
             logger.error(msg)
         else:
             logger.debug(msg)
-        logger.debug(self.print_request(req=resp.request, to_return=True))
+
         self.platform_exception = PlatformError(resp)
 
     def print_request(self, req=None, to_return=False, with_auth=False):
@@ -590,11 +650,10 @@ class ApiClient:
             body = json.loads(body)
             if isinstance(body, dict):
                 for key, value in body.items():
-                    print(key)
                     hide = any([field in key for field in ['secret', 'password']])
                     if hide:
                         body[key] = '*' * len(value)
-        except:
+        except Exception:
             pass
 
         msg = '{}\n{}\n{}\n\n{}'.format(
@@ -620,8 +679,9 @@ class ApiClient:
         environments = self.environments
         if env.startswith('http'):
             if env not in environments.keys():
-                logger.exception('Unknown environment. Please add environment to SDK ("add_environment" method)')
-                raise ConnectionError('Unknown environment. Please add environment to SDK ("add_environment" method)')
+                msg = 'Unknown environment. Please add environment to SDK ("add_environment" method)'
+                logger.exception(msg)
+                raise ConnectionError(msg)
         else:
             matched_env = [env_url for env_url, env_dict in environments.items() if env_dict['alias'] == env]
             if len(matched_env) != 1:
@@ -650,7 +710,7 @@ class ApiClient:
         :return:
         """
         # check if already logged in with SAME email
-        if self.token is not None:
+        if self.token is not None or self.token == '':
             try:
                 payload = jwt.decode(self.token, algorithms=['HS256'], verify=False)
                 if 'email' in payload and \
@@ -661,8 +721,9 @@ class ApiClient:
                                    'Set "force" flag to True to login anyway.')
                     return True
             except jwt.exceptions.DecodeError:
-                logger.debug('{}\n{}'.format(traceback.format_exc(), 'Cant decode token. Force login is user'))
+                logger.debug('{}'.format('Cant decode token. Force login is user'))
 
+        logger.info('[Start] Login Secret')
         environment = self.environment
         audience = None
         auth0_url = None
@@ -672,10 +733,10 @@ class ApiClient:
                 auth0_url = env_params['auth0_url']
         missing = False
         if audience is None:
-            logger.exception('audience not found. Please add a new environment to SDK. env: %s' % environment)
+            logger.error('audience not found. Please add a new environment to SDK. env: {}'.format(environment))
             missing = True
         if auth0_url is None:
-            logger.exception('auth0_url not found. Please add a new environment to SDK. env: %s' % environment)
+            logger.error('auth0_url not found. Please add a new environment to SDK. env: {}'.format(environment))
             missing = True
         if missing:
             raise ConnectionError('Some values are missing. See above for full error')
@@ -688,11 +749,7 @@ class ApiClient:
                    'client_id': client_id,
                    'client_secret': client_secret
                    }
-        headers = {
-            'content-type': 'application/json',
-            'Cache-Control': 'no-cache',
-            'Postman-Token': 'c9e3e17b-00a6-4329-93c3-a9cea74f3f6b'
-        }
+        headers = {'content-type': 'application/json'}
         token_url = auth0_url + '/oauth/token'
         resp = requests.request("POST", token_url, data=json.dumps(payload), headers=headers)
         if not resp.ok:
@@ -700,16 +757,14 @@ class ApiClient:
             return False
         else:
             response_dict = resp.json()
-            self.token = response_dict['id_token']
+            self.token = response_dict['id_token']  # this will also set the refresh_token to None
             if 'refresh_token' in response_dict:
                 self.refresh_token = response_dict['refresh_token']
-            else:
-                self.refresh_token = None
             payload = jwt.decode(self.token, algorithms=['HS256'], verify=False)
             if 'email' in payload:
-                logger.info('Logged in: %s' % payload['email'])
+                logger.info('[Done] Login Secret. User: {}'.format(payload['email']))
             else:
-                logger.info('Logged in: %s' % email)
+                logger.info('[Done] Login Secret. User: {}'.format(email))
                 logger.info(payload)
         return True
 
@@ -720,7 +775,7 @@ class ApiClient:
         :param token: a valid token
         :return:
         """
-        self.token = token
+        self.token = token  # this will also set the refresh_token to None
 
     def login(self, audience=None, auth0_url=None, client_id=None):
         """
@@ -758,13 +813,13 @@ class ApiClient:
         else:
             missing = False
             if audience is None:
-                logger.exception('Missing parameter for environment missing. Need to input "audience"')
+                logger.error('Missing parameter for environment missing. Need to input "audience"')
                 missing = True
             if client_id is None:
-                logger.exception('Missing parameter for environment missing. Need to input "client_id"')
+                logger.error('Missing parameter for environment missing. Need to input "client_id"')
                 missing = True
             if auth0_url is None:
-                logger.exception('Missing parameter for environment missing. Need to input "auth0_url"')
+                logger.error('Missing parameter for environment missing. Need to input "auth0_url"')
                 missing = True
             if missing:
                 raise ConnectionError('Missing parameter for environment. see above')
@@ -846,11 +901,10 @@ class ApiClient:
                 else:
                     response_dict = resp.json()
                     final_token = response_dict['id_token']
-                    self.token = final_token
+                    self.token = final_token  # this will also set the refresh_token to None
                     if 'refresh_token' in response_dict:
                         self.refresh_token = response_dict['refresh_token']
-                    else:
-                        self.refresh_token = None
+
                     payload = jwt.decode(self.token, algorithms=['HS256'], verify=False)
                     if 'email' in payload:
                         logger.info('Logged in: %s' % payload['email'])
@@ -862,7 +916,7 @@ class ApiClient:
                 logger.exception('Timeout reached: getting token from server')
                 raise ConnectionError('Timeout reached: getting token from server')
         except Exception as err:
-            logger.exception(err)
+            logger.exception('Error in http server for getting token')
         finally:
             # shutdown local server
             server.server_close()
@@ -873,32 +927,29 @@ class ApiClient:
 
 
 class RefreshTimer(threading.Thread):
+    class Status(enum.Enum):
+        FAILED = 0
+        PENDING = 1
+        MISSING = 2
+        INPROGRESS = 3
 
     def __init__(self, client_api):
         super(RefreshTimer, self).__init__()
         self.client_api = client_api
         self.kill = False
-        self.renew_status = 'pending'
+        self.renew_status = self.Status.PENDING
         self.times = {
             'before_expired': 60 * 60,  # 60 min
             'on_fail': 10 * 60,  # 10 min
-            'wake_margin': 30 * 60  # 30 min
+            'wake_margin': 30 * 60,  # 30 min
+            'on_missing': 10 * 60 * 60,  # 10 hours
+            'default': 10 * 60 * 60  # 10 hours
         }
 
     def renew_token(self):
-        if self.client_api.refresh_token is None:
-            logger.error('missing "refresh_token" for user')
-            self.renew_status = 'failed'
-            return
-        if self.client_api.environment in self.client_api.environments.keys():
-            env_params = self.client_api.environments[self.client_api.environment]
-            client_id = env_params['client_id']
-            auth0_url = env_params['auth0_url']
-        else:
-            logger.error('missing environments params for refreshing token')
-            self.renew_status = 'failed'
-            return
-
+        env_params = self.client_api.environments[self.client_api.environment]
+        client_id = env_params['client_id']
+        auth0_url = env_params['auth0_url']
         payload = {'grant_type': 'refresh_token',
                    'client_id': client_id,
                    'refresh_token': self.client_api.refresh_token}
@@ -908,26 +959,37 @@ class RefreshTimer(threading.Thread):
                                 headers={'content-type': 'application/json'})
         if not resp.ok:
             self.client_api.print_bad_response(resp)
-            self.renew_status = 'failed'
+            self.renew_status = self.Status.FAILED
         else:
             response_dict = resp.json()
             # get new token
             final_token = response_dict['id_token']
             self.client_api.token = final_token
             # set status back to pending
-            self.renew_status = 'pending'
+            self.renew_status = self.Status.PENDING
 
     def run(self):
         while True:
             try:
                 logger.debug('RefreshToken: Started')
+                next_wake = self.times['default']
                 if self.kill:
                     logger.debug('RefreshToken: Killed. Breaking..')
                     break
                 if self.client_api.token is None or self.client_api.token == '':
-                    logger.debug('RefreshToken: Bad token.')
-                    next_wake = self.times['on_fail']
-                else:
+                    # token is missing
+                    logger.debug('RefreshToken: Missing token.')
+                    self.renew_status = self.Status.MISSING
+                if self.client_api.refresh_token is None or self.client_api.refresh_token == '':
+                    # missing refresh token
+                    logger.debug('RefreshToken: Missing "refresh_token"')
+                    self.renew_status = self.Status.MISSING
+                if self.client_api.environment not in self.client_api.environments.keys():
+                    # env params missing
+                    logger.error('RefreshToken: Missing environments params for refreshing token')
+                    self.renew_status = self.Status.MISSING
+                if self.renew_status == self.Status.PENDING:
+                    # check expiration time
                     payload = jwt.decode(self.client_api.token, algorithms=['HS256'], verify=False)
                     now = datetime.datetime.now().timestamp()
                     exp = payload['exp']
@@ -935,22 +997,30 @@ class RefreshTimer(threading.Thread):
                     if now > (exp - self.times['before_expired']):
                         # 1 hour till expiration and not already in renew process
                         logger.debug('RefreshToken: Refreshing...')
-                        self.renew_status = 'working'
+                        self.renew_status = self.Status.INPROGRESS
                         self.renew_token()
-                        if self.renew_status == 'failed':
-                            logger.debug('RefreshToken: Failed')
-                        else:
+                        if self.renew_status == self.Status.PENDING:
+                            # calculate next wake time
                             logger.debug('RefreshToken: Success')
-                        payload = jwt.decode(self.client_api.token, algorithms=['HS256'], verify=False)
-                        now = datetime.datetime.now().timestamp()
-                        exp = payload['exp']
-                    if self.renew_status == 'failed':
-                        next_wake = self.times['on_fail']
+                            payload = jwt.decode(self.client_api.token, algorithms=['HS256'], verify=False)
+                            now = datetime.datetime.now().timestamp()
+                            exp = payload['exp']
+                            next_wake = int(exp - now - self.times['wake_margin'])
+                        else:
+                            logger.debug('RefreshToken: Failed')
+                            next_wake = self.times['on_fail']
                     else:
                         next_wake = int(exp - now - self.times['wake_margin'])
+
+                if self.renew_status == self.Status.FAILED:
+                    next_wake = self.times['on_fail']
+                if self.renew_status == self.Status.MISSING:
+                    next_wake = self.times['on_missing']
+
                 logger.debug('RefreshToken: Sleeping for: {}[s]'.format(next_wake))
                 time.sleep(next_wake)
             except:
                 logger.debug(traceback.format_exc())
-                logger.debug('RefreshToken: Non Fatal Error: refresh token failed. Sleeping for: {}'.format(self.times['on_fail']))
+                logger.debug('RefreshToken: Non Fatal Error: refresh token failed. Sleeping for: {}'.format(
+                    self.times['on_fail']))
                 time.sleep(self.times['on_fail'])

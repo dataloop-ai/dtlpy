@@ -19,14 +19,17 @@ import sys
 import os
 
 from .exceptions import PlatformException
-from . import services, repositories, exceptions
+from . import services, repositories, exceptions, entities
 from .__version__ import version as __version__
 from .entities import Box, Point, Segmentation, Polygon, Ellipse, Classification, Polyline, Filters, Trigger, \
-    AnnotationCollection, Annotation, Item, Package, Filters, Session, Recipe, Ontology, Label
+    AnnotationCollection, Annotation, Item, Package, Filters, Session, Recipe, Ontology, Label, Similarity, PluginInput
 from . import examples
 from .services.check_sdk import check
 from .utilities import Converter, BasePluginRunner, Progress
 
+if os.name == "nt":
+    # set encoding for windows printing
+    os.environ["PYTHONIOENCODING"] = ":replace"
 """
 Main Platform Interface module for Dataloop
 """
@@ -56,7 +59,7 @@ logger = services.create_logger(logger, level=logging.WARNING)
 client_api = services.ApiClient()
 projects = repositories.Projects(client_api=client_api)
 datasets = repositories.Datasets(client_api=client_api, project=None)
-items = repositories.Items(client_api=client_api)
+items = repositories.Items(client_api=client_api, datasets=datasets)
 plugins = repositories.Plugins(client_api=client_api)
 sessions = repositories.Sessions(client_api=client_api)
 deployments = repositories.Deployments(client_api=client_api)
@@ -66,7 +69,7 @@ if client_api.token_expired():
 
 try:
     check(version=__version__, client_api=client_api)
-except:
+except Exception:
     logger.debug('Failed to check SDK! Continue without')
 
 
@@ -154,17 +157,27 @@ def environment():
 
 
 def info(with_token=True):
-    payload = jwt.decode(client_api.token, algorithms=['HS256'], verify=False)
-    user_email = payload['email']
-    env = client_api.environment
-    print('-- Dataloop info --')
-    print('-- Working environment: {environment}'.format(environment=env))
-    print('-- User: {email}'.format(email=user_email))
+    """
+    Return a dictionary with current information: env, user, token
+    :param with_token:
+    :return:
+    """
+    user_email = 'null'
+    if client_api.token is not None:
+        payload = jwt.decode(client_api.token, algorithms=['HS256'], verify=False)
+        user_email = payload['email']
+    information = {'environment': client_api.environment,
+                   'user_email': user_email}
     if with_token:
-        print('-- Token: {token}'.format(token=client_api.token))
+        information['token'] = client_api.token
+    return information
 
 
 def init():
+    """
+    init current directory as a Dataloop working directory
+    :return:
+    """
     from .services import CookieIO
     client_api.state_io = CookieIO.init_local_cookie(create=True)
     assert isinstance(client_api.state_io, CookieIO)
@@ -172,7 +185,9 @@ def init():
 
 
 def checkout_state():
+    """
+    Return the current checked out state
+    :return:
+    """
     state = client_api.state_io.read_json()
-    print('Checked-out:')
-    for key, val in state.items():
-        print('{}: {}'.format(key, val))
+    return state

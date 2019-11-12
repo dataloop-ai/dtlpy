@@ -1,5 +1,5 @@
 import logging
-from .. import utilities, entities
+from .. import miscellaneous, entities
 import attr
 import copy
 
@@ -37,6 +37,7 @@ class Artifact(entities.Item):
             stream=_json.get('stream', None),
             name=_json.get('name', None),
             type=_json.get('type', None),
+            dir=_json.get('dir', None),
             url=_json.get('url', None),
             id=_json['id'])
 
@@ -45,5 +46,5 @@ class Artifact(entities.Item):
 
         :return:
         """
-        utilities.List([self]).print()
+        miscellaneous.List([self]).print()
 

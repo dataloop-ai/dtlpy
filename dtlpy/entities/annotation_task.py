@@ -79,3 +79,6 @@ class AnnotationTask:
             self._project = projects.get(project_id=self.projectId)
         assert isinstance(self._project, entities.Project)
         return self._project
+
+    def update(self, system_metadata=False):
+        return self.project.annotation_tasks.update(annotation_task=self, system_metadata=system_metadata)

@@ -13,7 +13,5 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with DTLPY.  If not, see <http://www.gnu.org/licenses/>.
-from .miscellaneous import Miscellaneous
-from .miscellaneous import List
 from .converter import Converter
 from .base_plugin_runner import BasePluginRunner, Progress

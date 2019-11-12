@@ -129,18 +129,9 @@ if __name__ == '__main__':
     # Summary
     all_results = [result[0] for result in results.values()]
     passed = all(all_results)
-    print('-------------- Summary --------------')
-    print('Current loop api calls: ', str(api_calls))
-    print('Tests took: {:.2f}[s]'.format(end_time - start_time))
-    if passed:
-        print('All scenarios passed! {}/{}:'.format(np.sum([1 for res in all_results if res is True]), len(all_results)))
-    else:
-        print('Failed {}/{}:'.format(np.sum([1 for res in all_results if res is False]), len(all_results)))
-        for feature, result in results.items():
-            status, log_filename = result
-            if status is False:
-                print('\t{}'.format(feature))
-        print('Logs:')
+
+    if not passed:
+        print('-------------- Logs --------------')
         for feature, result in results.items():
             status, log_filename = result
             if status is False:
@@ -149,6 +140,18 @@ if __name__ == '__main__':
                         print(output.read())
                 except:
                     continue
+    print('-------------- Summary --------------')
+    print('Current loop api calls: ', str(api_calls))
+    print('Tests took: {:.2f}[s]'.format(end_time - start_time))
+    if passed:
+        print(
+            'All scenarios passed! {}/{}:'.format(np.sum([1 for res in all_results if res is True]), len(all_results)))
+    else:
+        print('Failed {}/{}:'.format(np.sum([1 for res in all_results if res is False]), len(all_results)))
+        for feature, result in results.items():
+            status, log_filename = result
+            if status is False:
+                print('\t{}'.format(feature))
 
     # return success/failure
     if passed:

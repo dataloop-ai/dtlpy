@@ -1,13 +1,6 @@
 dtlpy.repositories package
 ==========================
 
-Subpackages
------------
-
-.. toctree::
-
-   dtlpy.repositories.plugins_assets
-
 Submodules
 ----------
 

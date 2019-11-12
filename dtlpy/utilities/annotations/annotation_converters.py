@@ -41,7 +41,7 @@ class BaseConverterFromPlatform:
                                         params=params)
             self.results[i_item] = True
         except Exception as err:
-            logging.exception(traceback.format_exc())
+            logging.exception('Error running thread conversion')
             self.errors[i_item] = traceback.format_exc()
             self.results[i_item] = False
 

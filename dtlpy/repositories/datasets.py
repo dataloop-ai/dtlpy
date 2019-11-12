@@ -4,7 +4,7 @@ Datasets Repository
 
 import logging
 from urllib.parse import urlencode
-from .. import entities, repositories, utilities, PlatformException
+from .. import entities, repositories, miscellaneous, PlatformException
 import os
 import tqdm
 from multiprocessing.pool import ThreadPool
@@ -102,10 +102,10 @@ class Datasets:
         success, response = self._client_api.gen_request(req_type='get',
                                                          path='/datasets?{}'.format(query_string))
         if success:
-            datasets = utilities.List([entities.Dataset.from_json(client_api=self._client_api,
-                                                                  _json=_json,
-                                                                  project=self.project)
-                                       for _json in response.json()])
+            datasets = miscellaneous.List([entities.Dataset.from_json(client_api=self._client_api,
+                                                                      _json=_json,
+                                                                      project=self.project)
+                                           for _json in response.json()])
         else:
             raise PlatformException(response)
         return datasets
@@ -159,7 +159,7 @@ class Datasets:
                                                              path='/datasets/{}'.format(dataset.id))
             if not success:
                 raise PlatformException(response)
-            logger.info('Dataset was deleted successfully')
+            logger.info('Dataset {} was deleted successfully'.format(dataset.name))
             return True
         else:
             raise PlatformException(error='403',
@@ -181,6 +181,28 @@ class Datasets:
         if success:
             logger.info('Dataset was updated successfully')
             return dataset
+        else:
+            raise PlatformException(response)
+
+    def directory_tree(self, dataset=None, dataset_name=None, dataset_id=None):
+        """
+        Get dataset's directory tree
+        :return:
+        """
+        if dataset is None and dataset_name is None and dataset_id is None:
+            raise PlatformException('400', 'Must provide dataset, dataset name or dataset id')
+        if dataset_id is None:
+            if dataset is None:
+                dataset = self.get(dataset_name=dataset_name)
+            dataset_id = dataset.id
+
+        url_path = '/datasets/{}/directoryTree'.format(dataset_id)
+
+        success, response = self._client_api.gen_request(req_type='get',
+                                                         path=url_path)
+
+        if success:
+            return entities.DirectoryTree(_json=response.json())
         else:
             raise PlatformException(response)
 
@@ -265,13 +287,15 @@ class Datasets:
                     dataset.name,
                 )
 
+        downloader = repositories.Downloader(items_repository=dataset.items)
+
         # check if need to only download zip
         if filters is None:
             filters = entities.Filters()
             if annotation_options is None:
-                repositories.Downloader.download_annotations(dataset=dataset,
-                                                             local_path=local_path,
-                                                             overwrite=overwrite)
+                downloader.download_annotations(dataset=dataset,
+                                                local_path=local_path,
+                                                overwrite=overwrite)
                 return local_path
 
         filters.add(field='annotated', values=True)
@@ -284,9 +308,9 @@ class Datasets:
         pages = dataset.items.list(filters=filters)
 
         if pages.items_count > dataset.annotated / 10:
-            repositories.Downloader.download_annotations(dataset=dataset,
-                                                         local_path=local_path,
-                                                         overwrite=overwrite)
+            downloader.download_annotations(dataset=dataset,
+                                            local_path=local_path,
+                                            overwrite=overwrite)
 
         pool = ThreadPool(processes=num_workers)
         progress = tqdm.tqdm(total=pages.items_count)

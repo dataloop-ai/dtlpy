@@ -1,10 +1,10 @@
 import logging
 import os
 import json
-from .plugins_assets import deployment_json_local_path
+from ..assets import deployment_json_local_path
 import datetime
 
-from .. import utilities, exceptions, entities, repositories
+from .. import miscellaneous, exceptions, entities, repositories
 
 logger = logging.getLogger(name=__name__)
 
@@ -22,8 +22,8 @@ class Deployments:
     @property
     def project(self):
         if self._project is None:
-            # try to get checked out project
             try:
+                # try to get checked out project
                 projects = repositories.Projects(client_api=self._client_api)
                 self._project = projects.get()
             except Exception:
@@ -98,7 +98,7 @@ class Deployments:
             raise exceptions.PlatformException(response)
 
         # return triggers list
-        deployments = utilities.List()
+        deployments = miscellaneous.List()
         for deployment in response.json()['items']:
             deployments.append(entities.Deployment.from_json(client_api=self._client_api,
                                                              _json=deployment,
@@ -122,7 +122,7 @@ class Deployments:
                 plugin = self.plugin
 
         if deployment_name is None:
-            deployment_name = 'default_deployment'
+            deployment_name = 'default-deployment'
 
         if config is None:
             config = dict()

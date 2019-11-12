@@ -58,7 +58,10 @@ class Filters:
         :return:
         """
         # add ** if doesnt exist
-        if field == 'filename':
+        if field == 'type':
+            if (isinstance(values, str) and values == 'dir') or (isinstance(values, list) and 'dir' in values):
+                self.show_dirs = True
+        elif field == 'filename':
             if isinstance(values, str):
                 if not values.endswith('*') and not os.path.splitext(values)[-1].startswith('.'):
                     if values.endswith('/'):
@@ -83,8 +86,12 @@ class Filters:
         for single_filter in self.filter_list:
             if single_filter.field == field:
                 self.filter_list.remove(single_filter)
+        if field == 'type':
+            self.show_dirs = False
 
     def pop_join(self, field):
+        if self.resource == 'annotations':
+            raise PlatformException('400', 'Cannot join to annotations filters')
         if self.join is not None:
             for single_filter in self.join['filter']['$and']:
                 if field in single_filter:
@@ -133,15 +140,14 @@ class Filters:
             # add items defaults
             if self.resource == 'items':
                 if not self.show_hidden:
-                    if self.method == 'or':
-                        filters_dict['$and'] = Filters.hidden()
-                    else:
-                        filters_dict['$and'] += Filters.hidden()
+                    if '$and' not in filters_dict:
+                        filters_dict['$and'] = list()
+                    filters_dict['$and'] += Filters.hidden()
                 if not self.show_dirs:
-                    if self.method == 'or':
-                        filters_dict['$and'] = Filters.no_dirs()
-                    else:
-                        filters_dict['$and'] += Filters.no_dirs()
+                    if '$and' not in filters_dict:
+                        filters_dict['$and'] = list()
+                    filters_dict['$and'] += Filters.no_dirs()
+
             # add to json
             _json['filter'] = filters_dict
 
@@ -176,9 +182,7 @@ class Filters:
 
     def sort_by(self, field, value='ascending'):
         if value not in ['ascending', 'descending']:
-            raise PlatformException(
-                '400', 'Sort can be by ascending or descending order only'
-            )
+            raise PlatformException(error='400', message='Sort can be by ascending or descending order only')
         self.sort[field] = value
 
     @staticmethod

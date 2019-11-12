@@ -1,12 +1,11 @@
-from multiprocessing.pool import ThreadPool
-from PIL import Image
-import numpy as np
 import traceback
 import logging
 import attr
 import json
+import numpy as np
+from PIL import Image
 
-from .. import utilities, entities, PlatformException
+from .. import miscellaneous, entities, PlatformException
 
 logger = logging.getLogger(name=__name__)
 
@@ -112,7 +111,7 @@ class AnnotationCollection:
         if annotation_format == 'mask':
             # create an empty mask
             if image is None:
-                mask = np.zeros((height, width, 4))
+                mask = np.zeros((height, width, 4), dtype=np.uint8)
             else:
                 if len(image.shape) == 2:
                     # image is gray
@@ -120,14 +119,17 @@ class AnnotationCollection:
                 elif image.shape[2] == 3:
                     mask = cv2.cvtColor(image, cv2.COLOR_RGB2RGBA)
                 else:
-                    raise PlatformException('400', 'Unknown image type')
+                    raise PlatformException(error='1001',
+                                            message='Unknown image shape. expected depth: gray or RGB. got: {}'.format(
+                                                image.shape))
         elif annotation_format == 'instance':
             if image is None:
                 # create an empty mask
-                mask = np.zeros((height, width))
+                mask = np.zeros((height, width), dtype=np.uint8)
             else:
                 if len(image.shape) != 2:
-                    raise PlatformException('400', 'must be 2d array when trying to draw instance on image')
+                    raise PlatformException(error='1001',
+                                            message='Image shape must be 2d array when trying to draw instance on image')
                 mask = image
             # create a dictionary of labels and ids
             labels = [label.tag for label in self.item.dataset.labels]
@@ -137,14 +139,16 @@ class AnnotationCollection:
         elif annotation_format == 'object_id':
             if image is None:
                 # create an empty mask
-                mask = np.zeros((height, width))
+                mask = np.zeros((height, width), dtype=np.uint8)
             else:
                 if len(image.shape) != 2:
-                    raise PlatformException('400', 'must be 2d array when trying to draw instance on image')
+                    raise PlatformException(error='1001',
+                                            message='Image shape must be 2d array when trying to draw instance on image')
                 mask = image
         else:
-            raise PlatformException('404', 'unknown annotations format: "{}". known formats: "mask", "instance"'.format(
-                annotation_format))
+            raise PlatformException(error='1001',
+                                    message='unknown annotations format: "{}". known formats: "mask", "instance"'.format(
+                                        annotation_format))
 
         #############
         # gor over all annotations and put the id where the annotations is
@@ -155,6 +159,10 @@ class AnnotationCollection:
                 # if label not in dataset label - put it as background
                 color = label_instance_dict.get(annotation.label, 0)
             elif annotation_format == 'object_id':
+                if annotation.object_id is None:
+                    raise PlatformException(error='1001',
+                                            message='Try to show object_id but annotation has no value. annotation id: {}'.format(
+                                                annotation.id))
                 color = annotation.object_id
             else:
                 raise PlatformException('404',
@@ -220,40 +228,37 @@ class AnnotationCollection:
             raise PlatformException('400', 'missing item to perform platform upload')
         return self.item.annotations.upload(self.annotations)
 
+    @staticmethod
+    def _json_to_annotation(item, w_json):
+        try:
+            # ignore notes
+            if w_json['type'] == 'note':
+                annotation = 'note'
+                status = False
+            else:
+                annotation = entities.Annotation.from_json(_json=w_json,
+                                                           item=item)
+                status = True
+        except Exception:
+            annotation = traceback.format_exc()
+            status = False
+        return status, annotation
+
     @classmethod
     def from_json(cls, _json, item=None):
-
-        def json_to_annotation(w_i_json, w_json):
-            try:
-                # ignore notes
-                if w_json['type'] == 'note':
-                    annotations[w_i_json] = 'note'
-                    success[w_i_json] = False
-                else:
-                    annotations[w_i_json] = entities.Annotation.from_json(_json=w_json,
-                                                                          item=item)
-                    success[w_i_json] = True
-            except Exception:
-                logger.warning('{}\nFailed to load annotation. id: {}, item_id:{}'.format(traceback.format_exc(),
-                                                                                          w_json['id'],
-                                                                                          w_json['itemId']))
-                success[w_i_json] = False
-
-        pool = ThreadPool(processes=32)
-        success = [False for _ in range(len(_json))]
-        annotations = [False for _ in range(len(_json))]
+        results = [None for _ in range(len(_json))]
         for i_json, single_json in enumerate(_json):
-            pool.apply_async(func=json_to_annotation, kwds={"w_json": single_json,
-                                                            "w_i_json": i_json})
-        pool.close()
-        pool.join()
-        pool.terminate()
-        annotations = [annotation for i_annotation, annotation in enumerate(annotations) if success[i_annotation]]
+            results[i_json] = cls._json_to_annotation(item=item,
+                                                      w_json=single_json)
+        # log errors
+        _ = [logger.warning(j[1]) for j in results if j[0] is False and j[1] != 'note']
+        # return good jobs
+        annotations = [j[1] for j in results if j[0] is True]
         annotations.sort(key=lambda x: x.label)
         return cls(annotations=annotations, item=item)
 
     def print(self):
-        utilities.List([self.annotations]).print()
+        miscellaneous.List([self.annotations]).print()
 
     def to_json(self):
 
@@ -286,5 +291,5 @@ class AnnotationCollection:
 
     def video_player(self):
         from ..utilities.videos.video_player import VideoPlayer
-        a = VideoPlayer(dataset_id=self.item.dataset.id,
+        _ = VideoPlayer(dataset_id=self.item.dataset.id,
                         item_id=self.item.id)

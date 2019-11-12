@@ -1,5 +1,5 @@
 import attr
-from .. import utilities
+from .. import miscellaneous
 
 
 @attr.s
@@ -40,7 +40,7 @@ class TimeSeries:
         )
 
     def print(self):
-        utilities.List([self]).print()
+        miscellaneous.List([self]).print()
 
     def add(self, data):
         self.project.times_series.add(series=self, data=data)

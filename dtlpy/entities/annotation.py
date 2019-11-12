@@ -2,11 +2,11 @@ import numpy as np
 import logging
 import attr
 import json
-
+import mimetypes
+import os
 from PIL import Image
-from collections import namedtuple
 
-from .. import utilities, entities, PlatformException
+from .. import miscellaneous, entities, PlatformException
 
 logger = logging.getLogger(name=__name__)
 
@@ -242,13 +242,15 @@ class Annotation:
     ##################
 
     def print(self):
-        utilities.List([self]).print()
+        miscellaneous.List([self]).print()
 
     def delete(self):
         """
         Remove an annotation from item
         :return: True
         """
+        if self.item is None:
+            raise PlatformException('400', 'Annotation must have an item in order to perform this action')
         return self.item.annotations.delete(annotation_id=self.id)
 
     def update(self, system_metadata=False):
@@ -257,6 +259,8 @@ class Annotation:
         :param system_metadata:
         :return: Annotation object
         """
+        if self.item is None:
+            raise PlatformException('400', 'Annotation must have an item in order to perform this action')
         return self.item.annotations.update(annotations=self,
                                             system_metadata=system_metadata)
 
@@ -265,6 +269,8 @@ class Annotation:
         Create a new annotation in host
         :return:
         """
+        if self.item is None:
+            raise PlatformException('400', 'Annotation must have an item in order to perform this action')
         return self.item.annotations.upload(annotations=self)
 
     def download(self, filepath, annotation_format='mask', height=None, width=None, thickness=1, with_text=False):
@@ -330,11 +336,11 @@ class Annotation:
 
         # height/width
         if height is None:
-            if self.item.height is None:
+            if self.item is None or self.item.height is None:
                 raise PlatformException('400', 'must provide item width and height')
             height = self.item.height
         if width is None:
-            if self.item.width is None:
+            if self.item is None or self.item.width is None:
                 raise PlatformException('400', 'must provide item width and height')
             width = self.item.width
 
@@ -364,7 +370,7 @@ class Annotation:
                                                 color))
         # show annotation
         if image is None:
-            image = np.zeros((height, width, len(color)))
+            image = np.zeros((height, width, len(color)), dtype=np.uint8)
             if image.shape[2] == 1:
                 image = np.squeeze(image)
         return self.annotation_definition.show(image=image,
@@ -464,10 +470,11 @@ class Annotation:
         """
         # handle fps
         if self.fps is None:
-            if self.item.fps is None:
-                raise PlatformException('400', 'Item does not have fps')
-            else:
-                self.fps = self.item.fps
+            if self.item is not None:
+                if self.item.fps is not None:
+                    self.fps = self.item.fps
+        if self.fps is None:
+            raise PlatformException('400', 'Annotation must have fps in order to perform this action')
 
         # calculate time stamp
         if frame_num is None:
@@ -542,15 +549,33 @@ class Annotation:
         # handle 'note'
         if _json['type'] == 'note':
             return None
-        if item is None:
-            logger.info('Using Dummy item for loading annotations')
-            named = namedtuple('Item', field_names=['mimetype', 'url', 'id', 'dataset_url'])
-            item = named('image/jpeg', '', '', '')
 
-        # get item type
         is_video = False
-        if 'video' in item.mimetype:
-            is_video = True
+
+        if item is None:
+            if 'filename' in _json:
+                ext = os.path.splitext(_json['filename'])[-1]
+                try:
+                    is_video = 'video' in mimetypes.types_map[ext]
+                except Exception:
+                    logger.info("Unknown annotation's item type. Default item type is set to: image")
+            else:
+                logger.info("Unknown annotation's item type. Default item type is set to: image")
+
+            item_url = _json.get('item', None)
+            item_id = _json.get('itemId', None)
+            dataset_url = _json.get('dataset', None)
+            dataset_id = _json.get('datasetId', None)
+
+        else:
+            # get item type
+            if 'video' in item.mimetype:
+                is_video = True
+
+            item_url = _json.get('item', item.url)
+            item_id = _json.get('itemId', item.id)
+            dataset_url = _json.get('dataset', item.dataset_url)
+            dataset_id = _json.get('datasetId', item.datasetId)
 
         # get id
         if 'id' in _json:
@@ -579,7 +604,10 @@ class Annotation:
         ############
         if is_video:
             # get fps
-            fps = item.fps
+            if item is None:
+                fps = 25
+            else:
+                fps = item.fps
 
             # get video-only attributes    
             automated = None
@@ -644,11 +672,11 @@ class Annotation:
             # platform
             id=annotation_id,
             url=_json.get('url', None),
-            item_url=_json.get('item', item.url),
+            item_url=item_url,
             item=item,
-            item_id=_json.get('itemId', item.id),
-            dataset_url=_json.get('dataset', item.dataset_url),
-            dataset_id=_json.get('datasetId', item.datasetId),
+            item_id=item_id,
+            dataset_url=dataset_url,
+            dataset_id=dataset_id,
             creator=_json['creator'],
             createdAt=_json['createdAt'],
             updatedBy=_json['updatedBy'],
@@ -862,12 +890,15 @@ class FrameAnnotation:
 
     @property
     def color(self):
-        label = None
-        for label in self.annotation.item.dataset.labels:
-            if label.tag.lower() == self.label.lower():
-                return label.rgb
-        if label is None:
+        if self.annotation.item is None:
             return 255, 255, 255
+        else:
+            label = None
+            for label in self.annotation.item.dataset.labels:
+                if label.tag.lower() == self.label.lower():
+                    return label.rgb
+            if label is None:
+                return 255, 255, 255
 
     @property
     def coordinates(self):

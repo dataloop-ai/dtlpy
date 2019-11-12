@@ -70,8 +70,7 @@ class PipelineRunner:
                             # load class dynamically
                             step.load()
                 except FileNotFoundError as err:
-                    err_msg = '%s\n%s' % (traceback.format_exc(),
-                                          'Custom file wasn\'t found. It needs to be is a different stage from the Unpack step')
+                    err_msg = 'Custom file wasn\'t found. It needs to be is a different stage from the Unpack step'
                     logger.exception(err_msg)
                     raise FileNotFoundError(err_msg)
 
@@ -154,8 +153,7 @@ class PipelineRunner:
                     for g in g_list:
                         del g
         except Exception as err:
-            logger.exception(traceback.format_exc())
-            logger.exception(err)
+            logger.exception('Error running pipeline')
             self.reporter.send_progress({'status': 'failed',
                                          'error': '%s' % traceback.format_exc()})
             raise

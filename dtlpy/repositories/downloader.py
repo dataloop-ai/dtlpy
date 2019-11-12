@@ -1,17 +1,16 @@
-import io
-import os
-import json
-import tqdm
+import multiprocessing
+import threading
 import traceback
 import datetime
-from PIL import Image
-import threading
 import logging
+import json
+import tqdm
+import os
+import io
 
-from multiprocessing.pool import ThreadPool
-import dtlpy as dl
+from PIL import Image
 
-from .. import entities, PlatformException, utilities
+from .. import entities, miscellaneous, PlatformException
 
 logger = logging.getLogger(name=__name__)
 
@@ -61,7 +60,7 @@ class Downloader:
         ###################
         # filters
         if filters is None:
-            filters = dl.Filters()
+            filters = entities.Filters()
 
         # file types
         if file_types is not None:
@@ -140,11 +139,11 @@ class Downloader:
         success = [False for _ in range(num_items)]
         status = ["" for _ in range(num_items)]
         errors = [None for _ in range(num_items)]
-
+        jobs = [None for _ in range(num_items)]
         # pool
-        pool = ThreadPool(processes=num_workers)
+        pool = self.items_repository._client_api.thread_pool
         # download
-        pbar = tqdm.tqdm(total=num_items)
+        pbar = tqdm.tqdm(total=num_items, disable=self.items_repository._client_api.verbose.disable_progress_bar)
         try:
             i_item = 0
             for page in items_to_download:
@@ -166,7 +165,7 @@ class Downloader:
                             pbar.update()
                             if annotation_options and item.annotated:
                                 # download annotations only
-                                pool.apply_async(
+                                jobs[i_item] = pool.apply_async(
                                     self._download_img_annotations,
                                     kwds={
                                         "item": item,
@@ -185,7 +184,7 @@ class Downloader:
                         item_local_filepath = None
 
                     # download single item
-                    pool.apply_async(
+                    jobs[i_item] = pool.apply_async(
                         self.__thread_download_wrapper,
                         kwds={
                             "i_item": i_item,
@@ -206,10 +205,9 @@ class Downloader:
                     )
                     i_item += 1
         except Exception as e:
-            logger.exception(e)
+            logger.exception('Error downloading:')
         finally:
-            pool.close()
-            pool.join()
+            _ = [j.wait() for j in jobs if isinstance(j, multiprocessing.pool.ApplyResult)]
             pbar.close()
         # reporting
         n_download = status.count("download")
@@ -283,8 +281,7 @@ class Downloader:
             output[i_item] = download
             success[i_item] = True
 
-    @staticmethod
-    def download_annotations(dataset, local_path, overwrite=False):
+    def download_annotations(self, dataset, local_path, overwrite=False):
         """
         Download annotations json for entire dataset
 
@@ -312,8 +309,8 @@ class Downloader:
                         if chunk:  # filter out keep-alive new chunks
                             f.write(chunk)
                 # unzipping annotations to directory
-                utilities.Miscellaneous.unzip_directory(zip_filename=w_filepath,
-                                                        to_directory=local_path)
+                miscellaneous.Zipping.unzip_directory(zip_filename=w_filepath,
+                                                      to_directory=local_path)
             except Exception:
                 raise PlatformException(error='400',
                                         message="Getting annotations from zip failed: {}".format(w_url))
@@ -334,16 +331,15 @@ class Downloader:
         elif isinstance(dataset.export['zip'], dict):
             for url in dataset.export['zip']['chunks']:
                 urls.append(url)
-        pool = ThreadPool(processes=32)
+        pool = self.items_repository._client_api.thread_pool
+        jobs = list()
         for i_url, url in enumerate(urls):
             # zip filepath
             zip_filepath = os.path.join(local_path, "annotations_{}.zip".format(i_url))
             # send url to pool
-            pool.apply_async(download_single_chunk, kwds={'w_url': url,
-                                                          'w_filepath': zip_filepath})
-        pool.close()
-        pool.join()
-        pool.terminate()
+            jobs.append(pool.apply_async(download_single_chunk, kwds={'w_url': url,
+                                                                      'w_filepath': zip_filepath}))
+        _ = [j.wait() for j in jobs]
 
     @staticmethod
     def _download_img_annotations(item, img_filepath, local_path, overwrite, annotation_options,
@@ -478,8 +474,12 @@ class Downloader:
             try:
                 one_file_progress_bar = total_length is not None and int(total_length) > 10e6  # size larger than 10 MB
                 if one_file_progress_bar:
-                    one_file_pbar = tqdm.tqdm(total=int(total_length), unit='B',
-                                              unit_scale=True, unit_divisor=1024, position=1)
+                    one_file_pbar = tqdm.tqdm(total=int(total_length),
+                                              unit='B',
+                                              unit_scale=True,
+                                              unit_divisor=1024,
+                                              position=1,
+                                              disable=self.items_repository._client_api.verbose.disable_progress_bar)
             except Exception as err:
                 one_file_progress_bar = False
                 logger.debug('Cant decide downloaded file length, bar will not be presented: {}'.format(err))

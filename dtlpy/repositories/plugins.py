@@ -1,11 +1,13 @@
 import logging
 import json
+import multiprocessing
 import sys
 import os
 from shutil import copyfile
+from multiprocessing.pool import ThreadPool
 
-from .. import entities, repositories, exceptions, utilities, services
-from .plugins_assets import plugin_json_path, main_py_path, mock_json_path, deployment_json_local_path, \
+from .. import entities, repositories, exceptions, utilities, services, miscellaneous
+from ..assets import plugin_json_path, main_py_path, mock_json_path, deployment_json_local_path, \
     plugin_default_gitignore
 
 
@@ -86,7 +88,7 @@ class Plugins:
             raise exceptions.PlatformException(response)
 
         # return plugins list
-        plugins = utilities.List()
+        plugins = miscellaneous.List()
         for plugin in response.json()['items']:
             plugins.append(entities.Plugin.from_json(client_api=self.client_api,
                                                      _json=plugin,
@@ -132,12 +134,13 @@ class Plugins:
             if 'inputs' in plugin_json:
                 inputs = plugin_json['inputs']
             else:
-                inputs = [
-                    {
-                        "type": "Item",
-                        "name": "item"
-                    }
-                ]
+                inputs = list()
+        else:
+            if not isinstance(inputs, list):
+                inputs = [inputs]
+            if len(inputs) > 0 and isinstance(inputs[0], entities.PluginInput):
+                for i_input, single_input in enumerate(inputs):
+                    inputs[i_input] = single_input.to_json(resource='plugin')
 
         if outputs is None:
             if 'outputs' in plugin_json:
@@ -344,15 +347,34 @@ class Plugins:
 
         logging.info('Successfully generated plugin')
 
-    def test_local_plugin(self, cwd=None):
+    def is_multithread(self, inputs):
+        is_multi = False
+        if isinstance(inputs[0], list):
+            is_multi = True
+
+        if is_multi:
+            for single_input in inputs:
+                if not isinstance(single_input, list):
+                    raise exceptions.PlatformException('400', 'mock.json inputs can be either list of dictionaries '
+                                                              'or list of lists')
+
+        return is_multi
+
+    def test_local_plugin(self, cwd=None, concurrency=None):
         """
         Test local plugin
         :return:
         """
         if cwd is None:
             cwd = os.getcwd()
-        local_runner = LocalPluginRunner(self.client_api, plugins=self, cwd=cwd)
-        local_runner.run_local_project()
+
+        with open(os.path.join(cwd, 'mock.json'), 'r') as f:
+            mock_json = json.load(f)
+        is_multithread = self.is_multithread(inputs=mock_json['inputs'])
+
+        local_runner = LocalPluginRunner(self.client_api, plugins=self, cwd=cwd, multithreading=is_multithread,
+                                         concurrency=concurrency)
+        return local_runner.run_local_project()
 
     def checkout(self, plugin_name):
         """
@@ -371,7 +393,7 @@ class LocalPluginRunner:
     Package Runner Class
     """
 
-    def __init__(self, client_api, plugins, cwd=None):
+    def __init__(self, client_api, plugins, cwd=None, multithreading=False, concurrency=32):
         if cwd is None:
             self.cwd = os.getcwd()
         else:
@@ -380,21 +402,25 @@ class LocalPluginRunner:
         self._client_api = client_api
         self._plugins = plugins
         self.plugin_io = PluginIO(cwd=self.cwd)
+        self.multithreading = multithreading
+        self.concurrency = concurrency
 
         with open(os.path.join(self.cwd, 'mock.json'), 'r') as f:
             self.mock_json = json.load(f)
 
-    @staticmethod
-    def validate_mock(plugin_json, mock_json):
+    def validate_mock(self, plugin_json, mock_json):
         """
         Validate mock
         :param plugin_json:
         :param mock_json:
         :return:
         """
-        if len(plugin_json['inputs']) != len(mock_json['inputs']):
-            raise exceptions.PlatformException('400', 'Parameters in mock, not fit the parameters in plugin.json')
-        pass
+        inputs = mock_json['inputs']
+        if not self.multithreading:
+            inputs = [inputs]
+        for single_input in inputs:
+            if len(plugin_json['inputs']) != len(single_input):
+                raise exceptions.PlatformException('400', 'Parameters in mock, not fit the parameters in plugin.json')
 
     def get_mainpy_run_function(self):
         """
@@ -419,15 +445,41 @@ class LocalPluginRunner:
             raise exceptions.PlatformException('400', "Please checkout to a valid project")
 
         plugin_inputs = self.plugin_io.get('inputs')
-        kwargs = dict()
-        progress = utilities.Progress()
-        kwargs['progress'] = progress
-        for plugin_input in plugin_inputs:
-            kwargs[plugin_input['name']] = self.get_field(plugin_input['name'],
-                                                          plugin_input['type'],
-                                                          project, self.mock_json)
+        if not self.multithreading:
+            kwargs = dict()
+            progress = utilities.Progress()
+            kwargs['progress'] = progress
+            for plugin_input in plugin_inputs:
+                kwargs[plugin_input['name']] = self.get_field(plugin_input['name'],
+                                                              plugin_input['type'],
+                                                              project, self.mock_json)
+            results = plugin_runner.run(**kwargs)
+        else:
+            pool = ThreadPool(processes=self.concurrency)
+            inputs = self.mock_json['inputs']
+            results = list()
+            jobs = list()
+            for single_input in inputs:
+                kwargs = dict()
+                progress = utilities.Progress()
+                kwargs['progress'] = progress
+                for plugin_input in plugin_inputs:
+                    kwargs[plugin_input['name']] = self.get_field(field_name=plugin_input['name'],
+                                                                  field_type=plugin_input['type'],
+                                                                  project=project,
+                                                                  mock_json=self.mock_json,
+                                                                  mock_inputs=single_input)
+                jobs.append(
+                    pool.apply_async(
+                        func=plugin_runner.run,
+                        kwds=kwargs
+                    )
+                )
+            for job in jobs:
+                job.wait()
+                results.append(job.get())
 
-        return plugin_runner.run(**kwargs)
+        return results
 
     def get_dataset(self, project, resource_id):
         """
@@ -463,7 +515,7 @@ class LocalPluginRunner:
         item = self.get_item(project, resource_id)
         return item.annotations.get(annotation_id=resource_id['annotation_id'])
 
-    def get_field(self, field_name, field_type, project, mock_json):
+    def get_field(self, field_name, field_type, project, mock_json, mock_inputs=None):
         """
         Get field in mock json
         :param field_name:
@@ -472,7 +524,8 @@ class LocalPluginRunner:
         :param mock_json:
         :return:
         """
-        mock_inputs = mock_json['inputs']
+        if mock_inputs is None:
+            mock_inputs = mock_json['inputs']
         filtered_mock_inputs = list(filter(lambda input_field: input_field['name'] == field_name, mock_inputs))
 
         if len(filtered_mock_inputs) == 0:

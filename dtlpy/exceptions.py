@@ -14,7 +14,8 @@ class PlatformException(Exception):
             '404': NotFound,
             '408': RequestTimeout,
             '500': InternalServerError,
-            '600': TokenExpired
+            '600': TokenExpired,
+            '1001': ShowAnnotationError
         }
 
         if not type(error) == requests.models.Response:
@@ -30,9 +31,9 @@ class PlatformException(Exception):
                     self.message = error.text
 
         if self.status_code in exceptions:
-            raise exceptions[self.status_code](self.status_code, self.message)
+            raise exceptions[self.status_code](status_code=self.status_code, message=self.message)
         else:
-            raise UnknownException(self.status_code, self.message)
+            raise UnknownException(status_code=self.status_code, message=self.message)
 
 
 class ExceptionMain(Exception):
@@ -71,4 +72,12 @@ class TokenExpired(ExceptionMain):
 
 
 class UnknownException(ExceptionMain):
+    pass
+
+
+##########################
+# annotations exceptions #
+##########################
+class ShowAnnotationError(ExceptionMain):
+    """ raised when error in annotations drawing"""
     pass

@@ -1,8 +1,6 @@
 import logging
-import traceback
-from multiprocessing.pool import ThreadPool
 
-from .. import entities, PlatformException, repositories, utilities
+from .. import entities, PlatformException, repositories, miscellaneous
 
 logger = logging.getLogger(name=__name__)
 
@@ -12,19 +10,29 @@ class Items:
     Items repository
     """
 
-    def __init__(self, client_api, dataset=None, items_entity=None):
+    def __init__(self, client_api, datasets, dataset=None, dataset_id=None, items_entity=None):
         self._client_api = client_api
         self._dataset = dataset
+        self._dataset_id = dataset_id
+        self._datasets = datasets
         # set items entity to represent the item (Item, Package, Artifact etc...)
         if items_entity is None:
             self.items_entity = entities.Item
 
     @property
+    def datasets(self):
+        assert isinstance(self._datasets, repositories.Datasets)
+        return self._datasets
+
+    @property
     def dataset(self):
         if self._dataset is None:
-            raise PlatformException(
-                error='400',
-                message='Cannot perform action WITHOUT Dataset entity in Items repository. Please set a dataset')
+            if self._dataset_id is None:
+                raise PlatformException(
+                    error='400',
+                    message='Cannot perform action WITHOUT Dataset entity in Items repository. Please set a dataset')
+            else:
+                self._dataset = self.datasets.get(dataset_id=self._dataset_id)
         assert isinstance(self._dataset, entities.Dataset)
         return self._dataset
 
@@ -51,28 +59,10 @@ class Items:
             filters = entities.Filters()
             filters.add(field='type', values='file')
         pages = self.list(filters=filters)
-
         num_items = pages.items_count
-
-        def get_page(w_page, i_start, w_items):
-            try:
-                for item in w_page:
-                    w_items[i_start] = item
-                    i_start += 1
-            except Exception:
-                logger.exception(traceback.format_exc())
-
         items = [None for _ in range(num_items)]
-        pool = ThreadPool(processes=32)
-        i_item = 0
-        for page in pages:
-            pool.apply_async(get_page, kwds={"i_start": i_item,
-                                             "w_page": page,
-                                             "w_items": items})
-            i_item += filters.page_size
-        pool.close()
-        pool.join()
-        pool.terminate()
+        for i_item, item in enumerate(pages.all()):
+            items[i_item] = item
         items = [item for item in items if item is not None]
         return items
 
@@ -90,12 +80,6 @@ class Items:
                                                          json_req=filters.prepare())
         if not success:
             raise PlatformException(response)
-        try:
-            self._client_api.print_json(response.json()["items"])
-            logger.debug("Page:{}/{}".format(1 + filters.page, response.json()["totalPagesCount"]))
-        except ValueError:
-            # no JSON returned
-            pass
         return response.json()
 
     def list(self, filters=None, page_offset=None, page_size=None):
@@ -140,7 +124,7 @@ class Items:
                                        page_size=page_size,
                                        client_api=self._client_api,
                                        item_entity=items_entity)
-        paged.get_page()
+        paged.items = paged.get_page()
         return paged
 
     def get(self, filepath=None, item_id=None):
@@ -236,13 +220,15 @@ class Items:
             raise PlatformException('400', 'must provide either item or filters')
         if filters is not None and update_values is None:
             raise PlatformException('400', 'Must provide fields and values to update when updating by filter')
+        if filters is not None and not isinstance(update_values, dict):
+            raise PlatformException('400', 'update_values must be a dictionary')
         if item is not None and filters is not None:
             raise PlatformException('400', 'must provide either item or filters')
 
         # update item
         if item is not None:
-            json_req = utilities.miscellaneous.DictDiffer.diff(origin=item._platform_dict,
-                                                               modified=item.to_json())
+            json_req = miscellaneous.DictDiffer.diff(origin=item._platform_dict,
+                                                     modified=item.to_json())
             if not json_req:
                 return item
             url_path = "/items/{}".format(item.id)

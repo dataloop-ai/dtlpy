@@ -2,7 +2,7 @@ from collections import namedtuple
 import logging
 import attr
 
-from .. import repositories, utilities, services
+from .. import repositories, miscellaneous, services
 
 logger = logging.getLogger(name=__name__)
 
@@ -131,7 +131,7 @@ class Project:
                                                        attr.fields(Project)._repositories))
 
     def print(self):
-        utilities.List([self]).print()
+        miscellaneous.List([self]).print()
 
     def delete(self, sure=False, really=False):
         """

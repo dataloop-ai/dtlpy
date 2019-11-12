@@ -3,7 +3,7 @@ import logging
 import attr
 import os
 
-from .. import repositories, utilities, entities, services
+from .. import repositories, miscellaneous, entities, services
 
 logger = logging.getLogger(name=__name__)
 
@@ -38,6 +38,7 @@ class Dataset:
     # defaults
     _ontology_ids = attr.ib(default=None)
     _labels = attr.ib(default=None)
+    _directory_tree = attr.ib(default=None)
 
     @classmethod
     def from_json(cls, project, _json, client_api):
@@ -75,6 +76,7 @@ class Dataset:
                                                               attr.fields(Dataset)._repositories,
                                                               attr.fields(Dataset)._ontology_ids,
                                                               attr.fields(Dataset)._labels,
+                                                              attr.fields(Dataset)._directory_tree,
                                                               attr.fields(Dataset).items_url))
         _json.update({'items': self.items_url})
         return _json
@@ -105,7 +107,7 @@ class Dataset:
         else:
             datasets = self._project.datasets
 
-        r = reps(items=repositories.Items(client_api=self._client_api, dataset=self),
+        r = reps(items=repositories.Items(client_api=self._client_api, dataset=self, datasets=datasets),
                  recipes=repositories.Recipes(client_api=self._client_api, dataset=self),
                  datasets=datasets)
         return r
@@ -133,6 +135,13 @@ class Dataset:
         assert isinstance(self._project, entities.Project)
         return self._project
 
+    @property
+    def directory_tree(self):
+        if self._directory_tree is None:
+            self._directory_tree = self.project.datasets.directory_tree(dataset_id=self.id)
+        assert isinstance(self._directory_tree, entities.DirectoryTree)
+        return self._directory_tree
+
     @project.setter
     def project(self, project):
         self._project = project
@@ -152,7 +161,7 @@ class Dataset:
         return local_path
 
     def print(self):
-        utilities.List([self]).print()
+        miscellaneous.List([self]).print()
 
     @staticmethod
     def serialize_labels(labels_dict):

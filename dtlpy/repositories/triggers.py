@@ -1,6 +1,4 @@
-from .. import utilities
-from .. import exceptions
-from .. import entities, repositories
+from .. import entities, repositories, miscellaneous, exceptions
 
 
 class Triggers:
@@ -16,7 +14,10 @@ class Triggers:
     @property
     def project(self):
         if self._project is None:
-            self._project = repositories.Projects(client_api=self._client_api).get()
+            if self.deployment is None:
+                self._project = repositories.Projects(client_api=self._client_api).get()
+            else:
+                self._project = self.deployment.project
         assert isinstance(self._project, entities.Project)
         return self._project
 
@@ -204,7 +205,7 @@ class Triggers:
             raise exceptions.PlatformException(response)
 
         # return triggers list
-        triggers = utilities.List()
+        triggers = miscellaneous.List()
         for trigger in response.json()['items']:
             triggers.append(entities.Trigger.from_json(client_api=self._client_api,
                                                        _json=trigger,

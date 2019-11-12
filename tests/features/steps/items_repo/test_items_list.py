@@ -181,6 +181,7 @@ def step_impl(context):
 @behave.when(u'I list items with query mimetypes="{mimetype_filters}"')
 def step_impl(context, mimetype_filters):
     filters = context.dl.Filters()
+    filters.add(field='type', values='file')
     filters.add(field='metadata.system.mimetype', values=mimetype_filters)
     context.list = context.dataset.items.list(filters=filters)
 

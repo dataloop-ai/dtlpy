@@ -1,7 +1,7 @@
 import os
 import logging
 
-from .. import entities, utilities, PlatformException, exceptions
+from .. import entities, miscellaneous, PlatformException, exceptions
 
 logger = logging.getLogger(name=__name__)
 
@@ -71,7 +71,7 @@ class Artifacts:
         filters.add(field='filename', values=remote_path)
         pages = self.items_repository.list(filters=filters)
         items = [item for page in pages for item in page]
-        return utilities.List(items)
+        return miscellaneous.List(items)
 
     def get(self, artifact_id=None, artifact_name=None,
             session_id=None, plugin_name=None):

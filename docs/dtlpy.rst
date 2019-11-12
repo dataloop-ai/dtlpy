@@ -6,10 +6,12 @@ Subpackages
 
 .. toctree::
 
+   dtlpy.assets
    dtlpy.callbacks
    dtlpy.dlp
    dtlpy.entities
    dtlpy.examples
+   dtlpy.miscellaneous
    dtlpy.pipelines
    dtlpy.repositories
    dtlpy.services

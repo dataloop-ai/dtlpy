@@ -4,7 +4,7 @@ import attr
 import copy
 import os
 
-from .. import repositories, utilities, entities, services, PlatformException
+from .. import repositories, miscellaneous, entities, services, PlatformException
 
 logger = logging.getLogger(name=__name__)
 
@@ -29,6 +29,7 @@ class Item:
     url = attr.ib()
     id = attr.ib()
     hidden = attr.ib()
+    dir = attr.ib()
 
     # api
     _client_api = attr.ib(type=services.ApiClient)
@@ -39,6 +40,7 @@ class Item:
 
     # repositories
     _repositories = attr.ib()
+    modalities = attr.ib()
 
     @classmethod
     def from_json(cls, _json, client_api, dataset=None):
@@ -49,6 +51,7 @@ class Item:
         :param client_api: client_api
         :return: Item object
         """
+        metadata = _json.get('metadata', dict())
         return cls(
             # sdk
             platform_dict=copy.deepcopy(_json),
@@ -63,8 +66,9 @@ class Item:
             createdAt=_json.get('createdAt', None),
             hidden=_json.get('hidden', False),
             stream=_json.get('stream', None),
+            dir=_json.get('dir', None),
             filename=_json['filename'],
-            metadata=_json['metadata'],
+            metadata=metadata,
             name=_json['name'],
             type=_json['type'],
             url=_json['url'],
@@ -78,6 +82,7 @@ class Item:
         _json = attr.asdict(self,
                             filter=attr.filters.exclude(attr.fields(Item)._repositories,
                                                         attr.fields(Item)._dataset,
+                                                        attr.fields(Item).modalities,
                                                         attr.fields(Item)._client_api,
                                                         attr.fields(Item)._platform_dict,
                                                         attr.fields(Item).dataset_url,
@@ -87,6 +92,12 @@ class Item:
                       'dataset': self.dataset_url})
         return _json
 
+    @modalities.default
+    def set_modalities(self):
+        modalities = Modalities(item=self)
+        assert isinstance(modalities, Modalities)
+        return modalities
+
     @_repositories.default
     def set_repositories(self):
         reps = namedtuple('repositories',
@@ -94,7 +105,10 @@ class Item:
         reps.__new__.__defaults__ = (None, None, None, None)
 
         if self._dataset is None:
-            items = repositories.Items(client_api=self._client_api, dataset=None)
+            items = repositories.Items(client_api=self._client_api,
+                                       dataset=None,
+                                       dataset_id=self.datasetId,
+                                       datasets=repositories.Datasets(client_api=self._client_api, project=None))
         else:
             items = self.dataset.items
 
@@ -166,7 +180,7 @@ class Item:
     # Methods #
     ###########
     def print(self):
-        utilities.List([self]).print()
+        miscellaneous.List([self]).print()
 
     def download(
             self,
@@ -251,3 +265,50 @@ class Item:
 
     def open_in_web(self):
         self.items.open_in_web(item=self)
+
+
+class Modality:
+    def __init__(self, _json=None, modality_type=None, ref=None, name=None):
+        self.type = _json.get('type', modality_type)
+        self.ref = _json.get('ref', ref)
+        self.name = _json.get('name', name)
+
+
+class Modalities:
+    def __init__(self, item):
+        assert isinstance(item, Item)
+        self.item = item
+
+    @property
+    def modalities(self):
+        return self.item.metadata.get('modalities', None)
+
+    def create(self, name, modality_type, ref):
+        if self.modalities is None:
+            self.item.metadata['modalities'] = list()
+
+        _json = {
+            "type": modality_type,
+            "ref": ref,
+            "name": name
+        }
+
+        self.item.metadata['modalities'].append(_json)
+
+        return Modality(_json=_json)
+
+    def delete(self, name):
+        if self.modalities is not None:
+            for modality in self.item.metadata['modalities']:
+                if name == modality['name']:
+                    self.item.metadata['modalities'].remove(modality)
+                    return Modality(_json=modality)
+        return None
+
+    def list(self):
+        modalities = list()
+        if self.modalities is not None:
+            modalities = list()
+            for modality in self.item.metadata['modalities']:
+                modalities.append(Modality(_json=modality))
+        return modalities

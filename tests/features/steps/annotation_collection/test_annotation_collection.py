@@ -1,5 +1,6 @@
 import behave
 import random as r
+import time
 
 
 @behave.given(u"I get item annotation collection")
@@ -24,6 +25,7 @@ def step_impl(context, label):
 @behave.when(u"I update annotation collection")
 def step_impl(context):
     context.annotation_collection.update()
+    time.sleep(7)
 
 
 @behave.then(u'Annotations in host have label "{label}"')

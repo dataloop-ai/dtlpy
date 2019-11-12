@@ -60,6 +60,13 @@ dtlpy.entities.deployment module
    :members:
    :undoc-members:
    :show-inheritance:
+dtlpy.entities.directory\_tree module
+-------------------------------------
+
+.. automodule:: dtlpy.entities.directory_tree
+   :members:
+   :undoc-members:
+   :show-inheritance:
 dtlpy.entities.filters module
 -----------------------------
 
@@ -127,6 +134,13 @@ dtlpy.entities.session module
 -----------------------------
 
 .. automodule:: dtlpy.entities.session
+   :members:
+   :undoc-members:
+   :show-inheritance:
+dtlpy.entities.similarity module
+--------------------------------
+
+.. automodule:: dtlpy.entities.similarity
    :members:
    :undoc-members:
    :show-inheritance:

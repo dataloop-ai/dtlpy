@@ -28,9 +28,11 @@ from .ontology import Ontology
 from .annotation_definitions import Box, Point, Segmentation, Polygon, Ellipse, Classification, Polyline, Comparison, \
     UndefinedAnnotationType
 from .label import Label
-from .plugin import Plugin, PluginInput, PluginOutput
+from .plugin import Plugin, PluginInput
 from .time_series import TimeSeries
 from .deployment import Deployment
 from .session import Session
 from .assignment import Assignment
 from .annotation_task import AnnotationTask
+from .directory_tree import DirectoryTree
+from .similarity import Similarity

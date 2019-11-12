@@ -3,7 +3,7 @@ import logging
 import random
 import attr
 
-from .. import utilities, entities, PlatformException, repositories, services
+from .. import miscellaneous, entities, PlatformException, repositories, services
 
 logger = logging.getLogger(name=__name__)
 
@@ -97,7 +97,7 @@ class Ontology:
         return _json
 
     def print(self):
-        utilities.List([self]).print()
+        miscellaneous.List([self]).print()
 
     def delete(self):
         """

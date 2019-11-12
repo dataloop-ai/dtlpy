@@ -2,7 +2,7 @@ from collections import namedtuple
 import logging
 import attr
 
-from .. import utilities, repositories, services, entities
+from .. import miscellaneous, repositories, services, entities, PlatformException
 
 logger = logging.getLogger(name=__name__)
 
@@ -37,7 +37,7 @@ class Plugin:
         reps = namedtuple('repositories',
                           field_names=['sessions', 'deployments', 'projects'])
         r = reps(sessions=repositories.Sessions(client_api=self._client_api),
-                 deployments=repositories.Deployments(client_api=self._client_api, plugin=self),
+                 deployments=repositories.Deployments(client_api=self._client_api, plugin=self, project=self._project),
                  projects=repositories.Projects(client_api=self._client_api))
         return r
 
@@ -67,7 +67,7 @@ class Plugin:
     def git_status(self):
         status = 'Git status unavailable'
         try:
-            package = self.project.packages.get(package_id=self.packageId, version=self.version-1)
+            package = self.project.packages.get(package_id=self.packageId, version=self.version - 1)
             if 'git' in package.metadata:
                 status = package.metadata['git'].get('status', status)
         except Exception:
@@ -78,7 +78,7 @@ class Plugin:
     def git_log(self):
         log = 'Git log unavailable'
         try:
-            package = self.project.packages.get(package_id=self.packageId, version=self.version-1)
+            package = self.project.packages.get(package_id=self.packageId, version=self.version - 1)
             if 'git' in package.metadata:
                 log = package.metadata['git'].get('log', log)
         except Exception:
@@ -117,7 +117,7 @@ class Plugin:
 
         :return:
         """
-        utilities.List([self]).print()
+        miscellaneous.List([self]).print()
 
     def to_json(self):
         """
@@ -203,37 +203,103 @@ class Plugin:
 
 @attr.s
 class PluginInput:
-    path = attr.ib()
-    resource = attr.ib()
-    by = attr.ib()
-    constValue = attr.ib()
+    INPUT_TYPES = ['Json', 'Dataset', 'Item', 'Annotation']
+    type = attr.ib(type=str)
+    value = attr.ib(default=None)
+    name = attr.ib(type=str)
 
-    def to_json(self):
-        return attr.asdict(self)
+    @name.default
+    def set_name(self):
+        if self.type == 'Item':
+            return 'item'
+        elif self.type == 'Dataset':
+            return 'dataset'
+        elif self.type == 'Annotation':
+            return 'annotation'
+        else:
+            return 'config'
+
+    # noinspection PyUnusedLocal
+    @name.validator
+    def check_name(self, attribute, value):
+        name_ok = True
+        expected_name = 'Expected name for type {} is: '.format(self.type)
+        if self.type == 'Item' and value != 'item':
+            expected_name += 'item'
+            name_ok = False
+        elif self.type == 'Dataset' and value != 'dataset':
+            expected_name += 'dataset'
+            name_ok = False
+        elif self.type == 'Annotation' and value != 'annotation':
+            expected_name += 'dataset'
+            name_ok = False
+
+        if not name_ok:
+            raise PlatformException('400', 'Invalid input name. {}'.format(expected_name))
+
+    # noinspection PyUnusedLocal
+    @type.validator
+    def check_type(self, attribute, value):
+        if value not in self.INPUT_TYPES:
+            raise PlatformException('400', 'Invalid input type please select from: {}'.format(self.INPUT_TYPES))
+
+    # noinspection PyUnusedLocal
+    @value.validator
+    def check_value(self, attribute, value):
+        value_ok = True
+        expected_value = 'Expected value should be:'
+        if self.type == 'Json':
+            expected_value = '{} a dictionary'.format(expected_value)
+            if not isinstance(value, dict):
+                value_ok = False
+        elif self.type == 'Dataset':
+            expected_value = '{} {{"dataset_id": <dataset id>}}'.format(expected_value)
+            if not isinstance(value, dict):
+                value_ok = False
+            else:
+                if 'dataset_id' not in value:
+                    value_ok = False
+        elif self.type == 'Item':
+            expected_value = '{} {{"dataset_id": <dataset id>, "item_id": <item id>}}'.format(expected_value)
+            if not isinstance(value, dict):
+                value_ok = False
+            else:
+                if 'item_id' not in value:
+                    value_ok = False
+                if 'dataset_id' not in value:
+                    value_ok = False
+        elif self.type == 'Annotation':
+            expected_value = '{} {{"dataset_id": <dataset id>, "item_id": <item id>, "annotation_id": <annotation id>}}'.format(
+                expected_value)
+            if not isinstance(value, dict):
+                value_ok = False
+            else:
+                if 'item_id' not in value:
+                    value_ok = False
+                if 'dataset_id' not in value:
+                    value_ok = False
+                if 'annotation_id' not in value:
+                    value_ok = False
+
+        if not value_ok and value is not None:
+            raise PlatformException('400', 'Illegal value. {}'.format(expected_value))
+
+    def to_json(self, resource='plugin'):
+        if resource == 'plugin':
+            _json = attr.asdict(self)
+        elif resource == 'session':
+            _json = {
+                self.name: self.value
+            }
+        else:
+            raise PlatformException('400', 'Please select resource from: plugin, session')
+
+        return _json
 
     @classmethod
     def from_json(cls, _json):
         return cls(
-            path=_json.get('path', None),
-            resource=_json.get('resource', None),
-            by=_json.get('by', None),
-            constValue=_json.get('constValue', None)
-        )
-
-
-@attr.s
-class PluginOutput:
-    name = attr.ib()
-    type = attr.ib()
-    value = attr.ib()
-
-    def to_json(self):
-        return attr.asdict(self)
-
-    @classmethod
-    def from_json(cls, _json):
-        return cls(
-            name=_json.get('name', None),
             type=_json.get('type', None),
-            value=_json.get('value', None)
+            value=_json.get('value', None),
+            name=_json.get('name', None)
         )

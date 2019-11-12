@@ -1,4 +1,5 @@
 import behave
+import time
 
 
 @behave.given(u"I remove annotations attributes")
@@ -12,8 +13,9 @@ def step_impl(context):
 def step_impl(context):
     context.item.annotations.update(
         annotations=context.annotations_get.annotations,
-        system_metadata=True,
+        system_metadata=True
     )
+    time.sleep(7)
 
 
 @behave.then(u"Item annotations has no attributes")
@@ -95,12 +97,13 @@ def step_impl(context):
     assert annotation_get.label == "person"
 
 
-@behave.given(u'I add "{rais_valuse}" to annotation coordinates')
-def step_impl(context, rais_valuse):
-    context.annotation_x.top += 50
-    context.annotation_x.right += 50
-    context.annotation_x.left += 50
-    context.annotation_x.bottom += 50
+@behave.given(u'I add "{raise_value}" to annotation coordinates')
+def step_impl(context, raise_value):
+    raise_value = int(raise_value)
+    context.annotation_x.top += raise_value
+    context.annotation_x.right += raise_value
+    context.annotation_x.left += raise_value
+    context.annotation_x.bottom += raise_value
 
 
 @behave.then(u'annotation x coordinates should be changed accordingly')

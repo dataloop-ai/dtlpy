@@ -1,11 +1,10 @@
 import hashlib
-import traceback
 import logging
 import os
 import io
 import random
 
-from .. import entities, utilities, PlatformException, exceptions, repositories
+from .. import entities, utilities, PlatformException, exceptions, repositories, miscellaneous
 
 logger = logging.getLogger(name=__name__)
 
@@ -192,7 +191,7 @@ class Packages:
             directory = os.path.abspath(directory)
 
             # create zipfile
-            utilities.Miscellaneous.zip_directory(zip_filename=zip_filename, directory=directory)
+            miscellaneous.Zipping.zip_directory(zip_filename=zip_filename, directory=directory)
             zip_md = self.__file_hash(zip_filename)
 
             # get latest version
@@ -231,14 +230,14 @@ class Packages:
                 item.metadata['system']['md5'] = zip_md
 
                 # add git info to metadata
-                if utilities.miscellaneous.GitUtils.is_git_repo(path=directory):
+                if miscellaneous.GitUtils.is_git_repo(path=directory):
                     # create 'git' field in metadata
                     if 'git' not in item.metadata:
                         item.metadata['git'] = dict()
 
                     # get info
-                    log = utilities.miscellaneous.GitUtils.git_log(path=directory)
-                    status = utilities.miscellaneous.GitUtils.git_status(path=directory)
+                    log = miscellaneous.GitUtils.git_log(path=directory)
+                    status = miscellaneous.GitUtils.git_status(path=directory)
 
                     # add to metadata
                     item.metadata['git']['status'] = status
@@ -248,7 +247,7 @@ class Packages:
                 item = self.items_repository.update(item=item, system_metadata=True)
 
         except Exception as e:
-            logger.exception('{}\n{}'.format(e, traceback.format_exc()))
+            logger.exception('Error when packing:')
             raise
         finally:
             # cleanup
@@ -266,8 +265,8 @@ class Packages:
         if not os.path.isfile(artifact_filepath):
             raise PlatformException(error='404',
                                     message='error downloading package. see above for more information')
-        utilities.Miscellaneous.unzip_directory(zip_filename=artifact_filepath,
-                                                to_directory=local_path)
+        miscellaneous.Zipping.unzip_directory(zip_filename=artifact_filepath,
+                                              to_directory=local_path)
         os.remove(artifact_filepath)
         return artifact_filepath
 

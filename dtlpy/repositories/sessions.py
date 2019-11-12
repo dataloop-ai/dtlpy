@@ -1,5 +1,6 @@
-from .. import exceptions, entities, utilities
 import logging
+
+from .. import exceptions, entities, miscellaneous
 
 logger = logging.getLogger(name=__name__)
 
@@ -19,7 +20,7 @@ class Sessions:
         return self._deployment
 
     def create(self, deployment_id=None, sync=False, session_input=None,
-               resource='item', item_id=None, dataset_id=None):
+               resource='item', item_id=None, dataset_id=None, annotation_id=None):
         """
         Create deployment entity
         :param item_id:
@@ -38,10 +39,19 @@ class Sessions:
         # payload
         if session_input is None:
             payload = {resource: {
-                'item_id': item_id,
                 'dataset_id': dataset_id}
             }
+            if item_id is not None:
+                payload['item_id'] = item_id
+            if annotation_id is not None:
+                payload['annotation_id'] = annotation_id
         else:
+            if not isinstance(session_input, list):
+                session_input = [session_input]
+            if len(session_input) > 0 and isinstance(session_input[0], entities.PluginInput):
+                for i_input, single_input in enumerate(session_input):
+                    session_input[i_input] = single_input.to_json(resource='session')
+
             payload = session_input
 
         # request url
@@ -84,7 +94,7 @@ class Sessions:
             logging.warning('Listing deployment sessions without deployment entity will return deployment'
                             ' session objects with no deployment.\nto properly list deployment sessions use '
                             'deployment.deployment_sessions.list() method')
-        sessions = utilities.List()
+        sessions = miscellaneous.List()
         for deployment_session in response.json()['items']:
             sessions.append(entities.Session.from_json(client_api=self.client_api,
                                                        _json=deployment_session,
@@ -129,6 +139,17 @@ class Sessions:
         payload = dict()
         if status is not None:
             payload['status'] = status
+        else:
+            if percent_complete is not None and isinstance(percent_complete, int):
+                if percent_complete < 100:
+                    payload['status'] = 'inProgress'
+                else:
+                    payload['status'] = 'completed'
+            elif output is not None:
+                payload['status'] = 'completed'
+            else:
+                payload['status'] = 'inProgress'
+
         if percent_complete is not None:
             payload['percentComplete'] = percent_complete
         if message is not None:

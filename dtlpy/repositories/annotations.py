@@ -1,8 +1,7 @@
-import json
-import logging
 import traceback
+import logging
+import json
 import jwt
-from multiprocessing.pool import ThreadPool
 import os
 
 from .. import entities, PlatformException
@@ -33,36 +32,6 @@ class Annotations:
         if not isinstance(item, entities.Item):
             raise ValueError('Must input a valid Item entity')
         self._item = item
-
-    @staticmethod
-    def multiprocess_wrapper(func, items, params=None):
-        """
-            Wrapper to tun fun con a list of items in multi threads
-
-        :param func:
-        :param items:
-        :param params:
-        :return:
-        """
-        n_items = len(items)
-        success = [False for _ in range(n_items)]
-        output = [None for _ in range(n_items)]
-        errors = [None for _ in range(n_items)]
-
-        pool = ThreadPool(processes=32)
-        for i_item, item in enumerate(items):
-            pool.apply_async(func=func,
-                             kwds={'i_item': i_item,
-                                   'item': item,
-                                   'output': output,
-                                   'errors': errors,
-                                   'success': success,
-                                   'params': params})
-        pool.close()
-        pool.join()
-        pool.terminate()
-        errors = {i_job: errors[i_job] for i_job, suc in enumerate(success) if suc is False}
-        return output, errors
 
     def get(self, annotation_id):
         """
@@ -175,6 +144,32 @@ class Annotations:
                                     with_text=with_text,
                                     annotation_format=annotation_format)
 
+    def _update_single_annotation(self, w_annotation, system_metadata):
+        try:
+            if isinstance(w_annotation, entities.Annotation):
+                annotation_id = w_annotation.id
+                annotation = w_annotation.to_json()
+            else:
+                raise PlatformException('400',
+                                        'unknown annotations type: {}'.format(type(w_annotation)))
+
+            url_path = '/annotations/{}'.format(annotation_id)
+            if system_metadata:
+                url_path += '?system=true'
+            suc, response = self._client_api.gen_request(req_type='put',
+                                                         path=url_path,
+                                                         json_req=annotation)
+            if suc:
+                result = entities.Annotation.from_json(_json=response.json(),
+                                                       item=self.item)
+            else:
+                raise PlatformException(response)
+            status = True
+        except:
+            status = False
+            result = traceback.format_exc()
+        return status, result
+
     def update(self, annotations, system_metadata=False):
         """
             Update an existing annotation.
@@ -183,44 +178,53 @@ class Annotations:
         :param system_metadata:
         :return: True
         """
-
-        def update_single_annotation(i_item, item, output, success, errors, params):
-            try:
-                if isinstance(item, entities.Annotation):
-                    annotation_id = item.id
-                    annotation = item.to_json()
-                else:
-                    raise PlatformException('400',
-                                            'unknown annotations type: {}'.format(type(item)))
-
-                url_path = '/annotations/{}'.format(annotation_id)
-                if params['system_metadata']:
-                    url_path += '?system=true'
-                suc, response = self._client_api.gen_request(req_type='put',
-                                                             path=url_path,
-                                                             json_req=annotation)
-                if suc:
-                    success[i_item] = True
-                    output[i_item] = entities.Annotation.from_json(_json=response.json(),
-                                                                   item=self.item)
-                else:
-                    raise PlatformException(response)
-
-            except Exception as e:
-                success[i_item] = False
-                errors[i_item] = e
-
+        pool = self._client_api.thread_pool
         if not isinstance(annotations, list):
             annotations = [annotations]
-        multi_output, multi_errors = self.multiprocess_wrapper(func=update_single_annotation,
-                                                               items=annotations,
-                                                               params={'system_metadata': system_metadata})
-        if len(multi_errors) == 0:
-            logger.debug('Annotation/s updated successfully. {}/{}'.format(len(multi_output), len(multi_output)))
+        jobs = [None for _ in range(len(annotations))]
+        for i_ann, ann in enumerate(annotations):
+            jobs[i_ann] = pool.apply_async(func=self._update_single_annotation,
+                                           kwds={'w_annotation': ann,
+                                                 'system_metadata': system_metadata})
+        # wait for jobs to be finish
+        _ = [j.wait() for j in jobs]
+        # get all results
+        results = [j.get() for j in jobs]
+        out_annotations = [r[1] for r in results if r[0] is True]
+        out_errors = [r[1] for r in results if r[0] is False]
+        if len(out_errors) == 0:
+            logger.debug('Annotation/s updated successfully. {}/{}'.format(len(out_annotations), len(results)))
         else:
-            logger.error(multi_errors)
-            logger.error('Annotation/s updated with {} errors'.format(len(multi_errors)))
-        return multi_output
+            logger.error(out_errors)
+            logger.error('Annotation/s updated with {} errors'.format(len(out_errors)))
+        return out_annotations
+
+    def _upload_single_annotation(self, w_annotation):
+        try:
+            if isinstance(w_annotation, str):
+                w_annotation = json.loads(w_annotation)
+            elif isinstance(w_annotation, entities.Annotation):
+                w_annotation = w_annotation.to_json()
+            elif isinstance(w_annotation, dict):
+                w_annotation = w_annotation
+            else:
+                raise PlatformException('400',
+                                        'unknown annotations type: {}'.format(type(w_annotation)))
+            w_annotation.pop('id', None)
+            w_annotation.pop('_id', None)
+            suc, response = self._client_api.gen_request(req_type='post',
+                                                         path='/items/{}/annotations'.format(self.item.id),
+                                                         json_req=w_annotation)
+            if suc:
+                result = entities.Annotation.from_json(_json=response.json(),
+                                                       item=self.item)
+                status = True
+            else:
+                raise PlatformException(response)
+        except Exception as e:
+            status = False
+            result = traceback.format_exc()
+        return status, result
 
     def upload(self, annotations):
         """
@@ -229,33 +233,6 @@ class Annotations:
         :param annotations: list or single annotation of type Annotation
         :return: list of annotation objects
         """
-
-        def upload_single_annotation(i_item, item, output, success, errors, params):
-            try:
-                if isinstance(item, str):
-                    annotation = json.loads(item)
-                elif isinstance(item, entities.Annotation):
-                    annotation = item.to_json()
-                elif isinstance(item, dict):
-                    annotation = item
-                else:
-                    raise PlatformException('400',
-                                            'unknown annotations type: {}'.format(type(item)))
-                annotation.pop('id', None)
-                annotation.pop('_id', None)
-                suc, response = self._client_api.gen_request(req_type='post',
-                                                             path='/items/{}/annotations'.format(self.item.id),
-                                                             json_req=annotation)
-                if suc:
-                    output[i_item] = entities.Annotation.from_json(_json=response.json(),
-                                                                   item=self.item)
-                    success[i_item] = True
-                else:
-                    raise PlatformException(response)
-            except Exception as e:
-                success[i_item] = False
-                errors[i_item] = traceback.format_exc()
-
         # make list if not list
         if isinstance(annotations, entities.AnnotationCollection):
             annotations = annotations.annotations
@@ -271,15 +248,25 @@ class Annotations:
                         annotations = annotations['data']
                     else:
                         PlatformException('400', 'Unknown annotation file format')
+
+        pool = self._client_api.thread_pool
+        jobs = [None for _ in range(len(annotations))]
         # call multiprocess wrapper to run function on each item in list
-        multi_output, multi_errors = self.multiprocess_wrapper(func=upload_single_annotation,
-                                                               items=annotations)
-        if len(multi_errors) == 0:
-            logger.debug('Annotation/s uploaded successfully. {}/{}'.format(len(multi_output), len(multi_output)))
+        for i_ann, ann in enumerate(annotations):
+            jobs[i_ann] = pool.apply_async(func=self._upload_single_annotation,
+                                           kwds={'w_annotation': ann})
+        # wait for jobs to be finish
+        _ = [j.wait() for j in jobs]
+        # get all results
+        results = [j.get() for j in jobs]
+        out_annotations = [r[1] for r in results if r[0] is True]
+        out_errors = [r[1] for r in results if r[0] is False]
+        if len(out_errors) == 0:
+            logger.debug('Annotation/s uploaded successfully. {}/{}'.format(len(out_annotations), len(results)))
         else:
-            logger.error(multi_errors)
-            logger.error('Annotation/s uploaded with {} errors'.format(len(multi_errors)))
-        return multi_output
+            logger.error(out_errors)
+            logger.error('Annotation/s uploaded with {} errors'.format(len(out_errors)))
+        return out_annotations
 
     def builder(self):
         return entities.AnnotationCollection(item=self.item)

@@ -14,14 +14,14 @@ Feature: Annotaions repository update function testing
         When I update annotations
         Then  Item annotations has no attributes
 
-    Scenario: Updateing annotations: change label
-        Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
-        And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"
-        And There are no files in folder "downloaded_annotations"
-        And Item is annotated with annotations in file: "assets_split/annotations_crud/0162_annotations.json"
-        And I change all annotations labels to "person"
-        When I update annotations
-        Then  All item annotations have label "person"
+    # Scenario: Updateing annotations: change label
+    #     Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
+    #     And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"
+    #     And There are no files in folder "downloaded_annotations"
+    #     And Item is annotated with annotations in file: "assets_split/annotations_crud/0162_annotations.json"
+    #     And I change all annotations labels to "person"
+    #     When I update annotations
+    #     Then  All item annotations have label "person"
 
     #TODO - not working as expected - server returns 200
     # Scenario: Updateing annotations: change to non-existing label

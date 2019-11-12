@@ -33,7 +33,7 @@ def main():
                                                   label='beans_can'))
 
     # create a mask
-    mask = np.zeros(shape=(item.height, item.width))
+    mask = np.zeros(shape=(item.height, item.width), dtype=np.uint8)
     # mark some part in the middle
     mask[50:100, 200:250] = 1
     # add annotations of type segmentation

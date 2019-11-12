@@ -1,7 +1,6 @@
 import logging
-from .. import exceptions
-from .. import entities
-from .. import utilities
+
+from .. import exceptions, miscellaneous, entities
 
 logger = logging.getLogger(name=__name__)
 URL_PATH = '/annotationtasks'
@@ -57,7 +56,7 @@ class AnnotationTasks:
             raise ('400', 'Must provide project')
         project_ids = ','.join(project_ids)
         query.append('projects={}'.format(project_ids))
-        
+
         if assignments is not None:
             if not isinstance(assignments, list):
                 assignments = [assignments]
@@ -87,7 +86,7 @@ class AnnotationTasks:
         success, response = self._client_api.gen_request(req_type='get',
                                                          path=url)
         if success:
-            annotation_tasks = utilities.List(
+            annotation_tasks = miscellaneous.List(
                 [entities.AnnotationTask.from_json(client_api=self._client_api,
                                                    _json=_json)
                  for _json in response.json()['items']])
@@ -163,13 +162,17 @@ class AnnotationTasks:
             raise exceptions.PlatformException(response)
         return True
 
-    def update(self, annotation_task=None):
+    def update(self, annotation_task=None, system_metadata=False):
         """
         Update an Annotation Task
         :return: Annotation Task object
         """
         url = URL_PATH
         url = '{}/{}'.format(url, annotation_task.id)
+
+        if system_metadata:
+            url += '?system=true'
+
         success, response = self._client_api.gen_request(req_type='patch',
                                                          path=url,
                                                          json_req=annotation_task.to_json())
@@ -198,24 +201,40 @@ class AnnotationTasks:
 
         if status is not None:
             payload['status'] = status
+        else:
+            payload['status'] = 'open'
+
         if project_id is not None:
             payload['projectId'] = project_id
+        else:
+            payload['projectId'] = self.project.id
+
         if dataset_id is not None:
-            payload['dataset_id'] = dataset_id
+            payload['datasetId'] = dataset_id
+
         if recipe_id is not None:
-            payload['recipe_id'] = recipe_id
+            payload['recipeId'] = recipe_id
+
         if assignments_ids is not None:
             if not isinstance(assignments_ids, list):
                 assignments_ids = [assignments_ids]
-            payload['assignments_ids'] = assignments_ids
+            payload['assignmentIds'] = assignments_ids
+        else:
+            payload['assignmentIds'] = list()
+
         if query is not None:
             payload['query'] = query
+        else:
+            payload['query'] = '{}'
+
         if due_date is not None:
             payload['dueDate'] = due_date
+        else:
+            payload['dueDate'] = 0
 
         success, response = self._client_api.gen_request(req_type='post',
                                                          path=URL_PATH,
-                                                         data=payload)
+                                                         json_req=payload)
         if success:
             annotation_task = entities.AnnotationTask.from_json(client_api=self._client_api,
                                                                 _json=response.json())

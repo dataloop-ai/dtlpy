@@ -2,7 +2,7 @@ from collections import namedtuple
 import logging
 import attr
 
-from .. import repositories, utilities, entities, services
+from .. import repositories, miscellaneous, entities, services
 
 logger = logging.getLogger(name=__name__)
 
@@ -98,7 +98,7 @@ class Recipe:
 
         :return:
         """
-        utilities.List([self]).print()
+        miscellaneous.List([self]).print()
 
     def delete(self):
         """

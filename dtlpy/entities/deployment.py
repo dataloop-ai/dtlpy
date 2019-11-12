@@ -23,6 +23,7 @@ class Deployment:
     pluginId = attr.ib()
     mq = attr.ib()
     pluginRevision = attr.ib()
+    useUserJwt = attr.ib()
 
     # name change
     project_id = attr.ib()
@@ -47,6 +48,7 @@ class Deployment:
             createdAt=_json.get("createdAt", None),
             updatedAt=_json.get("updatedAt", None),
             pluginRevision=_json.get("pluginRevision", None),
+            useUserJwt=_json.get("useUserJwt", False),
             config=_json.get("config", dict()),
             runtime=_json.get("runtime", dict()),
             mq=_json.get('mq', dict()),
@@ -65,10 +67,10 @@ class Deployment:
     def set_repositories(self):
         reps = namedtuple('repositories',
                           field_names=['sessions', 'deployments', 'triggers'])
-        try:
+
+        project = None
+        if self._project is not None:
             project = self.project
-        except Exception:
-            project = None
 
         if self._plugin is None:
             deployments = repositories.Deployments(client_api=self._client_api, plugin=self._plugin,

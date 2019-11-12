@@ -1,7 +1,7 @@
 import logging
 import pandas as pd
 
-from dtlpy import entities, utilities, PlatformException
+from dtlpy import entities, miscellaneous, PlatformException
 
 logger = logging.getLogger(name=__name__)
 
@@ -20,8 +20,8 @@ class TimesSeries:
         success, response = self._client_api.gen_request(req_type='get',
                                                          path='/projects/{}/timeSeries'.format(self.project.id))
         if success:
-            tss = utilities.List([entities.TimeSeries.from_json(_json=_json, project=self.project)
-                                  for _json in response.json()])
+            tss = miscellaneous.List([entities.TimeSeries.from_json(_json=_json, project=self.project)
+                                      for _json in response.json()])
         else:
             raise PlatformException(response)
         return tss
@@ -101,14 +101,13 @@ class TimesSeries:
         elif series is not None and isinstance(series, entities.TimeSeries):
             series_id = series.id
         else:
-            logger.exception(
-                'Must choose by at least one. "series_id" or "series"')
-            raise ValueError(
-                'Must choose by at least one. "series_id" or "series"')
+            msg = 'Must choose by at least one of: "series_id", "series"'
+            logger.error(msg)
+            raise ValueError(msg)
         success, response = self._client_api.gen_request(req_type='delete',
                                                          path='/projects/{}/timeSeries/{}'.format(self.project.id,
                                                                                                   series_id))
         if not success:
-            logger.exception('Platform error deleting a series:')
             raise PlatformException(response)
+        logger.info('Time series id {} deleted successfully'.format(series_id))
         return True

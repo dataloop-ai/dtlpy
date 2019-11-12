@@ -9,7 +9,7 @@ Before starting run
 
 Checkout to a local project and dataset
 
-.. code::
+.. code-block:: python
 
     $ dlp projects checkout <project_name/project_id>
     $ dlp datasets checkout <dataset_name/dataset_id>
@@ -17,7 +17,7 @@ Checkout to a local project and dataset
 
 Create a Plugin at the current directory
 
-.. code::
+.. code-block:: python
 
    $ dlp plugins generate --plugin-name
 
@@ -34,48 +34,60 @@ Developing the plugin
 =====================
 Plugin Json
 ---------------------
-| The plugin.json should look something like this:
-| {
-|     "inputs": [
-|         {
-|             "type": "Item",
-|             "name": "item"
-|         }
-|     ],
-|     "outputs": [
-|     ],
-|     "name": "myPlugin"
-| }
+The plugin.json should look something like this:
 
-| It defines the plugin inputs, outputs and name.
-| In this case, the plugin name is: myPlugin and it expects an item input.
-| Input can be of types, item, dataset, annotation and json
+.. code-block:: python
 
-| The value of an dataset entity should be in the form:
-| {
-|   "dataset_id": <dataset_id>
-| }
+    {
+        "inputs": [
+            {
+                "type": "Item",
+                "name": "item"
+            }
+        ],
+        "outputs": [
+        ],
+        "name": "myPlugin"
+    }
 
-| The value of an item entity should be in the form:
-| {
-|   "dataset_id": <dataset_id>,
-|   "item_id": <item_id>
-| }
+It defines the plugin inputs, outputs and name.
 
-| The value of an annotation entity should be in the form:
-| {
-|   "dataset_id": <dataset_id>,
-|   "item_id": <item_id>,
-|   "annotation_id": <annotation_id>
-| }
+In this case, the plugin name is: myPlugin and it expects an item input.
+Input can be of types, item, dataset, annotation and json
+The value of an dataset entity should be in the form:
 
-| The value of a Json entity can be any json.
+.. code-block:: python
+
+    {
+      "dataset_id": <dataset_id>
+    }
+
+The value of an item entity should be in the form:
+
+.. code-block:: python
+
+    {
+      "dataset_id": <dataset_id>,
+      "item_id": <item_id>
+    }
+
+The value of an annotation entity should be in the form:
+
+.. code-block:: python
+
+    {
+      "dataset_id": <dataset_id>,
+      "item_id": <item_id>,
+      "annotation_id": <annotation_id>
+    }
+
+The value of a Json entity can be any json.
 
 Plugin Source Code
 ---------------------
 Your main.py file should look something like this:
 
-.. code::
+.. code-block:: python
 
     import dtlpy as dl
     import logging
@@ -139,27 +151,30 @@ By providing plugin inputs in the "input" field of mock.json
 And providing init params in the "config" field of mock.json
 You can perform:
 
-.. code::
+.. code-block:: python
 
    $ dlp plugins test
 
 This will run the init method followed by the run method with params provided in the mock.json.
 
 For example:
-| {
-|   "inputs": [
-|     {
-|       "name": "item",
-|       "value": {
-|         "dataset_id": "5d8b1d0ecb5bbd508b64f491",
-|         "item_id": "5d8b1d1bba74a0f7717c500b"
-|       }
-|     }
-|   ],
-|   "config": {
-|     "message": "My first plugin"
-|   }
-| }
+
+.. code-block:: python
+
+    {
+      "inputs": [
+        {
+          "name": "item",
+          "value": {
+            "dataset_id": "5d8b1d0ecb5bbd508b64f491",
+            "item_id": "5d8b1d1bba74a0f7717c500b"
+          }
+        }
+      ],
+      "config": {
+        "message": "My first plugin"
+      }
+    }
 
 | the init method will receive {"message": "My first plugin"}
 | and run method will receive item with id provided from dataset with id provided.
@@ -171,52 +186,88 @@ Deploy to cloud
 =====================
 First push the pluging by performing:
 
-.. code::
+.. code-block:: python
 
    $ dlp plugins push
 
 Secondly, edit the deployment.json file:
 
-|   {
-|     "name": "deployment-json",
-|     "plugin": "deploymentJsonPlugin",
-|     "runtime": {
-|       "gpu": false,
-|       "replicas": 1,
-|       "concurrency": 32,
-|       "image": ""
-|     },
-|     "triggers": [
-|       {
-|         "name": "deploymentJsonPlugin",
-|         "filter": {},
-|         "resource": "Item",
-|         "actions": [
-|           "Created"
-|         ],
-|         "active": true,
-|         "executionMode": "Once"
-|       }
-|     ],
-|     "config": {
-|       "message": "My first plugin with deployment.json"
-|     },
-|     "pluginRevision": "latest"
-|   }
+.. code-block:: python
 
-| In this case:
-|     - deployment name is: deployment
-|     - it is attached to plugin "deploymentJsonPlugin"
-|     - deployment will work on cpu and allow 32 procecces to run simultaneously
-|     - container autoscale limit is 1
-|     - plugin version is latest
-|     - a trigger by the name of deploymentJsonPlugin will be created and will trigger this deployment
-|       anytime an Item is created in the project.
+    {
+    "name": "deployment-json",
+    "plugin": "deploymentJsonPlugin",
+    "runtime": {
+      "gpu": false,
+      "replicas": 1,
+      "concurrency": 32,
+      "image": ""
+    },
+    "triggers": [
+      {
+        "name": "deploymentJsonPlugin",
+        "filter": {},
+        "resource": "Item",
+        "actions": [
+          "Created"
+        ],
+        "active": true,
+        "executionMode": "Once"
+      }
+    ],
+    "config": {
+      "message": "My first plugin with deployment.json"
+    },
+    "pluginRevision": "latest"
+    }
+
+In this case:
+    - deployment name is: deployment
+    - it is attached to plugin "deploymentJsonPlugin"
+    - deployment will work on cpu and allow 32 procecces to run simultaneously
+    - container autoscale limit is 1
+    - plugin version is latest
+    - a trigger by the name of deploymentJsonPlugin will be created and will trigger this deployment anytime an Item is created in the project.
 
 
 | Now we can deploy the plugin to the cloud(i.e: make a running instance out of it)
 
-.. code::
+.. code-block:: python
 
    $ dlp plugins deploy
 
+
+Triggers
+===========
+
+Lets say we have a deployment (a plugin we have deployed).
+
+If we want this deployment to be triggered automatically when something happens, we can do so by creating a trigger.
+
+Triggers can work on items, datasets or annotations and be triggered upon creation, update or deletion.
+
+Create a trigger:
+
+.. code-block:: python
+
+    import dtlpy as dl
+
+    # get deployment
+    deployment = dl.deployments.get(deployment_name="My deployment name")
+
+    ######################################################################
+    # create trigger for for when item is uploaded to directory "/train" #
+    ######################################################################
+
+    # create filter
+    filters = dl.Filters()
+    filters.add(field='dir', value='/train')
+
+    # create trigger
+    trigger = deployment.triggers.create(
+        deployment_id=deployment.id,
+        resource='Item',
+        actions='Created',
+        name='training-trigger',
+        filters=filters
+    )

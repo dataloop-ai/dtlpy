@@ -1,7 +1,7 @@
-from multiprocessing.pool import ThreadPool
 import logging
+import traceback
 
-from .. import entities, utilities, PlatformException
+from .. import entities, miscellaneous, PlatformException
 
 logger = logging.getLogger(name=__name__)
 
@@ -67,14 +67,22 @@ class Ontologies:
         def get_single_ontology(w_i_ontology):
             ontologies[w_i_ontology] = self.get(ontology_id=ontologies[w_i_ontology])
 
-        pool = ThreadPool(processes=32)
-        for i_ontology in range(len(ontologies)):
-            pool.apply_async(get_single_ontology, kwds={"w_i_ontology": i_ontology})
-        pool.close()
-        pool.join()
-        pool.terminate()
+        results = [None for _ in range(len(ontologies))]
+        for i_ontology, ontology_id in enumerate(ontologies):
+            results[i_ontology] = self._protected_get(ontology_id=ontology_id)
+        # log errors
+        _ = [logger.warning(r[1]) for r in results if r[0] is False]
+        # return good jobs
+        return miscellaneous.List([r[1] for r in results if r[0] is True])
 
-        return utilities.List(ontologies)
+    def _protected_get(self, ontology_id):
+        try:
+            ontology = self.get(ontology_id=ontology_id)
+            status = True
+        except:
+            ontology = traceback.format_exc()
+            status = False
+        return status, ontology
 
     def get(self, ontology_id):
         """
@@ -131,7 +139,7 @@ class Ontologies:
             self.recipe.dataset._labels = ontology.labels
             return ontology
         else:
-            logger.exception("Failed to update ontology")
+            logger.exception("Failed to update ontology:")
             raise PlatformException(response)
 
     @staticmethod

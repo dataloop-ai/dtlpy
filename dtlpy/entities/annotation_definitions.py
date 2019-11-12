@@ -776,7 +776,7 @@ class Segmentation:
             raise
 
         # plot polygon on a blank mask with thickness -1 to fill the polyline
-        mask = np.zeros(shape=shape)
+        mask = np.zeros(shape=shape, dtype=np.uint8)
         mask = cv2.drawContours(image=mask,
                                 contours=geo,
                                 contourIdx=-1,

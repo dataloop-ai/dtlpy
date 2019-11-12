@@ -1,7 +1,7 @@
 import logging
-from multiprocessing.pool import ThreadPool
+import traceback
 
-from .. import entities, utilities, repositories, PlatformException
+from .. import entities, miscellaneous, repositories, PlatformException
 
 logger = logging.getLogger(name=__name__)
 
@@ -72,22 +72,27 @@ class Recipes:
         List recipes for dataset
         """
         recipes = list()
-        recipes = list()
         if self.dataset.metadata is not None and 'system' in self.dataset.metadata and 'recipes' in \
                 self.dataset.metadata['system']:
             recipes = [recipe_id for recipe_id in self.dataset.metadata['system']['recipes']]
 
-        def get_single_recipe(w_i_recipe):
-            recipes[w_i_recipe] = self.get(recipe_id=recipes[w_i_recipe])
+        results = [None for _ in range(len(recipes))]
+        for i_recipe, recipe_id in enumerate(recipes):
+            results[i_recipe] = self._protected_get(recipe_id=recipe_id)
 
-        pool = ThreadPool(processes=32)
-        for i_recipe in range(len(recipes)):
-            pool.apply_async(get_single_recipe, kwds={'w_i_recipe': i_recipe})
-        pool.close()
-        pool.join()
-        pool.terminate()
+        # log errors
+        _ = [logger.warning(r[1]) for r in results if r[0] is False]
+        # return good jobs
+        return miscellaneous.List([r[1] for r in results if r[0] is True])
 
-        return utilities.List(recipes)
+    def _protected_get(self, recipe_id):
+        try:
+            recipe = self.get(recipe_id=recipe_id)
+            status = True
+        except:
+            recipe = traceback.format_exc()
+            status = False
+        return status, recipe
 
     def get(self, recipe_id):
         """
@@ -102,7 +107,7 @@ class Recipes:
             recipe = entities.Recipe.from_json(client_api=self._client_api, _json=response.json(), dataset=self.dataset)
         else:
             logger.exception(
-                'Unable to get info from recipe. dataset id: %s, recipe_id id: %s' % (self.dataset.id, recipe_id))
+                'Unable to get info from recipe. dataset id: {}, recipe_id id: {}'.format(self.dataset.id, recipe_id))
             raise PlatformException(response)
 
         return recipe
@@ -116,8 +121,10 @@ class Recipes:
         """
         success, response = self._client_api.gen_request(req_type='delete',
                                                          path='/recipes/%s' % recipe_id)
-
-        return success
+        if not success:
+            raise PlatformException(response)
+        logger.info('Recipe id {} deleted successfully'.format(recipe_id))
+        return True
 
     def update(self, recipe, system_metadata=False):
         """
@@ -136,5 +143,5 @@ class Recipes:
         if success:
             return entities.Recipe.from_json(client_api=self._client_api, _json=response.json(), dataset=self.dataset)
         else:
-            logger.exception('Error while updating item')
+            logger.exception('Error while updating item:')
             raise PlatformException(response)
