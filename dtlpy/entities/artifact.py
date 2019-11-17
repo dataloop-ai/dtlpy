@@ -47,4 +47,3 @@ class Artifact(entities.Item):
         :return:
         """
         miscellaneous.List([self]).print()
-

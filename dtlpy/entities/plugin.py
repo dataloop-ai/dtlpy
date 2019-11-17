@@ -162,7 +162,6 @@ class Plugin:
         Deploy plugin
 
         :param deployment_name:
-        :param revision:
         :return:
         """
         return self.project.plugins.deploy(plugin=self,

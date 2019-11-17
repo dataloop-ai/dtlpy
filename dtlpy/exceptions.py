@@ -1,5 +1,7 @@
 import requests
 
+from . import services
+
 
 class PlatformException(Exception):
 
@@ -15,13 +17,11 @@ class PlatformException(Exception):
             '408': RequestTimeout,
             '500': InternalServerError,
             '600': TokenExpired,
-            '1001': ShowAnnotationError
+            '1001': ShowAnnotationError,
+            '1002': ExportAnnotationError
         }
 
-        if not type(error) == requests.models.Response:
-            self.status_code = error
-            self.message = message
-        else:
+        if isinstance(error, requests.models.Response) or isinstance(error, services.AsyncResponse):
             if hasattr(error, 'status_code'):
                 self.status_code = str(error.status_code)
             if hasattr(error, 'text'):
@@ -29,6 +29,10 @@ class PlatformException(Exception):
                     self.message = error.json().get('message', error.text)
                 except:
                     self.message = error.text
+
+        else:
+            self.status_code = error
+            self.message = message
 
         if self.status_code in exceptions:
             raise exceptions[self.status_code](status_code=self.status_code, message=self.message)
@@ -79,5 +83,10 @@ class UnknownException(ExceptionMain):
 # annotations exceptions #
 ##########################
 class ShowAnnotationError(ExceptionMain):
+    """ raised when error in annotations drawing"""
+    pass
+
+
+class ExportAnnotationError(ExceptionMain):
     """ raised when error in annotations drawing"""
     pass

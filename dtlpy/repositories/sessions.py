@@ -81,7 +81,11 @@ class Sessions:
         url_path = '/deployment_sessions'
 
         if self.deployment is not None:
-            url_path += '/{}'.format(self.deployment.id)
+            url_path += '?deployment={}'.format(self.deployment.id)
+        else:
+            logging.warning('Listing deployment sessions without deployment entity will return deployment'
+                            ' session objects with no deployment.\nto properly list deployment sessions use '
+                            'deployment.deployment_sessions.list() method')
 
         # request
         success, response = self.client_api.gen_request(req_type='get',
@@ -89,11 +93,6 @@ class Sessions:
         if not success:
             raise exceptions.PlatformException(response)
 
-        # return triggers list
-        if self.deployment is None:
-            logging.warning('Listing deployment sessions without deployment entity will return deployment'
-                            ' session objects with no deployment.\nto properly list deployment sessions use '
-                            'deployment.deployment_sessions.list() method')
         sessions = miscellaneous.List()
         for deployment_session in response.json()['items']:
             sessions.append(entities.Session.from_json(client_api=self.client_api,

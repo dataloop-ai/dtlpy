@@ -319,6 +319,7 @@ class Items:
             file_types=None,
             num_workers=32,
             overwrite=False,
+            item_metadata=None
     ):
         """
         Upload local file to dataset.
@@ -349,6 +350,8 @@ class Items:
             # config
             num_workers=num_workers,
             overwrite=overwrite,
+            # metadata to upload with items
+            item_metadata=item_metadata
         )
 
     def open_in_web(self, filepath=None, item_id=None, item=None):

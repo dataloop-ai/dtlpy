@@ -1,4 +1,5 @@
 from collections import namedtuple
+import traceback
 import logging
 import attr
 
@@ -100,6 +101,25 @@ class Project:
     def annotation_tasks(self):
         assert isinstance(self._repositories.annotation_tasks, repositories.AnnotationTasks)
         return self._repositories.annotation_tasks
+
+    @staticmethod
+    def _protected_from_json(_json, client_api):
+        """
+        Same as from_json but with try-except to catch if error
+        :param _json:
+        :param client_api:
+        :param plugin:
+        :param project:
+        :return:
+        """
+        try:
+            project = Project.from_json(_json=_json,
+                                        client_api=client_api)
+            status = True
+        except Exception:
+            project = traceback.format_exc()
+            status = False
+        return status, project
 
     @classmethod
     def from_json(cls, _json, client_api):

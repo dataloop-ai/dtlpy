@@ -102,10 +102,23 @@ class Datasets:
         success, response = self._client_api.gen_request(req_type='get',
                                                          path='/datasets?{}'.format(query_string))
         if success:
-            datasets = miscellaneous.List([entities.Dataset.from_json(client_api=self._client_api,
-                                                                      _json=_json,
-                                                                      project=self.project)
-                                           for _json in response.json()])
+            pool = self._client_api.thread_pool_entities
+            datasets_json = response.json()
+            jobs = [None for _ in range(len(datasets_json))]
+            # return triggers list
+            for i_dataset, dataset in enumerate(datasets_json):
+                jobs[i_dataset] = pool.apply_async(entities.Dataset._protected_from_json,
+                                                   kwds={'client_api': self._client_api,
+                                                         '_json': dataset,
+                                                         'project': self.project})
+            # wait for all jobs
+            _ = [j.wait() for j in jobs]
+            # get all resutls
+            results = [j.get() for j in jobs]
+            # log errors
+            _ = [logger.warning(r[1]) for r in results if r[0] is False]
+            # return good jobs
+            datasets = miscellaneous.List([r[1] for r in results if r[0] is True])
         else:
             raise PlatformException(response)
         return datasets

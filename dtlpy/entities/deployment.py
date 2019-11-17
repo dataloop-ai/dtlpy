@@ -1,4 +1,5 @@
 from collections import namedtuple
+import traceback
 import logging
 import attr
 
@@ -34,6 +35,27 @@ class Deployment:
     # repositories
     _project = attr.ib(default=None)
     _repositories = attr.ib()
+
+    @staticmethod
+    def _protected_from_json(_json, client_api, plugin=None, project=None):
+        """
+        Same as from_json but with try-except to catch if error
+        :param _json:
+        :param client_api:
+        :param plugin:
+        :param project:
+        :return:
+        """
+        try:
+            deployment = Deployment.from_json(_json=_json,
+                                              client_api=client_api,
+                                              plugin=plugin,
+                                              project=project)
+            status = True
+        except Exception:
+            deployment = traceback.format_exc()
+            status = False
+        return status, deployment
 
     @classmethod
     def from_json(cls, _json, client_api, plugin=None, project=None):

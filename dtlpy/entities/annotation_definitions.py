@@ -745,7 +745,7 @@ class Segmentation:
             color = (255, 255, 255)
         max_val = np.max(self.geo)
         if max_val > 1:
-            self.geo = self.geo/max_val
+            self.geo = self.geo / max_val
         png_ann = np.stack((color[0] * self.geo,
                             color[1] * self.geo,
                             color[2] * self.geo,

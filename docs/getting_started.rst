@@ -111,6 +111,14 @@ For upload the content of a folder (without the head) use "\*" at the end of the
 		remote_path='/images/dogs',
 		overwrite=False
 	)
+
+	# Can added metadata directly to the uploaded item by adding item_metadata to "upload"
+	dataset.items.upload(
+		local_path=r'C:\home\dogs', #  can be a directory
+		remote_path='/images/dogs',
+		item_metadata={'user': {'mark_all': 'gt'}}
+	)
+
 	# or upload just the content of that folder using "*":
 	dataset.items.upload(
 		local_path=r'C:\home\dogs\*', #  can be a directory

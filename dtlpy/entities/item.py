@@ -1,4 +1,5 @@
 from collections import namedtuple
+import traceback
 import logging
 import attr
 import copy
@@ -41,6 +42,25 @@ class Item:
     # repositories
     _repositories = attr.ib()
     modalities = attr.ib()
+
+    @staticmethod
+    def _protected_from_json(_json, client_api, dataset=None):
+        """
+        Same as from_json but with try-except to catch if error
+        :param _json:
+        :param client_api:
+        :param dataset:
+        :return:
+        """
+        try:
+            item = Item.from_json(_json=_json,
+                                  client_api=client_api,
+                                  dataset=dataset)
+            status = True
+        except Exception:
+            item = traceback.format_exc()
+            status = False
+        return status, item
 
     @classmethod
     def from_json(cls, _json, client_api, dataset=None):
@@ -283,7 +303,7 @@ class Modalities:
     def modalities(self):
         return self.item.metadata.get('modalities', None)
 
-    def create(self, name, modality_type, ref):
+    def create(self, name, ref, modality_type='overlay'):
         if self.modalities is None:
             self.item.metadata['modalities'] = list()
 

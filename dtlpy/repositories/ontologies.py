@@ -64,18 +64,25 @@ class Ontologies:
 
         ontologies = [ontology_id for ontology_id in self.recipe.ontologyIds]
 
-        def get_single_ontology(w_i_ontology):
-            ontologies[w_i_ontology] = self.get(ontology_id=ontologies[w_i_ontology])
-
-        results = [None for _ in range(len(ontologies))]
+        pool = self._client_api.thread_pool_entities
+        jobs = [None for _ in range(len(ontologies))]
         for i_ontology, ontology_id in enumerate(ontologies):
-            results[i_ontology] = self._protected_get(ontology_id=ontology_id)
+            jobs[i_ontology] = pool.apply_async(self._protected_get, kwds={'ontology_id': ontology_id})
+        # wait for all jobs
+        _ = [j.wait() for j in jobs]
+        # get all results
+        results = [j.get() for j in jobs]
         # log errors
         _ = [logger.warning(r[1]) for r in results if r[0] is False]
         # return good jobs
         return miscellaneous.List([r[1] for r in results if r[0] is True])
 
     def _protected_get(self, ontology_id):
+        """
+        Same as get but with try-except to catch if error
+        :param ontology_id:
+        :return:
+        """
         try:
             ontology = self.get(ontology_id=ontology_id)
             status = True

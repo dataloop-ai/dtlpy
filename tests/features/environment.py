@@ -47,22 +47,39 @@ def after_tag(context, tag):
 @fixture
 def delete_plugins(context):
     if hasattr(context, 'first_plugin'):
-        context.first_plugin.delete()
+        try:
+            context.first_plugin.delete()
+        except Exception:
+            pass
 
     if hasattr(context, 'second_plugin'):
-        context.second_plugin.delete()
+        try:
+            context.second_plugin.delete()
+        except Exception:
+            pass
 
     if hasattr(context, 'plugin'):
-        context.plugin.delete()
-
+        try:
+            context.plugin.delete()
+        except Exception:
+            pass
 
 @fixture
 def delete_deployments(context):
     if hasattr(context, 'first_deployment'):
-        context.first_deployment.delete()
+        try:
+            context.first_deployment.delete()
+        except Exception:
+            pass
 
     if hasattr(context, 'second_deployment'):
-        context.second_deployment.delete()
+        try:
+            context.second_deployment.delete()
+        except Exception:
+            pass
 
     if hasattr(context, 'deployment'):
-        context.deployment.delete()
+        try:
+            context.deployment.delete()
+        except Exception:
+            pass

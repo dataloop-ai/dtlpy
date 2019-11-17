@@ -11,6 +11,13 @@ dtlpy.services.api\_client module
    :members:
    :undoc-members:
    :show-inheritance:
+dtlpy.services.async\_entities module
+-------------------------------------
+
+.. automodule:: dtlpy.services.async_entities
+   :members:
+   :undoc-members:
+   :show-inheritance:
 dtlpy.services.calls\_counter module
 ------------------------------------
 

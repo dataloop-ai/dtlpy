@@ -47,6 +47,7 @@ def check_in_thread(version, client_api):
 def check(version, client_api):
     worker = threading.Thread(target=check_in_thread, kwargs={'version': version,
                                                               'client_api': client_api})
+    worker.daemon = True
     worker.start()
     status = client_api.cookie_io.get('check_version_status')
     if status is not None:

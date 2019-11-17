@@ -6,7 +6,7 @@ class Assignment:
     """
     Assignment object
     """
-    
+
     # platform
     name = attr.ib()
     annotator = attr.ib()
@@ -15,12 +15,12 @@ class Assignment:
     metadata = attr.ib()
     id = attr.ib()
     url = attr.ib()
-    
+
     # sdk
     _client_api = attr.ib()
     _task = attr.ib(default=None)
     _project = attr.ib(default=None)
-    
+
     @classmethod
     def from_json(cls, _json, client_api, project=None, task=None):
         return cls(
@@ -35,7 +35,7 @@ class Assignment:
             project=project,
             task=task
         )
-    
+
     def to_json(self):
         """
         Returns platform _json format of object

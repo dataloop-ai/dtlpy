@@ -1,3 +1,4 @@
+import traceback
 import logging
 import attr
 import copy
@@ -12,6 +13,25 @@ class Package(entities.Item):
     """
     Package object
     """
+
+    @staticmethod
+    def _protected_from_json(_json, client_api, dataset=None):
+        """
+        Same as from_json but with try-except to catch if error
+        :param _json:
+        :param client_api:
+        :param dataset:
+        :return:
+        """
+        try:
+            item = Package.from_json(_json=_json,
+                                     client_api=client_api,
+                                     dataset=dataset)
+            status = True
+        except Exception:
+            item = traceback.format_exc()
+            status = False
+        return status, item
 
     @classmethod
     def from_json(cls, _json, client_api, dataset=None):

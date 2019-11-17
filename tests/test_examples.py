@@ -35,22 +35,22 @@ second_dataset = second_project.datasets.create('dataset_examples_tester_{}'.for
 time.sleep(1)
 second_item = second_dataset.items.upload(local_path=image_path)
 examples.copy_annotations.main(first_project_name=project.name,
-                                  second_project_name=second_project.name,
-                                  first_dataset_name=dataset.name,
-                                  second_dataset_name=second_dataset.name,
-                                  first_remote_filepath=item.filename,
-                                  second_remote_filepath=second_item.filename)
+                               second_project_name=second_project.name,
+                               first_dataset_name=dataset.name,
+                               second_dataset_name=second_dataset.name,
+                               first_remote_filepath=item.filename,
+                               second_remote_filepath=second_item.filename)
 
 # copy folder
 examples.copy_folder.main(first_project_name=project.name,
-                             second_project_name=second_project.name,
-                             first_dataset_name=dataset.name,
-                             second_dataset_name=second_dataset.name)
+                          second_project_name=second_project.name,
+                          first_dataset_name=dataset.name,
+                          second_dataset_name=second_dataset.name)
 
 # show item and mask
 examples.show_item_and_mask.main(project_name=project.name,
-                                    dataset_name=dataset.name,
-                                    item_remote_path=item.filename)
+                                 dataset_name=dataset.name,
+                                 item_remote_path=item.filename)
 
 project.delete(True, True)
 second_project.delete(True, True)

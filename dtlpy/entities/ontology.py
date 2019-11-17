@@ -116,7 +116,8 @@ class Ontology:
         """
         return self.ontologies.update(self, system_metadata=system_metadata)
 
-    def add_label(self, label_name, color=None, children=None, attributes=None, display_label=None, label=None, add=True):
+    def add_label(self, label_name, color=None, children=None, attributes=None, display_label=None, label=None,
+                  add=True):
         """
         Add a single label to ontology
 
@@ -235,5 +236,5 @@ class Ontology:
                                                children=label["children"],
                                                attributes=label["attributes"],
                                                display_label=label["display_label"]))
-            
+
         return added_labels

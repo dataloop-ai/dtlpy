@@ -88,6 +88,13 @@ dtlpy.entities.label module
    :members:
    :undoc-members:
    :show-inheritance:
+dtlpy.entities.links module
+---------------------------
+
+.. automodule:: dtlpy.entities.links
+   :members:
+   :undoc-members:
+   :show-inheritance:
 dtlpy.entities.ontology module
 ------------------------------
 

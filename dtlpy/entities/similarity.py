@@ -1,6 +1,5 @@
 import json
-from io import BytesIO
-
+import io
 import attr
 
 
@@ -89,7 +88,7 @@ class Similarity:
         return _json
 
     def to_bytes_io(self):
-        byte_io = BytesIO()
+        byte_io = io.BytesIO()
         byte_io.name = self.name
         byte_io.write(json.dumps(self.to_json()).encode())
         byte_io.seek(0)

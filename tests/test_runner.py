@@ -29,9 +29,11 @@ def test_feature_file(w_feature_filename):
         os.makedirs(log_path, exist_ok=True)
     print('Starting feature file: {}'.format(feature_filepath))
     log_filepath = None
+    w_i_try = -1
     try:
-        for i in range(NUM_TRIES):
-            log_filepath = os.path.join(log_path, os.path.basename(w_feature_filename) + '_try_{}.log'.format(i + 1))
+        for w_i_try in range(NUM_TRIES):
+            log_filepath = os.path.join(log_path,
+                                        os.path.basename(w_feature_filename) + '_try_{}.log'.format(w_i_try + 1))
             clean_feature_log_file(log_filepath)
             cmds = ['behave', features_path,
                     '-i', w_feature_filename,
@@ -47,7 +49,9 @@ def test_feature_file(w_feature_filename):
                 break
 
         if log_filepath is None:
-            results[w_feature_filename] = (False, '')
+            results[w_feature_filename] = {'status': False,
+                                           'log_file': '',
+                                           'try': w_i_try}
         else:
             directory, file = os.path.split(log_filepath)
             if p.returncode == 0:
@@ -55,21 +59,27 @@ def test_feature_file(w_feature_filename):
                 new_log_filepath = os.path.join(directory, 'pass_' + file)
                 if os.path.isfile(log_filepath):
                     os.rename(log_filepath, new_log_filepath)
-                results[w_feature_filename] = (True, new_log_filepath)
+                results[w_feature_filename] = {'status': True,
+                                               'log_file': new_log_filepath,
+                                               'try': w_i_try}
             else:
                 # failed
                 new_log_filepath = os.path.join(directory, 'fail_' + file)
                 if os.path.isfile(log_filepath):
                     os.rename(log_filepath, new_log_filepath)
-                results[w_feature_filename] = (False, new_log_filepath)
+                results[w_feature_filename] = {'status': False,
+                                               'log_file': new_log_filepath,
+                                               'try': w_i_try}
     except:
         print(traceback.format_exc())
-        results[w_feature_filename] = (False, log_filepath)
+        results[w_feature_filename] = {'status': False,
+                                       'log_file': log_filepath,
+                                       'try': w_i_try}
 
 
 if __name__ == '__main__':
     print('########################################')
-    print('Running test from directory: {}'.format(TEST_DIR))
+    print('# Running test from directory: {}'.format(TEST_DIR))
     print('########################################')
 
     # reset SDK api calls
@@ -107,7 +117,7 @@ if __name__ == '__main__':
             striped, ext = os.path.splitext(filename)
             if ext in ['.feature']:
                 feature_filepath = os.path.join(path, filename)
-                results[filename] = (False, '')
+                results[filename] = dict()
                 time.sleep(1)
                 pool.apply_async(test_feature_file, kwds={'w_feature_filename': filename})
 
@@ -127,13 +137,15 @@ if __name__ == '__main__':
     api_calls = sum(api_calls.values())
 
     # Summary
-    all_results = [result[0] for result in results.values()]
+    all_results = [result['status'] for result in results.values()]
     passed = all(all_results)
 
     if not passed:
         print('-------------- Logs --------------')
         for feature, result in results.items():
-            status, log_filename = result
+            status = result['status']
+            log_filename = result['log_file']
+            i_try = result['try']
             if status is False:
                 try:
                     with open(log_filename, 'r') as output:
@@ -148,10 +160,22 @@ if __name__ == '__main__':
             'All scenarios passed! {}/{}:'.format(np.sum([1 for res in all_results if res is True]), len(all_results)))
     else:
         print('Failed {}/{}:'.format(np.sum([1 for res in all_results if res is False]), len(all_results)))
-        for feature, result in results.items():
-            status, log_filename = result
-            if status is False:
-                print('\t{}'.format(feature))
+
+    # print failed first
+    for feature, result in results.items():
+        if not result['status']:
+            status = 'passed' if result['status'] else 'failed'
+            log_filename = result['log_file']
+            i_try = result['try']
+            print('{}\t in try: {}\tfeature: {}'.format(status, i_try, feature))
+
+    # print passes
+    for feature, result in results.items():
+        if result['status']:
+            status = 'passed' if result['status'] else 'failed'
+            log_filename = result['log_file']
+            i_try = result['try']
+            print('{}\t in try: {}\tfeature: {}'.format(status, i_try, feature))
 
     # return success/failure
     if passed:

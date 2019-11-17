@@ -29,7 +29,7 @@ class Downloader:
                  local_path=None,
                  file_types=None,
                  save_locally=True,
-                 num_workers=32,
+                 num_workers=32,  # deprecated
                  overwrite=False,
                  annotation_options=None,
                  to_items_folder=True,
@@ -58,14 +58,6 @@ class Downloader:
         ###################
         # Default options #
         ###################
-        # filters
-        if filters is None:
-            filters = entities.Filters()
-
-        # file types
-        if file_types is not None:
-            filters.add(field='metadata.system.mimetype', values=file_types, operator='in')
-
         # annotation options
         if annotation_options is None:
             annotation_options = list()
@@ -75,7 +67,6 @@ class Downloader:
         ##############
         # local path #
         ##############
-
         if local_path is None:
             # create default local path
             local_path = self.__default_local_path()
@@ -105,7 +96,7 @@ class Downloader:
             else:
                 raise PlatformException(
                     error="400",
-                    message='Unknown items type to download. expecting str or Item entities. Got "{}" instead'.format(
+                    message='Unknown items type to download. Expecting str or Item entities. Got "{}" instead'.format(
                         type(items[0])
                     ),
                 )
@@ -114,6 +105,12 @@ class Downloader:
             items_to_download = [items]
             num_items = len(items)
         else:
+            # filters
+            if filters is None:
+                filters = entities.Filters()
+            # file types
+            if file_types is not None:
+                filters.add(field='metadata.system.mimetype', values=file_types, operator='in')
             items_to_download = self.items_repository.list(filters=filters)
             num_items = items_to_download.items_count
 
@@ -161,7 +158,6 @@ class Downloader:
                             status[i_item] = "exist"
                             output[i_item] = item_local_filepath
                             success[i_item] = True
-                            i_item += 1
                             pbar.update()
                             if annotation_options and item.annotated:
                                 # download annotations only
@@ -177,8 +173,8 @@ class Downloader:
                                         "with_text": with_text
                                     },
                                 )
+                            i_item += 1
                             continue
-
                     else:
                         item_local_path = None
                         item_local_filepath = None
@@ -204,7 +200,7 @@ class Downloader:
                         },
                     )
                     i_item += 1
-        except Exception as e:
+        except Exception:
             logger.exception('Error downloading:')
         finally:
             _ = [j.wait() for j in jobs if isinstance(j, multiprocessing.pool.ApplyResult)]
@@ -393,15 +389,18 @@ class Downloader:
                         height=img_shape[0],
                         width=img_shape[1],
                     )
-            elif option in ["mask", "instance"]:
+            elif option in ["mask", "instance", "img_mask"]:
                 annotation_filepath = temp_path + ".png"
                 if not os.path.isfile(annotation_filepath) or overwrite:
                     # if not exists OR (exists AND overwrite)
                     if not os.path.exists(os.path.dirname(annotation_filepath)):
                         # create folder if not exists
                         os.makedirs(os.path.dirname(annotation_filepath), exist_ok=True)
+                    if option == 'img_mask' and img_filepath is None:
+                        raise PlatformException(error="1002", message="Missing image for annotation option img_mask")
                     annotations.download(
                         filepath=annotation_filepath,
+                        img_filepath=img_filepath,
                         annotation_format=option,
                         height=img_shape[0],
                         width=img_shape[1],
@@ -409,9 +408,7 @@ class Downloader:
                         with_text=with_text
                     )
             else:
-                raise PlatformException(
-                    "400", "Unknown annotation option: {}".format(option)
-                )
+                raise PlatformException(error="400", message="Unknown annotation option: {}".format(option))
 
     @staticmethod
     def __get_local_filepath(local_path, item, to_items_folder):

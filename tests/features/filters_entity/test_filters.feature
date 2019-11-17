@@ -46,20 +46,20 @@ Feature: Items repository list function testing
         And I list items with filters
         Then I receive "6" items
 
-        When I create filters
-        And I add field "name" with values "!*dog*" and operator "glob"
-        And I list items with filters
-        Then I receive "27" items
+        # When I create filters
+        # And I add field "name" with values "!*dog*" and operator "glob"
+        # And I list items with filters
+        # Then I receive "27" items
 
         When I create filters
         And I add field "name" with values "*cat*" and operator "glob"
         And I list items with filters
         Then I receive "6" items
 
-        When I create filters
-        And I add field "name" with values "!*cat*" and operator "glob"
-        And I list items with filters
-        Then I receive "27" items
+        # When I create filters
+        # And I add field "name" with values "!*cat*" and operator "glob"
+        # And I list items with filters
+        # Then I receive "27" items
 
         When I create filters
         And I add field "metadata.user.good" with values "True" and operator "None"
@@ -137,19 +137,19 @@ Feature: Items repository list function testing
         And I list items with filters
         Then I receive "6" items
 
-        When I create filters
-        And I add field "annotated" with values "True" and operator "None"
-        And I add field "filename" with values "/**" and operator "glob"
-        And I add field "name" with values "!*label*" and operator "glob"        
-        And I list items with filters
-        Then I receive "6" items
+        # When I create filters
+        # And I add field "annotated" with values "True" and operator "None"
+        # And I add field "filename" with values "/**" and operator "glob"
+        # And I add field "name" with values "!*label*" and operator "glob"
+        # And I list items with filters
+        # Then I receive "6" items
 
-        When I create filters
-        And I add field "annotated" with values "True" and operator "None"
-        And I add field "filename" with values "/**" and operator "glob"
-        And I add field "name" with values "!*type*" and operator "glob"        
-        And I list items with filters
-        Then I receive "6" items
+        # When I create filters
+        # And I add field "annotated" with values "True" and operator "None"
+        # And I add field "filename" with values "/**" and operator "glob"
+        # And I add field "name" with values "!*type*" and operator "glob"
+        # And I list items with filters
+        # Then I receive "6" items
 
         # multiple filters with join
 

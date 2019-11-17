@@ -1,4 +1,5 @@
 from collections import namedtuple
+import traceback
 import logging
 import attr
 import os
@@ -39,6 +40,25 @@ class Dataset:
     _ontology_ids = attr.ib(default=None)
     _labels = attr.ib(default=None)
     _directory_tree = attr.ib(default=None)
+
+    @staticmethod
+    def _protected_from_json(project, _json, client_api):
+        """
+        Same as from_json but with try-except to catch if error
+        :param project:
+        :param _json:
+        :param client_api:
+        :return:
+        """
+        try:
+            dataset = Dataset.from_json(project=project,
+                                        _json=_json,
+                                        client_api=client_api)
+            status = True
+        except Exception:
+            dataset = traceback.format_exc()
+            status = False
+        return status, dataset
 
     @classmethod
     def from_json(cls, project, _json, client_api):

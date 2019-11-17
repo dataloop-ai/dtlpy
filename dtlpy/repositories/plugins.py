@@ -522,6 +522,7 @@ class LocalPluginRunner:
         :param field_type:
         :param project:
         :param mock_json:
+        :param mock_inputs:
         :return:
         """
         if mock_inputs is None:

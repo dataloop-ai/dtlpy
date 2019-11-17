@@ -43,12 +43,26 @@ class TimeSeries:
         miscellaneous.List([self]).print()
 
     def add(self, data):
+        """
+        add data to time series table
+        :param data:
+        :return:
+        """
         self.project.times_series.add(series=self, data=data)
 
     def delete(self):
+        """
+        delete the time series
+        :return:
+        """
         self.project.times_series.delete(series=self)
 
     def table(self, filters=None):
+        """
+        get the time table according to filters
+        :param filters:
+        :return:
+        """
         return self.project.times_series.get_table(series=self, filters=filters)
 
     def to_json(self):

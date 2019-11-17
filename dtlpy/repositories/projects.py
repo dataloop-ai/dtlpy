@@ -69,11 +69,24 @@ class Projects:
         """
         success, response = self._client_api.gen_request(req_type='get',
                                                          path='/projects')
+
         if success:
-            projects = miscellaneous.List(
-                [entities.Project.from_json(client_api=self._client_api,
-                                            _json=_json)
-                 for _json in response.json()])
+            pool = self._client_api.thread_pool_entities
+            projects_json = response.json()
+            jobs = [None for _ in range(len(projects_json))]
+            # return triggers list
+            for i_project, project in enumerate(projects_json):
+                jobs[i_project] = pool.apply_async(entities.Project._protected_from_json,
+                                                   kwds={'client_api': self._client_api,
+                                                         '_json': project})
+            # wait for all jobs
+            _ = [j.wait() for j in jobs]
+            # get all resutls
+            results = [j.get() for j in jobs]
+            # log errors
+            _ = [logger.warning(r[1]) for r in results if r[0] is False]
+            # return good jobs
+            projects = miscellaneous.List([r[1] for r in results if r[0] is True])
         else:
             logger.exception('Platform error getting projects')
             raise PlatformException(response)

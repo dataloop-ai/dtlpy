@@ -71,25 +71,35 @@ class Recipes:
         """
         List recipes for dataset
         """
-        recipes = list()
-        if self.dataset.metadata is not None and 'system' in self.dataset.metadata and 'recipes' in \
-                self.dataset.metadata['system']:
+
+        try:
             recipes = [recipe_id for recipe_id in self.dataset.metadata['system']['recipes']]
+        except KeyError:
+            recipes = list()
 
-        results = [None for _ in range(len(recipes))]
+        pool = self._client_api.thread_pool_entities
+        jobs = [None for _ in range(len(recipes))]
         for i_recipe, recipe_id in enumerate(recipes):
-            results[i_recipe] = self._protected_get(recipe_id=recipe_id)
-
+            jobs[i_recipe] = pool.apply_async(self._protected_get, kwds={'recipe_id': recipe_id})
+        # wait for all jobs
+        _ = [j.wait() for j in jobs]
+        # get all results
+        results = [j.get() for j in jobs]
         # log errors
         _ = [logger.warning(r[1]) for r in results if r[0] is False]
         # return good jobs
         return miscellaneous.List([r[1] for r in results if r[0] is True])
 
     def _protected_get(self, recipe_id):
+        """
+        Same as get but with try-except to catch if error
+        :param recipe_id:
+        :return:
+        """
         try:
             recipe = self.get(recipe_id=recipe_id)
             status = True
-        except:
+        except Exception:
             recipe = traceback.format_exc()
             status = False
         return status, recipe
@@ -104,7 +114,9 @@ class Recipes:
         success, response = self._client_api.gen_request(req_type='get',
                                                          path='/recipes/%s' % recipe_id)
         if success:
-            recipe = entities.Recipe.from_json(client_api=self._client_api, _json=response.json(), dataset=self.dataset)
+            recipe = entities.Recipe.from_json(client_api=self._client_api,
+                                               _json=response.json(),
+                                               dataset=self.dataset)
         else:
             logger.exception(
                 'Unable to get info from recipe. dataset id: {}, recipe_id id: {}'.format(self.dataset.id, recipe_id))

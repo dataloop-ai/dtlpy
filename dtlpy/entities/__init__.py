@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with DTLPY.  If not, see <http://www.gnu.org/licenses/>.
 from .item import Item
+from .links import Link, ItemLink, UrlLink
 from .trigger import Trigger
 from .project import Project
 from .artifact import Artifact

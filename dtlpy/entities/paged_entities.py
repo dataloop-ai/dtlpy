@@ -42,11 +42,23 @@ class PagedEntities:
             self.total_pages_count = result['totalPagesCount']
         if 'items' in result:
             if self.filters.resource == 'items':
-                items = miscellaneous.List(
-                    [self.item_entity.from_json(client_api=self._client_api,
-                                                _json=_json,
-                                                dataset=self.items_repository.dataset)
-                     for _json in result['items']])
+                items_json = result['items']
+                pool = self._client_api.thread_pool_entities
+                jobs = [None for _ in range(len(items_json))]
+                # return triggers list
+                for i_item, item in enumerate(items_json):
+                    jobs[i_item] = pool.apply_async(self.item_entity._protected_from_json,
+                                                    kwds={'client_api': self._client_api,
+                                                          '_json': item,
+                                                          'dataset': self.items_repository.dataset})
+                # wait for all jobs
+                _ = [j.wait() for j in jobs]
+                # get all resutls
+                results = [j.get() for j in jobs]
+                # log errors
+                _ = [logger.warning(r[1]) for r in results if r[0] is False]
+                # return good jobs
+                items = miscellaneous.List([r[1] for r in results if r[0] is True])
             elif self.filters.resource == 'annotations':
                 items = self.load_annotations(result=result)
             else:
@@ -131,7 +143,7 @@ class PagedEntities:
         total_items = list()
         jobs = list()
         while True:
-            if len(total_items) < 50 and page_offset <= total_pages:
+            if page_offset <= total_pages:
                 jobs.append(self._client_api.thread_pool.apply_async(self.get_page, kwds={'page_offset': page_offset,
                                                                                           'page_size': page_size}))
                 page_offset += 1

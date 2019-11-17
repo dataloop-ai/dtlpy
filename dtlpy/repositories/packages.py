@@ -4,7 +4,7 @@ import os
 import io
 import random
 
-from .. import entities, utilities, PlatformException, exceptions, repositories, miscellaneous
+from .. import entities, PlatformException, exceptions, repositories, miscellaneous
 
 logger = logging.getLogger(name=__name__)
 

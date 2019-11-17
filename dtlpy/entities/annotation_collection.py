@@ -179,11 +179,13 @@ class AnnotationCollection:
 
         return mask
 
-    def download(self, filepath, annotation_format='mask', height=None, width=None, thickness=1, with_text=False):
+    def download(self, filepath, img_filepath=None, annotation_format='mask', height=None, width=None, thickness=1,
+                 with_text=False):
         """
             Save annotations to file
 
-        :param filepath:
+        :param filepath: path to save annotation
+        :param img_filepath: img file path - needed for img_mask
         :param annotation_format:
         :param height:
         :param width:
@@ -200,14 +202,22 @@ class AnnotationCollection:
             _json['annotations'] = annotations
             with open(filepath, 'w') as f:
                 json.dump(_json, f)
-        else:
-            mask = self.show(thickness=thickness,
+        elif annotation_format in ["mask", "instance", "img_mask"]:
+            image = None
+            if annotation_format == "img_mask":
+                annotation_format = "mask"
+                image = np.asarray(Image.open(img_filepath))
+            mask = self.show(image=image,
+                             thickness=thickness,
                              with_text=with_text,
                              height=height,
                              width=width,
                              annotation_format=annotation_format)
             img = Image.fromarray(mask.astype(np.uint8))
             img.save(filepath)
+
+        else:
+            raise PlatformException(error="400", message="Unknown annotation option: {}".format(annotation_format))
         return filepath
 
     ############
@@ -278,7 +288,6 @@ class AnnotationCollection:
         return _json
 
     #########################
-    # For video annotations #
     # For video annotations #
     #########################
     def get_frame(self, frame_num):

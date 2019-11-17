@@ -7,6 +7,8 @@ import threading
 import traceback
 import datetime
 import requests
+import aiohttp
+import asyncio
 import logging
 import hashlib
 import base64
@@ -16,9 +18,6 @@ import tqdm
 import json
 import jwt
 import os
-
-import numpy as np
-
 from multiprocessing.pool import ThreadPool
 from requests.adapters import HTTPAdapter
 from urllib.parse import urlencode
@@ -27,6 +26,7 @@ from functools import wraps
 
 from .calls_counter import CallsCounter
 from .cookie import CookieIO
+from .async_entities import AsyncResponse, AsyncUploadStream
 from .. import miscellaneous, exceptions, __version__
 
 logger = logging.getLogger(name=__name__)
@@ -187,9 +187,9 @@ class ApiClient:
         if num_processes is None:
             num_processes = 8 * multiprocessing.cpu_count()
         self._num_processes = num_processes
-        logger.debug('Creating global ThreadPool with {} workers'.format(self._num_processes))
+        logger.debug('Creating two global ThreadPool with {} workers'.format(self._num_processes))
         self._thread_pool = ThreadPool(processes=self._num_processes)
-
+        self._thread_pool_entities = ThreadPool(processes=self._num_processes)
         # set logging level
         logging.getLogger('dtlpy').handlers[1].setLevel(logging._nameToLevel[self.verbose.logging_level.upper()])
 
@@ -201,6 +201,15 @@ class ApiClient:
             logger.debug('Global ThreadPool is not running. Creating a new one')
             self._thread_pool = ThreadPool(processes=self._num_processes)
         return self._thread_pool
+
+    @property
+    def thread_pool_entities(self):
+        assert isinstance(self._thread_pool_entities, multiprocessing.pool.ThreadPool)
+        if self._thread_pool_entities._state != multiprocessing.pool.RUN:
+            # pool is closed, open a new one
+            logger.debug('Global ThreadPool is not running. Creating a new one')
+            self._thread_pool_entities = ThreadPool(processes=self._num_processes)
+        return self._thread_pool_entities
 
     @property
     def verify(self):
@@ -420,35 +429,11 @@ class ApiClient:
             return_type = True
         return return_type, resp
 
-    def upload_from_local(self, to_upload, item_type, item_size, remote_url, uploaded_filename, remote_path=None,
-                          callback=None, log_error=True):
-        """
-        Upload a file (Streaming..)
+    async def __upload_file_async(self, to_upload, item_type, item_size, remote_url, uploaded_filename,
+                                  remote_path=None, callback=None, mode='skip', item_metadata=None):
+        headers = self.auth
+        headers['User-Agent'] = requests_toolbelt.user_agent('dtlpy', __version__.version)
 
-        :param to_upload: filepath of buufer to upload
-        :param item_type: 'file' or 'directory'
-        :param item_size: size of item in bytes
-        :param remote_url: url for request
-        :param uploaded_filename: filename to save in platform
-        :param remote_path: remote path to upload to
-        :param log_error: print error log (to use when trying request more than once)
-        :param callback:
-        :return:
-        """
-        if remote_path is None:
-            remote_path = '/'
-        # multipart uploading of the file
-        file = requests_toolbelt.MultipartEncoder(fields={
-            'file': (uploaded_filename, to_upload),
-            'type': item_type,
-            'path': os.path.join(remote_path, uploaded_filename).replace('\\', '/'),
-        })
-        # move file to last part
-        lens = [part.len for part in file.parts]
-        temp = file.parts[2]
-        file.parts[2] = file.parts[np.argmax(lens)]
-        file.parts[np.argmax(lens)] = temp
-        # create callback
         if callback is None:
             if item_size > 10e6:
                 # size larger than 10MB
@@ -459,37 +444,56 @@ class ApiClient:
                                  position=1,
                                  disable=self.verbose.disable_progress_bar)
 
-                def callback(monitor):
-                    pbar.update(monitor.bytes_read - pbar.n)
+                def callback(bytes_read):
+                    pbar.update(bytes_read - pbar.n)
             else:
-                def callback(monitor):
+                def callback(bytes_read):
                     pass
-        monitor = requests_toolbelt.MultipartEncoderMonitor(file, callback)
-        # prepare request
-        headers = self.auth
-        headers['User-Agent'] = requests_toolbelt.user_agent('dtlpy', __version__.version)
-        headers['Content-Type'] = monitor.content_type
-        req = requests.Request('POST', self.environment + remote_url,
-                               headers=headers,
-                               data=monitor)
-        # prepare to send
-        prepared = req.prepare()
-        resp = self.send_session(prepared)
-        self.last_response = resp
-        self.last_request = prepared
-        # handle output
-        if not resp.ok:
-            self.print_bad_response(resp, log_error)
+
+        async with aiohttp.ClientSession(headers=headers) as session:
+            form = aiohttp.FormData({})
+            form.add_field('type', item_type)
+            form.add_field('path', os.path.join(remote_path, uploaded_filename).replace('\\', '/'))
+            if item_metadata is not None:
+                form.add_field('metadata', json.dumps(item_metadata))
+            form.add_field('file', AsyncUploadStream(buffer=to_upload, callback=callback))
+            url = '{}?mode={}'.format(self.environment + remote_url, mode)
+            async with session.post(url, data=form) as resp:
+                text = await resp.text()
+                _json = await resp.json()
+                response = AsyncResponse(text=text,
+                                         _json=_json,
+                                         async_resp=resp)
+        return response
+
+    def upload_from_local(self, to_upload, item_type, item_size, remote_url, uploaded_filename, remote_path=None,
+                          callback=None, log_error=True, mode='skip', item_metadata=None):
+        if remote_path is None:
+            remote_path = '/'
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        response = loop.run_until_complete(self.__upload_file_async(to_upload=to_upload,
+                                                                    item_type=item_type,
+                                                                    item_size=item_size,
+                                                                    item_metadata=item_metadata,
+                                                                    remote_url=remote_url,
+                                                                    uploaded_filename=uploaded_filename,
+                                                                    remote_path=remote_path,
+                                                                    callback=callback,
+                                                                    mode=mode))
+        loop.close()
+        if not response.ok:
+            self.print_bad_response(response, log_error)
             success = False
         else:
             try:
-                # print only what is printable (dont print get steam etc..)
-                self.print_response(resp)
+                # print only what is printable (don't print get steam etc..)
+                self.print_response(response)
             except ValueError:
                 # no JSON returned
                 pass
             success = True
-        return success, resp
+        return success, response
 
     def send_session(self, prepared, stream=None):
         if self.session is None:
@@ -643,7 +647,12 @@ class ApiClient:
             if k == 'authorization' and not with_auth:
                 continue
             headers.append('{}: {}'.format(k, v))
-        body = req.body
+        if hasattr(req, 'body'):
+            body = req.body
+        elif isinstance(req, aiohttp.RequestInfo):
+            body = {'multipart': 'true'}
+        else:
+            body = dict()
 
         # remove secrets and passwords
         try:
@@ -658,7 +667,7 @@ class ApiClient:
 
         msg = '{}\n{}\n{}\n\n{}'.format(
             '-----------START-----------',
-            req.method + ' ' + req.url,
+            req.method + ' ' + str(req.url),
             '\n'.join(headers),
             body,
         )

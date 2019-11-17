@@ -16,9 +16,12 @@ Dataloop's SDK and CLI documentation
    notebook_examples.ipynb
    filters.rst
    converters.rst
+   starting_with_plugins.rst
+   links.rst
+   modality.rst
+   similarity.rst
    annotations_types.rst
    annotations_format.rst
-   starting_with_plugins.rst
    cli.rst
    repositories.rst
    entities.rst

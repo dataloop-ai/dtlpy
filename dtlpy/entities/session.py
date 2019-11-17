@@ -29,7 +29,6 @@ class Session:
 
     @classmethod
     def from_json(cls, _json, client_api, deployment=None):
-
         return cls(
             feedbackQueue=_json.get('feedbackQueue', None),
             deploymentId=_json.get('deploymentId', None),

@@ -1,0 +1,70 @@
+from .. import entities
+from .. import PlatformException
+
+
+class Link:
+
+    # noinspection PyShadowingBuiltins
+    def __init__(self, name, type, ref, dataset_id=None):
+        self.type = type
+        self.ref = ref
+        self.name = name
+        self.dataset_id = dataset_id
+
+
+class UrlLink(Link):
+
+    def __init__(self, ref, name=None):
+        if name is None:
+            name = ref
+        # noinspection PyShadowingBuiltins
+        type = 'url'
+        super().__init__(name=name, type=type, ref=ref)
+
+    @staticmethod
+    def from_list(url_list):
+        url_links = list()
+        for url in url_list:
+            url_links.append(UrlLink(ref=url))
+        return url_links
+
+
+class ItemLink(Link):
+
+    def __init__(self, ref=None, name=None, dataset_id=None, item=None):
+        if ref is None and item is None:
+            raise PlatformException('400', 'Must provide either ref or item_id')
+
+        if item is not None and not isinstance(item, entities.Item):
+            raise PlatformException('400', 'Param item must be of type Item')
+
+        if ref is None:
+            ref = item.id
+
+        if name is None:
+            if item is not None:
+                name = item.name
+            else:
+                name = ref
+
+        if dataset_id is None and item is not None and isinstance(item, entities.Item):
+            dataset_id = item.datasetId
+
+        # noinspection PyShadowingBuiltins
+        type = 'id'
+        super().__init__(name=name, type=type, ref=ref, dataset_id=dataset_id)
+
+    @staticmethod
+    def from_list(items):
+        if not isinstance(items, list):
+            items = [items]
+
+        item_links = list()
+        for item in items:
+            if isinstance(item, str):
+                item_links.append(ItemLink(ref=item))
+            elif isinstance(item, entities.Item):
+                item_links.append(ItemLink(item=item))
+            else:
+                raise PlatformException('400', 'Unknown item type. items should be a list of item entities/item ids')
+        return item_links

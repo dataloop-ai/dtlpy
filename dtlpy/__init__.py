@@ -22,7 +22,8 @@ from .exceptions import PlatformException
 from . import services, repositories, exceptions, entities
 from .__version__ import version as __version__
 from .entities import Box, Point, Segmentation, Polygon, Ellipse, Classification, Polyline, Filters, Trigger, \
-    AnnotationCollection, Annotation, Item, Package, Filters, Session, Recipe, Ontology, Label, Similarity, PluginInput
+    AnnotationCollection, Annotation, Item, Package, Filters, Session, Recipe, Ontology, Label, Similarity, \
+    PluginInput, ItemLink, UrlLink
 from . import examples
 from .services.check_sdk import check
 from .utilities import Converter, BasePluginRunner, Progress
@@ -191,3 +192,27 @@ def checkout_state():
     """
     state = client_api.state_io.read_json()
     return state
+
+
+class ModalityTypeEnum:
+    """
+    State enum
+    """
+    OVERLAY = 'overlay'
+
+
+class SimilarityTypeEnum:
+    """
+    State enum
+    """
+    ID = 'id'
+    URL = 'url'
+
+
+class LinkTypeEnum:
+    """
+    State enum
+    """
+    ID = 'id'
+    URL = 'url'
+

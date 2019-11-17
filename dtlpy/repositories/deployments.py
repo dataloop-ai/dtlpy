@@ -97,13 +97,25 @@ class Deployments:
         if not success:
             raise exceptions.PlatformException(response)
 
+        deployments_json = response.json()['items']
+        jobs = [None for _ in range(len(deployments_json))]
+        pool = self._client_api.thread_pool_entities
+
         # return triggers list
-        deployments = miscellaneous.List()
-        for deployment in response.json()['items']:
-            deployments.append(entities.Deployment.from_json(client_api=self._client_api,
-                                                             _json=deployment,
-                                                             plugin=self.plugin))
-        return deployments
+        for i_deployment, deployment in enumerate(deployments_json):
+            jobs[i_deployment] = pool.apply_async(entities.Deployment._protected_from_json,
+                                                  kwds={'client_api': self._client_api,
+                                                        '_json': deployment,
+                                                        'plugin': self._plugin,
+                                                        'project': self._project})
+        # wait for all jobs
+        _ = [j.wait() for j in jobs]
+        # get all resutls
+        results = [j.get() for j in jobs]
+        # log errors
+        _ = [logger.warning(r[1]) for r in results if r[0] is False]
+        # return good jobs
+        return miscellaneous.List([r[1] for r in results if r[0] is True])
 
     def create(self, deployment_name=None, plugin=None, revision=None, config=None, runtime=None):
         """
