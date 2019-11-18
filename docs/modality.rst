@@ -2,6 +2,8 @@
 Modality
 ############
 
+Modality allows adding multiple items and toggling between them when annotating. These are typically images from multiple sensors that are overlaid. Items loaded as a modality will load together when source image is loaded.
+
 Before we get started with Modality:
 
 .. code-block:: python

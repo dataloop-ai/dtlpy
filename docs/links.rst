@@ -3,8 +3,8 @@
 Links
 ####################
 
-Item Links
-##############
+Links are items that do not have their own binaries, instead, they point to links of binaries from
+other items or URL links.
 
 Before we get started with Links:
 
@@ -13,6 +13,11 @@ Before we get started with Links:
     import dtlpy as dl
 
     project = dl.projects.get(project_name='my project')
+
+Item Links
+##############
+
+Items that reflects other items' binaries.
 
 If I want to make links from one dataset to another
 
@@ -59,6 +64,9 @@ Upload multiple links
 
 URL Links
 ##############
+
+Items that reflects binaries from a URL.
+
 Lets say I have a dataset:
 
 .. code-block:: python
