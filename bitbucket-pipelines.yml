@@ -44,13 +44,17 @@ pipelines:
   tags:
     "*":
       - step:
-          image: python:3.5
+          image: gcr.io/google.com/cloudsdktool/cloud-sdk:271.0.0
           name: Build SDK Container
           script:
             - case "$BITBUCKET_TAG" in "") export BITBUCKET_TAG="build-$BITBUCKET_BUILD_NUMBER"; esac
-            - python setup.py bdist_wheel
+            - apt-get install -y python3-pip
+            - python3 setup.py bdist_wheel
             - docker login -u _json_key -p "$GCP_KEY" https://gcr.io
-            - chmod +x ./build-docker-cpu.sh
-            - ./build-docker-cpu.sh $BITBUCKET_TAG
-            - chmod +x ./build-docker-gpu.sh
-            - ./build-docker-gpu.sh $BITBUCKET_TAG
+            - cp dist/dtlpy-$BITBUCKET_TAG-py3-none-any.whl dist/dtlpy-latest-py3-none-any.whl
+            - echo "$GCP_KEY" >> k.json
+            - gcloud auth activate-service-account --key-file=k.json
+            - gsutil -m cp -R dist/**  gs://dtlpy/dev/
+            - chmod +x ./build-docker.sh
+            - ./build-docker.sh $BITBUCKET_TAG
+            - git checkout -b "$BITBUCKET_TAG"

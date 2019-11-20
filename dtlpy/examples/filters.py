@@ -27,8 +27,6 @@ def main():
     # add filter - created since June 2019
     filters.add(field='createdAt', values='01/06/2019', operator='gt')
 
-    filters.add(field='type', values=['file', 'dir', 'oa-test-1@dataloop.ai'], operator='in')
-
     ######################
     # get filtered items #
     ######################

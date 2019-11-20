@@ -11,7 +11,9 @@ class Filters:
     """
 
     def __init__(self):
-        self.filter_list = list()
+        self.or_filter_list = list()
+        self.and_filter_list = list()
+        self.custom_filter = None
         self.known_operators = ['or', 'and', 'in', 'ne', 'eq', 'gt', 'glob', 'lt']
         self.resource = 'items'
         self.page = 0
@@ -49,7 +51,7 @@ class Filters:
         }
         return default_filter[self.resource]
 
-    def add(self, field, values, operator=None):
+    def add(self, field, values, operator=None, method=None):
         """
         Add filter
         :param field: Metadata field
@@ -57,6 +59,9 @@ class Filters:
         :param operator: optional - $in, $gt, $lt, $eq, $ne - default = $eq
         :return:
         """
+        if method is None:
+            method = self.method
+
         # add ** if doesnt exist
         if field == 'type':
             if (isinstance(values, str) and values == 'dir') or (isinstance(values, list) and 'dir' in values):
@@ -78,14 +83,26 @@ class Filters:
                                 values[i_value] = value + '/**'
 
         # create SingleFilter object and add to self.filter_list
-        self.filter_list.append(
-            SingleFilter(field=field, values=values, operator=operator)
-        )
+        if method == 'or':
+            self.or_filter_list.append(
+                SingleFilter(field=field, values=values, operator=operator)
+            )
+        elif method == 'and':
+            self.and_filter_list.append(
+                SingleFilter(field=field, values=values, operator=operator)
+            )
+        else:
+            raise PlatformException('400', 'Unknown method {}, please select from: or/and'.format(method))
 
     def pop(self, field):
-        for single_filter in self.filter_list:
+        for single_filter in self.or_filter_list:
             if single_filter.field == field:
-                self.filter_list.remove(single_filter)
+                self.or_filter_list.remove(single_filter)
+
+        for single_filter in self.and_filter_list:
+            if single_filter.field == field:
+                self.and_filter_list.remove(single_filter)
+
         if field == 'type':
             self.show_dirs = False
 
@@ -110,13 +127,19 @@ class Filters:
             self.join['filter']['$and'] = list()
         self.join['filter']['$and'].append(SingleFilter(field=field, values=values, operator=operator).prepare())
 
+    def __has_filters(self):
+        if self.and_filter_list or self.or_filter_list:
+            return True
+        else:
+            return False
+
     def prepare(self, operation=None, update=None):
         """
         To dictionary for platform call
         :return: dict
         """
         # filters exist
-        if len(self.filter_list) > 0:
+        if self.__has_filters() or self.custom_filter is not None:
             ###############
             # create json #
             ###############
@@ -131,22 +154,33 @@ class Filters:
             # filters #
             ###########
             # add filters to json
-            filters = list()
-            for single_filter in self.filter_list:
-                filters.append(single_filter.prepare())
-            filters_dict = dict()
-            filters_dict['${}'.format(self.method)] = filters
+            if self.custom_filter is None:
+                filters_dict = dict()
 
-            # add items defaults
-            if self.resource == 'items':
-                if not self.show_hidden:
-                    if '$and' not in filters_dict:
-                        filters_dict['$and'] = list()
-                    filters_dict['$and'] += Filters.hidden()
-                if not self.show_dirs:
-                    if '$and' not in filters_dict:
-                        filters_dict['$and'] = list()
-                    filters_dict['$and'] += Filters.no_dirs()
+                if len(self.or_filter_list) > 0:
+                    or_filters = list()
+                    for single_filter in self.or_filter_list:
+                        or_filters.append(single_filter.prepare())
+                    filters_dict['$or'] = or_filters
+
+                if len(self.and_filter_list) > 0:
+                    and_filters = list()
+                    for single_filter in self.and_filter_list:
+                        and_filters.append(single_filter.prepare())
+                    filters_dict['$and'] = and_filters
+
+                # add items defaults
+                if self.resource == 'items':
+                    if not self.show_hidden:
+                        if '$and' not in filters_dict:
+                            filters_dict['$and'] = list()
+                        filters_dict['$and'] += Filters.hidden()
+                    if not self.show_dirs:
+                        if '$and' not in filters_dict:
+                            filters_dict['$and'] = list()
+                        filters_dict['$and'] += Filters.no_dirs()
+            else:
+                filters_dict = self.custom_filter
 
             # add to json
             _json['filter'] = filters_dict

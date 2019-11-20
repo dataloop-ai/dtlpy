@@ -1,3 +1,4 @@
+
 Getting Started
 ===============
 
@@ -69,6 +70,7 @@ List projects, datasets
 Iterator of items
 -----------------
 You can create a generator of items with different filters
+
 .. code-block:: python
 
 	# Get the project
@@ -85,6 +87,44 @@ You can create a generator of items with different filters
 	for page in pages:
 		for item in page:
 			item.print()
+
+Page entity iterator also allows reverse iteration for cases in which you want to change items during the iteration:
+
+.. code-block:: python
+
+	# Get the project
+	project = dl.projects.get(project_name='MyProject')
+	# Get the dataset
+	dataset = project.datasets.get(dataset_name='MyDataset')
+	# Get items in pages (100 item per page)
+	filters = dl.Filters()
+	filters.add(field='filename', values='/winter/is/coming/*')
+	pages = dataset.items.list(filters=filters)
+	# Count the items
+	print('Number of items in dataset: {}'.format(pages.items_count))
+	# Go over all item and print the properties
+	for page in reverse(pages):
+		for item in page:
+			item.move('/new_folder')
+
+If you want to iterate through all items within your filter, you can also do so without going through them page by page:
+
+.. code-block:: python
+
+	# Get the project
+	project = dl.projects.get(project_name='MyProject')
+	# Get the dataset
+	dataset = project.datasets.get(dataset_name='MyDataset')
+	# Get items in pages (100 item per page)
+	filters = dl.Filters()
+	filters.add(field='filename', values='/winter/is/coming/*')
+	pages = dataset.items.list(filters=filters)
+	# Count the items
+	print('Number of items in dataset: {}'.format(pages.items_count))
+	# Go over all item and print the properties
+	for page in pages.all():
+		for item in page:
+			item.move('/new_folder')
 
 Upload and download items
 -------------------------

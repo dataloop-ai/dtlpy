@@ -3,7 +3,7 @@
 Links
 ####################
 
-Links are items that do not have their own binaries, instead, they point to links of binaries from
+Links are items that do not have their own binaries, instead, they have links to binaries from
 other items or URL links.
 
 Before we get started with Links:

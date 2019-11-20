@@ -71,20 +71,20 @@ class PagedEntities:
         self.page_offset = 0
         self.has_next_page = True
         while self.has_next_page:
-            items = self.get_page()
-            yield items
+            self.get_page()
             self.page_offset += 1
+            yield self.items
 
     def __reversed__(self):
         self.page_offset = self.total_pages_count - 1
         while True:
-            items = self.get_page()
-            yield items
+            self.get_page()
+            yield self.items
             if self.page_offset == 0:
                 break
             self.page_offset -= 1
 
-    def get_page(self, page_offset=None, page_size=None):
+    def return_page(self, page_offset=None, page_size=None):
         filters = copy.copy(self.filters)
         filters.page = self.page_offset
         filters.page_size = self.page_size
@@ -96,6 +96,11 @@ class PagedEntities:
         items = self.process_result(result)
         return items
 
+    def get_page(self, page_offset=None, page_size=None):
+        items = self.return_page(page_offset=page_offset,
+                                 page_size=page_size)
+        self.items = items
+
     def print(self):
         self.items.print()
 
@@ -106,7 +111,7 @@ class PagedEntities:
         :return:
         """
         self.page_offset += 1
-        self.items = self.get_page()
+        self.get_page()
 
     def prev_page(self):
         """
@@ -115,7 +120,7 @@ class PagedEntities:
         :return:
         """
         self.page_offset -= 1
-        self.items = self.get_page()
+        self.get_page()
 
     def go_to_page(self, page=0):
         """
@@ -125,7 +130,7 @@ class PagedEntities:
         :return:
         """
         self.page_offset = page
-        self.items = self.get_page()
+        self.get_page()
 
     def load_annotations(self, result):
         items = dict()
@@ -144,8 +149,8 @@ class PagedEntities:
         jobs = list()
         while True:
             if page_offset <= total_pages:
-                jobs.append(self._client_api.thread_pool.apply_async(self.get_page, kwds={'page_offset': page_offset,
-                                                                                          'page_size': page_size}))
+                jobs.append(self._client_api.thread_pool.apply_async(self.return_page, kwds={'page_offset': page_offset,
+                                                                                             'page_size': page_size}))
                 page_offset += 1
             for i_job, job in enumerate(jobs):
                 if job.ready():

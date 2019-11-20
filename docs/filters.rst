@@ -156,3 +156,37 @@ Then, after update it will be:
     'annotation_notes': [...],
     'annotatedDogs': True
     }}
+
+More advanced filtering options
+################################
+If you want filter items/annotations by "or" and "and" options you can do so by specifying which filters will be check
+ with "or" and which ones with "and":
+
+.. code-block:: python
+
+	# create a filters instance
+	filters = Filters()
+
+	# filters with or
+	filters.add(field='name', values='*dogs*', operator='glob', method="or")
+	filters.add(field='name', values='*cats*', operator='glob', method="or")
+
+    # filters with and
+	filters.add(field='annotated', values=True, method='and)
+	filters.add(field='metadata.user.is_automated', values=True, method='and)
+
+I the above example, we want to get items that are annotated AND have field "is_automated=True" in their metadata.
+Those items should alse have either the string "dogs" or "cats" in their name.
+
+
+You can also create your own custom filter dictionary and use it instead:.
+For the above example, the filter will look something like that:
+
+.. code-block:: python
+
+	{'$or': [{'name': {'$glob': '*dogs*'}},
+             {'name': {'$glob': '*cats*'}}],
+     '$and': [{'annotated': True},
+              {'metadata.user.is_automated': True},
+              {'hidden': False},
+              {'type': 'file'}]}

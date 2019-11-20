@@ -3,10 +3,8 @@
 .readthedocs.yml
 .gitignore
 bitbucket-pipelines.yml
-build-docker-cpu.sh
-build-docker-gpu.sh
-Dockerfile.cpu
-Dockerfile.gpu
+build-docker.sh
+Dockerfile
 docs
 dtlpy
 LICENSE

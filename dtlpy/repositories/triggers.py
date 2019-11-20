@@ -172,7 +172,7 @@ class Triggers:
                                           client_api=self._client_api,
                                           project=self.project)
 
-    def list(self, active=None, page_offset=None, resource=None):
+    def list(self, active=None, page_offset=None, resource=None, deployment_id=None):
         """
         List project triggers
         :return:
@@ -183,8 +183,14 @@ class Triggers:
         # either project or deployment
         if self.project is not None:
             query.append('projects={}'.format(self.project.id))
+
+        if deployment_id is not None:
+            pass
         elif self.deployment is not None:
-            query.append('deploymentId={}'.format(self.deployment.id))
+            deployment_id = self.deployment.id
+        else:
+            raise exceptions.PlatformException('400', "Must provide a deployment id")
+        query.append('deploymentId={}'.format(deployment_id))
 
         # other queries
         if active is not None:

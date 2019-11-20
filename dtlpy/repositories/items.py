@@ -124,7 +124,7 @@ class Items:
                                        page_size=page_size,
                                        client_api=self._client_api,
                                        item_entity=items_entity)
-        paged.items = paged.get_page()
+        paged.get_page()
         return paged
 
     def get(self, filepath=None, item_id=None):
