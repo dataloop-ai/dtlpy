@@ -23,6 +23,7 @@ from requests.adapters import HTTPAdapter
 from urllib.parse import urlencode
 from urllib3.util import Retry
 from functools import wraps
+import numpy as np
 
 from .calls_counter import CallsCounter
 from .cookie import CookieIO
@@ -185,31 +186,34 @@ class ApiClient:
 
         # create a global thread pool to run multi threading
         if num_processes is None:
-            num_processes = 8 * multiprocessing.cpu_count()
-        self._num_processes = num_processes
-        logger.debug('Creating two global ThreadPool with {} workers'.format(self._num_processes))
-        self._thread_pool = ThreadPool(processes=self._num_processes)
-        self._thread_pool_entities = ThreadPool(processes=self._num_processes)
+            num_processes = multiprocessing.cpu_count()
+        self._thread_pools = dict()
+        self._thread_pools_names = {'item.upload': num_processes,
+                                    'item.download': num_processes,
+                                    'item.page': num_processes,
+                                    'annotation.upload': num_processes,
+                                    'annotation.download': num_processes,
+                                    'annotation.update': num_processes,
+                                    'entity.create': num_processes}
         # set logging level
         logging.getLogger('dtlpy').handlers[1].setLevel(logging._nameToLevel[self.verbose.logging_level.upper()])
 
-    @property
-    def thread_pool(self):
-        assert isinstance(self._thread_pool, multiprocessing.pool.ThreadPool)
-        if self._thread_pool._state != multiprocessing.pool.RUN:
+    def thread_pools(self, pool_name):
+        if pool_name not in self._thread_pools_names:
+            raise ValueError('unknown thread pool name: {}. known name: {}'.format(pool_name,
+                                                                                   list(
+                                                                                       self._thread_pools_names.keys())))
+        num_processes = self._thread_pools_names[pool_name]
+        if pool_name not in self._thread_pools:
+            self._thread_pools[pool_name] = ThreadPool(processes=num_processes)
+        pool = self._thread_pools[pool_name]
+        assert isinstance(pool, multiprocessing.pool.ThreadPool)
+        if pool._state != multiprocessing.pool.RUN:
             # pool is closed, open a new one
             logger.debug('Global ThreadPool is not running. Creating a new one')
-            self._thread_pool = ThreadPool(processes=self._num_processes)
-        return self._thread_pool
-
-    @property
-    def thread_pool_entities(self):
-        assert isinstance(self._thread_pool_entities, multiprocessing.pool.ThreadPool)
-        if self._thread_pool_entities._state != multiprocessing.pool.RUN:
-            # pool is closed, open a new one
-            logger.debug('Global ThreadPool is not running. Creating a new one')
-            self._thread_pool_entities = ThreadPool(processes=self._num_processes)
-        return self._thread_pool_entities
+            pool = ThreadPool(processes=num_processes)
+            self._thread_pools[pool_name] = pool
+        return pool
 
     @property
     def verify(self):
@@ -445,32 +449,43 @@ class ApiClient:
                                  disable=self.verbose.disable_progress_bar)
 
                 def callback(bytes_read):
-                    pbar.update(bytes_read - pbar.n)
+                    pbar.update(bytes_read)
             else:
                 def callback(bytes_read):
                     pass
 
-        async with aiohttp.ClientSession(headers=headers) as session:
-            form = aiohttp.FormData({})
-            form.add_field('type', item_type)
-            form.add_field('path', os.path.join(remote_path, uploaded_filename).replace('\\', '/'))
-            if item_metadata is not None:
-                form.add_field('metadata', json.dumps(item_metadata))
-            form.add_field('file', AsyncUploadStream(buffer=to_upload, callback=callback))
-            url = '{}?mode={}'.format(self.environment + remote_url, mode)
-            async with session.post(url, data=form) as resp:
-                text = await resp.text()
-                _json = await resp.json()
-                response = AsyncResponse(text=text,
-                                         _json=_json,
-                                         async_resp=resp)
+        timeout = aiohttp.ClientTimeout(total=0)
+        async with aiohttp.ClientSession(headers=headers, timeout=timeout) as session:
+            try:
+                form = aiohttp.FormData({})
+                form.add_field('type', item_type)
+                form.add_field('path', os.path.join(remote_path, uploaded_filename).replace('\\', '/'))
+                if item_metadata is not None:
+                    form.add_field('metadata', json.dumps(item_metadata))
+                form.add_field('file', AsyncUploadStream(buffer=to_upload, callback=callback))
+                url = '{}?mode={}'.format(self.environment + remote_url, mode)
+                async with session.post(url, data=form) as resp:
+                    text = await resp.text()
+                    try:
+                        _json = await resp.json()
+                    except:
+                        _json = dict()
+                    response = AsyncResponse(text=text,
+                                             _json=_json,
+                                             async_resp=resp)
+            except:
+                logger.exception('Error in async upload')
         return response
 
     def upload_from_local(self, to_upload, item_type, item_size, remote_url, uploaded_filename, remote_path=None,
                           callback=None, log_error=True, mode='skip', item_metadata=None):
+        def exception_handler(loop, context):
+            logger.debug("[Asyc] Upload item caught the following exception: {}".format(context['message']))
+
         if remote_path is None:
             remote_path = '/'
         loop = asyncio.new_event_loop()
+        loop.set_exception_handler(exception_handler)
         asyncio.set_event_loop(loop)
         response = loop.run_until_complete(self.__upload_file_async(to_upload=to_upload,
                                                                     item_type=item_type,
@@ -510,8 +525,8 @@ class ApiClient:
                 raise_on_status=False
             )
             adapter = HTTPAdapter(max_retries=retry,
-                                  pool_maxsize=self._num_processes,
-                                  pool_connections=self._num_processes)
+                                  pool_maxsize=np.sum(list(self._thread_pools_names.values())),
+                                  pool_connections=np.sum(list(self._thread_pools_names.values())))
             self.session.mount('http://', adapter)
             self.session.mount('https://', adapter)
         resp = self.session.send(request=prepared, stream=stream, verify=self.verify, timeout=None)

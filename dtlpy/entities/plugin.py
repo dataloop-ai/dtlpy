@@ -1,6 +1,7 @@
 from collections import namedtuple
 import logging
 import attr
+import json
 
 from .. import miscellaneous, repositories, services, entities, PlatformException
 
@@ -242,14 +243,23 @@ class PluginInput:
         if value not in self.INPUT_TYPES:
             raise PlatformException('400', 'Invalid input type please select from: {}'.format(self.INPUT_TYPES))
 
+    @staticmethod
+    def is_json_serializable(val):
+        try:
+            json.dumps(val)
+            is_json_serializable = True
+        except Exception:
+            is_json_serializable = False
+        return is_json_serializable
+
     # noinspection PyUnusedLocal
     @value.validator
     def check_value(self, attribute, value):
         value_ok = True
         expected_value = 'Expected value should be:'
         if self.type == 'Json':
-            expected_value = '{} a dictionary'.format(expected_value)
-            if not isinstance(value, dict):
+            expected_value = '{} json serializable'.format(expected_value)
+            if not self.is_json_serializable(value):
                 value_ok = False
         elif self.type == 'Dataset':
             expected_value = '{} {{"dataset_id": <dataset id>}}'.format(expected_value)

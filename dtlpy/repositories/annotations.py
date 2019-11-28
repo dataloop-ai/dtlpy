@@ -178,7 +178,7 @@ class Annotations:
         :param system_metadata:
         :return: True
         """
-        pool = self._client_api.thread_pool
+        pool = self._client_api.thread_pools(pool_name='annotation.update')
         if not isinstance(annotations, list):
             annotations = [annotations]
         jobs = [None for _ in range(len(annotations))]
@@ -249,7 +249,7 @@ class Annotations:
                     else:
                         PlatformException('400', 'Unknown annotation file format')
 
-        pool = self._client_api.thread_pool
+        pool = self._client_api.thread_pools(pool_name='annotation.upload')
         jobs = [None for _ in range(len(annotations))]
         # call multiprocess wrapper to run function on each item in list
         for i_ann, ann in enumerate(annotations):

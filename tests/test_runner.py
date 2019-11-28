@@ -103,7 +103,7 @@ if __name__ == '__main__':
     dl.setenv('dev')
     # check token
     payload = jwt.decode(dl.token(), algorithms=['HS256'], verify=False)
-    if payload['email'] not in ['oa-test-1@dataloop.ai', 'oa-test-2@dataloop.ai']:
+    if payload['email'] not in ['oa-test-1@dataloop.ai', 'oa-test-2@dataloop.ai', 'oa-test-3@dataloop.ai']:
         assert False, 'Cannot run test on user: "{}". only test users'.format(payload['email'])
 
     # run tests

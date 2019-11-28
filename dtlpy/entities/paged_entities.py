@@ -43,7 +43,7 @@ class PagedEntities:
         if 'items' in result:
             if self.filters.resource == 'items':
                 items_json = result['items']
-                pool = self._client_api.thread_pool_entities
+                pool = self._client_api.thread_pools(pool_name='entity.create')
                 jobs = [None for _ in range(len(items_json))]
                 # return triggers list
                 for i_item, item in enumerate(items_json):
@@ -147,9 +147,10 @@ class PagedEntities:
         total_pages = math.ceil(self.items_count / page_size)
         total_items = list()
         jobs = list()
+        pool = self._client_api.thread_pools('item.page')
         while True:
             if page_offset <= total_pages:
-                jobs.append(self._client_api.thread_pool.apply_async(self.return_page, kwds={'page_offset': page_offset,
+                jobs.append(pool.apply_async(self.return_page, kwds={'page_offset': page_offset,
                                                                                              'page_size': page_size}))
                 page_offset += 1
             for i_job, job in enumerate(jobs):

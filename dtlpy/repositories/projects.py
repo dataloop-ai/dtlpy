@@ -71,7 +71,7 @@ class Projects:
                                                          path='/projects')
 
         if success:
-            pool = self._client_api.thread_pool_entities
+            pool = self._client_api.thread_pools(pool_name='entity.create')
             projects_json = response.json()
             jobs = [None for _ in range(len(projects_json))]
             # return triggers list

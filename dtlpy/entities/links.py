@@ -1,5 +1,6 @@
 from .. import entities
 from .. import PlatformException
+import os
 
 
 class Link:
@@ -16,7 +17,7 @@ class UrlLink(Link):
 
     def __init__(self, ref, name=None):
         if name is None:
-            name = ref
+            name = os.path.split(ref)[-1].replace('/', "").replace("\\", '').replace('.', '')
         # noinspection PyShadowingBuiltins
         type = 'url'
         super().__init__(name=name, type=type, ref=ref)

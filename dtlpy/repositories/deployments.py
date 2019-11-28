@@ -88,7 +88,7 @@ class Deployments:
 
         if self.plugin is not None:
             url_path += '?pluginId={}'.format(self.plugin.id)
-        elif self.project is not None:
+        elif self._project is not None:
             url_path += '?projects={}'.format(self.project.id)
 
         # request
@@ -99,7 +99,7 @@ class Deployments:
 
         deployments_json = response.json()['items']
         jobs = [None for _ in range(len(deployments_json))]
-        pool = self._client_api.thread_pool_entities
+        pool = self._client_api.thread_pools(pool_name='entity.create')
 
         # return triggers list
         for i_deployment, deployment in enumerate(deployments_json):
@@ -337,7 +337,7 @@ class Deployments:
 
         # get attributes
         plugin_name = deployment_json.get('plugin', None)
-        plugins = repositories.Plugins(client_api=self._client_api, project=self.project)
+        plugins = repositories.Plugins(client_api=self._client_api, project=self._project)
         if plugin_name is None:
             plugin = plugins.get()
         else:
@@ -349,7 +349,7 @@ class Deployments:
 
         deployment = self.deploy(deployment_name=name, plugin=plugin, revision=revision, runtime=runtime, config=config)
 
-        triggers = repositories.Triggers(client_api=self._client_api, project=self.project)
+        triggers = repositories.Triggers(client_api=self._client_api, project=self._project)
         for trigger in deployment_triggers:
             name = trigger.get('name', None)
             filters = trigger.get('filter', dict())
@@ -375,7 +375,7 @@ class Deployments:
         """
         # project
         if project is None:
-            project = self.project.projects.get()
+            project = self._project
 
         # get deployment file
         if deployment_json_path is None:
@@ -455,7 +455,7 @@ class Deployments:
         """
         # project
         if project is None:
-            project = self.project.projects.get()
+            project = self._project
 
         # get deployment file
         if deployment_json_path is None:

@@ -102,7 +102,7 @@ class Datasets:
         success, response = self._client_api.gen_request(req_type='get',
                                                          path='/datasets?{}'.format(query_string))
         if success:
-            pool = self._client_api.thread_pool_entities
+            pool = self._client_api.thread_pools('entity.create')
             datasets_json = response.json()
             jobs = [None for _ in range(len(datasets_json))]
             # return triggers list

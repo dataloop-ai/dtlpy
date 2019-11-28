@@ -138,7 +138,7 @@ class Downloader:
         errors = [None for _ in range(num_items)]
         jobs = [None for _ in range(num_items)]
         # pool
-        pool = self.items_repository._client_api.thread_pool
+        pool = self.items_repository._client_api.thread_pools(pool_name='item.download')
         # download
         pbar = tqdm.tqdm(total=num_items, disable=self.items_repository._client_api.verbose.disable_progress_bar)
         try:
@@ -327,7 +327,7 @@ class Downloader:
         elif isinstance(dataset.export['zip'], dict):
             for url in dataset.export['zip']['chunks']:
                 urls.append(url)
-        pool = self.items_repository._client_api.thread_pool
+        pool = self.items_repository._client_api.thread_pools(pool_name='annotation.download')
         jobs = list()
         for i_url, url in enumerate(urls):
             # zip filepath

@@ -64,7 +64,7 @@ class Ontologies:
 
         ontologies = [ontology_id for ontology_id in self.recipe.ontologyIds]
 
-        pool = self._client_api.thread_pool_entities
+        pool = self._client_api.thread_pools(pool_name='entity.create')
         jobs = [None for _ in range(len(ontologies))]
         for i_ontology, ontology_id in enumerate(ontologies):
             jobs[i_ontology] = pool.apply_async(self._protected_get, kwds={'ontology_id': ontology_id})

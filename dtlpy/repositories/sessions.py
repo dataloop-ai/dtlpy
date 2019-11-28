@@ -20,9 +20,10 @@ class Sessions:
         return self._deployment
 
     def create(self, deployment_id=None, sync=False, session_input=None,
-               resource='item', item_id=None, dataset_id=None, annotation_id=None):
+               resource=None, item_id=None, dataset_id=None, annotation_id=None):
         """
         Create deployment entity
+        :param annotation_id:
         :param item_id:
         :param resource:
         :param sync:
@@ -38,21 +39,29 @@ class Sessions:
 
         # payload
         if session_input is None:
-            payload = {resource: {
-                'dataset_id': dataset_id}
-            }
-            if item_id is not None:
-                payload['item_id'] = item_id
-            if annotation_id is not None:
-                payload['annotation_id'] = annotation_id
+            if resource is not None:
+                payload = {resource: {
+                    'dataset_id': dataset_id}
+                }
+                if item_id is not None:
+                    payload['item_id'] = item_id
+                if annotation_id is not None:
+                    payload['annotation_id'] = annotation_id
+            else:
+                payload = dict()
         else:
-            if not isinstance(session_input, list):
-                session_input = [session_input]
-            if len(session_input) > 0 and isinstance(session_input[0], entities.PluginInput):
-                for i_input, single_input in enumerate(session_input):
-                    session_input[i_input] = single_input.to_json(resource='session')
-
-            payload = session_input
+            if not isinstance(session_input, dict):
+                if not isinstance(session_input, list):
+                    session_input = [session_input]
+                if len(session_input) > 0 and isinstance(session_input[0], entities.PluginInput):
+                    inputs = dict()
+                    for single_input in session_input:
+                        inputs.update(single_input.to_json(resource='session'))
+                    payload = inputs
+                else:
+                    raise exceptions.PlatformException('400', 'Unknown input type')
+            else:
+                payload = session_input
 
         # request url
         url_path = '/deployment_sessions/{deployment_id}'.format(deployment_id=deployment_id)

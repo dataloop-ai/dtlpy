@@ -215,7 +215,18 @@ class CommandExecutor:
             filters = self.dl.Filters()
             if args.remote_path is not None:
                 remote_path = [t.strip() for t in args.remote_path.split(",")]
-                filters.add(field="dir", values=remote_path, operator="in")
+                if len(remote_path) == 1:
+                    remote_path = remote_path[0]
+                    if '*' in remote_path:
+                        filters.add(field="dir", values=remote_path, operator='glob')
+                    else:
+                        filters.add(field="dir", values=remote_path)
+                elif len(remote_path) > 1:
+                    for item in remote_path:
+                        if '*' in item:
+                            filters.add(field="dir", values=item, operator='glob', method='or')
+                            remote_path.pop(remote_path.index(item))
+                    filters.add(field="dir", values=remote_path, operator='in', method='or')
 
             if not args.without_binaries:
                 dataset.items.download(filters=filters,

@@ -235,7 +235,7 @@ class Uploader:
         success = [False for _ in range(num_files)]
         errors = ["" for _ in range(num_files)]
         jobs = [None for _ in range(num_files)]
-        pool = self.items_repository._client_api.thread_pool
+        pool = self.items_repository._client_api.thread_pools(pool_name='item.upload')
         with tqdm.tqdm(total=num_files, disable=self.items_repository._client_api.verbose.disable_progress_bar) as pbar:
             for i_item in range(num_files):
                 element = elements[i_item]
@@ -418,18 +418,20 @@ class Uploader:
         temp_dir = None
         action = 'na'
         remote_folder, remote_filename = os.path.split(element.remote_filepath)
+
+        if element.type == 'url':
+            saved_locally, element.buffer, temp_dir = self.url_to_data(element.buffer)
+        elif element.type == 'link':
+            element.buffer = self.link(ref=element.buffer.ref, dataset_id=element.buffer.dataset_id,
+                                       type=element.buffer.type)
+        elif element.type == 'similarity':
+            element.buffer = element.buffer.to_bytes_io()
+
         for i_try in range(NUM_TRIES):
             try:
                 logger.debug("Upload item: {path}. Try {i}/{n}. Starting..".format(path=remote_filename,
                                                                                    i=i_try + 1,
                                                                                    n=NUM_TRIES))
-                if element.type == 'url':
-                    saved_locally, element.buffer, temp_dir = self.url_to_data(element.buffer)
-                elif element.type == 'link':
-                    element.buffer = self.link(ref=element.buffer.ref, dataset_id=element.buffer.dataset_id,
-                                               type=element.buffer.type)
-                elif element.type == 'similarity':
-                    element.buffer = element.buffer.to_bytes_io()
                 item, action = self.__upload_single_item(filepath=element.buffer,
                                                          mode=mode,
                                                          item_metadata=element.item_metadata,

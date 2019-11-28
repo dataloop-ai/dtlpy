@@ -69,7 +69,7 @@ class Plugins:
         # return entity
         return entities.Plugin.from_json(client_api=self.client_api,
                                          _json=response.json(),
-                                         project=self.project)
+                                         project=self._project)
 
     def list(self):
         """
@@ -78,7 +78,7 @@ class Plugins:
         """
         url_path = '/plugins'
 
-        if self.project is not None:
+        if self._project is not None:
             url_path += '?projects={}'.format(self.project.id)
 
         # request
@@ -92,7 +92,7 @@ class Plugins:
         for plugin in response.json()['items']:
             plugins.append(entities.Plugin.from_json(client_api=self.client_api,
                                                      _json=plugin,
-                                                     project=self.project))
+                                                     project=self._project))
         return plugins
 
     def push(self, package_id=None, src_path=None, plugin_name=None, inputs=None, outputs=None):
@@ -209,7 +209,7 @@ class Plugins:
         # return entity
         return entities.Plugin.from_json(_json=response.json(),
                                          client_api=self.client_api,
-                                         project=self.project)
+                                         project=self._project)
 
     def delete(self, plugin=None, plugin_name=None, plugin_id=None):
         """
@@ -278,7 +278,7 @@ class Plugins:
         # return entity
         return entities.Plugin.from_json(_json=response.json(),
                                          client_api=self.client_api,
-                                         project=self.project)
+                                         project=self._project)
 
     def deploy(self,
                plugin_id=None,

@@ -77,7 +77,7 @@ class Recipes:
         except KeyError:
             recipes = list()
 
-        pool = self._client_api.thread_pool_entities
+        pool = self._client_api.thread_pools(pool_name='entity.create')
         jobs = [None for _ in range(len(recipes))]
         for i_recipe, recipe_id in enumerate(recipes):
             jobs[i_recipe] = pool.apply_async(self._protected_get, kwds={'recipe_id': recipe_id})

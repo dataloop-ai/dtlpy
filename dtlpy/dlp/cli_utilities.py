@@ -239,7 +239,9 @@ class DlpCompleter(Completer):
                                               kwargs={"param": param,
                                                       'word_before_cursor': word_before_cursor,
                                                       'cmd': cmd})
+                    thread.daemon = True
                     thread.start()
+
                 else:
                     self.get_param_suggestions(param=param, word_before_cursor=word_before_cursor, cmd=cmd)
             if self.thread_state in [StateEnum.DONE, StateEnum.CONTINUE]:

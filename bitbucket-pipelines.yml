@@ -48,7 +48,7 @@ pipelines:
           name: Build SDK Container
           script:
             - case "$BITBUCKET_TAG" in "") export BITBUCKET_TAG="build-$BITBUCKET_BUILD_NUMBER"; esac
-            - apt-get install -y python3-pip
+            - apt-get -y update && apt-get install -y python3-pip
             - python3 setup.py bdist_wheel
             - docker login -u _json_key -p "$GCP_KEY" https://gcr.io
             - cp dist/dtlpy-$BITBUCKET_TAG-py3-none-any.whl dist/dtlpy-latest-py3-none-any.whl

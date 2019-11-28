@@ -45,3 +45,7 @@ class Assignment:
         return attr.asdict(self, filter=attr.filters.exclude(attr.fields(Assignment)._client_api,
                                                              attr.fields(Assignment)._project,
                                                              attr.fields(Assignment)._task))
+
+    def update(self):
+        if self._task is not None:
+            return self._task.assignments.update(assignment=self)
