@@ -25,7 +25,11 @@ def main():
     # add filter - filename includes 'dog'
     filters.add(field='filename', values='*dog*')
     # add filter - created since June 2019
-    filters.add(field='createdAt', values='01/06/2019', operator='gt')
+    # -- time filters -- must be in ISO format and in UTC (offset from local time). converting using datetime package as follows:
+    import datetime, time
+    timestamp = datetime.datetime(year=2019, month=10, day=27, hour=15, minute=39, second=6,
+                                  tzinfo=datetime.timezone(datetime.timedelta(seconds=-time.timezone))).isoformat()
+    filters.add(field='createdAt', values=timestamp, operator='gt')
 
     ######################
     # get filtered items #
