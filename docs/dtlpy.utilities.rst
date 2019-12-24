@@ -26,6 +26,20 @@ dtlpy.utilities.converter module
    :members:
    :undoc-members:
    :show-inheritance:
+dtlpy.utilities.miscellaneous module
+------------------------------------
+
+.. automodule:: dtlpy.utilities.miscellaneous
+   :members:
+   :undoc-members:
+   :show-inheritance:
+dtlpy.utilities.query\_creator module
+-------------------------------------
+
+.. automodule:: dtlpy.utilities.query_creator
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 
 Module contents

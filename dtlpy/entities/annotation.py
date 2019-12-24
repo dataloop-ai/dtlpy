@@ -349,7 +349,8 @@ class Annotation:
             if self.color is not None:
                 color = self.color
             else:
-                logger.warning('No color given for label: {}, random color will be selected'.format(self.label))
+                if not (self.type == 'classification' and self.label.lower() in ['approved', 'completed']):
+                    logger.warning('No color given for label: {}, random color will be selected'.format(self.label))
                 color = (127, 127, 127)
         if (isinstance(color, list) or isinstance(color, tuple)) and len(color) == 3:
             # if color is a list or tuple and size of 3 - add alpha

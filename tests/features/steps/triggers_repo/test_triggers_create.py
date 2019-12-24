@@ -57,11 +57,11 @@ def step_impl(context, item_type):
         item = context.uploaded_item_with_trigger
     else:
         item = context.annotation
-    num_try = 10
+    num_try = 15
     triggered = False
 
     for i in range(num_try):
-        time.sleep(5)
+        time.sleep(7)
         if is_item:
             item = context.dataset.items.get(item_id=item.id)
             if 'plugins' in item.system:
@@ -90,7 +90,9 @@ def step_impl(context, plugin_name, plugin_path):
 @behave.given(u'There is a deployment by the name of "{deployment_name}"')
 def step_impl(context, deployment_name):
     deployment_name = '{}-{}'.format(deployment_name, random.randrange(1000, 10000))
-    context.deployment = context.plugin.deployments.deploy(deployment_name=deployment_name)
+    context.deployment = context.plugin.deployments.deploy(
+        deployment_name=deployment_name,
+        bot=context.bot_user)
     assert isinstance(context.deployment, context.dl.entities.Deployment)
 
 

@@ -90,7 +90,7 @@ def step_impl(context):
     )
 
 
-@behave.then(u"Annotation should be updateed")
+@behave.then(u"Annotation should be updated")
 def step_impl(context):
     annotation_get = context.item.annotations.get(context.annotation_x.id)
     assert annotation_get.attributes == list()

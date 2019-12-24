@@ -5,6 +5,8 @@ Missing Tests:
     - Cli plugins
     - Deployment entity
     - Deployments logs
+    - sessions repo
+    - session entity
     - Cli deployments
     - Trigger entity
     - Annotation task repo
@@ -14,3 +16,5 @@ Missing Tests:
     - Filters
     - Converters
     - Directory Tree
+    - Bots
+    - plugin/session inputs

@@ -28,7 +28,7 @@ Machine to Machine Login
 .. code-block:: python
 
 	# Login to Dataloop platform
-	dl.login_secret(email, password, client_id, client_secret)
+	dl.login_secret(email="", password="",client_id="",client_secret="")
 
 Create project and dataset
 --------------------------

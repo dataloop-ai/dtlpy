@@ -1,6 +1,8 @@
-Annotation Types
-================
+Annotations
+===========
 
+Annotation Types
+----------------
 Using the annotations definitions classes you can create, edit, view and upload Platform annotations.
 Supported types: Classification, Point, Ellipse, Box, Polyline, Polygon, Segmentation.
 
@@ -33,6 +35,8 @@ Each annotations init recieves the coordinates for the specific type, label and 
     annotations_definition = dl.Segmentation(geo=geo, label=label)
 
 
+Upload and Show
+---------------
 Init a Platform annotations with the Definition for viewing and drawing:
 
 .. code-block:: python
@@ -43,7 +47,7 @@ Init a Platform annotations with the Definition for viewing and drawing:
     dataset = project.datasets.get(dataset_name='FirstDataset')
     item = dataset.items.get(filepath='/image.jpg)
 
-    builder = item.annotations.builder())
+    builder = item.annotations.builder()
     builder.add(annotation_definition=dl.Segmentation(geo=mask,
                                                    label=label)
     # get annotations mask
@@ -51,3 +55,66 @@ Init a Platform annotations with the Definition for viewing and drawing:
 
     # draw on image
     image = builder.show(image)
+
+    # upload annotations to item
+    item.annotations.upload(annotations=builder)
+
+
+Model Metadata
+--------------
+Add metadata to annotation when uploading.
+This can be used to add "model" metadata to each annotations and filter by them in the platform
+
+.. code-block:: python
+
+    builder = item.annotations.builder()
+    # add annotation with model name and confidence
+    builder.add(annotation_definition=dl.Box(top=10, left=10, bottom=100, right=100,
+                                             label=label),
+                metadata={'user': {'model': {'name': 'model_name',
+                                             'confidence': 0.9}}})
+    # upload annotations to item
+    item.annotations.upload(annotations=builder)
+
+Parenting Annotations
+---------------------
+You can set annotations relation using the parent_id input:
+
+.. code-block:: python
+
+    #############################
+    # when creating annotations #
+    #############################
+    builder = item.annotations.builder()
+    builder.add(annotation_definition=dl.Box(top=10, left=10, bottom=100, right=100,
+                                             label='parent'))
+    # upload parent annotation
+    annotations = item.annotations.upload(annotations=builder)
+
+    # create the child annotation
+    builder = item.annotations.builder()
+    builder.add(annotation_definition=dl.Box(top=50, left=50, bottom=150, right=150,
+                                             label='child'),
+                parent_id=annotations[0].id)
+    # upload annotations to item
+    item.annotations.upload(annotations=builder)
+
+    ###########################
+    # on existing annotations #
+    ###########################
+    # create and upload parent annotation
+    builder = item.annotations.builder()
+    builder.add(annotation_definition=dl.Box(top=10, left=10, bottom=100, right=100,
+                                             label='parent'))
+    parent_annotation = item.annotations.upload(annotations=builder)[0]
+    # create and upload child annotation
+    builder = item.annotations.builder()
+    builder.add(annotation_definition=dl.Box(top=50, left=50, bottom=150, right=150,
+                                             label='child'))
+    child_annotation = item.annotations.upload(annotations=builder)[0]
+
+    # set the child parent ID to the parent
+    child_annotation.parent_id = parent_annotation.id
+    # update the annotation
+    child_annotation.update(system_metadata=True)
+

@@ -30,6 +30,7 @@ def step_impl(context):
                 runtime = json.loads(param[1])
 
     context.deployment = context.plugin.deployments.create(
+        bot=context.bot_user,
         deployment_name=deployment_name,
         plugin=context.plugin,
         revision=revision,

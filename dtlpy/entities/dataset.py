@@ -233,6 +233,7 @@ class Dataset:
                              overwrite=False,
                              thickness=1,
                              with_text=False,
+                             remote_path=None,
                              num_workers=32):
         return self.datasets.download_annotations(dataset=self,
                                                   local_path=local_path,
@@ -241,6 +242,7 @@ class Dataset:
                                                   annotation_options=annotation_options,
                                                   thickness=thickness,
                                                   with_text=with_text,
+                                                  remote_path=remote_path,
                                                   num_workers=num_workers)
 
     def checkout(self):

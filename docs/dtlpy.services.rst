@@ -46,6 +46,13 @@ dtlpy.services.create\_logger module
    :members:
    :undoc-members:
    :show-inheritance:
+dtlpy.services.logins module
+----------------------------
+
+.. automodule:: dtlpy.services.logins
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 
 Module contents

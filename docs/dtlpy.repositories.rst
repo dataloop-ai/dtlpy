@@ -1,6 +1,13 @@
 dtlpy.repositories package
 ==========================
 
+Subpackages
+-----------
+
+.. toctree::
+
+   dtlpy.repositories.plugins_assets
+
 Submodules
 ----------
 
@@ -29,6 +36,13 @@ dtlpy.repositories.assignments module
 -------------------------------------
 
 .. automodule:: dtlpy.repositories.assignments
+   :members:
+   :undoc-members:
+   :show-inheritance:
+dtlpy.repositories.bots module
+------------------------------
+
+.. automodule:: dtlpy.repositories.bots
    :members:
    :undoc-members:
    :show-inheritance:

@@ -46,6 +46,13 @@ dtlpy.entities.assignment module
    :members:
    :undoc-members:
    :show-inheritance:
+dtlpy.entities.bot module
+-------------------------
+
+.. automodule:: dtlpy.entities.bot
+   :members:
+   :undoc-members:
+   :show-inheritance:
 dtlpy.entities.dataset module
 -----------------------------
 
@@ -162,6 +169,13 @@ dtlpy.entities.trigger module
 -----------------------------
 
 .. automodule:: dtlpy.entities.trigger
+   :members:
+   :undoc-members:
+   :show-inheritance:
+dtlpy.entities.user module
+--------------------------
+
+.. automodule:: dtlpy.entities.user
    :members:
    :undoc-members:
    :show-inheritance:

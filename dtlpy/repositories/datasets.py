@@ -266,7 +266,8 @@ class Datasets:
                              overwrite=False,
                              thickness=1,
                              with_text=False,
-                             num_workers=32):
+                             num_workers=32,
+                             remote_path=None):
 
         def download_single(i_item, i_img_filepath, i_local_path, i_overwrite, i_annotation_options,
                             i_thickness, i_with_text):
@@ -308,7 +309,8 @@ class Datasets:
             if annotation_options is None:
                 downloader.download_annotations(dataset=dataset,
                                                 local_path=local_path,
-                                                overwrite=overwrite)
+                                                overwrite=overwrite,
+                                                remote_path=remote_path)
                 return local_path
 
         filters.add(field='annotated', values=True)
@@ -323,7 +325,8 @@ class Datasets:
         if pages.items_count > dataset.annotated / 10:
             downloader.download_annotations(dataset=dataset,
                                             local_path=local_path,
-                                            overwrite=overwrite)
+                                            overwrite=overwrite,
+                                            remote_path=remote_path)
 
         pool = ThreadPool(processes=num_workers)
         progress = tqdm.tqdm(total=pages.items_count)

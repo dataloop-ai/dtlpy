@@ -4,11 +4,15 @@ import traceback
 import datetime
 import logging
 import json
+
+import requests
 import tqdm
 import os
 import io
 
 from PIL import Image
+from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
 
 from .. import entities, miscellaneous, PlatformException
 
@@ -216,7 +220,7 @@ class Downloader:
         # log error
         if n_error > 0:
             log_filepath = os.path.join(os.getcwd(),
-                                        "log_{}.txt".format(datetime.datetime.now().strftime("%Y%m%d_%H%M%S")))
+                                        "log_{}.txt".format(datetime.datetime.utcnow().strftime("%Y%m%d_%H%M%S")))
             errors_list = [errors[i_job] for i_job, suc in enumerate(success) if suc is False]
             ids_list = [output[i_job] for i_job, suc in enumerate(success) if suc is False]
             errors_json = {item_id: error for item_id, error in zip(ids_list, errors_list)}
@@ -277,7 +281,7 @@ class Downloader:
             output[i_item] = download
             success[i_item] = True
 
-    def download_annotations(self, dataset, local_path, overwrite=False):
+    def download_annotations(self, dataset, local_path, overwrite=False, remote_path=None):
         """
         Download annotations json for entire dataset
 
@@ -287,10 +291,13 @@ class Downloader:
         :return:
         """
 
-        def download_single_chunk(w_filepath, w_url):
+        def download_single_chunk(w_filepath, w_url, remote_path=None):
             try:
                 # remove heading of the url
-                w_url = w_url[w_url.find('/dataset'):]
+                if remote_path is None:
+                    w_url = w_url[w_url.find('/dataset'):]
+                else:
+                    w_url = '/datasets/{}/annotations/zip?directory={}'.format(dataset.id, remote_path)
                 # get zip from platform
                 success, response = dataset._client_api.gen_request(req_type="get",
                                                                     path=w_url,
@@ -321,21 +328,25 @@ class Downloader:
             # create local path to download and save to
             if not os.path.isdir(local_path):
                 os.makedirs(local_path)
-        urls = list()
-        if isinstance(dataset.export['zip'], str):
-            urls.append(dataset.export['zip'])
-        elif isinstance(dataset.export['zip'], dict):
-            for url in dataset.export['zip']['chunks']:
-                urls.append(url)
-        pool = self.items_repository._client_api.thread_pools(pool_name='annotation.download')
-        jobs = list()
-        for i_url, url in enumerate(urls):
-            # zip filepath
-            zip_filepath = os.path.join(local_path, "annotations_{}.zip".format(i_url))
-            # send url to pool
-            jobs.append(pool.apply_async(download_single_chunk, kwds={'w_url': url,
-                                                                      'w_filepath': zip_filepath}))
-        _ = [j.wait() for j in jobs]
+        if remote_path is None:
+            urls = list()
+            if isinstance(dataset.export['zip'], str):
+                urls.append(dataset.export['zip'])
+            elif isinstance(dataset.export['zip'], dict):
+                for url in dataset.export['zip']['chunks']:
+                    urls.append(url)
+            pool = self.items_repository._client_api.thread_pools(pool_name='annotation.download')
+            jobs = list()
+            for i_url, url in enumerate(urls):
+                # zip filepath
+                zip_filepath = os.path.join(local_path, "annotations_{}.zip".format(i_url))
+                # send url to pool
+                jobs.append(pool.apply_async(download_single_chunk, kwds={'w_url': url,
+                                                                          'w_filepath': zip_filepath}))
+            _ = [j.wait() for j in jobs]
+        else:
+            zip_filepath = os.path.join(local_path, "annotations_{}.zip".format(remote_path.split('/')[-1]))
+            download_single_chunk(w_url=None, w_filepath=zip_filepath, remote_path=remote_path)
 
     @staticmethod
     def _download_img_annotations(item, img_filepath, local_path, overwrite, annotation_options,
@@ -368,7 +379,8 @@ class Downloader:
         # get image shape
         if item.width is not None and item.height is not None:
             img_shape = (item.height, item.width)
-        elif 'image' in item.mimetype and img_filepath is not None:
+        elif ('image' in item.mimetype and img_filepath is not None) or \
+                ('json' in item.mimetype and img_filepath is not None):
             img_shape = Image.open(img_filepath).size[::-1]
         else:
             img_shape = (0, 0)
@@ -425,6 +437,38 @@ class Downloader:
             local_filepath = os.path.join(local_path, item.filename[1:])
         return local_path, local_filepath
 
+    @staticmethod
+    def __get_link_source(item):
+        assert isinstance(item, entities.Item)
+        if not item.filename.endswith('.json') or \
+                'system' not in item.metadata or \
+                'shebang' not in item.metadata['system'] or \
+                item.metadata['system']['shebang']['dltype'] != 'link':
+            return item, '', False
+
+        # recursively get next id link item
+        while item.filename.endswith('.json') and \
+                'system' in item.metadata and \
+                'shebang' in item.metadata['system'] and \
+                'dltype' in item.metadata['system']['shebang'] and \
+                item.metadata['system']['shebang']['dltype'] == 'link' and \
+                'linkInfo' in item.metadata['system']['shebang'] and \
+                item.metadata['system']['shebang']['linkInfo']['type'] == 'id':
+            item = item.dataset.items.get(item_id=item.metadata['system']['shebang']['linkInfo']['ref'])
+
+        # check if link
+        if item.filename.endswith('.json') and \
+                'system' in item.metadata and \
+                'shebang' in item.metadata['system'] and \
+                'dltype' in item.metadata['system']['shebang'] and \
+                item.metadata['system']['shebang']['dltype'] == 'link' and \
+                'linkInfo' in item.metadata['system']['shebang'] and \
+                item.metadata['system']['shebang']['linkInfo']['type'] == 'url':
+            url = item.metadata['system']['shebang']['linkInfo']['ref']
+            return item, url, True
+        else:
+            return item, '', False
+
     def __thread_download(self,
                           item,
                           save_locally,
@@ -452,13 +496,20 @@ class Downloader:
         if save_locally and os.path.isfile(local_filepath):
             need_to_download = overwrite
 
+        item, url, is_url = self.__get_link_source(item=item)
+
         response = None
         if need_to_download:
-            result, response = self.items_repository._client_api.gen_request(req_type="get",
-                                                                             path="/items/{}/stream".format(item.id),
-                                                                             stream=True)
-            if not result:
-                raise PlatformException(response)
+            if not is_url:
+                result, response = self.items_repository._client_api.gen_request(req_type="get",
+                                                                                 path="/items/{}/stream".format(
+                                                                                     item.id),
+                                                                                 stream=True)
+                if not result:
+                    raise PlatformException(response)
+            else:
+                response = self.get_url_stream(url=url)
+
         if save_locally:
             # save to file
             if not os.path.exists(os.path.dirname(local_filepath)):
@@ -536,3 +587,22 @@ class Downloader:
             )
         logger.info("Downloading to: {}".format(local_path))
         return local_path
+
+    @staticmethod
+    def get_url_stream(url):
+
+        # This will download the binaries from the URL user provided
+        prepared_request = requests.Request(method='GET', url=url).prepare()
+        with requests.Session() as s:
+            retry = Retry(
+                total=3,
+                read=3,
+                connect=3,
+                backoff_factor=0.3,
+            )
+            adapter = HTTPAdapter(max_retries=retry)
+            s.mount('http://', adapter)
+            s.mount('https://', adapter)
+            response = s.send(request=prepared_request, stream=True)
+
+        return response

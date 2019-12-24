@@ -30,6 +30,14 @@ class Plugins:
                 logging.warning('please checkout a project or use project plugins repository for this action')
         return self._project
 
+    def __get_project(self, plugin):
+        assert isinstance(plugin, entities.Plugin)
+        if plugin.project is None:
+            projects = repositories.Projects(client_api=self.client_api)
+            self._project = projects.get(project_id=plugin.project_id)
+        else:
+            self._project = plugin.project
+
     def get(self, plugin_name=None, plugin_id=None):
         """
         Get Plugin object
@@ -94,6 +102,46 @@ class Plugins:
                                                      _json=plugin,
                                                      project=self._project))
         return plugins
+
+    def pull(self, plugin, version=None, local_path=None):
+        """
+        :param version:
+        :param plugin:
+        :param local_path:
+        :return:
+        """
+        assert isinstance(plugin, entities.Plugin)
+
+        if self.project is None:
+            self.__get_project(plugin)
+
+        dir_version = version
+        if version is None:
+            dir_version = plugin.version
+
+        if local_path is None:
+            local_path = os.path.join(
+                os.path.expanduser("~"),
+                ".dataloop",
+                "projects",
+                self.project.name,
+                "plugins",
+                plugin.name,
+                str(dir_version))
+
+        if version is None or version == plugin.version:
+            package_id = plugin.packageId
+        else:
+            versions = [revision for revision in plugin.revisions if revision['version'] == version]
+            if len(versions) <= 0:
+                raise exceptions.PlatformException('404', 'Version not found: version={}'.format(version))
+            elif len(versions) > 1:
+                raise exceptions.PlatformException('404', 'More than one version found: version={}'.format(version))
+            package_id = versions[0]['packageId']
+
+        self.project.packages.unpack(package_id=package_id, local_path=local_path)
+
+        return local_path
 
     def push(self, package_id=None, src_path=None, plugin_name=None, inputs=None, outputs=None):
         """

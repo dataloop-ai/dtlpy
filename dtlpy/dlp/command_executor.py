@@ -238,12 +238,17 @@ class CommandExecutor:
                                        thickness=int(args.thickness),
                                        to_items_folder=not args.not_items_folder)
             else:
+                if isinstance(args.remote_path, str):
+                    remote_path = args.remote_path
+                else:
+                    remote_path = None
                 dataset.download_annotations(filters=filters,
                                              local_path=args.local_path,
                                              annotation_options=annotation_options,
                                              overwrite=args.overwrite,
                                              with_text=args.with_text,
-                                             thickness=int(args.thickness))
+                                             thickness=int(args.thickness),
+                                             remote_path=remote_path)
 
         else:
             print('Type "dlp items --help" for options')

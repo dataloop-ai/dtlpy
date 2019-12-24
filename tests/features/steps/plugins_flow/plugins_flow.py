@@ -1,7 +1,7 @@
 import behave
-import os
 import json
 import time
+import os
 
 
 @behave.when(u'I copy all relevant files from "{plugin_assets_path}" to "{plugin_directory_path}"')
@@ -65,7 +65,9 @@ def step_impl(context, plugin_directory_path):
 def step_impl(context, plugin_directory_path):
     plugin_directory_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], plugin_directory_path)
     context.plugin = context.project.plugins.push(src_path=plugin_directory_path)
-    context.deployment = context.project.deployments.deploy_from_local_folder(cwd=plugin_directory_path)
+    context.deployment = context.project.deployments.deploy_from_local_folder(bot=context.bot_user,
+                                                                              cwd=plugin_directory_path)
+    time.sleep(30)
 
 
 @behave.when(u'I upload item in "{item_path}" to dataset')
@@ -77,7 +79,7 @@ def step_impl(context, item_path):
 
 @behave.then(u'Item "{item_num}" annotations equal annotations in "{assets_annotations_path}"')
 def step_impl(context, item_num, assets_annotations_path):
-    num_try = 10
+    num_try = 15
     assets_annotations_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], assets_annotations_path)
     if item_num == '1':
         item = context.item
@@ -94,7 +96,7 @@ def step_impl(context, item_num, assets_annotations_path):
         if len(annotations) > 0:
             break
         else:
-            time.sleep(2)
+            time.sleep(10)
 
     assert len(annotations) == 1
 

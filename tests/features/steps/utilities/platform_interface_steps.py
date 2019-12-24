@@ -8,6 +8,8 @@ import dtlpy as dl
 
 @behave.given('Platform Interface is initialized as dlp and Environment is set to development')
 def before_all(context):
+    bot_user = 'pipelines@dataloop.ai'
+    context.bot_user = bot_user
     if hasattr(context.feature, 'dataloop_feature_dl'):
         context.dl = context.feature.dataloop_feature_dl
     else:

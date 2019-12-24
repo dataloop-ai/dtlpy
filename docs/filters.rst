@@ -18,7 +18,7 @@ Filters options (or any combination of them):
 	filters.add(field='dir', values='/rick')
 
 	# filter multiple directories
-	filters.add(field='dir', values=['/rick', '/jerry'], operator='in')
+	filters.add(field='dir', values=['/rick', '/jerry'], operator=dl.FiltersOperations.IN)
 
 	# get filtered items:
 	pages = dataset.items.list(filters=filters)
@@ -53,8 +53,10 @@ More filters options:
 	filters.add(field='annotated', values=True)
 
 	# filter by date created
-	# (gt = greater than...)
-	filters.add(field='createdAt', values='01/06/2019', operator='gt')
+	import datetime, time
+    timestamp = datetime.datetime(year=2019, month=10, day=27, hour=15, minute=39, second=6,
+                                  tzinfo=datetime.timezone(datetime.timedelta(seconds=-time.timezone))).isoformat()
+	filters.add(field='createdAt', values=timestamp, operator=dl.FiltersOperations.GREATER_THAN)
 
 
 Get annotations using filters:
@@ -65,7 +67,7 @@ Get annotations using filters:
 	filters = Filters()
 
 	# set resource
-	filters.resource = 'annotations'
+	filters.resource = dl.FiltersResource.ANNOTATION
 
 	# add filter
 	filters.add(field='label', values='dog')
@@ -80,7 +82,7 @@ Filter items by their annotations:
 
 	# filter by item name
 	# (only items with the string "pets" anywhere in their name)
-	filters.add(field='name', values='*pets*', operator='glob')
+	filters.add(field='name', values='*pets*', operator=dl.FiltersOperations.GLOB)
 
 	# filter by item's annotations
 	# (only items with annotations labeled "cat")
@@ -99,25 +101,38 @@ This behavior can be changed:
 	filters = Filters()
 
     # get all items created before or after 2018
-    filters.add(field='createdAt', values='01/01/2018', operator='gt')
-    filters.add(field='createdAt', values='01/01/2019', operator='lt')
+    import datetime, time
+    earlier_timestamp = datetime.datetime(year=2018, month=1, day=1, hour=0, minute=0, second=0,
+                                  tzinfo=datetime.timezone(datetime.timedelta(seconds=-time.timezone))).isoformat()
+
+    later_timestamp = datetime.datetime(year=2019, month=1, day=1, hour=0, minute=0, second=0,
+                                  tzinfo=datetime.timezone(datetime.timedelta(seconds=-time.timezone))).isoformat()
+
+    filters.add(field='createdAt', values=earlier_timestamp, operator=dl.FiltersOperations.GREATER_THAN)
+    filters.add(field='createdAt', values=later_timestamp, operator=dl.FiltersOperations.LESS_THAN)
 
     # change method to OR
-    filters.method = 'or'
+    filters.method = dl.FiltersMethod.OR
 
 When adding a filter, you have some operators available to use:
 
 glob -> string global expressions such as !, *, **
+(or dl.FiltersOperation..GLOB)
 
 eq -> equal
+(or dl.FiltersOperation..EQUAL)
 
 ne -> not equal
+(or dl.FiltersOperation.NOT_EQUAL)
 
 gt -> greater than
+(or dl.FiltersOperation.GREATER_THAN)
 
 lt -> less than
+(or dl.FiltersOperation.LESS_THAN)
 
 in -> is in a list (when using this expression values should be a list)
+(or dl.FiltersOperation.IN)
 
 Update user metadata with filters:
 update_value must be a dictionary.
@@ -168,12 +183,12 @@ If you want filter items/annotations by "or" and "and" options you can do so by 
 	filters = Filters()
 
 	# filters with or
-	filters.add(field='name', values='*dogs*', operator='glob', method="or")
-	filters.add(field='name', values='*cats*', operator='glob', method="or")
+	filters.add(field='name', values='*dogs*', operator=dl.FiltersOperation..GLOB, method=dl.FiltersMethod.OR)
+	filters.add(field='name', values='*cats*', operator=dl.FiltersOperation..GLOB, method=dl.FiltersMethod.OR)
 
     # filters with and
-	filters.add(field='annotated', values=True, method='and)
-	filters.add(field='metadata.user.is_automated', values=True, method='and)
+	filters.add(field='annotated', values=True, method=dl.FiltersMethod.AND)
+	filters.add(field='metadata.user.is_automated', values=True, method=dl.FiltersMethod.AND)
 
 I the above example, we want to get items that are annotated AND have field "is_automated=True" in their metadata.
 Those items should alse have either the string "dogs" or "cats" in their name.
