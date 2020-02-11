@@ -14,21 +14,25 @@ class Recipe:
     """
     id = attr.ib()
     creator = attr.ib()
-    url = attr.ib()
+    url = attr.ib(repr=False)
     title = attr.ib()
     projectIds = attr.ib()
     description = attr.ib()
-    ontologyIds = attr.ib()
-    instructions = attr.ib()
-    examples = attr.ib()
-    customActions = attr.ib()
+    ontologyIds = attr.ib(repr=False)
+    instructions = attr.ib(repr=False)
+    examples = attr.ib(repr=False)
+    customActions = attr.ib(repr=False)
+    metadata = attr.ib()
+
+    # name change
+    ui_settings = attr.ib()
 
     # platform
-    _client_api = attr.ib(type=services.ApiClient)
+    _client_api = attr.ib(type=services.ApiClient, repr=False)
     # entities
-    _dataset = attr.ib()
+    _dataset = attr.ib(repr=False)
     # repositories
-    _repositories = attr.ib()
+    _repositories = attr.ib(repr=False)
 
     @classmethod
     def from_json(cls, _json, dataset, client_api):
@@ -51,6 +55,8 @@ class Recipe:
             description=_json['description'],
             ontologyIds=_json['ontologyIds'],
             instructions=_json['instructions'],
+            ui_settings=_json.get('uiSettings', None),
+            metadata=_json['metadata'],
             examples=_json['examples'],
             customActions=_json['customActions'])
 
@@ -89,7 +95,9 @@ class Recipe:
         """
         _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(Recipe)._client_api,
                                                               attr.fields(Recipe)._dataset,
+                                                              attr.fields(Recipe).ui_settings,
                                                               attr.fields(Recipe)._repositories))
+        _json['uiSettings'] = self.ui_settings
         return _json
 
     def print(self):

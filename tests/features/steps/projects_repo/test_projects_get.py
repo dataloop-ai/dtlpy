@@ -1,5 +1,5 @@
 # coding=utf-8
-"""Projects repository get function testing."""
+"""Projects repository get service testing."""
 
 import behave
 
@@ -21,7 +21,15 @@ def step_impl(context, project_name):
 
 @behave.then(u'The project I got is equal to the one created')
 def step_impl(context):
-    assert context.project.to_json() == context.project_get.to_json()
+    project_json = context.project.to_json()
+    if 'role' in project_json:
+        project_json.pop('role')
+
+    get_json = context.project.to_json()
+    if 'role' in get_json:
+        get_json.pop('role')
+
+    assert project_json == get_json
     context.project.delete(True, True)
 
 @behave.when(u'I get a project by the id of Project')

@@ -1,5 +1,5 @@
 # coding=utf-8
-"""Projects repository list function testing."""
+"""Projects repository list service testing."""
 
 import behave
 
@@ -21,9 +21,9 @@ def step_impl(context):
     assert len(context.list) == 0
 
 
-@behave.then(u'I receive a projects list of "{list_lenght}" project')
-def step_impl(context, list_lenght):
-    assert len(context.list) == int(list_lenght)
+@behave.then(u'I receive a projects list of "{list_length}" project')
+def step_impl(context, list_length):
+    assert len(context.list) == int(list_length)
 
 
 @behave.then(u'The project in the projects list equals the project I created')
@@ -32,6 +32,10 @@ def step_impl(context):
     for project in context.list:
         if project.name == context.project.name:
             found = True
-            assert project.to_json() == context.project.to_json()
+            list_json = project.to_json()
+            project_json = context.project.to_json()
+            list_json.pop('role')
+            project_json.pop('role')
+            assert list_json == project_json
     assert found is True
     context.project.delete(True, True)

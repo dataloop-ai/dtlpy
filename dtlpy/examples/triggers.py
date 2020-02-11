@@ -7,17 +7,17 @@ def main():
     # create trigger #
     ##################
     # create Item trigger
-    # that will trigger deployment with given id
+    # that will trigger service with given id
     # when item is created
-    trigger = project.triggers.create(deployment_ids=['some_deployment_id'],
+    trigger = project.triggers.create(service_ids=['some_service_id'],
                                       resource='Item',
                                       actions=['Created'],
                                       active=True)
 
     # create Annotation trigger
-    # that will trigger deployment with given id
+    # that will trigger service with given id
     # when Annotation is deleted
-    trigger = project.triggers.create(deployment_ids=['some_deployment_id'],
+    trigger = project.triggers.create(service_ids=['some_service_id'],
                                       resource='Annotation',
                                       actions=['Deleted'],
                                       active=True)

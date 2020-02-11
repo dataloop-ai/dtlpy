@@ -7,8 +7,8 @@ def step_impl(context, entity):
         entity = context.dl.Item
     elif entity == "Artifact":
         entity = context.dl.entities.Artifact
-    elif entity == "Package":
-        entity = context.dl.Package
+    elif entity == "Codebase":
+        entity = context.dl.Codebase
 
     context.dataset.items.set_items_entity(entity)
 
@@ -19,8 +19,8 @@ def step_impl(context, entity):
         entity = context.dl.Item
     elif entity == "Artifact":
         entity = context.dl.entities.Artifact
-    elif entity == "Package":
-        entity = context.dl.Package
+    elif entity == "Codebase":
+        entity = context.dl.Codebase
 
     assert context.dataset.items.items_entity == entity
 

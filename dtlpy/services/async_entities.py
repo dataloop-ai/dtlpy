@@ -31,6 +31,25 @@ class AsyncResponse:
         return self.async_resp.headers
 
 
+class DummyErrorResponse:
+    def __init__(self, error, trace):
+        self.status = 400
+        self.reason = trace
+        self.error = error
+        self.request_info = {}
+        self.headers = {}
+
+
+class AsyncResponseError(AsyncResponse):
+    def __init__(self, error, trace):
+        async_resp = DummyErrorResponse(error=error, trace=trace)
+        _json = {'error': error}
+        text = error
+        super(AsyncResponseError).__init__(async_resp=async_resp,
+                                           _json=_json,
+                                           text=text)
+
+
 class AsyncUploadStream(io.IOBase):
     def __init__(self, buffer, callback=None):
         self.buffer = buffer

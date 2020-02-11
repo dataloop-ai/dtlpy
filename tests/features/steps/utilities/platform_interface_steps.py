@@ -4,12 +4,17 @@ import time
 import jwt
 import os
 import dtlpy as dl
+import numpy as np
+try:
+    # for local import
+    from tests.env_from_git_branch import get_env_from_git_branch
+except ImportError:
+    # for remote import
+    from env_from_git_branch import get_env_from_git_branch
 
 
-@behave.given('Platform Interface is initialized as dlp and Environment is set to development')
+@behave.given('Platform Interface is initialized as dlp and Environment is set according to git branch')
 def before_all(context):
-    bot_user = 'pipelines@dataloop.ai'
-    context.bot_user = bot_user
     if hasattr(context.feature, 'dataloop_feature_dl'):
         context.dl = context.feature.dataloop_feature_dl
     else:
@@ -29,10 +34,18 @@ def before_all(context):
         context.dl.client_api.calls_counter.reset()
 
         # set env to dev
-        context.dl.setenv('dev')
+        if get_env_from_git_branch() != dl.client_api.environments[dl.client_api.environment]['alias']:
+            context.dl.setenv(get_env_from_git_branch())
 
         # check token
-        payload = jwt.decode(context.dl.token(), algorithms=['HS256'], verify=False)
+        payload = None
+        for i in range(10):
+            try:
+                payload = jwt.decode(context.dl.token(), algorithms=['HS256'], verify=False)
+                break
+            except jwt.exceptions.DecodeError:
+                time.sleep(np.random.rand())
+                pass
         if payload['email'] not in ['oa-test-1@dataloop.ai', 'oa-test-2@dataloop.ai', 'oa-test-3@dataloop.ai']:
             assert False, 'Cannot run test on user: "{}". only test users'.format(payload['email'])
 
@@ -51,3 +64,13 @@ def step_impl(context, project_name):
         context.feature.dataloop_feature_project = context.project
         time.sleep(5)
     context.dataset_count = 0
+
+    if 'bot.create' in context.feature.tags:
+        if hasattr(context.feature, 'bot_user'):
+            context.bot_user = context.feature.bot_user
+        else:
+            bot_name = 'test_bot_{}'.format(random.randrange(1000, 10000))
+            context.bot = context.project.bots.create(name=bot_name)
+            context.feature.bot = context.bot
+            context.bot_user = context.bot.email
+            context.feature.bot_user = context.bot_user

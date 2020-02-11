@@ -34,10 +34,10 @@ If you want to change this behaviour:
 
 .. code-block:: python
 
-	# create a filters instance
+    # create a filters instance
 	filters = Filters()
-	filters.show_hidden = True
-	filters.show_dirs = True
+    filters.show_hidden = True
+    filters.show_dirs = True
 
 More filters options:
 
@@ -54,8 +54,8 @@ More filters options:
 
 	# filter by date created
 	import datetime, time
-	timestamp = datetime.datetime(year=2019, month=10, day=27, hour=15, minute=39, second=6,
-								  tzinfo=datetime.timezone(datetime.timedelta(seconds=-time.timezone))).isoformat()
+    timestamp = datetime.datetime(year=2019, month=10, day=27, hour=15, minute=39, second=6,
+                                  tzinfo=datetime.timezone(datetime.timedelta(seconds=-time.timezone))).isoformat()
 	filters.add(field='createdAt', values=timestamp, operator=dl.FiltersOperations.GREATER_THAN)
 
 
@@ -100,20 +100,19 @@ This behavior can be changed:
 	# create a filters instance
 	filters = Filters()
 
-	# get all items created before or after 2018
-	import datetime, time
-	earlier_timestamp = datetime.datetime(year=2018, month=1, day=1, hour=0, minute=0, second=0,
-								  tzinfo=datetime.timezone(datetime.timedelta(seconds=-time.timezone))).isoformat()
+    # get all items created before or after 2018
+    import datetime, time
+    earlier_timestamp = datetime.datetime(year=2018, month=1, day=1, hour=0, minute=0, second=0,
+                                  tzinfo=datetime.timezone(datetime.timedelta(seconds=-time.timezone))).isoformat()
 
-	later_timestamp = datetime.datetime(year=2019, month=1, day=1, hour=0, minute=0, second=0,
-								  tzinfo=datetime.timezone(datetime.timedelta(seconds=-time.timezone))).isoformat()
+    later_timestamp = datetime.datetime(year=2019, month=1, day=1, hour=0, minute=0, second=0,
+                                  tzinfo=datetime.timezone(datetime.timedelta(seconds=-time.timezone))).isoformat()
 
-	filters.add(field='createdAt', values=earlier_timestamp, operator=dl.FiltersOperations.GREATER_THAN)
-	filters.add(field='createdAt', values=later_timestamp, operator=dl.FiltersOperations.LESS_THAN)
+    filters.add(field='createdAt', values=earlier_timestamp, operator=dl.FiltersOperations.GREATER_THAN)
+    filters.add(field='createdAt', values=later_timestamp, operator=dl.FiltersOperations.LESS_THAN)
 
-	# change method to OR
-	filters.method = dl.FiltersMethod.OR
-
+    # change method to OR
+    filters.method = dl.FiltersMethod.OR
 
 When adding a filter, you have some operators available to use:
 
@@ -141,42 +140,42 @@ The dictionary will update only user metadata.
 
 .. code-block:: python
 
-	#########################
-	# update filtered items #
-	#########################
-	# to add filed annotatedDogs to all filtered items and give value True
-	# this field will be added to user metadata
-	update_values = {'annotatedDogs': True}
+    #########################
+    # update filtered items #
+    #########################
+    # to add filed annotatedDogs to all filtered items and give value True
+    # this field will be added to user metadata
+    update_values = {'annotatedDogs': True}
 
-	# update
-	pages = dataset.items.update(filters=filters, update_values=update_values)
+    # update
+    pages = dataset.items.update(filters=filters, update_values=update_values)
 
 
 If before update metadata was:
 
 .. code-block:: python
 
-	{'system': {...},
-	'user':{
-	'plugins': {...},
-	'annotation_notes': [...]
-	}}
+    {'system': {...},
+    'user':{
+    'plugins': {...},
+    'annotation_notes': [...]
+    }}
 
 Then, after update it will be:
 
 .. code-block:: python
 
-	{'system': {...},
-	'user':{
-	'plugins': {...},
-	'annotation_notes': [...],
-	'annotatedDogs': True
-	}}
+    {'system': {...},
+    'user':{
+    'plugins': {...},
+    'annotation_notes': [...],
+    'annotatedDogs': True
+    }}
 
 More advanced filtering options
 ################################
 If you want filter items/annotations by "or" and "and" options you can do so by specifying which filters will be check
-with "or" and which ones with "and":
+ with "or" and which ones with "and":
 
 .. code-block:: python
 
@@ -187,7 +186,7 @@ with "or" and which ones with "and":
 	filters.add(field='name', values='*dogs*', operator=dl.FiltersOperation..GLOB, method=dl.FiltersMethod.OR)
 	filters.add(field='name', values='*cats*', operator=dl.FiltersOperation..GLOB, method=dl.FiltersMethod.OR)
 
-	# filters with and
+    # filters with and
 	filters.add(field='annotated', values=True, method=dl.FiltersMethod.AND)
 	filters.add(field='metadata.user.is_automated', values=True, method=dl.FiltersMethod.AND)
 
@@ -201,8 +200,8 @@ For the above example, the filter will look something like that:
 .. code-block:: python
 
 	{'$or': [{'name': {'$glob': '*dogs*'}},
-			 {'name': {'$glob': '*cats*'}}],
-	 '$and': [{'annotated': True},
-			  {'metadata.user.is_automated': True},
-			  {'hidden': False},
-			  {'type': 'file'}]}
+             {'name': {'$glob': '*cats*'}}],
+     '$and': [{'annotated': True},
+              {'metadata.user.is_automated': True},
+              {'hidden': False},
+              {'type': 'file'}]}

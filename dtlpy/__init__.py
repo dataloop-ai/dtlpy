@@ -19,14 +19,13 @@ import sys
 import os
 
 from .exceptions import PlatformException
-from . import services, repositories, exceptions, entities
+from . import repositories, exceptions, entities, examples
 from .__version__ import version as __version__
 from .entities import Box, Point, Segmentation, Polygon, Ellipse, Classification, Polyline, Filters, Trigger, \
-    AnnotationCollection, Annotation, Item, Package, Filters, Session, Recipe, Ontology, Label, Similarity, \
-    PluginInput, ItemLink, UrlLink
-from . import examples
-from .services.check_sdk import check
-from .utilities import Converter, BasePluginRunner, Progress
+    AnnotationCollection, Annotation, Item, Codebase, Filters, Execution, Recipe, Ontology, Label, Similarity, \
+    ItemLink, UrlLink, PackageModule, PackageFunction, FunctionIO, Modality
+from .utilities import Converter, BaseServiceRunner, Progress
+from .services import DataloopLogger, ApiClient, check_sdk
 
 if os.name == "nt":
     # set encoding for windows printing
@@ -34,6 +33,25 @@ if os.name == "nt":
 """
 Main Platform Interface module for Dataloop
 """
+##########
+# Logger #
+##########
+logger = logging.getLogger(name=__name__)
+logger.setLevel(logging.DEBUG)
+log_filepath = DataloopLogger.get_log_filepath()
+# set file handler to save all logs to file
+formatter = logging.Formatter(fmt="%(asctime)s.%(msecs)03d [%(levelname)s]-[%(threadName)s] %(name)s: %(message)s",
+                              datefmt='%Y-%m-%d %H:%M:%S')
+fh = DataloopLogger(log_filepath, maxBytes=(1048 * 1000 * 5))
+fh.setLevel(logging.DEBUG)
+fh.setFormatter(formatter)
+sh = logging.StreamHandler()
+sh.setLevel(logging.WARNING)
+sh.setFormatter(formatter)
+# set handlers to main logger
+logger.addHandler(sh)
+logger.addHandler(fh)
+
 # check python version
 if sys.version_info.major != 3:
     if sys.version_info.minor not in [5, 6]:
@@ -47,29 +65,24 @@ if sys.version_info.major != 3:
 Main Platform Interface module for Dataloop
 """
 
-##########
-# Logger #
-##########
-logger = logging.getLogger(name=__name__)
-logger = services.create_logger(logger, level=logging.WARNING)
-
 ################
 # Repositories #
 ################
 # Create repositories instances
-client_api = services.ApiClient()
+client_api = ApiClient()
 projects = repositories.Projects(client_api=client_api)
 datasets = repositories.Datasets(client_api=client_api, project=None)
 items = repositories.Items(client_api=client_api, datasets=datasets)
-plugins = repositories.Plugins(client_api=client_api)
-sessions = repositories.Sessions(client_api=client_api)
-deployments = repositories.Deployments(client_api=client_api)
+packages = repositories.Packages(client_api=client_api)
+executions = repositories.Executions(client_api=client_api)
+services = repositories.Services(client_api=client_api)
+webhooks = repositories.Webhooks(client_api=client_api)
+triggers = repositories.Triggers(client_api=client_api)
 
 if client_api.token_expired():
     logger.error('Token expired. Please login')
-
 try:
-    check(version=__version__, client_api=client_api)
+    check_sdk.check(version=__version__, client_api=client_api)
 except Exception:
     logger.debug('Failed to check SDK! Continue without')
 
@@ -133,12 +146,12 @@ def setenv(env):
     client_api.setenv(env=env)
 
 
-def token_expired():
+def token_expired(t=60):
     """
     Check if token is expired
     :return: bool. True if token expired
     """
-    return client_api.token_expired()
+    return client_api.token_expired(t=t)
 
 
 def token():
@@ -163,15 +176,7 @@ def info(with_token=True):
     :param with_token:
     :return:
     """
-    user_email = 'null'
-    if client_api.token is not None:
-        payload = jwt.decode(client_api.token, algorithms=['HS256'], verify=False)
-        user_email = payload['email']
-    information = {'environment': client_api.environment,
-                   'user_email': user_email}
-    if with_token:
-        information['token'] = client_api.token
-    return information
+    return client_api.info(with_token=with_token)
 
 
 def init():
@@ -216,3 +221,106 @@ class LinkTypeEnum:
     ID = 'id'
     URL = 'url'
 
+
+class TriggerResource:
+    ITEM = 'Item'
+    DATASET = 'Dataset'
+    ANNOTATION = 'Annotation'
+
+
+class TriggerAction:
+    CREATED = 'Created'
+    UPDATED = 'Updated'
+    DELETED = 'Deleted'
+
+
+class TriggerExecutionMode:
+    ONCE = 'Once'
+    ALWAYS = 'Always'
+
+
+class PackageInputType:
+    ITEM = 'Item'
+    DATASET = 'Dataset'
+    ANNOTATION = 'Annotation'
+    JSON = 'Json'
+
+
+class FiltersResource:
+    ITEM = 'items'
+    ANNOTATION = 'annotations'
+
+
+class FiltersOperations:
+    OR = 'or'
+    AND = 'and'
+    IN = 'in'
+    NOT_EQUAL = 'ne'
+    EQUAL = 'eq'
+    GREATER_THAN = 'gt'
+    GLOB = 'glob'
+    LESS_THAN = 'lt'
+
+
+class FiltersMethod:
+    OR = 'or'
+    AND = 'and'
+
+
+class FiltersOrderByDirection:
+    DESCENDING = 'descending'
+    ASCENDING = 'ascending'
+
+
+class KnownFields:
+    DIR = 'dir'
+    ANNOTATED = 'annotated'
+    FILENAME = 'filename'
+    CREATED_AT = 'createdAt'
+    UPDATED_AT = 'updatedAt'
+    LABEL = 'label'
+    NAME = 'name'
+    HIDDEN = 'hidden'
+
+
+class ExecutionStatus:
+    SUCCESS = 'success'
+    FAILED = 'failed'
+    IN_PROGRESS = 'inProgress'
+    CREATED = 'created'
+
+
+class HttpMethod:
+    GET = 'GET'
+    POST = 'POST'
+    DELETE = 'DELETE'
+    PATCH = 'PATCH'
+
+
+class AnnotationOptions:
+    JSON = 'json'
+    MASK = 'mask'
+    INSTANCE = 'instance'
+
+
+class AnnotationFormat:
+    COCO = 'coco'
+    VOC = 'voc'
+    YOLO = 'yolo'
+    DATALOOP = 'dataloop'
+
+
+class InstanceCatalog:
+    REGULAR_MICRO = 'regular-micro',
+    REGULAR_XS = 'regular-xs',
+    REGULAR_S = 'regular-s',
+    REGULAR_M = 'regular-m',
+    REGULAR_L = 'regular-l',
+    REGULAR_XL = 'regular-xl',
+    HIGHMEM_MICRO = 'highmem-micro',
+    HIGHMEM_XS = 'highmem-xs',
+    HIGHMEM_S = 'highmem-s',
+    HIGHMEM_M = 'highmem-m',
+    HIGHMEM_L = 'highmem-l',
+    HIGHMEM_XL = 'highmem-xl',
+    GPU_K80_S = 'gpu-k80-s'

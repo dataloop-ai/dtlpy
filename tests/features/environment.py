@@ -1,17 +1,23 @@
-from __future__ import print_function
 from behave import fixture
 from behave import use_fixture
 import os
 import json
+import logging
 
 
 @fixture
 def after_feature(context, feature):
+    if hasattr(feature, 'bot'):
+        try:
+            feature.bot.delete()
+        except Exception:
+            logging.exception('Failed to delete bot')
+
     if hasattr(feature, 'dataloop_feature_project'):
         try:
             feature.dataloop_feature_project.delete(True, True)
-        except:
-            pass
+        except Exception:
+            logging.exception('Failed to delete project')
 
     # update api call json
     if hasattr(feature, 'dataloop_feature_dl'):
@@ -25,61 +31,79 @@ def after_feature(context, feature):
                 api_calls[context.feature.name] = feature.dataloop_feature_dl.client_api.calls_counter.number
             with open(api_calls_path, 'w') as f:
                 json.dump(api_calls, f)
-        except:
-            pass
+        except Exception:
+            logging.exception('Failed to update api calls')
+
 
 @fixture
 def after_tag(context, tag):
     
-    if tag == 'deployments.delete':
+    if tag == 'services.delete':
         try:
-            use_fixture(delete_deployments, context)
-        except:
-            pass
+            use_fixture(delete_services, context)
+        except Exception:
+            logging.exception('Failed to delete service')
 
-    if tag == 'plugins.delete':
+    if tag == 'packages.delete':
         try:
-            use_fixture(delete_plugins, context)
-        except:
-            pass
+            use_fixture(delete_packages, context)
+        except Exception:
+            logging.exception('Failed to delete package')
 
+    if tag == 'packages.delete_one':
+        try:
+            use_fixture(delete_one_package, context)
+        except Exception:
+            logging.exception('Failed to delete package')
 
 @fixture
-def delete_plugins(context):
-    if hasattr(context, 'first_plugin'):
+def delete_packages(context):
+    first_package_deleted = False
+    if hasattr(context, 'first_package'):
         try:
-            context.first_plugin.delete()
+            context.first_package.delete()
+            first_package_deleted = True
         except Exception:
             pass
 
-    if hasattr(context, 'second_plugin'):
+    if hasattr(context, 'second_package'):
         try:
-            context.second_plugin.delete()
+            context.second_package.delete()
         except Exception:
             pass
 
-    if hasattr(context, 'plugin'):
+    if not first_package_deleted and hasattr(context, 'package'):
         try:
-            context.plugin.delete()
+            context.package.delete()
         except Exception:
             pass
 
 @fixture
-def delete_deployments(context):
-    if hasattr(context, 'first_deployment'):
+def delete_one_package(context):
+    if hasattr(context, 'package'):
         try:
-            context.first_deployment.delete()
+            context.package.delete()
         except Exception:
             pass
 
-    if hasattr(context, 'second_deployment'):
+@fixture
+def delete_services(context):
+    first_service_deleted = False
+    if hasattr(context, 'first_service'):
         try:
-            context.second_deployment.delete()
+            context.first_service.delete()
+            first_service_deleted = True
         except Exception:
             pass
 
-    if hasattr(context, 'deployment'):
+    if hasattr(context, 'second_service'):
         try:
-            context.deployment.delete()
+            context.second_service.delete()
+        except Exception:
+            pass
+
+    if not first_service_deleted and hasattr(context, 'service'):
+        try:
+            context.service.delete()
         except Exception:
             pass

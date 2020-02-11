@@ -21,7 +21,9 @@ dlp.client_api.is_cli = True
 ##########
 # set levels for CLI
 logger = logging.getLogger(name='dtlpy')
-logger.handlers[1].setLevel(logging.INFO)
+handler_id = next((i for i, hand in enumerate(logger.handlers) if isinstance(hand, logging.StreamHandler)), 0)
+logger.handlers[handler_id].setLevel(level=logging.INFO)
+logger.propagate = False
 
 
 def dlp_exit():
@@ -106,6 +108,8 @@ def main():
                 print(e)
                 sys.exit(1)
     except KeyboardInterrupt:
+        dlp_exit()
+    except EOFError:
         dlp_exit()
     except Exception:
         print(traceback.format_exc())

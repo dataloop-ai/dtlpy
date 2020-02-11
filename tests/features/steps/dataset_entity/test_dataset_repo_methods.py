@@ -12,15 +12,9 @@ def step_impl(context):
 def step_impl(context, local_path):
     local_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], local_path)
     context.dataset.download(filters=None,
-                             local_path=local_path,
-                             filetypes=None,
-                             num_workers=None,
-                             save_locally=True,
-                             download_item=True,
-                             annotation_options=['mask', 'instance'],
-                             opacity=1,
-                             with_text=False,
-                             thickness=3)
+                            local_path=local_path,
+                            annotation_options=['mask', 'instance', 'json'],
+                            thickness=3)
 
 
 @behave.when(u'I delete a dataset entity')

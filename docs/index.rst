@@ -16,7 +16,7 @@ Dataloop's SDK and CLI documentation
    notebook_examples.ipynb
    filters.rst
    converters.rst
-   starting_with_plugins.rst
+   starting_with_FaaS.rst
    links.rst
    modality.rst
    similarity.rst

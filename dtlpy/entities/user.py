@@ -2,7 +2,7 @@ import traceback
 import logging
 import attr
 
-from .. import miscellaneous
+from .. import miscellaneous, entities, exceptions
 
 logger = logging.getLogger(name=__name__)
 
@@ -13,17 +13,17 @@ class User:
     User entity
     """
     createdAt = attr.ib()
-    updatedAt = attr.ib()
-    firstName = attr.ib()
-    lastName = attr.ib()
+    updatedAt = attr.ib(repr=False)
+    name = attr.ib()
+    last_name = attr.ib()
     username = attr.ib()
-    avatar = attr.ib()
+    avatar = attr.ib(repr=False)
     email = attr.ib()
     type = attr.ib()
     org = attr.ib()
     id = attr.ib()
     # api
-    project = attr.ib()
+    _project = attr.ib(repr=False)
 
     @staticmethod
     def _protected_from_json(_json, project):
@@ -34,13 +34,21 @@ class User:
         :return:
         """
         try:
-            project = User.from_json(_json=_json,
-                                     project=project)
+            user = User.from_json(_json=_json,
+                                  project=project)
             status = True
         except Exception:
-            project = traceback.format_exc()
+            user = traceback.format_exc()
             status = False
-        return status, project
+        return status, user
+
+    @property
+    def project(self):
+        if self._project is None:
+            raise exceptions.PlatformException(error='2001',
+                                               message='Missing entity "project".')
+        assert isinstance(self._project, entities.Project)
+        return self._project
 
     @classmethod
     def from_json(cls, _json, project):
@@ -53,9 +61,9 @@ class User:
         """
         return cls(
             createdAt=_json.get('createdAt', None),
-            firstName=_json.get('firstName', None),
+            name=_json.get('firstName', None),
             updatedAt=_json.get('updatedAt', None),
-            lastName=_json.get('lastName', None),
+            last_name=_json.get('lastName', None),
             username=_json.get('username', None),
             avatar=_json.get('avatar', None),
             email=_json.get('email', None),
@@ -70,8 +78,13 @@ class User:
 
         :return: platform json format of object
         """
-        return attr.asdict(self,
-                           filter=attr.filters.exclude(attr.fields(User).project))
+        _json = attr.asdict(self,
+                            filter=attr.filters.exclude(attr.fields(User)._project,
+                                                        attr.fields(User).name,
+                                                        attr.fields(User).last_name))
+        _json['firstName'] = self.name
+        _json['lastName'] = self.last_name
+        return _json
 
     def print(self):
         miscellaneous.List([self]).print()

@@ -1,4 +1,3 @@
-
 Getting Started
 ===============
 
@@ -238,6 +237,14 @@ The download file will be split to directories ('items', 'mask' etc.). To avoid 
 		local_path='/home/images/best_one.jpg',
 		overwrite=True
 	)
+
+To view and set the label-instance map:
+
+.. code-block:: python
+
+	dataset.instance_map
+	# {'two': 3, 'three': 2, 'one': 1}
+	dataset.instance_map =  {'two': 2, 'three': 1, 'one': 3}
 
 Move item between folders
 -------------------------

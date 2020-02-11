@@ -3,33 +3,35 @@ import logging
 logger = logging.getLogger(name=__name__)
 
 
-class PluginRunner(dl.BasePluginRunner):
+class ServiceRunner(dl.BaseServiceRunner):
     """
-    Plugin runner class
+    Package runner class
 
     """
+
     def __init__(self, **kwargs):
         """
-        Init plugin attributes here
-        
+        Init package attributes here
+
         :param kwargs: config params
         :return:
         """
 
     def run(self, progress=None):
         """
-        Write your main plugin function here
+        Write your main package service here
 
-        :param progress: Use this to update the progress of your plugin
+        :param progress: Use this to update the progress of your package
         :return:
         """
         # these lines can be removed
         assert isinstance(progress, dl.Progress)
         progress.update(status='inProgress', progress=0)
+        logger.info('Hello World from Dataloop :)')
 
 
 if __name__ == "__main__":
     """
-    Run this main to locally debug your plugin
+    Run this main to locally debug your package
     """
-    dl.plugins.test_local_plugin()
+    dl.packages.test_local_package()

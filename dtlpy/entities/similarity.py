@@ -36,7 +36,7 @@ class Similarity:
     ref = attr.ib(type=str)
     type = attr.ib(type=str)
     name = attr.ib(type=str, default=None)
-    _items = attr.ib(default=list())
+    _items = attr.ib()
 
     @property
     def target(self):
@@ -44,19 +44,20 @@ class Similarity:
 
     @property
     def items(self):
-        items = list()
-        for item in self._items:
-            items.append(SimilarityItem.from_json(_json=item))
-        return items
+        return [SimilarityItem.from_json(_json=item) for item in self._items]
 
     @classmethod
     def from_json(cls, _json):
-
         return cls(
             ref=_json['metadata']['target']['ref'],
             type=_json['metadata']['target']['type'],
             items=_json.get('items', list())
         )
+
+    @_items.default
+    def set_items(self):
+        items = list()
+        return items
 
     def to_json(self):
         """
@@ -64,11 +65,9 @@ class Similarity:
 
         :return: platform json format of object
         """
-        # get excluded
         items = list()
         items.append(self.target.to_json())
-        for item in self.items:
-            items.append(item.to_json())
+        items += self._items
 
         target = {
             "type": self.type,

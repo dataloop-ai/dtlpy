@@ -1,6 +1,5 @@
-import os
-import logging
 import datetime
+import os
 from logging import handlers
 
 
@@ -21,7 +20,7 @@ class DataloopLogger(handlers.BaseRotatingHandler):
     @staticmethod
     def clean_logs():
         log_path = DataloopLogger.get_log_path()
-        now = datetime.datetime.now().timestamp()
+        now = datetime.datetime.utcnow().timestamp()
         for filename in os.listdir(log_path):
             filepath = os.path.join(log_path, filename)
             file_time = os.path.getmtime(filepath)
@@ -71,26 +70,3 @@ class DataloopLogger(handlers.BaseRotatingHandler):
             if self.stream.tell() + len(msg) >= self.maxBytes:
                 return 1
         return 0
-
-
-def create_logger(logger, level=logging.WARNING):
-    logger.setLevel(logging.DEBUG)
-    log_filepath = DataloopLogger.get_log_filepath()
-    # set file handler to save all logs to file
-    formatter = logging.Formatter(fmt="%(asctime)s.%(msecs)03d [%(levelname)s]-[%(threadName)s] %(name)s: %(message)s",
-                                  datefmt='%Y-%m-%d %H:%M:%S')
-    fh = DataloopLogger(log_filepath, maxBytes=(1048 * 1000 * 5))
-    fh.setLevel(logging.DEBUG)
-    fh.setFormatter(formatter)
-
-    # set steam handler for viewing
-    formatter = logging.Formatter(fmt="%(asctime)s.%(msecs)03d [%(levelname)s]- %(name)s: %(message)s",
-                                  datefmt='%Y-%m-%d %H:%M:%S')
-    sh = logging.StreamHandler()
-    sh.setLevel(level)
-    sh.setFormatter(formatter)
-
-    # set handlers to main logger
-    logger.addHandler(fh)
-    logger.addHandler(sh)
-    return logger

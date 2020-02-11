@@ -4,30 +4,47 @@ import random as r
 import time
 
 
-@behave.then(u"Annotations to_json() equals to Platform json")
-def step_impl(context):
-    annotations_list = context.item.annotations.list()
-    for ann in annotations_list:
-        success, response = context.item._client_api.gen_request(
+@behave.then(u'Object "{entity}" to_json() equals to Platform json.')
+def step_impl(context, entity):
+    if entity != 'Annotations':
+        entity = entity.lower()
+        entity_to_json = getattr(context, entity).to_json()
+        url_path = "/{}s/{}".format(entity, getattr(context, entity).id)
+
+        success, response = getattr(context, entity)._client_api.gen_request(
             req_type="get",
-            path="/datasets/%s/items/%s/annotations/%s"
-                 % (context.item.dataset.id, context.item.id, ann.id),
+            path=url_path
         )
-        ann_json = ann.to_json()
         response = response.json()
-        assert success is True
-
-        # remove metadata because response has not metadata
-        if ann.type in ['segment', 'polyline']:
-            if 'metadata' in ann_json:
-                ann_json.pop('metadata')
-            if 'metadata' in response:
-                response.pop('metadata')
-
-        # compare json
-        if response != ann_json:
-            logging.error('FAILED: response json is:\n{}\n\nto_json is:\n{}'.format(response.json(), ann_json))
+        assert success
+        if entity == 'package':
+            entity_to_json['modules'][0]['functions'][0].pop('description')
+        if entity_to_json != response:
+            logging.error('FAILED: response json is:\n{}\n\nto_json is:\n{}'.format(response, entity_to_json))
             assert False
+    else:
+        annotations_list = context.item.annotations.list()
+        for ann in annotations_list:
+            success, response = context.item._client_api.gen_request(
+                req_type="get",
+                path="/datasets/%s/items/%s/annotations/%s"
+                    % (context.item.dataset.id, context.item.id, ann.id),
+            )
+            ann_json = ann.to_json()
+            response = response.json()
+            assert success
+
+            # remove metadata because response has no metadata
+            if ann.type in ['segment', 'polyline']:
+                if 'metadata' in ann_json:
+                    ann_json.pop('metadata')
+                if 'metadata' in response:
+                    response.pop('metadata')
+
+            # compare json
+            if response != ann_json:
+                logging.error('FAILED: response json is:\n{}\n\nto_json is:\n{}'.format(response, ann_json))
+                assert False
 
 
 @behave.when(u"I create a blank annotation to item")

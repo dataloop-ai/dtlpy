@@ -1,6 +1,5 @@
 def main():
     import dtlpy as dl
-    dl.setenv('dev')
 
     ########
     # prep #
@@ -16,20 +15,19 @@ def main():
     # create filters #
     ##################
     filters = dl.Filters()
-    # set resource
-    filters.resource = 'items'
+    # set resource - optional - default is item
+    filters.resource = dl.FiltersResource.ITEM
     # add filter - only files
     filters.add(field='type', values='file')
     # add filter - only annotated items
     filters.add(field='annotated', values=True)
     # add filter - filename includes 'dog'
     filters.add(field='filename', values='*dog*')
-    # add filter - created since June 2019
     # -- time filters -- must be in ISO format and in UTC (offset from local time). converting using datetime package as follows:
     import datetime, time
     timestamp = datetime.datetime(year=2019, month=10, day=27, hour=15, minute=39, second=6,
                                   tzinfo=datetime.timezone(datetime.timedelta(seconds=-time.timezone))).isoformat()
-    filters.add(field='createdAt', values=timestamp, operator='gt')
+    filters.add(field='createdAt', values=timestamp, operator=dl.FiltersOperations.GREATER_THAN)
 
     ######################
     # get filtered items #
@@ -78,19 +76,22 @@ def main():
     ##################
     filters = dl.Filters()
     # set resource
-    filters.resource = 'annotations'
+    filters.resource = dl.FiltersResource.ANNOTATION
     # add filter - only box annotations
     filters.add(field='type', values='box')
     # add filter - only dogs
-    filters.add(field='label', values=['Dog', 'cat'], operator='in')
+    filters.add(field='label', values=['Dog', 'cat'], operator=dl.FiltersOperations.IN)
     # add filter - annotated by Joe and David
-    filters.add(field='creator', values=['Joe@dataloop.ai', 'David@dataloop.ai', 'oa-test-1@dataloop.ai'], operator='in')
+    filters.add(field='creator',
+                values=['Joe@dataloop.ai', 'David@dataloop.ai', 'oa-test-1@dataloop.ai'],
+                operator=dl.FiltersOperations.IN
+                )
 
     ############################
     # get filtered annotations #
     ############################
     # return results sorted by descending id 
-    filters.sort_by(field='id', value='descending')
+    filters.sort_by(field='id', value=dl.FiltersOrderByDirection.DESCENDING)
     pages = dataset.items.list(filters=filters)
 
     ###############################

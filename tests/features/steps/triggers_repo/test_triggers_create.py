@@ -11,7 +11,8 @@ def step_impl(context):
     resource = None
     actions = None
     active = None
-    executionMode = None
+    execution_mode = None
+    function_name = None
 
     params = context.table.headings
     for param in params:
@@ -32,44 +33,50 @@ def step_impl(context):
             active = param[1] == "True"
         elif param[0] == "executionMode":
             if param[1] != "None":
-                executionMode = param[1]
+                execution_mode = param[1]
+        elif param[0] == "function_name":
+            if param[1] != "None":
+                function_name = param[1]
 
-    context.trigger = context.deployment.triggers.create(
-        deployment_id=context.deployment.id,
+    context.trigger = context.service.triggers.create(
+        service_id=context.service.id,
         name=name,
         filters=filters,
         resource=resource,
         actions=actions,
         active=active,
-        executionMode=executionMode,
+        execution_mode=execution_mode,
+        function_name=function_name
     )
 
 
-@behave.then(u"I receive a Trigger entity")
+@behave.then(u'I receive a Trigger entity')
 def step_impl(context):
     assert isinstance(context.trigger, context.dl.entities.Trigger)
 
 
-@behave.then(u'Deployment was triggered on "{item_type}"')
+@behave.then(u'I receive a Trigger entity with function "{function_name}"')
+def step_impl(context, function_name):
+    assert isinstance(context.trigger, context.dl.entities.Trigger)
+    assert context.trigger.function_name == function_name
+
+
+@behave.then(u'Service was triggered on "{item_type}"')
 def step_impl(context, item_type):
     is_item = item_type == 'item'
-    if is_item:
-        item = context.uploaded_item_with_trigger
-    else:
-        item = context.annotation
-    num_try = 15
+    num_try = 36
     triggered = False
 
     for i in range(num_try):
-        time.sleep(7)
+        time.sleep(5)
         if is_item:
-            item = context.dataset.items.get(item_id=item.id)
-            if 'plugins' in item.system:
-                if context.plugin.name in item.system['plugins']:
+            item = context.dataset.items.get(item_id=context.uploaded_item_with_trigger.id)
+            if 'executionLogs' in item.system:
+                if context.service.name in item.system['executionLogs']:
                     triggered = True
                     break
         else:
-            item = item.update()
+            item = context.annotation.item.annotations.get(annotation_id=context.annotation.id)
             if item.label == "Edited":
                 triggered = True
                 break
@@ -77,23 +84,40 @@ def step_impl(context, item_type):
     assert triggered
 
 
+@behave.given(u'There is a package (pushed from "{package_path}") by the name of "{package_name}"')
+def step_impl(context, package_name, package_path):
+    package_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], package_path)
+    package_name = '{}_{}'.format(package_name, random.randrange(1000, 10000))
+    context.package = context.project.packages.push(src_path=package_path, package_name=package_name)
+    assert isinstance(context.package, context.dl.entities.Package)
+
+
+@behave.given(u'There is a package (pushed from "{package_path}") with function "{function_name}"')
+def step_impl(context, function_name, package_path):
+    package_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], package_path)
+    package_name = '{}_{}'.format(function_name, random.randrange(1000, 10000))
+
+    function_io = context.dl.FunctionIO(name='item', type=context.dl.PackageInputType.ITEM)
+    function = context.dl.PackageFunction(name=function_name, inputs=function_io)
+    module = context.dl.PackageModule(name='default_module', functions=function, entry_point='main.py')
+
+    context.package = context.project.packages.push(src_path=package_path,
+                                                    package_name=package_name,
+                                                    modules=module)
+
+    assert isinstance(context.package, context.dl.entities.Package)
+
+
 @behave.given(
-    u'There is a plugin (pushed from "{plugin_path}") by the name of "{plugin_name}"'
-)
-def step_impl(context, plugin_name, plugin_path):
-    plugin_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], plugin_path)
-    plugin_name = '{}_{}'.format(plugin_name, random.randrange(1000, 10000))
-    context.plugin = context.project.plugins.push(src_path=plugin_path, plugin_name=plugin_name)
-    assert isinstance(context.plugin, context.dl.entities.Plugin)
-
-
-@behave.given(u'There is a deployment by the name of "{deployment_name}"')
-def step_impl(context, deployment_name):
-    deployment_name = '{}-{}'.format(deployment_name, random.randrange(1000, 10000))
-    context.deployment = context.plugin.deployments.deploy(
-        deployment_name=deployment_name,
-        bot=context.bot_user)
-    assert isinstance(context.deployment, context.dl.entities.Deployment)
+    u'There is a service by the name of "{service_name}" with module name "{module_name}" saved to context "{service_attr_name}"')
+def step_impl(context, service_name, module_name, service_attr_name):
+    service_name = '{}-{}'.format(service_name, random.randrange(1000, 10000))
+    runtime = {"gpu": False, "numReplicas": 1, 'concurrency': 1}
+    setattr(context, service_attr_name, context.package.services.deploy(service_name=service_name,
+                                                                        bot=context.bot_user,
+                                                                        runtime=runtime,
+                                                                        module_name=module_name))
+    assert isinstance(getattr(context, service_attr_name), context.dl.entities.Service)
 
 
 @behave.when(u"I edit item user metadata")
@@ -110,7 +134,5 @@ def step_impl(context):
     time.sleep(3)
     annotation = context.dl.Annotation.new(annotation_definition=context.dl.Point(y=200, x=200, label='dog'),
                                            item=context.uploaded_item_with_trigger)
-    annotations = annotation.upload()
-    assert len(annotations) == 1
-    context.annotation = annotations[0]
+    context.annotation = annotation.upload()
     assert isinstance(context.annotation, context.dl.entities.Annotation)

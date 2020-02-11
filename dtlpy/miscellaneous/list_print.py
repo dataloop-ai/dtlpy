@@ -1,4 +1,3 @@
-import traceback
 import datetime
 import tabulate
 import logging
@@ -12,7 +11,7 @@ logger = logging.getLogger(name=__name__)
 
 class List(list):
 
-    def print(self, show_all=False, level='print'):
+    def print(self, show_all=False, level='print', to_return=False):
         try:
             to_print = list()
             keys_list = list()
@@ -28,7 +27,7 @@ class List(list):
                 to_print = sorted(to_print, key=lambda k: k['createdAt'])
             except KeyError:
                 pass
-            except Exception as err:
+            except Exception:
                 logger.exception('Error sorting printing:')
 
             remove_keys_list = ['contributors', 'url', 'annotations', 'items', 'export', 'directoryTree',
@@ -43,12 +42,6 @@ class List(list):
                 for key in remove_keys_list:
                     if key in keys_list:
                         keys_list.remove(key)
-
-            is_cli = False
-            tr = ''.join(traceback.format_stack())
-            if 'dlp.exe' in tr:
-                # running from command line
-                is_cli = True
             for element in to_print:
                 # handle printing errors for not ascii string when in cli
                 if 'name' in element:
@@ -58,7 +51,6 @@ class List(list):
                     except UnicodeEncodeError:
                         # if not - print bytes instead
                         element['name'] = str(element['name']).encode('utf-8')
-
                 if 'createdAt' in element:
                     try:
                         str_timestamp = str(element['createdAt'])
@@ -68,14 +60,19 @@ class List(list):
                             '%Y-%m-%d %H:%M:%S')
                     except Exception:
                         pass
-
             df = pandas.DataFrame(to_print, columns=keys_list)
             if 'name' in list(df.columns.values):
                 df['name'] = df['name'].astype(str)
-            if level == 'print':
-                print('\n{}'.format(tabulate.tabulate(df, headers='keys', tablefmt='psql')))
-            elif level == 'debug':
-                logger.debug('\n{}'.format(tabulate.tabulate(df, headers='keys', tablefmt='psql')))
+
+            if to_return:
+                return tabulate.tabulate(df, headers='keys', tablefmt='psql')
+            else:
+                if level == 'print':
+                    print('\n{}'.format(tabulate.tabulate(df, headers='keys', tablefmt='psql')))
+                elif level == 'debug':
+                    logger.debug('\n{}'.format(tabulate.tabulate(df, headers='keys', tablefmt='psql')))
+                else:
+                    raise ValueError('unknown log level in printing: {}'.format(level))
 
         except Exception:
             raise exceptions.PlatformException('400', 'Printing error')

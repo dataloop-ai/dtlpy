@@ -236,23 +236,25 @@ class Uploader:
         errors = ["" for _ in range(num_files)]
         jobs = [None for _ in range(num_files)]
         pool = self.items_repository._client_api.thread_pools(pool_name='item.upload')
-        with tqdm.tqdm(total=num_files, disable=self.items_repository._client_api.verbose.disable_progress_bar) as pbar:
-            for i_item in range(num_files):
-                element = elements[i_item]
-                # upload
-                jobs[i_item] = pool.apply_async(self.__upload_single_item_wrapper,
-                                                kwds={"i_item": i_item,
-                                                      "element": element,
-                                                      "mode": mode,
-                                                      "pbar": pbar,
-                                                      "status": status,
-                                                      "success": success,
-                                                      "output": output,
-                                                      "errors": errors,
-                                                      },
-                                                )
+        disable_pbar = self.items_repository._client_api.verbose.disable_progress_bar or num_files == 1
+        pbar = tqdm.tqdm(total=num_files, disable=disable_pbar)
+        for i_item in range(num_files):
+            element = elements[i_item]
+            # upload
+            jobs[i_item] = pool.apply_async(self.__upload_single_item_wrapper,
+                                            kwds={"i_item": i_item,
+                                                  "element": element,
+                                                  "mode": mode,
+                                                  "pbar": pbar,
+                                                  "status": status,
+                                                  "success": success,
+                                                  "output": output,
+                                                  "errors": errors,
+                                                  },
+                                            )
 
-            _ = [j.wait() for j in jobs if isinstance(j, multiprocessing.pool.ApplyResult)]
+        _ = [j.wait() for j in jobs if isinstance(j, multiprocessing.pool.ApplyResult)]
+        pbar.close()
         # summary
         logger.info("Number of total files: {}".format(num_files))
         for action in np.unique(status):
@@ -263,7 +265,7 @@ class Uploader:
         errors_list = [errors[i_job] for i_job, suc in enumerate(success) if suc is False]
         if len(errors_list) > 0:
             log_filepath = os.path.join(os.getcwd(),
-                                        "log_{}.txt".format(datetime.datetime.now().strftime("%Y%m%d_%H%M%S")))
+                                        "log_{}.txt".format(datetime.datetime.utcnow().strftime("%Y%m%d_%H%M%S")))
 
             with open(log_filepath, "w") as f:
                 f.write("\n".join(errors_list))
@@ -390,7 +392,7 @@ class Uploader:
                                                                                    mode=mode,
                                                                                    remote_path=remote_path,
                                                                                    log_error=last_try)
-        except:
+        except Exception:
             raise
         finally:
             if need_close:

@@ -22,6 +22,13 @@ def get_parser():
     subparsers.add_parser("shell", help="Open interactive Dataloop shell")
 
     ########
+    # shell #
+    ########
+    a = subparsers.add_parser("upgrade", help="Update dtlpy package")
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument("-u", "--url", metavar='\b', help="Package url. default 'dtlpy'", default=None)
+
+    ########
     # Login #
     ########
     subparsers.add_parser("login", help="Login using web Auth0 interface")
@@ -81,17 +88,6 @@ def get_parser():
     required = a.add_argument_group("required named arguments")
     required.add_argument("-e", "--env", metavar='\b', help="working environment", required=True)
 
-    # upgrade
-    a = subparser_parser.add_parser("upgrade", help="Update dtlpy package")
-    optional = a.add_argument_group("optional named arguments")
-    optional.add_argument(
-        "-u",
-        "--url",
-        metavar='\b',
-        help="package url",
-        default="dtlpy",
-    )
-
     ############
     # Projects #
     ############
@@ -109,7 +105,9 @@ def get_parser():
     a = subparser_parser.add_parser("create", help="Create a new project")
     required = a.add_argument_group("required named arguments")
     required.add_argument("-p", "--project-name", metavar='\b', help="project name")
-    required.add_argument("-c", "--checkout", action='store_true', default=False, help="checkout the new project")
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument("--checkout", dest="checkout", default=False, action='store_true',
+                          help="Checkout created ptoject")
 
     # checkout
     a = subparser_parser.add_parser("checkout", help="checkout a project")
@@ -147,7 +145,7 @@ def get_parser():
     optional = a.add_argument_group("optional named arguments")
     optional.add_argument("-p", "--project-name", metavar='\b', default=None,
                           help="project name. Default taken from checked out (if checked out)")
-    required.add_argument("-c", "--checkout", action='store_true', default=False, help="checkout the new dataset")
+    optional.add_argument("-c", "--checkout", action='store_true', default=False, help="checkout the new dataset")
 
     # checkout
     a = subparser_parser.add_parser("checkout", help="checkout a dataset")
@@ -312,124 +310,215 @@ def get_parser():
     )
 
     ###############
-    # Deployments #
+    # Services #
     ###############
-    subparser = subparsers.add_parser("deployments", help="Operations with deployments")
+    subparser = subparsers.add_parser("services", help="Operations with services")
     subparser_parser = subparser.add_subparsers(
-        dest="deployments", help="deployments operations"
+        dest="services", help="services operations"
     )
 
     # ACTIONS #
 
     # generate
     a = subparser_parser.add_parser(
-        "generate", help="Generate deployment.json file"
+        "generate", help="Generate service.json file"
     )
     optional = a.add_argument_group("optional named arguments")
     optional.add_argument("-l", "--local-path", dest="local_path", default=None,
-                          help="path to deployment.json file")
+                          help="path to service.json file")
 
     # deploy
     a = subparser_parser.add_parser(
-        "deploy", help="Deploy deployment from deployment.json file"
+        "deploy", help="Deploy service from service.json file"
     )
     optional = a.add_argument_group("optional named arguments")
     optional.add_argument("-l", "--local-path", dest="local_path", default=None,
-                          help="path to deployment.json file")
+                          help="path to service.json file")
     optional.add_argument("-pr", "--project-name", dest="project_name", default=None,
                           help="Project name")
+    optional.add_argument("-b", "--bot", dest="bot", default=None,
+                          help="User bot")
+
+    # execute
+    a = subparser_parser.add_parser("execute", help="Create an execution")
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument("-f", "--function-name", dest="function_name", default=None,
+                          help="which function to run")
+    optional.add_argument("--sync", dest="sync", default=False, action='store_true',
+                          help="Wait for execution to complete ")
+    optional.add_argument("-i", "--item-id", dest="item_id", default=None,
+                          help="Item input")
+    optional.add_argument("-d", "--dataset-id", dest="dataset_id", default=None,
+                          help="Dataset input")
+    optional.add_argument("-a", "--annotation-id", dest="annotation_id", default=None,
+                          help="Annotation input")
+    optional.add_argument("-in", "--inputs", dest="inputs", default='{}',
+                          help="Dictionary string input")
 
     # tear-down
     a = subparser_parser.add_parser(
-        "tear-down", help="tear-down deployment of deployment.json file"
+        "tear-down", help="tear-down service of service.json file"
     )
     optional = a.add_argument_group("optional named arguments")
     optional.add_argument("-l", "--local-path", dest="local_path", default=None,
-                          help="path to deployment.json file")
+                          help="path to service.json file")
     optional.add_argument("-pr", "--project-name", dest="project_name", default=None,
                           help="Project name")
 
     # ls
-    a = subparser_parser.add_parser(
-        "ls", help="List project's deployments"
-    )
+    a = subparser_parser.add_parser("ls", help="List project's services")
     optional = a.add_argument_group("optional named arguments")
     optional.add_argument("-pr", "--project-name", dest="project_name", default=None,
                           help="Project name")
+    optional.add_argument("-pkg", "--package-name", dest="package_name", default=None,
+                          help="Package name")
 
     # log
-    a = subparser_parser.add_parser(
-        "log", help="Get deployments log"
-    )
-    required = a.add_argument_group("required named arguments")
-    required.add_argument("-pr", "--project-name", dest="project_name", default=None,
-                          help="Project name", required=True)
-    required.add_argument("-d", "--deployment-name", dest="deployment_name", default=None,
-                          help="Project name", required=True)
-
-    optional = a.add_argument_group("optional named arguments")
+    a = subparser_parser.add_parser("log", help="Get services log")
+    optional = a.add_argument_group("required named arguments")
+    optional.add_argument("-pr", "--project-name", dest="project_name", default=None,
+                          help="Project name")
+    optional.add_argument("-f", "--service-name", dest="service_name", default=None,
+                          help="Project name")
     optional.add_argument("-t", "--start", dest="start", default=None,
                           help="Log start time")
 
-    ###########
-    # Plugins #
-    ###########
-    subparser = subparsers.add_parser("plugins", help="Operations with plugins")
+    # delete
+    a = subparser_parser.add_parser("delete", help="Delete Service")
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument("-f", "--service-name", dest="service_name", default=None,
+                          help="Service name")
+    optional.add_argument("-p", "--project-name", dest="project_name", default=None,
+                          help="Project name")
+    optional.add_argument("-pkg", "--package-name", dest="package_name", default=None,
+                          help="Package name")
+
+    ############
+    # Triggers #
+    ############
+    subparser = subparsers.add_parser("triggers", help="Operations with triggers")
     subparser_parser = subparser.add_subparsers(
-        dest="plugins", help="plugin operations"
+        dest="triggers", help="triggers operations"
+    )
+
+    # ACTIONS #
+
+    # create
+    a = subparser_parser.add_parser(
+        "create", help="Create a Service Trigger"
+    )
+    required = a.add_argument_group("required named arguments")
+    required.add_argument("-f", "--service-name", dest="service_name",
+                          help="Service name", required=True)
+    required.add_argument("-n", "--name", dest="name",
+                          help="Trigger name", required=True)
+    required.add_argument("-r", "--resource", dest="resource",
+                          help="Resource name", required=True)
+    required.add_argument("-a", "--actions", dest="actions", help="Actions", required=True)
+
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument("-p", "--project-name", dest="project_name", default=None,
+                          help="Project name")
+    optional.add_argument("-pkg", "--package-name", dest="package_name", default=None,
+                          help="Package name")
+    optional.add_argument("-fl", "--filters", dest="filters", default='{}',
+                          help="Json filter")
+    optional.add_argument("-fn", "--function-name", dest="function_name", default='run',
+                          help="Function name")
+
+    # delete
+    a = subparser_parser.add_parser(
+        "delete", help="Delete Trigger"
+    )
+    required = a.add_argument_group("required named arguments")
+    required.add_argument("-t", "--trigger-name", dest="trigger_name", default=None,
+                          help="Trigger name", required=True)
+
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument("-f", "--service-name", dest="service_name", default=None,
+                          help="Service name")
+    optional.add_argument("-p", "--project-name", dest="project_name", default=None,
+                          help="Project name")
+    optional.add_argument("-pkg", "--package-name", dest="package_name", default=None,
+                          help="Package name")
+
+    ############
+    # packages #
+    ############
+    subparser = subparsers.add_parser("packages", help="Operations with packages")
+    subparser_parser = subparser.add_subparsers(
+        dest="packages", help="package operations"
     )
 
     # ACTIONS #
 
     # deploy
     a = subparser_parser.add_parser(
-        "deploy", help="Deploy plugin from local directory"
+        "deploy", help="Deploy package from local directory"
     )
     optional = a.add_argument_group("optional named arguments")
-    optional.add_argument("-df", "--deployment-file", dest="deployment_file", default=None,
-                          help="Path to deployment file")
+    optional.add_argument("-f", "--service-file", dest="service_file", default=None,
+                          help="Path to service file")
+    optional.add_argument("-b", "--bot", dest="bot", default=None,
+                          help="User bot")
+    optional.add_argument("--checkout", dest="checkout", default=False, action='store_true',
+                          help="Checkout deployed service")
 
     # generate
     a = subparser_parser.add_parser(
-        "generate", help="Create a boilerplate for a new plugin"
+        "generate", help="Create a boilerplate for a new package"
     )
     optional = a.add_argument_group("optional named arguments")
     optional.add_argument("-pr", "--project-name", dest="project_name", default=None,
                           help="Project name")
-    optional.add_argument("-p", "--plugin-name", dest="plugin_name", default=None,
-                          help="Plugin name")
+    optional.add_argument("-p", "--package-name", dest="package_name", default=None,
+                          help="Package name")
 
     # ls
-    a = subparser_parser.add_parser("ls", help="List plugins")
+    a = subparser_parser.add_parser("ls", help="List packages")
     optional = a.add_argument_group("optional named arguments")
     optional.add_argument("-p", "--project-name", dest="project_name", default=None,
                           help="Project name")
 
     # push
-    a = subparser_parser.add_parser("push", help="Create plugin in platform")
+    a = subparser_parser.add_parser("push", help="Create package in platform")
 
     optional = a.add_argument_group("optional named arguments")
     optional.add_argument("-src", "--src-path", metavar='\b', default=None,
                           help="Revision to deploy if selected True")
-    optional.add_argument("-pkg", "--package-id", metavar='\b', default=None,
+    optional.add_argument("-cid", "--codebase-id", metavar='\b', default=None,
                           help="Revision to deploy if selected True")
     optional.add_argument("-pr", "--project-name", metavar='\b', default=None,
                           help="Project name")
-    optional.add_argument("-p", "--plugin-name", metavar='\b', default=None,
-                          help="Plugin name")
+    optional.add_argument("-p", "--package-name", metavar='\b', default=None,
+                          help="Package name")
+    optional.add_argument("--checkout", dest="checkout", default=False, action='store_true',
+                          help="Checkout pushed package")
 
     # test
     a = subparser_parser.add_parser(
-        "test", help="Tests that plugin locally using mock.json"
+        "test", help="Tests that Package locally using mock.json"
     )
     optional = a.add_argument_group("optional named arguments")
-    optional.add_argument("-c", "--concurrency", metavar='\b', default=None,
+    optional.add_argument("-c", "--concurrency", metavar='\b', default=1,
                           help="Revision to deploy if selected True")
 
     # checkout
-    a = subparser_parser.add_parser("checkout", help="checkout a plugin")
+    a = subparser_parser.add_parser("checkout", help="checkout a package")
     required = a.add_argument_group("required named arguments")
-    required.add_argument("-p", "--plugin-name", metavar='\b', help="plugin name")
+    required.add_argument("-p", "--package-name", metavar='\b', help="package name")
+
+    # delete
+    a = subparser_parser.add_parser(
+        "delete", help="Delete Package"
+    )
+    required = a.add_argument_group("required named arguments")
+    required.add_argument("-pkg", "--package-name", dest="package_name", default=None,
+                          help="Package name", required=True)
+
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument("-p", "--project-name", dest="project_name", default=None,
+                          help="Project name")
 
     #########
     # Shell #

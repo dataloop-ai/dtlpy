@@ -35,3 +35,8 @@ If I want to add second item as modality to the first item
 
     # Update item to apply changes to platform
     item1.update()
+
+Upload items and modalities using threads
+#########################################
+For more examples go to :doc:`examples.`.
+

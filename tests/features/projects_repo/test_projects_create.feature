@@ -1,7 +1,7 @@
-Feature: Projects repository create function testing
+Feature: Projects repository create service testing
 
     Background: Background name
-        Given Platform Interface is initialized as dlp and Environment is set to development
+        Given Platform Interface is initialized as dlp and Environment is set according to git branch
 
     Scenario: Create project with legal name
         When I create a project by the name of "project_create"

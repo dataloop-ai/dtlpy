@@ -16,3 +16,4 @@ from . import upload_batch_of_items
 from . import upload_items_and_custom_format_annotations
 from . import upload_segmentation_annotations_from_mask_image
 from . import upload_yolo_format_annotations
+from . import upload_items_with_modalities

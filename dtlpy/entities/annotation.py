@@ -6,7 +6,7 @@ import mimetypes
 import os
 from PIL import Image
 
-from .. import miscellaneous, entities, PlatformException
+from .. import miscellaneous, entities, PlatformException, repositories
 
 logger = logging.getLogger(name=__name__)
 
@@ -17,48 +17,73 @@ class Annotation:
     Annotations object
     """
     # annotation definition
-    annotation_definition = attr.ib()
+    annotation_definition = attr.ib(repr=False)
 
     # platform
     id = attr.ib()
-    url = attr.ib()
-    item_url = attr.ib()
-    item = attr.ib()
+    url = attr.ib(repr=False)
+    item_url = attr.ib(repr=False)
+    item = attr.ib(repr=False)
     item_id = attr.ib()
     creator = attr.ib()
     createdAt = attr.ib()
-    updatedBy = attr.ib()
-    updatedAt = attr.ib()
+    updatedBy = attr.ib(repr=False)
+    updatedAt = attr.ib(repr=False)
     type = attr.ib()
-    dataset_url = attr.ib()
+    dataset_url = attr.ib(repr=False)
 
     # meta
-    metadata = attr.ib()
-    fps = attr.ib()
-    dataset_id = attr.ib(default=None)
-    status = attr.ib(default=None)
-    object_id = attr.ib(default=None)
-    automated = attr.ib(default=None)
+    metadata = attr.ib(repr=False)
+    fps = attr.ib(repr=False)
+    dataset_id = attr.ib(default=None, repr=False)
+    status = attr.ib(default=None, repr=False)
+    object_id = attr.ib(default=None, repr=False)
+    automated = attr.ib(default=None, repr=False)
 
     # snapshots
-    frames = attr.ib(default=None)
-    current_frame = attr.ib(default=0)
+    frames = attr.ib(default=None, repr=False)
+    current_frame = attr.ib(default=0, repr=False)
 
     # video attributes
-    end_frame = attr.ib(default=0)
-    end_time = attr.ib(default=0)
+    end_frame = attr.ib(default=0, repr=False)
+    end_time = attr.ib(default=0, repr=False)
     start_frame = attr.ib(default=0)
 
     # temp
-    platform_dict = attr.ib(default=None)
+    platform_dict = attr.ib(default=None, repr=False)
+    _dataset = attr.ib(repr=False, default=None)
+    _client_api = attr.ib(default=None, repr=False)
 
     ####################################
     # annotation definition attributes #
     ####################################
     @property
+    def parent_id(self):
+        parent_id = None
+        try:
+            parent_id = self.metadata['system']['parentId']
+        except KeyError:
+            pass
+        return parent_id
+
+    @parent_id.setter
+    def parent_id(self, parent_id):
+        if 'system' not in self.metadata:
+            self.metadata['system'] = dict()
+        self.metadata['system']['parentId'] = parent_id
+
+    @property
     def coordinates(self):
         coordinates = self.annotation_definition.to_coordinates(color=self.color)
         return coordinates
+
+    @property
+    def dataset(self):
+        if self._dataset is not None:
+            assert isinstance(self._dataset, entities.Dataset)
+            return self._dataset
+        else:
+            raise PlatformException('2001', 'Missing entity dataset. Use get_dataset() to get it')
 
     @property
     def x(self):
@@ -155,25 +180,13 @@ class Annotation:
 
     @property
     def color(self):
-        if self.item is not None:
-            def find_tag_in_labels(search_tag, labels):
-                for label in labels:
-                    if label.tag.lower() == search_tag.lower():
-                        return label
-                return None
-
-            dataset_labels = self.item.dataset.labels
-            split_tag = self.label.lower().split('.')
-            for i_tag, tag in enumerate(split_tag):
-                if i_tag == 0:
-                    # first tag in split - search in main dataset labels
-                    dataset_labels = find_tag_in_labels(tag, dataset_labels)
-                else:
-                    # search in label's children
-                    dataset_labels = find_tag_in_labels(tag, dataset_labels.children)
-                if dataset_labels is None:
-                    return None
-            return dataset_labels.rgb
+        if self.item is not None and self.item._dataset is not None:
+            lower_keys = {key.lower(): label for key, label in self.item.dataset.labels_flat_dict.items()}
+            if self.label.lower() in lower_keys:
+                color = lower_keys[self.label.lower()].rgb
+            else:
+                color = None
+            return color
         else:
             return None
 
@@ -241,6 +254,19 @@ class Annotation:
     # entity methods #
     ##################
 
+    def get_dataset(self):
+        if self._dataset is None:
+            if self._client_api is None:
+                raise PlatformException('400', 'Cannot perform this action without a client api attribute')
+            datasets = repositories.Datasets(client_api=self._client_api)
+            self._dataset = datasets.get(dataset_id=self.dataset_id)
+
+    def get_item(self):
+        if self.item is None:
+            if self._dataset is None:
+                self.get_dataset()
+            self.item = self.dataset.items.get(item_id=self.item_id)
+
     def print(self):
         miscellaneous.List([self]).print()
 
@@ -262,7 +288,7 @@ class Annotation:
         if self.item is None:
             raise PlatformException('400', 'Annotation must have an item in order to perform this action')
         return self.item.annotations.update(annotations=self,
-                                            system_metadata=system_metadata)
+                                            system_metadata=system_metadata)[0]
 
     def upload(self):
         """
@@ -271,7 +297,7 @@ class Annotation:
         """
         if self.item is None:
             raise PlatformException('400', 'Annotation must have an item in order to perform this action')
-        return self.item.annotations.upload(annotations=self)
+        return self.item.annotations.upload(annotations=self)[0]
 
     def download(self, filepath, annotation_format='mask', height=None, width=None, thickness=1, with_text=False):
         """
@@ -286,7 +312,7 @@ class Annotation:
         """
         if annotation_format == 'json':
             with open(filepath, 'w') as f:
-                json.dump(self.to_json(), f)
+                json.dump(self.to_json(), f, indent=2)
         else:
             mask = self.show(thickness=thickness,
                              with_text=with_text,
@@ -349,7 +375,7 @@ class Annotation:
             if self.color is not None:
                 color = self.color
             else:
-                if not (self.type == 'classification' and self.label.lower() in ['approved', 'completed']):
+                if self.label.lower() not in ['approved', 'completed']:
                     logger.warning('No color given for label: {}, random color will be selected'.format(self.label))
                 color = (127, 127, 127)
         if (isinstance(color, list) or isinstance(color, tuple)) and len(color) == 3:
@@ -386,7 +412,8 @@ class Annotation:
     # I/O #
     #######
     @classmethod
-    def new(cls, item=None, annotation_definition=None, object_id=None, automated=None, metadata=None, frame_num=0):
+    def new(cls, item=None, annotation_definition=None, object_id=None, automated=None, metadata=None, frame_num=0,
+            parent_id=None):
         """
         Create a new annotation object annotations
 
@@ -396,11 +423,17 @@ class Annotation:
         :param automated: is automated
         :param metadata: metadata
         :param frame_num: optional - first frame number if video annotation
+        :param parent_id: add parent annotation ID
         :return: annotation object
         """
         # init annotations
         if metadata is None:
             metadata = dict()
+        # add parent
+        if parent_id is not None:
+            if 'system' not in metadata:
+                metadata['system'] = dict()
+            metadata['system']['parentId'] = parent_id
 
         # frames
         frames = dict()
@@ -540,9 +573,10 @@ class Annotation:
         return True
 
     @classmethod
-    def from_json(cls, _json, item=None):
+    def from_json(cls, _json, item=None, client_api=None):
         """
         Create an annotation object from platform json
+        :param client_api:
         :param _json: platform json
         :param item: item
         :return: annotation object
@@ -694,7 +728,8 @@ class Annotation:
             automated=automated,
             end_frame=end_frame,
             end_time=end_time,
-            start_frame=start_frame
+            start_frame=start_frame,
+            client_api=client_api
         )
 
         #################

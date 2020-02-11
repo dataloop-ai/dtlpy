@@ -40,6 +40,7 @@ def step_impl(context, file_path):
         context.annotations = json.load(f)["annotations"]
     context.item.annotations.upload(context.annotations)
 
+
 @behave.when(u'I move item to "{new_path}"')
 def step_impl(context, new_path):
     context.item_name = context.item.name
@@ -56,3 +57,9 @@ def step_impl(context):
     else:
         name  = '/' + context.new_path + '/' + context.item_name
     assert context.moved_item.filename == name
+
+
+@behave.then(u'Item is annotated')
+def step_impl(context):
+    context.item.annotated = True
+    context.item = context.item.update()

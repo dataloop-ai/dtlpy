@@ -23,8 +23,9 @@ def check_in_thread(version, client_api):
         try:
             payload = jwt.decode(client_api.token, algorithms=['HS256'], verify=False)
             user_email = payload['email']
-        except:
+        except Exception:
             user_email = 'na'
+        logger.debug('SDK info: user: {}, version: {}'.format(user_email, version))
         return_type, resp = client_api.gen_request(req_type='POST',
                                                    path='/sdk/check',
                                                    data={'version': version,
@@ -39,7 +40,7 @@ def check_in_thread(version, client_api):
             client_api.cookie_io.put(key='check_version_status',
                                      value={'level': 'debug',
                                             'msg': 'unknown'})
-    except:
+    except Exception:
         logger.debug(traceback.format_exc())
         logger.debug('Error in check sdk manager.')
 

@@ -4,7 +4,7 @@ import logging
 import attr
 import os
 
-from .. import repositories, miscellaneous, entities, services
+from .. import repositories, miscellaneous, entities, services, exceptions
 
 logger = logging.getLogger(name=__name__)
 
@@ -18,28 +18,29 @@ class Dataset:
     id = attr.ib()
     url = attr.ib()
     name = attr.ib()
-    annotated = attr.ib()
+    annotated = attr.ib(repr=False)
     creator = attr.ib()
-    projects = attr.ib()
+    projects = attr.ib(repr=False)
     itemsCount = attr.ib()
-    metadata = attr.ib()
-    items_url = attr.ib()  # name change when to_json
-    directoryTree = attr.ib()
-    export = attr.ib()
+    metadata = attr.ib(repr=False)
+    items_url = attr.ib(repr=False)  # name change when to_json
+    directoryTree = attr.ib(repr=False)
+    export = attr.ib(repr=False)
 
     # api
-    _client_api = attr.ib(type=services.ApiClient)
+    _client_api = attr.ib(type=services.ApiClient, repr=False)
+    _instance_map = attr.ib(default=None, repr=False)
 
     # entities
-    _project = attr.ib(default=None)
+    _project = attr.ib(default=None, repr=False)
 
     # repositories
-    _repositories = attr.ib()
+    _repositories = attr.ib(repr=False)
 
     # defaults
-    _ontology_ids = attr.ib(default=None)
-    _labels = attr.ib(default=None)
-    _directory_tree = attr.ib(default=None)
+    _ontology_ids = attr.ib(default=None, repr=False)
+    _labels = attr.ib(default=None, repr=False)
+    _directory_tree = attr.ib(default=None, repr=False)
 
     @staticmethod
     def _protected_from_json(project, _json, client_api):
@@ -65,7 +66,7 @@ class Dataset:
         """
         Build a Dataset entity object from a json
 
-        :param _json: _json response form host
+        :param _json: _json response from host
         :param project: dataset's project
         :param client_api: client_api
         :return: Dataset object
@@ -85,6 +86,30 @@ class Dataset:
                    client_api=client_api,
                    project=project)
 
+    @classmethod
+    def dummy(cls, dataset_id, client_api, name=None):
+        """
+        Build a dummy Dataset entity
+
+        :param dataset_id:
+        :param name:
+        :param client_api: client_api
+        :return: Dummy Dataset Object
+        """
+        return cls(metadata=None,
+                   directoryTree=None,
+                   itemsCount=None,
+                   annotated=None,
+                   projects=None,
+                   creator=None,
+                   items_url=None,
+                   export=None,
+                   name=name,
+                   url=None,
+                   id=dataset_id,
+                   client_api=client_api,
+                   project=None)
+
     def to_json(self):
         """
         Returns platform _json format of object
@@ -97,6 +122,7 @@ class Dataset:
                                                               attr.fields(Dataset)._ontology_ids,
                                                               attr.fields(Dataset)._labels,
                                                               attr.fields(Dataset)._directory_tree,
+                                                              attr.fields(Dataset)._instance_map,
                                                               attr.fields(Dataset).items_url))
         _json.update({'items': self.items_url})
         return _json
@@ -106,6 +132,38 @@ class Dataset:
         if self._labels is None:
             self._labels = self.recipes.list()[0].ontologies.list()[0].labels
         return self._labels
+
+    @property
+    def labels_flat_dict(self):
+        flatten_dict = dict()
+
+        def add_to_dict(tag, father):
+            flatten_dict[tag] = father
+            for child in father.children:
+                add_to_dict('{}.{}'.format(tag, child.tag), child)
+
+        for label in self.labels:
+            add_to_dict(label.tag, label)
+        return flatten_dict
+
+    @property
+    def instance_map(self):
+        if self._instance_map is None:
+            labels = [label for label in self.labels_flat_dict]
+            labels.sort()
+            # each label gets index as instance id
+            self._instance_map = {label: (i_label + 1) for i_label, label in enumerate(labels)}
+        return self._instance_map
+
+    @instance_map.setter
+    def instance_map(self, value):
+        """
+        instance mapping for creating instance mask
+        :param value: dictionary {label: map_id}
+        """
+        if not isinstance(value, dict):
+            raise ValueError('input must be a dictionary of {lable_name: instance_id}')
+        self._instance_map = value
 
     @property
     def ontology_ids(self):
@@ -121,7 +179,7 @@ class Dataset:
     @_repositories.default
     def set_repositories(self):
         reps = namedtuple('repositories',
-                          field_names=['items', 'recipes', 'datasets'])
+                          field_names=['items', 'recipes', 'datasets', 'assignments', 'tasks'])
         if self._project is None:
             datasets = repositories.Datasets(client_api=self._client_api, project=self._project)
         else:
@@ -129,6 +187,8 @@ class Dataset:
 
         r = reps(items=repositories.Items(client_api=self._client_api, dataset=self, datasets=datasets),
                  recipes=repositories.Recipes(client_api=self._client_api, dataset=self),
+                 assignments=repositories.Assignments(project=self._project, client_api=self._client_api, dataset=self),
+                 tasks=repositories.Tasks(client_api=self._client_api, project=self._project, dataset=self),
                  datasets=datasets)
         return r
 
@@ -148,12 +208,34 @@ class Dataset:
         return self._repositories.datasets
 
     @property
+    def assignments(self):
+        assert isinstance(self._repositories.assignments, repositories.Assignments)
+        return self._repositories.assignments
+
+    @property
+    def tasks(self):
+        assert isinstance(self._repositories.tasks, repositories.Tasks)
+        return self._repositories.tasks
+
+    @property
     def project(self):
         if self._project is None:
-            # get project from the dataset information
-            self._project = repositories.Projects(client_api=self._client_api).get(project_id=self.projects[0])
+            project = self._client_api.state_io.get('project')
+            if project is not None:
+                self._project = entities.Project.from_json(_json=project, client_api=self._client_api)
+        if self._project is None:
+            self.get_project()
+            if self._project is None:
+                raise exceptions.PlatformException(error='2001',
+                                                   message='Missing entity "project".')
         assert isinstance(self._project, entities.Project)
         return self._project
+
+    @project.setter
+    def project(self, project):
+        if not isinstance(project, entities.Project):
+            raise ValueError('Must input a valid Project entity')
+        self._project = project
 
     @property
     def directory_tree(self):
@@ -162,9 +244,12 @@ class Dataset:
         assert isinstance(self._directory_tree, entities.DirectoryTree)
         return self._directory_tree
 
-    @project.setter
-    def project(self, project):
-        self._project = project
+    def get_project(self, dummy=False):
+        if self._project is None:
+            if dummy:
+                self._project = entities.Project.dummy(project_id=self.projects[0], client_api=self._client_api)
+            else:
+                self._project = repositories.Projects(client_api=self._client_api).get(project_id=self.projects[0])
 
     def __copy__(self):
         return Dataset.from_json(_json=self.to_json(), project=self._project, client_api=self._client_api)
@@ -226,6 +311,25 @@ class Dataset:
         return self.datasets.update(dataset=self,
                                     system_metadata=system_metadata)
 
+    def clone(self, clone_name, filters=None, with_items_annotations=True, with_metadata=True,
+              with_task_annotations_status=True):
+        """
+        Clone dataset
+
+        :param clone_name: new dataset name
+        :param filters: Filters entity or a query dict
+        :param with_items_annotations:
+        :param with_metadata:
+        :param with_task_annotations_status:
+        :return:
+        """
+        return self.datasets.clone(dataset_id=self.id,
+                                   filters=filters,
+                                   clone_name=clone_name,
+                                   with_metadata=with_metadata,
+                                   with_items_annotations=with_items_annotations,
+                                   with_task_annotations_status=with_task_annotations_status)
+
     def download_annotations(self,
                              local_path=None,
                              filters=None,
@@ -235,6 +339,7 @@ class Dataset:
                              with_text=False,
                              remote_path=None,
                              num_workers=32):
+
         return self.datasets.download_annotations(dataset=self,
                                                   local_path=local_path,
                                                   overwrite=overwrite,
@@ -251,7 +356,7 @@ class Dataset:
 
         :return:
         """
-        self.datasets.checkout(identifier=self.name)
+        self.datasets.checkout(dataset=self)
 
     def open_in_web(self):
         """
@@ -325,3 +430,41 @@ class Dataset:
         ontology = ontology.update(system_metadata=True)
         self._labels = ontology.labels
         return added_labels
+
+    def download(
+            self,
+            filters=None,
+            local_path=None,
+            file_types=None,
+            annotation_options=None,
+            overwrite=False,
+            to_items_folder=True,
+            thickness=1,
+            with_text=False,
+            without_relative_path=None
+    ):
+        """
+        Download dataset by filters.
+        Filtering the dataset for items and save them local
+        Optional - also download annotation, mask, instance and image mask of the item
+
+        :param local_path: local folder or filename to save to.
+        :param filters: Filters entity or a dictionary containing filters parameters
+        :param to_items_folder: Create 'items' folder and download items to it
+        :param overwrite: optional - default = False
+        :param file_types: a list of file type to download. e.g ['video/webm', 'video/mp4', 'image/jpeg', 'image/png']
+        :param annotation_options: download annotations options: ['mask', 'img_mask', 'instance', 'json']
+        :param with_text: optional - add text to annotations, default = False
+        :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
+        :param without_relative_path: string - remote path - download items without the relative path from platform
+        :return: Output (list)
+        """
+        return self.items.download(filters=filters,
+                                   local_path=local_path,
+                                   file_types=file_types,
+                                   annotation_options=annotation_options,
+                                   overwrite=overwrite,
+                                   to_items_folder=to_items_folder,
+                                   thickness=thickness,
+                                   with_text=with_text,
+                                   without_relative_path=without_relative_path)

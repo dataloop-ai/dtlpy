@@ -12,6 +12,7 @@ def creating_a_project(context, project_name):
     except Exception as e:
         context.error = e
 
+
 @behave.when(u'I create a project by the name of "{project_name}"')
 def creating_a_project(context, project_name):
     project_name = project_name + str(random.randint(10000, 100000))
@@ -29,7 +30,13 @@ def project_object_should_be_created(context, project_name):
 @behave.then(u'Project should exist in host by the name of "{project_name}"')
 def project_should_exist_in_host(context, project_name):
     project_get = context.dl.projects.get(project_id=context.project.id)
-    assert project_get.to_json() == context.project.to_json()
+
+    list_json = project_get.to_json()
+    project_json = context.project.to_json()
+    list_json.pop('role')
+    project_json.pop('role')
+
+    assert list_json == project_json
     context.project.delete(True, True)
 
 

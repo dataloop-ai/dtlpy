@@ -18,7 +18,8 @@ class PlatformException(Exception):
             '500': InternalServerError,
             '600': TokenExpired,
             '1001': ShowAnnotationError,
-            '1002': ExportAnnotationError
+            '1002': ExportAnnotationError,
+            '2001': MissingEntity
         }
 
         if isinstance(error, requests.models.Response) or isinstance(error, services.AsyncResponse):
@@ -27,7 +28,7 @@ class PlatformException(Exception):
             if hasattr(error, 'text'):
                 try:
                     self.message = error.json().get('message', error.text)
-                except:
+                except Exception:
                     self.message = error.text
 
         else:
@@ -76,6 +77,10 @@ class TokenExpired(ExceptionMain):
 
 
 class UnknownException(ExceptionMain):
+    pass
+
+
+class MissingEntity(ExceptionMain):
     pass
 
 

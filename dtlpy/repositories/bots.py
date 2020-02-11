@@ -1,5 +1,5 @@
 import logging
-from .. import entities, miscellaneous, PlatformException
+from .. import entities, miscellaneous, exceptions
 
 logger = logging.getLogger(name=__name__)
 
@@ -11,8 +11,26 @@ class Bots:
 
     def __init__(self, client_api, project):
         self._client_api = client_api
-        self.project = project
+        self._project = project
 
+    @property
+    def project(self):
+        if self._project is None:
+            raise exceptions.PlatformException(
+                error='2001',
+                message='Missing "project". need to set a Project entity or use project.bots repository')
+        assert isinstance(self._project, entities.Project)
+        return self._project
+
+    @project.setter
+    def project(self, project):
+        if not isinstance(project, entities.Project):
+            raise ValueError('Must input a valid Project entity')
+        self._project = project
+
+    ###########
+    # methods #
+    ###########
     def list(self):
         """
         Get project's bots list.
@@ -40,54 +58,68 @@ class Bots:
             bots = miscellaneous.List([r[1] for r in results if r[0] is True])
         else:
             logger.exception('Platform error getting bots')
-            raise PlatformException(response)
+            raise exceptions.PlatformException(response)
         return bots
 
-    def get(self, bot_name=None, bot_id=None):
+    def get(self, bot_email=None, bot_id=None, bot_name=None):
         """
         Get a Bot object
+        :param bot_email: get bot by email
         :param bot_name: get bot by name
         :param bot_id: get bot by id
         :return: Bot object
 
         """
-        if bot_id is not None:
-            success, response = self._client_api.gen_request(req_type='post',
-                                                             path='/projects/{}/bots/{}'.format(self.project.id,
-                                                                                                bot_id))
-            if success:
-                bot = entities.Bot.from_json(_json=response.json(),
-                                             project=self.project)
+        if bot_id is None:
+            if bot_name is not None:
+                bots = self.list()
+                bot = [bot for bot in bots if bot.name == bot_name]
+
+            elif bot_email is not None:
+                bots = self.list()
+                bot = [bot for bot in bots if bot.email == bot_email]
             else:
-                raise PlatformException(response)
-        elif bot_name is not None:
-            bots = self.list()
-            bot = [bot for bot in bots if bot.name == bot_name]
+                raise exceptions.PlatformException('400', 'Must choose by "bot_id" or "bot_name"')
             if not bot:
                 # list is empty
-                raise PlatformException('404', 'Bot not found. Name: {}'.format(bot_name))
+                raise exceptions.PlatformException('404', 'Bot not found. Name: {}'.format(bot_email))
                 # project = None
             elif len(bot) > 1:
                 # more than one matching project
-                raise PlatformException('404', 'More than one bot with same name. Please "get" by id')
+                raise exceptions.PlatformException('404', 'More than one bot with same name. Please "get" by id')
             else:
-                bot = bot[0]
+                bot_id = bot[0].id
+
+        success, response = self._client_api.gen_request(req_type='get',
+                                                         path='/projects/{}/bots/{}'.format(self.project.id,
+                                                                                            bot_id))
+        if success:
+            bot = entities.Bot.from_json(_json=response.json(),
+                                         project=self.project)
         else:
-            raise PlatformException('400', 'Must choose by "bot_id" or "bot_name"')
+            raise exceptions.PlatformException(response)
+
         assert isinstance(bot, entities.Bot)
         return bot
 
-    def delete(self, bot_id=None):
+    def delete(self, bot_id=None, bot_email=None):
         """
         Delete a Bot
         :param bot_id: bot id to delete
+        :param bot_email: bot email to delete
         :return: True
         """
+        if bot_id is None:
+            if bot_email is None:
+                raise exceptions.PlatformException(error='400',
+                                                   message='must input one of bot_id or bot_email to delete')
+            bot = self.get(bot_email=bot_email)
+            bot_id = bot.id
         success, response = self._client_api.gen_request(req_type='delete',
                                                          path='/projects/{}/bots/{}'.format(self.project.id,
                                                                                             bot_id))
         if not success:
-            raise PlatformException(response)
+            raise exceptions.PlatformException(response)
         logger.info('Bot {} deleted successfully'.format(bot_id))
         return True
 
@@ -103,6 +135,6 @@ class Bots:
             bot = entities.Bot.from_json(_json=response.json(),
                                          project=self.project)
         else:
-            raise PlatformException(response)
+            raise exceptions.PlatformException(response)
         assert isinstance(bot, entities.Bot)
         return bot

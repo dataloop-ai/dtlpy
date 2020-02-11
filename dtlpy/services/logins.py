@@ -35,7 +35,7 @@ def login_secret(api_client, email, password, client_id, client_secret, force=Fa
                                'Set "force" flag to True to login anyway.')
                 return True
         except jwt.exceptions.DecodeError:
-            logger.debug('{}'.format('Cant decode token. Force login is user'))
+            logger.debug('{}'.format('Cant decode token. Force login is used'))
 
     logger.info('[Start] Login Secret')
     environment = api_client.environment

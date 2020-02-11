@@ -5,10 +5,23 @@ import random
 import logging
 import os
 from dtlpy import examples
+try:
+    # for local import
+    from tests.env_from_git_branch import get_env_from_git_branch
+except ImportError:
+    # for remote import
+    from env_from_git_branch import get_env_from_git_branch
+
+try:
+    # for local import
+    from tests.env_from_git_branch import get_env_from_git_branch
+except ImportError:
+    # for remote import
+    from env_from_git_branch import get_env_from_git_branch
 
 logging.basicConfig(level='DEBUG')
 
-dl.setenv('dev')
+dl.setenv(get_env_from_git_branch())
 # check token
 payload = jwt.decode(dl.token(), algorithms=['HS256'], verify=False)
 if payload['email'] not in ['oa-test-1@dataloop.ai', 'oa-test-2@dataloop.ai', 'oa-test-3@dataloop.ai']:
@@ -52,5 +65,8 @@ examples.show_item_and_mask.main(project_name=project.name,
                                  dataset_name=dataset.name,
                                  item_remote_path=item.filename)
 
+# show item and mask
+examples.upload_items_with_modalities.main(project_name=project.name,
+                                           dataset_name=dataset.name)
 project.delete(True, True)
 second_project.delete(True, True)

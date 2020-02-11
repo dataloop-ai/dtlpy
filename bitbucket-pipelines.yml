@@ -7,12 +7,13 @@ pipelines:
         name: Tests3.5
         script:
           - python --version
+          - PYTHONPATH=$PWD
           - pip install -r requirements.txt
           - python setup.py build
           - python setup.py install
-          - python tests/test_login.py "$TEST_USERNAME" "$TEST_PASSWORD" "$TEST_CLIENT_ID" "$TEST_CLIENT_SECRET"
+          - python tests/test_login.py "$TEST_USER_PROD" "$TEST_PASSWORD_PROD" "$CLIENT_ID_PROD" "$CLIENT_SECRET_PROD"
           - pip install gsutil
-          - gsutil -m cp -R gs://sdl-tests-assets/assets tests/
+          - gsutil -m cp -R gs://dtlpy/assets tests/
           - python tests/test_examples.py
           - python tests/test_runner.py
     - step:
@@ -20,12 +21,13 @@ pipelines:
         name: Tests3.6
         script:
           - python --version
+          - PYTHONPATH=$PWD
           - pip install -r requirements.txt
           - python setup.py build
           - python setup.py install
-          - python tests/test_login.py "$TEST_USERNAME" "$TEST_PASSWORD" "$TEST_CLIENT_ID" "$TEST_CLIENT_SECRET"
+          - python tests/test_login.py "$TEST_USER_PROD" "$TEST_PASSWORD_PROD" "$CLIENT_ID_PROD" "$CLIENT_SECRET_PROD"
           - pip install gsutil
-          - gsutil -m cp -R gs://sdl-tests-assets/assets tests/
+          - gsutil -m cp -R gs://dtlpy/assets tests/
           - python tests/test_examples.py
           - python tests/test_runner.py
     - step:
@@ -33,12 +35,13 @@ pipelines:
         name: Tests3.7
         script:
           - python --version
+          - PYTHONPATH=$PWD
           - pip install -r requirements.txt
           - python setup.py build
           - python setup.py install
-          - python tests/test_login.py "$TEST_USERNAME" "$TEST_PASSWORD" "$TEST_CLIENT_ID" "$TEST_CLIENT_SECRET"
+          - python tests/test_login.py "$TEST_USER_PROD" "$TEST_PASSWORD_PROD" "$CLIENT_ID_PROD" "$CLIENT_SECRET_PROD"
           - pip install gsutil
-          - gsutil -m cp -R gs://sdl-tests-assets/assets tests/
+          - gsutil -m cp -R gs://dtlpy/assets tests/
           - python tests/test_examples.py
           - python tests/test_runner.py
   tags:

@@ -5,7 +5,7 @@ import attr
 import copy
 import os
 
-from .. import repositories, miscellaneous, entities, services, PlatformException
+from .. import repositories, miscellaneous, entities, services, exceptions
 
 logger = logging.getLogger(name=__name__)
 
@@ -16,32 +16,32 @@ class Item:
     Item object
     """
     # item information
-    annotations_link = attr.ib()
+    annotations_link = attr.ib(repr=False)
     dataset_url = attr.ib()
-    thumbnail = attr.ib()
+    thumbnail = attr.ib(repr=False)
     createdAt = attr.ib()
     datasetId = attr.ib()
-    annotated = attr.ib()
-    metadata = attr.ib()
+    annotated = attr.ib(repr=False)
+    metadata = attr.ib(repr=False)
     filename = attr.ib()
-    stream = attr.ib()
+    stream = attr.ib(repr=False)
     name = attr.ib()
     type = attr.ib()
-    url = attr.ib()
+    url = attr.ib(repr=False)
     id = attr.ib()
-    hidden = attr.ib()
-    dir = attr.ib()
+    hidden = attr.ib(repr=False)
+    dir = attr.ib(repr=False)
 
     # api
-    _client_api = attr.ib(type=services.ApiClient)
-    _platform_dict = attr.ib()
+    _client_api = attr.ib(type=services.ApiClient, repr=False)
+    _platform_dict = attr.ib(repr=False)
 
     # entities
-    _dataset = attr.ib()
+    _dataset = attr.ib(repr=False)
+    _project = attr.ib(repr=False)
 
     # repositories
-    _repositories = attr.ib()
-    modalities = attr.ib()
+    _repositories = attr.ib(repr=False)
 
     @staticmethod
     def _protected_from_json(_json, client_api, dataset=None):
@@ -63,10 +63,11 @@ class Item:
         return status, item
 
     @classmethod
-    def from_json(cls, _json, client_api, dataset=None):
+    def from_json(cls, _json, client_api, dataset=None, project=None):
         """
         Build an item entity object from a json
-        :param _json: _json response form host
+        :param project:
+        :param _json: _json response from host
         :param dataset: dataset in which the annotation's item is located
         :param client_api: client_api
         :return: Item object
@@ -77,6 +78,7 @@ class Item:
             platform_dict=copy.deepcopy(_json),
             client_api=client_api,
             dataset=dataset,
+            project=project,
             # params
             annotations_link=_json.get('annotations', None),
             thumbnail=_json.get('thumbnail', None),
@@ -94,35 +96,54 @@ class Item:
             url=_json['url'],
             id=_json['id'])
 
-    def to_json(self):
-        """
-        Returns platform _json format of object
-        :return: platform json format of object
-        """
-        _json = attr.asdict(self,
-                            filter=attr.filters.exclude(attr.fields(Item)._repositories,
-                                                        attr.fields(Item)._dataset,
-                                                        attr.fields(Item).modalities,
-                                                        attr.fields(Item)._client_api,
-                                                        attr.fields(Item)._platform_dict,
-                                                        attr.fields(Item).dataset_url,
-                                                        attr.fields(Item).annotations_link))
+    ############
+    # entities #
+    ############
 
-        _json.update({'annotations': self.annotations_link,
-                      'dataset': self.dataset_url})
-        return _json
+    @property
+    def dataset(self):
+        if self._dataset is None:
+            self.get_dataset()
+            if self._dataset is None:
+                raise exceptions.PlatformException(error='2001',
+                                                   message='Missing entity "dataset".')
+        assert isinstance(self._dataset, entities.Dataset)
+        return self._dataset
 
-    @modalities.default
-    def set_modalities(self):
-        modalities = Modalities(item=self)
-        assert isinstance(modalities, Modalities)
-        return modalities
+    @property
+    def project(self):
+        if self._project is None:
+            self.get_project()
+            if self._project is None:
+                raise exceptions.PlatformException(error='2001',
+                                                   message='Missing entity "project".')
+        assert isinstance(self._project, entities.Project)
+        return self._project
+
+    def get_dataset(self, dummy=False):
+        if self._dataset is None:
+            if dummy:
+                self._dataset = entities.Dataset.dummy(dataset_id=self.datasetId, client_api=self._client_api)
+            else:
+                self._dataset = repositories.Datasets(client_api=self._client_api).get(dataset_id=self.datasetId)
+
+    def get_project(self, dummy=False):
+        if self._project is None:
+            if self._dataset is None:
+                self.get_dataset(dummy=dummy)
+            if self._dataset._project is None:
+                self._dataset.get_project(dummy=dummy)
+            self._project = self._dataset.project
+
+    ################
+    # repositories #
+    ################
 
     @_repositories.default
     def set_repositories(self):
         reps = namedtuple('repositories',
-                          field_names=['annotations', 'items', 'packages', 'artifacts'])
-        reps.__new__.__defaults__ = (None, None, None, None)
+                          field_names=['annotations', 'items', 'codebases', 'artifacts', 'modalities'])
+        reps.__new__.__defaults__ = (None, None, None, None, None)
 
         if self._dataset is None:
             items = repositories.Items(client_api=self._client_api,
@@ -133,8 +154,28 @@ class Item:
             items = self.dataset.items
 
         r = reps(annotations=repositories.Annotations(client_api=self._client_api, item=self),
-                 items=items)
+                 items=items,
+                 codebases=None,
+                 artifacts=None,
+                 modalities=Modalities(item=self))
         return r
+
+    @property
+    def modalities(self):
+        assert isinstance(self._repositories.modalities, Modalities)
+        return self._repositories.modalities
+
+    @property
+    def annotations(self):
+        assert isinstance(self._repositories.annotations, repositories.Annotations)
+        return self._repositories.annotations
+
+    @property
+    def items(self):
+        assert isinstance(self._repositories.items, repositories.Items)
+        if self._repositories.items._dataset is None:
+            self._repositories.items._dataset = self.dataset
+        return self._repositories.items
 
     ##############
     # Properties #
@@ -179,26 +220,27 @@ class Item:
     def system(self):
         return self.metadata.get('system', dict())
 
-    @property
-    def annotations(self):
-        assert isinstance(self._repositories.annotations, repositories.Annotations)
-        return self._repositories.annotations
-
-    @property
-    def items(self):
-        assert isinstance(self._repositories.items, repositories.Items)
-        return self._repositories.items
-
-    @property
-    def dataset(self):
-        if self._dataset is None:
-            self._dataset = repositories.Datasets(client_api=self._client_api).get(dataset_id=self.datasetId)
-        assert isinstance(self._dataset, entities.Dataset)
-        return self._dataset
-
     ###########
-    # Methods #
+    # Functions #
     ###########
+    def to_json(self):
+        """
+        Returns platform _json format of object
+        :return: platform json format of object
+        """
+        _json = attr.asdict(self,
+                            filter=attr.filters.exclude(attr.fields(Item)._repositories,
+                                                        attr.fields(Item)._dataset,
+                                                        attr.fields(Item)._project,
+                                                        attr.fields(Item)._client_api,
+                                                        attr.fields(Item)._platform_dict,
+                                                        attr.fields(Item).dataset_url,
+                                                        attr.fields(Item).annotations_link))
+
+        _json.update({'annotations': self.annotations_link,
+                      'dataset': self.dataset_url})
+        return _json
+
     def print(self):
         miscellaneous.List([self]).print()
 
@@ -275,7 +317,7 @@ class Item:
             new_path = '/' + new_path
         if '.' in new_path:
             if len(new_path.split('.')) > 2:
-                raise PlatformException('400', 'Remote path cannot include dots')
+                raise exceptions.PlatformException('400', 'Remote path cannot include dots')
             else:
                 self.filename = new_path
         else:
@@ -283,15 +325,36 @@ class Item:
 
         return self.update(system_metadata=True)
 
+    def clone(self, dst_dataset_id, remote_filepath=None, metadata=None,
+              with_annotations=True, with_metadata=True, with_task_annotations_status=False):
+        if remote_filepath is None:
+            remote_filepath = self.filename
+        return self.items.clone(item_id=self.id,
+                                dst_dataset_id=dst_dataset_id,
+                                remote_filepath=remote_filepath,
+                                metadata=metadata,
+                                with_annotations=with_annotations,
+                                with_metadata=with_metadata,
+                                with_task_annotations_status=with_task_annotations_status)
+
     def open_in_web(self):
         self.items.open_in_web(item=self)
 
 
 class Modality:
-    def __init__(self, _json=None, modality_type=None, ref=None, name=None):
+    def __init__(self, _json=None, modality_type=None, ref=None, ref_type='id', name=None):
+        if _json is None:
+            _json = dict()
         self.type = _json.get('type', modality_type)
+        self.ref_type = _json.get('refType', ref_type)
         self.ref = _json.get('ref', ref)
         self.name = _json.get('name', name)
+
+    def to_json(self):
+        return {"type": self.type,
+                "ref": self.ref,
+                "refType": self.ref_type,
+                "name": self.name}
 
 
 class Modalities:
@@ -303,12 +366,13 @@ class Modalities:
     def modalities(self):
         return self.item.metadata.get('modalities', None)
 
-    def create(self, name, ref, modality_type='overlay'):
+    def create(self, name, ref, ref_type='id', modality_type='overlay'):
         if self.modalities is None:
             self.item.metadata['modalities'] = list()
 
         _json = {
             "type": modality_type,
+            "refType": ref_type,
             "ref": ref,
             "name": name
         }

@@ -2,9 +2,8 @@
 Feature: Cli Others
 
     Background: background
-        Given Platform Interface is initialized as dlp and Environment is set to development
+        Given Platform Interface is initialized as dlp and Environment is set according to git branch
         And I am logged in
-        And Environment is "dev"
         And I have context random number
 
     Scenario: Exit

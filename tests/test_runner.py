@@ -8,6 +8,12 @@ import os
 import dtlpy as dl
 import numpy as np
 from multiprocessing.pool import ThreadPool
+try:
+    # for local import
+    from tests.env_from_git_branch import get_env_from_git_branch
+except ImportError:
+    # for remote import
+    from env_from_git_branch import get_env_from_git_branch
 
 TEST_DIR = os.path.dirname(os.path.realpath(__file__))
 NUM_TRIES = 3
@@ -100,7 +106,7 @@ if __name__ == '__main__':
     # set timer and environment
     start_time = time.time()
     # set env to dev
-    dl.setenv('dev')
+    dl.setenv(get_env_from_git_branch())
     # check token
     payload = jwt.decode(dl.token(), algorithms=['HS256'], verify=False)
     if payload['email'] not in ['oa-test-1@dataloop.ai', 'oa-test-2@dataloop.ai', 'oa-test-3@dataloop.ai']:

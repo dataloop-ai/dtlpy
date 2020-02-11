@@ -1,7 +1,7 @@
-Feature: Annotaions repository Get function testing
+Feature: Annotaions repository Get service testing
 
     Background: Initiate Platform Interface
-        Given Platform Interface is initialized as dlp and Environment is set to development
+        Given Platform Interface is initialized as dlp and Environment is set according to git branch
         And There is a project by the name of "annotations_get"
         And I create a dataset with a random name
 

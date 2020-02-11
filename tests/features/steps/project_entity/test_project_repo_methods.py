@@ -33,17 +33,18 @@ def step_impl(context, new_project_name):
     context.project.update()
     context.new_project_name = new_project_name
 
+
 @behave.then(u'Project in host has name "{new_project_name}"')
 def step_impl(context, new_project_name):
     project_get = context.dl.projects.get(project_id=context.project.id)
     assert project_get.name == context.new_project_name
 
 
-@behave.when(u'I use project entity to pack directory by name "{package_name}"')
-def step_impl(context, package_name):
-    context.package = context.project.pack_package(
-        directory=context.package_local_dir,
-        name=package_name,
+@behave.when(u'I use project entity to pack directory by name "{codebase_name}"')
+def step_impl(context, codebase_name):
+    context.codebase = context.project.pack_codebase(
+        directory=context.codebase_local_dir,
+        name=codebase_name,
         description="some description",
     )
 
@@ -57,3 +58,8 @@ def step_impl(context):
         assert type(e) == context.dl.exceptions.NotFound
         context.project = context.dl.projects.create(context.project.name)
         context.feature.dataloop_feature_project = context.project
+
+
+@behave.when(u'I reclaim project')
+def step_impl(context):
+    context.project = context.dl.projects.get(project_id=context.project.id)

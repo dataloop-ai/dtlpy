@@ -14,21 +14,21 @@ class Ontology:
     Ontology object
     """
     # api
-    _client_api = attr.ib(type=services.ApiClient)
+    _client_api = attr.ib(type=services.ApiClient, repr=False)
 
     # params
     id = attr.ib()
     creator = attr.ib()
-    url = attr.ib()
+    url = attr.ib(repr=False)
     labels = attr.ib()
-    metadata = attr.ib()
+    metadata = attr.ib(repr=False)
     attributes = attr.ib()
 
     # entities
-    _recipe = attr.ib()
+    _recipe = attr.ib(repr=False)
 
     # repositories
-    _repositories = attr.ib()
+    _repositories = attr.ib(repr=False)
 
     @_repositories.default
     def set_repositories(self):
@@ -121,7 +121,8 @@ class Ontology:
         """
         Add a single label to ontology
 
-        :param label: 
+        :param add:
+        :param label:
         :param label_name: label name
         :param color: optional - if not given a random color will be selected
         :param children: optional - children

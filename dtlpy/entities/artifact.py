@@ -10,10 +10,11 @@ logger = logging.getLogger(name=__name__)
 class Artifact(entities.Item):
 
     @classmethod
-    def from_json(cls, _json, client_api, dataset=None):
+    def from_json(cls, _json, client_api, dataset=None, project=None):
         """
         Build an Artifact entity object from a json
-        :param _json: _json response form host
+        :param project:
+        :param _json: _json response from host
         :param dataset: Artifact's dataset
         :param client_api: client_api
         :return: Artifact object
@@ -24,6 +25,7 @@ class Artifact(entities.Item):
             platform_dict=copy.deepcopy(_json),
             client_api=client_api,
             dataset=dataset,
+            project=project,
             # params
             annotations_link=_json.get('annotations_link', None),
             createdAt=_json.get('createdAt', None),

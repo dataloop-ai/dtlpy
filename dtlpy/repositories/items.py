@@ -1,6 +1,6 @@
 import logging
 
-from .. import entities, PlatformException, repositories, miscellaneous
+from .. import entities, exceptions, repositories, miscellaneous
 
 logger = logging.getLogger(name=__name__)
 
@@ -15,24 +15,18 @@ class Items:
         self._dataset = dataset
         self._dataset_id = dataset_id
         self._datasets = datasets
-        # set items entity to represent the item (Item, Package, Artifact etc...)
+        # set items entity to represent the item (Item, Codebase, Artifact etc...)
         if items_entity is None:
             self.items_entity = entities.Item
 
-    @property
-    def datasets(self):
-        assert isinstance(self._datasets, repositories.Datasets)
-        return self._datasets
-
+    ############
+    # entities #
+    ############
     @property
     def dataset(self):
         if self._dataset is None:
-            if self._dataset_id is None:
-                raise PlatformException(
-                    error='400',
-                    message='Cannot perform action WITHOUT Dataset entity in Items repository. Please set a dataset')
-            else:
-                self._dataset = self.datasets.get(dataset_id=self._dataset_id)
+            raise exceptions.PlatformException(error='2001',
+                                               message='Missing "dataset". try "get_dataset()"')
         assert isinstance(self._dataset, entities.Dataset)
         return self._dataset
 
@@ -42,12 +36,30 @@ class Items:
             raise ValueError('Must input a valid Dataset entity')
         self._dataset = dataset
 
+    def get_dataset(self):
+        if self._dataset_id is None:
+            raise exceptions.PlatformException(
+                error='400',
+                message='Cannot perform action WITHOUT Dataset entity in Items repository. Please set a dataset')
+        self._dataset = self.datasets.get(dataset_id=self._dataset_id)
+
+    ################
+    # repositories #
+    ################
+    @property
+    def datasets(self):
+        assert isinstance(self._datasets, repositories.Datasets)
+        return self._datasets
+
+    ###########
+    # methods #
+    ###########
     def set_items_entity(self, entity):
-        if entity in [entities.Item, entities.Artifact, entities.Package]:
+        if entity in [entities.Item, entities.Artifact, entities.Codebase]:
             self.items_entity = entity
         else:
-            raise PlatformException(error="403",
-                                    message="Unable to set given entity. Entity give: {}".format(entity))
+            raise exceptions.PlatformException(error="403",
+                                               message="Unable to set given entity. Entity give: {}".format(entity))
 
     def get_all_items(self, filters=None):
         """
@@ -79,7 +91,7 @@ class Items:
                                                          path="/datasets/{}/query".format(self.dataset.id),
                                                          json_req=filters.prepare())
         if not success:
-            raise PlatformException(response)
+            raise exceptions.PlatformException(response)
         return response.json()
 
     def list(self, filters=None, page_offset=None, page_size=None):
@@ -97,7 +109,7 @@ class Items:
 
         # assert type filters
         if not isinstance(filters, entities.Filters):
-            raise PlatformException('400', 'Unknown filters type')
+            raise exceptions.PlatformException('400', 'Unknown filters type')
 
         # page size
         if page_size is None:
@@ -143,25 +155,50 @@ class Items:
                                                    _json=response.json(),
                                                    dataset=self._dataset)
             else:
-                raise PlatformException(response)
+                raise exceptions.PlatformException(response)
         elif filepath is not None:
             filters = entities.Filters()
             filters.show_hidden = True
             filters.add(field='filename', values=filepath)
             paged_entity = self.list(filters=filters)
             if len(paged_entity.items) == 0:
-                raise PlatformException(error='404', message='Item not found. filepath= "{}"'.format(filepath))
+                raise exceptions.PlatformException(error='404',
+                                                   message='Item not found. filepath= "{}"'.format(filepath))
             elif len(paged_entity.items) > 1:
-                raise PlatformException(error='404',
-                                        message='More than one item found. Please "get" by id. filepath: "{}"'.format(
-                                            filepath))
+                raise exceptions.PlatformException(
+                    error='404',
+                    message='More than one item found. Please "get" by id. filepath: "{}"'.format(filepath))
             else:
                 item = paged_entity.items[0]
         else:
-            raise PlatformException(error="400",
-                                    message='Must choose by at least one. "filename" or "item_id"')
+            raise exceptions.PlatformException(error="400",
+                                               message='Must choose by at least one. "filename" or "item_id"')
         assert isinstance(item, entities.Item)
         return item
+
+    def clone(self, item_id, dst_dataset_id, remote_filepath=None, metadata=None, with_annotations=True,
+              with_metadata=True, with_task_annotations_status=False):
+        if metadata is None:
+            metadata = dict()
+        payload = {"targetDatasetId": dst_dataset_id,
+                   "remoteFileName": remote_filepath,
+                   "metadata": metadata,
+                   "cloneDatasetParams": {
+                       "withItemsAnnotations": with_annotations,
+                       "withMetadata": with_metadata,
+                       "withTaskAnnotationsStatus": with_task_annotations_status}
+                   }
+        success, response = self._client_api.gen_request(req_type="post",
+                                                         path="/items/{}/clone".format(item_id),
+                                                         json_req=payload)
+        # check response
+        if success:
+            cloned_item = self.items_entity.from_json(client_api=self._client_api,
+                                                      _json=response.json(),
+                                                      dataset=self._dataset)
+        else:
+            raise exceptions.PlatformException(response)
+        return cloned_item
 
     def delete(self, filename=None, item_id=None, filters=None):
         """
@@ -183,9 +220,9 @@ class Items:
             if not isinstance(items, list):
                 items = [items]
             if len(items) == 0:
-                raise PlatformException("404", "Item not found")
+                raise exceptions.PlatformException("404", "Item not found")
             elif len(items) > 1:
-                raise PlatformException(error="404", message="More the 1 item exist by the name provided")
+                raise exceptions.PlatformException(error="404", message="More the 1 item exist by the name provided")
             else:
                 item_id = items[0].id
                 success, response = self._client_api.gen_request(req_type="delete",
@@ -196,14 +233,14 @@ class Items:
                                                              path="/datasets/{}/query".format(self.dataset.id),
                                                              json_req=filters.prepare(operation='delete'))
         else:
-            raise PlatformException("400", "Must provide item id, filename or filters")
+            raise exceptions.PlatformException("400", "Must provide item id, filename or filters")
 
         # check response
         if success:
             logger.debug("Item/s deleted successfully")
             return success
         else:
-            raise PlatformException(response)
+            raise exceptions.PlatformException(response)
 
     def update(self, item=None, filters=None, update_values=None, system_metadata=False):
         """
@@ -215,15 +252,15 @@ class Items:
         :param system_metadata: bool
         :return: Item object
         """
+        ref = filters is not None and (filters._ref_task or filters._ref_assignment)
+
         # check params
         if item is None and filters is None:
-            raise PlatformException('400', 'must provide either item or filters')
-        if filters is not None and update_values is None:
-            raise PlatformException('400', 'Must provide fields and values to update when updating by filter')
-        if filters is not None and not isinstance(update_values, dict):
-            raise PlatformException('400', 'update_values must be a dictionary')
-        if item is not None and filters is not None:
-            raise PlatformException('400', 'must provide either item or filters')
+            raise exceptions.PlatformException('400', 'must provide either item or filters')
+
+        if item is None and not ref and (update_values is None or not isinstance(update_values, dict)):
+            raise exceptions.PlatformException('400',
+                                               'Must provide update_values must be a dictionary to update when updating by filter')
 
         # update item
         if item is not None:
@@ -244,7 +281,7 @@ class Items:
                                                    dataset=self._dataset)
             else:
                 logger.exception("Error while updating item")
-                raise PlatformException(response)
+                raise exceptions.PlatformException(response)
         # update by filters
         else:
             # prepare request
@@ -253,12 +290,9 @@ class Items:
                                                              json_req=filters.prepare(operation='update',
                                                                                       update=update_values))
             if not success:
-                raise PlatformException(response)
+                raise exceptions.PlatformException(response)
             else:
                 logger.debug("Items were updated successfully.")
-                # return self.items_entity.from_json(
-                #     client_api=self._client_api, _json=response.json(), dataset=self.dataset
-                # )
                 return response.json()
 
     def download(
@@ -274,7 +308,8 @@ class Items:
             overwrite=False,
             to_items_folder=True,
             thickness=1,
-            with_text=False
+            with_text=False,
+            without_relative_path=None
     ):
         """
         Download dataset by filters.
@@ -292,6 +327,7 @@ class Items:
         :param annotation_options: download annotations options: ['mask', 'img_mask', 'instance', 'json']
         :param with_text: optional - add text to annotations, default = False
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
+        :param without_relative_path: string - remote path - download items without the relative path from platform
         :return: Output (list)
         """
         downloader = repositories.Downloader(self)
@@ -306,7 +342,8 @@ class Items:
             overwrite=overwrite,
             to_items_folder=to_items_folder,
             thickness=thickness,
-            with_text=with_text
+            with_text=with_text,
+            without_relative_path=without_relative_path
         )
 
     def upload(
@@ -326,13 +363,14 @@ class Items:
         Local filesystem will remain.
         If "*" at the end of local_path (e.g. "/images/*") items will be uploaded without head directory
 
+        :param item_metadata:
         :param overwrite: optional - default = False
         :param local_path: list of local file, local folder, BufferIO, or url to upload
         :param local_annotations_path: path to dataloop format annotations json files.
         :param remote_path: remote path to save.
         :param file_types: list of file type to upload. e.g ['.jpg', '.png']. default is all
         :param num_workers:
-        :return: Output (list)
+        :return: Output (list/single item)
         """
         # fix remote path
         if remote_path is not None:
@@ -355,16 +393,10 @@ class Items:
         )
 
     def open_in_web(self, filepath=None, item_id=None, item=None):
-        import webbrowser
-        if self._client_api.environment == 'https://gate.dataloop.ai/api/v1':
-            head = 'https://console.dataloop.ai'
-        elif self._client_api.environment == 'https://dev-gate.dataloop.ai/api/v1':
-            head = 'https://dev-con.dataloop.ai'
-        else:
-            raise PlatformException('400', 'Please provide environment')
         if item is None:
-            item = self.get(filepath=filepath, item_id=item_id)
-        item_url = head + '/projects/{}/datasets/{}/annotation/{}'.format(item.dataset.project.id,
-                                                                          item.dataset.id,
-                                                                          item.id)
-        webbrowser.open(url=item_url, new=2, autoraise=True)
+            item = self.get(filepath=filepath,
+                            item_id=item_id)
+        self._client_api._open_in_web(resource_type='item',
+                                      project_id=item._dataset._project.id,
+                                      dataset_id=item._dataset.id,
+                                      item_id=item.id)

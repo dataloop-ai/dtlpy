@@ -1,7 +1,7 @@
-Feature: Datasets repository update function testing
+Feature: Datasets repository update service testing
 
     Background: Initiate Platform Interface and create a project
-        Given Platform Interface is initialized as dlp and Environment is set to development
+        Given Platform Interface is initialized as dlp and Environment is set according to git branch
         And There is a project by the name of "datasets_edit"
 
     #returns error - ('400', '\ntext: {"statusCode":400,"message":"\'dataset.attributes\' must be an array"}')

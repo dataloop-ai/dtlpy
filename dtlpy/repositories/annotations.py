@@ -4,7 +4,7 @@ import json
 import jwt
 import os
 
-from .. import entities, PlatformException
+from .. import entities, exceptions
 
 logger = logging.getLogger(name=__name__)
 
@@ -18,12 +18,15 @@ class Annotations:
         self._client_api = client_api
         self._item = item
 
+    ############
+    # entities #
+    ############
     @property
     def item(self):
         if self._item is None:
-            raise PlatformException(
-                error='400',
-                message='Cannot perform action WITHOUT Item entity in Annotations repository. Please set an item')
+            raise exceptions.PlatformException(
+                error='2001',
+                message='Missing "item". need to set a Item entity or use item.annotations repository')
         assert isinstance(self._item, entities.Item)
         return self._item
 
@@ -33,6 +36,9 @@ class Annotations:
             raise ValueError('Must input a valid Item entity')
         self._item = item
 
+    ###########
+    # methods #
+    ###########
     def get(self, annotation_id):
         """
             Get a single annotation
@@ -46,7 +52,7 @@ class Annotations:
             annotation = entities.Annotation.from_json(_json=response.json(),
                                                        item=self.item)
         else:
-            raise PlatformException(response)
+            raise exceptions.PlatformException(response)
         return annotation
 
     def list(self):
@@ -62,7 +68,7 @@ class Annotations:
             annotations = entities.AnnotationCollection.from_json(_json=response.json(),
                                                                   item=self.item)
         else:
-            raise PlatformException(response)
+            raise exceptions.PlatformException(response)
         return annotations
 
     def show(self, image=None, thickness=1, with_text=False, height=None, width=None, annotation_format='mask'):
@@ -100,7 +106,7 @@ class Annotations:
         elif annotation is not None and isinstance(annotation, entities.Annotation):
             annotation_id = annotation.id
         else:
-            assert False
+            raise exceptions.PlatformException(error='400', message='Must input annotation id or annotation entity')
         # get creator from token
         creator = jwt.decode(self._client_api.token, algorithms=['HS256'], verify=False)['email']
         payload = {'username': creator}
@@ -108,7 +114,7 @@ class Annotations:
                                                          path='/annotations/{}'.format(annotation_id),
                                                          json_req=payload)
         if not success:
-            raise PlatformException(response)
+            raise exceptions.PlatformException(response)
         logger.info('Annotation {} deleted successfully'.format(annotation_id))
         return True
 
@@ -130,11 +136,11 @@ class Annotations:
         # height/weight
         if height is None:
             if self.item.height is None:
-                raise PlatformException('400', 'Height must be provided')
+                raise exceptions.PlatformException('400', 'Height must be provided')
             height = self.item.height
         if width is None:
             if self.item.width is None:
-                raise PlatformException('400', 'Width must be provided')
+                raise exceptions.PlatformException('400', 'Width must be provided')
             width = self.item.width
 
         return annotations.download(filepath=filepath,
@@ -150,8 +156,8 @@ class Annotations:
                 annotation_id = w_annotation.id
                 annotation = w_annotation.to_json()
             else:
-                raise PlatformException('400',
-                                        'unknown annotations type: {}'.format(type(w_annotation)))
+                raise exceptions.PlatformException('400',
+                                                   'unknown annotations type: {}'.format(type(w_annotation)))
 
             url_path = '/annotations/{}'.format(annotation_id)
             if system_metadata:
@@ -163,9 +169,9 @@ class Annotations:
                 result = entities.Annotation.from_json(_json=response.json(),
                                                        item=self.item)
             else:
-                raise PlatformException(response)
+                raise exceptions.PlatformException(response)
             status = True
-        except:
+        except Exception:
             status = False
             result = traceback.format_exc()
         return status, result
@@ -208,8 +214,8 @@ class Annotations:
             elif isinstance(w_annotation, dict):
                 w_annotation = w_annotation
             else:
-                raise PlatformException('400',
-                                        'unknown annotations type: {}'.format(type(w_annotation)))
+                raise exceptions.PlatformException('400',
+                                                   'unknown annotations type: {}'.format(type(w_annotation)))
             w_annotation.pop('id', None)
             w_annotation.pop('_id', None)
             suc, response = self._client_api.gen_request(req_type='post',
@@ -220,8 +226,8 @@ class Annotations:
                                                        item=self.item)
                 status = True
             else:
-                raise PlatformException(response)
-        except Exception as e:
+                raise exceptions.PlatformException(response)
+        except Exception:
             status = False
             result = traceback.format_exc()
         return status, result
@@ -247,11 +253,11 @@ class Annotations:
                     elif 'data' in annotations:
                         annotations = annotations['data']
                     else:
-                        PlatformException('400', 'Unknown annotation file format')
+                        exceptions.PlatformException('400', 'Unknown annotation file format')
 
         pool = self._client_api.thread_pools(pool_name='annotation.upload')
         jobs = [None for _ in range(len(annotations))]
-        # call multiprocess wrapper to run function on each item in list
+        # call multiprocess wrapper to run service on each item in list
         for i_ann, ann in enumerate(annotations):
             jobs[i_ann] = pool.apply_async(func=self._upload_single_annotation,
                                            kwds={'w_annotation': ann})

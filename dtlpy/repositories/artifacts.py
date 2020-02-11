@@ -19,20 +19,13 @@ class Artifacts:
         self._dataset = dataset
         self._items_repository = None
 
+    ############
+    # entities #
+    ############
     @property
     def project(self):
         assert isinstance(self._project, entities.Project)
         return self._project
-
-    @property
-    def items_repository(self):
-        if self._items_repository is None:
-            # load Binaries dataset
-
-            # load items repository
-            self._items_repository = self.dataset.items
-            self._items_repository.set_items_entity(entities.Artifact)
-        return self._items_repository
 
     @property
     def dataset(self):
@@ -56,17 +49,32 @@ class Artifacts:
                 self.project.datasets.update(dataset=self._dataset, system_metadata=True)
         return self._dataset
 
-    def list(self, session_id=None, plugin_name=None):
+    ################
+    # repositories #
+    ################
+    @property
+    def items_repository(self):
+        if self._items_repository is None:
+            # load Binaries dataset
+            # load items repository
+            self._items_repository = self.dataset.items
+            self._items_repository.set_items_entity(entities.Artifact)
+        return self._items_repository
+
+    ###########
+    # methods #
+    ###########
+    def list(self, execution_id=None, package_name=None):
         """
         List of artifacts
         :return: list of artifacts
         """
         filters = entities.Filters()
         remote_path = '/artifacts'
-        if plugin_name is not None:
-            remote_path += '/plugins/{}'.format(plugin_name)
-        if session_id is not None:
-            remote_path += '/sessions/{}'.format(session_id)
+        if package_name is not None:
+            remote_path += '/packages/{}'.format(package_name)
+        if execution_id is not None:
+            remote_path += '/executions/{}'.format(execution_id)
         remote_path += '/*'
         filters.add(field='filename', values=remote_path)
         pages = self.items_repository.list(filters=filters)
@@ -74,22 +82,22 @@ class Artifacts:
         return miscellaneous.List(items)
 
     def get(self, artifact_id=None, artifact_name=None,
-            session_id=None, plugin_name=None):
+            execution_id=None, package_name=None):
         """
 
         Get an artifact object by name, id or type
-        If by name or type - need to input also session/task id for the artifact folder
-        :param plugin_name:
+        If by name or type - need to input also execution/task id for the artifact folder
+        :param package_name:
         :param artifact_id: optional - search by id
         :param artifact_name:
-        :param session_id:
+        :param execution_id:
         :return: Artifact object
         """
         if artifact_id is not None:
             artifact = self.items_repository.get(item_id=artifact_id)
             return artifact
         elif artifact_name is not None:
-            artifacts = self.list(session_id=session_id, plugin_name=plugin_name)
+            artifacts = self.list(execution_id=execution_id, package_name=package_name)
             artifact = [artifact for artifact in artifacts if artifact.name == artifact_name]
             if len(artifact) == 1:
                 artifact = artifact[0]
@@ -101,64 +109,62 @@ class Artifacts:
             raise ValueError(msg)
 
     def download(self, artifact_id=None, artifact_name=None,
-                 session_id=None, plugin_name=None,
-                 local_path=None, overwrite=False):
+                 execution_id=None, package_name=None,
+                 local_path=None, overwrite=False, save_locally=True):
         """
 
         Download artifact binary.
         Get artifact by name, id or type
 
+        :param save_locally:
         :param overwrite: optional - default = False
         :param artifact_id: optional - search by id
         :param local_path: artifact will be saved to this filepath
         :param artifact_name:
-        :param session_id:
-        :param plugin_name:
+        :param execution_id:
+        :param package_name:
         :return: Artifact object
         """
         if artifact_id is not None:
             artifact = self.items_repository.download(item_id=artifact_id,
-                                                      save_locally=True,
+                                                      save_locally=save_locally,
                                                       local_path=local_path,
                                                       overwrite=overwrite)
-            return artifact
+        elif artifact_name is None:
+            if all(elem is None for elem in [package_name, execution_id]):
+                raise PlatformException(error='400', message='Must input package or execution (id or entity)')
 
-        if artifact_name is None:
             directories = '/artifacts'
-            if plugin_name is not None:
-                directories += '/plugins/{}'.format(plugin_name)
-            if session_id is not None:
-                directories = '/sessions/{}'.format(session_id)
-            directories += '/*'.format(plugin_name)
-            if all(elem is None for elem in [plugin_name, session_id]):
-                raise PlatformException(error='400', message='Must input plugin or session (id or entity)')
-
+            if package_name is not None:
+                directories += '/packages/{}'.format(package_name)
+            if execution_id is not None:
+                directories += '/executions/{}'.format(execution_id)
+            without_relative_path = directories
+            directories += '/*'
             filters = entities.Filters()
             filters.add(field='filename', values=directories)
-            if not (local_path.endswith('/*') or local_path.endswith(r'\*')):
-                # download directly to folder
-                local_path = os.path.join(local_path, '*')
-            self.items_repository.download(filters=filters,
-                                           save_locally=True,
-                                           local_path=local_path,
-                                           overwrite=overwrite)
-
+            artifact = self.items_repository.download(filters=filters,
+                                                      save_locally=save_locally,
+                                                      local_path=local_path,
+                                                      to_items_folder=False,
+                                                      overwrite=overwrite,
+                                                      without_relative_path=without_relative_path)
         else:
-            artifact = self.get(artifact_id=artifact_id,
-                                session_id=session_id,
-                                plugin_name=plugin_name,
-                                artifact_name=artifact_name)
+            artifact_obj = self.get(artifact_id=artifact_id,
+                                    execution_id=execution_id,
+                                    package_name=package_name,
+                                    artifact_name=artifact_name)
 
-            artifact.download(save_locally=True,
-                              local_path=local_path,
-                              overwrite=overwrite)
-            return artifact
+            artifact = artifact_obj.download(save_locally=save_locally,
+                                             local_path=local_path,
+                                             overwrite=overwrite)
+        return artifact
 
     def upload(self,
                # what to upload
                filepath,
                # where to upload
-               plugin_name=None, plugin=None, session_id=None, session=None,
+               package_name=None, package=None, execution_id=None, execution=None,
                # add information
                overwrite=False):
         """
@@ -169,33 +175,30 @@ class Artifacts:
 
         :param overwrite: optional - default = False
         :param filepath: local binary file
-        :param plugin_name:
-        :param plugin:
-        :param session_id:
-        :param session:
+        :param package_name:
+        :param package:
+        :param execution_id:
+        :param execution:
         :return: Artifact Object
         """
         remote_path = '/artifacts'
-        if plugin_name is not None or plugin is not None:
-            if plugin is not None:
-                plugin_name = plugin.name
-            remote_path += '/plugins/{}'.format(plugin_name)
-        if session_id is not None or session is not None:
-            if session is not None:
-                session_id = session.id
-            remote_path += '/sessions/{}'.format(session_id)
+        if package_name is not None or package is not None:
+            if package is not None:
+                package_name = package.name
+            remote_path += '/packages/{}'.format(package_name)
+        if execution_id is not None or execution is not None:
+            if execution is not None:
+                execution_id = execution.id
+            remote_path += '/executions/{}'.format(execution_id)
 
-        if all(elem is None for elem in [plugin_name, plugin, session_id, session]):
-            raise ValueError('Must input plugin or session (id or entity)')
+        if all(elem is None for elem in [package_name, package, execution_id, execution]):
+            raise ValueError('Must input package or execution (id or entity)')
 
         if os.path.isfile(filepath):
             artifact = self.items_repository.upload(local_path=filepath,
                                                     remote_path=remote_path,
                                                     overwrite=overwrite)
         elif os.path.isdir(filepath):
-            if not (filepath.endswith('/*') or filepath.endswith(r'\*')):
-                # upload directly to folder
-                filepath = os.path.join(filepath, '*')
             artifact = self.items_repository.upload(local_path=filepath,
                                                     remote_path=remote_path,
                                                     overwrite=overwrite)

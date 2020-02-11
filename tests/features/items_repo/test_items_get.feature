@@ -1,7 +1,7 @@
-Feature: Items repository get function testing
+Feature: Items repository get service testing
 
     Background: Initiate Platform Interface and create a project
-        Given Platform Interface is initialized as dlp and Environment is set to development
+        Given Platform Interface is initialized as dlp and Environment is set according to git branch
         And There is a project by the name of "items_get"
         And I create a dataset with a random name
 
@@ -25,8 +25,8 @@ Feature: Items repository get function testing
         When I try to get an item by remote path "/some_path"
         Then "NotFound" exception should be raised
 
-    Scenario: Use get function with neither filename or remote path
-        When I try to use get functions with no params
+    Scenario: Use get service with neither filename or remote path
+        When I try to use get services with no params
         Then "BadRequest" exception should be raised
 
     Scenario: Get an existing item by filename when 2 files with the same name exist

@@ -1,9 +1,12 @@
 import pathspec
+import numpy as np
 import logging
 import zipfile
 import os
 
 logger = logging.getLogger(name=__name__)
+
+MAX_ZIP_FILE = 100e6  # 100MB
 
 
 class Zipping:
@@ -11,13 +14,14 @@ class Zipping:
         pass
 
     @staticmethod
-    def zip_directory(zip_filename, directory=None):
+    def zip_directory(zip_filename, directory=None, ignore_max_file_size=False):
         """
         Zip Directory
         Will ignore .gitignore files
 
         :param directory:
         :param zip_filename:
+        :param ignore_max_file:
         :return:
         """
         # default path
@@ -35,15 +39,18 @@ class Zipping:
 
         # init zip file
         zip_file = zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED)
-
-        for root, dirs, files in os.walk(directory):
-            for file in files:
-                filepath = os.path.join(root, file)
-                if not spec.match_file(filepath):
-                    zip_file.write(filepath, arcname=os.path.join('dist', os.path.relpath(filepath, directory)))
-
-        # finally
-        zip_file.close()
+        try:
+            for root, dirs, files in os.walk(directory):
+                for file in files:
+                    filepath = os.path.join(root, file)
+                    if not spec.match_file(filepath):
+                        zip_file.write(filepath, arcname=os.path.relpath(filepath, directory))
+                        if not ignore_max_file_size:
+                            if np.sum([f.file_size for f in list(zip_file.NameToInfo.values())]) > MAX_ZIP_FILE:
+                                raise ValueError(
+                                    'Zip file cant be over 100MB. Please verify that only code is being uploaded')
+        finally:
+            zip_file.close()
 
     @staticmethod
     def unzip_directory(zip_filename, to_directory=None):

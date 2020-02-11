@@ -63,7 +63,7 @@ class Label:
         elif isinstance(self.color, tuple) or isinstance(self.color, list):
             color = self.color
         else:
-            logger.warning('Unknown color scheme: %s' % self.color)
+            logger.warning('Unknown color scheme: {}'.format(self.color))
             color = (255, 0, 0)
         return color
 

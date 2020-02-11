@@ -38,13 +38,16 @@ class Downloader:
                  annotation_options=None,
                  to_items_folder=True,
                  thickness=1,
-                 with_text=False
+                 with_text=False,
+                 without_relative_path=None,
+                 avoid_unnecessary_annotation_download=False
                  ):
         """
         Download dataset by filters.
         Filtering the dataset for items and save them local
         Optional - also download annotation, mask, instance and image mask of the item
 
+        :param avoid_unnecessary_annotation_download:
         :param filters: Filters entity or a dictionary containing filters parameters
         :param items: download Item entity or item_id (or a list of item)
         :param overwrite: optional - default = False
@@ -56,6 +59,7 @@ class Downloader:
         :param to_items_folder: Create 'items' folder and download items to it
         :param with_text: optional - add text to annotations, default = False
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
+        :param without_relative_path: string - remote path - download items without the relative path from platform
         :return: Output (list)
         """
 
@@ -82,8 +86,11 @@ class Downloader:
             # check if filename
             _, ext = os.path.splitext(local_path)
             if not ext:
-                logger.info("Creating new directory for download: {}".format(local_path))
-                os.makedirs(local_path, exist_ok=True)
+                path_to_create = local_path
+                if local_path.endswith('*'):
+                    path_to_create = os.path.dirname(local_path)
+                logger.info("Creating new directory for download: {}".format(path_to_create))
+                os.makedirs(path_to_create, exist_ok=True)
 
         #####################
         # items to download #
@@ -123,7 +130,9 @@ class Downloader:
         ####################
         # download annotations' json files in a new thread
         # items will start downloading and if json not exists yet - will download for each file
-        if annotation_options:
+        annotated_count = self.__get_annotated_count(items=items, filters=filters)
+        if annotation_options and not avoid_unnecessary_annotation_download and self.__need_to_download_annotations_zip(
+                items_count=annotated_count):
             # a new folder named 'json' will be created under the "local_path"
             logger.info("Downloading annotations formats: {}".format(annotation_options))
             thread = threading.Thread(target=self.download_annotations,
@@ -153,9 +162,11 @@ class Downloader:
                         continue
                     if save_locally:
                         # get local file path
-                        item_local_path, item_local_filepath = self.__get_local_filepath(local_path=local_path,
-                                                                                         item=item,
-                                                                                         to_items_folder=to_items_folder)
+                        item_local_path, item_local_filepath = self.__get_local_filepath(
+                            local_path=local_path,
+                            without_relative_path=without_relative_path,
+                            item=item,
+                            to_items_folder=to_items_folder)
 
                         if os.path.isfile(item_local_filepath) and not overwrite:
                             logger.debug("File Exists: {}".format(item_local_filepath))
@@ -225,12 +236,35 @@ class Downloader:
             ids_list = [output[i_job] for i_job, suc in enumerate(success) if suc is False]
             errors_json = {item_id: error for item_id, error in zip(ids_list, errors_list)}
             with open(log_filepath, "w") as f:
-                json.dump(errors_json, f, indent=4)
+                json.dump(errors_json, f, indent=2)
             logger.warning("Errors in {} files. See {} for full log".format(n_error, log_filepath))
         if len(output) == 1:
             return output[0]
         else:
             return output
+
+    def __need_to_download_annotations_zip(self, items_count):
+        try:
+            if self.items_repository._dataset is None:
+                if items_count > 1:
+                    return True
+                else:
+                    return False
+            else:
+                return (items_count / self.items_repository._dataset.annotated) > 0.1
+        except Exception:
+            return False
+
+    def __get_annotated_count(self, items, filters):
+        try:
+            if items is not None:
+                num_annotated = len([item for item in items if item.annotated])
+            else:
+                filters.add(field='annotated', values=True)
+                num_annotated = self.items_repository.list(filters=filters).items_count
+        except Exception:
+            num_annotated = 0
+        return num_annotated
 
     def __thread_download_wrapper(self, i_item,
                                   # item params
@@ -285,6 +319,7 @@ class Downloader:
         """
         Download annotations json for entire dataset
 
+        :param remote_path:
         :param dataset: Dataset entity
         :param overwrite: optional - overwrite annotations if exist, default = false
         :param local_path:
@@ -423,7 +458,7 @@ class Downloader:
                 raise PlatformException(error="400", message="Unknown annotation option: {}".format(option))
 
     @staticmethod
-    def __get_local_filepath(local_path, item, to_items_folder):
+    def __get_local_filepath(local_path, item, to_items_folder, without_relative_path=None):
         # create paths
         _, ext = os.path.splitext(local_path)
         if ext:
@@ -434,7 +469,10 @@ class Downloader:
             # if directory - get item's filename
             if to_items_folder:
                 local_path = os.path.join(local_path, "items")
-            local_filepath = os.path.join(local_path, item.filename[1:])
+            if without_relative_path is not None:
+                local_filepath = os.path.join(local_path, os.path.relpath(item.filename, without_relative_path))
+            else:
+                local_filepath = os.path.join(local_path, item.filename[1:])
         return local_path, local_filepath
 
     @staticmethod
@@ -567,24 +605,31 @@ class Downloader:
     def __default_local_path(self):
 
         # create default local path
-        if self.items_repository.dataset.project is None:
-            # by dataset name
+        if self.items_repository._dataset is None:
             local_path = os.path.join(
                 os.path.expanduser("~"),
                 ".dataloop",
-                "datasets",
-                "{}_{}".format(self.items_repository.dataset.name, self.items_repository.dataset.id),
+                "items",
             )
         else:
-            # by dataset and project name
-            local_path = os.path.join(
-                os.path.expanduser("~"),
-                ".dataloop",
-                "projects",
-                self.items_repository.dataset.project.name,
-                "datasets",
-                self.items_repository.dataset.name,
-            )
+            if self.items_repository.dataset._project is None:
+                # by dataset name
+                local_path = os.path.join(
+                    os.path.expanduser("~"),
+                    ".dataloop",
+                    "datasets",
+                    "{}_{}".format(self.items_repository.dataset.name, self.items_repository.dataset.id),
+                )
+            else:
+                # by dataset and project name
+                local_path = os.path.join(
+                    os.path.expanduser("~"),
+                    ".dataloop",
+                    "projects",
+                    self.items_repository.dataset.project.name,
+                    "datasets",
+                    self.items_repository.dataset.name,
+                )
         logger.info("Downloading to: {}".format(local_path))
         return local_path
 

@@ -1,7 +1,7 @@
 import logging
 import traceback
 
-from .. import entities, miscellaneous, PlatformException
+from .. import entities, miscellaneous, exceptions
 
 logger = logging.getLogger(name=__name__)
 
@@ -15,11 +15,27 @@ class Ontologies:
         self._client_api = client_api
         self._recipe = recipe
 
+    ############
+    # entities #
+    ############
     @property
     def recipe(self):
+        if self._recipe is None:
+            raise exceptions.PlatformException(
+                error='2001',
+                message='Missing "recipe". need to set a Recipe entity or use ontology.recipes repository')
         assert isinstance(self._recipe, entities.Recipe)
         return self._recipe
 
+    @recipe.setter
+    def recipe(self, recipe):
+        if not isinstance(recipe, entities.Recipe):
+            raise ValueError('Must input a valid Recipe entity')
+        self._recipe = recipe
+
+    ###########
+    # methods #
+    ###########
     def create(self, labels, project_ids=None, attributes=None):
         """
         Create a new ontology
@@ -50,7 +66,7 @@ class Ontologies:
                                                    recipe=self._recipe)
         else:
             logger.exception("Failed to create Ontology")
-            raise PlatformException(response)
+            raise exceptions.PlatformException(response)
         return ontology
 
     def list(self):
@@ -86,7 +102,7 @@ class Ontologies:
         try:
             ontology = self.get(ontology_id=ontology_id)
             status = True
-        except:
+        except Exception:
             ontology = traceback.format_exc()
             status = False
         return status, ontology
@@ -105,7 +121,7 @@ class Ontologies:
                                                    client_api=self._client_api,
                                                    recipe=self._recipe)
         else:
-            raise PlatformException(response)
+            raise exceptions.PlatformException(response)
         return ontology
 
     def delete(self, ontology_id):
@@ -121,7 +137,7 @@ class Ontologies:
             logger.debug("Ontology was deleted successfully")
             return success
         else:
-            raise PlatformException(response)
+            raise exceptions.PlatformException(response)
 
     def update(self, ontology, system_metadata=False):
         """
@@ -147,7 +163,7 @@ class Ontologies:
             return ontology
         else:
             logger.exception("Failed to update ontology:")
-            raise PlatformException(response)
+            raise exceptions.PlatformException(response)
 
     @staticmethod
     def labels_to_roots(labels):
@@ -190,5 +206,6 @@ class Ontologies:
                 roots.append(root)
         for root in roots:
             if not isinstance(root["value"]["color"], str):
+                # noinspection PyStringFormat
                 root["value"]["color"] = "#%02x%02x%02x" % root["value"]["color"]
         return roots

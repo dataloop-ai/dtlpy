@@ -1,5 +1,8 @@
 import logging
-from .. import entities, miscellaneous, PlatformException
+
+import jwt
+
+from .. import entities, miscellaneous, exceptions
 
 logger = logging.getLogger(name=__name__)
 
@@ -12,6 +15,12 @@ class Projects:
     def __init__(self, client_api):
         self._client_api = client_api
 
+    def __get_from_cache(self):
+        project = self._client_api.state_io.get('project')
+        if project is not None:
+            project = entities.Project.from_json(_json=project, client_api=self._client_api)
+        return project
+
     def __get_by_id(self, project_id):
         success, response = self._client_api.gen_request(req_type='get',
                                                          path='/projects/{}'.format(project_id))
@@ -21,46 +30,72 @@ class Projects:
         else:
             # raise PlatformException(response)
             # TODO because of a bug in gate wrong error is returned so for now manually raise not found
-            raise PlatformException(error="404", message="Project not found")
+            raise exceptions.PlatformException(error="404", message="Project not found")
         return project
 
-    def __get_by_identifier(self, identifier):
+    def __get_by_identifier(self, identifier=None):
         projects = self.list()
-        projects_by_name = [project for project in projects if project.name == identifier]
+        projects_by_name = [project for project in projects if identifier in project.id or identifier in project.name]
         if len(projects_by_name) == 1:
             return projects_by_name[0]
         elif len(projects_by_name) > 1:
-            raise Exception('Multiple projects with this name exist')
-
-        projects_by_partial_id = [project for project in projects if project.id.startswith(identifier)]
-        if len(projects_by_partial_id) == 1:
-            return projects_by_partial_id[0]
-        elif len(projects_by_partial_id) > 1:
-            raise Exception("Multiple projects whose id begins with {} exist".format(identifier))
-        raise Exception("Project not found")
+            raise Exception('Multiple projects with this name/identifier exist')
+        else:
+            raise Exception("Project not found")
 
     def open_in_web(self, project_name=None, project_id=None, project=None):
-        import webbrowser
-        if self._client_api.environment == 'https://gate.dataloop.ai/api/v1':
-            head = 'https://console.dataloop.ai'
-        elif self._client_api.environment == 'https://dev-gate.dataloop.ai/api/v1':
-            head = 'https://dev-con.dataloop.ai'
-        else:
-            raise PlatformException('400', 'Unknown environment')
-        if project is None:
-            project = self.get(project_name=project_name, project_id=project_id)
-        project_url = head + '/project-overview/{}'.format(project.id)
-        webbrowser.open(url=project_url, new=2, autoraise=True)
+        if project_id is None:
+            if project is not None:
+                project_id = project.id
+            elif project_name is not None:
+                project_id = self.get(project_name=project_name)
+            else:
+                raise exceptions.PlatformException('400', 'Please provide project, project name or project id')
+        self._client_api._open_in_web(resource_type='project', project_id=project_id)
 
-    def checkout(self, identifier):
+    def checkout(self, identifier=None, project_name=None, project_id=None, project=None):
         """
-        Check-out as project
+        Check-out a project
+        :param project:
+        :param project_id:
+        :param project_name:
         :param identifier: project name or partial id
         :return:
         """
-        project = self.__get_by_identifier(identifier)
-        self._client_api.state_io.put('project', project.id)
+        if project is None:
+            if project_id is not None or project_name is not None:
+                project = self.get(project_id=project_id, project_name=project_name)
+            elif identifier is not None:
+                project = self.__get_by_identifier(identifier=identifier)
+            else:
+                raise exceptions.PlatformException(error='400',
+                                                   message='Must provide partial/full id/name to checkout')
+        self._client_api.state_io.put('project', project.to_json())
         logger.info('Checked out to project {}'.format(project.name))
+
+    def _send_mail(self, project_id, send_to, title, content):
+        url = '/projects/{}/mail'.format(project_id)
+        assert isinstance(title, str)
+        assert isinstance(content, str)
+        if self._client_api.token is not None:
+            sender = jwt.decode(self._client_api.token, algorithms=['HS256'], verify=False)['email']
+        else:
+            raise exceptions.PlatformException('600', 'Token expired please log in')
+
+        payload = {
+            'to': send_to,
+            'from': sender,
+            'subject': title,
+            'body': content
+        }
+
+        success, response = self._client_api.gen_request(req_type='post',
+                                                         path=url,
+                                                         json_req=payload)
+
+        if not success:
+            raise exceptions.PlatformException(response)
+        return True
 
     def list(self):
         """
@@ -81,7 +116,7 @@ class Projects:
                                                          '_json': project})
             # wait for all jobs
             _ = [j.wait() for j in jobs]
-            # get all resutls
+            # get all results
             results = [j.get() for j in jobs]
             # log errors
             _ = [logger.warning(r[1]) for r in results if r[0] is False]
@@ -89,39 +124,57 @@ class Projects:
             projects = miscellaneous.List([r[1] for r in results if r[0] is True])
         else:
             logger.exception('Platform error getting projects')
-            raise PlatformException(response)
+            raise exceptions.PlatformException(response)
         return projects
 
-    def get(self, project_name=None, project_id=None):
+    def get(self, project_name=None, project_id=None, dummy=False, checkout=False):
         """
         Get a Project object
+        :param checkout:
+        :param dummy:
         :param project_name: optional - search by name
         :param project_id: optional - search by id
         :return: Project object
 
         """
-
-        if project_id is not None:
-            project = self.__get_by_id(project_id)
-        elif project_name is not None:
-            projects = self.list()
-            project = [project for project in projects if project.name == project_name]
-            if not project:
-                # list is empty
-                raise PlatformException('404', 'Project not found. Name: {}'.format(project_name))
-                # project = None
-            elif len(project) > 1:
-                # more than one matching project
-                raise PlatformException('404', 'More than one project with same name. Please "get" by id')
+        if dummy:
+            if project_id is None:
+                project = self.__get_from_cache()
+                if project is None:
+                    raise exceptions.PlatformException(
+                        error='404',
+                        message='No input and no checked-out found')
             else:
-                project = project[0]
+                project = entities.Project.dummy(project_id=project_id, name=project_name, client_api=self._client_api)
         else:
-            # get from state cookie
-            state_project_id = self._client_api.state_io.get('project')
-            if state_project_id is None:
-                raise PlatformException('400', 'Must choose by "project_id" or "project_name" OR checkout a project')
+            if project_id is not None:
+                project = self.__get_by_id(project_id)
+            elif project_name is not None:
+                projects = self.list()
+                project = [project for project in projects if project.name == project_name]
+                if not project:
+                    # list is empty
+                    raise exceptions.PlatformException(error='404',
+                                                       message='Project not found. Name: {}'.format(project_name))
+                    # project = None
+                elif len(project) > 1:
+                    # more than one matching project
+                    raise exceptions.PlatformException(
+                        error='404',
+                        message='More than one project with same name. Please "get" by id')
+                else:
+                    project = project[0]
             else:
-                project = self.__get_by_id(state_project_id)
+                # get from state cookie
+                project = self.__get_from_cache()
+                if project is None:
+                    raise exceptions.PlatformException(
+                        error='404',
+                        message='No input and no checked-out found')
+
+        assert isinstance(project, entities.Project)
+        if checkout:
+            self.checkout(project=project)
         return project
 
     def delete(self, project_name=None, project_id=None, sure=False, really=False):
@@ -139,13 +192,14 @@ class Projects:
             success, response = self._client_api.gen_request(req_type='delete',
                                                              path='/projects/{}'.format(project.id))
             if not success:
-                raise PlatformException(response)
+                raise exceptions.PlatformException(response)
             logger.info('Project {} deleted successfully'.format(project.name))
             return True
 
         else:
-            raise PlatformException(error='403',
-                                    message='Cant delete project from SDK. Please login to platform to delete')
+            raise exceptions.PlatformException(
+                error='403',
+                message='Cant delete project from SDK. Please login to platform to delete')
 
     def update(self, project, system_metadata=False):
         """
@@ -161,11 +215,12 @@ class Projects:
         if success:
             return project
         else:
-            raise PlatformException(response)
+            raise exceptions.PlatformException(response)
 
-    def create(self, project_name):
+    def create(self, project_name, checkout=False):
         """
         Create a new project
+        :param checkout:
         :param project_name:
         :return: Project object
         """
@@ -177,6 +232,8 @@ class Projects:
             project = entities.Project.from_json(client_api=self._client_api,
                                                  _json=response.json())
         else:
-            raise PlatformException(response)
+            raise exceptions.PlatformException(response)
         assert isinstance(project, entities.Project)
+        if checkout:
+            self.checkout(project=project)
         return project

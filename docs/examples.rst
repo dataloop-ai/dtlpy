@@ -38,6 +38,8 @@ Content
 
 :ref:`17`
 
+:ref:`18`
+
 .. _1:
 
 Add metadata to items
@@ -147,17 +149,23 @@ Move items to another folder in platform
 .. _15:
 
 Filters
-----------------------------------------
+-------
 .. literalinclude:: ../dtlpy/examples/filters.py
 
 .. _16:
 
 Delete Annotations
-----------------------------------------
+------------------
 .. literalinclude:: ../dtlpy/examples/delete_annotations.py
 
 .. _17:
 
 Add Labels
-----------------------------------------
+----------
 .. literalinclude:: ../dtlpy/examples/add_labels.py
+
+.. _18:
+
+Optimized Upload Of Link and Modalities
+---------------------------------------
+.. literalinclude:: ../dtlpy/examples/upload_items_with_modalities.py

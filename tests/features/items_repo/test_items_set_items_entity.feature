@@ -1,7 +1,7 @@
-Feature: Items repository set_items_entity function testing
+Feature: Items repository set_items_entity service testing
 
     Background: Initiate Platform Interface and create a project
-        Given Platform Interface is initialized as dlp and Environment is set to development
+        Given Platform Interface is initialized as dlp and Environment is set according to git branch
         And There is a project by the name of "set_items_entity"
         And I create a dataset with a random name
 
@@ -10,8 +10,8 @@ Feature: Items repository set_items_entity function testing
         Then Items item entity is "Artifact"
         When I change entity to "Item"
         Then Items item entity is "Item"
-        When I change entity to "Package"
-        Then Items item entity is "Package"
+        When I change entity to "Codebase"
+        Then Items item entity is "Codebase"
 
     Scenario: Change items entity to legal entity
         When I try to change entity to "Dataset"

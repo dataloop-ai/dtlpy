@@ -10,7 +10,7 @@ class Filters:
     Filters entity to filter items from pages in platform
     """
 
-    def __init__(self):
+    def __init__(self, field=None, values=None, operator=None, method=None):
         self.or_filter_list = list()
         self.and_filter_list = list()
         self.custom_filter = None
@@ -23,6 +23,21 @@ class Filters:
         self.show_hidden = False
         self.show_dirs = False
         self.join = None
+        self._ref_task = False
+        self._ref_assignment = False
+        self._ref_op = None
+        self._ref_assignment_id = None
+        self._ref_task_id = None
+
+        if field is not None and values is not None:
+            self.add(field=field, values=values, operator=operator, method=method)
+
+    def _nullify_refs(self):
+        self._ref_task = False
+        self._ref_assignment = False
+        self._ref_op = None
+        self._ref_assignment_id = None
+        self._ref_task_id = None
 
     @property
     def default_filter(self):
@@ -54,33 +69,35 @@ class Filters:
     def add(self, field, values, operator=None, method=None):
         """
         Add filter
-        :param field: Metadata field
+        :param method: Optional - or/and
+        :param field: Metadata field / attribute
         :param values: field values
-        :param operator: optional - $in, $gt, $lt, $eq, $ne - default = $eq
+        :param operator: optional - in, gt, lt, eq, ne
         :return:
         """
         if method is None:
             method = self.method
 
         # add ** if doesnt exist
-        if field == 'type':
-            if (isinstance(values, str) and values == 'dir') or (isinstance(values, list) and 'dir' in values):
-                self.show_dirs = True
-        elif field == 'filename':
-            if isinstance(values, str):
-                if not values.endswith('*') and not os.path.splitext(values)[-1].startswith('.'):
-                    if values.endswith('/'):
-                        values = values + '**'
-                    else:
-                        values = values + '/**'
-            elif isinstance(values, list):
-                for i_value, value in enumerate(values):
-                    if isinstance(value, str):
-                        if not value.endswith('*') and not os.path.splitext(value)[-1].startswith('.'):
-                            if value.endswith('/'):
-                                values[i_value] = value + '**'
-                            else:
-                                values[i_value] = value + '/**'
+        if self.resource == 'items':
+            if field == 'type':
+                if (isinstance(values, str) and values == 'dir') or (isinstance(values, list) and 'dir' in values):
+                    self.show_dirs = True
+            elif field == 'filename':
+                if isinstance(values, str):
+                    if not values.endswith('*') and not os.path.splitext(values)[-1].startswith('.'):
+                        if values.endswith('/'):
+                            values = values + '**'
+                        else:
+                            values = values + '/**'
+                elif isinstance(values, list):
+                    for i_value, value in enumerate(values):
+                        if isinstance(value, str):
+                            if not value.endswith('*') and not os.path.splitext(value)[-1].startswith('.'):
+                                if value.endswith('/'):
+                                    values[i_value] = value + '**'
+                                else:
+                                    values[i_value] = value + '/**'
 
         # create SingleFilter object and add to self.filter_list
         if method == 'or':
@@ -198,7 +215,34 @@ class Filters:
         #############
         # operation #
         #############
-        if operation is not None:
+        if self._ref_assignment or self._ref_task:
+            refs = list()
+            if self._ref_task:
+                task_refs = list()
+                if not isinstance(self._ref_task_id, list):
+                    self._ref_task_id = [self._ref_task_id]
+
+                for ref_id in self._ref_task_id:
+                    task_refs.append({'type': 'task', 'id': ref_id})
+
+                refs += task_refs
+
+            if self._ref_assignment:
+                assignment_refs = list()
+                if not isinstance(self._ref_assignment_id, list):
+                    self._ref_assignment_id = [self._ref_assignment_id]
+
+                for ref_id in self._ref_assignment_id:
+                    assignment_refs.append({'type': 'assignment', 'id': ref_id})
+
+                refs += assignment_refs
+
+            _json['references'] = {
+                'operation': self._ref_op,
+                'refs': refs
+            }
+
+        elif operation is not None:
             if operation == 'update':
                 _json[operation] = {'metadata': {'user': update}}
             elif operation == 'delete':

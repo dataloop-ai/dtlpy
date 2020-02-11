@@ -32,14 +32,16 @@ class AnnotationCollection:
     def __len__(self):
         return len(self.annotations)
 
-    def add(self, annotation_definition, object_id=None, frame_num=0, automated=True, fixed=True, metadata=None):
+    def add(self, annotation_definition, object_id=None, frame_num=0,
+            automated=True, fixed=True, metadata=None, parent_id=None):
         """
         Add annotations to collection
 
         :param annotation_definition: dl.Polygon, dl.Segmentation, dl.Point, dl.Box etc
-        :param object_id: Id of the annotation. If video - must input to match annotations between frames
+        :param object_id: Object id (any id given by user). If video - must input to match annotations between frames
         :param frame_num: video only, number of frame
         :param fixed: video only, mark frame as fixed
+        :param parent_id: set a parent for this annotation (parent annotation ID)
         :param automated:
         :param metadata: optional- metadata dictionary for annotation
         :return:
@@ -49,7 +51,8 @@ class AnnotationCollection:
             annotation = entities.Annotation.new(item=self.item,
                                                  annotation_definition=annotation_definition,
                                                  automated=automated,
-                                                 metadata=metadata)
+                                                 metadata=metadata,
+                                                 parent_id=parent_id)
             self.annotations.append(annotation)
         else:
             # find matching element_id
@@ -62,7 +65,8 @@ class AnnotationCollection:
                                                      annotation_definition=annotation_definition,
                                                      automated=automated,
                                                      metadata=metadata,
-                                                     object_id=object_id)
+                                                     object_id=object_id,
+                                                     parent_id=parent_id)
                 self.annotations.append(annotation)
             elif len(matched_ind) == 1:
                 # found matching object id - add annotation to it
@@ -70,8 +74,8 @@ class AnnotationCollection:
                                                            frame_num=frame_num,
                                                            fixed=fixed)
             else:
-                raise PlatformException('400',
-                                        'more than one annotation with same object id: {}'.format(object_id))
+                raise PlatformException(error='400',
+                                        message='more than one annotation with same object id: {}'.format(object_id))
 
     ############
     # Plotting #
@@ -132,10 +136,7 @@ class AnnotationCollection:
                                             message='Image shape must be 2d array when trying to draw instance on image')
                 mask = image
             # create a dictionary of labels and ids
-            labels = [label.tag for label in self.item.dataset.labels]
-            labels.sort()
-            # each label gets index as instance id
-            label_instance_dict = {label: (i_label + 1) for i_label, label in enumerate(labels)}
+            label_instance_dict = self.item.dataset.instance_map
         elif annotation_format == 'object_id':
             if image is None:
                 # create an empty mask
@@ -201,7 +202,7 @@ class AnnotationCollection:
                 annotations.append(ann.to_json())
             _json['annotations'] = annotations
             with open(filepath, 'w') as f:
-                json.dump(_json, f)
+                json.dump(_json, f, indent=2)
         elif annotation_format in ["mask", "instance", "img_mask"]:
             image = None
             if annotation_format == "img_mask":
@@ -266,6 +267,18 @@ class AnnotationCollection:
         annotations = [j[1] for j in results if j[0] is True]
         annotations.sort(key=lambda x: x.label)
         return cls(annotations=annotations, item=item)
+
+    def from_instance_mask(self, mask, instance_map=None):
+        if instance_map is None:
+            instance_map = self.item.dataset.instance_map
+        # go over all instance ids
+        for label, instance_id in instance_map.items():
+            # find a binary mask per instance
+            class_mask = instance_id == mask
+            if not np.any(class_mask):
+                continue
+            # add the binary mask to the annotation builder
+            self.add(entities.Segmentation(geo=class_mask, label=label))
 
     def print(self):
         miscellaneous.List([self.annotations]).print()

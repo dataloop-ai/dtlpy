@@ -3,7 +3,7 @@ import behave
 
 @behave.when(u"I list triggers")
 def step_impl(context):
-    context.trigger_list = context.deployment.triggers.list()
+    context.trigger_list = context.service.triggers.list()
 
 
 @behave.then(u'I receive a Trigger list of "{count}" objects')

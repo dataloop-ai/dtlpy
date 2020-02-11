@@ -1,7 +1,7 @@
-Feature: Item Entity repo functions
+Feature: Item Entity repo services
 
     Background: Initiate Platform Interface
-        Given Platform Interface is initialized as dlp and Environment is set to development
+        Given Platform Interface is initialized as dlp and Environment is set according to git branch
         And There is a project by the name of "item_repo_methods"
         And I create a dataset with a random name
 
@@ -40,4 +40,14 @@ Feature: Item Entity repo functions
         Given There is an item
         When I move item to "main_dir/sub_dir/new_name.jpg"
         Then Item in host moved to a new directory
+
+    Scenario: To Json - not annotated item
+        Given Item in path "assets_split/ann_json_to_object/0000000162.jpg" is uploaded to "Dataset"
+        Then Object "Item" to_json() equals to Platform json.
+
+    Scenario: To Json - annotated video
+        Given Item in path "assets_split/ann_json_to_object/sample_video.mp4" is uploaded to "Dataset"
+        When Item is annotated with annotations in file: "assets_split/ann_json_to_object/video_annotations.json"
+        Then Item is annotated
+        Then Object "Item" to_json() equals to Platform json.
 

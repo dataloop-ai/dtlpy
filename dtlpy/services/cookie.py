@@ -35,9 +35,9 @@ class CookieIO:
         return CookieIO(local_cookie_file, create=create, local=True)
 
     @staticmethod
-    def init_plugin_json_cookie(create=False):
-        plugin_json_file = os.path.join(os.getcwd(), 'plugin.json')
-        return CookieIO(plugin_json_file, create=create, local=True)
+    def init_package_json_cookie(create=False):
+        package_json_file = os.path.join(os.getcwd(), 'package.json')
+        return CookieIO(package_json_file, create=create, local=True)
 
     def create(self):
         # create directory '.dataloop' if not exists
@@ -50,7 +50,7 @@ class CookieIO:
         try:
             with open(self.COOKIE, 'r') as f:
                 json.load(f)
-        except json.JSONDecodeError:
+        except ValueError:
             print('{} is corrupted'.format(self.COOKIE))
             raise SystemExit
 
@@ -75,7 +75,7 @@ class CookieIO:
                     with open(self.COOKIE, 'r') as fp:
                         cfg = json.load(fp)
                     break
-                except json.decoder.JSONDecodeError:
+                except ValueError:
                     if i == (NUM_TRIES - 1):
                         raise
                     time.sleep(0.1)
@@ -102,8 +102,8 @@ class CookieIO:
         cfg = self.read_json(create=True)
         cfg[key] = value
         with open(self.COOKIE, 'w') as fp:
-            json.dump(cfg, fp, indent=4)
+            json.dump(cfg, fp, indent=2)
 
     def reset(self):
         with open(self.COOKIE, 'w') as fp:
-            json.dump({}, fp)
+            json.dump({}, fp, indent=2)

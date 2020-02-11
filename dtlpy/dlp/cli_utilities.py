@@ -84,7 +84,7 @@ class FileHistory(History):
             def write(t):
                 f.write(t.encode('utf-8'))
 
-            write('\n# %s\n' % datetime.datetime.now())
+            write('\n# %s\n' % datetime.datetime.utcnow())
             for line in string.split('\n'):
                 hide = any(field in line for field in self.to_hide)
                 if not hide:
@@ -123,6 +123,57 @@ class DlpCompleter(Completer):
                     project_list = self.dlp.projects.list()
                     self.param_suggestions = ['"{}'.format(project.name) for project in project_list]
                     self.thread_state = StateEnum.DONE
+
+                elif param == '--package-name':
+                    self.thread_state = StateEnum.RUNNING
+                    if '--project-name' in cmd:
+                        project = self.dlp.projects.get(
+                            project_name=cmd[cmd.index('--project-name') + 1].replace('"', ''))
+                        packages = project.packages
+                    else:
+                        packages = self.dlp.packages
+                    package_list = packages.list()
+                    self.param_suggestions = ['"{}'.format(package.name) for package in package_list]
+                    self.thread_state = StateEnum.DONE
+
+                elif param == '--service-name':
+                    self.thread_state = StateEnum.RUNNING
+                    if '--package-name' in cmd:
+                        package = self.dlp.packages.get(
+                            package_name=cmd[cmd.index('--package-name') + 1].replace('"', ''))
+                        services = package.services
+                    elif '--project-name' in cmd:
+                        project = self.dlp.projects.get(
+                            project_name=cmd[cmd.index('--project-name') + 1].replace('"', ''))
+                        services = project.services
+                    else:
+                        services = self.dlp.services
+
+                    service_list = services.list()
+                    self.param_suggestions = ['"{}'.format(service.name) for service in service_list]
+                    self.thread_state = StateEnum.DONE
+
+                elif param == '--trigger-name':
+                    self.thread_state = StateEnum.RUNNING
+                    if '--service-name' in cmd:
+                        service = self.dlp.services.get(
+                            service_name=cmd[cmd.index('--service-name') + 1].replace('"', ''))
+                        triggers = service.triggers
+                    elif '--package-name' in cmd:
+                        package = self.dlp.packages.get(
+                            package_name=cmd[cmd.index('--package-name') + 1].replace('"', ''))
+                        triggers = package.services
+                    elif '--project-name' in cmd:
+                        project = self.dlp.projects.get(
+                            project_name=cmd[cmd.index('--project-name') + 1].replace('"', ''))
+                        triggers = project.services
+                    else:
+                        triggers = self.dlp.services
+
+                    trigger_list = triggers.list()
+                    self.param_suggestions = ['"{}'.format(trigger.name) for trigger in trigger_list]
+                    self.thread_state = StateEnum.DONE
+
                 elif param == '--dataset-name':
                     self.thread_state = StateEnum.RUNNING
                     if '--project-name' in cmd:
@@ -134,6 +185,7 @@ class DlpCompleter(Completer):
                         dataset_list = project.datasets.list()
                     self.param_suggestions = ['"{}'.format(dataset.name) for dataset in dataset_list]
                     self.thread_state = StateEnum.DONE
+
                 elif param == '--remote-path':
                     self.thread_state = StateEnum.RUNNING
                     if '--project-name' in cmd:
@@ -150,7 +202,8 @@ class DlpCompleter(Completer):
                     with_quotation = ['"{}'.format(directory) for directory in dataset.directory_tree.dir_names]
                     self.param_suggestions += with_quotation
                     self.thread_state = StateEnum.DONE
-                elif param in ['--local-path', '--local-annotations-path', '--deployment-file']:
+
+                elif param in ['--local-path', '--local-annotations-path', '--service-file']:
                     self.thread_state = StateEnum.CONTINUE
                     param = word_before_cursor.replace('"', '')
                     if param == '':
@@ -165,10 +218,22 @@ class DlpCompleter(Completer):
                                                   for directory in os.listdir(base_dir)
                                                   if (not directory.startswith('.') and
                                                       param in '"{}'.format(os.path.join(base_dir, directory)))]
+
                 elif param in ['--annotation-options']:
                     self.thread_state = StateEnum.CONTINUE
                     self.param_suggestions = ['mask', 'json', 'instance', '"mask, json"',
                                               '"mask, instance"', '"json, instance"', '"mask, json, instance"']
+
+                elif param in ['--actions']:
+                    self.thread_state = StateEnum.CONTINUE
+                    self.param_suggestions = ['Created', 'Updated', 'Deleted', '"Created, Updated"',
+                                              '"Created, Deleted"', '"Updated, Deleted"', '"Created, Updated, Deleted"']
+
+                elif param in ['--resource']:
+                    self.thread_state = StateEnum.CONTINUE
+                    self.param_suggestions = [value for key, value in self.dlp.TriggerResource.__dict__.items() if
+                                              not key.startswith('_')]
+
                 elif param in ['cd']:
                     self.thread_state = StateEnum.CONTINUE
                     if word_before_cursor != '' and os.path.isdir(os.path.join(os.getcwd(), word_before_cursor)):
@@ -180,6 +245,7 @@ class DlpCompleter(Completer):
                     else:
                         self.param_suggestions = [directory for directory in os.listdir(os.getcwd()) if
                                                   os.path.isdir(directory)]
+
                 else:
                     self.thread_state = StateEnum.START
                     self.param_suggestions = list()
@@ -246,6 +312,8 @@ class DlpCompleter(Completer):
                     self.get_param_suggestions(param=param, word_before_cursor=word_before_cursor, cmd=cmd)
             if self.thread_state in [StateEnum.DONE, StateEnum.CONTINUE]:
                 suggestions = self.param_suggestions
+        elif len(cmd) == 0:
+            suggestions = list(self.keywords.keys())
         elif len(cmd) == 1:
             self.thread_state = StateEnum.START
             if cmd[0] not in self.keywords.keys() and cmd[0] != '':

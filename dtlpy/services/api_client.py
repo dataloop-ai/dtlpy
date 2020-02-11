@@ -10,24 +10,20 @@ import requests
 import aiohttp
 import asyncio
 import logging
-import hashlib
-import base64
-import enum
-import time
 import tqdm
 import json
 import jwt
 import os
 from multiprocessing.pool import ThreadPool
 from requests.adapters import HTTPAdapter
-from urllib.parse import urlencode
 from urllib3.util import Retry
 from functools import wraps
 import numpy as np
 
 from .calls_counter import CallsCounter
 from .cookie import CookieIO
-from .async_entities import AsyncResponse, AsyncUploadStream
+from .logins import login, login_secret
+from .async_entities import AsyncResponse, AsyncUploadStream, AsyncResponseError
 from .. import miscellaneous, exceptions, __version__
 
 logger = logging.getLogger(name=__name__)
@@ -94,7 +90,7 @@ class Verbose:
     def logging_level(self, val):
         self._logging_level = val
         # set log level
-        logging.getLogger('dtlpy').handlers[1].setLevel(logging._nameToLevel[self._logging_level.upper()])
+        logging.getLogger('dtlpy').handlers[0].setLevel(logging._nameToLevel[self._logging_level.upper()])
         # write to cookie
         self.to_cookie()
 
@@ -115,7 +111,8 @@ class Decorators:
         def decorated_method(inst, *args, **kwargs):
             # before the method call
             if inst.token_expired():
-                raise exceptions.PlatformException('600', 'Token expired, Please login.')
+                if inst.renew_token_method() is False:
+                    raise exceptions.PlatformException('600', 'Token expired, Please login.')
             # the actual method call
             result = method(inst, *args, **kwargs)
             # after the method call
@@ -134,6 +131,7 @@ class ApiClient:
         # Initiate #
         ############
         # define local params - read only once from cookie file
+        self.renew_token_method = self.renew_token
         self.is_cli = False
         self.session = None
         self._token = None
@@ -179,14 +177,13 @@ class ApiClient:
         counter_filepath = os.path.join(os.path.dirname(self.cookie_io.COOKIE), 'calls_counter.json')
         self.calls_counter = CallsCounter(filepath=counter_filepath)
 
-        # start refresh token thread
-        self.refresh_token_thread = RefreshTimer(client_api=self)
-        self.refresh_token_thread.daemon = True
-        self.refresh_token_thread.start()
+        # start refresh token
+        self.refresh_token_active = True
 
         # create a global thread pool to run multi threading
         if num_processes is None:
             num_processes = multiprocessing.cpu_count()
+        self._num_processes = num_processes
         self._thread_pools = dict()
         self._thread_pools_names = {'item.upload': num_processes,
                                     'item.download': num_processes,
@@ -196,7 +193,23 @@ class ApiClient:
                                     'annotation.update': num_processes,
                                     'entity.create': num_processes}
         # set logging level
-        logging.getLogger('dtlpy').handlers[1].setLevel(logging._nameToLevel[self.verbose.logging_level.upper()])
+        logging.getLogger('dtlpy').handlers[0].setLevel(logging._nameToLevel[self.verbose.logging_level.upper()])
+
+    @property
+    def num_processes(self):
+        return self._num_processes
+
+    @num_processes.setter
+    def num_processes(self, num_processes):
+        self._num_processes = num_processes
+        for pool_name in self._thread_pools_names:
+            self._thread_pools_names[pool_name] = num_processes
+
+        for pool in self._thread_pools:
+            self._thread_pools[pool].close()
+            self._thread_pools[pool].terminate()
+
+        self._thread_pools = dict()
 
     def thread_pools(self, pool_name):
         if pool_name not in self._thread_pools_names:
@@ -264,34 +277,46 @@ class ApiClient:
                          'token': None,
                          'refresh_token': None,
                          'verify_ssl': True},
-                    'https://gate.dataloop.ai/api/v1': {'alias': 'prod',
-                                                        'audience': 'https://dataloop-production.auth0.com/userinfo',
-                                                        'client_id': 'FrG0HZga1CK5UVUSJJuDkSDqItPieWGW',
-                                                        'auth0_url': 'https://dataloop-production.auth0.com',
-                                                        'token': None,
-                                                        'refresh_token': None,
-                                                        'verify_ssl': True},
-                    'https://localhost:8443/api/v1': {'alias': 'local',
-                                                      'audience': 'https://dataloop-local.auth0.com/userinfo',
-                                                      'client_id': 'ewGhbg5brMHOoL2XZLHBzhEanapBIiVO',
-                                                      'auth0_url': 'https://dataloop-local.auth0.com',
-                                                      'token': None,
-                                                      'refresh_token': None,
-                                                      'verify_ssl': False},
-                    'https://172.17.0.1:8443/api/v1': {'alias': 'docker_linux',
-                                                       'audience': 'https://dataloop-local.auth0.com/userinfo',
-                                                       'client_id': 'ewGhbg5brMHOoL2XZLHBzhEanapBIiVO',
-                                                       'auth0_url': 'https://dataloop-local.auth0.com',
-                                                       'token': None,
-                                                       'refresh_token': None,
-                                                       'verify_ssl': False},
-                    'https://host.docker.internal:8443/api/v1': {'alias': 'docker_windows',
-                                                                 'audience': 'https://dataloop-local.auth0.com/userinfo',
-                                                                 'client_id': 'ewGhbg5brMHOoL2XZLHBzhEanapBIiVO',
-                                                                 'auth0_url': 'https://dataloop-local.auth0.com',
-                                                                 'token': None,
-                                                                 'refresh_token': None,
-                                                                 'verify_ssl': False}
+                    'https://rc-gate.dataloop.ai/api/v1':
+                        {'alias': 'rc',
+                         'audience': 'https://dataloop-development.auth0.com/api/v2/',
+                         'client_id': 'I4Arr9ixs5RT4qIjOGtIZ30MVXzEM4w8',
+                         'auth0_url': 'https://dataloop-development.auth0.com',
+                         'token': None,
+                         'refresh_token': None,
+                         'verify_ssl': True},
+                    'https://gate.dataloop.ai/api/v1': {
+                        'alias': 'prod',
+                        'audience': 'https://dataloop-production.auth0.com/userinfo',
+                        'client_id': 'FrG0HZga1CK5UVUSJJuDkSDqItPieWGW',
+                        'auth0_url': 'https://dataloop-production.auth0.com',
+                        'token': None,
+                        'refresh_token': None,
+                        'verify_ssl': True},
+                    'https://localhost:8443/api/v1': {
+                        'alias': 'local',
+                        'audience': 'https://dataloop-local.auth0.com/userinfo',
+                        'client_id': 'ewGhbg5brMHOoL2XZLHBzhEanapBIiVO',
+                        'auth0_url': 'https://dataloop-local.auth0.com',
+                        'token': None,
+                        'refresh_token': None,
+                        'verify_ssl': False},
+                    'https://172.17.0.1:8443/api/v1': {
+                        'alias': 'docker_linux',
+                        'audience': 'https://dataloop-local.auth0.com/userinfo',
+                        'client_id': 'ewGhbg5brMHOoL2XZLHBzhEanapBIiVO',
+                        'auth0_url': 'https://dataloop-local.auth0.com',
+                        'token': None,
+                        'refresh_token': None,
+                        'verify_ssl': False},
+                    'https://host.docker.internal:8443/api/v1': {
+                        'alias': 'docker_windows',
+                        'audience': 'https://dataloop-local.auth0.com/userinfo',
+                        'client_id': 'ewGhbg5brMHOoL2XZLHBzhEanapBIiVO',
+                        'auth0_url': 'https://dataloop-local.auth0.com',
+                        'token': None,
+                        'refresh_token': None,
+                        'verify_ssl': False}
                 }
                 # save to local variable
                 self.environments = _environments
@@ -351,13 +376,14 @@ class ApiClient:
             environments[self.environment]['refresh_token'] = token
         else:
             environments[self.environment] = {'refresh_token': token}
+        self.refresh_token_active = True
         self.environments = environments
 
     def add_environment(self, environment, audience, client_id, auth0_url,
                         verify_ssl=True, token=None, refresh_token=None, alias=None):
         environments = self.environments
         if environment in environments:
-            logger.warning('Environment exists. Overwriting. env: %s' % environment)
+            logger.warning('Environment exists. Overwriting. env: {}'.format(environment))
         if token is None:
             token = None
         if alias is None:
@@ -370,6 +396,22 @@ class ApiClient:
                                      'refresh_token': refresh_token,
                                      'verify_ssl': verify_ssl}
         self.environments = environments
+
+    def info(self, with_token=True):
+        """
+        Return a dictionary with current information: env, user, token
+        :param with_token:
+        :return:
+        """
+        user_email = 'null'
+        if self.token is not None:
+            payload = jwt.decode(self.token, algorithms=['HS256'], verify=False)
+            user_email = payload['email']
+        information = {'environment': self.environment,
+                       'user_email': user_email}
+        if with_token:
+            information['token'] = self.token
+        return information
 
     @Decorators.token_expired_decorator
     def gen_request(self, req_type, path, data=None, json_req=None, files=None, stream=False, headers=None,
@@ -464,7 +506,7 @@ class ApiClient:
                     form.add_field('metadata', json.dumps(item_metadata))
                 form.add_field('file', AsyncUploadStream(buffer=to_upload, callback=callback))
                 url = '{}?mode={}'.format(self.environment + remote_url, mode)
-                async with session.post(url, data=form) as resp:
+                async with session.post(url, data=form, verify_ssl=self.verify) as resp:
                     text = await resp.text()
                     try:
                         _json = await resp.json()
@@ -473,8 +515,8 @@ class ApiClient:
                     response = AsyncResponse(text=text,
                                              _json=_json,
                                              async_resp=resp)
-            except:
-                logger.exception('Error in async upload')
+            except Exception as err:
+                response = AsyncResponseError(error=err, trace=traceback.format_exc())
         return response
 
     def upload_from_local(self, to_upload, item_type, item_size, remote_url, uploaded_filename, remote_path=None,
@@ -496,6 +538,9 @@ class ApiClient:
                                                                     remote_path=remote_path,
                                                                     callback=callback,
                                                                     mode=mode))
+        with threadLock:
+            self.calls_counter.add()
+        loop.stop()
         loop.close()
         if not response.ok:
             self.print_bad_response(response, log_error)
@@ -563,25 +608,27 @@ class ApiClient:
             else:
                 logger.warning('Proxy is used, make sure dataloop urls are in "no_proxy" environment variable')
 
-    def token_expired(self):
+    def token_expired(self, t=60):
         """
         Check token validation
-        :return:
+        :param t: time ahead interval in seconds
         """
         try:
             if self.token is None or self.token == '':
                 return True
             payload = jwt.decode(self.token, algorithms=['HS256'], verify=False)
-            now = datetime.datetime.now().timestamp()
+            d = datetime.datetime.utcnow()
+            epoch = datetime.datetime(1970, 1, 1)
+            now = (d - epoch).total_seconds()
             exp = payload['exp']
-            if now < exp:
+            if now < (exp - t):
                 return False
             else:
                 return True
-        except jwt.exceptions.DecodeError as err:
+        except jwt.exceptions.DecodeError:
             logger.exception('Invalid token.')
             return True
-        except Exception as err:
+        except Exception:
             logger.exception('Unknown error:')
             return True
 
@@ -590,19 +637,21 @@ class ApiClient:
         try:
             response_json = response.json()
             return True, response_json
-        except json.decoder.JSONDecodeError:
+        except ValueError:
             return False, None
 
     ##########
     # STDOUT #
     ##########
-    def print_response(self, resp):
+    def print_response(self, resp=None):
         """
         Print tabulate response
         :param resp: response from requests
         :return:
         """
         try:
+            if resp is None:
+                resp = self.last_response
             is_json_serializable, results = self.is_json_serializable(response=resp)
             if self.verbose.print_all_responses and is_json_serializable:
                 if isinstance(results, dict):
@@ -612,10 +661,12 @@ class ApiClient:
                 else:
                     logger.debug('Unknown response type: {}. cant print'.format(type(results)))
                     return
-                logger.debug('-- Request --')
+                logger.debug('--- [Request] Start ---')
                 logger.debug(self.print_request(req=resp.request, to_return=True))
-                logger.debug('-- Response --')
+                logger.debug('--- [Request] End ---')
+                logger.debug('--- [Response] Start ---')
                 to_print.print(show_all=False, level='debug')
+                logger.debug('--- [Response] End ---')
         except Exception:
             logger.exception('Printing response from gate:')
 
@@ -636,14 +687,15 @@ class ApiClient:
         if hasattr(resp, 'text'):
             msg += '[Text: {val}]'.format(val=resp.text)
 
-        logger.debug('-- Request --')
+        logger.debug('--- [Request] Start ---')
         logger.debug(self.print_request(req=resp.request, to_return=True))
-        logger.debug('-- Response --')
+        logger.debug('--- [Request] End ---')
+        logger.debug('--- [Response] Start ---')
         if log_error:
             logger.error(msg)
         else:
             logger.debug(msg)
-
+        logger.debug('--- [Response] End ---')
         self.platform_exception = PlatformError(resp)
 
     def print_request(self, req=None, to_return=False, with_auth=False):
@@ -680,8 +732,7 @@ class ApiClient:
         except Exception:
             pass
 
-        msg = '{}\n{}\n{}\n\n{}'.format(
-            '-----------START-----------',
+        msg = '{}\n{}\n{}'.format(
             req.method + ' ' + str(req.url),
             '\n'.join(headers),
             body,
@@ -716,6 +767,7 @@ class ApiClient:
         self.environment = env
         # reset local token
         self._token = None
+        self.refresh_token_active = True
         logger.info('Platform environment: %s' % self.environment)
         if self.token_expired():
             logger.info('Token expired, Please login.')
@@ -733,66 +785,13 @@ class ApiClient:
         :param force: force login. in case login with same user but want to get a new JWT
         :return:
         """
-        # check if already logged in with SAME email
-        if self.token is not None or self.token == '':
-            try:
-                payload = jwt.decode(self.token, algorithms=['HS256'], verify=False)
-                if 'email' in payload and \
-                        payload['email'] == email and \
-                        not self.token_expired() and \
-                        not force:
-                    logger.warning('Trying to login with same email but token not expired. Not doing anything... '
-                                   'Set "force" flag to True to login anyway.')
-                    return True
-            except jwt.exceptions.DecodeError:
-                logger.debug('{}'.format('Cant decode token. Force login is user'))
+        return login_secret(api_client=self,
+                            email=email,
+                            password=password,
+                            client_id=client_id,
+                            client_secret=client_secret,
+                            force=force)
 
-        logger.info('[Start] Login Secret')
-        environment = self.environment
-        audience = None
-        auth0_url = None
-        for env, env_params in self.environments.items():
-            if env == environment:
-                audience = env_params['audience']
-                auth0_url = env_params['auth0_url']
-        missing = False
-        if audience is None:
-            logger.error('audience not found. Please add a new environment to SDK. env: {}'.format(environment))
-            missing = True
-        if auth0_url is None:
-            logger.error('auth0_url not found. Please add a new environment to SDK. env: {}'.format(environment))
-            missing = True
-        if missing:
-            raise ConnectionError('Some values are missing. See above for full error')
-        # need to login
-        payload = {'username': email,
-                   'password': password,
-                   'grant_type': 'password',
-                   'audience': audience,
-                   'scope': 'openid email offline_access',
-                   'client_id': client_id,
-                   'client_secret': client_secret
-                   }
-        headers = {'content-type': 'application/json'}
-        token_url = auth0_url + '/oauth/token'
-        resp = requests.request("POST", token_url, data=json.dumps(payload), headers=headers)
-        if not resp.ok:
-            self.print_bad_response(resp)
-            return False
-        else:
-            response_dict = resp.json()
-            self.token = response_dict['id_token']  # this will also set the refresh_token to None
-            if 'refresh_token' in response_dict:
-                self.refresh_token = response_dict['refresh_token']
-            payload = jwt.decode(self.token, algorithms=['HS256'], verify=False)
-            if 'email' in payload:
-                logger.info('[Done] Login Secret. User: {}'.format(payload['email']))
-            else:
-                logger.info('[Done] Login Secret. User: {}'.format(email))
-                logger.info(payload)
-        return True
-
-    ##########
     def login_token(self, token):
         """
         Login using existing token
@@ -806,245 +805,93 @@ class ApiClient:
         Login using Auth0.
         :return:
         """
-        import webbrowser
-        from http.server import BaseHTTPRequestHandler, HTTPServer
-        from urllib.parse import urlparse, parse_qs
-
-        logger.info('Logging in to Dataloop...')
-        login_success = False
-        # create a Code Verifier
-        n_bytes = 64
-        verifier = base64.urlsafe_b64encode(os.urandom(n_bytes)).rstrip(b'=')
-        # https://tools.ietf.org/html/rfc7636#section-4.1
-        # minimum length of 43 characters and a maximum length of 128 characters.
-        if len(verifier) < 43:
-            raise ValueError("Verifier too short. n_bytes must be > 30.")
-        elif len(verifier) > 128:
-            raise ValueError("Verifier too long. n_bytes must be < 97.")
-        # Create a code challenge
-        digest = hashlib.sha256(verifier).digest()
-        challenge = base64.urlsafe_b64encode(digest).rstrip(b'=')
-
-        ################################
-        # auth0 parameters for request #
-        ################################
-        # get env from url
-        if self.environment in self.environments.keys():
-            env_params = self.environments[self.environment]
-            audience = env_params['audience']
-            client_id = env_params['client_id']
-            auth0_url = env_params['auth0_url']
-        else:
-            missing = False
-            if audience is None:
-                logger.error('Missing parameter for environment missing. Need to input "audience"')
-                missing = True
-            if client_id is None:
-                logger.error('Missing parameter for environment missing. Need to input "client_id"')
-                missing = True
-            if auth0_url is None:
-                logger.error('Missing parameter for environment missing. Need to input "auth0_url"')
-                missing = True
-            if missing:
-                raise ConnectionError('Missing parameter for environment. see above')
-            # add to login parameters
-            self.add_environment(environment=self.environment,
-                                 audience=audience,
-                                 client_id=client_id,
-                                 auth0_url=auth0_url)
-
-        redirect_url = 'http://localhost:3001/token'
-
-        # set url request for auth0
-        payload = {'code_challenge_method': 'S256',
-                   'code_challenge': challenge,
-                   'response_type': 'code',
-                   'audience': audience,
-                   'scope': 'openid email offline_access',
-                   'client_id': client_id,
-                   'redirect_uri': redirect_url}
-
-        query_string = urlencode(payload, doseq=True)
-
-        # set up local server to get response from auth0
-        global query_dict
-        query_dict = None
-
-        class RequestHandler(BaseHTTPRequestHandler):
-
-            def log_message(self, format, *args):
-                return
-
-            def do_GET(self):
-                global query_dict
-                parsed_path = urlparse(self.path)
-                query_dict = parse_qs(parsed_path.query)
-                try:
-                    # working directory when running from command line
-                    location = os.path.dirname(os.path.realpath(__file__))
-                except NameError:
-                    # working directory when running from console
-                    location = './dtlpy/services'
-                filename = os.path.join(location, '..', 'assets', 'lock_open.png')
-                if query_dict and 'code' in query_dict:
-                    if os.path.isfile(filename):
-                        with open(filename, 'rb') as f:
-                            # Open the static file requested and send it
-                            self.send_response(200)
-                            self.send_header('Content-type', 'image/jpg')
-                            self.end_headers()
-                            self.wfile.write(f.read())
-                return
-
-        port = 3001
-        # print('Listening on localhost:%s' % port)
-        server = HTTPServer(('', port), RequestHandler)
-        # set timeout to 1min (waiting for user to login)
-        server.timeout = 60  # timeout 1 min
-        try:
-            # open browser to Auth0 login page
-            webbrowser.open(url=auth0_url + '/authorize' + '?%s' % query_string, new=2, autoraise=True)
-            # wait for request
-            server.handle_request()
-            # check the global list for the token
-            if query_dict and 'code' in query_dict:
-                # authentication code received from auth0 - can continue login
-                # payload for auth0 token request
-                payload = {'grant_type': 'authorization_code',
-                           'client_id': client_id,
-                           'code_verifier': verifier.decode(),
-                           'code': query_dict['code'][0],
-                           'redirect_uri': redirect_url}
-                resp = requests.request("POST",
-                                        auth0_url + '/oauth/token',
-                                        json=payload,
-                                        headers={'content-type': 'application/json'})
-                if not resp.ok:
-                    self.print_bad_response(resp)
-                    login_success = False
-                else:
-                    response_dict = resp.json()
-                    final_token = response_dict['id_token']
-                    self.token = final_token  # this will also set the refresh_token to None
-                    if 'refresh_token' in response_dict:
-                        self.refresh_token = response_dict['refresh_token']
-
-                    payload = jwt.decode(self.token, algorithms=['HS256'], verify=False)
-                    if 'email' in payload:
-                        logger.info('Logged in: %s' % payload['email'])
-                    else:
-                        logger.info('Logged in: unknown user')
-                    login_success = True
-            else:
-                # if time out passed (in seconds) break
-                logger.exception('Timeout reached: getting token from server')
-                raise ConnectionError('Timeout reached: getting token from server')
-        except Exception as err:
-            logger.exception('Error in http server for getting token')
-        finally:
-            # shutdown local server
-            server.server_close()
-        return login_success
-
-    def set_api_counter(self, filepath):
-        self.calls_counter = CallsCounter(filepath=filepath)
-
-
-class RefreshTimer(threading.Thread):
-    class Status(enum.Enum):
-        FAILED = 0
-        PENDING = 1
-        MISSING = 2
-        INPROGRESS = 3
-
-    def __init__(self, client_api):
-        super(RefreshTimer, self).__init__()
-        self.client_api = client_api
-        self.kill = False
-        self.renew_status = self.Status.PENDING
-        self.times = {
-            'before_expired': 60 * 60,  # 60 min
-            'on_fail': 10 * 60,  # 10 min
-            'wake_margin': 30 * 60,  # 30 min
-            'on_missing': 10 * 60 * 60,  # 10 hours
-            'default': 10 * 60 * 60  # 10 hours
-        }
+        return login(api_client=self,
+                     audience=audience,
+                     auth0_url=auth0_url,
+                     client_id=client_id)
 
     def renew_token(self):
-        env_params = self.client_api.environments[self.client_api.environment]
+        renewed = False
+        if self.refresh_token_active is False:
+            return renewed
+        logger.debug('RefreshToken: Started')
+        if self.token is None or self.token == '':
+            # token is missing
+            logger.debug('RefreshToken: Missing token.')
+            self.refresh_token_active = False
+        if self.refresh_token is None or self.refresh_token == '':
+            # missing refresh token
+            logger.debug('RefreshToken: Missing "refresh_token"')
+            self.refresh_token_active = False
+        if self.environment not in self.environments.keys():
+            # env params missing
+            logger.error('RefreshToken: Missing environments params for refreshing token')
+            self.refresh_token_active = False
+
+        if self.refresh_token_active is False:
+            return renewed
+
+        refresh_token = self.refresh_token
+
+        env_params = self.environments[self.environment]
         client_id = env_params['client_id']
         auth0_url = env_params['auth0_url']
         payload = {'grant_type': 'refresh_token',
                    'client_id': client_id,
-                   'refresh_token': self.client_api.refresh_token}
+                   'refresh_token': self.refresh_token}
         resp = requests.request("POST",
                                 auth0_url + '/oauth/token',
                                 json=payload,
                                 headers={'content-type': 'application/json'})
         if not resp.ok:
-            self.client_api.print_bad_response(resp)
-            self.renew_status = self.Status.FAILED
+            logger.debug('RefreshToken: Failed')
+            self.print_bad_response(resp)
         else:
             response_dict = resp.json()
             # get new token
             final_token = response_dict['id_token']
-            self.client_api.token = final_token
+            self.token = final_token
+            self.refresh_token = refresh_token
             # set status back to pending
-            self.renew_status = self.Status.PENDING
+            logger.debug('RefreshToken: Success')
+            renewed = True
+        return renewed
 
-    def run(self):
-        while True:
-            try:
-                logger.debug('RefreshToken: Started')
-                next_wake = self.times['default']
-                if self.kill:
-                    logger.debug('RefreshToken: Killed. Breaking..')
-                    break
-                if self.client_api.token is None or self.client_api.token == '':
-                    # token is missing
-                    logger.debug('RefreshToken: Missing token.')
-                    self.renew_status = self.Status.MISSING
-                if self.client_api.refresh_token is None or self.client_api.refresh_token == '':
-                    # missing refresh token
-                    logger.debug('RefreshToken: Missing "refresh_token"')
-                    self.renew_status = self.Status.MISSING
-                if self.client_api.environment not in self.client_api.environments.keys():
-                    # env params missing
-                    logger.error('RefreshToken: Missing environments params for refreshing token')
-                    self.renew_status = self.Status.MISSING
-                if self.renew_status == self.Status.PENDING:
-                    # check expiration time
-                    payload = jwt.decode(self.client_api.token, algorithms=['HS256'], verify=False)
-                    now = datetime.datetime.now().timestamp()
-                    exp = payload['exp']
-                    # check if need to renew
-                    if now > (exp - self.times['before_expired']):
-                        # 1 hour till expiration and not already in renew process
-                        logger.debug('RefreshToken: Refreshing...')
-                        self.renew_status = self.Status.INPROGRESS
-                        self.renew_token()
-                        if self.renew_status == self.Status.PENDING:
-                            # calculate next wake time
-                            logger.debug('RefreshToken: Success')
-                            payload = jwt.decode(self.client_api.token, algorithms=['HS256'], verify=False)
-                            now = datetime.datetime.now().timestamp()
-                            exp = payload['exp']
-                            next_wake = int(exp - now - self.times['wake_margin'])
-                        else:
-                            logger.debug('RefreshToken: Failed')
-                            next_wake = self.times['on_fail']
-                    else:
-                        next_wake = int(exp - now - self.times['wake_margin'])
+    def set_api_counter(self, filepath):
+        self.calls_counter = CallsCounter(filepath=filepath)
 
-                if self.renew_status == self.Status.FAILED:
-                    next_wake = self.times['on_fail']
-                if self.renew_status == self.Status.MISSING:
-                    next_wake = self.times['on_missing']
+    def _open_in_web(self,
+                     resource_type,
+                     project_id=None,
+                     dataset_id=None,
+                     item_id=None,
+                     package_id=None,
+                     service_id=None):
 
-                logger.debug('RefreshToken: Sleeping for: {}[s]'.format(next_wake))
-                time.sleep(next_wake)
-            except:
-                logger.debug(traceback.format_exc())
-                logger.debug('RefreshToken: Non Fatal Error: refresh token failed. Sleeping for: {}'.format(
-                    self.times['on_fail']))
-                time.sleep(self.times['on_fail'])
+        import webbrowser
+        env = self._environments[self._environment]['alias']
+        if env == 'prod':
+            head = 'https://console.dataloop.ai'
+        elif env == 'dev':
+            head = 'https://dev-con.dataloop.ai'
+        elif env == 'rc':
+            head = 'https://rc-con.dataloop.ai'
+        elif env == 'local':
+            head = 'https://localhost:8443/'
+        else:
+            raise exceptions.PlatformException(error='400', message='Unknown environment: {}'.format(env))
+
+        if resource_type == 'project':
+            url = head + '/project-overview/{}'.format(project_id)
+        elif resource_type == 'dataset':
+            url = head + '/projects/{}/datasets/{}'.format(project_id, dataset_id)
+        elif resource_type == 'item':
+            url = head + '/projects/{}/datasets/{}/annotation/{}'.format(project_id, dataset_id, item_id)
+        elif resource_type == 'package':
+            url = head + '/projects/{}/packages/{}'.format(project_id, package_id)
+        elif resource_type == 'service':
+            url = head + '/projects/{}/packages/{}/services/{}'.format(project_id, package_id, service_id)
+        else:
+            raise exceptions.PlatformException(error='400', message='Unknown resource_type: {}'.format(resource_type))
+
+        webbrowser.open(url=url, new=2, autoraise=True)

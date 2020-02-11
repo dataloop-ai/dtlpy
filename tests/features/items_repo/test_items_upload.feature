@@ -1,7 +1,7 @@
-Feature: Items repository upload function testing
+Feature: Items repository upload service testing
 
     Background: Initiate Platform Interface and create a project
-        Given Platform Interface is initialized as dlp and Environment is set to development
+        Given Platform Interface is initialized as dlp and Environment is set according to git branch
         And There is a project by the name of "items_upload"
         And I create a dataset with a random name
 

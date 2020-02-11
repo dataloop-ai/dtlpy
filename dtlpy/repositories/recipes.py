@@ -1,7 +1,7 @@
 import logging
 import traceback
 
-from .. import entities, miscellaneous, repositories, PlatformException
+from .. import entities, miscellaneous, repositories, exceptions
 
 logger = logging.getLogger(name=__name__)
 
@@ -15,11 +15,27 @@ class Recipes:
         self._client_api = client_api
         self._dataset = dataset
 
+    ############
+    # entities #
+    ############
     @property
     def dataset(self):
+        if self._dataset is None:
+            raise exceptions.PlatformException(
+                error='2001',
+                message='Missing "dataset". need to set a Dataset entity or use dataset.recipes repository')
         assert isinstance(self._dataset, entities.Dataset)
         return self._dataset
 
+    @dataset.setter
+    def dataset(self, dataset):
+        if not isinstance(dataset, entities.Dataset):
+            raise ValueError('Must input a valid Dataset entity')
+        self._dataset = dataset
+
+    ###########
+    # methods #
+    ###########
     def create(self, project_ids=None, ontology_ids=None, labels=None, recipe_name=None, attributes=None):
         """
         Create New Recipe
@@ -55,7 +71,7 @@ class Recipes:
                                                dataset=self.dataset)
         else:
             logger.exception('Failed to create Recipe')
-            raise PlatformException(response)
+            raise exceptions.PlatformException(response)
 
         # add recipe id to dataset system metadata
         if 'system' not in self.dataset.metadata:
@@ -120,7 +136,7 @@ class Recipes:
         else:
             logger.exception(
                 'Unable to get info from recipe. dataset id: {}, recipe_id id: {}'.format(self.dataset.id, recipe_id))
-            raise PlatformException(response)
+            raise exceptions.PlatformException(response)
 
         return recipe
 
@@ -134,7 +150,7 @@ class Recipes:
         success, response = self._client_api.gen_request(req_type='delete',
                                                          path='/recipes/%s' % recipe_id)
         if not success:
-            raise PlatformException(response)
+            raise exceptions.PlatformException(response)
         logger.info('Recipe id {} deleted successfully'.format(recipe_id))
         return True
 
@@ -156,4 +172,4 @@ class Recipes:
             return entities.Recipe.from_json(client_api=self._client_api, _json=response.json(), dataset=self.dataset)
         else:
             logger.exception('Error while updating item:')
-            raise PlatformException(response)
+            raise exceptions.PlatformException(response)

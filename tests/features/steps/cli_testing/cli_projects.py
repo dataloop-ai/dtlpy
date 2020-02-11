@@ -11,11 +11,6 @@ def step_impl(context):
     assert not dl.client_api.token_expired()
 
 
-@behave.given(u'Environment is "dev"')
-def step_impl(context):
-    dl.setenv('dev')
-
-
 @behave.when(u"I perform command")
 def step_impl(context):
     rel_path = os.environ['DATALOOP_TEST_ASSETS']

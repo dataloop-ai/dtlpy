@@ -1,20 +1,12 @@
 Missing Tests:
     - Time series repo
     - Time series entity
-    - Plugin entity
-    - Cli plugins
-    - Deployment entity
-    - Deployments logs
-    - sessions repo
-    - session entity
-    - Cli deployments
-    - Trigger entity
+    - Cli packages
+    - Cli services
+    - client api
     - Annotation task repo
-    - Annotation task entity
     - Assignments repo
-    - Assignments entity
-    - Filters
     - Converters
     - Directory Tree
-    - Bots
-    - plugin/session inputs
+    - FunctionIO
+    - entities to_json output equals platform json

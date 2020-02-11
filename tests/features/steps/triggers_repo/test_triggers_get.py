@@ -9,7 +9,7 @@ def step_impl(context):
     resource = None
     actions = None
     active = None
-    executionMode = None
+    execution_mode = None
 
     params = context.table.headings
     for param in params:
@@ -30,27 +30,27 @@ def step_impl(context):
             active = param[1] == "True"
         elif param[0] == "executionMode":
             if param[1] != "None":
-                executionMode = param[1]
+                execution_mode = param[1]
 
-    context.trigger = context.deployment.triggers.create(
-        deployment_id=context.deployment.id,
+    context.trigger = context.service.triggers.create(
+        service_id=context.service.id,
         name=name,
         filters=filters,
         resource=resource,
         actions=actions,
         active=active,
-        executionMode=executionMode,
+        execution_mode=execution_mode,
     )
 
 
 @behave.when(u"I get trigger by id")
 def step_impl(context):
-    context.trigger_get = context.deployment.triggers.get(trigger_id=context.trigger.id)
+    context.trigger_get = context.service.triggers.get(trigger_id=context.trigger.id)
 
 
 @behave.when(u"I get trigger by name")
 def step_impl(context):
-    context.trigger_get = context.deployment.triggers.get(trigger_name=context.trigger.name)
+    context.trigger_get = context.service.triggers.get(trigger_name=context.trigger.name)
 
 
 @behave.then(u"I receive a Trigger object")

@@ -1,4 +1,6 @@
-from .. import entities, repositories, miscellaneous, exceptions
+from urllib.parse import urlencode
+
+from .. import entities, miscellaneous, exceptions
 
 
 class Triggers:
@@ -6,37 +8,67 @@ class Triggers:
     Triggers repository
     """
 
-    def __init__(self, client_api, project=None, deployment=None):
+    def __init__(self, client_api, project=None, service=None):
         self._client_api = client_api
         self._project = project
-        self.deployment = deployment
+        self._service = service
+
+    ############
+    # entities #
+    ############
+    @property
+    def service(self):
+        if self._service is None:
+            raise exceptions.PlatformException(
+                error='2001',
+                message='Missing "service". need to set a Service entity or use service.triggers repository')
+        assert isinstance(self._service, entities.Service)
+        return self._service
+
+    @service.setter
+    def service(self, service):
+        if not isinstance(service, entities.Service):
+            raise ValueError('Must input a valid Service entity')
+        self._service = service
 
     @property
     def project(self):
         if self._project is None:
-            if self.deployment is None:
-                self._project = repositories.Projects(client_api=self._client_api).get()
-            else:
-                self._project = self.deployment.project
+            if self._service is not None:
+                self._project = self._service._project
+        if self._project is None:
+            raise exceptions.PlatformException(
+                error='2001',
+                message='Missing "project". need to set a Project entity or use project.triggers repository')
         assert isinstance(self._project, entities.Project)
         return self._project
 
-    # noinspection PyPep8Naming
-    def create(self, deployment_id, name=None, filters=None,
-               resource=None, actions=None, active=True, executionMode=None):
+    @project.setter
+    def project(self, project):
+        if not isinstance(project, entities.Project):
+            raise ValueError('Must input a valid Project entity')
+        self._project = project
+
+    ###########
+    # methods #
+    ###########
+    def create(self, service_id=None, webhook_id=None, name=None, filters=None, function_name=None,
+               resource=None, actions=None, active=True, execution_mode=None, project_id=None):
         """
         Create a Trigger
 
+        :param function_name:
+        :param project_id:
+        :param webhook_id:
         :param name:
-        :param executionMode:
-        :param deployment_id: Id of deployments to be triggered
+        :param execution_mode:
+        :param service_id: Id of services to be triggered
         :param filters: optional - Item/Annotation metadata filters, default = none
         :param resource: optional - dataset/item/annotation, default = item
         :param actions: optional - Created/Updated/Deleted, default = create
         :param active: optional - True/False, default = True
         :return: Trigger entity
         """
-        # defaults
         if name is None:
             name = 'default_trigger'
         if filters is None:
@@ -44,32 +76,66 @@ class Triggers:
         elif isinstance(filters, entities.Filters):
             filters = filters.prepare()['filter']
 
+        if function_name is None:
+            function_name = 'run'
+
         # actions
         if actions is not None:
             if not isinstance(actions, list):
                 actions = [actions]
 
-        # payload
-        payload = {'deploymentId': deployment_id,
-                   'project': self.project.id,
-                   'filter': filters,
-                   'active': active,
-                   'name': name,
-                   'special': True}
+        if service_id is None and webhook_id is None:
+            if self._service is not None:
+                service_id = self._service.id
+
+        # type
+        if (service_id is None and webhook_id is None) or (service_id is not None and webhook_id is not None):
+            raise exceptions.PlatformException('400', 'Must provide either service id or webhook id but not both')
+
+        if service_id is None:
+            operation = {
+                'type': 'webhook',
+                'webhookId': webhook_id
+            }
+        else:
+            operation = {
+                'type': 'function',
+                'serviceId': service_id,
+                'functionName': function_name
+
+            }
+
+        spec = {
+            'filter': filters,
+            'operation': operation,
+        }
 
         # add optionals
         if resource is not None:
-            payload['resource'] = resource
+            spec['resource'] = resource
         if actions is not None:
             if not isinstance(actions, list):
                 actions = [actions]
-            payload['actions'] = actions
+            spec['actions'] = actions
         else:
-            payload['actions'] = ['Created']
-        if executionMode is not None:
-            payload['executionMode'] = executionMode
+            spec['actions'] = ['Created']
+        if execution_mode is not None:
+            spec['executionMode'] = execution_mode
         else:
-            payload['executionMode'] = 'Once'
+            spec['executionMode'] = 'Once'
+
+        # payload
+        if self._project is None and project_id is None:
+            raise exceptions.PlatformException('400', 'Please provide a project id')
+        elif project_id is None:
+            project_id = self._project.id
+
+        payload = {
+            'active': active,
+            'projectId': project_id,
+            'name': name,
+            'spec': spec
+        }
 
         # request
         success, response = self._client_api.gen_request(req_type='post',
@@ -83,7 +149,8 @@ class Triggers:
         # return entity
         return entities.Trigger.from_json(_json=response.json(),
                                           client_api=self._client_api,
-                                          project=self.project)
+                                          project=self._project,
+                                          service=self._service)
 
     def get(self, trigger_id=None, trigger_name=None):
         """
@@ -107,13 +174,13 @@ class Triggers:
             # return entity
             trigger = entities.Trigger.from_json(client_api=self._client_api,
                                                  _json=response.json(),
-                                                 project=self.project)
+                                                 project=self._project,
+                                                 service=self._service)
         else:
             if trigger_name is None:
                 raise exceptions.PlatformException('400', 'Must provide either trigger name or trigger id')
             else:
-                triggers = self.list()
-                triggers = [trigger for trigger in triggers if trigger.name == trigger_name]
+                triggers = self.list(name=trigger_name)
                 if len(triggers) == 0:
                     raise exceptions.PlatformException('404', 'Trigger not found')
                 elif len(triggers) == 1:
@@ -170,43 +237,40 @@ class Triggers:
         # return entity
         return entities.Trigger.from_json(_json=response.json(),
                                           client_api=self._client_api,
-                                          project=self.project)
+                                          project=self._project,
+                                          service=self._service)
 
-    def list(self, active=None, page_offset=None, resource=None, deployment_id=None):
+    def list(self, active=None, page_offset=None, resource=None, service_id=None, name=None, project_id=None):
         """
         List project triggers
         :return:
         """
-        url_path = '/triggers'
-        query = list()
+        url = '/triggers'
+        query_params = {
+            'name': name,
+            'resource': resource,
+            'active': active,
+            'pageOffset': page_offset
+        }
 
-        # either project or deployment
-        if self.project is not None:
-            query.append('projects={}'.format(self.project.id))
+        # either project or service
+        if project_id is None:
+            if self._project is not None:
+                project_id = self._project.id
+        if service_id is None:
+            if self._service is not None:
+                service_id = self._service.id
 
-        if deployment_id is not None:
-            pass
-        elif self.deployment is not None:
-            deployment_id = self.deployment.id
+        if service_id is not None:
+            query_params['serviceId'] = service_id
         else:
-            raise exceptions.PlatformException('400', "Must provide a deployment id")
-        query.append('deploymentId={}'.format(deployment_id))
+            query_params['projects'] = project_id
 
-        # other queries
-        if active is not None:
-            query.append('active={}'.format(active).lower())
-        if page_offset is not None:
-            query.append('pageOffset={}'.format(page_offset))
-        if resource is not None:
-            query.append('resource={}'.format(resource))
-
-        if len(query) > 0:
-            query_string = '&'.join(query)
-            url_path = '{}?{}'.format(url_path, query_string)
+        url += '?{}'.format(urlencode({key: val for key, val in query_params.items() if val is not None}, doseq=True))
 
         # request
         success, response = self._client_api.gen_request(req_type='get',
-                                                         path=url_path)
+                                                         path=url)
         if not success:
             raise exceptions.PlatformException(response)
 
@@ -215,5 +279,6 @@ class Triggers:
         for trigger in response.json()['items']:
             triggers.append(entities.Trigger.from_json(client_api=self._client_api,
                                                        _json=trigger,
-                                                       project=self.project))
+                                                       project=self._project,
+                                                       service=self._service))
         return triggers

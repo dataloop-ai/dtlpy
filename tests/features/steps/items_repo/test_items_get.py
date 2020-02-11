@@ -50,7 +50,7 @@ def step_impl(context, remote_path):
         context.error = e
 
 
-@behave.when(u'I try to use get functions with no params')
+@behave.when(u'I try to use get services with no params')
 def step_impl(context):
     try:
         context.dataset.items.get()

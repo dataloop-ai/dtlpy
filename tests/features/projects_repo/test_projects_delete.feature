@@ -1,7 +1,7 @@
-Feature: Projects repository get function testing
+Feature: Projects repository get service testing
 
     Background: Initiate Platform Interface
-        Given Platform Interface is initialized as dlp and Environment is set to development
+        Given Platform Interface is initialized as dlp and Environment is set according to git branch
 
     Scenario: Delete project by name
         Given I create a project by the name of "project_delete"
