@@ -28,6 +28,14 @@ dtlpy.entities.annotation\_definitions module
     :undoc-members:
     :show-inheritance:
 
+dtlpy.entities.annotation\_task module
+--------------------------------------
+
+.. automodule:: dtlpy.entities.task
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 dtlpy.entities.artifact module
 ------------------------------
 
@@ -192,14 +200,6 @@ dtlpy.entities.similarity module
 --------------------------------
 
 .. automodule:: dtlpy.entities.similarity
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-dtlpy.entities.task module
---------------------------
-
-.. automodule:: dtlpy.entities.task
     :members:
     :undoc-members:
     :show-inheritance:

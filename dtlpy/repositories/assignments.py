@@ -251,7 +251,8 @@ class Assignments:
 
             return dataset.items.update(filters=filters)
         finally:
-            filters._nullify_refs()
+            if filters is not None:
+                filters._nullify_refs()
 
     def assign_items(self, dataset, assignment_id=None, assignment_name=None, filters=None, items=None):
         """

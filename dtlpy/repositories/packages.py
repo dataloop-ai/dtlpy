@@ -450,10 +450,15 @@ class Packages:
             mock_json = json.load(f)
         is_multithread = self.is_multithread(inputs=mock_json['inputs'])
 
-        local_runner = LocalServiceRunner(self._client_api, packages=self, cwd=cwd, multithreading=is_multithread,
-                                          concurrency=concurrency, module_name=module_name, function_name=function_name,
+        local_runner = LocalServiceRunner(self._client_api,
+                                          packages=self,
+                                          cwd=cwd,
+                                          multithreading=is_multithread,
+                                          concurrency=concurrency,
+                                          module_name=module_name,
+                                          function_name=function_name,
                                           entry_point=entry_point)
-        return local_runner.run_local_project()
+        return local_runner.run_local_project(self._project)
 
     def __get_from_cache(self):
         package = self._client_api.state_io.get('package')
@@ -525,15 +530,13 @@ class LocalServiceRunner:
         kwargs = self.mock_json.get('init_params', dict())
         return service_runner(**kwargs)
 
-    def run_local_project(self):
+    def run_local_project(self, project):
         self.validate_mock(mock_json=self.package_io.read_json())
         package_runner = self.get_mainpy_run_service()
 
-        try:
+        if project is None:
             projects = repositories.Projects(client_api=self._client_api)
             project = projects.get()
-        except Exception:
-            raise exceptions.PlatformException('400', "Please checkout to a valid project")
 
         modules = self.package_io.get('modules')
         if isinstance(modules, list) and len(modules) > 0:
@@ -603,8 +606,7 @@ class LocalServiceRunner:
         :param resource_id:
         :return: Item entity
         """
-        dataset = self.get_dataset(project, resource_id)
-        return dataset.items.get(item_id=resource_id['item_id'])
+        return project.items.get(item_id=resource_id['item_id'])
 
     def get_annotation(self, project, resource_id):
         """

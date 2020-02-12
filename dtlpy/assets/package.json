@@ -16,6 +16,12 @@
             }
           ],
           "output": []
+        },
+        {
+          "name": "hello",
+          "description": "hello function",
+          "input": [],
+          "output": []
         }
       ]
     }

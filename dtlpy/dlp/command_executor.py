@@ -1,14 +1,14 @@
 import logging
-import traceback
 import subprocess
 import jwt
 import sys
 import os
-import datetime
 import json
 from dtlpy import repositories
 
 from .. import exceptions
+
+logger = logging.getLogger('dtlpy')
 
 
 class CommandExecutor:
@@ -19,13 +19,11 @@ class CommandExecutor:
         self.utils = Utils(dl)
 
     def run(self, args):
-        print(datetime.datetime.utcnow())
-
         ########################
         # Run Command if Exist #
         ########################
         if args.operation is None:
-            print('See "dlp --help" for options')
+            logger.info('See "dlp --help" for options')
             return
 
         operation = args.operation.lower().replace('-', '_')
@@ -73,8 +71,8 @@ class CommandExecutor:
         else:
             url = args.url
 
-        print("[INFO] Update DTLPy from {}".format(url))
-        print("[INFO] Installing using pip...")
+        logger.info("Update DTLPy from {}".format(url))
+        logger.info("Installing using pip...")
         cmd = "pip install {} --upgrade".format(url)
         subprocess.Popen(cmd, shell=True)
         sys.exit(0)
@@ -86,17 +84,17 @@ class CommandExecutor:
     # noinspection PyUnusedLocal
     def checkout_state(self, args):
         state = self.dl.checkout_state()
-        print('Checked-out:')
+        logger.info('Checked-out:')
         for key, val in state.items():
             try:
                 msg = '{entity} name: {name}\t{entity} id: {id}'.format(entity=key, name=val['name'], id=val['id'])
             except KeyError:
                 msg = '{entity} Not Found'.format(entity=key)
-            print(msg)
+            logger.info(msg)
 
     # noinspection PyUnusedLocal
     def version(self, args):
-        print("[INFO] Dataloop SDK Version: {}".format(self.dl.__version__))
+        logger.info("Dataloop SDK Version: {}".format(self.dl.__version__))
 
     # noinspection PyUnusedLocal
     def help(self, args):
@@ -105,23 +103,24 @@ class CommandExecutor:
     def api(self, args):
         if args.api == "info":
             information = self.dl.info()
-            print('-- Dataloop info --')
-            _ = [print('{}: {}'.format(key, val)) for key, val in information.items()]
+            logger.info('-- Dataloop info --')
+            _ = [logger.info('{}: {}'.format(key, val)) for key, val in information.items()]
 
         if args.api == "setenv":
             self.dl.setenv(args.env)
-            print("[INFO] Platform environment: {}".format(self.dl.environment()))
+            logger.info("Platform environment: {}".format(self.dl.environment()))
 
     def projects(self, args):
         if args.projects == "ls":
             self.dl.projects.list().print()
         elif args.projects == "web":
+            if args.project_name is None:
+                args.project_name = self.dl.projects.get().name
             self.dl.projects.open_in_web(project_name=args.project_name)
         elif args.projects == "create":
             project = self.dl.projects.create(args.project_name)
             project.print()
-            if args.checkout:
-                project.checkout()
+            project.checkout()
         elif args.projects == "checkout":
             self.dl.projects.checkout(project_name=args.project_name)
         else:
@@ -129,17 +128,17 @@ class CommandExecutor:
 
     def datasets(self, args):
         if args.datasets == "ls":
-            print(datetime.datetime.utcnow())
             self.utils.get_datasets_repo(args=args).list().print()
 
         elif args.datasets == "checkout":
             self.dl.datasets.checkout(dataset_name=args.dataset_name)
 
         elif args.datasets == "web":
+            if args.dataset_name is None:
+                args.dataset_name = self.dl.datasets.get().name
             self.utils.get_datasets_repo(args=args).open_in_web(dataset_name=args.dataset_name)
 
         elif args.datasets == "create":
-            print(datetime.datetime.utcnow())
             dataset = self.utils.get_datasets_repo(args=args).create(dataset_name=args.dataset_name)
             dataset.print()
             if args.checkout:
@@ -149,7 +148,7 @@ class CommandExecutor:
 
     def items(self, args):
         if self.dl.token_expired():
-            print("[ERROR] token expired, please login.")
+            logger.error("token expired, please login.")
             return
 
         if args.items == "ls":
@@ -184,8 +183,7 @@ class CommandExecutor:
             dataset.items.open_in_web(filepath=args.remote_path)
 
         elif args.items == "upload":
-            print(datetime.datetime.utcnow())
-            print("[INFO] Uploading directory...")
+            logger.info("Uploading directory...")
             if isinstance(args.num_workers, str):
                 args.num_workers = int(args.num_workers)
             if isinstance(args.file_types, str):
@@ -201,7 +199,7 @@ class CommandExecutor:
                                  local_annotations_path=args.local_annotations_path)
 
         elif args.items == "download":
-            print("[INFO] Downloading dataset...")
+            logger.info("Downloading dataset...")
 
             if isinstance(args.num_workers, str):
                 args.num_workers = int(args.num_workers)
@@ -308,30 +306,26 @@ class CommandExecutor:
 
         if args.services == "generate":
             self.dl.services.generate_services_json(path=args.local_path)
+            logger.info('Successfully generated service file')
+
         elif args.services == "delete":
-            services = self.utils.get_services_repo(args=args).list(name=args.service_name)
-            if len(services) == 0:
-                print('Service not found: {}'.format(args.service_name))
-            elif len(services) > 1:
-                print('More than one services found by the same name: {}'.format(args.service_name))
-            else:
-                service_name = services[0].name
-                services[0].delete()
-                print('Service: "{}" deleted successfully'.format(service_name))
+            service = self.utils.get_services_repo(args=args).get(service_name=args.service_name)
+            service.delete()
+            logger.info('Service: "{}" deleted successfully'.format(service.name))
 
         elif args.services == "deploy":
-            if project is None:
-                logging.error('Please provide project name or check out a project')
+            project = self.dl.projects.get()
+            package = self.dl.packages.get()
+            if project is None or package is None:
+                logger.info('Please checkout a project and a package')
                 return
-            else:
-                project.services.deploy_pipeline(bot=args.bot, service_json_path=args.local_path,
-                                                 project=args.project_name)
-        elif args.services == "tear_down":
-            if project is None:
-                logging.error('Please provide project name or check out a project')
-                return
-            else:
-                project.services.tear_down(service_json_path=args.local_path, project=args.project_name)
+            services = package.services
+            services._project = project
+            service = services.deploy_from_local_folder(bot=args.bot,
+                                                        service_file=args.service_file,
+                                                        checkout=True)
+            logger.info("Successfully deployed the service: {}".format(service.name))
+
         elif args.services == "ls":
             self.utils.get_services_repo(args=args).list().print()
         elif args.services == "log":
@@ -353,7 +347,7 @@ class CommandExecutor:
             try:
                 service = self.dl.services.get()
             except Exception:
-                print('Please checkout a service')
+                logger.info('Please checkout a service')
                 return
 
             if args.annotation_id is not None:
@@ -368,62 +362,62 @@ class CommandExecutor:
             try:
                 execution_input = json.loads(args.inputs)
             except Exception:
-                print('Input should be json serializable')
+                logger.info('Input should be json serializable')
                 return
             if len(execution_input) == 0:
                 execution_input = None
 
-            print('invoking')
-            service.execute(sync=args.sync,
+            logger.info('executing')
+            service.execute(sync=not args.asynchronous,
                             execution_input=execution_input,
                             function_name=args.function_name,
                             resource=resource,
                             item_id=args.item_id,
                             dataset_id=args.dataset_id,
                             annotation_id=args.annotation_id)
-            print("Successfully deployed the package, service name is: %s" % service.name)
+            logger.info("Successfully executed function: {}".format(args.function_name))
 
         else:
-            print('Type "dlp packages --help" for options')
+            logger.info('Type "dlp packages --help" for options')
 
     def triggers(self, args):
 
         if args.triggers == "create":
-            triggers = self.utils.get_triggers_repo(args=args)
             args.actions = [t.strip() for t in args.actions.split(",")]
+            service = self.utils.get_services_repo(args).get(service_name=args.service_name)
 
-            trigger = triggers.create(name=args.name,
-                                      filters=json.loads('{}'.format(args.filters.replace("'", '"'))),
-                                      function_name=args.function_name,
-                                      resource=args.resource, actions=args.actions)
+            trigger = service.triggers.create(name=args.name,
+                                              filters=json.loads('{}'.format(args.filters.replace("'", '"'))),
+                                              function_name=args.function_name,
+                                              resource=args.resource,
+                                              actions=args.actions)
+            logger.info('Trigger created successfully: {}'.format(trigger.name))
 
-            print('Trigger created successfully: {}'.format(trigger.name))
-
-        if args.triggers == "delete":
+        elif args.triggers == "delete":
             triggers = self.utils.get_triggers_repo(args=args)
             triggers.get(trigger_name=args.trigger_name).delete()
-
-            print('Trigger deleted successfully: {}'.format(args.trigger_name))
+            logger.info('Trigger deleted successfully: {}'.format(args.trigger_name))
+        elif args.triggers == "ls":
+            triggers = self.utils.get_triggers_repo(args=args)
+            triggers.list().print()
+        else:
+            logger.info('Type "dlp packages --help" for options')
 
     def packages(self, args):
         if self.dl.token_expired():
-            print("[ERROR] token expired, please login.")
+            logger.error("token expired, please login.")
             return
 
         if args.packages == "generate":
             packages = self.utils.get_packages_repo(args=args)
             packages.generate(name=args.package_name, src_path=os.getcwd())
             self.utils.dl.client_api.state_io.put('package', {'name': args.package_name})
-            print('Successfully generated package')
+            logger.info('Successfully generated package file')
 
         elif args.packages == "delete":
-            packages = self.utils.get_packages_repo(args=args).list(name=args.package_name)
-            if len(packages) == 0:
-                print('Package not found: {}'.format(args.package_name))
-            elif len(packages) > 1:
-                print('More than one Packages found by the same name: {}'.format(args.package_name))
-            else:
-                packages[0].delete()
+            package = self.utils.get_packages_repo(args=args).get(package_name=args.package_name)
+            package.delete()
+            logger.info('Successfully deleted package {}'.format(package.name))
 
         elif args.packages == "ls":
             self.utils.get_packages_repo(args=args).list().print()
@@ -437,9 +431,9 @@ class CommandExecutor:
             package = packages.push(codebase_id=args.codebase_id,
                                     src_path=args.src_path,
                                     package_name=args.package_name,
-                                    checkout=args.checkout)
+                                    checkout=True)
 
-            print("Successfully pushed package to platform\nPackage id:{}".format(package.id))
+            logger.info("Successfully pushed package to platform\nPackage id:{}".format(package.id))
 
         elif args.packages == "test":
             go_back = False
@@ -447,9 +441,10 @@ class CommandExecutor:
                 go_back = True
                 os.chdir('./src')
             try:
-                self.dl.packages.test_local_package(concurrency=int(args.concurrency))
+                self.dl.packages.test_local_package(concurrency=int(args.concurrency),
+                                                    function_name=args.function_name)
             except Exception:
-                print(traceback.format_exc())
+                logger.exception('failed during test')
             finally:
                 if go_back:
                     os.chdir('..')
@@ -458,17 +453,17 @@ class CommandExecutor:
             project = self.dl.projects.get()
             package = self.dl.packages.get()
             if project is None or package is None:
-                print('Please checkout a project and a package')
+                logger.info('Please checkout a project and a package')
                 return
             services = package.services
             services._project = project
             service = services.deploy_from_local_folder(bot=args.bot,
                                                         service_file=args.service_file,
-                                                        checkout=args.checkout)
-            print("Successfully deployed the package, service name is: %s" % service.name)
+                                                        checkout=True)
+            logger.info("Successfully deployed the service: {}".format(service.name))
 
         else:
-            print('Type "dlp packages --help" for options')
+            logger.info('Type "dlp packages --help" for options')
 
     # noinspection PyUnusedLocal
     @staticmethod
@@ -554,13 +549,8 @@ class Utils:
                 services = self.dl.services
 
         if args.package_name is not None:
-            package_list = packages.list(name=args.package_name)
-            if len(package_list) == 0:
-                print('Package not found: {}'.format(args.package_name))
-            elif len(package_list) > 1:
-                print('More than one Packages found by the same name: {}'.format(args.package_name))
-            else:
-                services = package_list[0].services
+            package = packages.get(package_name=args.package_name)
+            services = package.services
 
         assert isinstance(services, repositories.Services)
         return services
@@ -582,21 +572,12 @@ class Utils:
                 triggers = self.dl.triggers
 
         if args.package_name is not None:
-            package_list = packages.list(name=args.package_name)
-            if len(package_list) == 0:
-                print('Package not found: {}'.format(args.package_name))
-            elif len(package_list) > 1:
-                print('More than one Packages found by the same name: {}'.format(args.package_name))
-            else:
-                services = package_list[0].services
+            package = packages.package_name(name=args.package_name)
+            services = package.services
 
-        service_list = services.list(name=args.service_name)
-        if len(service_list) == 0:
-            print('Package not found: {}'.format(args.package_name))
-        elif len(service_list) > 1:
-            print('More than one Packages found by the same name: {}'.format(args.package_name))
-        else:
-            triggers = service_list[0].triggers
+        if args.service_name is not None:
+            service = services.get(service_name=args.service_name)
+            triggers = service.triggers
 
         assert isinstance(triggers, repositories.Triggers)
         return triggers

@@ -1,7 +1,7 @@
 [
   {
-    "name": "name",
-    "packageName": "name",
+    "name": "default-service",
+    "packageName": "default_package",
     "packageRevision": "latest",
     "runtime": {
       "gpu": false,
@@ -18,11 +18,11 @@
           "Created"
         ],
         "active": true,
-        "function": "run",
+        "function": "hello",
         "executionMode": "Once"
       }
     ],
     "initParams": {},
-    "moduleName": "default"
+    "moduleName": "default_module"
   }
 ]

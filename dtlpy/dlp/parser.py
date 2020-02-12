@@ -105,9 +105,6 @@ def get_parser():
     a = subparser_parser.add_parser("create", help="Create a new project")
     required = a.add_argument_group("required named arguments")
     required.add_argument("-p", "--project-name", metavar='\b', help="project name")
-    optional = a.add_argument_group("optional named arguments")
-    optional.add_argument("--checkout", dest="checkout", default=False, action='store_true',
-                          help="Checkout created ptoject")
 
     # checkout
     a = subparser_parser.add_parser("checkout", help="checkout a project")
@@ -313,9 +310,7 @@ def get_parser():
     # Services #
     ###############
     subparser = subparsers.add_parser("services", help="Operations with services")
-    subparser_parser = subparser.add_subparsers(
-        dest="services", help="services operations"
-    )
+    subparser_parser = subparser.add_subparsers(dest="services", help="services operations")
 
     # ACTIONS #
 
@@ -328,14 +323,10 @@ def get_parser():
                           help="path to service.json file")
 
     # deploy
-    a = subparser_parser.add_parser(
-        "deploy", help="Deploy service from service.json file"
-    )
+    a = subparser_parser.add_parser("deploy", help="Deploy service from local directory")
     optional = a.add_argument_group("optional named arguments")
-    optional.add_argument("-l", "--local-path", dest="local_path", default=None,
-                          help="path to service.json file")
-    optional.add_argument("-pr", "--project-name", dest="project_name", default=None,
-                          help="Project name")
+    optional.add_argument("-f", "--service-file", dest="service_file", default=None,
+                          help="Path to service file")
     optional.add_argument("-b", "--bot", dest="bot", default=None,
                           help="User bot")
 
@@ -344,8 +335,8 @@ def get_parser():
     optional = a.add_argument_group("optional named arguments")
     optional.add_argument("-f", "--function-name", dest="function_name", default=None,
                           help="which function to run")
-    optional.add_argument("--sync", dest="sync", default=False, action='store_true',
-                          help="Wait for execution to complete ")
+    optional.add_argument("-as", "--async", dest="asynchronous", default=True, action='store_false',
+                          help="Async execution ")
     optional.add_argument("-i", "--item-id", dest="item_id", default=None,
                           help="Item input")
     optional.add_argument("-d", "--dataset-id", dest="dataset_id", default=None,
@@ -397,21 +388,12 @@ def get_parser():
     # Triggers #
     ############
     subparser = subparsers.add_parser("triggers", help="Operations with triggers")
-    subparser_parser = subparser.add_subparsers(
-        dest="triggers", help="triggers operations"
-    )
+    subparser_parser = subparser.add_subparsers(dest="triggers", help="triggers operations")
 
     # ACTIONS #
-
     # create
-    a = subparser_parser.add_parser(
-        "create", help="Create a Service Trigger"
-    )
+    a = subparser_parser.add_parser("create", help="Create a Service Trigger")
     required = a.add_argument_group("required named arguments")
-    required.add_argument("-f", "--service-name", dest="service_name",
-                          help="Service name", required=True)
-    required.add_argument("-n", "--name", dest="name",
-                          help="Trigger name", required=True)
     required.add_argument("-r", "--resource", dest="resource",
                           help="Resource name", required=True)
     required.add_argument("-a", "--actions", dest="actions", help="Actions", required=True)
@@ -421,15 +403,17 @@ def get_parser():
                           help="Project name")
     optional.add_argument("-pkg", "--package-name", dest="package_name", default=None,
                           help="Package name")
+    optional.add_argument("-f", "--service-name", dest="service_name",
+                          help="Service name", default=None)
+    optional.add_argument("-n", "--name", dest="name",
+                          help="Trigger name", default=None)
     optional.add_argument("-fl", "--filters", dest="filters", default='{}',
                           help="Json filter")
     optional.add_argument("-fn", "--function-name", dest="function_name", default='run',
                           help="Function name")
 
     # delete
-    a = subparser_parser.add_parser(
-        "delete", help="Delete Trigger"
-    )
+    a = subparser_parser.add_parser("delete", help="Delete Trigger")
     required = a.add_argument_group("required named arguments")
     required.add_argument("-t", "--trigger-name", dest="trigger_name", default=None,
                           help="Trigger name", required=True)
@@ -442,6 +426,14 @@ def get_parser():
     optional.add_argument("-pkg", "--package-name", dest="package_name", default=None,
                           help="Package name")
 
+    a = subparser_parser.add_parser("ls", help="List triggers")
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument("-pr", "--project-name", dest="project_name", default=None,
+                          help="Project name")
+    optional.add_argument("-pkg", "--package-name", dest="package_name", default=None,
+                          help="Package name")
+    optional.add_argument("-s", "--service-name", dest="service_name", default=None,
+                          help="Service name")
     ############
     # packages #
     ############
@@ -453,21 +445,15 @@ def get_parser():
     # ACTIONS #
 
     # deploy
-    a = subparser_parser.add_parser(
-        "deploy", help="Deploy package from local directory"
-    )
+    a = subparser_parser.add_parser("deploy", help="Deploy service from local directory")
     optional = a.add_argument_group("optional named arguments")
     optional.add_argument("-f", "--service-file", dest="service_file", default=None,
                           help="Path to service file")
     optional.add_argument("-b", "--bot", dest="bot", default=None,
                           help="User bot")
-    optional.add_argument("--checkout", dest="checkout", default=False, action='store_true',
-                          help="Checkout deployed service")
 
     # generate
-    a = subparser_parser.add_parser(
-        "generate", help="Create a boilerplate for a new package"
-    )
+    a = subparser_parser.add_parser("generate", help="Create a boilerplate for a new package")
     optional = a.add_argument_group("optional named arguments")
     optional.add_argument("-pr", "--project-name", dest="project_name", default=None,
                           help="Project name")
@@ -492,8 +478,6 @@ def get_parser():
                           help="Project name")
     optional.add_argument("-p", "--package-name", metavar='\b', default=None,
                           help="Package name")
-    optional.add_argument("--checkout", dest="checkout", default=False, action='store_true',
-                          help="Checkout pushed package")
 
     # test
     a = subparser_parser.add_parser(
@@ -502,7 +486,8 @@ def get_parser():
     optional = a.add_argument_group("optional named arguments")
     optional.add_argument("-c", "--concurrency", metavar='\b', default=1,
                           help="Revision to deploy if selected True")
-
+    optional.add_argument("-f", "--function-name", metavar='\b', default='run',
+                          help="Function to test")
     # checkout
     a = subparser_parser.add_parser("checkout", help="checkout a package")
     required = a.add_argument_group("required named arguments")
@@ -512,11 +497,10 @@ def get_parser():
     a = subparser_parser.add_parser(
         "delete", help="Delete Package"
     )
-    required = a.add_argument_group("required named arguments")
-    required.add_argument("-pkg", "--package-name", dest="package_name", default=None,
-                          help="Package name", required=True)
-
     optional = a.add_argument_group("optional named arguments")
+    optional.add_argument("-pkg", "--package-name", dest="package_name", default=None,
+                          help="Package name")
+
     optional.add_argument("-p", "--project-name", dest="project_name", default=None,
                           help="Project name")
 

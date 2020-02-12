@@ -80,7 +80,8 @@ class AnnotationCollection:
     ############
     # Plotting #
     ############
-    def show(self, image=None, thickness=None, with_text=False, height=None, width=None, annotation_format='mask'):
+    def show(self, image=None, thickness=None, with_text=False, height=None, width=None, annotation_format='mask',
+             label_instance_dict=None):
         """
             Show annotations according to annotation_format
 
@@ -90,6 +91,7 @@ class AnnotationCollection:
         :param thickness: line thickness
         :param with_text: add label to annotation
         :param annotation_format: how to show thw annotations. options: 'mask'/'instance'
+        :param label_instance_dict: instance label map {'Label': 1, 'More': 2}
         :return: ndarray of the annotations
         """
         # if 'video' in self.item.mimetype and (annotation_format != 'json' or annotation_format != ['json']):
@@ -111,7 +113,6 @@ class AnnotationCollection:
                 raise PlatformException('400', 'Width must be provided')
             width = self.item.width
 
-        label_instance_dict = None
         if annotation_format == 'mask':
             # create an empty mask
             if image is None:
@@ -136,7 +137,8 @@ class AnnotationCollection:
                                             message='Image shape must be 2d array when trying to draw instance on image')
                 mask = image
             # create a dictionary of labels and ids
-            label_instance_dict = self.item.dataset.instance_map
+            if label_instance_dict is None:
+                label_instance_dict = self.item.dataset.instance_map
         elif annotation_format == 'object_id':
             if image is None:
                 # create an empty mask

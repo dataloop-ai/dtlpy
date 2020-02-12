@@ -90,7 +90,7 @@ class CookieIO:
         if key in cfg.keys():
             value = cfg[key]
         else:
-            logger.warning(msg='Key not in platform cookie file: %s. Return None' % key)
+            logger.debug(msg='Key not in platform cookie file: {}. Return None'.format(key))
             value = None
         return value
 

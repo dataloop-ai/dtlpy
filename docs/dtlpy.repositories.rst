@@ -4,6 +4,14 @@ dtlpy.repositories package
 Submodules
 ----------
 
+dtlpy.repositories.annotation\_tasks module
+-------------------------------------------
+
+.. automodule:: dtlpy.repositories.tasks
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 dtlpy.repositories.annotations module
 -------------------------------------
 
@@ -112,14 +120,6 @@ dtlpy.repositories.services module
 ----------------------------------
 
 .. automodule:: dtlpy.repositories.services
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-dtlpy.repositories.tasks module
--------------------------------
-
-.. automodule:: dtlpy.repositories.tasks
     :members:
     :undoc-members:
     :show-inheritance:

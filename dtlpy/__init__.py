@@ -78,6 +78,8 @@ executions = repositories.Executions(client_api=client_api)
 services = repositories.Services(client_api=client_api)
 webhooks = repositories.Webhooks(client_api=client_api)
 triggers = repositories.Triggers(client_api=client_api)
+assignments = repositories.Assignments(client_api=client_api)
+tasks = repositories.Tasks(client_api=client_api)
 
 if client_api.token_expired():
     logger.error('Token expired. Please login')

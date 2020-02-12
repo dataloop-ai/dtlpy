@@ -36,14 +36,16 @@ class Project:
     @_repositories.default
     def set_repositories(self):
         reps = namedtuple('repositories',
-                          'projects triggers datasets packages codebases artifacts times_series services '
+                          'projects triggers datasets items packages codebases artifacts times_series services '
                           'executions assignments tasks bots webhooks')
+        datasets = repositories.Datasets(client_api=self._client_api, project=self)
 
         r = reps(projects=repositories.Projects(client_api=self._client_api),
                  webhooks=repositories.Webhooks(client_api=self._client_api, project=self),
+                 items=repositories.Items(client_api=self._client_api, datasets=datasets),
+                 datasets=datasets,
                  executions=repositories.Executions(client_api=self._client_api),
                  triggers=repositories.Triggers(client_api=self._client_api, project=self),
-                 datasets=repositories.Datasets(client_api=self._client_api, project=self),
                  packages=repositories.Packages(project=self, client_api=self._client_api),
                  codebases=repositories.Codebases(project=self, client_api=self._client_api),
                  artifacts=repositories.Artifacts(project=self, client_api=self._client_api),
@@ -58,6 +60,11 @@ class Project:
     def triggers(self):
         assert isinstance(self._repositories.triggers, repositories.Triggers)
         return self._repositories.triggers
+
+    @property
+    def items(self):
+        assert isinstance(self._repositories.items, repositories.Items)
+        return self._repositories.items
 
     @property
     def services(self):

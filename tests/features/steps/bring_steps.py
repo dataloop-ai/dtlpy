@@ -3,8 +3,8 @@ import os
 # set var for assets
 os.environ['DATALOOP_TEST_ASSETS'] = os.path.join(os.getcwd(), 'tests', 'assets')
 
-os.environ['DATALOOP_TEST_ASSETS'] = '/Users/aharonlouzon/Desktop/Dataloop/SDK/dtlpy/tests/assets'
-os.chdir('/Users/aharonlouzon/Desktop/Dataloop/SDK/dtlpy')
+# os.environ['DATALOOP_TEST_ASSETS'] = '/Users/aharonlouzon/Desktop/Dataloop/SDK/dtlpy/tests/assets'
+# os.chdir('/Users/aharonlouzon/Desktop/Dataloop/SDK/dtlpy')
 
 from tests.features.steps.projects_repo import test_projects_create
 from tests.features.steps.projects_repo import test_projects_list

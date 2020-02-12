@@ -139,15 +139,14 @@ class FunctionIO:
                 if 'dataset_id' not in value:
                     value_ok = False
         elif self.type == 'Item':
-            expected_value = '{} {{"dataset_id": <dataset id>, "item_id": <item id>}}'.format(expected_value)
+            expected_value = '{} {{"item_id": <item id>}}'.format(expected_value)
             if not isinstance(value, dict):
                 value_ok = False
             else:
                 if 'item_id' not in value:
                     value_ok = False
         elif self.type == 'Annotation':
-            expected_value = '{} {{"dataset_id": <dataset id>, "item_id": <item id>, "annotation_id": <annotation id>}}'.format(
-                expected_value)
+            expected_value = '{} {{"item_id": <item id>, "annotation_id": <annotation id>}}'.format(expected_value)
             if not isinstance(value, dict):
                 value_ok = False
             else:

@@ -226,7 +226,7 @@ class Tasks:
         else:
             raise exceptions.PlatformException(response)
 
-    def create(self, name, assignees, dataset=None, task_owner=None, status=None, project_id=None,
+    def create(self, name, assignees=None, dataset=None, task_owner=None, status=None, project_id=None,
                recipe_id=None, assignments_ids=None, query=None, due_date=None, filters=None, items=None):
         """
         Create a new Annotation Task
@@ -246,6 +246,7 @@ class Tasks:
         """
         if dataset is None and self._dataset is None:
             raise exceptions.PlatformException('400', 'Please provide param dataset')
+
         if dataset is None:
             dataset = self._dataset
 
@@ -281,7 +282,7 @@ class Tasks:
             payload['dueDate'] = 0
 
         assignments = list()
-        if filters is not None or items is not None:
+        if (filters is not None or items is not None) and assignees is not None:
             assignments = self.__create_assignments(name=name, filters=filters, items=items, dataset=dataset,
                                                     assignees=assignees, project_id=project_id)
             assignments_ids = [assignment.id for assignment in assignments]
@@ -340,7 +341,8 @@ class Tasks:
             filters._ref_op = op
             return dataset.items.update(filters=filters)
         finally:
-            filters._nullify_refs()
+            if filters is not None:
+                filters._nullify_refs()
 
     def add_items(self, dataset, task=None, task_id=None, filters=None, items=None):
         """

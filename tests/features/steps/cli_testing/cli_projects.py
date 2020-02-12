@@ -35,7 +35,7 @@ def step_impl(context):
     time.sleep(1)
     for i in range(num_tries):
         # run shell command
-        p = subprocess.Popen(cmds, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.Popen(cmds, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         context.out, context.err = p.communicate()
         if p.returncode == 0:
             break

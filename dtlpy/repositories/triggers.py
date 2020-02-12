@@ -69,8 +69,20 @@ class Triggers:
         :param active: optional - True/False, default = True
         :return: Trigger entity
         """
+        if service_id is None and webhook_id is None:
+            if self._service is not None:
+                service_id = self._service.id
+
+        # type
+        if (service_id is None and webhook_id is None) or (service_id is not None and webhook_id is not None):
+            raise exceptions.PlatformException('400', 'Must provide either service id or webhook id but not both')
+
         if name is None:
-            name = 'default_trigger'
+            if self._service is not None:
+                name = self._service.name
+            else:
+                name = 'default_trigger'
+
         if filters is None:
             filters = dict()
         elif isinstance(filters, entities.Filters):
@@ -83,14 +95,6 @@ class Triggers:
         if actions is not None:
             if not isinstance(actions, list):
                 actions = [actions]
-
-        if service_id is None and webhook_id is None:
-            if self._service is not None:
-                service_id = self._service.id
-
-        # type
-        if (service_id is None and webhook_id is None) or (service_id is not None and webhook_id is not None):
-            raise exceptions.PlatformException('400', 'Must provide either service id or webhook id but not both')
 
         if service_id is None:
             operation = {

@@ -36,7 +36,11 @@ class List(list):
                                 'feedbackQueue',  # session fields
                                 '_ontology_ids', '_labels',  # dataset
                                 'esInstance', 'esIndex',  # time series fields
-                                'thumbnail'  # item thumnail too long
+                                'thumbnail',  # item thumnail too long
+                                # services fields
+                                'driverId', 'useUserJwt', 'versions', 'runtime', 'mq', 'global',
+                                # triggers
+                                'scope'
                                 ]
             if not show_all:
                 for key in remove_keys_list:

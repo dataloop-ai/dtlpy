@@ -1,5 +1,6 @@
 import dtlpy as dl
 import logging
+
 logger = logging.getLogger(name=__name__)
 
 
@@ -17,7 +18,7 @@ class ServiceRunner(dl.BaseServiceRunner):
         :return:
         """
 
-    def run(self, progress=None):
+    def run(self, item, progress=None):
         """
         Write your main package service here
 
@@ -27,7 +28,23 @@ class ServiceRunner(dl.BaseServiceRunner):
         # these lines can be removed
         assert isinstance(progress, dl.Progress)
         progress.update(status='inProgress', progress=0)
-        logger.info('Hello World from Dataloop :)')
+        print('Item received! filename: {}'.format(item.filename))
+        builder = item.annotations.builder()
+        builder.add(dl.Classification(label='from_function'))
+        item.annotations.upload(builder)
+        print('Annotation uploaded!')
+
+    def hello(self, progress=None):
+        """
+        Write your main package service here
+
+        :param progress: Use this to update the progress of your package
+        :return:
+        """
+        # these lines can be removed
+        assert isinstance(progress, dl.Progress)
+        progress.update(status='inProgress', progress=0)
+        print('Hello World from Dataloop :)')
 
 
 if __name__ == "__main__":
