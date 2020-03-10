@@ -9,7 +9,7 @@ logger = logging.getLogger(name=__name__)
 
 
 @attr.s()
-class Project:
+class Project(entities.BaseEntity):
     """
     Project entity
     """
@@ -129,6 +129,7 @@ class Project:
     @property
     def contributors(self):
         return miscellaneous.List([entities.User.from_json(_json=_json,
+                                                           client_api=self._client_api,
                                                            project=self) for _json in self._contributors])
 
     @staticmethod
@@ -149,47 +150,28 @@ class Project:
         return status, project
 
     @classmethod
-    def from_json(cls, _json, client_api):
+    def from_json(cls, _json, client_api, is_fetched=True):
         """
         Build a Project entity object from a json
 
+        :param is_fetched: is Entity fetched from Platform
         :param _json: _json response from host
         :param client_api: client_api
         :return: Project object
         """
-        return cls(contributors=_json['contributors'],
-                   feature_constraints=_json.get('featureConstraints', None),
-                   createdAt=_json['createdAt'],
-                   updatedAt=_json['updatedAt'],
-                   creator=_json['creator'],
+        inst = cls(feature_constraints=_json.get('featureConstraints', None),
+                   contributors=_json.get('contributors', None),
+                   createdAt=_json.get('createdAt', None),
+                   updatedAt=_json.get('updatedAt', None),
+                   creator=_json.get('creator', None),
                    account=_json.get('account', None),
-                   name=_json['name'],
+                   name=_json.get('name', None),
                    role=_json.get('role', None),
-                   org=_json['org'],
-                   id=_json['id'],
-
+                   org=_json.get('org', None),
+                   id=_json.get('id', None),
                    client_api=client_api)
-
-    # noinspection PyShadowingBuiltins
-    @classmethod
-    def dummy(cls, project_id, client_api, name=None):
-        """
-        Build a Project entity object from a json
-
-        :param project_id: id
-        :param name : name
-        :param client_api: client_api
-        :return: Project object
-        """
-        return cls(contributors=None,
-                   createdAt=None,
-                   updatedAt=None,
-                   creator=None,
-                   name=name,
-                   org=None,
-                   id=project_id,
-
-                   client_api=client_api)
+        inst.is_fetched = is_fetched
+        return inst
 
     def to_json(self):
         """
@@ -206,9 +188,6 @@ class Project:
         output_dict['featureConstraints'] = self.feature_constraints
 
         return output_dict
-
-    def print(self, to_return=False):
-        return miscellaneous.List([self]).print(to_return=to_return)
 
     def delete(self, sure=False, really=False):
         """

@@ -13,6 +13,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with DTLPY.  If not, see <http://www.gnu.org/licenses/>.
+from .base_entity import BaseEntity
 from .item import Item, Modality
 from .links import Link, ItemLink, UrlLink
 from .trigger import Trigger
@@ -26,8 +27,8 @@ from .paged_entities import PagedEntities
 from .filters import Filters
 from .recipe import Recipe
 from .ontology import Ontology
-from .annotation_definitions import Box, Point, Segmentation, Polygon, Ellipse, Classification, Polyline, Comparison, \
-    UndefinedAnnotationType
+from .annotation_definitions import Box, Point, Segmentation, Polygon, Ellipse, Classification, Subtitle, \
+    Polyline, Comparison, UndefinedAnnotationType
 from .label import Label
 from .package import Package
 from .package_module import PackageModule

@@ -3,13 +3,13 @@ import logging
 import attr
 import json
 
-from .. import miscellaneous, repositories, entities, exceptions, services
+from .. import repositories, entities, exceptions, services
 
 logger = logging.getLogger(name=__name__)
 
 
 @attr.s
-class Package:
+class Package(entities.BaseEntity):
     """
     Package object
     """
@@ -23,6 +23,7 @@ class Package:
     codebase_id = attr.ib()
     revisions = attr.ib(repr=False)
     modules = attr.ib()
+    creator = attr.ib()
 
     # name change
     project_id = attr.ib()
@@ -33,23 +34,25 @@ class Package:
     _repositories = attr.ib(repr=False)
 
     @classmethod
-    def from_json(cls, _json, client_api, project):
+    def from_json(cls, _json, client_api, project, is_fetched=True):
         """
         Turn platform representation of package into a package entity
 
         :param _json: platform representation of package
         :param client_api:
         :param project:
+        :param is_fetched: is Entity fetched from Platform
         :return: Package entity
         """
         modules = [entities.PackageModule.from_json(_module) for _module in _json.get('modules', list())]
-        return cls(
+        inst = cls(
             project_id=_json.get('projectId', None),
             codebase_id=_json.get('codebaseId', None),
             createdAt=_json.get('createdAt', None),
             updatedAt=_json.get('updatedAt', None),
             revisions=_json.get('revisions', None),
             version=_json.get('version', None),
+            creator=_json.get('creator', None),
             client_api=client_api,
             modules=modules,
             name=_json.get('name', None),
@@ -57,30 +60,8 @@ class Package:
             project=project,
             id=_json.get('id', None)
         )
-
-    @classmethod
-    def dummy(cls, package_id, client_api):
-        """
-        Turn dummy platform representation of package into a package entity
-
-        :param package_id:
-        :param client_api:
-        :return: package entity
-        """
-        return cls(
-            project_id=None,
-            codebase_id=None,
-            modules=None,
-            createdAt=None,
-            updatedAt=None,
-            revisions=None,
-            version=None,
-            client_api=client_api,
-            name=None,
-            url=None,
-            project=None,
-            id=package_id
-        )
+        inst.is_fetched = is_fetched
+        return inst
 
     def to_json(self):
         """
@@ -116,19 +97,9 @@ class Package:
     @property
     def project(self):
         if self._project is None:
-            self.get_project()
-            if self._project is None:
-                raise exceptions.PlatformException(error='2001',
-                                                   message='Missing entity "project".')
+            self._project = self.projects.get(project_id=self.project_id, fetch=None)
         assert isinstance(self._project, entities.Project)
         return self._project
-
-    def get_project(self, dummy=False):
-        if self._project is None:
-            if dummy:
-                self._project = entities.Project.dummy(project_id=self.project_id, client_api=self._client_api)
-            else:
-                self._project = self.projects.get(project_id=self.project_id)
 
     ################
     # repositories #
@@ -192,14 +163,6 @@ class Package:
     ###########
     # methods #
     ###########
-    def print(self):
-        """
-        Prints Package entity
-
-        :return:
-        """
-        miscellaneous.List([self]).print()
-
     def update(self):
         """
         Update Package changes to platform
@@ -209,7 +172,7 @@ class Package:
         return self.packages.update(package=self)
 
     def deploy(self, service_name=None, revision=None, init_input=None, runtime=None, sdk_version=None,
-               agent_versions=None, verify=True, bot=None, pod_type=None, module_name=None):
+               agent_versions=None, verify=True, bot=None, pod_type=None, module_name=None, **kwargs):
         """
         Deploy package
 
@@ -235,7 +198,9 @@ class Package:
                                             pod_type=pod_type,
                                             bot=bot,
                                             verify=verify,
-                                            module_name=module_name)
+                                            module_name=module_name,
+                                            jwt_forward=kwargs.get('jwt_forward', None),
+                                            is_global=kwargs.get('is_global', None))
 
     def checkout(self):
         """

@@ -10,7 +10,7 @@ Create a task:
     project = dl.projects.get('My Project')
     dataset = project.datasets.get('My Dataset')
     filters = dl.Filters(field='dir', values='/dir1')
-    task = dataset.tasks.create(name='task_name')
+    task = dataset.tasks.create(task_name='task_name')
 
 Get/list tasks:
 
@@ -122,7 +122,7 @@ Create assignment:
 .. code-block:: python
 
     filters = dl.Filters(field='dir', values='/dir1')
-    dl.assignments.create(name='name',
+    dl.assignments.create(assignment_name='name',
                            annotator='chandler',
                            dataset=dataset,
                            project_id=project.id,
@@ -136,7 +136,7 @@ Creating a task with assignments:
     project = dl.projects.get('My Project')
     dataset = project.datasets.get('My Dataset')
     filters = dl.Filters(field='dir', values='/dir1')
-    task = dataset.tasks.create(name='task_name',
+    task = dataset.tasks.create(task_name='task_name',
                                 assignees=['ross@dataloop.ai', 'monica@dataloop.ai', 'joey@dataloop.ai'],
                                 filters=filters)
 

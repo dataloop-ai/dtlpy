@@ -63,3 +63,9 @@ def step_impl(context):
 def step_impl(context):
     context.item.annotated = True
     context.item = context.item.update()
+
+@behave.given(u'I upload item in path "{item_path}" to dataset')
+def step_impl(context, item_path):
+    item_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], item_path)
+    context.item = context.dataset.items.upload(local_path=item_path)
+    context.item = context.dataset.items.get(item_id=context.item.id)

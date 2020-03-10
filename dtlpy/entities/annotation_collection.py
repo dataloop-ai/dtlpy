@@ -1,3 +1,4 @@
+import os
 import traceback
 import logging
 import attr
@@ -5,13 +6,13 @@ import json
 import numpy as np
 from PIL import Image
 
-from .. import miscellaneous, entities, PlatformException
+from .. import entities, PlatformException
 
 logger = logging.getLogger(name=__name__)
 
 
 @attr.s
-class AnnotationCollection:
+class AnnotationCollection(entities.BaseEntity):
     """
         Collection of Annotation entity
     """
@@ -32,20 +33,35 @@ class AnnotationCollection:
     def __len__(self):
         return len(self.annotations)
 
-    def add(self, annotation_definition, object_id=None, frame_num=0,
-            automated=True, fixed=True, metadata=None, parent_id=None):
+    def add(self, annotation_definition, object_id=None,
+            frame_num=None, end_frame_num=None, start_time=None, end_time=None,
+            automated=True, fixed=True, metadata=None, parent_id=None, model_info=None):
         """
         Add annotations to collection
 
         :param annotation_definition: dl.Polygon, dl.Segmentation, dl.Point, dl.Box etc
         :param object_id: Object id (any id given by user). If video - must input to match annotations between frames
         :param frame_num: video only, number of frame
+        :param end_frame_num: video only, the end frame of the annotation
+        :param start_time: video only, start time of the annotation
+        :param end_time: video only, end time of the annotation
         :param fixed: video only, mark frame as fixed
         :param parent_id: set a parent for this annotation (parent annotation ID)
         :param automated:
         :param metadata: optional- metadata dictionary for annotation
+        :param model_info: optional - set model on annotation {'name',:'', 'confidence':0}
         :return:
         """
+        if model_info is not None:
+            if not isinstance(model_info, dict) or 'name' not in model_info or 'confidence' not in model_info:
+                raise ValueError('"model_info" must be a dict with keys: "name" and "confidence"')
+            if metadata is None:
+                metadata = dict()
+            if 'user' not in metadata:
+                metadata['user'] = dict()
+            metadata['user']['model'] = {'name': model_info['name'],
+                                         'confidence': float(model_info['confidence'])}
+
         if object_id is None:
             # add new annotation to list
             annotation = entities.Annotation.new(item=self.item,
@@ -54,6 +70,7 @@ class AnnotationCollection:
                                                  metadata=metadata,
                                                  parent_id=parent_id)
             self.annotations.append(annotation)
+            matched_ind = len(self.annotations) - 1
         else:
             # find matching element_id
             matched_ind = [i_annotation
@@ -68,14 +85,21 @@ class AnnotationCollection:
                                                      object_id=object_id,
                                                      parent_id=parent_id)
                 self.annotations.append(annotation)
+                matched_ind = len(self.annotations) - 1
             elif len(matched_ind) == 1:
-                # found matching object id - add annotation to it
-                self.annotations[matched_ind[0]].add_frame(annotation_definition=annotation_definition,
-                                                           frame_num=frame_num,
-                                                           fixed=fixed)
+                matched_ind = matched_ind[0]
             else:
                 raise PlatformException(error='400',
                                         message='more than one annotation with same object id: {}'.format(object_id))
+
+        #  add frame if exists
+        if frame_num is not None or start_time is not None:
+            self.annotations[matched_ind].add_frames(annotation_definition=annotation_definition,
+                                                     frame_num=frame_num,
+                                                     end_frame_num=end_frame_num,
+                                                     start_time=start_time,
+                                                     end_time=end_time,
+                                                     fixed=fixed)
 
     ############
     # Plotting #
@@ -196,6 +220,10 @@ class AnnotationCollection:
         :param with_text:
         :return:
         """
+        dir_name, ex = os.path.splitext(filepath)
+        if not ex:
+            filepath = '{}/{}.png'.format(dir_name, os.path.splitext(self.item.name)[0])
+
         if annotation_format == 'json':
             _json = {'_id': self.item.id,
                      'filename': self.item.filename}
@@ -203,7 +231,7 @@ class AnnotationCollection:
             for ann in self.annotations:
                 annotations.append(ann.to_json())
             _json['annotations'] = annotations
-            with open(filepath, 'w') as f:
+            with open(filepath, 'w+') as f:
                 json.dump(_json, f, indent=2)
         elif annotation_format in ["mask", "instance", "img_mask"]:
             image = None
@@ -281,9 +309,6 @@ class AnnotationCollection:
                 continue
             # add the binary mask to the annotation builder
             self.add(entities.Segmentation(geo=class_mask, label=label))
-
-    def print(self):
-        miscellaneous.List([self.annotations]).print()
 
     def to_json(self):
 

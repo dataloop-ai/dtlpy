@@ -1,5 +1,6 @@
 import logging
 import behave
+import json
 import random as r
 import time
 
@@ -8,19 +9,27 @@ import time
 def step_impl(context, entity):
     if entity != 'Annotations':
         entity = entity.lower()
-        entity_to_json = getattr(context, entity).to_json()
         url_path = "/{}s/{}".format(entity, getattr(context, entity).id)
-
         success, response = getattr(context, entity)._client_api.gen_request(
             req_type="get",
             path=url_path
         )
+        
+        entity_to_json = getattr(context, entity).to_json()
         response = response.json()
         assert success
         if entity == 'package':
             entity_to_json['modules'][0]['functions'][0].pop('description')
+        if entity == 'item':
+            if 'metadata' in response and 'system' in response['metadata']:
+                response['metadata']['system'].pop('executionLogs', None)
+            if 'metadata' in entity_to_json and 'system' in entity_to_json['metadata']:
+                entity_to_json['metadata']['system'].pop('executionLogs', None)
         if entity_to_json != response:
-            logging.error('FAILED: response json is:\n{}\n\nto_json is:\n{}'.format(response, entity_to_json))
+            logging.error('FAILED: response json is:\n{}\n\nto_json is:\n{}'.format(json.dumps(response,
+                                                                                               indent=2),
+                                                                                    json.dumps(entity_to_json,
+                                                                                               indent=2)))
             assert False
     else:
         annotations_list = context.item.annotations.list()
@@ -28,7 +37,7 @@ def step_impl(context, entity):
             success, response = context.item._client_api.gen_request(
                 req_type="get",
                 path="/datasets/%s/items/%s/annotations/%s"
-                    % (context.item.dataset.id, context.item.id, ann.id),
+                     % (context.item.dataset.id, context.item.id, ann.id),
             )
             ann_json = ann.to_json()
             response = response.json()
@@ -43,7 +52,10 @@ def step_impl(context, entity):
 
             # compare json
             if response != ann_json:
-                logging.error('FAILED: response json is:\n{}\n\nto_json is:\n{}'.format(response, ann_json))
+                logging.error('FAILED: response json is:\n{}\n\nto_json is:\n{}'.format(json.dumps(response,
+                                                                                                   indent=2),
+                                                                                        json.dumps(ann_json,
+                                                                                                   indent=2)))
                 assert False
 
 

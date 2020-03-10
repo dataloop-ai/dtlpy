@@ -6,6 +6,8 @@
      And Get feature entities
        |dataset|codebase|package|service|
 
+   @packages.delete
+   @services.delete
    Scenario: Feature entities
      Given Feature: I create a dataset by the name of "Dataset"
      When I checkout

@@ -37,73 +37,80 @@ def after_feature(context, feature):
 
 @fixture
 def after_tag(context, tag):
-    
     if tag == 'services.delete':
         try:
             use_fixture(delete_services, context)
         except Exception:
             logging.exception('Failed to delete service')
-
-    if tag == 'packages.delete':
+    elif tag == 'packages.delete':
         try:
             use_fixture(delete_packages, context)
         except Exception:
             logging.exception('Failed to delete package')
-
-    if tag == 'packages.delete_one':
+    elif tag == 'bot.create':
         try:
-            use_fixture(delete_one_package, context)
+            use_fixture(delete_bots, context)
         except Exception:
-            logging.exception('Failed to delete package')
+            logging.exception('Failed to delete bots')
+    else:
+        raise ValueError('unknown tag: {}'.format(tag))
+
+
+@fixture
+def delete_bots(context):
+    if not hasattr(context, 'to_delete_projects_ids'):
+        return
+
+    all_deleted = True
+    while context.to_delete_projects_ids:
+        project_id = context.to_delete_projects_ids.pop(0)
+        try:
+            project = context.dl.projects.get(project_id=project_id)
+            for bot in project.bots.list():
+                try:
+                    bot.delete()
+                except:
+                    logging.exception('Failed deleting bots: ')
+                    all_deleted = False
+                    pass
+        except context.dl.exceptions.NotFound:
+            pass
+        except:
+            logging.exception('Failed deleting bots: ')
+    assert all_deleted
+
 
 @fixture
 def delete_packages(context):
-    first_package_deleted = False
-    if hasattr(context, 'first_package'):
-        try:
-            context.first_package.delete()
-            first_package_deleted = True
-        except Exception:
-            pass
+    if not hasattr(context, 'to_delete_packages_ids'):
+        return
 
-    if hasattr(context, 'second_package'):
+    all_deleted = True
+    while context.to_delete_packages_ids:
+        package_id = context.to_delete_packages_ids.pop(0)
         try:
-            context.second_package.delete()
-        except Exception:
+            context.dl.packages.delete(package_id=package_id)
+        except context.dl.exceptions.NotFound:
             pass
+        except:
+            all_deleted = False
+            logging.exception('Failed deleting package: ')
+    assert all_deleted
 
-    if not first_package_deleted and hasattr(context, 'package'):
-        try:
-            context.package.delete()
-        except Exception:
-            pass
-
-@fixture
-def delete_one_package(context):
-    if hasattr(context, 'package'):
-        try:
-            context.package.delete()
-        except Exception:
-            pass
 
 @fixture
 def delete_services(context):
-    first_service_deleted = False
-    if hasattr(context, 'first_service'):
-        try:
-            context.first_service.delete()
-            first_service_deleted = True
-        except Exception:
-            pass
+    if not hasattr(context, 'to_delete_services_ids'):
+        return
 
-    if hasattr(context, 'second_service'):
+    all_deleted = True
+    while context.to_delete_services_ids:
+        service_id = context.to_delete_services_ids.pop(0)
         try:
-            context.second_service.delete()
-        except Exception:
+            context.dl.services.delete(service_id=service_id)
+        except context.dl.exceptions.NotFound:
             pass
-
-    if not first_service_deleted and hasattr(context, 'service'):
-        try:
-            context.service.delete()
-        except Exception:
-            pass
+        except:
+            all_deleted = False
+            logging.exception('Failed deleting service: ')
+    assert all_deleted

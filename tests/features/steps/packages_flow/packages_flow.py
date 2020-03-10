@@ -65,8 +65,12 @@ def step_impl(context, package_directory_path):
 def step_impl(context, package_directory_path):
     package_directory_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], package_directory_path)
     context.package = context.project.packages.push(src_path=package_directory_path)
+    context.to_delete_packages_ids.append(context.package.id)
     context.service = context.project.services.deploy_from_local_folder(bot=context.bot_user,
-                                                                              cwd=package_directory_path)
+                                                                        cwd=package_directory_path)
+
+    context.to_delete_services_ids.append(context.service.id)
+
 
 
 @behave.when(u'I upload item in "{item_path}" to dataset')
@@ -78,7 +82,8 @@ def step_impl(context, item_path):
 
 @behave.then(u'Item "{item_num}" annotations equal annotations in "{assets_annotations_path}"')
 def step_impl(context, item_num, assets_annotations_path):
-    num_try = 36
+    num_try = 60
+    interval = 5
     assets_annotations_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], assets_annotations_path)
     if item_num == '1':
         item = context.item
@@ -95,7 +100,7 @@ def step_impl(context, item_num, assets_annotations_path):
         if len(annotations) > 0:
             break
         else:
-            time.sleep(5)
+            time.sleep(interval)
 
     assert len(annotations) == 1
 

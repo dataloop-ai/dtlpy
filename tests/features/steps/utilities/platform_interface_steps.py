@@ -5,6 +5,7 @@ import jwt
 import os
 import dtlpy as dl
 import numpy as np
+
 try:
     # for local import
     from tests.env_from_git_branch import get_env_from_git_branch
@@ -15,6 +16,14 @@ except ImportError:
 
 @behave.given('Platform Interface is initialized as dlp and Environment is set according to git branch')
 def before_all(context):
+    # set up lists to delete
+    if not hasattr(context, 'to_delete_packages_ids'):
+        context.to_delete_packages_ids = list()
+    if not hasattr(context, 'to_delete_services_ids'):
+        context.to_delete_services_ids = list()
+    if not hasattr(context, 'to_delete_projects_ids'):
+        context.to_delete_projects_ids = list()
+
     if hasattr(context.feature, 'dataloop_feature_dl'):
         context.dl = context.feature.dataloop_feature_dl
     else:
@@ -61,6 +70,7 @@ def step_impl(context, project_name):
         num = random.randint(10000, 100000)
         project_name = 'test_{}_{}'.format(str(num), project_name)
         context.project = context.dl.projects.create(project_name=project_name)
+        context.to_delete_projects_ids.append(context.project.id)
         context.feature.dataloop_feature_project = context.project
         time.sleep(5)
     context.dataset_count = 0

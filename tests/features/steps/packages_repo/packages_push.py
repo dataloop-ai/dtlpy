@@ -40,6 +40,7 @@ def step_impl(context, package_number):
     package = context.project.packages.push(codebase_id=codebase_id,
                                             package_name=package_name,
                                             src_path=src_path)
+    context.to_delete_packages_ids.append(package.id)
     if package_number == 'first':
         context.first_package = package
         context.package = package

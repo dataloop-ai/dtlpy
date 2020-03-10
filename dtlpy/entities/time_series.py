@@ -1,17 +1,15 @@
 import attr
-from .. import miscellaneous, entities
+from .. import entities
 
 
 @attr.s
-class TimeSeries:
+class TimeSeries(entities.BaseEntity):
     """
     Time Series object
     """
     # platform
-    esInstance = attr.ib(repr=False)
     createdAt = attr.ib()
     updatedAt = attr.ib(repr=False)
-    esIndex = attr.ib(repr=False)
     owner = attr.ib()
     name = attr.ib()
     id = attr.ib()
@@ -33,13 +31,11 @@ class TimeSeries:
         :return: Time Series object
         """
         return cls(
-            esInstance=_json['esInstance'],
-            createdAt=_json['createdAt'],
-            updatedAt=_json['updatedAt'],
-            esIndex=_json['esIndex'],
-            owner=_json['owner'],
-            name=_json['name'],
-            id=_json['id'],
+            createdAt=_json.get('createdAt', None),
+            updatedAt=_json.get('updatedAt', None),
+            owner=_json.get('owner', None),
+            name=_json.get('name', None),
+            id=_json.get('id', None),
             project=project,
         )
 
@@ -88,12 +84,6 @@ class TimeSeries:
         :return:
         """
         return self.project.times_series.delete_samples(series_id=self.id, filters=filters)
-
-    ########
-    # Misc #
-    ########
-    def print(self):
-        miscellaneous.List([self]).print()
 
     ###########
     # Samples #

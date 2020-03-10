@@ -64,11 +64,12 @@ def step_impl(context, function_name):
 @behave.then(u'Service was triggered on "{item_type}"')
 def step_impl(context, item_type):
     is_item = item_type == 'item'
-    num_try = 36
+    num_try = 60
+    interval = 5
     triggered = False
 
     for i in range(num_try):
-        time.sleep(5)
+        time.sleep(interval)
         if is_item:
             item = context.dataset.items.get(item_id=context.uploaded_item_with_trigger.id)
             if 'executionLogs' in item.system:
@@ -89,6 +90,7 @@ def step_impl(context, package_name, package_path):
     package_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], package_path)
     package_name = '{}_{}'.format(package_name, random.randrange(1000, 10000))
     context.package = context.project.packages.push(src_path=package_path, package_name=package_name)
+    context.to_delete_packages_ids.append(context.package.id)
     assert isinstance(context.package, context.dl.entities.Package)
 
 
@@ -104,7 +106,7 @@ def step_impl(context, function_name, package_path):
     context.package = context.project.packages.push(src_path=package_path,
                                                     package_name=package_name,
                                                     modules=module)
-
+    context.to_delete_packages_ids.append(context.package.id)
     assert isinstance(context.package, context.dl.entities.Package)
 
 
@@ -117,6 +119,7 @@ def step_impl(context, service_name, module_name, service_attr_name):
                                                                         bot=context.bot_user,
                                                                         runtime=runtime,
                                                                         module_name=module_name))
+    context.to_delete_services_ids.append(getattr(context, service_attr_name).id)
     assert isinstance(getattr(context, service_attr_name), context.dl.entities.Service)
 
 

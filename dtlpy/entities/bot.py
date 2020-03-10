@@ -2,7 +2,7 @@ import traceback
 import logging
 import attr
 
-from .. import entities, exceptions
+from .. import entities, exceptions, repositories
 
 logger = logging.getLogger(name=__name__)
 
@@ -12,21 +12,10 @@ class Bot(entities.User):
     """
     Bot entity
     """
-    createdAt = attr.ib()
-    updatedAt = attr.ib(repr=False)
-    name = attr.ib()
-    last_name = attr.ib()
-    username = attr.ib()
-    avatar = attr.ib(repr=False)
-    email = attr.ib()
-    type = attr.ib()
-    org = attr.ib()
-    id = attr.ib()
-    # api
-    _project = attr.ib(repr=False)
+    _bots = attr.ib(repr=False, default=None)
 
     @staticmethod
-    def _protected_from_json(_json, project):
+    def _protected_from_json(_json, project, client_api, bots=None):
         """
         Same as from_json but with try-except to catch if error
         :param _json:
@@ -35,7 +24,9 @@ class Bot(entities.User):
         """
         try:
             bot = Bot.from_json(_json=_json,
-                                project=project)
+                                project=project,
+                                bots=bots,
+                                client_api=client_api)
             status = True
         except Exception:
             bot = traceback.format_exc()
@@ -43,12 +34,14 @@ class Bot(entities.User):
         return status, bot
 
     @classmethod
-    def from_json(cls, _json, project):
+    def from_json(cls, _json, project, client_api, bots=None):
         """
         Build a Bot entity object from a json
 
+        :param client_api:
         :param _json: _json response from host
         :param project: project entity
+        :param bots: Bots repository
         :return: User object
         """
         return cls(
@@ -62,7 +55,17 @@ class Bot(entities.User):
             type=_json.get('type', None),
             org=_json.get('org', None),
             id=_json.get('id', None),
-            project=project)
+            project=project,
+            client_api=client_api,
+            bots=bots
+        )
+
+    @property
+    def bots(self):
+        if self._bots is None:
+            self._bots = repositories.Bots(client_api=self._client_api, project=self._project)
+        assert isinstance(self._bots, repositories.Bots)
+        return self._bots
 
     @property
     def project(self):
@@ -81,6 +84,9 @@ class Bot(entities.User):
         _json = attr.asdict(self,
                             filter=attr.filters.exclude(attr.fields(Bot)._project,
                                                         attr.fields(Bot).name,
+                                                        attr.fields(Bot)._client_api,
+                                                        attr.fields(Bot)._bots,
+                                                        attr.fields(Bot)._users,
                                                         attr.fields(Bot).last_name))
         _json['firstName'] = self.name
         _json['lastName'] = self.last_name
@@ -92,4 +98,4 @@ class Bot(entities.User):
 
         :return: True
         """
-        return self.project.bots.delete(bot_id=self.id)
+        return self.bots.delete(bot_id=self.id)

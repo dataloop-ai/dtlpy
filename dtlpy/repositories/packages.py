@@ -8,6 +8,8 @@ from multiprocessing.pool import ThreadPool
 
 from .. import entities, repositories, exceptions, utilities, miscellaneous, assets
 
+logger = logging.getLogger(name=__name__)
+
 
 class Packages:
     """
@@ -42,50 +44,62 @@ class Packages:
     ###########
     # methods #
     ###########
-    def __get_project(self, package=None, project_id=None):
-        if package is not None and package.project is not None:
-            self._project = package.project
-        else:
-            self._project = repositories.Projects(client_api=self._client_api).get(project_id=project_id)
-
     def open_in_web(self, package=None, package_id=None, package_name=None):
         if package is None:
             package = self.get(package_name=package_name, package_id=package_id)
         self._client_api._open_in_web(resource_type='package', project_id=package.project_id, package_id=package.id)
 
-    def get(self, package_name=None, package_id=None, checkout=False):
+    def get(self, package_name=None, package_id=None, checkout=False, fetch=None):
         """
         Get Package object
 
         :param checkout:
         :param package_id:
         :param package_name:
+        :param fetch: optional - fetch entity from platform, default taken from cookie
         :return: Package object
         """
-        if package_id is None:
-            if package_name is None:
-                package = self.__get_from_cache()
-                if package is None:
-                    raise exceptions.PlatformException('400', 'Must provide either package id or package name')
-            else:
+        if fetch is None:
+            fetch = self._client_api.fetch_entities
+
+        if package_name is None and package_id is None:
+            package = self.__get_from_cache()
+            if package is None:
+                raise exceptions.PlatformException(
+                    error='400',
+                    message='Checked out not found, must provide either package id or package name')
+        elif fetch:
+            if package_id is not None:
+                success, response = self._client_api.gen_request(
+                    req_type="get",
+                    path="/packages/{}".format(package_id))
+                if not success:
+                    raise exceptions.PlatformException(response)
+                package = entities.Package.from_json(client_api=self._client_api,
+                                                     _json=response.json(),
+                                                     project=self._project)
+            elif package_name is not None:
                 packages = self.list(name=package_name)
                 if len(packages) == 0:
-                    raise exceptions.PlatformException('404', 'Package not found. Name: {}'.format(package_name))
+                    raise exceptions.PlatformException(
+                        error='404',
+                        message='Package not found. Name: {}'.format(package_name))
                 elif len(packages) > 1:
-                    raise exceptions.PlatformException('400',
-                                                       'More than one file found by the name of: {}'.format(
-                                                           package_name))
+                    raise exceptions.PlatformException(
+                        error='400',
+                        message='More than one file found by the name of: {}'.format(package_name))
                 package = packages[0]
+            else:
+                raise exceptions.PlatformException(
+                    error='400',
+                    message='Checked out not found, must provide either package id or package name')
         else:
-            # get by id
-            success, response = self._client_api.gen_request(
-                req_type="get",
-                path="/packages/{}".format(package_id))
-            if not success:
-                raise exceptions.PlatformException(response)
-            package = entities.Package.from_json(client_api=self._client_api,
-                                                 _json=response.json(),
-                                                 project=self._project)
+            package = entities.Package.from_json(_json={'id': package_id,
+                                                        'name': package_name},
+                                                 client_api=self._client_api,
+                                                 project=self._project,
+                                                 is_fetched=False)
+
         if checkout:
             self.checkout(package=package)
         return package
@@ -129,10 +143,11 @@ class Packages:
         :return:
         """
         if self._project is None:
-            self.__get_project(package, project_id)
-        if self._project is None:
-            raise ('400', 'Please provide a project_id')
-
+            if package is not None and package.project is not None:
+                self._project = package.project
+            else:
+                self._project = repositories.Projects(client_api=self._client_api).get(project_id=project_id,
+                                                                                       fetch=None)
         dir_version = version
         if version is None:
             dir_version = package.version
@@ -181,7 +196,7 @@ class Packages:
         if src_path is None:
             if codebase_id is None:
                 src_path = os.getcwd()
-                logging.warning('No src_path is given, getting package information from cwd: {}'.format(src_path))
+                logger.warning('No src_path is given, getting package information from cwd: {}'.format(src_path))
 
         # get package json
         package_from_json = dict()
@@ -235,6 +250,7 @@ class Packages:
         """
         if push:
             package.codebase_id = codebase_id
+            package.modules = modules
             return self.update(package=package)
         if modules is None:
             modules = [entities.DEFAULT_PACKAGE_MODULE]
@@ -285,17 +301,28 @@ class Packages:
             package_name = package.name
 
         # check if project exist
+        project_exists = True
         if self._project is None:
-            self.__get_project(package)
+            try:
+                if package is not None and package.project is not None:
+                    self._project = package.project
+                else:
+                    self._project = repositories.Projects(client_api=self._client_api).get(
+                        project_id=package.project_id)
+            except exceptions.NotFound:
+                project_exists = False
 
-        # create codebases repo
-        codebases = repositories.Codebases(client_api=self._client_api, project=self._project)
-
-        # get package codebases
-        codebase_pages = codebases.list_versions(codebase_name=package_name)
-        for codebase_page in codebase_pages:
-            for codebase in codebase_page:
-                codebase.delete()
+        if project_exists:
+            try:
+                # create codebases repo
+                codebases = repositories.Codebases(client_api=self._client_api, project=self._project)
+                # get package codebases
+                codebase_pages = codebases.list_versions(codebase_name=package_name)
+                for codebase_page in codebase_pages:
+                    for codebase in codebase_page:
+                        codebase.delete()
+            except exceptions.Forbidden:
+                logger.debug('Failed to delete code-bases. Continue without')
 
         # request
         success, response = self._client_api.gen_request(
@@ -350,7 +377,8 @@ class Packages:
                pod_type=None,
                verify=True,
                checkout=False,
-               module_name=None):
+               module_name=None,
+               **kwargs):
         """
         Deploy package
 
@@ -385,7 +413,9 @@ class Packages:
                                        bot=bot,
                                        verify=verify,
                                        module_name=module_name,
-                                       checkout=checkout)
+                                       checkout=checkout,
+                                       jwt_forward=kwargs.get('jwt_forward', None),
+                                       is_global=kwargs.get('is_global', None))
 
     @staticmethod
     def generate(name=None, src_path=None):
@@ -421,7 +451,7 @@ class Packages:
         with open(os.path.join(src_path, assets.paths.SERVICE_FILENAME), 'w')as f:
             json.dump(service_json, f, indent=2)
 
-        logging.info('Successfully generated package')
+        logger.info('Successfully generated package')
 
     @staticmethod
     def is_multithread(inputs):
@@ -458,7 +488,16 @@ class Packages:
                                           module_name=module_name,
                                           function_name=function_name,
                                           entry_point=entry_point)
-        return local_runner.run_local_project(self._project)
+
+        if self._project is None:
+            try:
+                project = repositories.Projects(client_api=self._client_api).get()
+            except Exception:
+                project = None
+        else:
+            project = self.project
+
+        return local_runner.run_local_project(project=project)
 
     def __get_from_cache(self):
         package = self._client_api.state_io.get('package')
@@ -478,7 +517,7 @@ class Packages:
         if package is None:
             package = self.get(package_id=package_id, package_name=package_name)
         self._client_api.state_io.put('package', package.to_json())
-        logging.info("Checked out to package {}".format(package.name))
+        logger.info("Checked out to package {}".format(package.name))
 
 
 class LocalServiceRunner:
@@ -530,13 +569,9 @@ class LocalServiceRunner:
         kwargs = self.mock_json.get('init_params', dict())
         return service_runner(**kwargs)
 
-    def run_local_project(self, project):
+    def run_local_project(self, project=None):
         self.validate_mock(mock_json=self.package_io.read_json())
         package_runner = self.get_mainpy_run_service()
-
-        if project is None:
-            projects = repositories.Projects(client_api=self._client_api)
-            project = projects.get()
 
         modules = self.package_io.get('modules')
         if isinstance(modules, list) and len(modules) > 0:
@@ -585,7 +620,7 @@ class LocalServiceRunner:
 
         return results
 
-    def get_dataset(self, project, resource_id):
+    def get_dataset(self, resource_id, project=None):
         """
         Get dataset
         :param project:
@@ -597,28 +632,38 @@ class LocalServiceRunner:
         else:
             dataset_id = self._client_api.state_io.get('dataset')
 
-        return project.datasets.get(dataset_id=dataset_id)
+        if project is not None:
+            datasets = project.datasets
+        else:
+            datasets = repositories.Datasets(client_api=self._client_api)
 
-    def get_item(self, project, resource_id):
+        return datasets.get(dataset_id=dataset_id)
+
+    def get_item(self, resource_id, project=None):
         """
         Get item
         :param project:
         :param resource_id:
         :return: Item entity
         """
-        return project.items.get(item_id=resource_id['item_id'])
+        if project is not None:
+            items = project.items
+        else:
+            items = repositories.Items(client_api=self._client_api)
 
-    def get_annotation(self, project, resource_id):
+        return items.get(item_id=resource_id['item_id'])
+
+    def get_annotation(self, resource_id, project=None):
         """
         Get annotation
         :param project:
         :param resource_id:
         :return: Annotation entity
         """
-        item = self.get_item(project, resource_id)
+        item = self.get_item(project=project, resource_id=resource_id)
         return item.annotations.get(annotation_id=resource_id['annotation_id'])
 
-    def get_field(self, field_name, field_type, project, mock_json, mock_inputs=None):
+    def get_field(self, field_name, field_type, mock_json, project=None, mock_inputs=None):
         """
         Get field in mock json
         :param field_name:
@@ -641,13 +686,13 @@ class LocalServiceRunner:
         resource_id = mock_input['value']
 
         if field_type == 'Dataset':
-            return self.get_dataset(project, resource_id)
+            return self.get_dataset(project=project, resource_id=resource_id)
 
         elif field_type == 'Item':
-            return self.get_item(project, resource_id)
+            return self.get_item(project=project, resource_id=resource_id)
 
         elif field_type == 'Annotation':
-            return self.get_annotation(project, resource_id)
+            return self.get_annotation(project=project, resource_id=resource_id)
 
         elif field_type == 'Json':
             return mock_input['value']

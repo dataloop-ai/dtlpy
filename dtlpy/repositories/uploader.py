@@ -1,9 +1,9 @@
-import multiprocessing
 import validators
 import traceback
 import datetime
 import tempfile
 import requests
+import asyncio
 import logging
 import shutil
 import json
@@ -235,25 +235,31 @@ class Uploader:
         success = [False for _ in range(num_files)]
         errors = ["" for _ in range(num_files)]
         jobs = [None for _ in range(num_files)]
-        pool = self.items_repository._client_api.thread_pools(pool_name='item.upload')
         disable_pbar = self.items_repository._client_api.verbose.disable_progress_bar or num_files == 1
         pbar = tqdm.tqdm(total=num_files, disable=disable_pbar)
+
+        def exception_handler(loop, context):
+            logger.debug("[Asyc] Upload item caught the following exception: {}".format(context['message']))
+
+        loop = asyncio.new_event_loop()
+        loop.set_exception_handler(exception_handler)
+        asyncio.set_event_loop(loop)
+        asyncio_semaphore = asyncio.BoundedSemaphore(8 * self.items_repository._client_api._num_processes)
         for i_item in range(num_files):
             element = elements[i_item]
             # upload
-            jobs[i_item] = pool.apply_async(self.__upload_single_item_wrapper,
-                                            kwds={"i_item": i_item,
-                                                  "element": element,
-                                                  "mode": mode,
-                                                  "pbar": pbar,
-                                                  "status": status,
-                                                  "success": success,
-                                                  "output": output,
-                                                  "errors": errors,
-                                                  },
-                                            )
-
-        _ = [j.wait() for j in jobs if isinstance(j, multiprocessing.pool.ApplyResult)]
+            jobs[i_item] = self.__upload_single_item_wrapper(asyncio_semaphore=asyncio_semaphore,
+                                                             i_item=i_item,
+                                                             element=element,
+                                                             mode=mode,
+                                                             pbar=pbar,
+                                                             status=status,
+                                                             success=success,
+                                                             output=output,
+                                                             errors=errors)
+        loop.run_until_complete(asyncio.gather(*jobs))
+        loop.stop()
+        loop.close()
         pbar.close()
         # summary
         logger.info("Number of total files: {}".format(num_files))
@@ -324,15 +330,16 @@ class Uploader:
         except Exception:
             logger.error('{}\nCant create existence dictionary when uploading'.format(traceback.format_exc()))
 
-    def __upload_single_item(self,
-                             filepath,
-                             annotations,
-                             remote_path,
-                             uploaded_filename,
-                             last_try,
-                             mode,
-                             item_metadata
-                             ):
+    async def __single_async_upload(self,
+                                    filepath,
+                                    annotations,
+                                    remote_path,
+                                    uploaded_filename,
+                                    last_try,
+                                    mode,
+                                    item_metadata,
+                                    callback
+                                    ):
         """
         Upload an item to dataset
 
@@ -383,22 +390,22 @@ class Uploader:
             item_type = 'file'
         remote_url = "/datasets/{}/items".format(self.items_repository.dataset.id)
         try:
-            result, response = self.items_repository._client_api.upload_from_local(to_upload=to_upload,
-                                                                                   item_metadata=item_metadata,
-                                                                                   item_size=item_size,
-                                                                                   item_type=item_type,
-                                                                                   remote_url=remote_url,
-                                                                                   uploaded_filename=uploaded_filename,
-                                                                                   mode=mode,
-                                                                                   remote_path=remote_path,
-                                                                                   log_error=last_try)
+            response = await self.items_repository._client_api.upload_file_async(to_upload=to_upload,
+                                                                                 item_type=item_type,
+                                                                                 item_size=item_size,
+                                                                                 item_metadata=item_metadata,
+                                                                                 remote_url=remote_url,
+                                                                                 uploaded_filename=uploaded_filename,
+                                                                                 remote_path=remote_path,
+                                                                                 callback=callback,
+                                                                                 mode=mode)
         except Exception:
             raise
         finally:
             if need_close:
                 to_upload.close()
 
-        if result:
+        if response.ok:
             item = self.items_repository.items_entity.from_json(client_api=self.items_repository._client_api,
                                                                 _json=response.json(),
                                                                 dataset=self.items_repository.dataset)
@@ -411,62 +418,64 @@ class Uploader:
             raise PlatformException(response)
         return item, response.headers.get('x-item-op', 'na')
 
-    def __upload_single_item_wrapper(self, i_item, element, pbar, status, success, output, errors, mode):
-        assert isinstance(element, UploadElement)
-        item = False
-        err = None
-        trace = None
-        saved_locally = False
-        temp_dir = None
-        action = 'na'
-        remote_folder, remote_filename = os.path.split(element.remote_filepath)
+    async def __upload_single_item_wrapper(self, asyncio_semaphore, i_item, element, pbar, status, success, output, errors, mode):
+        async with asyncio_semaphore:
+            assert isinstance(element, UploadElement)
+            item = False
+            err = None
+            trace = None
+            saved_locally = False
+            temp_dir = None
+            action = 'na'
+            remote_folder, remote_filename = os.path.split(element.remote_filepath)
 
-        if element.type == 'url':
-            saved_locally, element.buffer, temp_dir = self.url_to_data(element.buffer)
-        elif element.type == 'link':
-            element.buffer = self.link(ref=element.buffer.ref, dataset_id=element.buffer.dataset_id,
-                                       type=element.buffer.type)
-        elif element.type == 'similarity':
-            element.buffer = element.buffer.to_bytes_io()
+            if element.type == 'url':
+                saved_locally, element.buffer, temp_dir = self.url_to_data(element.buffer)
+            elif element.type == 'link':
+                element.buffer = self.link(ref=element.buffer.ref, dataset_id=element.buffer.dataset_id,
+                                           type=element.buffer.type)
+            elif element.type == 'similarity':
+                element.buffer = element.buffer.to_bytes_io()
 
-        for i_try in range(NUM_TRIES):
-            try:
-                logger.debug("Upload item: {path}. Try {i}/{n}. Starting..".format(path=remote_filename,
-                                                                                   i=i_try + 1,
-                                                                                   n=NUM_TRIES))
-                item, action = self.__upload_single_item(filepath=element.buffer,
-                                                         mode=mode,
-                                                         item_metadata=element.item_metadata,
-                                                         annotations=element.annotations_filepath,
-                                                         remote_path=remote_folder,
-                                                         uploaded_filename=remote_filename,
-                                                         last_try=(i_try + 1) == NUM_TRIES)
-                logger.debug("Upload item: {path}. Try {i}/{n}. Success. Item id: {id}".format(path=remote_filename,
-                                                                                               i=i_try + 1,
-                                                                                               n=NUM_TRIES,
-                                                                                               id=item.id))
-                time.sleep(0.3 * (2 ** (NUM_TRIES - 1)))
-                if isinstance(item, entities.Item):
-                    break
-            except Exception as e:
-                logger.debug("Upload item: {path}. Try {i}/{n}. Fail.".format(path=remote_filename,
-                                                                              i=i_try + 1,
-                                                                              n=NUM_TRIES))
-                err = e
-                trace = traceback.format_exc()
-            finally:
-                if saved_locally and os.path.isdir(temp_dir):
-                    shutil.rmtree(temp_dir)
-        if item:
-            status[i_item] = action
-            output[i_item] = item
-            success[i_item] = True
-        else:
-            status[i_item] = "error"
-            output[i_item] = remote_folder + remote_filename
-            success[i_item] = False
-            errors[i_item] = "{}\n{}".format(err, trace)
-        pbar.update()
+            for i_try in range(NUM_TRIES):
+                try:
+                    logger.debug("Upload item: {path}. Try {i}/{n}. Starting..".format(path=remote_filename,
+                                                                                       i=i_try + 1,
+                                                                                       n=NUM_TRIES))
+                    item, action = await self.__single_async_upload(filepath=element.buffer,
+                                                                    mode=mode,
+                                                                    item_metadata=element.item_metadata,
+                                                                    annotations=element.annotations_filepath,
+                                                                    remote_path=remote_folder,
+                                                                    uploaded_filename=remote_filename,
+                                                                    last_try=(i_try + 1) == NUM_TRIES,
+                                                                    callback=None)
+                    logger.debug("Upload item: {path}. Try {i}/{n}. Success. Item id: {id}".format(path=remote_filename,
+                                                                                                   i=i_try + 1,
+                                                                                                   n=NUM_TRIES,
+                                                                                                   id=item.id))
+                    if isinstance(item, entities.Item):
+                        break
+                    time.sleep(0.3 * (2 ** (NUM_TRIES - 1)))
+                except Exception as e:
+                    logger.debug("Upload item: {path}. Try {i}/{n}. Fail.".format(path=remote_filename,
+                                                                                  i=i_try + 1,
+                                                                                  n=NUM_TRIES))
+                    err = e
+                    trace = traceback.format_exc()
+                finally:
+                    if saved_locally and os.path.isdir(temp_dir):
+                        shutil.rmtree(temp_dir)
+            if item:
+                status[i_item] = action
+                output[i_item] = item
+                success[i_item] = True
+            else:
+                status[i_item] = "error"
+                output[i_item] = remote_folder + remote_filename
+                success[i_item] = False
+                errors[i_item] = "{}\n{}".format(err, trace)
+            pbar.update()
 
     @staticmethod
     def __upload_annotations(annotations, item):

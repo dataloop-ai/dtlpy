@@ -6,7 +6,7 @@
          And Directory "packages_create" is empty
          When I generate package by the name of "test_package" to "packages_create"
 
-    @packages.delete
+     @packages.delete
      Scenario: Create package
          When I push "first" package
              |codebase_id=None|package_name=test_package|src_path=packages_create|inputs=None|outputs=None|

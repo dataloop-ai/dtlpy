@@ -6,13 +6,14 @@ import mimetypes
 import os
 from PIL import Image
 
-from .. import miscellaneous, entities, PlatformException, repositories
+from .. import entities, PlatformException, repositories
+from ..services import ApiClient
 
 logger = logging.getLogger(name=__name__)
 
 
 @attr.s
-class Annotation:
+class Annotation(entities.BaseEntity):
     """
     Annotations object
     """
@@ -52,18 +53,20 @@ class Annotation:
     # temp
     platform_dict = attr.ib(default=None, repr=False)
     _dataset = attr.ib(repr=False, default=None)
-    _client_api = attr.ib(default=None, repr=False)
+    _datasets = attr.ib(repr=False, default=None)
+    _annotations = attr.ib(repr=False, default=None)
+    __client_api = attr.ib(default=None, repr=False)
+    _items = attr.ib(repr=False, default=None)
 
     ####################################
     # annotation definition attributes #
     ####################################
     @property
     def parent_id(self):
-        parent_id = None
         try:
             parent_id = self.metadata['system']['parentId']
         except KeyError:
-            pass
+            parent_id = None
         return parent_id
 
     @parent_id.setter
@@ -74,16 +77,55 @@ class Annotation:
 
     @property
     def coordinates(self):
-        coordinates = self.annotation_definition.to_coordinates(color=self.color)
+        color = None
+        if self.type in ['binary']:
+            color = self.color
+        coordinates = self.annotation_definition.to_coordinates(color=color)
         return coordinates
 
     @property
+    def _client_api(self):
+        if self.__client_api is None:
+            if self.item is None:
+                raise PlatformException('400',
+                                        'This action cannot be performed without an item entity. Please set item')
+            else:
+                self.__client_api = self.item._client_api
+        assert isinstance(self.__client_api, ApiClient)
+        return self.__client_api
+
+    @property
     def dataset(self):
-        if self._dataset is not None:
-            assert isinstance(self._dataset, entities.Dataset)
-            return self._dataset
-        else:
-            raise PlatformException('2001', 'Missing entity dataset. Use get_dataset() to get it')
+        if self._dataset is None:
+            self._dataset = self.datasets.get(dataset_id=self.dataset_id)
+        assert isinstance(self._dataset, entities.Dataset)
+        return self._dataset
+
+    @property
+    def annotations(self):
+        if self._annotations is None:
+            self._annotations = repositories.Annotations(client_api=self._client_api, item=self.item)
+        assert isinstance(self._annotations, repositories.Annotations)
+        return self._annotations
+
+    @property
+    def datasets(self):
+        if self._datasets is None:
+            self._datasets = repositories.Datasets(client_api=self._client_api)
+        assert isinstance(self._datasets, repositories.Datasets)
+        return self._datasets
+
+    @property
+    def items(self):
+        if self._items is None:
+            if self._datasets is not None:
+                self._items = self._dataset.items
+            elif self.item is not None:
+                self._items = self.item.items
+            else:
+                self._items = repositories.Items(client_api=self._client_api, dataset=self._dataset)
+        assert isinstance(self._items, repositories.Items)
+        return self._items
 
     @property
     def x(self):
@@ -180,14 +222,14 @@ class Annotation:
 
     @property
     def color(self):
-        if self.item is not None and self.item._dataset is not None:
-            lower_keys = {key.lower(): label for key, label in self.item.dataset.labels_flat_dict.items()}
+        try:
+            lower_keys = {key.lower(): label for key, label in self.dataset.labels_flat_dict.items()}
             if self.label.lower() in lower_keys:
                 color = lower_keys[self.label.lower()].rgb
             else:
                 color = None
             return color
-        else:
+        except Exception:
             return None
 
     ####################
@@ -254,30 +296,16 @@ class Annotation:
     # entity methods #
     ##################
 
-    def get_dataset(self):
-        if self._dataset is None:
-            if self._client_api is None:
-                raise PlatformException('400', 'Cannot perform this action without a client api attribute')
-            datasets = repositories.Datasets(client_api=self._client_api)
-            self._dataset = datasets.get(dataset_id=self.dataset_id)
-
     def get_item(self):
         if self.item is None:
-            if self._dataset is None:
-                self.get_dataset()
-            self.item = self.dataset.items.get(item_id=self.item_id)
-
-    def print(self):
-        miscellaneous.List([self]).print()
+            self.item = self.items.get(item_id=self.item_id)
 
     def delete(self):
         """
         Remove an annotation from item
         :return: True
         """
-        if self.item is None:
-            raise PlatformException('400', 'Annotation must have an item in order to perform this action')
-        return self.item.annotations.delete(annotation_id=self.id)
+        return self.annotations.delete(annotation_id=self.id)
 
     def update(self, system_metadata=False):
         """
@@ -285,19 +313,15 @@ class Annotation:
         :param system_metadata:
         :return: Annotation object
         """
-        if self.item is None:
-            raise PlatformException('400', 'Annotation must have an item in order to perform this action')
-        return self.item.annotations.update(annotations=self,
-                                            system_metadata=system_metadata)[0]
+        return self.annotations.update(annotations=self,
+                                       system_metadata=system_metadata)[0]
 
     def upload(self):
         """
         Create a new annotation in host
         :return:
         """
-        if self.item is None:
-            raise PlatformException('400', 'Annotation must have an item in order to perform this action')
-        return self.item.annotations.upload(annotations=self)[0]
+        return self.annotations.upload(annotations=self)[0]
 
     def download(self, filepath, annotation_format='mask', height=None, width=None, thickness=1, with_text=False):
         """
@@ -493,6 +517,26 @@ class Annotation:
             platform_dict=dict(),
         )
 
+    def add_frames(self, annotation_definition, frame_num=None, end_frame_num=None, start_time=None, end_time=None,
+                   fixed=True):
+        # handle fps
+        if self.fps is None:
+            if self.item is not None:
+                if self.item.fps is not None:
+                    self.fps = self.item.fps
+        if self.fps is None:
+            raise PlatformException('400', 'Annotation must have fps in order to perform this action')
+
+        if frame_num is None:
+            frame_num = start_time * self.fps
+        if end_frame_num is None:
+            end_frame_num = end_time * self.fps
+
+        for frame in range(frame_num, end_frame_num):
+            self.add_frame(annotation_definition=annotation_definition,
+                           frame_num=frame,
+                           fixed=fixed)
+
     def add_frame(self, annotation_definition, frame_num=None, fixed=True):
         """
         Add a frame state to annotation
@@ -573,10 +617,11 @@ class Annotation:
         return True
 
     @classmethod
-    def from_json(cls, _json, item=None, client_api=None):
+    def from_json(cls, _json, item=None, client_api=None, annotations=None):
         """
         Create an annotation object from platform json
         :param client_api:
+        :param annotations:
         :param _json: platform json
         :param item: item
         :return: annotation object
@@ -591,26 +636,20 @@ class Annotation:
             if 'filename' in _json:
                 ext = os.path.splitext(_json['filename'])[-1]
                 try:
-                    is_video = 'video' in mimetypes.types_map[ext]
+                    is_video = 'video' in mimetypes.types_map[ext.lower()]
                 except Exception:
                     logger.info("Unknown annotation's item type. Default item type is set to: image")
             else:
                 logger.info("Unknown annotation's item type. Default item type is set to: image")
-
-            item_url = _json.get('item', None)
-            item_id = _json.get('itemId', None)
-            dataset_url = _json.get('dataset', None)
-            dataset_id = _json.get('datasetId', None)
-
         else:
             # get item type
             if 'video' in item.mimetype:
                 is_video = True
 
-            item_url = _json.get('item', item.url)
-            item_id = _json.get('itemId', item.id)
-            dataset_url = _json.get('dataset', item.dataset_url)
-            dataset_id = _json.get('datasetId', item.datasetId)
+        item_url = _json.get('item', item.url if item is not None else None)
+        item_id = _json.get('itemId', item.id if item is not None else None)
+        dataset_url = _json.get('dataset', item.dataset_url if item is not None else None)
+        dataset_id = _json.get('datasetId', item.datasetId if item is not None else None)
 
         # get id
         if 'id' in _json:
@@ -639,7 +678,7 @@ class Annotation:
         ############
         if is_video:
             # get fps
-            if item is None:
+            if item is None or item.fps is None:
                 fps = 25
             else:
                 fps = item.fps
@@ -653,17 +692,13 @@ class Annotation:
             first_frame_attributes = _json.get('attributes', first_frame_attributes)
             # get first frame coordinates
             first_frame_coordinates = _json.get('coordinates', first_frame_coordinates)
-            # get first frame number
             if 'system' in metadata:
+                # get first frame number
                 first_frame_number = _json['metadata']['system'].get('frame', first_frame_number)
-            # get first frame start time
-            if 'system' in metadata:
+                # get first frame start time
                 first_frame_start_time = _json['metadata']['system'].get('startTime', first_frame_start_time)
-            # get first frame number
-            if 'system' in metadata:
+                # get first frame number
                 start_frame = _json['metadata']['system'].get('frame', start_frame)
-
-            if 'system' in metadata:
                 automated = _json['metadata']['system'].get('automated', automated)
                 end_frame = _json['metadata']['system'].get('endFrame', end_frame)
                 end_time = _json['metadata']['system'].get('endTime', end_time)
@@ -729,14 +764,17 @@ class Annotation:
             end_frame=end_frame,
             end_time=end_time,
             start_frame=start_frame,
-            client_api=client_api
+            annotations=annotations
         )
+        annotation.__client_api = client_api
 
         #################
         # if has frames #
         #################
         if is_video:
-            if annotation.type == 'class':
+            if annotation.type == 'class' or annotation.type == 'subtitle':
+                if end_frame is None:
+                    end_frame = start_frame  # eshlomo, this place needs cleanup
                 # for class type annotation create frames
                 # make copies of the head annotations for all frames in it
                 for frame_num in range(start_frame, end_frame + 1):
@@ -853,7 +891,7 @@ class Annotation:
                 _json['metadata']['system']['endFrame'] = self.end_frame
 
             # add snapshots only if classification
-            if self.type != 'class':
+            if self.type not in ['class', 'subtitle']:
                 _json['metadata']['system']['snapshots_'] = snapshots
         else:
             # remove metadata if empty
@@ -866,7 +904,7 @@ class Annotation:
 
 
 @attr.s
-class FrameAnnotation:
+class FrameAnnotation(entities.BaseEntity):
     """
     FrameAnnotation object
     """
@@ -995,6 +1033,8 @@ class FrameAnnotation:
             annotation = entities.Segmentation.from_json(_json)
         elif _json['type'] == 'class':
             annotation = entities.Classification.from_json(_json)
+        elif _json['type'] == 'subtitle':
+            annotation = entities.Subtitle.from_json(_json)
         elif _json['type'] == 'ellipse':
             annotation = entities.Ellipse.from_json(_json)
         elif _json['type'] == 'comparison':

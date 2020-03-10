@@ -3,13 +3,13 @@ import traceback
 import logging
 import attr
 
-from .. import services, repositories, entities, miscellaneous, exceptions
+from .. import services, repositories, entities, exceptions
 
 logger = logging.getLogger("dataloop.service")
 
 
 @attr.s
-class Service:
+class Service(entities.BaseEntity):
     """
     Service object
     """
@@ -68,9 +68,18 @@ class Service:
         return status, service
 
     @classmethod
-    def from_json(cls, _json, client_api, package=None, project=None):
+    def from_json(cls, _json, client_api, package=None, project=None, is_fetched=True):
+        """
+
+        :param _json:
+        :param client_api:
+        :param package:
+        :param project:
+        :param is_fetched: is Entity fetched from Platform
+        :return:
+        """
         versions = _json.get('versions', dict())
-        return cls(
+        inst = cls(
             package_revision=_json.get("packageRevision", None),
             bot=_json.get("botUserName", None),
             use_user_jwt=_json.get("useUserJwt", False),
@@ -95,40 +104,8 @@ class Service:
             package=package,
             project=project
         )
-
-    @classmethod
-    def dummy(cls, service_id, client_api):
-        """
-        Get a dummy entity
-        :param service_id:
-        :param client_api:
-        :return:
-        """
-        return cls(
-            package_revision=None,
-            bot=None,
-            use_user_jwt=None,
-            createdAt=None,
-            updatedAt=None,
-            project_id=None,
-            package_id=None,
-            module_name=None,
-            runtime=None,
-            init_input=None,
-            is_global=False,
-            name=None,
-            url=None,
-            mq=None,
-            id=service_id,
-            versions=None,
-            client_api=client_api,
-            package=None,
-            project=None,
-            active=None,
-            driver_id=None,
-            version=None,
-            creator=None
-        )
+        inst.is_fetched = is_fetched
+        return inst
 
     ############
     # Entities #
@@ -136,36 +113,18 @@ class Service:
     @property
     def project(self):
         if self._project is None:
-            self.get_project()
-            if self._project is None:
-                raise exceptions.PlatformException(error='2001',
-                                                   message='Missing entity "project".')
+            self._project = repositories.Projects(client_api=self._client_api).get(project_id=self.project_id,
+                                                                                   fetch=None)
         assert isinstance(self._project, entities.Project)
         return self._project
 
     @property
     def package(self):
         if self._package is None:
-            self.get_package()
-            if self._package is None:
-                raise exceptions.PlatformException(error='2001',
-                                                   message='Missing entity "package".')
+            self._package = repositories.Packages(client_api=self._client_api).get(package_id=self.package_id,
+                                                                                   fetch=None)
         assert isinstance(self._package, entities.Package)
         return self._package
-
-    def get_project(self, dummy=False):
-        if self._project is None:
-            if dummy:
-                self._project = entities.Project.dummy(project_id=self.project_id, client_api=self._client_api)
-            else:
-                self._project = repositories.Projects(client_api=self._client_api).get(project_id=self.project_id)
-
-    def get_package(self, dummy=False):
-        if self._package is None:
-            if dummy:
-                self._package = entities.Package.dummy(package_id=self.package_id, client_api=self._client_api)
-            else:
-                self._package = repositories.Packages(client_api=self._client_api).get(package_id=self.package_id)
 
     ################
     # repositories #
@@ -208,9 +167,6 @@ class Service:
     ###########
     # methods #
     ###########
-    def print(self):
-        miscellaneous.List([self]).print()
-
     def to_json(self):
         _json = attr.asdict(
             self,
@@ -266,17 +222,32 @@ class Service:
         """
         return self.services.status(service_id=self.id)
 
-    def log(self, size=None, checkpoint=None, start=None, end=None):
+    def log(self, size=None, checkpoint=None, start=None, end=None, follow=False,
+            execution_id=None, function_name=None, replica_id=None, system=False):
         """
         Get service logs
 
-        :param end:
-        :param start:
+        :param system:
+        :param end: iso format time
+        :param start: iso format time
         :param checkpoint:
+        :param follow: filters
+        :param execution_id: follow
+        :param function_name: execution_id
+        :param replica_id: function_name
         :param size:
         :return: Service entity
         """
-        return self.services.log(service=self, size=size, checkpoint=checkpoint, start=start, end=end)
+        return self.services.log(service=self,
+                                 size=size,
+                                 checkpoint=checkpoint,
+                                 start=start,
+                                 end=end,
+                                 follow=follow,
+                                 execution_id=execution_id,
+                                 function_name=function_name,
+                                 replica_id=replica_id,
+                                 system=system)
 
     def open_in_web(self):
         self.services.open_in_web(service=self)
@@ -289,17 +260,37 @@ class Service:
         """
         return self.services.checkout(service=self)
 
-    def execute(self, sync=False, execution_input=None, function_name=None, resource=None, item_id=None,
-                dataset_id=None, annotation_id=None):
-        execution = repositories.Services(package=self._package,
-                                          project=self._project,
-                                          client_api=self._client_api).execute(service=self,
-                                                                               sync=sync,
-                                                                               execution_input=execution_input,
-                                                                               function_name=function_name,
-                                                                               resource=resource,
-                                                                               item_id=item_id,
-                                                                               dataset_id=dataset_id,
-                                                                               annotation_id=annotation_id
-                                                                               )
+    def execute(self,
+                # executions info
+                execution_input=None, function_name=None,
+                # inputs info
+                resource=None, item_id=None, dataset_id=None, annotation_id=None, project_id=None,
+                # execution config
+                sync=False, stream_logs=True, return_output=True):
+        """
+        Execute a function on an existing service
+
+        :param service_id: service id to execute on
+        :param function_name: function name to run
+        :param project_id: resource's project
+        :param execution_input: input dictionary or list of FunctionIO entities
+        :param dataset_id: optional - input to function
+        :param item_id: optional - input to function
+        :param annotation_id: optional - input to function
+        :param resource: input type.
+        :param sync: wait for function to end
+        :param stream_logs: prints logs of the new execution. only works with sync=True
+        :param return_output: if True and sync is True - will return the output directly
+        :return:
+        """
+        execution = self.executions.create(sync=sync,
+                                           execution_input=execution_input,
+                                           function_name=function_name,
+                                           resource=resource,
+                                           item_id=item_id,
+                                           dataset_id=dataset_id,
+                                           annotation_id=annotation_id,
+                                           stream_logs=stream_logs,
+                                           project_id=project_id,
+                                           return_output=return_output)
         return execution

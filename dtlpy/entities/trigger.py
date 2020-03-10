@@ -1,9 +1,10 @@
 import attr
-from .. import entities, services, miscellaneous, exceptions, repositories
+from collections import namedtuple
+from .. import entities, services, exceptions, repositories
 
 
 @attr.s
-class Trigger:
+class Trigger(entities.BaseEntity):
     """
     Trigger Entity
     """
@@ -49,6 +50,24 @@ class Trigger:
     _project = attr.ib(repr=False)
     _client_api = attr.ib(type=services.ApiClient, repr=False)
     _op_type = attr.ib(default='service')
+    _repositories = attr.ib(repr=False)
+
+    @_repositories.default
+    def set_repositories(self):
+        reps = namedtuple('repositories',
+                          field_names=['services'])
+        if self._project is None:
+            services = repositories.Services(client_api=self._client_api, project=self._project)
+        else:
+            services = self._project.services
+
+        r = reps(services=services)
+        return r
+
+    @property
+    def services(self):
+        assert isinstance(self._repositories.services, repositories.Services)
+        return self._repositories.services
 
     # noinspection PyShadowingBuiltins
     @classmethod
@@ -98,43 +117,21 @@ class Trigger:
     @property
     def project(self):
         if self._project is None:
-            self.get_project()
-            if self._project is None:
-                raise exceptions.PlatformException(error='2001',
-                                                   message='Missing entity "project".')
+            self._project = repositories.Projects(client_api=self._client_api).get(project_id=self.project_id,
+                                                                                   fetch=None)
         assert isinstance(self._project, entities.Project)
         return self._project
 
     @property
     def service(self):
         if self._service is None:
-            self.get_service()
-            if self._service is None:
-                raise exceptions.PlatformException(error='2001',
-                                                   message='Missing entity "service".')
+            self._service = self.services.get(service_id=self.service_id, fetch=None)
         assert isinstance(self._service, entities.Service)
         return self._service
 
-    def get_service(self, dummy=False):
-        if self._service is None:
-            if dummy:
-                self._service = entities.Service.dummy(service_id=self.service_id, client_api=self._client_api)
-            else:
-                self._service = self.project.services.get(service_id=self.service_id)
-
-    def get_project(self, dummy=False):
-        if self._project is None:
-            if dummy:
-                self._project = entities.Project.dummy(project_id=self.project_id, client_api=self._client_api)
-            else:
-                self._project = repositories.Projects(client_api=self._client_api).get(project_id=self.project_id)
-
     ###########
-    # functions #
+    # methods #
     ###########
-    def print(self):
-        miscellaneous.List([self]).print()
-
     def to_json(self):
         """
         Returns platform _json format of object
@@ -151,6 +148,7 @@ class Trigger:
                                                               attr.fields(Trigger)._op_type,
                                                               attr.fields(Trigger)._spec,
                                                               attr.fields(Trigger).resource,
+                                                              attr.fields(Trigger)._repositories,
                                                               attr.fields(Trigger).actions,
                                                               attr.fields(Trigger).service_id,
                                                               attr.fields(Trigger).webhook_id,

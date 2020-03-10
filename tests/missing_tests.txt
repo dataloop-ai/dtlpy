@@ -1,11 +1,10 @@
 Missing Tests:
-    - Time series repo
-    - Time series entity
+    - Time series
     - Cli packages
     - Cli services
     - client api
-    - Annotation task repo
-    - Assignments repo
+    - Tasks
+    - Assignments
     - Converters
     - Directory Tree
     - FunctionIO

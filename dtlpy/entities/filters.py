@@ -50,16 +50,12 @@ class Filters:
 
         default_filter = {
             'items': {
-                'resource': 'items',
-                'pageSize': self.page_size,
-                'page': self.page,
                 'filter': {
                     '$and': and_list
                 },
                 'sort': {'type': 'ascending', 'createdAt': 'descending'},
             },
             'annotations': {
-                'resource': 'annotations',
                 'filter': dict(),
                 'sort': {'label': 'ascending', 'createdAt': 'descending'},
             },
@@ -161,11 +157,6 @@ class Filters:
             # create json #
             ###############
             _json = dict()
-            _json['resource'] = self.resource
-            _json['sort'] = self.sort
-            if self.resource == 'items':
-                _json['page'] = self.page
-                _json['pageSize'] = self.page_size
 
             ###########
             # filters #
@@ -196,15 +187,30 @@ class Filters:
                         if '$and' not in filters_dict:
                             filters_dict['$and'] = list()
                         filters_dict['$and'] += Filters.no_dirs()
-            else:
-                filters_dict = self.custom_filter
 
-            # add to json
-            _json['filter'] = filters_dict
+                # add to json
+                _json['filter'] = filters_dict
+
+            else:
+                if 'filter' in self.custom_filter or 'join' in self.custom_filter:
+                    if 'filter' in self.custom_filter:
+                        _json['filter'] = self.custom_filter['filter']
+                    self.join = self.custom_filter.get('join', self.join)
+                else:
+                    _json['filter'] = self.custom_filter
 
         # no filters
         else:
             _json = self.default_filter
+
+        ##################
+        # filter options #
+        ##################
+        if len(self.sort) > 0:
+            _json['sort'] = self.sort
+        _json['page'] = self.page
+        _json['pageSize'] = self.page_size
+        _json['resource'] = self.resource
 
         ########
         # join #
@@ -247,10 +253,10 @@ class Filters:
                 _json[operation] = {'metadata': {'user': update}}
             elif operation == 'delete':
                 _json[operation] = True
-                _json.pop('sort')
+                _json.pop('sort', None)
                 if self.resource == 'items':
-                    _json.pop('page')
-                    _json.pop('pageSize')
+                    _json.pop('page', None)
+                    _json.pop('pageSize', None)
             else:
                 raise PlatformException(error='400',
                                         message='Unknown operation: {}'.format(operation))

@@ -57,6 +57,7 @@ def step_impl(context):
     except Exception as e:
         assert type(e) == context.dl.exceptions.NotFound
         context.project = context.dl.projects.create(context.project.name)
+        context.to_delete_projects_ids.append(context.project.id)
         context.feature.dataloop_feature_project = context.project
 
 

@@ -42,11 +42,11 @@ Feature: Item Entity repo services
         Then Item in host moved to a new directory
 
     Scenario: To Json - not annotated item
-        Given Item in path "assets_split/ann_json_to_object/0000000162.jpg" is uploaded to "Dataset"
+        Given I upload item in path "assets_split/ann_json_to_object/0000000162.jpg" to dataset
         Then Object "Item" to_json() equals to Platform json.
 
     Scenario: To Json - annotated video
-        Given Item in path "assets_split/ann_json_to_object/sample_video.mp4" is uploaded to "Dataset"
+        Given I upload item in path "assets_split/ann_json_to_object/sample_video.mp4" to dataset
         When Item is annotated with annotations in file: "assets_split/ann_json_to_object/video_annotations.json"
         Then Item is annotated
         Then Object "Item" to_json() equals to Platform json.

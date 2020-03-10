@@ -226,10 +226,25 @@ class Tasks:
         else:
             raise exceptions.PlatformException(response)
 
-    def create(self, name, assignees=None, dataset=None, task_owner=None, status=None, project_id=None,
+    def create_qa_task(self, task, assignees):
+        if isinstance(task, entities.Task):
+            raise ValueError('task must be of type "Task". got: {}'.format(type(task)))
+        return self.create(task_name='{}_qa'.format(task.name),
+                           task_type='qa',
+                           task_parent_id=task.id,
+                           assignees=assignees,
+                           task_owner=task.creator,
+                           project_id=task.project_id,
+                           recipe_id=task.recipeId)
+
+    def create(self, task_name, assignees=None, dataset=None, task_owner=None, status=None,
+               task_type='annotation', task_parent_id=None,
+               project_id=None,
                recipe_id=None, assignments_ids=None, query=None, due_date=None, filters=None, items=None):
         """
         Create a new Annotation Task
+
+        :param task_name:
         :param assignees:
         :param dataset:
         :param task_owner:
@@ -241,7 +256,9 @@ class Tasks:
         :param query:
         :param project_id:
         :param status:
-        :param name:
+        :param task_name:
+        :param task_type: "annotation" or "qa"
+        :param task_parent_id: optional if type is qa - parent task id
         :return: Annotation Task object
         """
         if dataset is None and self._dataset is None:
@@ -253,7 +270,16 @@ class Tasks:
         if task_owner is None:
             task_owner = self._client_api.info()['user_email']
 
-        payload = {'name': name, 'taskOwner': task_owner, 'datasetId': dataset.id}
+        if task_type not in ['annotation', 'qa']:
+            raise ValueError('task_type must be one of: "annotation", "qa". got: {}'.format(task_type))
+
+        payload = {'name': task_name,
+                   'taskOwner': task_owner,
+                   'spec': {'type': task_type},
+                   'datasetId': dataset.id}
+
+        if task_parent_id is not None:
+            payload['spec']['parentTaskId'] = task_parent_id
 
         if status is not None:
             payload['status'] = status
@@ -264,7 +290,7 @@ class Tasks:
             if self._project is not None:
                 project_id = self._project.id
             else:
-                project_id = dataset.projsct[0]
+                project_id = dataset.project[0]
 
         payload['projectId'] = project_id
 
@@ -283,7 +309,7 @@ class Tasks:
 
         assignments = list()
         if (filters is not None or items is not None) and assignees is not None:
-            assignments = self.__create_assignments(name=name, filters=filters, items=items, dataset=dataset,
+            assignments = self.__create_assignments(name=task_name, filters=filters, items=items, dataset=dataset,
                                                     assignees=assignees, project_id=project_id)
             assignments_ids = [assignment.id for assignment in assignments]
         elif assignments_ids is not None and not isinstance(assignments_ids, list):
@@ -298,7 +324,9 @@ class Tasks:
                                                          json_req=payload)
         if success:
             task = entities.Task.from_json(client_api=self._client_api,
-                                           _json=response.json(), project=self._project, dataset=self._dataset)
+                                           _json=response.json(),
+                                           project=self._project,
+                                           dataset=self._dataset)
         else:
             raise exceptions.PlatformException(response)
         assert isinstance(task, entities.Task)
@@ -389,13 +417,13 @@ class Tasks:
         if dataset is None:
             dataset = self._dataset
 
-        filters = entities.Filters(field='metadata.system.refs.id', values=task_id, operator='in')
+        filters = entities.Filters(field='metadata.system.refs.id', values=[task_id], operator='in')
         return dataset.items.list(filters=filters)
 
     def __create_assignment(self, name, assignee, dataset=None, project_id=None, items=None, filters=None):
         if filters is None and items is None:
             raise exceptions.PlatformException('400', 'Must provide either filters or items list')
-        return self.assignments.create(name=name, annotator=assignee, project_id=project_id, filters=filters,
+        return self.assignments.create(assignment_name=name, annotator=assignee, project_id=project_id, filters=filters,
                                        items=items, dataset=dataset)
 
     @staticmethod

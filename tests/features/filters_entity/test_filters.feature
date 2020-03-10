@@ -222,7 +222,9 @@ Feature: Items repository list service testing
         And I list items with filters
         Then I receive "3" items         
         When I delete items with filters
-        And I create filters
+        And I list items with filters
+        Then I receive "0" items
+        When I create filters
         And I list items with filters
         Then I receive "30" items
 

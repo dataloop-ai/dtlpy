@@ -47,6 +47,8 @@ class Bots:
             for i_bot, bot in enumerate(bots_json):
                 jobs[i_bot] = pool.apply_async(entities.Bot._protected_from_json,
                                                kwds={'project': self.project,
+                                                     'bots': self,
+                                                     'client_api': self._client_api,
                                                      '_json': bot})
             # wait for all jobs
             _ = [j.wait() for j in jobs]
@@ -95,7 +97,8 @@ class Bots:
                                                                                             bot_id))
         if success:
             bot = entities.Bot.from_json(_json=response.json(),
-                                         project=self.project)
+                                         project=self.project,
+                                         bots=self, client_api=self._client_api)
         else:
             raise exceptions.PlatformException(response)
 
@@ -133,7 +136,8 @@ class Bots:
                                                          json_req={'name': name})
         if success:
             bot = entities.Bot.from_json(_json=response.json(),
-                                         project=self.project)
+                                         project=self.project,
+                                         bots=self, client_api=self._client_api)
         else:
             raise exceptions.PlatformException(response)
         assert isinstance(bot, entities.Bot)

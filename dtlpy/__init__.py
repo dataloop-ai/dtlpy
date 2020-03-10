@@ -21,7 +21,7 @@ import os
 from .exceptions import PlatformException
 from . import repositories, exceptions, entities, examples
 from .__version__ import version as __version__
-from .entities import Box, Point, Segmentation, Polygon, Ellipse, Classification, Polyline, Filters, Trigger, \
+from .entities import Box, Point, Segmentation, Polygon, Ellipse, Classification,Subtitle, Polyline, Filters, Trigger, \
     AnnotationCollection, Annotation, Item, Codebase, Filters, Execution, Recipe, Ontology, Label, Similarity, \
     ItemLink, UrlLink, PackageModule, PackageFunction, FunctionIO, Modality
 from .utilities import Converter, BaseServiceRunner, Progress
@@ -37,20 +37,21 @@ Main Platform Interface module for Dataloop
 # Logger #
 ##########
 logger = logging.getLogger(name=__name__)
-logger.setLevel(logging.DEBUG)
-log_filepath = DataloopLogger.get_log_filepath()
-# set file handler to save all logs to file
-formatter = logging.Formatter(fmt="%(asctime)s.%(msecs)03d [%(levelname)s]-[%(threadName)s] %(name)s: %(message)s",
-                              datefmt='%Y-%m-%d %H:%M:%S')
-fh = DataloopLogger(log_filepath, maxBytes=(1048 * 1000 * 5))
-fh.setLevel(logging.DEBUG)
-fh.setFormatter(formatter)
-sh = logging.StreamHandler()
-sh.setLevel(logging.WARNING)
-sh.setFormatter(formatter)
-# set handlers to main logger
-logger.addHandler(sh)
-logger.addHandler(fh)
+if len(logger.handlers) == 0:
+    logger.setLevel(logging.DEBUG)
+    log_filepath = DataloopLogger.get_log_filepath()
+    # set file handler to save all logs to file
+    formatter = logging.Formatter(fmt="%(asctime)s.%(msecs)03d [%(levelname)s]-[%(threadName)s] %(name)s: %(message)s",
+                                  datefmt='%Y-%m-%d %H:%M:%S')
+    fh = DataloopLogger(log_filepath, maxBytes=(1048 * 1000 * 5))
+    fh.setLevel(logging.DEBUG)
+    fh.setFormatter(formatter)
+    sh = logging.StreamHandler()
+    sh.setLevel(logging.WARNING)
+    sh.setFormatter(formatter)
+    # set handlers to main logger
+    logger.addHandler(sh)
+    logger.addHandler(fh)
 
 # check python version
 if sys.version_info.major != 3:
@@ -80,6 +81,8 @@ webhooks = repositories.Webhooks(client_api=client_api)
 triggers = repositories.Triggers(client_api=client_api)
 assignments = repositories.Assignments(client_api=client_api)
 tasks = repositories.Tasks(client_api=client_api)
+annotations = repositories.Annotations(client_api=client_api)
+verbose = client_api.verbose
 
 if client_api.token_expired():
     logger.error('Token expired. Please login')
@@ -313,16 +316,23 @@ class AnnotationFormat:
 
 
 class InstanceCatalog:
-    REGULAR_MICRO = 'regular-micro',
-    REGULAR_XS = 'regular-xs',
-    REGULAR_S = 'regular-s',
-    REGULAR_M = 'regular-m',
-    REGULAR_L = 'regular-l',
-    REGULAR_XL = 'regular-xl',
-    HIGHMEM_MICRO = 'highmem-micro',
-    HIGHMEM_XS = 'highmem-xs',
-    HIGHMEM_S = 'highmem-s',
-    HIGHMEM_M = 'highmem-m',
-    HIGHMEM_L = 'highmem-l',
-    HIGHMEM_XL = 'highmem-xl',
+    REGULAR_MICRO = 'regular-micro'
+    REGULAR_XS = 'regular-xs'
+    REGULAR_S = 'regular-s'
+    REGULAR_M = 'regular-m'
+    REGULAR_L = 'regular-l'
+    REGULAR_XL = 'regular-xl'
+    HIGHMEM_MICRO = 'highmem-micro'
+    HIGHMEM_XS = 'highmem-xs'
+    HIGHMEM_S = 'highmem-s'
+    HIGHMEM_M = 'highmem-m'
+    HIGHMEM_L = 'highmem-l'
+    HIGHMEM_XL = 'highmem-xl'
     GPU_K80_S = 'gpu-k80-s'
+
+
+class LoggingLevel:
+    DEBUG = 'debug'
+    WARNING = 'warning'
+    CRITICAL = 'critical'
+    INFO = 'info'

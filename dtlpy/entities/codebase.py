@@ -3,7 +3,7 @@ import logging
 import attr
 import copy
 
-from .. import miscellaneous, entities, repositories
+from .. import entities, repositories
 
 logger = logging.getLogger(name=__name__)
 
@@ -34,7 +34,7 @@ class Codebase(entities.Item):
         return status, item
 
     @classmethod
-    def from_json(cls, _json, client_api, dataset=None, project=None):
+    def from_json(cls, _json, client_api, dataset=None, project=None, is_fetched=True):
         """
         Build a Codebase entity object from a json
 
@@ -42,9 +42,10 @@ class Codebase(entities.Item):
         :param _json: _json response from host
         :param dataset: dataset in which the annotation's item is located
         :param client_api: client_api
+        :param is_fetched: is Entity fetched from Platform
         :return: Codebase object
         """
-        return cls(
+        inst = cls(
             # sdk
             platform_dict=copy.deepcopy(_json),
             client_api=client_api,
@@ -60,12 +61,14 @@ class Codebase(entities.Item):
             hidden=_json.get('hidden', False),
             stream=_json.get('stream', None),
             dir=_json.get('dir', None),
-            filename=_json['filename'],
-            metadata=_json['metadata'],
-            name=_json['name'],
-            type=_json['type'],
-            url=_json['url'],
+            filename=_json.get('filename', None),
+            metadata=_json.get('metadata', None),
+            name=_json.get('name', None),
+            type=_json.get('type', None),
+            url=_json.get('url', None),
             id=_json['id'])
+        inst.is_fetched = is_fetched
+        return inst
 
     @property
     def version(self):
@@ -125,6 +128,3 @@ class Codebase(entities.Item):
         # get codebase name
         codebase_name = self.filename.split('/')[len(self.filename.split('/')) - 2]
         return self.codebases.list_versions(codebase_name=codebase_name)
-
-    def print(self):
-        miscellaneous.List([self]).print()

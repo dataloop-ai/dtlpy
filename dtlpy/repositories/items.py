@@ -10,7 +10,7 @@ class Items:
     Items repository
     """
 
-    def __init__(self, client_api, datasets, dataset=None, dataset_id=None, items_entity=None):
+    def __init__(self, client_api, datasets=None, dataset=None, dataset_id=None, items_entity=None):
         self._client_api = client_api
         self._dataset = dataset
         self._dataset_id = dataset_id
@@ -25,8 +25,11 @@ class Items:
     @property
     def dataset(self):
         if self._dataset is None:
-            raise exceptions.PlatformException(error='2001',
-                                               message='Missing "dataset". try "get_dataset()"')
+            if self._dataset_id is None:
+                raise exceptions.PlatformException(
+                    error='400',
+                    message='Cannot perform action WITHOUT Dataset entity in Items repository. Please set a dataset')
+            self._dataset = self.datasets.get(dataset_id=self._dataset_id, fetch=None)
         assert isinstance(self._dataset, entities.Dataset)
         return self._dataset
 
@@ -36,18 +39,13 @@ class Items:
             raise ValueError('Must input a valid Dataset entity')
         self._dataset = dataset
 
-    def get_dataset(self):
-        if self._dataset_id is None:
-            raise exceptions.PlatformException(
-                error='400',
-                message='Cannot perform action WITHOUT Dataset entity in Items repository. Please set a dataset')
-        self._dataset = self.datasets.get(dataset_id=self._dataset_id)
-
     ################
     # repositories #
     ################
     @property
     def datasets(self):
+        if self._datasets is None:
+            self._datasets = repositories.Datasets(client_api=self._client_api)
         assert isinstance(self._datasets, repositories.Datasets)
         return self._datasets
 
@@ -139,40 +137,51 @@ class Items:
         paged.get_page()
         return paged
 
-    def get(self, filepath=None, item_id=None):
+    def get(self, filepath=None, item_id=None, fetch=None):
         """
         Get Item object
 
         :param filepath: optional - search by remote path
         :param item_id: optional - search by id
+        :param fetch: optional - fetch entity from platform, default taken from cookie
         :return: Item object
         """
-        if item_id is not None:
-            success, response = self._client_api.gen_request(req_type="get",
-                                                             path="/items/{}".format(item_id))
-            if success:
-                item = self.items_entity.from_json(client_api=self._client_api,
-                                                   _json=response.json(),
-                                                   dataset=self._dataset)
+        if fetch is None:
+            fetch = self._client_api.fetch_entities
+
+        if fetch:
+            if item_id is not None:
+                success, response = self._client_api.gen_request(req_type="get",
+                                                                 path="/items/{}".format(item_id))
+                if success:
+                    item = self.items_entity.from_json(client_api=self._client_api,
+                                                       _json=response.json(),
+                                                       dataset=self._dataset)
+                else:
+                    raise exceptions.PlatformException(response)
+            elif filepath is not None:
+                filters = entities.Filters()
+                filters.show_hidden = True
+                filters.add(field='filename', values=filepath)
+                paged_entity = self.list(filters=filters)
+                if len(paged_entity.items) == 0:
+                    raise exceptions.PlatformException(error='404',
+                                                       message='Item not found. filepath= "{}"'.format(filepath))
+                elif len(paged_entity.items) > 1:
+                    raise exceptions.PlatformException(
+                        error='404',
+                        message='More than one item found. Please "get" by id. filepath: "{}"'.format(filepath))
+                else:
+                    item = paged_entity.items[0]
             else:
-                raise exceptions.PlatformException(response)
-        elif filepath is not None:
-            filters = entities.Filters()
-            filters.show_hidden = True
-            filters.add(field='filename', values=filepath)
-            paged_entity = self.list(filters=filters)
-            if len(paged_entity.items) == 0:
-                raise exceptions.PlatformException(error='404',
-                                                   message='Item not found. filepath= "{}"'.format(filepath))
-            elif len(paged_entity.items) > 1:
-                raise exceptions.PlatformException(
-                    error='404',
-                    message='More than one item found. Please "get" by id. filepath: "{}"'.format(filepath))
-            else:
-                item = paged_entity.items[0]
+                raise exceptions.PlatformException(error="400",
+                                                   message='Must choose by at least one. "filename" or "item_id"')
         else:
-            raise exceptions.PlatformException(error="400",
-                                               message='Must choose by at least one. "filename" or "item_id"')
+            item = entities.Item.from_json(_json={'id': item_id,
+                                                  'filename': filepath},
+                                           client_api=self._client_api,
+                                           dataset=self._dataset,
+                                           is_fetched=False)
         assert isinstance(item, entities.Item)
         return item
 
@@ -396,7 +405,8 @@ class Items:
         if item is None:
             item = self.get(filepath=filepath,
                             item_id=item_id)
+
         self._client_api._open_in_web(resource_type='item',
-                                      project_id=item._dataset._project.id,
-                                      dataset_id=item._dataset.id,
+                                      project_id=item.dataset.project.id,
+                                      dataset_id=item.datasetId,
                                       item_id=item.id)

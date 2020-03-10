@@ -53,6 +53,7 @@ class Datasets:
         if dataset is not None:
             dataset = entities.Dataset.from_json(_json=dataset,
                                                  client_api=self._client_api,
+                                                 datasets=self,
                                                  project=self._project)
         return dataset
 
@@ -65,6 +66,7 @@ class Datasets:
         if success:
             dataset = entities.Dataset.from_json(client_api=self._client_api,
                                                  _json=response.json(),
+                                                 datasets=self,
                                                  project=self._project)
         else:
             raise exceptions.PlatformException(response)
@@ -134,6 +136,7 @@ class Datasets:
                 jobs[i_dataset] = pool.apply_async(entities.Dataset._protected_from_json,
                                                    kwds={'client_api': self._client_api,
                                                          '_json': dataset,
+                                                         'datasets': self,
                                                          'project': self.project})
             # wait for all jobs
             _ = [j.wait() for j in jobs]
@@ -147,26 +150,26 @@ class Datasets:
             raise exceptions.PlatformException(response)
         return datasets
 
-    def get(self, dataset_name=None, dataset_id=None, dummy=False, checkout=False):
+    def get(self, dataset_name=None, dataset_id=None, checkout=False, fetch=None):
         """
         Get dataset by name or id
 
         :param checkout:
-        :param dummy:
         :param dataset_name: optional - search by name
         :param dataset_id: optional - search by id
+        :param fetch: optional - fetch entity from platform, default taken from cookie
         :return: Dataset object
         """
-        if dummy:
-            if dataset_id is None:
-                dataset = self.__get_from_cache()
-                if dataset is None:
-                    raise exceptions.PlatformException(
-                        error='404',
-                        message='No input and no checked-out found')
-            else:
-                dataset = entities.Dataset.dummy(dataset_id=dataset_id, name=dataset_name, client_api=self._client_api)
-        else:
+        if fetch is None:
+            fetch = self._client_api.fetch_entities
+
+        if dataset_id is None and dataset_name is None:
+            dataset = self.__get_from_cache()
+            if dataset is None:
+                raise exceptions.PlatformException(
+                    error='400',
+                    message='Checked out not found, must provide either dataset id or dataset name')
+        elif fetch:
             if dataset_id is not None and dataset_id != '':
                 dataset = self.__get_by_id(dataset_id)
             elif dataset_name is not None:
@@ -180,12 +183,16 @@ class Datasets:
                 else:
                     dataset = datasets[0]
             else:
-                # get from state cookie
-                dataset = self.__get_from_cache()
-                if dataset is None:
-                    raise exceptions.PlatformException(
-                        error='404',
-                        message='No input and no checked-out found')
+                raise exceptions.PlatformException(
+                    error='404',
+                    message='No input and no checked-out found')
+        else:
+            dataset = entities.Dataset.from_json(_json={'id': dataset_id,
+                                                        'name': dataset_id},
+                                                 client_api=self._client_api,
+                                                 datasets=self,
+                                                 project=self._project,
+                                                 is_fetched=False)
         assert isinstance(dataset, entities.Dataset)
         if checkout:
             self.checkout(dataset=dataset)
@@ -293,6 +300,7 @@ class Datasets:
         if success:
             return entities.Dataset.from_json(_json=response.json(),
                                               project=self._project,
+                                              datasets=self,
                                               client_api=self._client_api)
         else:
             raise exceptions.PlatformException(response)
@@ -316,6 +324,7 @@ class Datasets:
         if success:
             return entities.Dataset.from_json(_json=response.json(),
                                               project=self._project,
+                                              datasets=self,
                                               client_api=self._client_api)
         else:
             raise exceptions.PlatformException(response)
@@ -349,6 +358,7 @@ class Datasets:
         if success:
             dataset = entities.Dataset.from_json(client_api=self._client_api,
                                                  _json=response.json(),
+                                                 datasets=self,
                                                  project=self.project)
             # create ontology and recipe
             dataset = dataset.recipes.create(ontology_ids=ontology_ids, labels=labels, attributes=attributes).dataset

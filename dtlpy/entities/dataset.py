@@ -4,13 +4,13 @@ import logging
 import attr
 import os
 
-from .. import repositories, miscellaneous, entities, services, exceptions
+from .. import repositories, entities, services
 
 logger = logging.getLogger(name=__name__)
 
 
 @attr.s
-class Dataset:
+class Dataset(entities.BaseEntity):
     """
     Dataset object
     """
@@ -35,6 +35,7 @@ class Dataset:
     _project = attr.ib(default=None, repr=False)
 
     # repositories
+    _datasets = attr.ib(repr=False, default=None)
     _repositories = attr.ib(repr=False)
 
     # defaults
@@ -43,18 +44,22 @@ class Dataset:
     _directory_tree = attr.ib(default=None, repr=False)
 
     @staticmethod
-    def _protected_from_json(project, _json, client_api):
+    def _protected_from_json(project, _json, client_api, datasets=None, is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
-        :param project:
-        :param _json:
-        :param client_api:
-        :return:
+         :param is_fetched: is Entity fetched from Platform
+        :param _json: _json response from host
+        :param project: dataset's project
+        :param datasets: Datasets repository
+        :param client_api: client_api
+        :return: Dataset object
         """
         try:
             dataset = Dataset.from_json(project=project,
                                         _json=_json,
-                                        client_api=client_api)
+                                        client_api=client_api,
+                                        datasets=datasets,
+                                        is_fetched=is_fetched)
             status = True
         except Exception:
             dataset = traceback.format_exc()
@@ -62,53 +67,33 @@ class Dataset:
         return status, dataset
 
     @classmethod
-    def from_json(cls, project, _json, client_api):
+    def from_json(cls, project, _json, client_api, datasets=None, is_fetched=True):
         """
         Build a Dataset entity object from a json
 
+        :param is_fetched: is Entity fetched from Platform
         :param _json: _json response from host
         :param project: dataset's project
+        :param datasets: Datasets repository
         :param client_api: client_api
         :return: Dataset object
         """
-        return cls(metadata=_json.get('metadata', None),
-                   directoryTree=_json['directoryTree'],
-                   itemsCount=_json['itemsCount'],
-                   annotated=_json['annotated'],
-                   projects=_json['projects'],
-                   creator=_json['creator'],
-                   items_url=_json['items'],
-                   export=_json['export'],
-                   name=_json['name'],
-                   url=_json['url'],
-                   id=_json['id'],
-
+        inst = cls(metadata=_json.get('metadata', None),
+                   directoryTree=_json.get('directoryTree', None),
+                   itemsCount=_json.get('itemsCount', None),
+                   annotated=_json.get('annotated', None),
+                   projects=_json.get('projects', None),
+                   creator=_json.get('creator', None),
+                   items_url=_json.get('items', None),
+                   export=_json.get('export', None),
+                   name=_json.get('name', None),
+                   url=_json.get('url', None),
+                   id=_json.get('id', None),
+                   datasets=datasets,
                    client_api=client_api,
                    project=project)
-
-    @classmethod
-    def dummy(cls, dataset_id, client_api, name=None):
-        """
-        Build a dummy Dataset entity
-
-        :param dataset_id:
-        :param name:
-        :param client_api: client_api
-        :return: Dummy Dataset Object
-        """
-        return cls(metadata=None,
-                   directoryTree=None,
-                   itemsCount=None,
-                   annotated=None,
-                   projects=None,
-                   creator=None,
-                   items_url=None,
-                   export=None,
-                   name=name,
-                   url=None,
-                   id=dataset_id,
-                   client_api=client_api,
-                   project=None)
+        inst.is_fetched = is_fetched
+        return inst
 
     def to_json(self):
         """
@@ -118,6 +103,7 @@ class Dataset:
         """
         _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(Dataset)._client_api,
                                                               attr.fields(Dataset)._project,
+                                                              attr.fields(Dataset)._datasets,
                                                               attr.fields(Dataset)._repositories,
                                                               attr.fields(Dataset)._ontology_ids,
                                                               attr.fields(Dataset)._labels,
@@ -220,14 +206,17 @@ class Dataset:
     @property
     def project(self):
         if self._project is None:
+            # get from cache
             project = self._client_api.state_io.get('project')
             if project is not None:
-                self._project = entities.Project.from_json(_json=project, client_api=self._client_api)
+                # build entity from json
+                p = entities.Project.from_json(_json=project, client_api=self._client_api)
+                # check if dataset belongs to project
+                if p.id in self.projects:
+                    self._project = p
         if self._project is None:
-            self.get_project()
-            if self._project is None:
-                raise exceptions.PlatformException(error='2001',
-                                                   message='Missing entity "project".')
+            self._project = repositories.Projects(client_api=self._client_api).get(project_id=self.projects[0],
+                                                                                   fetch=None)
         assert isinstance(self._project, entities.Project)
         return self._project
 
@@ -244,29 +233,27 @@ class Dataset:
         assert isinstance(self._directory_tree, entities.DirectoryTree)
         return self._directory_tree
 
-    def get_project(self, dummy=False):
-        if self._project is None:
-            if dummy:
-                self._project = entities.Project.dummy(project_id=self.projects[0], client_api=self._client_api)
-            else:
-                self._project = repositories.Projects(client_api=self._client_api).get(project_id=self.projects[0])
-
     def __copy__(self):
-        return Dataset.from_json(_json=self.to_json(), project=self._project, client_api=self._client_api)
+        return Dataset.from_json(_json=self.to_json(),
+                                 project=self._project,
+                                 client_api=self._client_api,
+                                 is_fetched=self.is_fetched,
+                                 datasets=self.datasets)
 
     def __get_local_path__(self):
         if self._project is not None:
             local_path = os.path.join(os.path.expanduser('~'),
                                       '.dataloop',
-                                      'projects', self.project.name,
-                                      'datasets', self.name)
+                                      'projects',
+                                      self.project.name,
+                                      'datasets',
+                                      self.name)
         else:
-            local_path = os.path.join(os.path.expanduser('~'), '.dataloop',
-                                      'datasets', '%s_%s' % (self.name, self.id))
+            local_path = os.path.join(os.path.expanduser('~'),
+                                      '.dataloop',
+                                      'datasets',
+                                      '%s_%s' % (self.name, self.id))
         return local_path
-
-    def print(self):
-        miscellaneous.List([self]).print()
 
     @staticmethod
     def serialize_labels(labels_dict):
@@ -468,3 +455,15 @@ class Dataset:
                                    thickness=thickness,
                                    with_text=with_text,
                                    without_relative_path=without_relative_path)
+
+    def delete_labels(self, label_names):
+        """
+        Delete labels from dataset's ontologies
+
+        :param label_names: label object/ label name / list of label objects / list of label names
+        :return:
+        """
+        for recipe in self.recipes.list():
+            for ontology in recipe.ontologies.list():
+                ontology.delete_labels(label_names=label_names)
+        self._labels = None

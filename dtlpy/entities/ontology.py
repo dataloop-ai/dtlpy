@@ -3,13 +3,13 @@ import logging
 import random
 import attr
 
-from .. import miscellaneous, entities, PlatformException, repositories, services
+from .. import entities, PlatformException, repositories, services
 
 logger = logging.getLogger(name=__name__)
 
 
 @attr.s
-class Ontology:
+class Ontology(entities.BaseEntity):
     """
     Ontology object
     """
@@ -29,6 +29,9 @@ class Ontology:
 
     # repositories
     _repositories = attr.ib(repr=False)
+
+    # defaults
+    _instance_map = attr.ib(default=None, repr=False)
 
     @_repositories.default
     def set_repositories(self):
@@ -53,6 +56,28 @@ class Ontology:
         assert isinstance(self._repositories.ontologies, repositories.Ontologies)
         return self._repositories.ontologies
 
+    @property
+    def labels_flat_dict(self):
+        flatten_dict = dict()
+
+        def add_to_dict(tag, father):
+            flatten_dict[tag] = father
+            for child in father.children:
+                add_to_dict('{}.{}'.format(tag, child.tag), child)
+
+        for label in self.labels:
+            add_to_dict(label.tag, label)
+        return flatten_dict
+
+    @property
+    def instance_map(self):
+        if self._instance_map is None:
+            labels = [label for label in self.labels_flat_dict]
+            labels.sort()
+            # each label gets index as instance id
+            self._instance_map = {label: (i_label + 1) for i_label, label in enumerate(labels)}
+        return self._instance_map
+
     @classmethod
     def from_json(cls, _json, client_api, recipe):
         """
@@ -73,9 +98,9 @@ class Ontology:
             labels.append(entities.Label.from_root(root=root))
 
         return cls(
-            metadata=_json["metadata"],
-            creator=_json["creator"],
-            url=_json["url"],
+            metadata=_json.get("metadata", None),
+            creator=_json.get("creator", None),
+            url=_json.get("url", None),
             id=_json["id"],
             attributes=attributes,
             client_api=client_api,
@@ -92,12 +117,10 @@ class Ontology:
         roots = [label.to_root() for label in self.labels]
         _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(Ontology)._client_api,
                                                               attr.fields(Ontology)._recipe,
+                                                              attr.fields(Ontology)._instance_map,
                                                               attr.fields(Ontology)._repositories))
         _json["roots"] = roots
         return _json
-
-    def print(self):
-        miscellaneous.List([self]).print()
 
     def delete(self):
         """
@@ -239,3 +262,36 @@ class Ontology:
                                                display_label=label["display_label"]))
 
         return added_labels
+
+    def delete_labels(self, label_names):
+        """
+        Delete labels from ontology
+
+        :param label_names: label object/ label name / list of label objects / list of label names
+        :return:
+        """
+        if not isinstance(label_names, list):
+            label_names = [label_names]
+
+        if isinstance(label_names[0], entities.Label):
+            label_names = [label.tag for label in label_names]
+
+        for label in label_names:
+            self.__delete_label(label)
+
+        self.update()
+
+    def __delete_label(self, label_name):
+        if label_name in self.instance_map.keys():
+            labels = self.labels
+            label_chain = label_name.split('.')
+            while len(label_chain) > 1:
+                label_name = label_chain.pop(0)
+                for i_label, label in enumerate(labels):
+                    if label.tag == label_name:
+                        labels = labels[i_label].children
+                        break
+            label_name = label_chain[0]
+            for i_label, label in enumerate(labels):
+                if label.tag == label_name:
+                    labels.pop(i_label)

@@ -31,6 +31,8 @@ class PagedEntities:
     _order_by_type = attr.ib(default=None, repr=False)
     _order_by_direction = attr.ib(default=None, repr=False)
     _execution_status = attr.ib(default=None, repr=False)
+    _execution_resource_type = attr.ib(default=None, repr=False)
+    _execution_resource_id = attr.ib(default=None, repr=False)
 
     # items list
     items = attr.ib(default=miscellaneous.List(), repr=False)
@@ -81,7 +83,7 @@ class PagedEntities:
                     jobs[i_item] = pool.apply_async(entities.Execution.from_json,
                                                     kwds={'client_api': self._client_api,
                                                           '_json': item,
-                                                          'service': self.items_repository.service})
+                                                          'service': self.items_repository._service})
                 # wait for all jobs
                 _ = [j.wait() for j in jobs]
 
@@ -146,6 +148,8 @@ class PagedEntities:
                                                                       page_size=page_size,
                                                                       order_by_type=self._order_by_type,
                                                                       order_by_direction=self._order_by_direction,
+                                                                      resource_type=self._execution_resource_type,
+                                                                      resource_id=self._execution_resource_id,
                                                                       status=self._execution_status))
         elif isinstance(self.items_repository, repositories.Webhooks):
             return self.process_result(

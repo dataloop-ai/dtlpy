@@ -50,7 +50,8 @@ class Annotations:
                                                          path='/annotations/{}'.format(annotation_id))
         if success:
             annotation = entities.Annotation.from_json(_json=response.json(),
-                                                       item=self.item)
+                                                       annotations=self,
+                                                       item=self._item)
         else:
             raise exceptions.PlatformException(response)
         return annotation
@@ -93,31 +94,6 @@ class Annotations:
                                 with_text=with_text,
                                 annotation_format=annotation_format)
 
-    def delete(self, annotation=None, annotation_id=None):
-        """
-            Remove an annotation from item
-
-        :param annotation: Annotation object
-        :param annotation_id: annotation id
-        :return: True/False
-        """
-        if annotation_id is not None:
-            pass
-        elif annotation is not None and isinstance(annotation, entities.Annotation):
-            annotation_id = annotation.id
-        else:
-            raise exceptions.PlatformException(error='400', message='Must input annotation id or annotation entity')
-        # get creator from token
-        creator = jwt.decode(self._client_api.token, algorithms=['HS256'], verify=False)['email']
-        payload = {'username': creator}
-        success, response = self._client_api.gen_request(req_type='delete',
-                                                         path='/annotations/{}'.format(annotation_id),
-                                                         json_req=payload)
-        if not success:
-            raise exceptions.PlatformException(response)
-        logger.info('Annotation {} deleted successfully'.format(annotation_id))
-        return True
-
     def download(self, filepath, annotation_format='mask', height=None, width=None, thickness=1, with_text=False):
         """
             Save annotation format to file
@@ -150,6 +126,62 @@ class Annotations:
                                     with_text=with_text,
                                     annotation_format=annotation_format)
 
+    def _delete_single_annotation(self, w_annotation_id):
+        try:
+
+            creator = jwt.decode(self._client_api.token, algorithms=['HS256'], verify=False)['email']
+            payload = {'username': creator}
+            success, response = self._client_api.gen_request(req_type='delete',
+                                                             path='/annotations/{}'.format(w_annotation_id),
+                                                             json_req=payload)
+
+            if not success:
+                raise exceptions.PlatformException(response)
+            status = True
+        except Exception:
+            status = False
+            response = traceback.format_exc()
+        return status, response
+
+    def delete(self, annotation=None, annotation_id=None):
+        """
+            Remove an annotation from item
+
+        :param annotation: Annotation object
+        :param annotation_id: annotation id
+        :return: True/False
+        """
+        if annotation_id is not None:
+            pass
+        elif annotation is not None and isinstance(annotation, entities.Annotation):
+            annotation_id = annotation.id
+        elif annotation is not None and isinstance(annotation, str) and annotation.lower() == 'all':
+            annotation_id = [annotation.id for annotation in self.list()]
+        else:
+            raise exceptions.PlatformException(error='400', message='Must input annotation id or annotation entity')
+        # get creator from token
+
+        if not isinstance(annotation_id, list):
+            annotation_id = [annotation_id]
+
+        pool = self._client_api.thread_pools(pool_name='annotation.update')
+        jobs = [None for _ in range(len(annotation_id))]
+        for i_ann, ann_id in enumerate(annotation_id):
+            jobs[i_ann] = pool.apply_async(func=self._delete_single_annotation,
+                                           kwds={'w_annotation_id': ann_id})
+        # wait for jobs to be finish
+        _ = [j.wait() for j in jobs]
+        # get all results
+        results = [j.get() for j in jobs]
+        out_annotations = [r[1] for r in results if r[0] is True]
+        out_errors = [r[1] for r in results if r[0] is False]
+        if len(out_errors) == 0:
+            logger.debug('Annotation/s delete successfully. {}/{}'.format(len(out_annotations), len(results)))
+        else:
+            logger.error(out_errors)
+            logger.error('Annotation/s delete with {} errors'.format(len(out_errors)))
+        return True
+
     def _update_single_annotation(self, w_annotation, system_metadata):
         try:
             if isinstance(w_annotation, entities.Annotation):
@@ -167,7 +199,8 @@ class Annotations:
                                                          json_req=annotation)
             if suc:
                 result = entities.Annotation.from_json(_json=response.json(),
-                                                       item=self.item)
+                                                       annotations=self,
+                                                       item=self._item)
             else:
                 raise exceptions.PlatformException(response)
             status = True
@@ -223,6 +256,7 @@ class Annotations:
                                                          json_req=w_annotation)
             if suc:
                 result = entities.Annotation.from_json(_json=response.json(),
+                                                       annotations=self,
                                                        item=self.item)
                 status = True
             else:

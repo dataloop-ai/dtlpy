@@ -6,7 +6,7 @@ Feature: Packages repository push service testing
         And Directory "packages_push" is empty
         When I generate package by the name of "test_package" to "packages_push"
 
-    @packages.delete_one
+    @packages.delete
     Scenario: Push local package - no params
         When I push "first" package
             |codebase_id=None|package_name=None|src_path=packages_push|inputs=None|outputs=None|

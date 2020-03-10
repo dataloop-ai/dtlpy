@@ -7,6 +7,7 @@ import random
 def creating_a_project(context, project_name):
     try:
         context.project = context.dl.projects.create(project_name=context.project_name)
+        context.to_delete_projects_ids.append(context.project.id)
         time.sleep(5)  # to sleep because authorization takes time
         context.error = None
     except Exception as e:
@@ -17,6 +18,7 @@ def creating_a_project(context, project_name):
 def creating_a_project(context, project_name):
     project_name = project_name + str(random.randint(10000, 100000))
     context.project = context.dl.projects.create(project_name=project_name)
+    context.to_delete_projects_ids.append(context.project.id)
     time.sleep(5)  # to sleep because authorization takes time
     context.project_name = project_name
 
@@ -44,6 +46,7 @@ def project_should_exist_in_host(context, project_name):
 def step_impl(context):
     try:
         context.project = context.dl.projects.create(project_name='')
+        context.to_delete_projects_ids.append(context.project.id)
         time.sleep(5)  # to sleep because authorization takes time
         context.error = None
     except Exception as e:
@@ -59,6 +62,7 @@ def step_impl(context, error):
 def step_impl(context, project_name):
     project_name = project_name + str(random.randint(10000, 100000))
     context.project = context.dl.projects.create(project_name=project_name)
+    context.to_delete_projects_ids.append(context.project.id)
     time.sleep(5)  # to sleep because authorization takes time
     context.project_name = project_name
 

@@ -5,13 +5,13 @@ import attr
 import copy
 import os
 
-from .. import repositories, miscellaneous, entities, services, exceptions
+from .. import repositories, entities, services, exceptions
 
 logger = logging.getLogger(name=__name__)
 
 
 @attr.s
-class Item:
+class Item(entities.BaseEntity):
     """
     Item object
     """
@@ -63,17 +63,18 @@ class Item:
         return status, item
 
     @classmethod
-    def from_json(cls, _json, client_api, dataset=None, project=None):
+    def from_json(cls, _json, client_api, dataset=None, project=None, is_fetched=True):
         """
         Build an item entity object from a json
         :param project:
         :param _json: _json response from host
         :param dataset: dataset in which the annotation's item is located
         :param client_api: client_api
+        :param is_fetched: is Entity fetched from Platform
         :return: Item object
         """
         metadata = _json.get('metadata', dict())
-        return cls(
+        inst = cls(
             # sdk
             platform_dict=copy.deepcopy(_json),
             client_api=client_api,
@@ -89,12 +90,14 @@ class Item:
             hidden=_json.get('hidden', False),
             stream=_json.get('stream', None),
             dir=_json.get('dir', None),
-            filename=_json['filename'],
+            filename=_json.get('filename', None),
             metadata=metadata,
-            name=_json['name'],
-            type=_json['type'],
-            url=_json['url'],
-            id=_json['id'])
+            name=_json.get('name', None),
+            type=_json.get('type', None),
+            url=_json.get('url', None),
+            id=_json.get('id', None))
+        inst.is_fetched = is_fetched
+        return inst
 
     ############
     # entities #
@@ -103,37 +106,23 @@ class Item:
     @property
     def dataset(self):
         if self._dataset is None:
-            self.get_dataset()
             if self._dataset is None:
-                raise exceptions.PlatformException(error='2001',
-                                                   message='Missing entity "dataset".')
+                self._dataset = self.datasets.get(dataset_id=self.datasetId, fetch=None)
         assert isinstance(self._dataset, entities.Dataset)
         return self._dataset
 
     @property
     def project(self):
         if self._project is None:
-            self.get_project()
+            if self._dataset is None:
+                if self._dataset is None:
+                    self._dataset = self.datasets.get(dataset_id=self.datasetId, fetch=None)
+            self._project = self._dataset.project
             if self._project is None:
                 raise exceptions.PlatformException(error='2001',
                                                    message='Missing entity "project".')
         assert isinstance(self._project, entities.Project)
         return self._project
-
-    def get_dataset(self, dummy=False):
-        if self._dataset is None:
-            if dummy:
-                self._dataset = entities.Dataset.dummy(dataset_id=self.datasetId, client_api=self._client_api)
-            else:
-                self._dataset = repositories.Datasets(client_api=self._client_api).get(dataset_id=self.datasetId)
-
-    def get_project(self, dummy=False):
-        if self._project is None:
-            if self._dataset is None:
-                self.get_dataset(dummy=dummy)
-            if self._dataset._project is None:
-                self._dataset.get_project(dummy=dummy)
-            self._project = self._dataset.project
 
     ################
     # repositories #
@@ -142,19 +131,22 @@ class Item:
     @_repositories.default
     def set_repositories(self):
         reps = namedtuple('repositories',
-                          field_names=['annotations', 'items', 'codebases', 'artifacts', 'modalities'])
-        reps.__new__.__defaults__ = (None, None, None, None, None)
+                          field_names=['annotations', 'datasets', 'items', 'codebases', 'artifacts', 'modalities'])
+        reps.__new__.__defaults__ = (None, None, None, None, None, None)
 
         if self._dataset is None:
             items = repositories.Items(client_api=self._client_api,
                                        dataset=None,
                                        dataset_id=self.datasetId,
                                        datasets=repositories.Datasets(client_api=self._client_api, project=None))
+            datasets = items.datasets
         else:
             items = self.dataset.items
+            datasets = self.dataset.datasets
 
         r = reps(annotations=repositories.Annotations(client_api=self._client_api, item=self),
                  items=items,
+                 datasets=datasets,
                  codebases=None,
                  artifacts=None,
                  modalities=Modalities(item=self))
@@ -169,6 +161,11 @@ class Item:
     def annotations(self):
         assert isinstance(self._repositories.annotations, repositories.Annotations)
         return self._repositories.annotations
+
+    @property
+    def datasets(self):
+        assert isinstance(self._repositories.datasets, repositories.Datasets)
+        return self._repositories.datasets
 
     @property
     def items(self):
@@ -240,9 +237,6 @@ class Item:
         _json.update({'annotations': self.annotations_link,
                       'dataset': self.dataset_url})
         return _json
-
-    def print(self):
-        miscellaneous.List([self]).print()
 
     def download(
             self,

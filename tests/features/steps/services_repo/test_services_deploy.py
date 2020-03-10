@@ -42,6 +42,7 @@ def step_impl(context):
         init_input=config,
         runtime=runtime
     )
+    context.to_delete_services_ids.append(context.service.id)
 
 
 @behave.then(u'There is only one service')

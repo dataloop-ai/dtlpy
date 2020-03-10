@@ -121,4 +121,5 @@ def step_impl(context, some_project_id, file_path):
 @behave.given(u'There is another project by the name of "{other_project_name}"')
 def step_impl(context, other_project_name):
     context.other_project = context.dl.projects.create(other_project_name)
+    context.to_delete_projects_ids.append(context.other_project.id)
     time.sleep(5)  # to sleep because authorization takes time

@@ -8,7 +8,7 @@ logger = logging.getLogger("dataloop.function")
 
 
 @attr.s
-class PackageFunction:
+class PackageFunction(entities.BaseEntity):
     """
     Webhook object
     """
@@ -38,9 +38,6 @@ class PackageFunction:
     def get_inputs(self):
         inputs = list()
         return inputs
-
-    def print(self):
-        miscellaneous.List([self]).print()
 
     def to_json(self):
         _json = attr.asdict(

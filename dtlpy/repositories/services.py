@@ -88,37 +88,56 @@ class Services:
     ###########
     # methods #
     ###########
-    def get(self, service_name=None, service_id=None, checkout=False):
+    def get(self, service_name=None, service_id=None, checkout=False, fetch=None):
         """
         Get service
 
         :param checkout:
         :param service_name: optional - search by name
         :param service_id: optional - search by id
+        :param fetch: optional - fetch entity from platform, default taken from cookie
         :return: Service object
         """
-        if service_id is not None:
-            success, response = self._client_api.gen_request(
-                req_type="get",
-                path="/services/{}".format(service_id)
-            )
-            if not success:
-                raise exceptions.PlatformException(response)
-            service = entities.Service.from_json(client_api=self._client_api,
-                                                 _json=response.json(),
-                                                 package=self._package,
-                                                 project=self._project)
-        elif service_name is not None:
-            services = self.list(name=service_name)
-            if len(services) > 1:
-                raise exceptions.PlatformException('404', 'More than one service with same name.')
-            elif len(services) == 0:
-                raise exceptions.PlatformException('404', 'Service not found: {}.'.format(service_name))
-            service = services[0]
-        else:
+        if fetch is None:
+            fetch = self._client_api.fetch_entities
+
+        if service_name is None and service_id is None:
             service = self.__get_from_cache()
             if service is None:
-                raise exceptions.PlatformException('404', 'No service found in state, please checkout a service.')
+                raise exceptions.PlatformException(
+                    error='400',
+                    message='Checked out not found, must provide either service id or service name')
+
+        elif fetch:
+            if service_id is not None:
+                success, response = self._client_api.gen_request(
+                    req_type="get",
+                    path="/services/{}".format(service_id)
+                )
+                if not success:
+                    raise exceptions.PlatformException(response)
+                service = entities.Service.from_json(client_api=self._client_api,
+                                                     _json=response.json(),
+                                                     package=self._package,
+                                                     project=self._project)
+            elif service_name is not None:
+                services = self.list(name=service_name)
+                if len(services) > 1:
+                    raise exceptions.PlatformException('404', 'More than one service with same name.')
+                elif len(services) == 0:
+                    raise exceptions.PlatformException('404', 'Service not found: {}.'.format(service_name))
+                service = services[0]
+            else:
+                raise exceptions.PlatformException(
+                    error='400',
+                    message='Checked out not found, must provide either service id or service name')
+        else:
+            service = entities.Service.from_json(_json={'id': service_id,
+                                                        'name': service_name},
+                                                 client_api=self._client_api,
+                                                 project=self._project,
+                                                 package=self,
+                                                 is_fetched=False)
 
         assert isinstance(service, entities.Service)
         if checkout:
@@ -191,7 +210,7 @@ class Services:
 
     def _create(self, service_name=None, package=None, module_name=None, bot=None, revision=None, init_input=None,
                 runtime=None, pod_type=None, project_id=None, sdk_version=None, agent_versions=None, verify=True,
-                driver_id=None):
+                driver_id=None, **kwargs):
         """
         Create service entity
         :param verify:
@@ -208,6 +227,13 @@ class Services:
         :param service_name:
         :return:
         """
+        is_global = kwargs.get('is_global', None)
+        jwt_forward = kwargs.get('jwt_forward', None)
+        if is_global is not None or jwt_forward is not None:
+            logger.warning(
+                'Params jwt_forward and is_global are restricted to superuser. '
+                'If you are not a superuser this action will not work')
+
         if agent_versions is None:
             if sdk_version is None:
                 sdk_version = __version__
@@ -288,7 +314,13 @@ class Services:
             if 'gpu' in payload['runtime'] and payload['runtime']['gpu']:
                 pod_type = 'gpu-k80-s'
             else:
-                pod_type = 'regular-s'
+                pod_type = 'regular-micro'
+
+        if is_global is not None:
+            payload['global'] = is_global
+
+        if jwt_forward is not None:
+            payload['useUserJwt'] = jwt_forward
 
         if 'podType' not in payload['runtime']:
             payload['runtime']['podType'] = pod_type
@@ -365,13 +397,19 @@ class Services:
                                           package=package,
                                           project=self._project)
 
-    def log(self, service, size=None, checkpoint=None, start=None, end=None):
+    def log(self, service, size=None, checkpoint=None, start=None, end=None, follow=False,
+            execution_id=None, function_name=None, replica_id=None, system=False):
         """
         Get service logs
 
+        :param system:
         :param end: iso format time
         :param start: iso format time
         :param checkpoint:
+        :param follow: filters
+        :param execution_id: follow
+        :param function_name: execution_id
+        :param replica_id: function_name
         :param size:
         :param service: Service entity
         :return: Service entity
@@ -379,11 +417,22 @@ class Services:
         assert isinstance(service, entities.Service)
 
         payload = {
-            'direction': 'asc'
+            'direction': 'asc',
+            'follow': follow,
+            'system': system
         }
 
         if size is not None:
             payload['size'] = size
+
+        if execution_id is not None:
+            payload['executionId'] = execution_id
+
+        if function_name is not None:
+            payload['functionName'] = function_name
+
+        if replica_id is not None:
+            payload['replicaId'] = replica_id
 
         if checkpoint is not None:
             payload['checkpoint'] = checkpoint
@@ -413,10 +462,17 @@ class Services:
         return ServiceLog(_json=response.json(),
                           service=service,
                           services=self,
-                          start=payload['start'])
+                          start=payload['start'],
+                          follow=follow,
+                          execution_id=execution_id,
+                          function_name=function_name,
+                          replica_id=replica_id,
+                          system=system)
 
-    def execute(self, service=None, service_id=None, service_name=None, sync=False, execution_input=None,
-                function_name=None, resource=None, item_id=None, dataset_id=None, annotation_id=None):
+    def execute(self, service=None, service_id=None, service_name=None,
+                sync=False, function_name=None, stream_logs=False,
+                execution_input=None, resource=None, item_id=None, dataset_id=None, annotation_id=None, project_id=None,
+                ):
         if service is None:
             service = self.get(service_id=service_id, service_name=service_name)
         execution = repositories.Executions(service=service,
@@ -428,12 +484,14 @@ class Services:
                                                                           resource=resource,
                                                                           item_id=item_id,
                                                                           dataset_id=dataset_id,
-                                                                          annotation_id=annotation_id)
+                                                                          annotation_id=annotation_id,
+                                                                          project_id=project_id,
+                                                                          stream_logs=stream_logs)
         return execution
 
     def deploy(self, service_name=None, package=None, bot=None, revision=None, init_input=None, runtime=None,
                pod_type=None, sdk_version=None, agent_versions=None, verify=True, checkout=False, module_name=None,
-               project_id=None, driver_id=None):
+               project_id=None, driver_id=None, **kwargs):
         """
         Deploy service
 
@@ -497,7 +555,9 @@ class Services:
                                    agent_versions=agent_versions,
                                    verify=verify,
                                    module_name=module_name,
-                                   driver_id=driver_id)
+                                   driver_id=driver_id,
+                                   jwt_forward=kwargs.get('jwt_forward', None),
+                                   is_global=kwargs.get('is_global', None))
         if checkout:
             self.checkout(service=service)
         return service
@@ -741,16 +801,37 @@ class ServiceLog:
     Service Log
     """
 
-    def __init__(self, _json, service, services, start=None):
+    def __init__(self, _json, service,
+                 services,
+                 start=None,
+                 follow=None,
+                 execution_id=None,
+                 function_name=None,
+                 replica_id=None,
+                 system=False):
+
         self.logs = _json.get('logs', dict())
         self.checkpoint = _json.get('checkpoint', None)
         self.stop = _json.get('stop', False)
         self.service = service
         self.services = services
         self.start = start
+        self.follow = follow
+        self.execution_id = execution_id
+        self.function_name = function_name
+        self.replica_id = replica_id
+        self.system = system
 
     def get_next_log(self):
-        log = self.services.log(service=self.service, checkpoint=self.checkpoint, start=self.start)
+        log = self.services.log(service=self.service,
+                                checkpoint=self.checkpoint,
+                                start=self.start,
+                                follow=self.follow,
+                                execution_id=self.execution_id,
+                                function_name=self.function_name,
+                                replica_id=self.replica_id,
+                                system=self.system)
+
         self.logs = log.logs
         self.checkpoint = log.checkpoint
         self.stop = log.stop
@@ -758,5 +839,5 @@ class ServiceLog:
     def __iter__(self):
         while not self.stop:
             for log in self.logs:
-                yield '{}: {}'.format(log.get('timestamp', self.start), log.get('message', ''))
+                yield '{}: {}'.format(log.get('timestamp', self.start), log.get('message', '').strip())
             self.get_next_log()

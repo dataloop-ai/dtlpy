@@ -7,7 +7,7 @@ logger = logging.getLogger("dataloop.module")
 
 
 @attr.s
-class PackageModule:
+class PackageModule(entities.BaseEntity):
     """
     Webhook object
     """
@@ -47,9 +47,6 @@ class PackageModule:
             self.functions.append(entities.PackageFunction.from_json(function))
         else:
             raise ValueError('Unknown function type: {}. Expecting dl.PackageFunction or dict')
-
-    def print(self):
-        miscellaneous.List([self]).print()
 
     def to_json(self):
         _json = attr.asdict(

@@ -1,6 +1,9 @@
 from urllib.parse import urlencode
+import logging
 
 from .. import entities, miscellaneous, exceptions
+
+logger = logging.getLogger(name=__name__)
 
 
 class Triggers:
@@ -53,10 +56,11 @@ class Triggers:
     # methods #
     ###########
     def create(self, service_id=None, webhook_id=None, name=None, filters=None, function_name=None,
-               resource=None, actions=None, active=True, execution_mode=None, project_id=None):
+               resource=None, actions=None, active=True, execution_mode=None, project_id=None, **kwargs):
         """
         Create a Trigger
 
+        :param scope:
         :param function_name:
         :param project_id:
         :param webhook_id:
@@ -69,6 +73,7 @@ class Triggers:
         :param active: optional - True/False, default = True
         :return: Trigger entity
         """
+        scope = kwargs.get('scope', None)
         if service_id is None and webhook_id is None:
             if self._service is not None:
                 service_id = self._service.id
@@ -140,6 +145,12 @@ class Triggers:
             'name': name,
             'spec': spec
         }
+
+        if scope is not None:
+            logger.warning(
+                "Only superuser is allowed to define a trigger's scope. "
+                "If you are not a superuser you will not be able to perform this action")
+            payload['scope'] = scope
 
         # request
         success, response = self._client_api.gen_request(req_type='post',

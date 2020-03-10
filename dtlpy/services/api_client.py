@@ -139,11 +139,16 @@ class ApiClient:
         self._environment = None
         self._environments = None
         self._verbose = None
+        self._fetch_entities = None
         # define other params
         self.last_response = None
         self.last_request = None
         self.platform_exception = None
         self.last_curl = None
+        self.minimal_print = True
+        # start refresh token
+        self.refresh_token_active = True
+
         self.cookie_io = CookieIO.init()
         assert isinstance(self.cookie_io, CookieIO)
         self.state_io = CookieIO.init_local_cookie(create=False)
@@ -152,8 +157,6 @@ class ApiClient:
         ##################
         # configurations #
         ##################
-        self.minimal_print = True
-
         # read URL
         environment = self.environment
         if environment is None:
@@ -177,16 +180,12 @@ class ApiClient:
         counter_filepath = os.path.join(os.path.dirname(self.cookie_io.COOKIE), 'calls_counter.json')
         self.calls_counter = CallsCounter(filepath=counter_filepath)
 
-        # start refresh token
-        self.refresh_token_active = True
-
         # create a global thread pool to run multi threading
         if num_processes is None:
             num_processes = multiprocessing.cpu_count()
         self._num_processes = num_processes
         self._thread_pools = dict()
-        self._thread_pools_names = {'item.upload': num_processes,
-                                    'item.download': num_processes,
+        self._thread_pools_names = {'item.download': num_processes,
                                     'item.page': num_processes,
                                     'annotation.upload': num_processes,
                                     'annotation.download': num_processes,
@@ -253,6 +252,21 @@ class ApiClient:
     def environment(self, env):
         self._environment = env
         self.cookie_io.put('url', env)
+
+    @property
+    def fetch_entities(self):
+        _fetch_entities = self._fetch_entities
+        if _fetch_entities is None:
+            _fetch_entities = self.cookie_io.get('fetch_entities')
+            if _fetch_entities is None:
+                _fetch_entities = True
+                self.fetch_entities = _fetch_entities
+        return _fetch_entities
+
+    @fetch_entities.setter
+    def fetch_entities(self, val):
+        self._fetch_entities = val
+        self.cookie_io.put('fetch_entities', val)
 
     @property
     def environments(self):
@@ -475,8 +489,8 @@ class ApiClient:
             return_type = True
         return return_type, resp
 
-    async def __upload_file_async(self, to_upload, item_type, item_size, remote_url, uploaded_filename,
-                                  remote_path=None, callback=None, mode='skip', item_metadata=None):
+    async def upload_file_async(self, to_upload, item_type, item_size, remote_url, uploaded_filename,
+                                remote_path=None, callback=None, mode='skip', item_metadata=None):
         headers = self.auth
         headers['User-Agent'] = requests_toolbelt.user_agent('dtlpy', __version__.version)
 
@@ -517,43 +531,10 @@ class ApiClient:
                                              async_resp=resp)
             except Exception as err:
                 response = AsyncResponseError(error=err, trace=traceback.format_exc())
+            finally:
+                with threadLock:
+                    self.calls_counter.add()
         return response
-
-    def upload_from_local(self, to_upload, item_type, item_size, remote_url, uploaded_filename, remote_path=None,
-                          callback=None, log_error=True, mode='skip', item_metadata=None):
-        def exception_handler(loop, context):
-            logger.debug("[Asyc] Upload item caught the following exception: {}".format(context['message']))
-
-        if remote_path is None:
-            remote_path = '/'
-        loop = asyncio.new_event_loop()
-        loop.set_exception_handler(exception_handler)
-        asyncio.set_event_loop(loop)
-        response = loop.run_until_complete(self.__upload_file_async(to_upload=to_upload,
-                                                                    item_type=item_type,
-                                                                    item_size=item_size,
-                                                                    item_metadata=item_metadata,
-                                                                    remote_url=remote_url,
-                                                                    uploaded_filename=uploaded_filename,
-                                                                    remote_path=remote_path,
-                                                                    callback=callback,
-                                                                    mode=mode))
-        with threadLock:
-            self.calls_counter.add()
-        loop.stop()
-        loop.close()
-        if not response.ok:
-            self.print_bad_response(response, log_error)
-            success = False
-        else:
-            try:
-                # print only what is printable (don't print get steam etc..)
-                self.print_response(response)
-            except ValueError:
-                # no JSON returned
-                pass
-            success = True
-        return success, response
 
     def send_session(self, prepared, stream=None):
         if self.session is None:
@@ -615,22 +596,27 @@ class ApiClient:
         """
         try:
             if self.token is None or self.token == '':
-                return True
-            payload = jwt.decode(self.token, algorithms=['HS256'], verify=False)
-            d = datetime.datetime.utcnow()
-            epoch = datetime.datetime(1970, 1, 1)
-            now = (d - epoch).total_seconds()
-            exp = payload['exp']
-            if now < (exp - t):
-                return False
+                expired = True
             else:
-                return True
+                payload = jwt.decode(self.token, algorithms=['HS256'], verify=False)
+                d = datetime.datetime.utcnow()
+                epoch = datetime.datetime(1970, 1, 1)
+                now = (d - epoch).total_seconds()
+                exp = payload['exp']
+                if now < (exp - t):
+                    expired = False
+                else:
+                    expired = True
         except jwt.exceptions.DecodeError:
             logger.exception('Invalid token.')
-            return True
+            expired = True
         except Exception:
             logger.exception('Unknown error:')
-            return True
+            expired = True
+        if expired:
+            if self.renew_token_method():
+                expired = False
+        return expired
 
     @staticmethod
     def is_json_serializable(response):
@@ -764,11 +750,12 @@ class ApiClient:
                 raise ConnectionError(
                     'Unknown platform environment: "{}". Known: {}'.format(env, ', '.join(known_aliases)))
             env = matched_env[0]
-        self.environment = env
-        # reset local token
-        self._token = None
-        self.refresh_token_active = True
-        logger.info('Platform environment: %s' % self.environment)
+        if self.environment != env:
+            self.environment = env
+            # reset local token
+            self._token = None
+            self.refresh_token_active = True
+        logger.info('Platform environment: {}'.format(self.environment))
         if self.token_expired():
             logger.info('Token expired, Please login.')
 
@@ -882,11 +869,11 @@ class ApiClient:
             raise exceptions.PlatformException(error='400', message='Unknown environment: {}'.format(env))
 
         if resource_type == 'project':
-            url = head + '/project-overview/{}'.format(project_id)
+            url = head + '/projects/{}'.format(project_id)
         elif resource_type == 'dataset':
             url = head + '/projects/{}/datasets/{}'.format(project_id, dataset_id)
         elif resource_type == 'item':
-            url = head + '/projects/{}/datasets/{}/annotation/{}'.format(project_id, dataset_id, item_id)
+            url = head + '/projects/{}/datasets/{}/items/{}'.format(project_id, dataset_id, item_id)
         elif resource_type == 'package':
             url = head + '/projects/{}/packages/{}'.format(project_id, package_id)
         elif resource_type == 'service':

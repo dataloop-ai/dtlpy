@@ -1,9 +1,10 @@
 import attr
-from .. import repositories, entities, services, exceptions
+from collections import namedtuple
+from .. import repositories, entities, services
 
 
 @attr.s
-class Execution:
+class Execution(entities.BaseEntity):
     """
     Service execution entity
     """
@@ -20,6 +21,9 @@ class Execution:
     syncReplyTo = attr.ib(repr=False)
     latest_status = attr.ib()
     function_name = attr.ib()
+    duration = attr.ib()
+    attempts = attr.ib()
+    max_attempts = attr.ib()
 
     # name changed
     trigger_id = attr.ib()
@@ -31,10 +35,47 @@ class Execution:
     _client_api = attr.ib(type=services.ApiClient, repr=False)
     _service = attr.ib(repr=False)
     _project = attr.ib(repr=False, default=None)
+    _repositories = attr.ib(repr=False)
+
+    ################
+    # repositories #
+    ################
+    @_repositories.default
+    def set_repositories(self):
+        reps = namedtuple('repositories',
+                          field_names=['executions', 'services'])
+
+        if self._project is not None:
+            services_repo = self._project.services
+            executions_repo = self._project.executions
+        elif self._service is not None:
+            services_repo = self._service.services
+            executions_repo = self._service.executions
+        else:
+            services_repo = repositories.Services(client_api=self._client_api,
+                                                  project=self._project,
+                                                  package=None)
+            executions_repo = repositories.Executions(client_api=self._client_api,
+                                                      project=self._project,
+                                                      service=self._service)
+
+        r = reps(executions=executions_repo,
+                 services=services_repo)
+        return r
+
+    @property
+    def services(self):
+        assert isinstance(self._repositories.services, repositories.Services)
+        return self._repositories.services
+
+    @property
+    def executions(self):
+        assert isinstance(self._repositories.executions, repositories.Executions)
+        return self._repositories.executions
 
     @classmethod
-    def from_json(cls, _json, client_api, service=None):
-        return cls(
+    def from_json(cls, _json, client_api, service=None, is_fetched=True):
+        inst = cls(
             feedbackQueue=_json.get('feedbackQueue', None),
             service_id=_json.get('serviceId', None),
             project_id=_json.get('projectId', None),
@@ -45,8 +86,11 @@ class Execution:
             updatedAt=_json.get('updatedAt', None),
             creator=_json.get('creator', None),
             trigger_id=_json.get('triggerId', None),
+            attempts=_json.get('attempts', None),
+            max_attempts=_json.get('maxAttempts', None),
             output=_json.get('output', None),
             status=_json.get('status', None),
+            duration=_json.get('duration', None),
             function_name=_json.get('functionName', entities.DEFAULT_PACKAGE_FUNCTION_NAME),
             input=_json.get('input', None),
             url=_json.get('url', None),
@@ -54,6 +98,8 @@ class Execution:
             client_api=client_api,
             service=service
         )
+        inst.is_fetched = is_fetched
+        return inst
 
     def to_json(self):
         """
@@ -64,13 +110,15 @@ class Execution:
         # get excluded
         _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(Execution)._client_api,
                                                               attr.fields(Execution)._service,
+                                                              attr.fields(Execution)._project,
+                                                              attr.fields(Execution)._repositories,
                                                               attr.fields(Execution).project_id,
                                                               attr.fields(Execution).service_id,
                                                               attr.fields(Execution).pipeline_id,
                                                               attr.fields(Execution).trigger_id,
                                                               attr.fields(Execution).function_name,
-                                                              attr.fields(Execution).latest_status,
-                                                              ))
+                                                              attr.fields(Execution).max_attempts,
+                                                              attr.fields(Execution).latest_status))
         # rename
         _json['projectId'] = self.project_id
         _json['triggerId'] = self.trigger_id
@@ -78,31 +126,26 @@ class Execution:
         _json['pipelineId'] = self.pipeline_id
         _json['functionName'] = self.function_name
         _json['latestStatus'] = self.latest_status
+        _json['maxAttempts'] = self.max_attempts
         return _json
 
     @property
     def service(self):
         if self._service is None:
-            self.get_service()
-            if self._service is None:
-                raise exceptions.PlatformException(error='2001',
-                                                   message='Missing entity "service".')
+            self._service = self.services.get(service_id=self.service_id, fetch=None)
         assert isinstance(self._service, entities.Service)
         return self._service
 
     @property
     def project(self):
         if self._project is None:
-            self.get_project()
-            if self._project is None:
-                raise exceptions.PlatformException(error='2001',
-                                                   message='Missing entity "project".')
+            self._project = repositories.Projects(client_api=self._client_api).get(project_id=self.project_id,
+                                                                                   fetch=None)
         assert isinstance(self._project, entities.Project)
         return self._project
 
     def get_latest_status(self):
-        self.latest_status = repositories.Executions(client_api=self._client_api, service=self._service,
-                                                     project=self._project).get(execution_id=self.id).latest_status
+        self.latest_status = self.executions.get(execution_id=self.id).latest_status
         return self.latest_status
 
     @service.setter
@@ -110,18 +153,6 @@ class Execution:
         if not isinstance(service, entities.Service):
             raise ValueError('Must input a valid service entity')
         self._service = service
-
-    def get_service(self, dummy=False):
-        if dummy:
-            self._service = entities.Service.dummy(service_id=self.service_id, client_api=self._client_api)
-        else:
-            self._service = self.project.services.get(service_id=self.service_id)
-
-    def get_project(self, dummy=False):
-        if dummy:
-            self._project = entities.Project.dummy(project_id=self.project_id, client_api=self._client_api)
-        else:
-            self._project = repositories.Projects(client_api=self._client_api).get(project_id=self.project_id)
 
     def progress_update(self, status=None, percent_complete=None, message=None, output=None):
         """
@@ -133,8 +164,29 @@ class Execution:
         :param output:
         :return:
         """
-        return self.service.executions.progress_update(execution_id=self.id,
-                                                       status=status,
-                                                       percent_complete=percent_complete,
-                                                       message=message,
-                                                       output=output)
+        return self.executions.progress_update(execution_id=self.id,
+                                               status=status,
+                                               percent_complete=percent_complete,
+                                               message=message,
+                                               output=output)
+
+    def update(self):
+        """
+        Update execution changes to platform
+        :return: execution entity
+        """
+        return self.executions.update(self)
+
+    def logs(self):
+        """
+        Print logs for execution
+        """
+        self.executions.logs(execution_id=self.id)
+
+    def increment(self):
+        """
+        Increment attempts
+
+        :return:
+        """
+        self.attempts = self.executions.increment(self)

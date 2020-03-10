@@ -5,6 +5,7 @@ from PIL import Image
 import io
 import random
 from multiprocessing.pool import ThreadPool
+import logging
 import time
 
 
@@ -253,7 +254,10 @@ def step_impl(context):
 
 @behave.then(u'I receive "{count}" items')
 def step_impl(context, count):
-    assert len(context.items_list.items) == int(count)
+    if len(context.items_list.items) != int(count):
+        logging.info('filter: {}'.format(context.filters.prepare()))
+        logging.error('Filtering error. expected item count: {}. received item count:{}'.format(int(count), context.items_list.items_count))
+        assert False
 
 
 @behave.when(u'I update items with filters, field "{field}"')

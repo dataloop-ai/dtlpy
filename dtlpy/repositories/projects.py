@@ -127,26 +127,26 @@ class Projects:
             raise exceptions.PlatformException(response)
         return projects
 
-    def get(self, project_name=None, project_id=None, dummy=False, checkout=False):
+    def get(self, project_name=None, project_id=None, checkout=False, fetch=None):
         """
         Get a Project object
         :param checkout:
-        :param dummy:
         :param project_name: optional - search by name
         :param project_id: optional - search by id
+        :param fetch: optional - fetch entity from platform, default taken from cookie
         :return: Project object
 
         """
-        if dummy:
-            if project_id is None:
-                project = self.__get_from_cache()
-                if project is None:
-                    raise exceptions.PlatformException(
-                        error='404',
-                        message='No input and no checked-out found')
-            else:
-                project = entities.Project.dummy(project_id=project_id, name=project_name, client_api=self._client_api)
-        else:
+        if fetch is None:
+            fetch = self._client_api.fetch_entities
+
+        if project_id is None and project_name is None:
+            project = self.__get_from_cache()
+            if project is None:
+                raise exceptions.PlatformException(
+                    error='400',
+                    message='Checked out not found, must provide either project id or project name')
+        elif fetch:
             if project_id is not None:
                 project = self.__get_by_id(project_id)
             elif project_name is not None:
@@ -165,13 +165,14 @@ class Projects:
                 else:
                     project = project[0]
             else:
-                # get from state cookie
-                project = self.__get_from_cache()
-                if project is None:
-                    raise exceptions.PlatformException(
-                        error='404',
-                        message='No input and no checked-out found')
-
+                raise exceptions.PlatformException(
+                    error='404',
+                    message='No input and no checked-out found')
+        else:
+            project = entities.Project.from_json(_json={'id': project_id,
+                                                        'name': project_name},
+                                                 client_api=self._client_api,
+                                                 is_fetched=False)
         assert isinstance(project, entities.Project)
         if checkout:
             self.checkout(project=project)

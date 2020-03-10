@@ -11,14 +11,16 @@ class Task:
     # platform
     name = attr.ib()
     status = attr.ib()
-    projectId = attr.ib()
+    project_id = attr.ib()
     metadata = attr.ib(repr=False)
     id = attr.ib()
     url = attr.ib(repr=False)
+    task_owner = attr.ib(repr=False)
     creator = attr.ib()
     dueDate = attr.ib()
-    datasetId = attr.ib()
-    recipeId = attr.ib(repr=False)
+    dataset_id = attr.ib()
+    spec = attr.ib()
+    recipe_id = attr.ib(repr=False)
     query = attr.ib(repr=False)
     assignmentIds = attr.ib(repr=False)
 
@@ -35,15 +37,17 @@ class Task:
         return cls(
             name=_json.get('name', None),
             status=_json.get('status', None),
-            projectId=_json.get('projectId', None),
+            project_id=_json.get('projectId', None),
             metadata=_json.get('metadata', dict()),
             url=_json.get('url', None),
+            spec=_json.get('spec', None),
             id=_json['id'],
             creator=_json.get('creator', None),
             dueDate=_json.get('dueDate', 0),
-            datasetId=_json.get('datasetId', None),
-            recipeId=_json.get('recipeId', None),
+            dataset_id=_json.get('datasetId', None),
+            recipe_id=_json.get('recipeId', None),
             query=_json.get('query', None),
+            task_owner=_json.get('taskOwner', None),
             assignmentIds=_json.get('assignmentIds', list()),
             dataset=dataset,
             project=project,
@@ -56,12 +60,21 @@ class Task:
 
         :return: platform json format of object
         """
-        return attr.asdict(self, filter=attr.filters.exclude(attr.fields(Task)._client_api,
-                                                             attr.fields(Task)._project,
-                                                             attr.fields(Task)._tasks,
-                                                             attr.fields(Task)._dataset,
-                                                             attr.fields(Task)._current_assignments,
-                                                             attr.fields(Task)._assignments))
+        _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(Task)._client_api,
+                                                              attr.fields(Task)._project,
+                                                              attr.fields(Task).project_id,
+                                                              attr.fields(Task).dataset_id,
+                                                              attr.fields(Task).recipe_id,
+                                                              attr.fields(Task).task_owner,
+                                                              attr.fields(Task)._tasks,
+                                                              attr.fields(Task)._dataset,
+                                                              attr.fields(Task)._current_assignments,
+                                                              attr.fields(Task)._assignments))
+        _json['projectId'] = self.project_id
+        _json['datasetId'] = self.dataset_id
+        _json['recipeId'] = self.recipe_id
+        _json['task_owner'] = self.task_owner
+        return _json
 
     @property
     def current_assignments(self):
@@ -107,27 +120,34 @@ class Task:
 
     def get_project(self):
         if self._project is None:
-            self._project = repositories.Projects(client_api=self._client_api).get(project_id=self.projectId)
+            self._project = repositories.Projects(client_api=self._client_api).get(project_id=self.project_id)
 
     def get_dataset(self):
         if self._dataset is None:
             self._dataset = repositories.Datasets(client_api=self._client_api, project=self._project).get(
-                dataset_id=self.datasetId)
+                dataset_id=self.dataset_id)
 
     def update(self, system_metadata=False):
-        return self.project.tasks.update(task=self, system_metadata=system_metadata)
+        return self.tasks.update(task=self, system_metadata=system_metadata)
 
-    def create_assignment(self, name, assignee, items=None, filters=None):
+    def create_qa_task(self, assignees):
+        return self.tasks.create_qa_task(task=self, assignees=assignees)
+
+    def create_assignment(self, assignment_name, assignee, items=None, filters=None):
         """
 
-        :param name:
+        :param assignment_name:
         :param assignee:
         :param items:
         :param filters:
         :return:
         """
-        assignment = self.assignments.create(name=name, annotator=assignee, project_id=self.projectId, filters=filters,
-                                             items=items, dataset=self.dataset)
+        assignment = self.assignments.create(assignment_name=assignment_name,
+                                             annotator=assignee,
+                                             project_id=self.projectId,
+                                             filters=filters,
+                                             items=items,
+                                             dataset=self.dataset)
         assignment.metadata['system']['taskId'] = self.id
         assignment.update(system_metadata=True)
         self.assignmentIds.append(assignment.id)

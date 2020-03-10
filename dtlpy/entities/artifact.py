@@ -1,5 +1,5 @@
 import logging
-from .. import miscellaneous, entities
+from .. import entities
 import attr
 import copy
 
@@ -10,17 +10,18 @@ logger = logging.getLogger(name=__name__)
 class Artifact(entities.Item):
 
     @classmethod
-    def from_json(cls, _json, client_api, dataset=None, project=None):
+    def from_json(cls, _json, client_api, dataset=None, project=None, is_fetched=True):
         """
         Build an Artifact entity object from a json
         :param project:
         :param _json: _json response from host
         :param dataset: Artifact's dataset
         :param client_api: client_api
+        :param is_fetched: is Entity fetched from Platform
         :return: Artifact object
         """
 
-        return cls(
+        inst = cls(
             # sdk
             platform_dict=copy.deepcopy(_json),
             client_api=client_api,
@@ -42,10 +43,5 @@ class Artifact(entities.Item):
             dir=_json.get('dir', None),
             url=_json.get('url', None),
             id=_json['id'])
-
-    def print(self):
-        """
-
-        :return:
-        """
-        miscellaneous.List([self]).print()
+        inst.is_fetched = is_fetched
+        return inst

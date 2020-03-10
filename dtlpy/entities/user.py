@@ -2,13 +2,13 @@ import traceback
 import logging
 import attr
 
-from .. import miscellaneous, entities, exceptions
+from .. import entities, exceptions
 
 logger = logging.getLogger(name=__name__)
 
 
 @attr.s
-class User:
+class User(entities.BaseEntity):
     """
     User entity
     """
@@ -24,18 +24,24 @@ class User:
     id = attr.ib()
     # api
     _project = attr.ib(repr=False)
+    _client_api = attr.ib(default=None, repr=False)
+    _users = attr.ib(repr=False, default=None)
 
     @staticmethod
-    def _protected_from_json(_json, project):
+    def _protected_from_json(_json, project, client_api, users=None):
         """
         Same as from_json but with try-except to catch if error
         :param _json:
+        :param users: Users repository
         :param project:
+        :param client_api:
         :return:
         """
         try:
             user = User.from_json(_json=_json,
-                                  project=project)
+                                  project=project,
+                                  users=users,
+                                  client_api=client_api)
             status = True
         except Exception:
             user = traceback.format_exc()
@@ -51,12 +57,14 @@ class User:
         return self._project
 
     @classmethod
-    def from_json(cls, _json, project):
+    def from_json(cls, _json, project, client_api, users=None):
         """
         Build a User entity object from a json
 
+        :param client_api:
         :param _json: _json response from host
         :param project: project entity
+        :param users: Users repository
         :return: User object
         """
         return cls(
@@ -70,7 +78,9 @@ class User:
             type=_json.get('type', None),
             org=_json.get('org', None),
             id=_json.get('id', None),
-            project=project)
+            project=project,
+            users=users,
+            client_api=client_api)
 
     def to_json(self):
         """
@@ -81,10 +91,9 @@ class User:
         _json = attr.asdict(self,
                             filter=attr.filters.exclude(attr.fields(User)._project,
                                                         attr.fields(User).name,
+                                                        attr.fields(User)._client_api,
+                                                        attr.fields(User).users,
                                                         attr.fields(User).last_name))
         _json['firstName'] = self.name
         _json['lastName'] = self.last_name
         return _json
-
-    def print(self):
-        miscellaneous.List([self]).print()

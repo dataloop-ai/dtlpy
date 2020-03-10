@@ -40,6 +40,7 @@ def step_impl(context):
         init_input=config,
         runtime=runtime,
     )
+    context.to_delete_services_ids.append(context.service.id)
     if hasattr(context, "first_service"):
         context.second_service = context.service
     else:
@@ -50,9 +51,10 @@ def step_impl(context):
 def step_impl(context):
     assert isinstance(context.service, context.dl.entities.Service)
 
+
 @behave.then(u'Log "{log_message}" is in service.log()')
 def step_impl(context, log_message):
-    num_tries = 15
+    num_tries = 60
     interval_time = 5
     success = False
 
@@ -66,6 +68,3 @@ def step_impl(context, log_message):
             break
 
     assert success
-
-
-    

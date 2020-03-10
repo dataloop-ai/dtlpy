@@ -1,9 +1,11 @@
 import multiprocessing
+from copy import deepcopy
 import threading
 import traceback
 import datetime
 import logging
 import json
+from copy import deepcopy
 
 import requests
 import tqdm
@@ -130,9 +132,8 @@ class Downloader:
         ####################
         # download annotations' json files in a new thread
         # items will start downloading and if json not exists yet - will download for each file
-        annotated_count = self.__get_annotated_count(items=items, filters=filters)
-        if annotation_options and not avoid_unnecessary_annotation_download and self.__need_to_download_annotations_zip(
-                items_count=annotated_count):
+        if num_items > 1 and annotation_options and not avoid_unnecessary_annotation_download and self.__need_to_download_annotations_zip(
+                items_count=self.__get_annotated_count(items=items, filters=filters)):
             # a new folder named 'json' will be created under the "local_path"
             logger.info("Downloading annotations formats: {}".format(annotation_options))
             thread = threading.Thread(target=self.download_annotations,
@@ -257,11 +258,12 @@ class Downloader:
 
     def __get_annotated_count(self, items, filters):
         try:
+            copy_filters = deepcopy(filters)
             if items is not None:
                 num_annotated = len([item for item in items if item.annotated])
             else:
-                filters.add(field='annotated', values=True)
-                num_annotated = self.items_repository.list(filters=filters).items_count
+                copy_filters.add(field='annotated', values=True)
+                num_annotated = self.items_repository.list(filters=copy_filters).items_count
         except Exception:
             num_annotated = 0
         return num_annotated

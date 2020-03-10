@@ -1,4 +1,6 @@
 import behave
+import logging
+import json
 
 
 @behave.when(u"I get execution by id")
@@ -13,4 +15,10 @@ def step_impl(context):
 
 @behave.then(u"Execution received equals to execution created")
 def step_impl(context):
-    assert context.execution_get.to_json() == context.execution.to_json()
+    if context.execution_get.to_json() != context.execution.to_json():
+        logging.error(
+            'FAILED: response json is:\n{}\n\nto_json is:\n{}'.format(json.dumps(context.execution_get.to_json(),
+                                                                                 indent=2),
+                                                                      json.dumps(context.execution.to_json(),
+                                                                                 indent=2)))
+        assert False

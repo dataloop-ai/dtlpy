@@ -1,13 +1,13 @@
 import logging
 import attr
 
-from .. import services, repositories, entities, miscellaneous, exceptions
+from .. import services, repositories, entities
 
 logger = logging.getLogger("dataloop.service")
 
 
 @attr.s
-class Webhook:
+class Webhook(entities.BaseEntity):
     """
     Webhook object
     """
@@ -50,19 +50,10 @@ class Webhook:
     @property
     def project(self):
         if self._project is None:
-            self.get_project()
-            if self._project is None:
-                raise exceptions.PlatformException(error='2001',
-                                                   message='Missing entity "project".')
+            self._project = repositories.Projects(client_api=self._client_api).get(project_id=self.project_id,
+                                                                                   fetch=None)
         assert isinstance(self._project, entities.Project)
         return self._project
-
-    def get_project(self, dummy=False):
-        if self._project is None:
-            if dummy:
-                self._project = entities.Project.dummy(project_id=self.project_id, client_api=self._client_api)
-            else:
-                self._project = repositories.Projects(client_api=self._client_api).get(project_id=self.project_id)
 
     @property
     def webhooks(self):
@@ -70,9 +61,6 @@ class Webhook:
             self._webhooks = repositories.Webhooks(client_api=self._client_api, project=self._project)
         assert isinstance(self._webhooks, repositories.Webhooks)
         return self._webhooks
-
-    def print(self):
-        miscellaneous.List([self]).print()
 
     def to_json(self):
         _json = attr.asdict(

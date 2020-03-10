@@ -2,13 +2,13 @@ from collections import namedtuple
 import logging
 import attr
 
-from .. import repositories, miscellaneous, entities, services
+from .. import repositories, entities, services
 
 logger = logging.getLogger(name=__name__)
 
 
 @attr.s
-class Recipe:
+class Recipe(entities.BaseEntity):
     """
     Recipe object
     """
@@ -16,7 +16,7 @@ class Recipe:
     creator = attr.ib()
     url = attr.ib(repr=False)
     title = attr.ib()
-    projectIds = attr.ib()
+    project_ids = attr.ib()
     description = attr.ib()
     ontologyIds = attr.ib(repr=False)
     instructions = attr.ib(repr=False)
@@ -48,17 +48,17 @@ class Recipe:
             client_api=client_api,
             dataset=dataset,
             id=_json['id'],
-            creator=_json['creator'],
-            url=_json['url'],
-            title=_json['title'],
-            projectIds=_json['projectIds'],
-            description=_json['description'],
-            ontologyIds=_json['ontologyIds'],
-            instructions=_json['instructions'],
+            creator=_json.get('creator', None),
+            url=_json.get('url', None),
+            title=_json.get('title', None),
+            project_ids=_json.get('projectIds', None),
+            description=_json.get('description', None),
+            ontologyIds=_json.get('ontologyIds', None),
+            instructions=_json.get('instructions', None),
             ui_settings=_json.get('uiSettings', None),
-            metadata=_json['metadata'],
-            examples=_json['examples'],
-            customActions=_json['customActions'])
+            metadata=_json.get('metadata', None),
+            examples=_json.get('examples', None),
+            customActions=_json.get('customActions', None))
 
     @_repositories.default
     def set_repositories(self):
@@ -95,18 +95,12 @@ class Recipe:
         """
         _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(Recipe)._client_api,
                                                               attr.fields(Recipe)._dataset,
+                                                              attr.fields(Recipe).project_ids,
                                                               attr.fields(Recipe).ui_settings,
                                                               attr.fields(Recipe)._repositories))
         _json['uiSettings'] = self.ui_settings
+        _json['projectIds'] = self.project_ids
         return _json
-
-    def print(self):
-        """
-        Display
-
-        :return:
-        """
-        miscellaneous.List([self]).print()
 
     def delete(self):
         """
