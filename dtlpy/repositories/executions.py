@@ -1,6 +1,5 @@
 import threading
 import logging
-import datetime
 from urllib.parse import urlencode
 
 from .. import exceptions, entities, repositories
@@ -57,22 +56,28 @@ class Executions:
     def __get_project_id(self, project_id=None, payload=None):
         if project_id is None:
             inputs = payload.get('input', dict())
-            if 'dataset' in inputs:
-                dataset_id = inputs['dataset']['dataset_id']
-                project_id = repositories.Datasets(
-                    client_api=self._client_api, project=self._project).get(dataset_id=dataset_id).projects[0]
-            elif 'item' in inputs:
-                item_id = inputs['item']['item_id']
-                project_id = repositories.Items(
-                    client_api=self._client_api).get(item_id=item_id).dataset.projects[0]
-            elif 'annotation' in inputs:
-                annotation_id = inputs['annotation']['annotation_id']
-                project_id = repositories.Annotations(
-                    client_api=self._client_api).get(annotation_id=annotation_id).dataset.projects[0]
-            elif self._project is not None:
-                project_id = self._project.id
-            else:
-                raise exceptions.PlatformException('400', 'Please provide a project id')
+            # go over all inputs and fins project id
+            for key, val in inputs.items():
+                if 'dataset_id' in val:
+                    dataset_id = val['dataset_id']
+                    project_id = repositories.Datasets(
+                        client_api=self._client_api, project=self._project).get(dataset_id=dataset_id).projects[0]
+                    break
+                elif 'item_id' in val:
+                    item_id = val['item_id']
+                    project_id = repositories.Items(client_api=self._client_api).get(item_id=item_id).dataset.projects[0]
+                    break
+                elif 'annotation_id' in val:
+                    annotation_id = val['annotation_id']
+                    project_id = repositories.Annotations(
+                        client_api=self._client_api).get(annotation_id=annotation_id).dataset.projects[0]
+                    break
+            if project_id is None:
+                # if still None - get from current repository
+                if self._project is not None:
+                    project_id = self._project.id
+                else:
+                    raise exceptions.PlatformException('400', 'Please provide a project id')
 
         return project_id
 
@@ -139,8 +144,6 @@ class Executions:
         else:
             payload['functionName'] = 'run'
 
-        # start time
-        start = datetime.datetime.utcnow().isoformat()
         # request url
         url_path = '/executions/{service_id}'.format(service_id=service_id)
         success, response = self._client_api.gen_request(req_type='post',
@@ -171,7 +174,7 @@ class Executions:
             return execution.output
         return execution
 
-    def list(self, service_id=None, page_offset=0, page_size=1000, order_by_type=None,
+    def list(self, service_id=None, page_offset=0, page_size=1000, order_by_type=None, function_name=None,
              order_by_direction=None, project_id=None, status=None, resource_type=None, resource_id=None):
         """
         List service executions
@@ -196,12 +199,13 @@ class Executions:
                                        order_by_type=order_by_type,
                                        execution_status=status,
                                        execution_resource_id=resource_id,
+                                       execution_function_name=function_name,
                                        execution_resource_type=resource_type)
         paged.get_page()
         return paged
 
     def get_list(self, service_id=None, project_id=None, page_offset=None, page_size=None, order_by_type=None,
-                 order_by_direction=None, status=None, resource_type=None, resource_id=None):
+                 order_by_direction=None, status=None, resource_type=None, resource_id=None, function_name=None):
         """
         List service executions
         :return:
@@ -214,7 +218,8 @@ class Executions:
             'pageSize': page_size,
             'status': status,
             'resourceType': resource_type,
-            'resourceId': resource_id
+            'resourceId': resource_id,
+            'functionName': function_name
         }
 
         if service_id is not None:

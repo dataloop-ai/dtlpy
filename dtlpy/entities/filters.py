@@ -23,6 +23,7 @@ class Filters:
         self.show_hidden = False
         self.show_dirs = False
         self.join = None
+        self.recursive = True
         self._ref_task = False
         self._ref_assignment = False
         self._ref_op = None
@@ -75,25 +76,9 @@ class Filters:
             method = self.method
 
         # add ** if doesnt exist
-        if self.resource == 'items':
-            if field == 'type':
-                if (isinstance(values, str) and values == 'dir') or (isinstance(values, list) and 'dir' in values):
-                    self.show_dirs = True
-            elif field == 'filename':
-                if isinstance(values, str):
-                    if not values.endswith('*') and not os.path.splitext(values)[-1].startswith('.'):
-                        if values.endswith('/'):
-                            values = values + '**'
-                        else:
-                            values = values + '/**'
-                elif isinstance(values, list):
-                    for i_value, value in enumerate(values):
-                        if isinstance(value, str):
-                            if not value.endswith('*') and not os.path.splitext(value)[-1].startswith('.'):
-                                if value.endswith('/'):
-                                    values[i_value] = value + '**'
-                                else:
-                                    values[i_value] = value + '/**'
+        if self.resource == 'items' and field == 'type':
+            if (isinstance(values, str) and values == 'dir') or (isinstance(values, list) and 'dir' in values):
+                self.show_dirs = True
 
         # create SingleFilter object and add to self.filter_list
         if method == 'or':
@@ -146,61 +131,87 @@ class Filters:
         else:
             return False
 
+    def __filters_list_to_dict(self):
+        filters_dict = dict()
+
+        if len(self.or_filter_list) > 0:
+            or_filters = list()
+            for single_filter in self.or_filter_list:
+                or_filters.append(single_filter.prepare(recursive=self.recursive and self.resource == 'items'))
+            filters_dict['$or'] = or_filters
+
+        if len(self.and_filter_list) > 0:
+            and_filters = list()
+            for single_filter in self.and_filter_list:
+                and_filters.append(single_filter.prepare(recursive=self.recursive and self.resource == 'items'))
+            filters_dict['$and'] = and_filters
+
+        # add items defaults
+        if self.resource == 'items':
+            if not self.show_hidden:
+                if '$and' not in filters_dict:
+                    filters_dict['$and'] = list()
+                filters_dict['$and'] += Filters.hidden()
+            if not self.show_dirs:
+                if '$and' not in filters_dict:
+                    filters_dict['$and'] = list()
+                filters_dict['$and'] += Filters.no_dirs()
+
+        return filters_dict
+
+    def __generate_custom_query(self):
+        filters_dict = dict()
+        if 'filter' in self.custom_filter or 'join' in self.custom_filter:
+            if 'filter' in self.custom_filter:
+                filters_dict = self.custom_filter['filter']
+            self.join = self.custom_filter.get('join', self.join)
+        else:
+            filters_dict = self.custom_filter
+        return filters_dict
+
+    def __generate_ref_query(self):
+        refs = list()
+        if self._ref_task:
+            task_refs = list()
+            if not isinstance(self._ref_task_id, list):
+                self._ref_task_id = [self._ref_task_id]
+
+            for ref_id in self._ref_task_id:
+                task_refs.append({'type': 'task', 'id': ref_id})
+
+            refs += task_refs
+
+        if self._ref_assignment:
+            assignment_refs = list()
+            if not isinstance(self._ref_assignment_id, list):
+                self._ref_assignment_id = [self._ref_assignment_id]
+
+            for ref_id in self._ref_assignment_id:
+                assignment_refs.append({'type': 'assignment', 'id': ref_id})
+
+            refs += assignment_refs
+
     def prepare(self, operation=None, update=None):
         """
         To dictionary for platform call
         :return: dict
         """
-        # filters exist
+        ########
+        # json #
+        ########
         if self.__has_filters() or self.custom_filter is not None:
-            ###############
-            # create json #
-            ###############
+            # filters exist
+            # create json
             _json = dict()
 
-            ###########
-            # filters #
-            ###########
             # add filters to json
             if self.custom_filter is None:
-                filters_dict = dict()
-
-                if len(self.or_filter_list) > 0:
-                    or_filters = list()
-                    for single_filter in self.or_filter_list:
-                        or_filters.append(single_filter.prepare())
-                    filters_dict['$or'] = or_filters
-
-                if len(self.and_filter_list) > 0:
-                    and_filters = list()
-                    for single_filter in self.and_filter_list:
-                        and_filters.append(single_filter.prepare())
-                    filters_dict['$and'] = and_filters
-
-                # add items defaults
-                if self.resource == 'items':
-                    if not self.show_hidden:
-                        if '$and' not in filters_dict:
-                            filters_dict['$and'] = list()
-                        filters_dict['$and'] += Filters.hidden()
-                    if not self.show_dirs:
-                        if '$and' not in filters_dict:
-                            filters_dict['$and'] = list()
-                        filters_dict['$and'] += Filters.no_dirs()
-
-                # add to json
-                _json['filter'] = filters_dict
-
+                _json['filter'] = self.__filters_list_to_dict()
             else:
-                if 'filter' in self.custom_filter or 'join' in self.custom_filter:
-                    if 'filter' in self.custom_filter:
-                        _json['filter'] = self.custom_filter['filter']
-                    self.join = self.custom_filter.get('join', self.join)
-                else:
-                    _json['filter'] = self.custom_filter
+                _json['filter'] = self.__generate_custom_query()
 
-        # no filters
         else:
+            # no filters
             _json = self.default_filter
 
         ##################
@@ -218,36 +229,14 @@ class Filters:
         if self.join is not None:
             _json['join'] = self.join
 
-        #############
-        # operation #
-        #############
+        #####################
+        # operation or refs #
+        #####################
         if self._ref_assignment or self._ref_task:
-            refs = list()
-            if self._ref_task:
-                task_refs = list()
-                if not isinstance(self._ref_task_id, list):
-                    self._ref_task_id = [self._ref_task_id]
-
-                for ref_id in self._ref_task_id:
-                    task_refs.append({'type': 'task', 'id': ref_id})
-
-                refs += task_refs
-
-            if self._ref_assignment:
-                assignment_refs = list()
-                if not isinstance(self._ref_assignment_id, list):
-                    self._ref_assignment_id = [self._ref_assignment_id]
-
-                for ref_id in self._ref_assignment_id:
-                    assignment_refs.append({'type': 'assignment', 'id': ref_id})
-
-                refs += assignment_refs
-
             _json['references'] = {
                 'operation': self._ref_op,
-                'refs': refs
+                'refs': self.__generate_ref_query()
             }
-
         elif operation is not None:
             if operation == 'update':
                 _json[operation] = {'metadata': {'user': update}}
@@ -288,13 +277,31 @@ class SingleFilter:
         self.values = values
         self.operator = operator
 
-    def prepare(self):
+    @staticmethod
+    def __add_recursive(value):
+        if not value.endswith('*') and not os.path.splitext(value)[-1].startswith('.'):
+            if value.endswith('/'):
+                value = value + '**'
+            else:
+                value = value + '/**'
+        return value
+
+    def prepare(self, recursive=False):
         _json = dict()
+        values = self.values
+
+        if recursive and self.field == 'filename':
+            if isinstance(values, str):
+                values = self.__add_recursive(value=values)
+            elif isinstance(values, list):
+                for i_value, value in enumerate(values):
+                    values[i_value] = self.__add_recursive(value=value)
+
         if self.operator is None:
-            _json[self.field] = self.values
+            _json[self.field] = values
         else:
             value = dict()
-            value['${}'.format(self.operator)] = self.values
+            value['${}'.format(self.operator)] = values
             _json[self.field] = value
 
         return _json

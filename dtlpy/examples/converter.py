@@ -74,9 +74,8 @@ def main():
     # custom conversion function
     # converts 1 custom annotation to dataloop annotation
     # dataloop annotation
-    def my_converter(annotation, item):
+    def my_converter(annotation):
         """
-        :param item: item - item
         :param annotation: custom annotation format
         :type annotation: dict
         :return: dataloop Annotation object
@@ -85,8 +84,7 @@ def main():
                                                                      bottom=annotation['bottom'],
                                                                      left=annotation['left'],
                                                                      right=annotation['right'],
-                                                                     label=annotation['label']),
-                                        item=item)
+                                                                     label=annotation['label']))
 
         return annotation
 

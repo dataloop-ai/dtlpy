@@ -11,10 +11,17 @@ class Triggers:
     Triggers repository
     """
 
-    def __init__(self, client_api, project=None, service=None):
+    def __init__(self, client_api, project=None, service=None, project_id=None):
         self._client_api = client_api
         self._project = project
         self._service = service
+        if project_id is None:
+            if self._project is not None:
+                project_id = self._project.id
+            elif self._service is not None:
+                project_id = self._service.project_id
+
+        self._project_id = project_id
 
     ############
     # entities #
@@ -56,11 +63,10 @@ class Triggers:
     # methods #
     ###########
     def create(self, service_id=None, webhook_id=None, name=None, filters=None, function_name=None,
-               resource=None, actions=None, active=True, execution_mode=None, project_id=None, **kwargs):
+               resource='Item', actions=None, active=True, execution_mode=None, project_id=None, **kwargs):
         """
         Create a Trigger
 
-        :param scope:
         :param function_name:
         :param project_id:
         :param webhook_id:
@@ -134,10 +140,10 @@ class Triggers:
             spec['executionMode'] = 'Once'
 
         # payload
-        if self._project is None and project_id is None:
+        if self._project_id is None and project_id is None:
             raise exceptions.PlatformException('400', 'Please provide a project id')
         elif project_id is None:
-            project_id = self._project.id
+            project_id = self._project_id
 
         payload = {
             'active': active,
@@ -270,8 +276,8 @@ class Triggers:
 
         # either project or service
         if project_id is None:
-            if self._project is not None:
-                project_id = self._project.id
+            if self._project_id is not None:
+                project_id = self._project_id
         if service_id is None:
             if self._service is not None:
                 service_id = self._service.id

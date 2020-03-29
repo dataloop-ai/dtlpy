@@ -29,6 +29,7 @@ class Converter:
         self.dataset = None
         self.item = None
         self.save_to_format = None
+        self.xml_template_path = 'voc_annotation_template.xml'
 
     def convert_dataset(self,
                         dataset,
@@ -90,6 +91,7 @@ class Converter:
                 converter = utilities.Converter()
                 converter.dataset = self.dataset
                 converter.save_to_format = self.save_to_format
+                converter.xml_template_path = self.xml_template_path
 
                 if annotation_filter is None:
                     method = converter.convert_file
@@ -406,7 +408,7 @@ class Converter:
             save_to = save_to + '.xml'
             environment = Environment(loader=PackageLoader('dtlpy', 'assets'),
                                       keep_trailing_newline=True)
-            annotation_template = environment.get_template('voc_annotation_template.xml')
+            annotation_template = environment.get_template(self.xml_template_path)
             with open(save_to, 'w') as file:
                 content = annotation_template.render(**output_annotation)
                 file.write(content)
@@ -508,7 +510,8 @@ class Converter:
                         "annotation": annotation,
                         "i_annotation": i_annotation,
                         "conversion_func": conversion_func,
-                        'annotations': annotations
+                        'annotations': annotations,
+                        'from_format': 'dataloop'
                     },
                 )
         pool.close()
@@ -626,7 +629,13 @@ class Converter:
         except Exception:
             annotations[i_annotation] = 'Error converting annotation: {}'.format(traceback.format_exc())
 
-    def custom_format(self, annotation, i_annotation, conversion_func, annotations=None):
+    def custom_format(self, annotation, i_annotation, conversion_func, annotations=None, from_format=None):
+        if from_format == 'dataloop' and isinstance(annotation, dict):
+            client_api = None
+            if self.item is not None:
+                client_api = self.item._client_api
+            annotation = entities.Annotation.from_json(_json=annotation, item=self.item, client_api=client_api)
+
         annotations[i_annotation] = conversion_func(annotation)
         if isinstance(annotations[i_annotation], entities.Annotation) and annotations[i_annotation].item is None:
             annotations[i_annotation].item = self.item

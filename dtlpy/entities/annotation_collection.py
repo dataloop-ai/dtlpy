@@ -1,8 +1,12 @@
-import os
+import mimetypes
 import traceback
+import datetime
+import webvtt
 import logging
 import attr
 import json
+import os
+
 import numpy as np
 from PIL import Image
 
@@ -221,10 +225,10 @@ class AnnotationCollection(entities.BaseEntity):
         :return:
         """
         dir_name, ex = os.path.splitext(filepath)
-        if not ex:
-            filepath = '{}/{}.png'.format(dir_name, os.path.splitext(self.item.name)[0])
 
         if annotation_format == 'json':
+            if not ex:
+                filepath = '{}/{}.json'.format(dir_name, os.path.splitext(self.item.name)[0])
             _json = {'_id': self.item.id,
                      'filename': self.item.filename}
             annotations = list()
@@ -234,6 +238,8 @@ class AnnotationCollection(entities.BaseEntity):
             with open(filepath, 'w+') as f:
                 json.dump(_json, f, indent=2)
         elif annotation_format in ["mask", "instance", "img_mask"]:
+            if not ex:
+                filepath = '{}/{}.png'.format(dir_name, os.path.splitext(self.item.name)[0])
             image = None
             if annotation_format == "img_mask":
                 annotation_format = "mask"
@@ -246,7 +252,29 @@ class AnnotationCollection(entities.BaseEntity):
                              annotation_format=annotation_format)
             img = Image.fromarray(mask.astype(np.uint8))
             img.save(filepath)
-
+        elif annotation_format == 'vtt':
+            if not ex:
+                filepath = '{}/{}.vtt'.format(dir_name, os.path.splitext(self.item.name)[0])
+            annotations_dict = [{'start_time': annotation.start_time,
+                                 'end_time': annotation.end_time,
+                                 'text': annotation.coordinates['text']} for annotation in self.annotations if
+                                annotation.type in ['subtitle']]
+            sorted_by_start_time = sorted(annotations_dict, key=lambda i: i['start_time'])
+            vtt = webvtt.WebVTT()
+            for ann in sorted_by_start_time:
+                s = str(datetime.timedelta(seconds=ann['start_time']))
+                if len(s.split('.')) == 1:
+                    s += '.000'
+                e = str(datetime.timedelta(seconds=ann['end_time']))
+                if len(e.split('.')) == 1:
+                    e += '.000'
+                caption = webvtt.Caption(
+                    '{}'.format(s),
+                    '{}'.format(e),
+                    '{}'.format(ann['text'])
+                )
+                vtt.captions.append(caption)
+            vtt.save(filepath)
         else:
             raise PlatformException(error="400", message="Unknown annotation option: {}".format(annotation_format))
         return filepath
@@ -270,7 +298,7 @@ class AnnotationCollection(entities.BaseEntity):
         return self.item.annotations.upload(self.annotations)
 
     @staticmethod
-    def _json_to_annotation(item, w_json):
+    def _json_to_annotation(item, w_json, is_video=None, fps=25):
         try:
             # ignore notes
             if w_json['type'] == 'note':
@@ -278,6 +306,8 @@ class AnnotationCollection(entities.BaseEntity):
                 status = False
             else:
                 annotation = entities.Annotation.from_json(_json=w_json,
+                                                           fps=fps,
+                                                           is_video=is_video,
                                                            item=item)
                 status = True
         except Exception:
@@ -286,10 +316,25 @@ class AnnotationCollection(entities.BaseEntity):
         return status, annotation
 
     @classmethod
-    def from_json(cls, _json, item=None):
+    def from_json(cls, _json, item=None, is_video=None, fps=25):
+        if item is None:
+            if 'filename' in _json:
+                ext = os.path.splitext(_json['filename'])[-1]
+                try:
+                    is_video = 'video' in mimetypes.types_map[ext.lower()]
+                except Exception:
+                    logger.info("Unknown annotation's item type. Default item type is set to: image")
+            else:
+                logger.info("Unknown annotation's item type. Default item type is set to: image")
+
+        if 'annotations' in _json:
+            _json = _json['annotations']
+
         results = [None for _ in range(len(_json))]
         for i_json, single_json in enumerate(_json):
             results[i_json] = cls._json_to_annotation(item=item,
+                                                      fps=fps,
+                                                      is_video=is_video,
                                                       w_json=single_json)
         # log errors
         _ = [logger.warning(j[1]) for j in results if j[0] is False and j[1] != 'note']
@@ -297,6 +342,17 @@ class AnnotationCollection(entities.BaseEntity):
         annotations = [j[1] for j in results if j[0] is True]
         annotations.sort(key=lambda x: x.label)
         return cls(annotations=annotations, item=item)
+
+    def from_vtt_file(self, filepath):
+        for caption in webvtt.read(filepath):
+            h, m, s = caption.start.split(':')
+            start_time = datetime.timedelta(hours=float(h), minutes=float(m), seconds=float(s)).total_seconds()
+            h, m, s = caption.end.split(':')
+            end_time = datetime.timedelta(hours=float(h), minutes=float(m), seconds=float(s)).total_seconds()
+
+            self.add(annotation_definition=entities.Subtitle(text=caption.text, label='Text'),
+                     start_time=start_time,
+                     end_time=end_time)
 
     def from_instance_mask(self, mask, instance_map=None):
         if instance_map is None:

@@ -86,24 +86,6 @@ class FunctionIO:
             return 'config'
 
     # noinspection PyUnusedLocal
-    @name.validator
-    def check_name(self, attribute, value):
-        name_ok = True
-        expected_name = 'Expected name for type {} is: '.format(self.type)
-        if self.type == 'Item' and value != 'item':
-            expected_name += 'item'
-            name_ok = False
-        elif self.type == 'Dataset' and value != 'dataset':
-            expected_name += 'dataset'
-            name_ok = False
-        elif self.type == 'Annotation' and value != 'annotation':
-            expected_name += 'dataset'
-            name_ok = False
-
-        if not name_ok:
-            raise exceptions.PlatformException('400', 'Invalid input name. {}'.format(expected_name))
-
-    # noinspection PyUnusedLocal
     @type.validator
     def check_type(self, attribute, value):
         if value not in self.INPUT_TYPES:

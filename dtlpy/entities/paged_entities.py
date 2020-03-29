@@ -33,6 +33,7 @@ class PagedEntities:
     _execution_status = attr.ib(default=None, repr=False)
     _execution_resource_type = attr.ib(default=None, repr=False)
     _execution_resource_id = attr.ib(default=None, repr=False)
+    _execution_function_name = attr.ib(default=None, repr=False)
 
     # items list
     items = attr.ib(default=miscellaneous.List(), repr=False)
@@ -150,6 +151,7 @@ class PagedEntities:
                                                                       order_by_direction=self._order_by_direction,
                                                                       resource_type=self._execution_resource_type,
                                                                       resource_id=self._execution_resource_id,
+                                                                      function_name=self._execution_function_name,
                                                                       status=self._execution_status))
         elif isinstance(self.items_repository, repositories.Webhooks):
             return self.process_result(

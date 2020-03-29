@@ -438,8 +438,11 @@ class Downloader:
                         height=img_shape[0],
                         width=img_shape[1],
                     )
-            elif option in ["mask", "instance", "img_mask"]:
-                annotation_filepath = temp_path + ".png"
+            elif option in ["mask", "instance", "img_mask", "vtt"]:
+                if option == 'vtt':
+                    annotation_filepath = temp_path + ".vtt"
+                else:
+                    annotation_filepath = temp_path + ".png"
                 if not os.path.isfile(annotation_filepath) or overwrite:
                     # if not exists OR (exists AND overwrite)
                     if not os.path.exists(os.path.dirname(annotation_filepath)):
@@ -550,7 +553,7 @@ class Downloader:
             else:
                 response = self.get_url_stream(url=url)
 
-        if save_locally:
+        if need_to_download and save_locally:
             # save to file
             if not os.path.exists(os.path.dirname(local_filepath)):
                 # create folder if not exists

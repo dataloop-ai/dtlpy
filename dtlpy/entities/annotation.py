@@ -2,8 +2,6 @@ import numpy as np
 import logging
 import attr
 import json
-import mimetypes
-import os
 from PIL import Image
 
 from .. import entities, PlatformException, repositories
@@ -40,6 +38,7 @@ class Annotation(entities.BaseEntity):
     status = attr.ib(default=None, repr=False)
     object_id = attr.ib(default=None, repr=False)
     automated = attr.ib(default=None, repr=False)
+    hash = attr.ib(default=None, repr=False)
 
     # snapshots
     frames = attr.ib(default=None, repr=False)
@@ -528,9 +527,9 @@ class Annotation(entities.BaseEntity):
             raise PlatformException('400', 'Annotation must have fps in order to perform this action')
 
         if frame_num is None:
-            frame_num = start_time * self.fps
+            frame_num = int(np.round(start_time * self.fps))
         if end_frame_num is None:
-            end_frame_num = end_time * self.fps
+            end_frame_num = int(np.round(end_time * self.fps))
 
         for frame in range(frame_num, end_frame_num):
             self.add_frame(annotation_definition=annotation_definition,
@@ -617,7 +616,7 @@ class Annotation(entities.BaseEntity):
         return True
 
     @classmethod
-    def from_json(cls, _json, item=None, client_api=None, annotations=None):
+    def from_json(cls, _json, item=None, client_api=None, annotations=None, is_video=None, fps=25):
         """
         Create an annotation object from platform json
         :param client_api:
@@ -630,21 +629,13 @@ class Annotation(entities.BaseEntity):
         if _json['type'] == 'note':
             return None
 
-        is_video = False
-
-        if item is None:
-            if 'filename' in _json:
-                ext = os.path.splitext(_json['filename'])[-1]
-                try:
-                    is_video = 'video' in mimetypes.types_map[ext.lower()]
-                except Exception:
-                    logger.info("Unknown annotation's item type. Default item type is set to: image")
+        if is_video is None:
+            if item is None:
+                is_video = False
             else:
-                logger.info("Unknown annotation's item type. Default item type is set to: image")
-        else:
-            # get item type
-            if 'video' in item.mimetype:
-                is_video = True
+                # get item type
+                if 'video' in item.mimetype:
+                    is_video = True
 
         item_url = _json.get('item', item.url if item is not None else None)
         item_id = _json.get('itemId', item.id if item is not None else None)
@@ -678,9 +669,7 @@ class Annotation(entities.BaseEntity):
         ############
         if is_video:
             # get fps
-            if item is None or item.fps is None:
-                fps = 25
-            else:
+            if item is not None and item.fps is not None:
                 fps = item.fps
 
             # get video-only attributes    
@@ -753,6 +742,7 @@ class Annotation(entities.BaseEntity):
             updatedAt=_json['updatedAt'],
             object_id=object_id,
             type=_json['type'],
+            hash=_json.get('hash', None),
             # meta
             metadata=metadata,
             fps=fps,
@@ -772,6 +762,7 @@ class Annotation(entities.BaseEntity):
         # if has frames #
         #################
         if is_video:
+            min_frame = None
             if annotation.type == 'class' or annotation.type == 'subtitle':
                 if end_frame is None:
                     end_frame = start_frame  # eshlomo, this place needs cleanup
@@ -791,7 +782,10 @@ class Annotation(entities.BaseEntity):
                                                           annotation=annotation,
                                                           fps=fps)
                     annotation.frames[frame.frame_num] = frame
-                    annotation.annotation_definition = annotation.frames[min(frames)].annotation_definition
+                    if min_frame is None:
+                        min_frame = frame.frame_num
+                    if frame.frame_num <= min_frame:
+                        annotation.annotation_definition = frame.annotation_definition
             else:
                 # set first frame
                 snapshot = {
@@ -830,6 +824,7 @@ class Annotation(entities.BaseEntity):
         _json = attr.asdict(self,
                             filter=attr.filters.include(attr.fields(Annotation).id,
                                                         attr.fields(Annotation).url,
+                                                        attr.fields(Annotation).hash,
                                                         attr.fields(Annotation).metadata,
                                                         attr.fields(Annotation).creator,
                                                         attr.fields(Annotation).createdAt,
