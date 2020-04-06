@@ -19,3 +19,4 @@ pathspec
 sphinx-argparse==0.2.5
 sphinxcontrib-websupport==1.1.2
 nbsphinx==0.4.2
+webvtt-py==0.4.3
