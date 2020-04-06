@@ -26,6 +26,13 @@ dtlpy.exceptions module
    :members:
    :undoc-members:
    :show-inheritance:
+dtlpy.new\_instance module
+--------------------------
+
+.. automodule:: dtlpy.new_instance
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 
 Module contents

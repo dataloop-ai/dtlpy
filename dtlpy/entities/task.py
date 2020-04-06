@@ -87,7 +87,7 @@ class Task:
     @property
     def assignments(self):
         if self._assignments is None:
-            self._assignments = repositories.Assignments(client_api=self._client_api, project=self.project)
+            self._assignments = repositories.Assignments(client_api=self._client_api, project=self.project, task=self)
         assert isinstance(self._assignments, repositories.Assignments)
         return self._assignments
 
@@ -130,24 +130,25 @@ class Task:
     def update(self, system_metadata=False):
         return self.tasks.update(task=self, system_metadata=system_metadata)
 
-    def create_qa_task(self, assignees):
-        return self.tasks.create_qa_task(task=self, assignees=assignees)
+    def create_qa_task(self, assignee_ids):
+        return self.tasks.create_qa_task(task=self, assignee_ids=assignee_ids)
 
-    def create_assignment(self, assignment_name, assignee, items=None, filters=None):
+    def create_assignment(self, assignment_name, assignee_id, items=None, filters=None):
         """
 
         :param assignment_name:
-        :param assignee:
+        :param assignee_id:
         :param items:
         :param filters:
         :return:
         """
         assignment = self.assignments.create(assignment_name=assignment_name,
-                                             annotator=assignee,
-                                             project_id=self.projectId,
+                                             assignee_id=assignee_id,
+                                             project_id=self.project_id,
                                              filters=filters,
                                              items=items,
                                              dataset=self.dataset)
+
         assignment.metadata['system']['taskId'] = self.id
         assignment.update(system_metadata=True)
         self.assignmentIds.append(assignment.id)
@@ -155,14 +156,16 @@ class Task:
         self.add_items(filters=filters, items=items)
         return assignment
 
-    def add_items(self, filters=None, items=None):
+    def add_items(self, filters=None, items=None, workload=None, limit=0):
         """
 
+        :param limit:
+        :param workload:
         :param filters:
         :param items:
         :return:
         """
-        return self.tasks.add_items(dataset=self.dataset, task=self, filters=filters, items=items)
+        return self.tasks.add_items(task=self, filters=filters, items=items, workload=workload, limit=limit)
 
     def remove_items(self, filters=None, items=None):
         """

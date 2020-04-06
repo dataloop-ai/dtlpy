@@ -11,7 +11,7 @@ def step_impl(context, input_type):
     inputs = list()
     with_input_entity = False
 
-    if input_type == input_type:
+    if input_type != 'None':
         with_input_entity = True
 
     params = context.table.headings
@@ -70,7 +70,10 @@ def step_impl(context, input_type):
             execution_input=execution_inputs
         )
     else:
-        resource = inputs[0]
+        if inputs:
+            resource = inputs[0]
+        else:
+            resource = 'no_input'
 
         if resource == 'Item':
             context.execution = context.service.executions.create(
@@ -95,6 +98,12 @@ def step_impl(context, input_type):
                 item_id=context.item.id,
                 dataset_id=context.dataset.id,
                 annotation_id=context.annotation.id
+            )
+        elif resource == 'no_input':
+            context.execution = context.service.executions.create(
+                service_id=context.service.id,
+                project_id=context.project.id,
+                sync=sync
             )
 
     if sync:

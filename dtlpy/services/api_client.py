@@ -126,7 +126,7 @@ class ApiClient:
     API calls to Dataloop gate
     """
 
-    def __init__(self, token=None, num_processes=None):
+    def __init__(self, token=None, num_processes=None, cookie_filepath=None):
         ############
         # Initiate #
         ############
@@ -149,7 +149,10 @@ class ApiClient:
         # start refresh token
         self.refresh_token_active = True
 
-        self.cookie_io = CookieIO.init()
+        if cookie_filepath is None:
+            self.cookie_io = CookieIO.init()
+        else:
+            self.cookie_io = CookieIO(path=cookie_filepath)
         assert isinstance(self.cookie_io, CookieIO)
         self.state_io = CookieIO.init_local_cookie(create=False)
         assert isinstance(self.state_io, CookieIO)
@@ -193,6 +196,11 @@ class ApiClient:
                                     'entity.create': num_processes}
         # set logging level
         logging.getLogger('dtlpy').handlers[0].setLevel(logging._nameToLevel[self.verbose.logging_level.upper()])
+
+    def __del__(self):
+        for name, pool in self._thread_pools.items():
+            pool.close()
+            pool.terminate()
 
     @property
     def num_processes(self):
@@ -469,10 +477,15 @@ class ApiClient:
         data = prepared.body
         headers = ['"{0}: {1}"'.format(k, v) for k, v in prepared.headers.items()]
         headers = " -H ".join(headers)
-        self.last_curl = command.format(method=method, headers=headers, data=data, uri=uri)
+        curl = command.format(method=method, headers=headers, data=data, uri=uri)
+        self.last_curl = curl
         self.last_request = prepared
         # send request
-        resp = self.send_session(prepared=prepared, stream=stream)
+        try:
+            resp = self.send_session(prepared=prepared, stream=stream)
+        except Exception:
+            logger.error(self.print_request(req=prepared, to_return=True))
+            raise
         self.last_response = resp
         # handle output
         if not resp.ok:

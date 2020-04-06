@@ -21,15 +21,25 @@ import os
 from .exceptions import PlatformException
 from . import repositories, exceptions, entities, examples
 from .__version__ import version as __version__
-from .entities import Box, Point, Segmentation, Polygon, Ellipse, Classification,Subtitle, Polyline, Filters, Trigger, \
+from .entities import Box, Point, Segmentation, Polygon, Ellipse, Classification, Subtitle, Polyline, Filters, Trigger, \
     AnnotationCollection, Annotation, Item, Codebase, Filters, Execution, Recipe, Ontology, Label, Similarity, \
-    ItemLink, UrlLink, PackageModule, PackageFunction, FunctionIO, Modality
+    ItemLink, UrlLink, PackageModule, PackageFunction, FunctionIO, Modality, Workload, WorkloadUnit
 from .utilities import Converter, BaseServiceRunner, Progress
 from .services import DataloopLogger, ApiClient, check_sdk
+
+# check python version
+if sys.version_info.major != 3:
+    if sys.version_info.minor not in [5, 6]:
+        sys.stderr.write(
+            'Error: Your Python version "{}.{}" is NOT supported by Dataloop SDK dtlpy. '
+            'Supported version are 3.5, 3.6)\n'.format(
+                sys.version_info.major, sys.version_info.minor))
+        sys.exit(-1)
 
 if os.name == "nt":
     # set encoding for windows printing
     os.environ["PYTHONIOENCODING"] = ":replace"
+
 """
 Main Platform Interface module for Dataloop
 """
@@ -53,19 +63,6 @@ if len(logger.handlers) == 0:
     logger.addHandler(sh)
     logger.addHandler(fh)
 
-# check python version
-if sys.version_info.major != 3:
-    if sys.version_info.minor not in [5, 6]:
-        sys.stderr.write(
-            'Error: Your Python version "{}.{}" is NOT supported by Dataloop SDK dtlpy. '
-            'Supported version are 3.5, 3.6)\n'.format(
-                sys.version_info.major, sys.version_info.minor))
-        sys.exit(-1)
-
-"""
-Main Platform Interface module for Dataloop
-"""
-
 ################
 # Repositories #
 ################
@@ -82,7 +79,6 @@ triggers = repositories.Triggers(client_api=client_api)
 assignments = repositories.Assignments(client_api=client_api)
 tasks = repositories.Tasks(client_api=client_api)
 annotations = repositories.Annotations(client_api=client_api)
-verbose = client_api.verbose
 
 if client_api.token_expired():
     logger.error('Token expired. Please login')
@@ -91,72 +87,14 @@ try:
 except Exception:
     logger.debug('Failed to check SDK! Continue without')
 
-
-def login(audience=None, auth0_url=None, client_id=None):
-    """
-    Login to Dataloop platform
-    :param audience: optional -
-    :param auth0_url: optional -
-    :param client_id: optional -
-    :return:
-    """
-    client_api.login(audience=audience, auth0_url=auth0_url, client_id=client_id)
-
-
-# noinspection PyShadowingNames
-def login_token(token):
-    """
-    Login with a token string
-    :param token: valid token-id
-    :return:
-    """
-    client_api.login_token(token=token)
-
-
-def login_secret(email, password, client_id, client_secret, force=False):
-    """
-    Login with Auth0 clientID and secret
-    :param email: user email
-    :param password: user password
-    :param client_id: auth0 client-id
-    :param client_secret: auth0 secret
-    :param force: force the login (if user did not change and token still valid)
-    :return:
-    """
-
-    client_api.login_secret(email=email,
-                            password=password,
-                            client_id=client_id,
-                            client_secret=client_secret,
-                            force=force)
-
-
-# noinspection PyShadowingNames
-def add_environment(environment, audience, client_id, auth0_url, verify_ssl=True, token=None, alias=None):
-    client_api.add_environment(environment=environment,
-                               audience=audience,
-                               client_id=client_id,
-                               auth0_url=auth0_url,
-                               verify_ssl=verify_ssl,
-                               token=token,
-                               alias=alias)
-
-
-def setenv(env):
-    """
-    Set an environment for API
-    :param env:
-    :return:
-    """
-    client_api.setenv(env=env)
-
-
-def token_expired(t=60):
-    """
-    Check if token is expired
-    :return: bool. True if token expired
-    """
-    return client_api.token_expired(t=t)
+verbose = client_api.verbose
+login = client_api.login
+login_token = client_api.login_token
+login_secret = client_api.login_secret
+add_environment = client_api.add_environment
+setenv = client_api.setenv
+token_expired = client_api.token_expired
+info = client_api.info
 
 
 def token():
@@ -173,15 +111,6 @@ def environment():
     :return: current environment
     """
     return client_api.environment
-
-
-def info(with_token=True):
-    """
-    Return a dictionary with current information: env, user, token
-    :param with_token:
-    :return:
-    """
-    return client_api.info(with_token=with_token)
 
 
 def init():

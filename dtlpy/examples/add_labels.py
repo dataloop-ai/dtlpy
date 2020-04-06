@@ -19,6 +19,15 @@ def main(project_name, dataset_name):
     project = dl.projects.get(project_name=project_name)
     dataset = project.datasets.get(dataset_name=dataset_name)
 
+    #########################
+    # View dataset's labels #
+    #########################
+    # as objects
+    labels = dataset.labels
+
+    # as instance map
+    labels = dataset.instance_map
+
     ###############################
     # add label to dataset entity #
     ###############################
@@ -45,6 +54,11 @@ def main(project_name, dataset_name):
                        'color': (124, 116, 140)}]}
     ]
     dataset.add_labels(label_list=labels)
+
+    #################
+    # Delete Labels #
+    #################
+    dataset.delete_labels(label_names=['Cat', 'Dog'])
 
     ########################################
     # Copy dataset labels to a new dataset #

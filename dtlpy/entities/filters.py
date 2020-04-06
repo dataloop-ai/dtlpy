@@ -191,7 +191,9 @@ class Filters:
 
             refs += assignment_refs
 
-    def prepare(self, operation=None, update=None):
+        return refs
+
+    def prepare(self, operation=None, update=None, query_only=False):
         """
         To dictionary for platform call
         :return: dict
@@ -217,11 +219,12 @@ class Filters:
         ##################
         # filter options #
         ##################
-        if len(self.sort) > 0:
-            _json['sort'] = self.sort
-        _json['page'] = self.page
-        _json['pageSize'] = self.page_size
-        _json['resource'] = self.resource
+        if not query_only:
+            if len(self.sort) > 0:
+                _json['sort'] = self.sort
+            _json['page'] = self.page
+            _json['pageSize'] = self.page_size
+            _json['resource'] = self.resource
 
         ########
         # join #

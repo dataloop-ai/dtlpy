@@ -34,6 +34,7 @@ class Annotation(entities.BaseEntity):
     # meta
     metadata = attr.ib(repr=False)
     fps = attr.ib(repr=False)
+    hash = attr.ib(default=None, repr=False)
     dataset_id = attr.ib(default=None, repr=False)
     status = attr.ib(default=None, repr=False)
     object_id = attr.ib(default=None, repr=False)
@@ -48,6 +49,7 @@ class Annotation(entities.BaseEntity):
     end_frame = attr.ib(default=0, repr=False)
     end_time = attr.ib(default=0, repr=False)
     start_frame = attr.ib(default=0)
+    start_time = attr.ib(default=0)
 
     # temp
     platform_dict = attr.ib(default=None, repr=False)
@@ -261,13 +263,6 @@ class Annotation(entities.BaseEntity):
             self.frames[self.current_frame].fixed = fixed
 
     @property
-    def start_time(self):
-        if len(self.frames) > 0:
-            return self.frames[min(self.frames)].timestamp
-        else:
-            return 0
-
-    @property
     def is_video(self):
         if len(self.frames) == 0:
             return False
@@ -435,11 +430,23 @@ class Annotation(entities.BaseEntity):
     # I/O #
     #######
     @classmethod
-    def new(cls, item=None, annotation_definition=None, object_id=None, automated=None, metadata=None, frame_num=0,
-            parent_id=None):
+    def new(cls,
+            item=None,
+            annotation_definition=None,
+            object_id=None,
+            automated=None,
+            metadata=None,
+            frame_num=None,
+            parent_id=None,
+            start_time=None,
+            height=None,
+            width=None):
         """
         Create a new annotation object annotations
 
+        :param start_time:
+        :param width: annotation item's width
+        :param height: annotation item's height
         :param item: item to annotate
         :param annotation_definition: annotation type object
         :param object_id: object_id
@@ -449,9 +456,13 @@ class Annotation(entities.BaseEntity):
         :param parent_id: add parent annotation ID
         :return: annotation object
         """
+        if frame_num is None:
+            frame_num = 0
+
         # init annotations
         if metadata is None:
             metadata = dict()
+
         # add parent
         if parent_id is not None:
             if 'system' not in metadata:
@@ -478,6 +489,15 @@ class Annotation(entities.BaseEntity):
         if item is not None:
             dataset_url = item.dataset_url
             dataset_id = item.datasetId
+
+        if start_time is None:
+            if fps is not None and frame_num is not None:
+                start_time = frame_num / fps if fps != 0 else 0
+            else:
+                start_time = 0
+
+        if frame_num is None:
+            frame_num = 0
 
         return cls(
             # annotation_definition
@@ -511,6 +531,7 @@ class Annotation(entities.BaseEntity):
             end_frame=frame_num,
             end_time=0,
             start_frame=frame_num,
+            start_time=start_time,
 
             # temp
             platform_dict=dict(),
@@ -553,29 +574,26 @@ class Annotation(entities.BaseEntity):
         if self.fps is None:
             raise PlatformException('400', 'Annotation must have fps in order to perform this action')
 
-        # calculate time stamp
-        if frame_num is None:
-            timestamp = 0
-        else:
-            timestamp = frame_num / self.fps
-
         # if this is first frame
         if self.annotation_definition is None:
+
             if frame_num is None:
                 frame_num = 0
             self.start_frame = frame_num
             self.current_frame = frame_num
             self.end_frame = frame_num
+            self.start_time = frame_num / self.fps if self.fps != 0 else 0
+
             frame = FrameAnnotation.new(annotation_definition=annotation_definition,
                                         frame_num=frame_num,
-                                        timestamp=timestamp,
                                         fixed=fixed,
                                         annotation=self)
 
             self.frames[frame_num] = frame
             self.set_frame(frame_num)
-            self.end_time = self.end_frame / self.fps
+            self.end_time = self.end_frame / self.fps if self.fps != 0 else 0
             self.type = annotation_definition.type
+
             return True
 
         # check if type matches annotation
@@ -588,15 +606,11 @@ class Annotation(entities.BaseEntity):
         elif frame_num < self.start_frame:
             self.start_frame = frame_num
 
-        # calculate time stamp
-        timestamp = frame_num / self.fps
-
         # add frame to annotation
         if not self.is_video:
             # create first frame from annotation definition
             frame = FrameAnnotation.new(annotation_definition=self.annotation_definition,
                                         frame_num=self.last_frame,
-                                        timestamp=timestamp,
                                         fixed=fixed,
                                         annotation=self)
 
@@ -605,7 +619,6 @@ class Annotation(entities.BaseEntity):
         # create new time annotations
         frame = FrameAnnotation.new(annotation_definition=annotation_definition,
                                     frame_num=frame_num,
-                                    timestamp=timestamp,
                                     fixed=fixed,
                                     annotation=self)
 
@@ -663,6 +676,10 @@ class Annotation(entities.BaseEntity):
         first_frame_coordinates = list()
         first_frame_number = 0
         first_frame_start_time = 0
+        automated = None
+        end_frame = None
+        start_time = 0
+        start_frame = 0
 
         ############
         # if video #
@@ -672,10 +689,7 @@ class Annotation(entities.BaseEntity):
             if item is not None and item.fps is not None:
                 fps = item.fps
 
-            # get video-only attributes    
-            automated = None
-            end_frame = None
-            start_frame = 0
+            # get video-only attributes
             end_time = 1.5
             # get first frame attribute
             first_frame_attributes = _json.get('attributes', first_frame_attributes)
@@ -685,7 +699,7 @@ class Annotation(entities.BaseEntity):
                 # get first frame number
                 first_frame_number = _json['metadata']['system'].get('frame', first_frame_number)
                 # get first frame start time
-                first_frame_start_time = _json['metadata']['system'].get('startTime', first_frame_start_time)
+                start_time = _json['metadata']['system'].get('startTime', first_frame_start_time)
                 # get first frame number
                 start_frame = _json['metadata']['system'].get('frame', start_frame)
                 automated = _json['metadata']['system'].get('automated', automated)
@@ -700,12 +714,8 @@ class Annotation(entities.BaseEntity):
             # get coordinates
             coordinates = _json.get('coordinates', list())
             # set video only attributes
-            fps = None
-            end_frame = 0
             end_time = 0
-            start_frame = 0
             # get automated
-            automated = None
             if 'system' in metadata:
                 automated = metadata['system'].get('automated', automated)
             # set annotation definition
@@ -740,9 +750,9 @@ class Annotation(entities.BaseEntity):
             createdAt=_json['createdAt'],
             updatedBy=_json['updatedBy'],
             updatedAt=_json['updatedAt'],
+            hash=_json.get('hash', None),
             object_id=object_id,
             type=_json['type'],
-            hash=_json.get('hash', None),
             # meta
             metadata=metadata,
             fps=fps,
@@ -754,7 +764,8 @@ class Annotation(entities.BaseEntity):
             end_frame=end_frame,
             end_time=end_time,
             start_frame=start_frame,
-            annotations=annotations
+            annotations=annotations,
+            start_time=start_time
         )
         annotation.__client_api = client_api
 
@@ -762,16 +773,14 @@ class Annotation(entities.BaseEntity):
         # if has frames #
         #################
         if is_video:
-            min_frame = None
             if annotation.type == 'class' or annotation.type == 'subtitle':
                 if end_frame is None:
-                    end_frame = start_frame  # eshlomo, this place needs cleanup
+                    end_frame = start_frame
                 # for class type annotation create frames
                 # make copies of the head annotations for all frames in it
                 for frame_num in range(start_frame, end_frame + 1):
                     snapshot = {
                         'frame': frame_num,
-                        'startTime': frame_num / fps,
                         'attributes': first_frame_attributes,
                         'coordinates': first_frame_coordinates,
                         'fixed': True,
@@ -782,10 +791,6 @@ class Annotation(entities.BaseEntity):
                                                           annotation=annotation,
                                                           fps=fps)
                     annotation.frames[frame.frame_num] = frame
-                    if min_frame is None:
-                        min_frame = frame.frame_num
-                    if frame.frame_num <= min_frame:
-                        annotation.annotation_definition = frame.annotation_definition
             else:
                 # set first frame
                 snapshot = {
@@ -795,7 +800,6 @@ class Annotation(entities.BaseEntity):
                     'frame': first_frame_number,
                     'label': _json['label'],
                     'type': annotation.type,
-                    'startTime': first_frame_start_time,
                 }
 
                 # add first frame
@@ -810,7 +814,8 @@ class Annotation(entities.BaseEntity):
                                                           annotation=annotation,
                                                           fps=fps)
                     annotation.frames[frame.frame_num] = frame
-                    annotation.annotation_definition = annotation.frames[min(frames)].annotation_definition
+
+            annotation.annotation_definition = annotation.frames[min(frames)].annotation_definition
 
         return annotation
 
@@ -827,6 +832,7 @@ class Annotation(entities.BaseEntity):
                                                         attr.fields(Annotation).hash,
                                                         attr.fields(Annotation).metadata,
                                                         attr.fields(Annotation).creator,
+                                                        attr.fields(Annotation).hash,
                                                         attr.fields(Annotation).createdAt,
                                                         attr.fields(Annotation).updatedBy,
                                                         attr.fields(Annotation).updatedAt,
@@ -910,7 +916,6 @@ class FrameAnnotation(entities.BaseEntity):
     annotation_definition = attr.ib()
 
     # multi
-    timestamp = attr.ib()
     frame_num = attr.ib()
     fixed = attr.ib()
 
@@ -921,6 +926,11 @@ class FrameAnnotation(entities.BaseEntity):
     @property
     def status(self):
         return self.annotation.status
+
+    @property
+    def timestamp(self):
+        if self.annotation.fps is not None and self.frame_num is not None:
+            return self.frame_num / self.annotation.fps if self.annotation.fps != 0 else None
 
     ####################################
     # annotation definition attributes #
@@ -1042,14 +1052,13 @@ class FrameAnnotation(entities.BaseEntity):
     # I/O #
     #######
     @classmethod
-    def new(cls, annotation, annotation_definition, frame_num, fixed, timestamp=0):
+    def new(cls, annotation, annotation_definition, frame_num, fixed):
         return cls(
             # annotations
             annotation=annotation,
             annotation_definition=annotation_definition,
 
             # multi
-            timestamp=timestamp,
             frame_num=frame_num,
             fixed=fixed
         )
@@ -1060,16 +1069,7 @@ class FrameAnnotation(entities.BaseEntity):
         _json['type'] = annotation.type
         annotation_definition = cls.json_to_annotation_definition(_json=_json)
 
-        frame_num = _json.get('frame', None)
-        timestamp = _json.get('startTime', 0)
-        if frame_num is None:
-            logger.warning(
-                'Missing frame number from annotation. using time stamp, annotation id: %s' % (_json['id']))
-            if fps is not None:
-                frame_num = timestamp * fps
-            else:
-                raise PlatformException('400', 'Cannot get annotation becaue it does not have frame num and item does '
-                                               'not have fps')
+        frame_num = _json.get('frame', annotation.last_frame + 1)
 
         return cls(
             # annotations
@@ -1077,14 +1077,12 @@ class FrameAnnotation(entities.BaseEntity):
             annotation_definition=annotation_definition,
 
             # multi
-            timestamp=timestamp,
             frame_num=frame_num,
             fixed=_json.get('fixed', False)
         )
 
     def to_snapshot(self):
         snapshot_dict = {'frame': self.frame_num,
-                         'startTime': self.timestamp,
                          'fixed': self.fixed,
                          'label': self.label,
                          'attributes': self.attributes,

@@ -303,3 +303,25 @@ class Triggers:
                                                        project=self._project,
                                                        service=self._service))
         return triggers
+
+    def resource_information(self, resource, resource_type, action='Created'):
+        """
+        return which function should run on a item (based on global triggers)
+
+        :param resource: 'Item' / 'Dataset' / etc
+        :param resource_type: dictionary of the resource object
+        :param action: 'Created' / 'Updated' / etc.
+
+        """
+        url = '/trigger-resource-information'
+
+        payload = {'resource': resource_type,
+                   'entity': resource.to_json(),
+                   'action': action}
+        # request
+        success, response = self._client_api.gen_request(req_type='post',
+                                                         path=url,
+                                                         json_req=payload)
+        if not success:
+            raise exceptions.PlatformException(response)
+        return response.json()

@@ -71,6 +71,7 @@ class AnnotationCollection(entities.BaseEntity):
             annotation = entities.Annotation.new(item=self.item,
                                                  annotation_definition=annotation_definition,
                                                  automated=automated,
+                                                 frame_num=frame_num,
                                                  metadata=metadata,
                                                  parent_id=parent_id)
             self.annotations.append(annotation)
@@ -84,6 +85,7 @@ class AnnotationCollection(entities.BaseEntity):
                 # no matching object id found - create new one
                 annotation = entities.Annotation.new(item=self.item,
                                                      annotation_definition=annotation_definition,
+                                                     frame_num=frame_num,
                                                      automated=automated,
                                                      metadata=metadata,
                                                      object_id=object_id,
@@ -350,9 +352,18 @@ class AnnotationCollection(entities.BaseEntity):
             h, m, s = caption.end.split(':')
             end_time = datetime.timedelta(hours=float(h), minutes=float(m), seconds=float(s)).total_seconds()
 
-            self.add(annotation_definition=entities.Subtitle(text=caption.text, label='Text'),
-                     start_time=start_time,
-                     end_time=end_time)
+            start_frame = round(start_time * self.item.fps)
+            annotation_definition = entities.Subtitle(text=caption.text, label='Text')
+            annotation = entities.Annotation.new(
+                annotation_definition=annotation_definition,
+                frame_num=start_frame,
+                item=self.item,
+                start_time=start_time)
+
+            annotation.add_frames(annotation_definition=annotation_definition,
+                                  frame_num=start_frame, end_time=end_time)
+
+            self.annotations.append(annotation)
 
     def from_instance_mask(self, mask, instance_map=None):
         if instance_map is None:

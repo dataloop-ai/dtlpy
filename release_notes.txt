@@ -1,3 +1,18 @@
+Release 1.13.8
+    Features:
+        - tasks and assignments new endpoints
+        - assignments new methods: reassign, redistribute
+        - name param in task/assignments is noe task_name/assignment_name
+        - Workload entity
+        - annotation hash
+        - filters.prepare can generate query only by using param query_only=True
+        - Dtlpy instance generator
+
+    Bugs:
+        - assignments list from task entity wasn't using task id
+        - tasks create uses dataset's project_id as default
+        - filters update task and assignments ref on items
+
 Release 1.8.0
     Features:
         - similarity

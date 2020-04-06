@@ -109,3 +109,5 @@ from tests.features.steps.bots_repo import test_bots_create
 from tests.features.steps.bots_repo import test_bots_list
 from tests.features.steps.bots_repo import test_bots_get
 from tests.features.steps.bots_repo import test_bots_delete
+
+from tests.features.steps.artifacts_repo import test_artifacts_upload

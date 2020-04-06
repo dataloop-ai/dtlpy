@@ -15,6 +15,7 @@ def step_impl(context, package_number):
     inputs = None
     src_path = None
     outputs = None
+    modules = None
 
     params = context.table.headings
     for param in params:
@@ -35,10 +36,18 @@ def step_impl(context, package_number):
         elif param[0] == 'outputs':
             if param[1] != 'None':
                 outputs = param[1]
+        elif param[0] == 'modules':
+            if param[1] != 'None':
+                modules = param[1]
+
+    if modules == 'no_input':
+        func = context.dl.PackageFunction()
+        modules = context.dl.PackageModule(functions=func, name=context.dl.entities.DEFAULT_PACKAGE_MODULE_NAME)
 
     # module = context.dl.entities.DEFAULT_PACKAGE_MODULE
     package = context.project.packages.push(codebase_id=codebase_id,
                                             package_name=package_name,
+                                            modules=modules,
                                             src_path=src_path)
     context.to_delete_packages_ids.append(package.id)
     if package_number == 'first':

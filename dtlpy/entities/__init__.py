@@ -38,7 +38,7 @@ from .package_defaults import DEFAULT_PACKAGE_MODULE, DEFAULT_PACKAGE_NAME, DEFA
 from .time_series import TimeSeries
 from .service import Service
 from .execution import Execution
-from .assignment import Assignment
+from .assignment import Assignment, Workload, WorkloadUnit
 from .task import Task
 from .directory_tree import DirectoryTree
 from .similarity import Similarity

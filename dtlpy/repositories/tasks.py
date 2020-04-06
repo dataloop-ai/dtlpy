@@ -1,4 +1,5 @@
 import logging
+import json
 from .. import exceptions, miscellaneous, entities, repositories
 
 logger = logging.getLogger(name=__name__)
@@ -10,11 +11,20 @@ class Tasks:
     Tasks repository
     """
 
-    def __init__(self, client_api, project=None, dataset=None):
+    def __init__(self, client_api, project=None, dataset=None, project_id=None):
         self._client_api = client_api
         self._project = project
         self._dataset = dataset
         self._assignments = None
+        if project_id is None:
+            if self._project is not None:
+                project_id = self._project.id
+            elif self._dataset is not None:
+                if self._dataset._project is not None:
+                    project_id = self._dataset._project.id
+                elif isinstance(self._dataset.projects, list) and len(self._dataset.projects) > 0:
+                    project_id = self._dataset.projects[0]
+        self._project_id = project_id
 
     ############
     # entities #
@@ -62,7 +72,7 @@ class Tasks:
     def list(self,
              project_ids=None,
              status=None,
-             name=None,
+             task_name=None,
              pages_size=None,
              page_offset=None,
              recipe=None,
@@ -73,7 +83,7 @@ class Tasks:
         """
         Get Annotation Task list
 
-        :param name:
+        :param task_name:
         :param project_ids: list of project ids
         :param assignments:
         :param creator:
@@ -93,8 +103,8 @@ class Tasks:
         if project_ids is not None:
             if not isinstance(project_ids, list):
                 project_ids = [project_ids]
-        elif self.project is not None:
-            project_ids = [self.project.id]
+        elif self._project_id is not None:
+            project_ids = [self._project_id]
         else:
             raise ('400', 'Must provide project')
         project_ids = ','.join(project_ids)
@@ -107,8 +117,8 @@ class Tasks:
             query.append('assignments={}'.format(assignments))
         if status is not None:
             query.append('status={}'.format(status))
-        if name is not None:
-            query.append('name={}'.format(name))
+        if task_name is not None:
+            query.append('name={}'.format(task_name))
         if pages_size is not None:
             query.append('pageSize={}'.format(pages_size))
         if page_offset is not None:
@@ -226,26 +236,40 @@ class Tasks:
         else:
             raise exceptions.PlatformException(response)
 
-    def create_qa_task(self, task, assignees):
+    def create_qa_task(self, task, assignee_ids):
         if isinstance(task, entities.Task):
             raise ValueError('task must be of type "Task". got: {}'.format(type(task)))
         return self.create(task_name='{}_qa'.format(task.name),
                            task_type='qa',
                            task_parent_id=task.id,
-                           assignees=assignees,
+                           assignee_ids=assignee_ids,
                            task_owner=task.creator,
                            project_id=task.project_id,
                            recipe_id=task.recipeId)
 
-    def create(self, task_name, assignees=None, dataset=None, task_owner=None, status=None,
-               task_type='annotation', task_parent_id=None,
+    def create(self,
+               task_name,
+               due_date,
+               assignee_ids=None,
+               workload=None,
+               dataset=None,
+               task_owner=None,
+               status='open',
+               task_type='annotation',
+               task_parent_id=None,
                project_id=None,
-               recipe_id=None, assignments_ids=None, query=None, due_date=None, filters=None, items=None):
+               recipe_id=None,
+               assignments_ids=None,
+               metadata=None,
+               filters=None,
+               items=None):
         """
         Create a new Annotation Task
 
+        :param metadata:
         :param task_name:
-        :param assignees:
+        :param assignee_ids:
+        :param workload:
         :param dataset:
         :param task_owner:
         :param items:
@@ -253,7 +277,6 @@ class Tasks:
         :param assignments_ids:
         :param recipe_id:
         :param due_date:
-        :param query:
         :param project_id:
         :param status:
         :param task_name:
@@ -264,6 +287,15 @@ class Tasks:
         if dataset is None and self._dataset is None:
             raise exceptions.PlatformException('400', 'Please provide param dataset')
 
+        if filters is None and items is None:
+            query = dict()
+        elif filters is None:
+            query = entities.Filters(field='id',
+                                     values=[item.id for item in items],
+                                     operator='in').prepare(query_only=True)
+        else:
+            query = filters.prepare(query_only=True)
+
         if dataset is None:
             dataset = self._dataset
 
@@ -273,51 +305,41 @@ class Tasks:
         if task_type not in ['annotation', 'qa']:
             raise ValueError('task_type must be one of: "annotation", "qa". got: {}'.format(task_type))
 
+        if recipe_id is None:
+            recipe_id = dataset.get_recipe_ids()[0]
+
+        if project_id is None:
+            if self._project_id is not None:
+                project_id = self._project_id
+            else:
+                raise exceptions.PlatformException('400', 'Must provide a project id')
+
+        if workload is None:
+            if assignee_ids is None:
+                workload = entities.Workload()
+            else:
+                workload = entities.Workload.generate(assignee_ids=assignee_ids)
+
+        if assignments_ids is None:
+            assignments_ids = list()
+
         payload = {'name': task_name,
+                   'query': "{}".format(json.dumps(query).replace("'", '"')),
                    'taskOwner': task_owner,
                    'spec': {'type': task_type},
-                   'datasetId': dataset.id}
+                   'datasetId': dataset.id,
+                   'projectId': project_id,
+                   'workload': workload.to_json(),
+                   'assignmentIds': assignments_ids,
+                   'recipeId': recipe_id,
+                   'status': status,
+                   'dueDate': due_date}
 
         if task_parent_id is not None:
             payload['spec']['parentTaskId'] = task_parent_id
 
-        if status is not None:
-            payload['status'] = status
-        else:
-            payload['status'] = 'open'
-
-        if project_id is None:
-            if self._project is not None:
-                project_id = self._project.id
-            else:
-                project_id = dataset.project[0]
-
-        payload['projectId'] = project_id
-
-        if recipe_id is not None:
-            payload['recipeId'] = recipe_id
-
-        if query is not None:
-            payload['query'] = query
-        else:
-            payload['query'] = '{}'
-
-        if due_date is not None:
-            payload['dueDate'] = due_date
-        else:
-            payload['dueDate'] = 0
-
-        assignments = list()
-        if (filters is not None or items is not None) and assignees is not None:
-            assignments = self.__create_assignments(name=task_name, filters=filters, items=items, dataset=dataset,
-                                                    assignees=assignees, project_id=project_id)
-            assignments_ids = [assignment.id for assignment in assignments]
-        elif assignments_ids is not None and not isinstance(assignments_ids, list):
-            assignments_ids = [assignments_ids]
-        else:
-            assignments_ids = list()
-
-        payload['assignmentIds'] = assignments_ids
+        if metadata is not None:
+            payload['metadata'] = metadata
 
         success, response = self._client_api.gen_request(req_type='post',
                                                          path=URL_PATH,
@@ -329,13 +351,8 @@ class Tasks:
                                            dataset=self._dataset)
         else:
             raise exceptions.PlatformException(response)
+
         assert isinstance(task, entities.Task)
-
-        if filters is not None or items is not None:
-            self.add_items(dataset=dataset, filters=filters, items=items, task_id=task.id)
-
-        self.__assign(assignments=assignments, task_id=task.id)
-
         return task
 
     def __assign(self, assignments, task_id):
@@ -372,19 +389,68 @@ class Tasks:
             if filters is not None:
                 filters._nullify_refs()
 
-    def add_items(self, dataset, task=None, task_id=None, filters=None, items=None):
+    # def add_items(self, dataset, task=None, task_id=None, filters=None, items=None):
+    #     """
+    #
+    #     :param task:
+    #     :param filters:
+    #     :param task_id:
+    #     :param dataset:
+    #     :param items:
+    #     :return:
+    #     """
+    #
+    #     return self.__item_operations(dataset=dataset, task_id=task_id, task=task, filters=filters, items=items,
+    #                                   op='create')
+
+    def add_items(self, task=None, task_id=None, filters=None, items=None, workload=None, limit=0):
         """
 
+        :param limit:
+        :param workload:
         :param task:
         :param filters:
         :param task_id:
-        :param dataset:
         :param items:
         :return:
         """
+        if filters is None and items is None:
+            raise exceptions.PlatformException('400', 'Must provide either filters or items list')
 
-        return self.__item_operations(dataset=dataset, task_id=task_id, task=task, filters=filters, items=items,
-                                      op='create')
+        if task is None and task_id is None:
+            raise exceptions.PlatformException('400', 'Must provide either task or task_id')
+
+        if filters is None:
+            filters = entities.Filters(field='id', values=[item.id for item in items], operator='in')
+
+        if workload is None:
+            workload = entities.Workload()
+
+        if task_id is None:
+            task_id = task.id
+
+        payload = {
+            "query": filters.prepare(),
+            "workload": workload.to_json(),
+            "limit": limit
+        }
+
+        url = '{}/{}/addToTask'.format(URL_PATH, task_id)
+
+        success, response = self._client_api.gen_request(req_type='post',
+                                                         path=url,
+                                                         json_req=payload)
+
+        if success:
+            task = entities.Task.from_json(client_api=self._client_api,
+                                           _json=response.json(),
+                                           project=self._project,
+                                           dataset=self._dataset)
+        else:
+            raise exceptions.PlatformException(response)
+
+        assert isinstance(task, entities.Task)
+        return task
 
     def remove_items(self, dataset, task=None, task_id=None, filters=None, items=None):
         """
@@ -420,11 +486,15 @@ class Tasks:
         filters = entities.Filters(field='metadata.system.refs.id', values=[task_id], operator='in')
         return dataset.items.list(filters=filters)
 
-    def __create_assignment(self, name, assignee, dataset=None, project_id=None, items=None, filters=None):
+    def __create_assignment(self, name, assignee_id, dataset=None, project_id=None, items=None, filters=None):
         if filters is None and items is None:
             raise exceptions.PlatformException('400', 'Must provide either filters or items list')
-        return self.assignments.create(assignment_name=name, annotator=assignee, project_id=project_id, filters=filters,
-                                       items=items, dataset=dataset)
+        return self.assignments.create(assignment_name=name,
+                                       assignee_id=assignee_id,
+                                       project_id=project_id,
+                                       filters=filters,
+                                       items=items,
+                                       dataset=dataset)
 
     @staticmethod
     def __generate_filter(filters, first_id, last_id, last_page):
@@ -441,10 +511,10 @@ class Tasks:
 
         return _json
 
-    def __create_assignments(self, name, dataset, assignees, project_id, filters=None, items=None):
-        num_assignments = len(assignees)
+    def __create_assignments(self, assignment_name, dataset, assignee_ids, project_id, filters=None, items=None):
+        num_assignments = len(assignee_ids)
         assignments = {assignee: None for assignee in
-                       assignees}
+                       assignee_ids}
 
         if filters is not None:
             filters.sort_by(field='id')
@@ -467,9 +537,9 @@ class Tasks:
                     last_page = False
 
                 previous_item_id = first_item_id
-                assignment_name = '{} ({})'.format(name, i_assignment)
+                assignment_name = '{} ({})'.format(assignment_name, i_assignment)
                 assignments[assignment] = self.__create_assignment(name=assignment_name, dataset=dataset,
-                                                                   assignee=assignment, project_id=project_id,
+                                                                   assignee_id=assignment, project_id=project_id,
                                                                    filters=assignment_filters)
         else:
             items_per_assignment = int(len(items) / num_assignments)
@@ -477,8 +547,8 @@ class Tasks:
             end = items_per_assignment
             for assignment in assignments:
                 assignment_items = items[start:end]
-                assignments[assignment] = self.__create_assignment(name=name, dataset=dataset,
-                                                                   assignee=assignment, project_id=project_id,
+                assignments[assignment] = self.__create_assignment(name=assignment_name, dataset=dataset,
+                                                                   assignee_id=assignment, project_id=project_id,
                                                                    items=assignment_items)
                 start = end
                 end = end + items_per_assignment

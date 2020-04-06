@@ -52,14 +52,16 @@ class Assignments:
     ###########
     # methods #
     ###########
-    def list(self, project_ids=None, status=None, name=None, annotator=None, pages_size=None, page_offset=None):
+    def list(self, project_ids=None, status=None, assignment_name=None, assignee_id=None, pages_size=None,
+             page_offset=None, task_id=None):
         """
         Get Assignments list
 
+        :param task_id:
         :param page_offset:
         :param pages_size:
-        :param annotator:
-        :param name:
+        :param assignee_id:
+        :param assignment_name:
         :param status:
         :param project_ids: list of project ids
         :return: List of Assignment objects
@@ -81,14 +83,19 @@ class Assignments:
 
         if status is not None:
             query.append('status={}'.format(status))
-        if name is not None:
-            query.append('name={}'.format(name))
-        if annotator is not None:
-            query.append('annotator={}'.format(annotator))
+        if assignment_name is not None:
+            query.append('name={}'.format(assignment_name))
+        if assignee_id is not None:
+            query.append('annotator={}'.format(assignee_id))
         if pages_size is not None:
             query.append('pageSize={}'.format(pages_size))
         if page_offset is not None:
             query.append('pageOffset={}'.format(page_offset))
+
+        if task_id is None and self._task is not None:
+            task_id = self._task.id
+        if task_id is not None:
+            query.append('taskId={}'.format(task_id))
 
         if len(query) > 0:
             query_string = '&'.join(query)
@@ -168,6 +175,78 @@ class Assignments:
             raise exceptions.PlatformException(response)
         return True
 
+    def reassign(self, assignee_id, assignment=None, assignment_id=None, task=None, task_id=None):
+        """
+        Reassign an assignment
+        :return: Assignment object
+        """
+        if assignment_id is None and assignment is None:
+            raise exceptions.PlatformException('400', 'Must provide either assignment or assignment_id')
+        elif assignment_id is None:
+            assignment_id = assignment.id
+
+        if task_id is None and task is None:
+            raise exceptions.PlatformException('400', 'Must provide either task or task_id')
+        elif task_id is None:
+            task_id = task.id
+
+        url = '/assignments/{}/reassign'.format(assignment_id)
+
+        payload = {
+            'taskId': task_id,
+            'annotator': assignee_id
+        }
+
+        success, response = self._client_api.gen_request(req_type='post',
+                                                         path=url,
+                                                         json_req=payload)
+        if success:
+            if task is None:
+                task = self._task
+            return entities.Assignment.from_json(_json=response.json(),
+                                                 client_api=self._client_api, project=self._project,
+                                                 dataset=self._dataset, task=task)
+        else:
+            raise exceptions.PlatformException(response)
+
+    def redistribute(self, workload, assignment=None, assignment_id=None, task=None, task_id=None):
+        """
+        Redistribute an assignment
+        :return: Assignment object
+        """
+        if assignment_id is None and assignment is None:
+            raise exceptions.PlatformException('400', 'Must provide either assignment or assignment_id')
+        elif assignment_id is None:
+            assignment_id = assignment.id
+
+        if task_id is None and task is None:
+            raise exceptions.PlatformException('400', 'Must provide either task or task_id')
+        elif task_id is None:
+            task_id = task.id
+
+        url = '/assignments/{}/redistribute'.format(assignment_id)
+
+        payload = {
+            'taskId': task_id,
+            'workload': workload.to_json()
+        }
+
+        success, response = self._client_api.gen_request(req_type='post',
+                                                         path=url,
+                                                         json_req=payload)
+        if success:
+            if task is None:
+                task = self._task
+            redistributed_assignments = list()
+            for redistributed_assignment in response.json():
+                redistributed_assignments.append(entities.Assignment.from_json(_json=redistributed_assignment,
+                                                                               client_api=self._client_api,
+                                                                               project=self._project,
+                                                                               dataset=self._dataset, task=task))
+            return miscellaneous.List(redistributed_assignments)
+        else:
+            raise exceptions.PlatformException(response)
+
     def update(self, assignment=None, system_metadata=False):
         """
         Update an assignment
@@ -188,7 +267,10 @@ class Assignments:
         else:
             raise exceptions.PlatformException(response)
 
-    def create(self, assignment_name, annotator, dataset=None, status=None, project_id=None, metadata=None, filters=None, items=None):
+    def create(self, assignment_name, assignee_id,
+               dataset=None, project_id=None,
+               filters=None, items=None,
+               status=None, metadata=None):
         """
         Create a new assignment
         :param dataset:
@@ -197,7 +279,7 @@ class Assignments:
         :param metadata:
         :param project_id:
         :param status:
-        :param annotator:
+        :param assignee_id:
         :param assignment_name:
         :return: Assignment object
         """
@@ -211,7 +293,7 @@ class Assignments:
             dataset = self._dataset
 
         payload = {'name': assignment_name,
-                   'annotator': annotator}
+                   'annotator': assignee_id}
 
         if status is not None:
             payload['status'] = status
