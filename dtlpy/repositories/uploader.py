@@ -140,8 +140,7 @@ class Uploader:
                         for filename in files:
                             _, ext = os.path.splitext(filename)
                             if file_types is None or ext in file_types:
-                                # get full image filepath
-                                filepath = os.path.join(root, filename)
+                                filepath = os.path.join(root, filename)  # get full image filepath
                                 # extract item's size
                                 total_size += os.path.getsize(filepath)
                                 # get annotations file
@@ -150,8 +149,7 @@ class Uploader:
                                     annotations_filepath = filepath.replace(upload_item_element,
                                                                             upload_annotations_element)
                                     # remove image extension
-                                    annotations_filepath, _ = os.path.splitext(
-                                        annotations_filepath)
+                                    annotations_filepath, _ = os.path.splitext(annotations_filepath)
                                     # add json extension
                                     annotations_filepath += ".json"
                                 else:

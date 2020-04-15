@@ -7,9 +7,7 @@ import shutil
 
 @behave.when(u'I upload a file in path "{item_local_path}"')
 def step_impl(context, item_local_path):
-    item_local_path = os.path.join(
-
-        os.environ["DATALOOP_TEST_ASSETS"], item_local_path)
+    item_local_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], item_local_path)
     context.item = context.dataset.items.upload(local_path=item_local_path,
                                                 remote_path=None
                                                 )
@@ -21,8 +19,7 @@ def step_impl(context, item_local_path, option):
         overwrite = True
     else:
         overwrite = False
-    item_local_path = os.path.join(
-        os.environ["DATALOOP_TEST_ASSETS"], item_local_path)
+    item_local_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], item_local_path)
     context.item = context.dataset.items.upload(local_path=item_local_path,
                                                 remote_path=None,
                                                 overwrite=overwrite
@@ -31,8 +28,7 @@ def step_impl(context, item_local_path, option):
 
 @behave.when(u'I upload file in path "{item_local_path}" to remote path "{remote_path}"')
 def step_impl(context, item_local_path, remote_path):
-    item_local_path = os.path.join(
-        os.environ["DATALOOP_TEST_ASSETS"], item_local_path)
+    item_local_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], item_local_path)
     context.item = context.dataset.items.upload(local_path=item_local_path,
                                                 remote_path=remote_path)
 
@@ -53,10 +49,8 @@ def step_impl(context):
 
 @behave.then(u'Item in host when downloaded to "{download_path}" equals item in "{item_local_path}"')
 def step_impl(context, item_local_path, download_path):
-    download_path = os.path.join(
-        os.environ["DATALOOP_TEST_ASSETS"], download_path)
-    file_to_compare = os.path.join(
-        os.environ["DATALOOP_TEST_ASSETS"], item_local_path)
+    download_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], download_path)
+    file_to_compare = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], item_local_path)
 
     context.dataset.items.download(
         filters=None,
@@ -98,8 +92,7 @@ def step_impl(context):
 
 @behave.then(u'Item in host is in folder "{remote_path}"')
 def step_impl(context, remote_path):
-    assert remote_path in context.dataset.items.get(
-        item_id=context.item.id).filename
+    assert remote_path in context.dataset.items.get(item_id=context.item.id).filename
 
 
 @behave.when(u'I upload the file in path "{local_path}", opened as a buffer, with remote name "{remote_name}"')
@@ -151,8 +144,7 @@ def step_impl(context, local_path, remote_path, remote_name):
 
 @behave.then(u'Item in host has name "{remote_name}"')
 def step_impl(context, remote_name):
-    assert remote_name in context.dataset.items.get(
-        item_id=context.item.id).filename
+    assert remote_name in context.dataset.items.get(item_id=context.item.id).filename
 
 
 @behave.then(u"Item was merged to host")
@@ -169,14 +161,12 @@ def step_impl(context):
 def step_impl(context, local_path, illegal_remote_path):
     local_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], local_path)
     # count error logs before
-    context.error_logs_before = sum(
-        [1 for filename in os.listdir(os.getcwd()) if filename.startswith("log_")])
+    context.error_logs_before = sum([1 for filename in os.listdir(os.getcwd()) if filename.startswith("log_")])
     # upload
     context.item = context.dataset.items.upload(local_path=local_path,
                                                 remote_path=illegal_remote_path)
     # count error logs after
-    context.error_logs_after = sum(
-        [1 for filename in os.listdir(os.getcwd()) if filename.startswith("log_")])
+    context.error_logs_after = sum([1 for filename in os.listdir(os.getcwd()) if filename.startswith("log_")])
 
 
 @behave.when(u'I try to upload file in path "{illegal_local_path}"')
