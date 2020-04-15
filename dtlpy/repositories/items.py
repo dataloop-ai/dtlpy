@@ -29,7 +29,8 @@ class Items:
                 raise exceptions.PlatformException(
                     error='400',
                     message='Cannot perform action WITHOUT Dataset entity in Items repository. Please set a dataset')
-            self._dataset = self.datasets.get(dataset_id=self._dataset_id, fetch=None)
+            self._dataset = self.datasets.get(
+                dataset_id=self._dataset_id, fetch=None)
         assert isinstance(self._dataset, entities.Dataset)
         return self._dataset
 
@@ -86,7 +87,8 @@ class Items:
         """
         # prepare request
         success, response = self._client_api.gen_request(req_type="POST",
-                                                         path="/datasets/{}/query".format(self.dataset.id),
+                                                         path="/datasets/{}/query".format(
+                                                             self.dataset.id),
                                                          json_req=filters.prepare())
         if not success:
             raise exceptions.PlatformException(response)
@@ -198,7 +200,8 @@ class Items:
                        "withTaskAnnotationsStatus": with_task_annotations_status}
                    }
         success, response = self._client_api.gen_request(req_type="post",
-                                                         path="/items/{}/clone".format(item_id),
+                                                         path="/items/{}/clone".format(
+                                                             item_id),
                                                          json_req=payload)
         # check response
         if success:
@@ -220,7 +223,8 @@ class Items:
         """
         if item_id is not None:
             success, response = self._client_api.gen_request(req_type="delete",
-                                                             path="/items/{}".format(item_id),
+                                                             path="/items/{}".format(
+                                                                 item_id),
                                                              )
         elif filename is not None:
             if not filename.startswith("/"):
@@ -231,7 +235,8 @@ class Items:
             if len(items) == 0:
                 raise exceptions.PlatformException("404", "Item not found")
             elif len(items) > 1:
-                raise exceptions.PlatformException(error="404", message="More the 1 item exist by the name provided")
+                raise exceptions.PlatformException(
+                    error="404", message="More the 1 item exist by the name provided")
             else:
                 item_id = items[0].id
                 success, response = self._client_api.gen_request(req_type="delete",
@@ -239,10 +244,12 @@ class Items:
         elif filters is not None:
             # prepare request
             success, response = self._client_api.gen_request(req_type="POST",
-                                                             path="/datasets/{}/query".format(self.dataset.id),
+                                                             path="/datasets/{}/query".format(
+                                                                 self.dataset.id),
                                                              json_req=filters.prepare(operation='delete'))
         else:
-            raise exceptions.PlatformException("400", "Must provide item id, filename or filters")
+            raise exceptions.PlatformException(
+                "400", "Must provide item id, filename or filters")
 
         # check response
         if success:
@@ -262,14 +269,16 @@ class Items:
         :param system_metadata: bool
         :return: Item object
         """
-        ref = filters is not None and (filters._ref_task or filters._ref_assignment)
+        ref = filters is not None and (
+            filters._ref_task or filters._ref_assignment)
 
         if system_update_values and not system_metadata:
             logger.warning('system metadata will not be updated because param system_metadata is False')
 
         # check params
         if item is None and filters is None:
-            raise exceptions.PlatformException('400', 'must provide either item or filters')
+            raise exceptions.PlatformException(
+                '400', 'must provide either item or filters')
 
         value_to_update = update_values or system_update_values
 
@@ -290,7 +299,8 @@ class Items:
                                                              path=url_path,
                                                              json_req=json_req)
             if success:
-                logger.debug("Item was updated successfully. Item id: {}".format(item.id))
+                logger.debug(
+                    "Item was updated successfully. Item id: {}".format(item.id))
                 return self.items_entity.from_json(client_api=self._client_api,
                                                    _json=response.json(),
                                                    dataset=self._dataset)
@@ -371,6 +381,7 @@ class Items:
             local_annotations_path=None,
             # upload options
             remote_path="/",
+            remote_name=None,
             file_types=None,
             num_workers=32,
             overwrite=False,
@@ -386,6 +397,7 @@ class Items:
         :param local_path: list of local file, local folder, BufferIO, or url to upload
         :param local_annotations_path: path to dataloop format annotations json files.
         :param remote_path: remote path to save.
+        :param remote_name: remote base name to save.
         :param file_types: list of file type to upload. e.g ['.jpg', '.png']. default is all
         :param num_workers:
         :return: Output (list/single item)
@@ -402,6 +414,7 @@ class Items:
             local_annotations_path=local_annotations_path,
             # upload options
             remote_path=remote_path,
+            remote_name=remote_name,
             file_types=file_types,
             # config
             num_workers=num_workers,
