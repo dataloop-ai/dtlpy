@@ -81,8 +81,8 @@ Filter items by their annotations:
 	filters = Filters()
 
 	# filter by item name
-	# (only items with the string "pets" anywhere in their name)
-	filters.add(field='name', values='*pets*', operator=dl.FiltersOperations.GLOB)
+	# (only items in dir pets)
+	filters.add(field='dir', values='/pets')
 
 	# filter by item's annotations
 	# (only items with annotations labeled "cat")
@@ -115,9 +115,6 @@ This behavior can be changed:
     filters.method = dl.FiltersMethod.OR
 
 When adding a filter, you have some operators available to use:
-
-glob -> string global expressions such as !, *, **
-(or dl.FiltersOperation..GLOB)
 
 eq -> equal
 (or dl.FiltersOperation..EQUAL)
@@ -183,8 +180,8 @@ If you want filter items/annotations by "or" and "and" options you can do so by 
 	filters = Filters()
 
 	# filters with or
-	filters.add(field='name', values='*dogs*', operator=dl.FiltersOperation..GLOB, method=dl.FiltersMethod.OR)
-	filters.add(field='name', values='*cats*', operator=dl.FiltersOperation..GLOB, method=dl.FiltersMethod.OR)
+	filters.add(field='dir', values='/dogs', method=dl.FiltersMethod.OR)
+	filters.add(field='dir', values='/cats', method=dl.FiltersMethod.OR)
 
     # filters with and
 	filters.add(field='annotated', values=True, method=dl.FiltersMethod.AND)
@@ -199,8 +196,8 @@ For the above example, the filter will look something like that:
 
 .. code-block:: python
 
-	{'$or': [{'name': {'$glob': '*dogs*'}},
-             {'name': {'$glob': '*cats*'}}],
+	{'$or': [{'dir': '/dogs'},
+             {'dir': '/cats'}],
      '$and': [{'annotated': True},
               {'metadata.user.is_automated': True},
               {'hidden': False},

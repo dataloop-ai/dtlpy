@@ -18,11 +18,11 @@ def step_impl(context, item_path):
     # import dtlpy as dl
     # assert isinstance(dataset, dl.entities.Dataset)
 
-    directory = None
-    annotated_label = None
-    annotated_type = None
-    name_dir = None
-    metadata = None
+    directory = dict()
+    annotated_label = dict()
+    annotated_type = dict()
+    name_dir = dict()
+    metadata = dict()
 
     params = context.table.headings
     for param in params:

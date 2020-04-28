@@ -1,3 +1,4 @@
+import os
 from collections import namedtuple
 import logging
 import attr
@@ -249,6 +250,55 @@ class Package(entities.BaseEntity):
 
     def open_in_web(self):
         self.packages.open_in_web(package=self)
+
+    @staticmethod
+    def _mockify_input(input_type):
+        _json = dict()
+        if input_type == 'Dataset':
+            _json.update({'dataset_id': 'id'})
+        if input_type == 'Item':
+            _json.update({'item_id': 'id', 'dataset_id': 'id'})
+        if input_type == 'Annotation':
+            _json.update({'annotation_id': 'id', 'item_id': 'id', 'dataset_id': 'id'})
+        return _json
+
+    def mockify(self, local_path=None, module_name=None, function_name=None):
+        if local_path is None:
+            local_path = os.getcwd()
+
+        if module_name is None:
+            if self.modules:
+                module_name = self.modules[0].name
+            else:
+                raise exceptions.PlatformException('400', 'Package has no modules')
+
+        modules = [module for module in self.modules if module.name == module_name]
+        if not modules:
+            raise exceptions.PlatformException('404', 'Module not found: {}'.format(module_name))
+        module = modules[0]
+
+        if function_name is None:
+            funcs = [func for func in module.functions]
+            if funcs:
+                func = funcs[0]
+            else:
+                raise exceptions.PlatformException('400', 'Module: {} has no functions'.format(module_name))
+        else:
+            funcs = [func for func in module.functions if func.name == function_name]
+            if not funcs:
+                raise exceptions.PlatformException('404', 'Function not found: {}'.format(function_name))
+            func = funcs[0]
+
+        mock = dict()
+        for module in self.modules:
+            mock['module_name'] = module.name
+            mock['function_name'] = func.name
+            mock['config'] = {inpt.name: self._mockify_input(input_type=inpt.type) for inpt in module.init_inputs}
+            mock['inputs'] = [{'name': inpt.name, 'value': self._mockify_input(input_type=inpt.type)} for inpt in
+                              func.inputs]
+
+        with open(os.path.join(local_path, 'mock.json'), 'w') as f:
+            json.dump(mock, f)
 
 
 @attr.s

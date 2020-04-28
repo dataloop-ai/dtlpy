@@ -52,8 +52,19 @@ def after_tag(context, tag):
             use_fixture(delete_bots, context)
         except Exception:
             logging.exception('Failed to delete bots')
+    elif tag == 'second_project.delete':
+        try:
+            use_fixture(delete_second_project, context)
+        except Exception:
+            logging.exception('Failed to delete second project')
     else:
         raise ValueError('unknown tag: {}'.format(tag))
+
+
+@fixture
+def delete_second_project(context):
+    if hasattr(context, 'second_project'):
+        context.second_project.delete(True, True)
 
 
 @fixture

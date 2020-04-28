@@ -459,6 +459,8 @@ def get_parser():
                           help="Project name")
     optional.add_argument("-p", "--package-name", dest="package_name", default=None,
                           help="Package name")
+    optional.add_argument("-t", "--package-type", dest="package_type", default=None,
+                          help="Type of package ")
 
     # ls
     a = subparser_parser.add_parser("ls", help="List packages")

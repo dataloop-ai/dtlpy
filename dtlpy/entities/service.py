@@ -126,6 +126,15 @@ class Service(entities.BaseEntity):
         assert isinstance(self._package, entities.Package)
         return self._package
 
+    @property
+    def execution_url(self):
+        return 'CURL -X POST' \
+               '\nauthorization: Bearer <token>' \
+               '\nContent-Type: application/json" -d {' \
+               '\n"input": {<input json>}, ' \
+               '"projectId": "{<project_id>}", ' \
+               '"functionName": "<function_name>"}'
+
     ################
     # repositories #
     ################
@@ -223,10 +232,11 @@ class Service(entities.BaseEntity):
         return self.services.status(service_id=self.id)
 
     def log(self, size=None, checkpoint=None, start=None, end=None, follow=False,
-            execution_id=None, function_name=None, replica_id=None, system=False):
+            execution_id=None, function_name=None, replica_id=None, system=False, view=False):
         """
         Get service logs
 
+        :param view:
         :param system:
         :param end: iso format time
         :param start: iso format time
@@ -247,7 +257,8 @@ class Service(entities.BaseEntity):
                                  execution_id=execution_id,
                                  function_name=function_name,
                                  replica_id=replica_id,
-                                 system=system)
+                                 system=system,
+                                 view=view)
 
     def open_in_web(self):
         self.services.open_in_web(service=self)

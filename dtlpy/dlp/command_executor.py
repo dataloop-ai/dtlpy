@@ -108,7 +108,7 @@ class CommandExecutor:
 
         if args.api == "setenv":
             self.dl.setenv(args.env)
-            logger.info("Platform environment: {}".format(self.dl.environment()))
+            logger.info("Platform environment: {}".format(self.dl.environment))
 
     def projects(self, args):
         if args.projects == "ls":
@@ -410,7 +410,8 @@ class CommandExecutor:
 
         if args.packages == "generate":
             packages = self.utils.get_packages_repo(args=args)
-            packages.generate(name=args.package_name, src_path=os.getcwd())
+            package_type = args.package_type if args.package_type else self.dl.PackageCatalog.DEFAULT_PACKAGE_TYPE
+            packages.generate(name=args.package_name, src_path=os.getcwd(), package_type=package_type)
             self.utils.dl.client_api.state_io.put('package', {'name': args.package_name})
             logger.info('Successfully generated package file')
 

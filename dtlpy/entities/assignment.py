@@ -24,6 +24,7 @@ class Assignment(entities.BaseEntity):
     _assignments = attr.ib(default=None, repr=False)
     _project = attr.ib(default=None, repr=False)
     _dataset = attr.ib(default=None, repr=False)
+    _datasets = attr.ib(default=None, repr=False)
 
     @classmethod
     def from_json(cls, _json, client_api, project=None, task=None, dataset=None):
@@ -58,6 +59,28 @@ class Assignment(entities.BaseEntity):
         assert isinstance(self._project, entities.Project)
         return self._project
 
+    @property
+    def dataset_id(self):
+        dataset_id = self.metadata.get('datasetId', None)
+        if dataset_id is None:
+            system_metadata = self.metadata.get('system', dict())
+            dataset_id = system_metadata.get('datasetId', None)
+        return dataset_id
+
+    @property
+    def datasets(self):
+        if self._datasets is None:
+            self._datasets = repositories.Datasets(client_api=self._client_api, project=self._project)
+        assert isinstance(self._datasets, repositories.Datasets)
+        return self._datasets
+
+    @property
+    def dataset(self):
+        if self._dataset is None:
+            self._dataset = self.datasets.get(dataset_id=self.dataset_id)
+        assert isinstance(self._dataset, entities.Dataset)
+        return self._dataset
+
     def to_json(self):
         """
         Returns platform _json format of object
@@ -84,11 +107,8 @@ class Assignment(entities.BaseEntity):
         :param items:
         :return:
         """
-        if dataset is None and self._dataset is None:
-            raise exceptions.PlatformException('400', 'Please provide dataset')
-
         if dataset is None:
-            dataset = self._dataset
+            dataset = self.dataset
 
         return self.assignments.assign_items(dataset=dataset, assignment_id=self.id, filters=filters, items=items)
 
@@ -100,11 +120,8 @@ class Assignment(entities.BaseEntity):
         :param items:
         :return:
         """
-        if dataset is None and self._dataset is None:
-            raise exceptions.PlatformException('400', 'Please provide dataset')
-
         if dataset is None:
-            dataset = self._dataset
+            dataset = self.dataset
 
         return self.assignments.remove_items(dataset=dataset, assignment_id=self.id, filters=filters, items=items)
 
@@ -114,13 +131,10 @@ class Assignment(entities.BaseEntity):
         :param dataset:
         :return:
         """
-        if dataset is None and self._dataset is None:
-            raise exceptions.PlatformException('400', 'Please provide dataset')
-
         if dataset is None:
-            dataset = self._dataset
+            dataset = self.dataset
 
-        return self.assignments.get_items(dataset=dataset, assignment_id=self.id)
+        return self.assignments.get_items(dataset=dataset, assignment=self)
 
     def reassign(self, assignee_id):
         """
@@ -175,6 +189,10 @@ class Workload:
 
     # platform
     workload = attr.ib(type=list)
+
+    def __iter__(self):
+        for w_l_u in self.workload:
+            yield w_l_u
 
     @workload.default
     def set_workload(self):

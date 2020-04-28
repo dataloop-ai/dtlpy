@@ -32,3 +32,6 @@ from .tasks import Tasks
 from .assignments import Assignments
 from .bots import Bots
 from .webhooks import Webhooks
+from .models import Models
+from .checkpoints import Checkpoints
+from .analytics import Analytics

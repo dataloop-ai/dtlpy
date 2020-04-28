@@ -2,6 +2,7 @@ import importlib
 import logging
 import json
 import os
+from copy import deepcopy
 from shutil import copyfile
 from urllib.parse import urlencode
 from multiprocessing.pool import ThreadPool
@@ -9,6 +10,29 @@ from multiprocessing.pool import ThreadPool
 from .. import entities, repositories, exceptions, utilities, miscellaneous, assets
 
 logger = logging.getLogger(name=__name__)
+
+
+class PackageCatalog:
+    DEFAULT_PACKAGE_TYPE = 'default_package_type'
+    MULTI_MODULE = 'multi_module'
+    MULTI_MODULE_WITH_TRIGGER = 'multi_module_with_trigger'
+    SINGLE_FUNCTION_ITEM = 'single_function_item'
+    SINGLE_FUNCTION_JSON = 'single_function_json'
+    SINGLE_FUNCTION_DATASET = 'single_function_dataset'
+    SINGLE_FUNCTION_ANNOTATION = 'single_function_annotation'
+    SINGLE_FUNCTION_NO_INPUT = 'single_function_no_input'
+    SINGLE_FUNCTION_MULTI_INPUT = 'single_function_multi_input'
+    MULTI_FUNCTION_ITEM = 'multi_function_item'
+    MULTI_FUNCTION_DATASET = 'multi_function_dataset'
+    MULTI_FUNCTION_ANNOTATION = 'multi_function_annotation'
+    MULTI_FUNCTION_NO_INPUT = 'multi_function_no_input'
+    MULTI_FUNCTION_JSON = 'multi_function_json'
+    SINGLE_FUNCTION_ITEM_WITH_TRIGGER = 'single_function_item_with_trigger'
+    SINGLE_FUNCTION_DATASET_WITH_TRIGGER = 'single_function_dataset_with_trigger'
+    SINGLE_FUNCTION_ANNOTATION_WITH_TRIGGER = 'single_function_annotation_with_trigger'
+    MULTI_FUNCTION_ITEM_WITH_TRIGGERS = 'multi_function_item_with_triggers'
+    MULTI_FUNCTION_DATASET_WITH_TRIGGERS = 'multi_function_dataset_with_triggers'
+    MULTI_FUNCTION_ANNOTATION_WITH_TRIGGERS = 'multi_function_annotation_with_triggers'
 
 
 class Packages:
@@ -176,7 +200,7 @@ class Packages:
 
         return local_path
 
-    def push(self, codebase_id=None, src_path=None, package_name=None, modules=None, checkout=False):
+    def push(self, codebase_id=None, src_path=None, package_name=None, modules=None, checkout=False, project=None):
         """
         Push local package
 
@@ -418,7 +442,7 @@ class Packages:
                                        is_global=kwargs.get('is_global', None))
 
     @staticmethod
-    def generate(name=None, src_path=None):
+    def generate(name=None, src_path=None, service_name=None, package_type=PackageCatalog.DEFAULT_PACKAGE_TYPE):
         """
         Generate new package environment
 
@@ -427,31 +451,217 @@ class Packages:
         # name
         if name is None:
             name = 'default_package'
+        if service_name is None:
+            service_name = 'default-service'
 
         # src path
         if src_path is None:
             src_path = os.getcwd()
 
-        with open(assets.paths.ASSETS_PACKAGE_FILEPATH, 'r') as f:
-            package_asset = json.load(f)
-
-        package_asset['name'] = name
-
+        package_asset = Packages._package_json_generator(package_name=name, package_catalog=package_type)
         with open(os.path.join(src_path, assets.paths.PACKAGE_FILENAME), 'w') as f:
             json.dump(package_asset, f, indent=2)
 
         copyfile(assets.paths.ASSETS_GITIGNORE_FILEPATH, os.path.join(src_path, '.gitignore'))
-        copyfile(assets.paths.ASSETS_MOCK_FILEPATH, os.path.join(src_path, assets.paths.MOCK_FILENAME))
-        copyfile(assets.paths.ASSETS_MAIN_FILEPATH, os.path.join(src_path, assets.paths.MAIN_FILENAME))
 
-        with open(assets.paths.ASSETS_SERVICE_FILEPATH, 'r') as f:
-            service_json = json.load(f)
-        service_json = service_json[0]
-        service_json['packageName'] = name
+        if package_type == PackageCatalog.DEFAULT_PACKAGE_TYPE:
+            copyfile(assets.paths.ASSETS_MOCK_FILEPATH, os.path.join(src_path, assets.paths.MOCK_FILENAME))
+        else:
+            with open(os.path.join(src_path, assets.paths.MOCK_FILENAME), 'w') as f:
+                module = entities.PackageModule.from_json(package_asset['modules'][0])
+                function_name = module.functions[0].name
+                json.dump(Packages._mock_json_generator(module=module, function_name=function_name), f)
+
+        main_file_paths = Packages._entry_point_generator(package_catalog=package_type)
+        if len(main_file_paths) == 1:
+            copyfile(main_file_paths[0], os.path.join(src_path, assets.paths.MAIN_FILENAME))
+        else:
+            copyfile(main_file_paths[0], os.path.join(src_path, assets.paths.MODULE_A_FILENAME))
+            copyfile(main_file_paths[1], os.path.join(src_path, assets.paths.MODULE_B_FILENAME))
+
+        service_json = Packages._service_json_generator(package_catalog=package_type,
+                                                        package_name=name,
+                                                        service_name=service_name)
+
         with open(os.path.join(src_path, assets.paths.SERVICE_FILENAME), 'w')as f:
             json.dump(service_json, f, indent=2)
 
         logger.info('Successfully generated package')
+
+    @staticmethod
+    def _mock_json_generator(module, function_name):
+        _json = dict(function_name=function_name, module_name=module.name)
+        funcs = [func for func in module.functions if func.name == function_name]
+        if len(funcs) == 1:
+            func = funcs[0]
+        else:
+            raise exceptions.PlatformException('400', 'Other than 1 functions by the name of: {}'.format(function_name))
+        _json['config'] = {inpt.name: entities.Package._mockify_input(input_type=inpt.type) for inpt in
+                           module.init_inputs}
+        _json['inputs'] = [{'name': inpt.name, 'value': entities.Package._mockify_input(input_type=inpt.type)} for inpt
+                           in func.inputs]
+        return _json
+
+    @staticmethod
+    def _package_json_generator(package_catalog, package_name):
+        if package_catalog == PackageCatalog.DEFAULT_PACKAGE_TYPE:
+            with open(assets.paths.ASSETS_PACKAGE_FILEPATH, 'r') as f:
+                package_asset = json.load(f)
+            package_asset['name'] = package_name
+            return package_asset
+
+        item_input = entities.FunctionIO(name='item', type='Item')
+        annotation_input = entities.FunctionIO(name='annotation', type='Annotation')
+        dataset_input = entities.FunctionIO(name='dataset', type='Dataset')
+        json_input = entities.FunctionIO(name='config', type='Json')
+        func = entities.PackageFunction(name='run')
+        if package_catalog in [PackageCatalog.SINGLE_FUNCTION_ITEM, PackageCatalog.SINGLE_FUNCTION_ITEM_WITH_TRIGGER]:
+            func.inputs = [item_input]
+            modules = entities.PackageModule(functions=func)
+        elif package_catalog in [PackageCatalog.SINGLE_FUNCTION_ANNOTATION,
+                                 PackageCatalog.SINGLE_FUNCTION_ANNOTATION_WITH_TRIGGER]:
+            func.inputs = [annotation_input]
+            modules = entities.PackageModule(functions=func)
+        elif package_catalog in [PackageCatalog.SINGLE_FUNCTION_DATASET,
+                                 PackageCatalog.SINGLE_FUNCTION_DATASET_WITH_TRIGGER]:
+            func.inputs = [dataset_input]
+            modules = entities.PackageModule(functions=func)
+        elif package_catalog in [PackageCatalog.SINGLE_FUNCTION_NO_INPUT]:
+            modules = entities.PackageModule(functions=func)
+        elif package_catalog == PackageCatalog.SINGLE_FUNCTION_JSON:
+            func.inputs = json_input
+            modules = entities.PackageModule(functions=func)
+        elif package_catalog in [PackageCatalog.MULTI_FUNCTION_ITEM, PackageCatalog.MULTI_FUNCTION_ITEM_WITH_TRIGGERS]:
+            func.inputs = [item_input]
+            func.name = 'first_method'
+            second_func = deepcopy(func)
+            second_func.name = 'second_method'
+            modules = entities.PackageModule(functions=[func, second_func])
+        elif package_catalog in [PackageCatalog.MULTI_FUNCTION_ANNOTATION,
+                                 PackageCatalog.MULTI_FUNCTION_ANNOTATION_WITH_TRIGGERS]:
+            func.inputs = [annotation_input]
+            func.name = 'first_method'
+            second_func = deepcopy(func)
+            second_func.name = 'second_method'
+            modules = entities.PackageModule(functions=[func, second_func])
+        elif package_catalog in [PackageCatalog.MULTI_FUNCTION_DATASET,
+                                 PackageCatalog.MULTI_FUNCTION_DATASET_WITH_TRIGGERS]:
+            func.inputs = [dataset_input]
+            func.name = 'first_method'
+            second_func = deepcopy(func)
+            second_func.name = 'second_method'
+            modules = entities.PackageModule(functions=[func, second_func])
+        elif package_catalog in [PackageCatalog.MULTI_FUNCTION_JSON]:
+            func.inputs = [json_input]
+            func.name = 'first_method'
+            second_func = deepcopy(func)
+            second_func.name = 'second_method'
+            modules = entities.PackageModule(functions=[func, second_func])
+        elif package_catalog in [PackageCatalog.MULTI_FUNCTION_NO_INPUT]:
+            func.name = 'first_method'
+            second_func = deepcopy(func)
+            second_func.name = 'second_method'
+            modules = entities.PackageModule(functions=[func, second_func])
+        elif package_catalog in [PackageCatalog.MULTI_MODULE, PackageCatalog.MULTI_MODULE_WITH_TRIGGER]:
+            module_a = entities.PackageModule(functions=func, name='first_module', entry_point='first_module_class.py')
+            module_b = entities.PackageModule(functions=func, name='second_module',
+                                              entry_point='second_module_class.py')
+            modules = [module_a, module_b]
+        elif package_catalog == PackageCatalog.SINGLE_FUNCTION_MULTI_INPUT:
+            func.inputs = [item_input, dataset_input, json_input, annotation_input]
+            modules = entities.PackageModule(functions=func)
+        else:
+            raise exceptions.PlatformException('404', 'Unknown package catalog type: {}'.format(package_catalog))
+
+        if not isinstance(modules, list):
+            modules = [modules]
+
+        _json = {'name': package_name,
+                 'modules': [module.to_json() for module in modules]}
+
+        return _json
+
+    @staticmethod
+    def _service_json_generator(package_catalog, package_name, service_name):
+        triggers = list()
+        with open(assets.paths.ASSETS_SERVICE_FILEPATH, 'r') as f:
+            service_json = json.load(f)[0]
+        if package_catalog == PackageCatalog.DEFAULT_PACKAGE_TYPE:
+            triggers = service_json['triggers']
+        elif 'triggers' in package_catalog:
+            trigger_a = dict(name='first_trigger', filter=dict(), actions=['Created'], function='first_method',
+                             executionMode='Once')
+            trigger_b = dict(name='second_trigger', filter=dict(), actions=['Created'], function='second_method',
+                             executionMode='Once')
+            if 'item' in package_catalog:
+                trigger_a['resource'] = trigger_b['resource'] = 'Item'
+            if 'dataset' in package_catalog:
+                trigger_a['resource'] = trigger_b['resource'] = 'Dataset'
+            if 'annotation' in package_catalog:
+                trigger_a['resource'] = trigger_b['resource'] = 'Annotation'
+            triggers += [trigger_a, trigger_b]
+        elif 'trigger' in package_catalog:
+            trigger = dict(name='trigger_name', filter=dict(), actions=[], function='run',
+                           executionMode='Once')
+            if 'item' in package_catalog:
+                trigger['resource'] = 'Item'
+            if 'dataset' in package_catalog:
+                trigger['resource'] = 'Dataset'
+            if 'annotation' in package_catalog:
+                trigger['resource'] = 'Annotation'
+            triggers += [trigger]
+
+        if service_name is not None:
+            service_json['name'] = service_name
+        if package_name is not None:
+            service_json['packageName'] = package_name
+        if 'multi_module' in package_catalog:
+            service_json['moduleName'] = 'first_module'
+
+        service_json['triggers'] = triggers
+
+        return service_json
+
+    @staticmethod
+    def _entry_point_generator(package_catalog):
+        if package_catalog == PackageCatalog.DEFAULT_PACKAGE_TYPE:
+            paths_to_service_runner = assets.paths.ASSETS_MAIN_FILEPATH
+        elif package_catalog in [PackageCatalog.SINGLE_FUNCTION_ITEM, PackageCatalog.SINGLE_FUNCTION_ITEM_WITH_TRIGGER]:
+            paths_to_service_runner = assets.service_runner_paths.SINGLE_METHOD_ITEM_SR_PATH
+        elif package_catalog in [PackageCatalog.SINGLE_FUNCTION_ANNOTATION,
+                                 PackageCatalog.SINGLE_FUNCTION_ANNOTATION_WITH_TRIGGER]:
+            paths_to_service_runner = assets.service_runner_paths.SINGLE_METHOD_ANNOTATION_SR_PATH
+        elif package_catalog in [PackageCatalog.SINGLE_FUNCTION_DATASET,
+                                 PackageCatalog.SINGLE_FUNCTION_DATASET_WITH_TRIGGER]:
+            paths_to_service_runner = assets.service_runner_paths.SINGLE_METHOD_DATASET_SR_PATH
+        elif package_catalog in [PackageCatalog.SINGLE_FUNCTION_NO_INPUT]:
+            paths_to_service_runner = assets.service_runner_paths.SINGLE_METHOD_SR_PATH
+        elif package_catalog == PackageCatalog.SINGLE_FUNCTION_JSON:
+            paths_to_service_runner = assets.service_runner_paths.SINGLE_METHOD_JSON_SR_PATH
+        elif package_catalog in [PackageCatalog.MULTI_FUNCTION_ITEM, PackageCatalog.MULTI_FUNCTION_ITEM_WITH_TRIGGERS]:
+            paths_to_service_runner = assets.service_runner_paths.MULTI_METHOD_JSON_SR_PATH
+        elif package_catalog in [PackageCatalog.MULTI_FUNCTION_ANNOTATION,
+                                 PackageCatalog.MULTI_FUNCTION_ANNOTATION_WITH_TRIGGERS]:
+            paths_to_service_runner = assets.service_runner_paths.MULTI_METHOD_ANNOTATION_SR_PATH
+        elif package_catalog in [PackageCatalog.MULTI_FUNCTION_DATASET,
+                                 PackageCatalog.MULTI_FUNCTION_DATASET_WITH_TRIGGERS]:
+            paths_to_service_runner = assets.service_runner_paths.MULTI_METHOD_DATASET_SR_PATH
+        elif package_catalog in [PackageCatalog.MULTI_FUNCTION_JSON]:
+            paths_to_service_runner = assets.service_runner_paths.MULTI_METHOD_JSON_SR_PATH
+        elif package_catalog in [PackageCatalog.MULTI_FUNCTION_NO_INPUT]:
+            paths_to_service_runner = assets.service_runner_paths.MULTI_METHOD_SR_PATH
+        elif package_catalog in [PackageCatalog.MULTI_MODULE, PackageCatalog.MULTI_MODULE_WITH_TRIGGER]:
+            paths_to_service_runner = [assets.service_runner_paths.SINGLE_METHOD_ITEM_SR_PATH,
+                                       assets.service_runner_paths.SINGLE_METHOD_ITEM_SR_PATH]
+        elif package_catalog == PackageCatalog.SINGLE_FUNCTION_MULTI_INPUT:
+            paths_to_service_runner = assets.service_runner_paths.SINGLE_METHOD_MULTI_INPUT_SR_PATH
+        else:
+            raise exceptions.PlatformException('404', 'Unknown package catalog type: {}'.format(package_catalog))
+
+        if not isinstance(paths_to_service_runner, list):
+            paths_to_service_runner = [paths_to_service_runner]
+
+        return paths_to_service_runner
 
     @staticmethod
     def is_multithread(inputs):
@@ -710,7 +920,7 @@ class PackageIO:
         self.package_file_path = os.path.join(cwd, assets.paths.PACKAGE_FILENAME)
         self.service_file_path = os.path.join(cwd, assets.paths.SERVICE_FILENAME)
 
-    def read_json(self, resource='packages'):
+    def read_json(self, resource='package'):
         if resource == 'package':
             file_path = self.package_file_path
         else:

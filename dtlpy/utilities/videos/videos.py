@@ -31,8 +31,7 @@ class Videos:
         """
         import ffmpeg
         if not os.path.isfile(filepath):
-            logger.exception('File doesnt exists')
-            raise IOError
+            raise IOError('File doesnt exists: {}'.format(filepath))
         basename, ext = os.path.splitext(filepath)
         # create folder for the frames
         if not os.path.exists(basename):
@@ -51,7 +50,7 @@ class Videos:
                                                                                 'r': str(fps)})
             ffmpeg.overwrite_output(stream).run()
         except Exception as e:
-            logger.exception('ffmpeg error in disassemble:')
+            logger.error('ffmpeg error in disassemble:')
             raise
         return basename
 
@@ -66,8 +65,7 @@ class Videos:
         """
         import ffmpeg
         if not os.path.isfile(filepath):
-            logger.exception('File doesnt exists')
-            raise IOError
+            raise IOError('File doesnt exists: {}'.format(filepath))
         # re encode video without b frame and as mp4
         basename, ext = os.path.splitext(filepath)
         output_filepath = os.path.join(basename, os.path.basename(filepath).replace(ext, '.mp4'))
@@ -119,8 +117,7 @@ class Videos:
         # https://www.ffmpeg.org/ffmpeg-formats.html#Examples-9
 
         if not os.path.isfile(filepath):
-            logger.exception('File doesnt exists')
-            raise IOError
+            raise IOError('File doesnt exists: {}'.format(filepath))
         logger.info('Extracting video information...')
         # call to ffmpeg to get frame rate
         probe = Videos.get_info(filepath)
@@ -136,33 +133,27 @@ class Videos:
             # split by seconds
             split_length = split_seconds
             if split_length <= 0:
-                logger.exception('Split length can\'t be 0')
-                raise ValueError
+                raise ValueError('"split_length" can\'t be 0')
             split_count = int(np.ceil(video_length / split_length))
             list_frames_to_split = [fps * split_length * n for n in range(1, split_count)]
         elif split_chunks is not None:
             # split for known number of chunks
             split_count = split_chunks
             if split_chunks <= 0:
-                logger.exception('Split chunk size can\'t be 0')
-                raise ValueError
+                raise ValueError('"split_chunks" size can\'t be 0')
             split_length = int(np.ceil(video_length / split_chunks))
             list_frames_to_split = [fps * split_length * n for n in range(1, split_count)]
         elif split_pairs is not None:
             if not isinstance(split_pairs, list):
-                logger.exception('"split_times" must be a list of tuples to split at.')
-                raise ValueError
+                raise ValueError('"split_times" must be a list of tuples to split at.')
             if not (isinstance(split_pairs[0], list) or isinstance(split_pairs[0], tuple)):
-                logger.exception('"split_times" must be a list of tuples to split at.')
-                raise ValueError
+                raise ValueError('"split_times" must be a list of tuples to split at.')
             list_frames_to_split = [fps * split_second for segment in split_pairs for split_second in segment]
             split_count = len(list_frames_to_split)
         else:
-            logger.exception('Must input one split option ("split_chunks", "split_time" or "split_pairs")')
-            raise ValueError
+            raise ValueError('Must input one split option ("split_chunks", "split_time" or "split_pairs")')
         if split_count == 1:
-            logger.exception('Video length is less than the target split length.')
-            raise ValueError
+            raise ValueError('Video length is less than the target split length.')
         # to integers
         list_frames_to_split = [int(i) for i in list_frames_to_split]
         # remove 0 if in the first segmetn

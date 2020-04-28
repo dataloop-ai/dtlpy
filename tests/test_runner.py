@@ -83,6 +83,39 @@ def test_feature_file(w_feature_filename):
                                        'try': w_i_try}
 
 
+def create_project_for_alerts(contributors, project_name):
+    project = dl.projects.create(project_name=project_name)
+    for con in contributors:
+        try:
+            project.add_member(email=con, role='developer')
+        except Exception:
+            pass
+    return project
+
+
+def send_alert():
+    recipients = [
+        'aharon@dataloop.ai',
+        'or@dataloop.ai'
+    ]
+
+    project_name = 'DataloopAlerts'
+
+    try:
+        project = dl.projects.get(project_name=project_name)
+    except Exception:
+        project = create_project_for_alerts(contributors=recipients, project_name=project_name)
+
+    title = 'FAILED - PRODUCTION - SDK TESTS'
+    msg = 'SDK tests in production failed'
+
+    for rec in recipients:
+        try:
+            dl.projects._send_mail(project_id=project.id, send_to=rec, title=title, content=msg)
+        except Exception:
+            print('Failed to send mail to: {}'.format(rec))
+
+
 if __name__ == '__main__':
     print('########################################')
     print('# Running test from directory: {}'.format(TEST_DIR))
@@ -147,6 +180,8 @@ if __name__ == '__main__':
     passed = all(all_results)
 
     if not passed:
+        if sys.argv.__len__() > 1 and sys.argv[1] == 'scheduled':
+            send_alert()
         print('-------------- Logs --------------')
         for feature, result in results.items():
             status = result['status']

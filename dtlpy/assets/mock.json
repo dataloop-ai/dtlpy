@@ -1,5 +1,12 @@
 {
+  "config": {},
   "inputs": [
-  ],
-  "config": {}
+    {
+      "name": "item",
+      "value": {
+        "dataset_id": "",
+        "item_id": ""
+      }
+    }
+  ]
 }

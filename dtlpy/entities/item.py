@@ -334,6 +334,21 @@ class Item(entities.BaseEntity):
     def open_in_web(self):
         self.items.open_in_web(item=self)
 
+    def change_status(self, status):
+        if status not in ['completed', 'approved', 'discarded']:
+            raise exceptions.PlatformException('400',
+                                               'Unknown status: {}. Please chose from: completed, approved, discarded'.format(
+                                                   status))
+        try:
+            annotation_definition = entities.Classification(label=status)
+            entities.Annotation.new(item=self, annotation_definition=annotation_definition,
+                                    metadata={'system': {'system': True}}).upload()
+            return True
+        except Exception:
+            logger.error('Error updating status. Please use platform')
+            logger.debug(traceback.format_exc())
+            return False
+
 
 class Modality:
     def __init__(self, _json=None, modality_type=None, ref=None, ref_type='id', name=None):

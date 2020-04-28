@@ -223,7 +223,7 @@ def login(api_client, audience=None, auth0_url=None, client_id=None):
                 login_success = True
         else:
             # if time out passed (in seconds) break
-            logger.exception('Timeout reached: getting token from server')
+            logger.error('Timeout reached: getting token from server')
             raise ConnectionError('Timeout reached: getting token from server')
     except Exception as err:
         logger.exception('Error in http server for getting token')

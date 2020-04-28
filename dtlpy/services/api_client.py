@@ -112,7 +112,11 @@ class Decorators:
             # before the method call
             if inst.token_expired():
                 if inst.renew_token_method() is False:
-                    raise exceptions.PlatformException('600', 'Token expired, Please login.')
+                    raise exceptions.PlatformException('600', 'Token expired, Please login.'
+                                                              '\nSDK login options: dl.login(), dl.login_token(), '
+                                                              'dl.login_secret()'
+                                                              '\nCLI login options: dlp login, dlp login-token, '
+                                                              'dlp login-secret')
             # the actual method call
             result = method(inst, *args, **kwargs)
             # after the method call
@@ -189,6 +193,7 @@ class ApiClient:
         self._num_processes = num_processes
         self._thread_pools = dict()
         self._thread_pools_names = {'item.download': num_processes,
+                                    'item.status_update': num_processes,
                                     'item.page': num_processes,
                                     'annotation.upload': num_processes,
                                     'annotation.download': num_processes,
@@ -208,12 +213,19 @@ class ApiClient:
 
     @num_processes.setter
     def num_processes(self, num_processes):
+        if num_processes == self._num_processes:
+            # same number. no need to do anything
+            return
         self._num_processes = num_processes
         for pool_name in self._thread_pools_names:
             self._thread_pools_names[pool_name] = num_processes
 
         for pool in self._thread_pools:
+            # close the pool
             self._thread_pools[pool].close()
+            # wait for all processes to finish
+            self._thread_pools[pool].join()
+            # terminate pool
             self._thread_pools[pool].terminate()
 
         self._thread_pools = dict()
@@ -754,7 +766,7 @@ class ApiClient:
         if env.startswith('http'):
             if env not in environments.keys():
                 msg = 'Unknown environment. Please add environment to SDK ("add_environment" method)'
-                logger.exception(msg)
+                logger.error(msg)
                 raise ConnectionError(msg)
         else:
             matched_env = [env_url for env_url, env_dict in environments.items() if env_dict['alias'] == env]

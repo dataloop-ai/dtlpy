@@ -251,10 +251,11 @@ class Items:
         else:
             raise exceptions.PlatformException(response)
 
-    def update(self, item=None, filters=None, update_values=None, system_metadata=False):
+    def update(self, item=None, filters=None, update_values=None, system_update_values=None, system_metadata=False):
         """
         Update items metadata
 
+        :param system_update_values: values in system metadata to be updated
         :param update_values: optional field to be updated and new values
         :param filters: optional update filtered items by given filter
         :param item: Item object
@@ -263,13 +264,18 @@ class Items:
         """
         ref = filters is not None and (filters._ref_task or filters._ref_assignment)
 
+        if system_update_values and not system_metadata:
+            logger.warning('system metadata will not be updated because param system_metadata is False')
+
         # check params
         if item is None and filters is None:
             raise exceptions.PlatformException('400', 'must provide either item or filters')
 
-        if item is None and not ref and (update_values is None or not isinstance(update_values, dict)):
+        value_to_update = update_values or system_update_values
+
+        if item is None and not ref and not value_to_update:
             raise exceptions.PlatformException('400',
-                                               'Must provide update_values must be a dictionary to update when updating by filter')
+                                               'Must provide update_values or system_update_values')
 
         # update item
         if item is not None:
@@ -289,14 +295,17 @@ class Items:
                                                    _json=response.json(),
                                                    dataset=self._dataset)
             else:
-                logger.exception("Error while updating item")
+                logger.error("Error while updating item")
                 raise exceptions.PlatformException(response)
         # update by filters
         else:
             # prepare request
+            url_path = "/datasets/{}/query".format(self.dataset.id)
             success, response = self._client_api.gen_request(req_type="POST",
-                                                             path="/datasets/{}/query".format(self.dataset.id),
+                                                             path=url_path,
                                                              json_req=filters.prepare(operation='update',
+                                                                                      system_update=system_update_values,
+                                                                                      system_metadata=system_metadata,
                                                                                       update=update_values))
             if not success:
                 raise exceptions.PlatformException(response)
@@ -410,3 +419,49 @@ class Items:
                                       project_id=item.dataset.project.id,
                                       dataset_id=item.datasetId,
                                       item_id=item.id)
+
+    def update_status(self, status, items=None, item_ids=None, filters=None, dataset=None):
+
+        if items is None and item_ids is None and filters is None:
+            raise exceptions.PlatformException('400', 'Must provide either items, item_ids or filters')
+
+        if self._dataset is None and dataset is None:
+            raise exceptions.PlatformException('400', 'Please provide dataset')
+        elif dataset is None:
+            dataset = self._dataset
+
+        if filters is not None:
+            items = dataset.items.list(filters=filters)
+            item_count = items.items_count
+        elif items is not None:
+            if isinstance(items, entities.PagedEntities):
+                item_count = items.items_count
+            else:
+                if not isinstance(items, list):
+                    items = [items]
+                item_count = len(items)
+                items = [items]
+        else:
+            if not isinstance(items, list):
+                items = [items]
+            item_count = len(items)
+            items = [[dataset.items.get(item_id=item_id, fetched=False) for item_id in item_ids]]
+
+        pool = self._client_api.thread_pools(pool_name='item.status_update')
+        jobs = [None for _ in range(item_count)]
+        # call multiprocess wrapper to run service on each item in list
+        for page in items:
+            for i_item, item in enumerate(page):
+                jobs[i_item] = pool.apply_async(func=item.change_status,
+                                                kwds={'status': status})
+        # wait for jobs to be finish
+        _ = [j.wait() for j in jobs]
+        # get all results
+        results = [j.get() for j in jobs]
+        out_success = [r for r in results if r is True]
+        out_errors = [r for r in results if r is False]
+        if len(out_errors) == 0:
+            logger.debug('Item/s updated successfully. {}/{}'.format(len(out_success), len(results)))
+        else:
+            logger.error(out_errors)
+            logger.error('Item/s updated with {} errors'.format(len(out_errors)))

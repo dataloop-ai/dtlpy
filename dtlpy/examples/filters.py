@@ -22,7 +22,7 @@ def main():
     # add filter - only annotated items
     filters.add(field='annotated', values=True)
     # add filter - filename includes 'dog'
-    filters.add(field='filename', values='*dog*')
+    filters.add(field='filename', values='/dog.jpg')
     # -- time filters -- must be in ISO format and in UTC (offset from local time). converting using datetime package as follows:
     import datetime, time
     timestamp = datetime.datetime(year=2019, month=10, day=27, hour=15, minute=39, second=6,

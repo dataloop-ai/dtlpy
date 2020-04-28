@@ -294,17 +294,14 @@ class VideoPlayer:
         if dataset_id is None:
             self.project = dl.projects.get(project_name=project_name, project_id=project_id)
             if self.project is None:
-                logger.exception('Project doesnt exists. name: %s, id: %s', project_name, project_id)
                 raise ValueError('Project doesnt exists. name: %s, id: %s' % (project_name, project_id))
             self.dataset = self.project.datasets.get(dataset_name=dataset_name, dataset_id=dataset_id)
         else:
             self.dataset = dl.datasets.get(dataset_id=dataset_id)
         if self.dataset is None:
-            logger.exception('Dataset doesnt exists. name: %s, id: %s', dataset_name, dataset_id)
             raise ValueError('Dataset doesnt exists. name: %s, id: %s' % (dataset_name, dataset_id))
         self.item = self.dataset.items.get(filepath=item_filepath, item_id=item_id)
         if self.item is None:
-            logger.exception('Item doesnt exists. name: %s, id: %s', item_filepath, item_id)
             raise ValueError('Item doesnt exists. name: %s, id: %s' % (item_filepath, item_id))
         self.labels = {label.tag: label.rgb for label in self.dataset.labels}
         _, ext = os.path.splitext(self.item.filename[1:])

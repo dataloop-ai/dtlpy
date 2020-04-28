@@ -24,10 +24,14 @@ def step_impl(context):
         elif param[0] == "active":
             active = param[1] == "True"
 
-    context.trigger.filters = filters
-    context.trigger.resource = resource
-    context.trigger.actions = actions
-    context.trigger.active = active
+    if filters is not None:
+        context.trigger.filters = filters
+    if resource is not None:
+        context.trigger.resource = resource
+    if actions is not None:
+        context.trigger.actions = actions
+    if active is not None:
+        context.trigger.active = active
 
     context.trigger_update = context.trigger.update()
 

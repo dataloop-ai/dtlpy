@@ -19,10 +19,10 @@ class Project(entities.BaseEntity):
     creator = attr.ib()
     id = attr.ib()
     name = attr.ib()
-    org = attr.ib()
+    org = attr.ib(repr=False)
     updatedAt = attr.ib(repr=False)
-    role = attr.ib()
-    account = attr.ib()
+    role = attr.ib(repr=False)
+    account = attr.ib(repr=False)
 
     # name change
     feature_constraints = attr.ib()
@@ -37,23 +37,26 @@ class Project(entities.BaseEntity):
     def set_repositories(self):
         reps = namedtuple('repositories',
                           'projects triggers datasets items packages codebases artifacts times_series services '
-                          'executions assignments tasks bots webhooks')
+                          'executions assignments tasks bots webhooks models analytics')
         datasets = repositories.Datasets(client_api=self._client_api, project=self)
 
         r = reps(projects=repositories.Projects(client_api=self._client_api),
                  webhooks=repositories.Webhooks(client_api=self._client_api, project=self),
                  items=repositories.Items(client_api=self._client_api, datasets=datasets),
                  datasets=datasets,
-                 executions=repositories.Executions(client_api=self._client_api),
+                 executions=repositories.Executions(client_api=self._client_api, project=self),
                  triggers=repositories.Triggers(client_api=self._client_api, project=self),
                  packages=repositories.Packages(project=self, client_api=self._client_api),
+                 models=repositories.Models(project=self, client_api=self._client_api),
                  codebases=repositories.Codebases(project=self, client_api=self._client_api),
                  artifacts=repositories.Artifacts(project=self, client_api=self._client_api),
                  times_series=repositories.TimesSeries(project=self, client_api=self._client_api),
                  services=repositories.Services(client_api=self._client_api, project=self),
                  assignments=repositories.Assignments(project=self, client_api=self._client_api),
                  tasks=repositories.Tasks(client_api=self._client_api, project=self),
-                 bots=repositories.Bots(client_api=self._client_api, project=self))
+                 bots=repositories.Bots(client_api=self._client_api, project=self),
+                 analytics=repositories.Analytics(client_api=self._client_api, project=self)
+                 )
         return r
 
     @property
@@ -92,6 +95,11 @@ class Project(entities.BaseEntity):
         return self._repositories.packages
 
     @property
+    def models(self):
+        assert isinstance(self._repositories.models, repositories.Models)
+        return self._repositories.models
+
+    @property
     def codebases(self):
         assert isinstance(self._repositories.codebases, repositories.Codebases)
         return self._repositories.codebases
@@ -125,6 +133,11 @@ class Project(entities.BaseEntity):
     def bots(self):
         assert isinstance(self._repositories.bots, repositories.Bots)
         return self._repositories.bots
+
+    @property
+    def analytics(self):
+        assert isinstance(self._repositories.analytics, repositories.Analytics)
+        return self._repositories.analytics
 
     @property
     def contributors(self):
@@ -224,3 +237,6 @@ class Project(entities.BaseEntity):
         :return:
         """
         self.projects.open_in_web(project=self)
+
+    def add_member(self, email, role='engineer'):
+        return self.projects.add_member(email=email, role=role, project_id=self.id)

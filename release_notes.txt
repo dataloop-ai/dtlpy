@@ -1,3 +1,41 @@
+Release 1.14.2
+    Features:
+        - Plug-119/Apply list by functionName to sdk
+        - DAT-3024/add new tasks/assignments functions to SDK
+        - added logs on general exception in request
+        - added trigger resource information endpoint
+        - del also in api client
+        - added analytics repository
+        - SDK-247/use item information from json when loading annotations
+        - model entity
+        - models repository
+        - checkpoint
+        - ability to provide custom filter in filters initiation
+        - PLUG-211/ package mockify
+        - PLUG-207-Create package type catalog
+        - added mockifier to package generation
+        - execution url for curl request
+        - update system metadata with filters
+        - set link mimetime
+        - Create function from a method
+
+    Bugs:
+        - SDK-155/cant get directory by name
+        - changed root functions to user api client direcly
+        - SDK-162/bugfix-made custom format example work
+        - revert token and env in init
+        - SDK-196/annotation list takes too long - removed min() method from from_json()
+        - removed getattribute from BaseEntity
+        - SDK-198/service.triggers.create failed on project id - using project_id
+        - bugfix - tasks.delete()
+        - bugfix:SDK-236 betted error message on a large codebase zip
+        - PLUG-215- token expired message is more informative
+
+    Tests:
+        - Artifacts
+        - Taks
+        - Assignments
+
 Release 1.13.8
     Features:
         - tasks and assignments new endpoints

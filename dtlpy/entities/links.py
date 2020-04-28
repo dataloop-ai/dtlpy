@@ -1,26 +1,30 @@
 from .. import entities
 from .. import PlatformException
 import os
+import mimetypes
 
 
 class Link:
 
     # noinspection PyShadowingBuiltins
-    def __init__(self, name, type, ref, dataset_id=None):
+    def __init__(self, name, type, ref, mimetype=None, dataset_id=None):
         self.type = type
         self.ref = ref
         self.name = name
         self.dataset_id = dataset_id
+        self.mimetype = mimetype
 
 
 class UrlLink(Link):
 
-    def __init__(self, ref, name=None):
+    def __init__(self, ref, mimetype=None, name=None):
         if name is None:
             name = os.path.split(ref)[-1].replace('/', "").replace("\\", '').replace('.', '')
         # noinspection PyShadowingBuiltins
         type = 'url'
-        super().__init__(name=name, type=type, ref=ref)
+        if not mimetype:
+            mimetype = mimetypes.guess_type(ref)[0] or 'image'
+        super().__init__(name=name, type=type, mimetype=mimetype, ref=ref)
 
     @staticmethod
     def from_list(url_list):

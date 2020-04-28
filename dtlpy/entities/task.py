@@ -17,7 +17,7 @@ class Task:
     url = attr.ib(repr=False)
     task_owner = attr.ib(repr=False)
     creator = attr.ib()
-    dueDate = attr.ib()
+    due_date = attr.ib()
     dataset_id = attr.ib()
     spec = attr.ib()
     recipe_id = attr.ib(repr=False)
@@ -43,7 +43,7 @@ class Task:
             spec=_json.get('spec', None),
             id=_json['id'],
             creator=_json.get('creator', None),
-            dueDate=_json.get('dueDate', 0),
+            due_date=_json.get('dueDate', 0),
             dataset_id=_json.get('datasetId', None),
             recipe_id=_json.get('recipeId', None),
             query=_json.get('query', None),
@@ -66,6 +66,7 @@ class Task:
                                                               attr.fields(Task).dataset_id,
                                                               attr.fields(Task).recipe_id,
                                                               attr.fields(Task).task_owner,
+                                                              attr.fields(Task).due_date,
                                                               attr.fields(Task)._tasks,
                                                               attr.fields(Task)._dataset,
                                                               attr.fields(Task)._current_assignments,
@@ -74,6 +75,7 @@ class Task:
         _json['datasetId'] = self.dataset_id
         _json['recipeId'] = self.recipe_id
         _json['task_owner'] = self.task_owner
+        _json['dueDate'] = self.due_date
         return _json
 
     @property
@@ -87,7 +89,8 @@ class Task:
     @property
     def assignments(self):
         if self._assignments is None:
-            self._assignments = repositories.Assignments(client_api=self._client_api, project=self.project, task=self)
+            self._assignments = repositories.Assignments(client_api=self._client_api, dataset=self._dataset,
+                                                         project=self.project, task=self, project_id=self.project_id)
         assert isinstance(self._assignments, repositories.Assignments)
         return self._assignments
 

@@ -60,7 +60,7 @@ def step_impl(context, log_message):
 
     for i in range(num_tries):
         time.sleep(interval_time)
-        for log in context.service.log():
+        for log in context.service.log(view=False):
             if log_message in log:
                 success = True
                 break

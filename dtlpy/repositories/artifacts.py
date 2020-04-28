@@ -1,4 +1,3 @@
-import os
 import logging
 
 from .. import entities, miscellaneous, PlatformException, exceptions
@@ -64,17 +63,31 @@ class Artifacts:
     ###########
     # methods #
     ###########
+    @staticmethod
+    def _build_path_header(package_name=None, package=None, execution_id=None, execution=None, model_name=None, checkpoint_name=None):
+        remote_path = '/artifacts'
+        if package_name is not None or package is not None:
+            if package is not None:
+                package_name = package.name
+            remote_path += '/packages/{}'.format(package_name)
+        if execution_id is not None or execution is not None:
+            if execution is not None:
+                execution_id = execution.id
+            remote_path += '/executions/{}'.format(execution_id)
+        if model_name is not None:
+            remote_path += '/models/{}'.format(model_name)
+        if checkpoint_name is not None:
+            remote_path += '/checkpoints/{}'.format(checkpoint_name)
+
+        return remote_path
+
     def list(self, execution_id=None, package_name=None):
         """
         List of artifacts
         :return: list of artifacts
         """
         filters = entities.Filters()
-        remote_path = '/artifacts'
-        if package_name is not None:
-            remote_path += '/packages/{}'.format(package_name)
-        if execution_id is not None:
-            remote_path += '/executions/{}'.format(execution_id)
+        remote_path = self._build_path_header(package_name=package_name, execution_id=execution_id)
         remote_path += '/*'
         filters.add(field='filename', values=remote_path)
         pages = self.items_repository.list(filters=filters)
@@ -101,6 +114,8 @@ class Artifacts:
             artifact = [artifact for artifact in artifacts if artifact.name == artifact_name]
             if len(artifact) == 1:
                 artifact = artifact[0]
+            elif len(artifact) > 1:
+                raise PlatformException('404', 'More Than one Artifact found')
             else:
                 raise PlatformException('404', 'Artifact not found')
             return artifact
@@ -126,7 +141,7 @@ class Artifacts:
         :return: Artifact object
         """
         if artifact_id is not None:
-            artifact = self.items_repository.download(item_id=artifact_id,
+            artifact = self.items_repository.download(items=artifact_id,
                                                       save_locally=save_locally,
                                                       local_path=local_path,
                                                       overwrite=overwrite)
@@ -134,15 +149,12 @@ class Artifacts:
             if all(elem is None for elem in [package_name, execution_id]):
                 raise PlatformException(error='400', message='Must input package or execution (id or entity)')
 
-            directories = '/artifacts'
-            if package_name is not None:
-                directories += '/packages/{}'.format(package_name)
-            if execution_id is not None:
-                directories += '/executions/{}'.format(execution_id)
-            without_relative_path = directories
-            directories += '/*'
+            remote_path = self._build_path_header(package_name=package_name,
+                                                  execution_id=execution_id)
+            without_relative_path = remote_path
+            remote_path += '/*'
             filters = entities.Filters()
-            filters.add(field='filename', values=directories)
+            filters.add(field='filename', values=remote_path)
             artifact = self.items_repository.download(filters=filters,
                                                       save_locally=save_locally,
                                                       local_path=local_path,
@@ -164,7 +176,8 @@ class Artifacts:
                # what to upload
                filepath,
                # where to upload
-               package_name=None, package=None, execution_id=None, execution=None,
+               package_name=None, package=None, execution_id=None, execution=None, model_name=None,
+               checkpoint_name=None,
                # add information
                overwrite=False):
         """
@@ -175,34 +188,46 @@ class Artifacts:
 
         :param overwrite: optional - default = False
         :param filepath: local binary file
+        :param model_name:
+        :param checkpoint_name:
         :param package_name:
         :param package:
         :param execution_id:
         :param execution:
         :return: Artifact Object
         """
-        remote_path = '/artifacts'
-        if package_name is not None or package is not None:
-            if package is not None:
-                package_name = package.name
-            remote_path += '/packages/{}'.format(package_name)
-        if execution_id is not None or execution is not None:
-            if execution is not None:
-                execution_id = execution.id
-            remote_path += '/executions/{}'.format(execution_id)
+        remote_path = self._build_path_header(package_name=package_name,
+                                              package=package,
+                                              execution=execution,
+                                              execution_id=execution_id,
+                                              model_name=model_name,
+                                              checkpoint_name=checkpoint_name)
 
-        if all(elem is None for elem in [package_name, package, execution_id, execution]):
+        if all(elem is None for elem in [package_name, package, execution_id, execution, model_name, checkpoint_name]):
             raise ValueError('Must input package or execution (id or entity)')
 
-        if os.path.isfile(filepath):
-            artifact = self.items_repository.upload(local_path=filepath,
-                                                    remote_path=remote_path,
-                                                    overwrite=overwrite)
-        elif os.path.isdir(filepath):
-            artifact = self.items_repository.upload(local_path=filepath,
-                                                    remote_path=remote_path,
-                                                    overwrite=overwrite)
-        else:
-            raise ValueError('Missing file or directory: %s' % filepath)
+        artifact = self.items_repository.upload(local_path=filepath,
+                                                remote_path=remote_path,
+                                                overwrite=overwrite)
+
         logger.debug('Artifact uploaded successfully')
         return artifact
+
+    def delete(self, artifact_id=None, artifact_name=None, execution_id=None, package_name=None):
+        if artifact_id is not None or artifact_name is not None:
+            artifacts = [self.get(artifact_id=artifact_id, artifact_name=artifact_name)]
+        elif execution_id is not None or package_name is not None:
+            artifacts = self.list(execution_id=execution_id, package_name=package_name)
+        else:
+            raise PlatformException('400',
+                                    'Must provide one of: artifact_id, artifact_name, execution_id, package_name')
+
+        # TODO - Temporary
+        for artifact in artifacts:
+            self.items_repository.delete(item_id=artifact.id)
+
+        # TODO - when delete with filters is enabled again use this:
+        # values = [artifact.id for artifact in artifacts]
+        # self.items_repository.delete(filters=entities.Filters(field='id', values=values, operator='in'))
+
+        return True

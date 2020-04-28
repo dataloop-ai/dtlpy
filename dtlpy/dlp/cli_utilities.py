@@ -234,6 +234,11 @@ class DlpCompleter(Completer):
                     self.param_suggestions = [value for key, value in self.dlp.TriggerResource.__dict__.items() if
                                               not key.startswith('_')]
 
+                elif param in ['--package-type']:
+                    self.thread_state = StateEnum.CONTINUE
+                    self.param_suggestions = [value for key, value in self.dlp.PackageCatalog.__dict__.items() if
+                                              not key.startswith('_')]
+
                 elif param in ['cd']:
                     self.thread_state = StateEnum.CONTINUE
                     if word_before_cursor != '' and os.path.isdir(os.path.join(os.getcwd(), word_before_cursor)):

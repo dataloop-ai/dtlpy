@@ -1,13 +1,23 @@
 import json
 import io
-import attr
+from copy import deepcopy
+from .. import entities, exceptions
 
 
-@attr.s
-class SimilarityItem:
-    type = attr.ib(type=str)
-    ref = attr.ib(type=str)
-    target = attr.ib(type=bool, default=False)
+class CollectionTypes:
+    SIMILARITY = 'collection'
+    MULTIVIEW = 'multi'
+
+
+class CollectionItem:
+    """
+    Base CollectionItem
+    """
+
+    def __init__(self, type, ref):
+        assert isinstance(ref, str)
+        self.ref = ref
+        self.type = type
 
     @classmethod
     def from_json(cls, _json):
@@ -22,42 +32,66 @@ class SimilarityItem:
             'ref': self.ref
         }
 
+        return _json
+
+
+class SimilarityItem(CollectionItem):
+    """
+    Single similarity item
+    """
+
+    def __init__(self, type, ref, target=False):
+        super().__init__(type=type, ref=ref)
+        assert isinstance(ref, str)
+        self.target = target
+
+    def to_json(self):
+        _json = super().to_json()
+
         if self.target:
             _json['target'] = self.target
 
         return _json
 
 
-@attr.s
-class Similarity:
+class MultiViewItem(CollectionItem):
     """
-    Similarity Entity
+    Single multi view item
     """
-    ref = attr.ib(type=str)
-    type = attr.ib(type=str)
-    name = attr.ib(type=str, default=None)
-    _items = attr.ib()
 
-    @property
-    def target(self):
-        return SimilarityItem(ref=self.ref, type=self.type, target=True)
+    def __init__(self, type, ref):
+        super().__init__(type=type, ref=ref)
 
-    @property
-    def items(self):
-        return [SimilarityItem.from_json(_json=item) for item in self._items]
 
-    @classmethod
-    def from_json(cls, _json):
-        return cls(
-            ref=_json['metadata']['target']['ref'],
-            type=_json['metadata']['target']['type'],
-            items=_json.get('items', list())
-        )
+class Collection:
+    """
+    Base Collection Entity
+    """
 
-    @_items.default
-    def set_items(self):
-        items = list()
-        return items
+    def __init__(self, type, name, items=None):
+        self.type = type
+        self.name = name
+        self._items = self._items_to_list(items=items)
+
+    @staticmethod
+    def _items_to_list(items):
+        items_list = list()
+        if items:
+            if not isinstance(items, list):
+                items = [items]
+
+            for item in items:
+                if isinstance(item, entities.Item):
+                    items_list.append({'type': 'id', 'ref': item.id})
+                elif isinstance(item, SimilarityItem) or isinstance(item, MultiViewItem):
+                    items_list.append(item.to_json())
+                elif isinstance(item, dict):
+                    items_list.append(item)
+                else:
+                    raise exceptions.PlatformException('400',
+                                                       'items must be a list of the following: '
+                                                       'Item, MultiViewItem, SimilarityItem, dict')
+        return items_list
 
     def to_json(self):
         """
@@ -65,23 +99,12 @@ class Similarity:
 
         :return: platform json format of object
         """
-        items = list()
-        items.append(self.target.to_json())
-        items += self._items
-
-        target = {
-            "type": self.type,
-            "ref": self.ref
-        }
-
         _json = {
-            "type": "collection",
+            "type": self.type,
             "shebang": "dataloop",
             "metadata": {
-                "dltype": "collection",
-                "target": target
-            },
-            "items": items
+                "dltype": self.type,
+            }
         }
 
         return _json
@@ -95,6 +118,9 @@ class Similarity:
         return byte_io
 
     def add(self, ref, type='id'):
+        """
+        Add item to collection
+        """
         item = {
             'ref': ref,
             'type': type
@@ -106,3 +132,98 @@ class Similarity:
         for item in self._items:
             if item['ref'] == ref:
                 self._items.remove(item)
+
+
+class Similarity(Collection):
+    """
+    Similarity Entity
+    """
+
+    def __init__(self, ref, name=None, items=None):
+        if name is None:
+            name = ref
+        super().__init__(type=CollectionTypes.SIMILARITY, name=name, items=items)
+        assert isinstance(ref, str)
+        self.ref = ref
+
+    @property
+    def items(self):
+        """
+        list of the collection items
+        """
+        return [SimilarityItem.from_json(_json=item) for item in self._items]
+
+    @property
+    def target(self):
+        """
+        Target item for similiraty
+        """
+        return SimilarityItem(ref=self.ref, type=self.type, target=True)
+
+    @classmethod
+    def from_json(cls, _json):
+        return cls(
+            ref=_json['metadata']['target']['ref'],
+            items=_json.get('items', list())
+        )
+
+    def _fixed_items(self):
+        items = deepcopy(self._items)
+        target_in_items = False
+        for item in items:
+            if item.get('ref', '') == self.ref:
+                target_in_items = True
+                item['target'] = True
+            else:
+                item.pop('target', None)
+
+        if not target_in_items:
+            items.append(self.target.to_json())
+
+        return items
+
+    def to_json(self):
+        """
+        Returns platform _json format of object
+
+        :return: platform json format of object
+        """
+        _json = super().to_json()
+        _json['metadata']['target'] = {
+            "type": self.type,
+            "ref": self.ref
+        }
+        _json['items'] = self._fixed_items()
+
+        return _json
+
+
+class MultiView(Collection):
+    """
+    Multi Entity
+    """
+
+    def __init__(self, name, items=None):
+        super().__init__(type=CollectionTypes.MULTIVIEW, name=name, items=items)
+
+    @property
+    def items(self):
+        """
+        list of the collection items
+        """
+        return [MultiViewItem.from_json(_json=item) for item in self._items]
+
+    @classmethod
+    def from_json(cls, _json):
+        return cls(items=_json.get('items', list()))
+
+    def to_json(self):
+        """
+        Returns platform _json format of object
+
+        :return: platform json format of object
+        """
+        _json = super().to_json()
+        _json['items'] = self._items
+
+        return _json

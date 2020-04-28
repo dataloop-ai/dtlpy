@@ -23,7 +23,8 @@ NUM_TRIES = 3  # try to upload 3 time before fail on item
 
 
 class UploadElement:
-    def __init__(self, element_type, buffer, remote_filepath, annotations_filepath, link_dataset_id=None, item_metadata=None):
+    def __init__(self, element_type, buffer, remote_filepath, annotations_filepath, link_dataset_id=None,
+                 item_metadata=None):
         self.type = element_type
         self.buffer = buffer
         self.remote_filepath = remote_filepath
@@ -48,7 +49,7 @@ class Uploader:
             # upload options
             remote_path=None,
             file_types=None,
-            num_workers=32,  # deprecated
+            num_workers=None,
             overwrite=False,
             item_metadata=None
     ):
@@ -83,6 +84,8 @@ class Uploader:
             if not isinstance(item_metadata, dict):
                 msg = '"item_metadata" should be a metadata dictionary. Got type: {}'.format(type(item_metadata))
                 raise PlatformException(error="400", message=msg)
+        if num_workers is not None:
+            self.items_repository._client_api.num_processes = num_workers
 
         ##########################
         # Convert inputs to list #
@@ -200,21 +203,38 @@ class Uploader:
                 if upload_item_element.name is None:
                     upload_item_element.name = '{}_similarity.json'.format(upload_item_element.ref)
                     remote_filepath = '{}{}'.format(remote_path, upload_item_element.name)
-                else:
+                elif not upload_item_element.name.endswith('.json'):
                     remote_filepath = '{}{}.json'.format(remote_path, upload_item_element.name)
+                else:
+                    remote_filepath = '{}{}'.format(remote_path, upload_item_element.name)
 
-                element = UploadElement(element_type='similarity',
+                element = UploadElement(element_type='collection',
                                         buffer=upload_item_element,
                                         remote_filepath=remote_filepath,
                                         annotations_filepath=upload_annotations_element,
                                         item_metadata=item_metadata)
                 elements.append(element)
-            else:
+            elif isinstance(upload_item_element, entities.MultiView):
+                if not upload_item_element.name.endswith('.json'):
+                    upload_item_element.name = '{}.json'.format(upload_item_element.name)
+
+                remote_filepath = '{}{}'.format(remote_path, upload_item_element.name)
+                element = UploadElement(element_type='collection',
+                                        buffer=upload_item_element,
+                                        remote_filepath=remote_filepath,
+                                        annotations_filepath=upload_annotations_element,
+                                        item_metadata=item_metadata)
+                elements.append(element)
+            elif isinstance(upload_item_element, bytes) or \
+                    isinstance(upload_item_element, io.BytesIO) or \
+                    isinstance(upload_item_element, io.BufferedReader) or \
+                    isinstance(upload_item_element, io.TextIOWrapper):
                 # binary element
                 if not hasattr(upload_item_element, "name"):
-                    raise PlatformException(error="400",
-                                            message='Must put attribute "name" on buffer (with file name) '
-                                                    'when uploading buffers')
+                    raise PlatformException(
+                        error="400",
+                        message='Upload elemnet type was bytes. Must put attribute "name" on buffer (with file name) '
+                                'when uploading buffers')
                 remote_filepath = remote_path + upload_item_element.name
                 element = UploadElement(element_type='buffer',
                                         buffer=upload_item_element,
@@ -227,6 +247,13 @@ class Uploader:
                     total_size += upload_item_element.__sizeof__()
                 except Exception:
                     logger.warning("Cant get binaries size")
+            else:
+                raise PlatformException(
+                    error="400",
+                    message="Unknown element type to upload ('local_path'). received type: {}. "
+                            "known types (or list of those types): str (dir, file, url), bytes, io.BytesIO, "
+                            "io.TextIOWrapper, Dataloop.Item, Dataloop.Link, Dataloop.Similarity".format(
+                        type(upload_item_element)))
 
         num_files = len(elements)
         logger.info("Uploading {} items..".format(num_files))
@@ -376,7 +403,7 @@ class Uploader:
             elif isinstance(filepath, io.TextIOWrapper):
                 to_upload = filepath
             else:
-                raise PlatformException("400", "unknown file type")
+                raise PlatformException("400", "Unknown input filepath type received: {}".format(type(filepath)))
 
             if uploaded_filename is None:
                 if hasattr(filepath, "name"):
@@ -418,7 +445,8 @@ class Uploader:
             raise PlatformException(response)
         return item, response.headers.get('x-item-op', 'na')
 
-    async def __upload_single_item_wrapper(self, asyncio_semaphore, i_item, element, pbar, status, success, output, errors, mode):
+    async def __upload_single_item_wrapper(self, asyncio_semaphore, i_item, element, pbar, status, success, output,
+                                           errors, mode):
         async with asyncio_semaphore:
             assert isinstance(element, UploadElement)
             item = False
@@ -433,8 +461,8 @@ class Uploader:
                 saved_locally, element.buffer, temp_dir = self.url_to_data(element.buffer)
             elif element.type == 'link':
                 element.buffer = self.link(ref=element.buffer.ref, dataset_id=element.buffer.dataset_id,
-                                           type=element.buffer.type)
-            elif element.type == 'similarity':
+                                           type=element.buffer.type, mimetype=element.buffer.mimetype)
+            elif element.type == 'collection':
                 element.buffer = element.buffer.to_bytes_io()
 
             for i_try in range(NUM_TRIES):
@@ -553,10 +581,13 @@ class Uploader:
             return False
 
     @staticmethod
-    def link(ref, type, dataset_id=None):
+    def link(ref, type, mimetype=None, dataset_id=None):
 
         link_info = {'type': type,
                      'ref': ref}
+
+        if mimetype:
+            link_info['mimetype'] = mimetype
 
         if dataset_id is not None:
             link_info['datasetId'] = dataset_id

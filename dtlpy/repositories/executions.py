@@ -58,6 +58,8 @@ class Executions:
             inputs = payload.get('input', dict())
             # go over all inputs and fins project id
             for key, val in inputs.items():
+                if not isinstance(val, dict):
+                    continue
                 if 'dataset_id' in val:
                     dataset_id = val['dataset_id']
                     project_id = repositories.Datasets(
@@ -90,7 +92,7 @@ class Executions:
                # inputs info
                resource=None, item_id=None, dataset_id=None, annotation_id=None, project_id=None,
                # execution config
-               sync=False, stream_logs=True, return_output=True):
+               sync=False, stream_logs=False, return_output=False):
         """
         Execute a function on an existing service
 
@@ -146,6 +148,8 @@ class Executions:
 
         # request url
         url_path = '/executions/{service_id}'.format(service_id=service_id)
+        if sync and not return_output and not stream_logs:
+            url_path += '?sync=true'
         success, response = self._client_api.gen_request(req_type='post',
                                                          path=url_path,
                                                          json_req=payload)
@@ -158,7 +162,7 @@ class Executions:
                                                  client_api=self._client_api,
                                                  service=self._service)
 
-        if sync:
+        if sync and (stream_logs or return_output):
             if stream_logs:
                 thread = threading.Thread(target=self.logs,
                                           kwargs={'execution_id': execution.id,

@@ -144,7 +144,7 @@ class Tasks:
                                          _json=_json, project=self._project, dataset=self._dataset)
                  for _json in response.json()['items']])
         else:
-            logger.exception('Platform error getting annotation task')
+            logger.error('Platform error getting annotation task')
             raise exceptions.PlatformException(response)
 
         return tasks
@@ -205,7 +205,7 @@ class Tasks:
                                                        'annotation task name or annotation task id')
                 else:
                     task = self.get(task_name=task_name)
-                    task_id = task.id
+            task_id = task.id
 
         url = URL_PATH
         url = '{}/{}'.format(url, task_id)
@@ -236,16 +236,20 @@ class Tasks:
         else:
             raise exceptions.PlatformException(response)
 
-    def create_qa_task(self, task, assignee_ids):
-        if isinstance(task, entities.Task):
-            raise ValueError('task must be of type "Task". got: {}'.format(type(task)))
+    def create_qa_task(self, due_date, task, assignee_ids, filters=None, items=None, query=None):
+        if filters is None and items is None and query is None:
+            query = json.loads(task.query)
         return self.create(task_name='{}_qa'.format(task.name),
                            task_type='qa',
                            task_parent_id=task.id,
                            assignee_ids=assignee_ids,
                            task_owner=task.creator,
                            project_id=task.project_id,
-                           recipe_id=task.recipeId)
+                           recipe_id=task.recipe_id,
+                           due_date=due_date,
+                           filters=filters,
+                           items=items,
+                           query=query)
 
     def create(self,
                task_name,
@@ -262,10 +266,12 @@ class Tasks:
                assignments_ids=None,
                metadata=None,
                filters=None,
-               items=None):
+               items=None,
+               query=None):
         """
         Create a new Annotation Task
 
+        :param query:
         :param metadata:
         :param task_name:
         :param assignee_ids:
@@ -287,14 +293,17 @@ class Tasks:
         if dataset is None and self._dataset is None:
             raise exceptions.PlatformException('400', 'Please provide param dataset')
 
-        if filters is None and items is None:
-            query = dict()
-        elif filters is None:
-            query = entities.Filters(field='id',
-                                     values=[item.id for item in items],
-                                     operator='in').prepare(query_only=True)
-        else:
-            query = filters.prepare(query_only=True)
+        if query is None:
+            if filters is None and items is None:
+                query = entities.Filters().prepare(query_only=True)
+            elif filters is None:
+                if not isinstance(items, list):
+                    items = [items]
+                query = entities.Filters(field='id',
+                                         values=[item.id for item in items],
+                                         operator='in').prepare(query_only=True)
+            else:
+                query = filters.prepare(query_only=True)
 
         if dataset is None:
             dataset = self._dataset
@@ -389,51 +398,54 @@ class Tasks:
             if filters is not None:
                 filters._nullify_refs()
 
-    # def add_items(self, dataset, task=None, task_id=None, filters=None, items=None):
-    #     """
-    #
-    #     :param task:
-    #     :param filters:
-    #     :param task_id:
-    #     :param dataset:
-    #     :param items:
-    #     :return:
-    #     """
-    #
-    #     return self.__item_operations(dataset=dataset, task_id=task_id, task=task, filters=filters, items=items,
-    #                                   op='create')
-
-    def add_items(self, task=None, task_id=None, filters=None, items=None, workload=None, limit=0):
+    def add_items(self, task=None,
+                  task_id=None, filters=None,
+                  items=None, assignee_ids=None,
+                  query=None, workload=None,
+                  limit=None):
         """
+        Add items to Task
 
+        :param query:
+        :param assignee_ids:
         :param limit:
         :param workload:
-        :param task:
+        :param task
+
         :param filters:
         :param task_id:
         :param items:
         :return:
         """
-        if filters is None and items is None:
-            raise exceptions.PlatformException('400', 'Must provide either filters or items list')
+        if filters is None and items is None and query is None:
+            raise exceptions.PlatformException('400', 'Must provide either filters, query or items list')
 
         if task is None and task_id is None:
             raise exceptions.PlatformException('400', 'Must provide either task or task_id')
 
-        if filters is None:
-            filters = entities.Filters(field='id', values=[item.id for item in items], operator='in')
+        if query is None:
+            if filters is None:
+                if not isinstance(items, list):
+                    items = [items]
+                filters = entities.Filters(field='id', values=[item.id for item in items], operator='in')
+            query = filters.prepare(query_only=True)
 
         if workload is None:
-            workload = entities.Workload()
+            if assignee_ids is None:
+                workload = entities.Workload()
+            else:
+                workload = entities.Workload.generate(assignee_ids=assignee_ids)
 
         if task_id is None:
             task_id = task.id
 
         payload = {
-            "query": filters.prepare(),
-            "workload": workload.to_json(),
-            "limit": limit
+            "query": "{}".format(json.dumps(query).replace("'", '"')),
+            "workload": workload.to_json()
         }
+
+        if limit is not None:
+            payload['limit'] = limit
 
         url = '{}/{}/addToTask'.format(URL_PATH, task_id)
 
@@ -486,71 +498,3 @@ class Tasks:
         filters = entities.Filters(field='metadata.system.refs.id', values=[task_id], operator='in')
         return dataset.items.list(filters=filters)
 
-    def __create_assignment(self, name, assignee_id, dataset=None, project_id=None, items=None, filters=None):
-        if filters is None and items is None:
-            raise exceptions.PlatformException('400', 'Must provide either filters or items list')
-        return self.assignments.create(assignment_name=name,
-                                       assignee_id=assignee_id,
-                                       project_id=project_id,
-                                       filters=filters,
-                                       items=items,
-                                       dataset=dataset)
-
-    @staticmethod
-    def __generate_filter(filters, first_id, last_id, last_page):
-        _json = filters.prepare()['filter']
-        or_list = [{"id": first_id}, {"id": {"$gt": first_id, "$lt": last_id}}]
-
-        if last_page:
-            or_list.append({"id": last_id})
-
-        if '$and' not in _json:
-            _json['$and'] = list()
-
-        _json['$and'].append({'$or': or_list})
-
-        return _json
-
-    def __create_assignments(self, assignment_name, dataset, assignee_ids, project_id, filters=None, items=None):
-        num_assignments = len(assignee_ids)
-        assignments = {assignee: None for assignee in
-                       assignee_ids}
-
-        if filters is not None:
-            filters.sort_by(field='id')
-            filtered_items = dataset.items.list(filters=filters)
-            if filtered_items.items_count == 0:
-                return
-            items_per_assignment = (filtered_items.items_count / num_assignments)
-            filters.page_size = 1
-            filters.page = filtered_items.items_count - 1
-            previous_item_id = dataset.items.list(filters=filters).items[-1].id
-            last_page = True
-            for i_assignment, assignment in enumerate(reversed(list(assignments.keys()))):
-                filters.page = max(filters.page - int(items_per_assignment), 0)
-                first_item_id = dataset.items.list(filters=filters).items[0].id
-                assignment_filters = entities.Filters()
-                assignment_filters.custom_filter = self.__generate_filter(filters=filters, first_id=first_item_id,
-                                                                          last_id=previous_item_id, last_page=last_page)
-
-                if last_page:
-                    last_page = False
-
-                previous_item_id = first_item_id
-                assignment_name = '{} ({})'.format(assignment_name, i_assignment)
-                assignments[assignment] = self.__create_assignment(name=assignment_name, dataset=dataset,
-                                                                   assignee_id=assignment, project_id=project_id,
-                                                                   filters=assignment_filters)
-        else:
-            items_per_assignment = int(len(items) / num_assignments)
-            start = 0
-            end = items_per_assignment
-            for assignment in assignments:
-                assignment_items = items[start:end]
-                assignments[assignment] = self.__create_assignment(name=assignment_name, dataset=dataset,
-                                                                   assignee_id=assignment, project_id=project_id,
-                                                                   items=assignment_items)
-                start = end
-                end = end + items_per_assignment
-
-        return list(assignments.values())

@@ -3,9 +3,6 @@ import os
 # set var for assets
 os.environ['DATALOOP_TEST_ASSETS'] = os.path.join(os.getcwd(), 'tests', 'assets')
 
-# os.environ['DATALOOP_TEST_ASSETS'] = '/Users/aharonlouzon/Desktop/Dataloop/SDK/dtlpy/tests/assets'
-# os.chdir('/Users/aharonlouzon/Desktop/Dataloop/SDK/dtlpy')
-
 from tests.features.steps.projects_repo import test_projects_create
 from tests.features.steps.projects_repo import test_projects_list
 from tests.features.steps.projects_repo import test_projects_get
@@ -111,3 +108,22 @@ from tests.features.steps.bots_repo import test_bots_get
 from tests.features.steps.bots_repo import test_bots_delete
 
 from tests.features.steps.artifacts_repo import test_artifacts_upload
+from tests.features.steps.artifacts_repo import test_artifacts_get
+from tests.features.steps.artifacts_repo import test_artifacts_list
+from tests.features.steps.artifacts_repo import test_artifacts_download
+from tests.features.steps.artifacts_repo import test_artifacts_delete
+
+from tests.features.steps.tasks_repo import test_tasks_create
+from tests.features.steps.tasks_repo import test_tasks_get
+from tests.features.steps.tasks_repo import test_tasks_list
+from tests.features.steps.tasks_repo import test_tasks_delete
+from tests.features.steps.tasks_repo import test_tasks_qa_task
+from tests.features.steps.tasks_repo import test_tasks_add_and_get_items
+
+from tests.features.steps.assignments_repo import test_assignments_create
+from tests.features.steps.assignments_repo import test_assignments_get
+from tests.features.steps.assignments_repo import test_assignments_list
+from tests.features.steps.assignments_repo import test_assignments_delete
+from tests.features.steps.assignments_repo import test_assignments_reassign
+from tests.features.steps.assignments_repo import test_assignments_redistribute
+from tests.features.steps.assignments_repo import test_assignments_items_operations

@@ -39,7 +39,8 @@ class Annotation(entities.BaseEntity):
     status = attr.ib(default=None, repr=False)
     object_id = attr.ib(default=None, repr=False)
     automated = attr.ib(default=None, repr=False)
-    hash = attr.ib(default=None, repr=False)
+    height = attr.ib(default=None)
+    width = attr.ib(default=None)
 
     # snapshots
     frames = attr.ib(default=None, repr=False)
@@ -289,7 +290,6 @@ class Annotation(entities.BaseEntity):
     ##################
     # entity methods #
     ##################
-
     def get_item(self):
         if self.item is None:
             self.item = self.items.get(item_id=self.item_id)
@@ -517,6 +517,8 @@ class Annotation(entities.BaseEntity):
             type=ann_type,
             dataset_url=dataset_url,
             dataset_id=dataset_id,
+            height=height,
+            width=width,
 
             # meta
             metadata=metadata,
@@ -549,10 +551,14 @@ class Annotation(entities.BaseEntity):
 
         if frame_num is None:
             frame_num = int(np.round(start_time * self.fps))
-        if end_frame_num is None:
-            end_frame_num = int(np.round(end_time * self.fps))
 
-        for frame in range(frame_num, end_frame_num):
+        if end_frame_num is None:
+            if end_time is not None:
+                end_frame_num = int(np.round(end_time * self.fps))
+            else:
+                end_frame_num = frame_num
+
+        for frame in range(frame_num, end_frame_num + 1):
             self.add_frame(annotation_definition=annotation_definition,
                            frame_num=frame,
                            fixed=fixed)
@@ -629,15 +635,27 @@ class Annotation(entities.BaseEntity):
         return True
 
     @classmethod
-    def from_json(cls, _json, item=None, client_api=None, annotations=None, is_video=None, fps=25):
+    def from_json(cls, _json,
+                  item=None,
+                  client_api=None,
+                  annotations=None,
+                  is_video=None,
+                  fps=None,
+                  item_metadata=None):
         """
         Create an annotation object from platform json
         :param client_api:
         :param annotations:
+        :param is_video:
+        :param fps:
+        :param item_metadata:
         :param _json: platform json
         :param item: item
         :return: annotation object
         """
+        if item_metadata is None:
+            item_metadata = dict()
+
         # handle 'note'
         if _json['type'] == 'note':
             return None
@@ -688,6 +706,8 @@ class Annotation(entities.BaseEntity):
             # get fps
             if item is not None and item.fps is not None:
                 fps = item.fps
+            if fps is None:
+                fps = item_metadata.get('fps', 25)
 
             # get video-only attributes
             end_time = 1.5
@@ -753,6 +773,8 @@ class Annotation(entities.BaseEntity):
             hash=_json.get('hash', None),
             object_id=object_id,
             type=_json['type'],
+            width=item_metadata.get('width', None),
+            height=item_metadata.get('height', None),
             # meta
             metadata=metadata,
             fps=fps,
@@ -829,7 +851,6 @@ class Annotation(entities.BaseEntity):
         _json = attr.asdict(self,
                             filter=attr.filters.include(attr.fields(Annotation).id,
                                                         attr.fields(Annotation).url,
-                                                        attr.fields(Annotation).hash,
                                                         attr.fields(Annotation).metadata,
                                                         attr.fields(Annotation).creator,
                                                         attr.fields(Annotation).hash,

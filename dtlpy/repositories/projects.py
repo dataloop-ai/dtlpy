@@ -97,6 +97,17 @@ class Projects:
             raise exceptions.PlatformException(response)
         return True
 
+    def add_member(self, email, project_id, role='engineer'):
+        url_path = '/projects/{}/members/{}'.format(project_id, email)
+        payload = dict(role=role)
+        success, response = self._client_api.gen_request(req_type='post',
+                                                         path=url_path,
+                                                         json_req=payload)
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        return response.json()
+
     def list(self):
         """
         Get users project's list.
@@ -123,7 +134,7 @@ class Projects:
             # return good jobs
             projects = miscellaneous.List([r[1] for r in results if r[0] is True])
         else:
-            logger.exception('Platform error getting projects')
+            logger.error('Platform error getting projects')
             raise exceptions.PlatformException(response)
         return projects
 
@@ -189,14 +200,15 @@ class Projects:
         :return: True
         """
         if sure and really:
-            project = self.get(project_name=project_name, project_id=project_id)
+            if project_id is None:
+                project = self.get(project_name=project_name)
+                project_id = project.id
             success, response = self._client_api.gen_request(req_type='delete',
-                                                             path='/projects/{}'.format(project.id))
+                                                             path='/projects/{}'.format(project_id))
             if not success:
                 raise exceptions.PlatformException(response)
-            logger.info('Project {} deleted successfully'.format(project.name))
+            logger.info('Project id {} deleted successfully'.format(project_id))
             return True
-
         else:
             raise exceptions.PlatformException(
                 error='403',

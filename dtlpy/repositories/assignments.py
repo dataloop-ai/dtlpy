@@ -1,6 +1,6 @@
 import logging
 
-from .. import exceptions, miscellaneous, entities
+from .. import exceptions, miscellaneous, entities, repositories
 
 logger = logging.getLogger(name=__name__)
 
@@ -10,11 +10,15 @@ class Assignments:
     Assignments repository
     """
 
-    def __init__(self, client_api, project=None, task=None, dataset=None):
+    def __init__(self, client_api, project=None, task=None, dataset=None, project_id=None):
         self._client_api = client_api
         self._project = project
         self._dataset = dataset
         self._task = task
+
+        self._project_id = project_id
+        if self._project_id is None and self._project is not None:
+            self._project_id = self._project.id
 
     ############
     # entities #
@@ -33,6 +37,15 @@ class Assignments:
         if not isinstance(task, entities.Task):
             raise ValueError('Must input a valid Task entity')
         self._task = task
+
+    @property
+    def project_id(self):
+        if self._project_id is not None:
+            return self._project_id
+        elif self._project is not None:
+            return self._project.id
+        else:
+            return None
 
     @property
     def project(self):
@@ -74,10 +87,13 @@ class Assignments:
         if project_ids is not None:
             if not isinstance(project_ids, list):
                 project_ids = [project_ids]
-        elif self.project is not None:
-            project_ids = [self.project.id]
+        elif self._project_id is not None:
+            project_ids = [self._project_id]
+        elif self._project is not None:
+            project_ids = [self._project.id]
         else:
             raise ('400', 'Must provide project')
+
         project_ids = ','.join(project_ids)
         query.append('projects={}'.format(project_ids))
 
@@ -110,7 +126,7 @@ class Assignments:
                                                task=self._task)
                  for _json in response.json()['items']])
         else:
-            logger.exception('Platform error getting assignments')
+            logger.error('Platform error getting assignments')
             raise exceptions.PlatformException(response)
         return assignments
 
@@ -292,13 +308,18 @@ class Assignments:
         elif dataset is None:
             dataset = self._dataset
 
+        if project_id is None:
+            if self.project_id is None:
+                raise exceptions.PlatformException('400', 'Please provide a project_id')
+            project_id = self.project_id
+
         payload = {'name': assignment_name,
+                   'projectId': project_id,
                    'annotator': assignee_id}
 
         if status is not None:
             payload['status'] = status
-        if project_id is not None:
-            payload['projectId'] = project_id
+
         if metadata is None:
             metadata = dict()
         metadata['system'] = {'datasetId': dataset.id}
@@ -337,6 +358,8 @@ class Assignments:
                 raise exceptions.PlatformException('400', 'Must provide either filters or items list')
 
             if filters is None:
+                if not isinstance(items, list):
+                    items = [items]
                 filters = entities.Filters(field='id', values=[item.id for item in items], operator='in')
 
             filters._ref_assignment = True
@@ -374,24 +397,32 @@ class Assignments:
         return self.__item_operations(dataset=dataset, assignment_id=assignment_id, filters=filters, items=items,
                                       op='delete', assignment_name=assignment_name)
 
-    def get_items(self, assignment_id=None, assignment_name=None, dataset=None):
+    def get_items(self, assignment=None, assignment_id=None, assignment_name=None, dataset=None):
         """
 
+        :param assignment:
         :param dataset:
         :param assignment_id:
         :param assignment_name:
         :return:
         """
-        if assignment_id is None and assignment_name is None:
-            raise exceptions.PlatformException('400', 'Please provide either assignment_id or assignment_name')
+        if assignment is None and assignment_id is None and assignment_name is None:
+            raise exceptions.PlatformException('400',
+                                               'Please provide either assignment,  assignment_id or assignment_name')
 
         if assignment_id is None:
-            assignment_id = self.get(assignment_name=assignment_name).id
+            if assignment is None:
+                assignment = self.get(assignment_name=assignment_name)
+            assignment_id = assignment.id
 
         if dataset is None and self._dataset is None:
-            raise exceptions.PlatformException('400', 'Please provide a dataset entity')
-
-        if dataset is None:
+            if assignment is None:
+                assignment = self.get(assignment_id=assignment_id, assignment_name=assignment_name)
+            if assignment.dataset_id is None:
+                raise exceptions.PlatformException('400', 'Please provide a dataset entity')
+            dataset = repositories.Datasets(client_api=self._client_api, project=self._project).get(
+                dataset_id=assignment.dataset_id)
+        elif dataset is None:
             dataset = self._dataset
 
         filters = entities.Filters(field='metadata.system.refs.id', values=[assignment_id], operator='in')

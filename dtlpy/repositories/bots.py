@@ -59,7 +59,7 @@ class Bots:
             # return good jobs
             bots = miscellaneous.List([r[1] for r in results if r[0] is True])
         else:
-            logger.exception('Platform error getting bots')
+            logger.error('Platform error getting bots')
             raise exceptions.PlatformException(response)
         return bots
 

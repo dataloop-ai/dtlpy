@@ -1,51 +1,8 @@
 options:
   docker: true
 pipelines:
-  default:
-    - step:
-        image: python:3.5
-        name: Tests3.5
-        script:
-          - python --version
-          - PYTHONPATH=$PWD
-          - pip install -r requirements.txt
-          - python setup.py build
-          - python setup.py install
-          - python tests/test_login.py "$TEST_USER_PROD" "$TEST_PASSWORD_PROD" "$CLIENT_ID_PROD" "$CLIENT_SECRET_PROD"
-          - pip install gsutil
-          - gsutil -m cp -R gs://dtlpy/assets tests/
-          - python tests/test_examples.py
-          - python tests/test_runner.py
-    - step:
-        image: python:3.6
-        name: Tests3.6
-        script:
-          - python --version
-          - PYTHONPATH=$PWD
-          - pip install -r requirements.txt
-          - python setup.py build
-          - python setup.py install
-          - python tests/test_login.py "$TEST_USER_PROD" "$TEST_PASSWORD_PROD" "$CLIENT_ID_PROD" "$CLIENT_SECRET_PROD"
-          - pip install gsutil
-          - gsutil -m cp -R gs://dtlpy/assets tests/
-          - python tests/test_examples.py
-          - python tests/test_runner.py
-    - step:
-        image: python:3.7
-        name: Tests3.7
-        script:
-          - python --version
-          - PYTHONPATH=$PWD
-          - pip install -r requirements.txt
-          - python setup.py build
-          - python setup.py install
-          - python tests/test_login.py "$TEST_USER_PROD" "$TEST_PASSWORD_PROD" "$CLIENT_ID_PROD" "$CLIENT_SECRET_PROD"
-          - pip install gsutil
-          - gsutil -m cp -R gs://dtlpy/assets tests/
-          - python tests/test_examples.py
-          - python tests/test_runner.py
   tags:
-    "*":
+    "v*":
       - step:
           image: gcr.io/google.com/cloudsdktool/cloud-sdk:271.0.0
           name: Build SDK Container
@@ -61,3 +18,48 @@ pipelines:
             - chmod +x ./build-docker.sh
             - ./build-docker.sh $BITBUCKET_TAG
             - git checkout -b "$BITBUCKET_TAG"
+    "run-test-5*":
+      - step:
+          image: python:3.5
+          name: Tests3.5
+          script:
+            - python --version
+            - PYTHONPATH=$PWD
+            - pip install -r requirements.txt
+            - python setup.py build
+            - python setup.py install
+            - python tests/test_login.py "$TEST_USER_PROD" "$TEST_PASSWORD_PROD" "$CLIENT_ID_PROD" "$CLIENT_SECRET_PROD"
+            - pip install gsutil
+            - gsutil -m cp -R gs://dtlpy/assets tests/
+            - python tests/test_examples.py
+            - python tests/test_runner.py
+    "run-test-6*":
+      - step:
+          image: python:3.6
+          name: Tests3.6
+          script:
+            - python --version
+            - PYTHONPATH=$PWD
+            - pip install -r requirements.txt
+            - python setup.py build
+            - python setup.py install
+            - python tests/test_login.py "$TEST_USER_PROD" "$TEST_PASSWORD_PROD" "$CLIENT_ID_PROD" "$CLIENT_SECRET_PROD"
+            - pip install gsutil
+            - gsutil -m cp -R gs://dtlpy/assets tests/
+            - python tests/test_examples.py
+            - python tests/test_runner.py
+    "run-test-7*":
+      - step:
+          image: python:3.7
+          name: Tests3.7
+          script:
+            - python --version
+            - PYTHONPATH=$PWD
+            - pip install -r requirements.txt
+            - python setup.py build
+            - python setup.py install
+            - python tests/test_login.py "$TEST_USER_PROD" "$TEST_PASSWORD_PROD" "$CLIENT_ID_PROD" "$CLIENT_SECRET_PROD"
+            - pip install gsutil
+            - gsutil -m cp -R gs://dtlpy/assets tests/
+            - python tests/test_examples.py
+            - python tests/test_runner.py

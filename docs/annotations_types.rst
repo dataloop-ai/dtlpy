@@ -6,7 +6,7 @@ Annotation Types
 Using the annotations definitions classes you can create, edit, view and upload Platform annotations.
 Supported types: Classification, Point, Ellipse, Box, Polyline, Polygon, Segmentation.
 
-Each annotations init recieves the coordinates for the specific type, label and optional attributes.
+Each annotations init receives the coordinates for the specific type, label and optional attributes.
 
 .. code-block:: python
 

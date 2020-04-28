@@ -41,7 +41,9 @@ from .execution import Execution
 from .assignment import Assignment, Workload, WorkloadUnit
 from .task import Task
 from .directory_tree import DirectoryTree
-from .similarity import Similarity
+from .similarity import Similarity, MultiView, SimilarityItem, MultiViewItem
 from .user import User
 from .bot import Bot
 from .webhook import Webhook
+from .model import Model
+from .checkpoint import Checkpoint

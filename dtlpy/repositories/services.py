@@ -1,11 +1,14 @@
 import datetime
+import inspect
 import logging
 import json
 import os
+import pickle
+import tempfile
 
 from urllib.parse import urlencode
 
-from .. import miscellaneous, exceptions, entities, repositories, assets
+from .. import miscellaneous, exceptions, entities, repositories, assets, utilities
 from ..__version__ import version as __version__
 
 logger = logging.getLogger(name=__name__)
@@ -398,10 +401,11 @@ class Services:
                                           project=self._project)
 
     def log(self, service, size=None, checkpoint=None, start=None, end=None, follow=False,
-            execution_id=None, function_name=None, replica_id=None, system=False):
+            execution_id=None, function_name=None, replica_id=None, system=False, view=False):
         """
         Get service logs
 
+        :param view:
         :param system:
         :param end: iso format time
         :param start: iso format time
@@ -459,15 +463,20 @@ class Services:
         if not success:
             raise exceptions.PlatformException(response)
 
-        return ServiceLog(_json=response.json(),
-                          service=service,
-                          services=self,
-                          start=payload['start'],
-                          follow=follow,
-                          execution_id=execution_id,
-                          function_name=function_name,
-                          replica_id=replica_id,
-                          system=system)
+        log = ServiceLog(_json=response.json(),
+                         service=service,
+                         services=self,
+                         start=payload['start'],
+                         follow=follow,
+                         execution_id=execution_id,
+                         function_name=function_name,
+                         replica_id=replica_id,
+                         system=system)
+
+        if view:
+            log.view()
+        else:
+            return log
 
     def execute(self, service=None, service_id=None, service_name=None,
                 sync=False, function_name=None, stream_logs=False,
@@ -489,12 +498,27 @@ class Services:
                                                                           stream_logs=stream_logs)
         return execution
 
-    def deploy(self, service_name=None, package=None, bot=None, revision=None, init_input=None, runtime=None,
-               pod_type=None, sdk_version=None, agent_versions=None, verify=True, checkout=False, module_name=None,
-               project_id=None, driver_id=None, **kwargs):
+    def deploy(self,
+               service_name=None,
+               package=None,
+               bot=None,
+               revision=None,
+               init_input=None,
+               runtime=None,
+               pod_type=None,
+               sdk_version=None,
+               agent_versions=None,
+               verify=True,
+               checkout=False,
+               module_name=None,
+               project_id=None,
+               driver_id=None,
+               func=None,
+               **kwargs):
         """
         Deploy service
 
+        :param func:
         :param project_id:
         :param module_name:
         :param checkout:
@@ -511,15 +535,20 @@ class Services:
         :param sdk_version:  - optional - string - sdk version
         :return:
         """
+        if func is not None:
+            return self.__deploy_function(name=service_name, project=self._project, func=func)
+
         if init_input is not None and not isinstance(init_input, dict):
             if not isinstance(init_input, list):
                 init_input = [init_input]
 
-            if isinstance(init_input[0], entities.FunctionIO):
+            if len(init_input) > 0 and isinstance(init_input[0], entities.FunctionIO):
                 params = dict()
                 for i_param, param in enumerate(init_input):
                     params[param.name] = param.value
                 init_input = params
+            elif len(init_input) == 0:
+                init_input = None
             else:
                 raise exceptions.PlatformException(
                     error='400',
@@ -561,6 +590,63 @@ class Services:
         if checkout:
             self.checkout(service=service)
         return service
+
+    @staticmethod
+    def __get_import_string(imports):
+        imports_string = ''
+        if imports is not None:
+            for imprt in imports:
+                as_string = ''
+                from_string = ''
+                import_from = imprt.get('from', None)
+                import_as = imprt.get('as', None)
+                import_module = imprt.get('module', None)
+                if import_from is not None:
+                    from_string = 'from {} '.format(import_from)
+                if import_as is not None:
+                    as_string = ' as {}'.format(import_as)
+                imports_string += '{}import {}{}\n'.format(from_string, import_module, as_string)
+        return imports_string
+
+    @staticmethod
+    def __get_inputs(func):
+        method = inspect.signature(func)
+        params = list(method.parameters)
+        inpts = list()
+        for arg in params:
+            if arg == 'item':
+                inpt_type = 'Item'
+            elif arg == 'dataset':
+                inpt_type = 'Dataset'
+            else:
+                inpt_type = 'Json'
+            inpts.append(entities.FunctionIO(type=inpt_type, name=arg))
+        return inpts
+
+    def __deploy_function(self, name, func, project, imports=None, is_staticmethod=True):
+        package_dir = tempfile.mkdtemp()
+        imports_string = self.__get_import_string(imports=imports)
+        main_file = os.path.join(package_dir, 'main.py')
+        with open(assets.paths.PARTIAL_MAIN_FILEPATH, 'r') as f:
+            main_string = f.read()
+        lines = inspect.getsourcelines(func)
+        method_func_string = "".join(lines[0])
+
+        with open(main_file, 'w') as f:
+            if is_staticmethod:
+                f.write('{}\n{}\n    @staticmethod\n    {}'.format(imports_string, main_string,
+                                                                   method_func_string.replace('\n', '\n    ')))
+            else:
+                f.write('{}\n{}\n    {}'.format(imports_string, main_string,
+                                                method_func_string.replace('\n', '\n    ')))
+
+        function = entities.PackageFunction(name=func.__name__, inputs=self.__get_inputs(func=func))
+        module = entities.PackageModule(functions=function, entry_point='main.py')
+        packages = repositories.Packages(client_api=self._client_api, project=project)
+        return packages.push(src_path=package_dir,
+                             package_name=name,
+                             checkout=True,
+                             modules=module).deploy(service_name=name)
 
     def deploy_from_local_folder(self, cwd=None, service_file=None, bot=None, checkout=False):
         """
@@ -830,11 +916,19 @@ class ServiceLog:
                                 execution_id=self.execution_id,
                                 function_name=self.function_name,
                                 replica_id=self.replica_id,
-                                system=self.system)
+                                system=self.system,
+                                view=False)
 
         self.logs = log.logs
         self.checkpoint = log.checkpoint
         self.stop = log.stop
+
+    def view(self):
+        try:
+            for log in self:
+                print(log)
+        except KeyboardInterrupt:
+            return
 
     def __iter__(self):
         while not self.stop:

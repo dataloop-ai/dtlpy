@@ -1,5 +1,6 @@
 import attr
 import logging
+import random
 
 logger = logging.getLogger(name=__name__)
 
@@ -11,6 +12,26 @@ class Label:
     display_label = attr.ib()
     attributes = attr.ib()
     children = attr.ib()
+
+    @attributes.default
+    def set_attributes(self):
+        attributes = list()
+        return attributes
+
+    @children.default
+    def set_children(self):
+        children = list()
+        return children
+
+    @color.default
+    def set_color(self):
+        color = (random.randrange(0, 255), random.randrange(0, 255), random.randrange(0, 255))
+        return color
+
+    @display_label.default
+    def set_display_label(self):
+        display_label = self.tag
+        return display_label
 
     @classmethod
     def from_root(cls, root):

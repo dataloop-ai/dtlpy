@@ -14,8 +14,8 @@ Feature: Artifacts repository upload service testing
         When I generate package by the name of "test_package" to "artifacts_upload"
         And I push "first" package
             | codebase_id=None | package_name=test_package | src_path=artifacts_upload | inputs=None | outputs=None |
-        And I upload artifact to "package"
-        Then I recieve an artifact object
+        And I upload "1" artifacts to "package"
+        Then I receive an artifact object
 
     @packages.delete
     Scenario: Use with package  - folder
@@ -24,8 +24,8 @@ Feature: Artifacts repository upload service testing
         When I generate package by the name of "test_package" to "artifacts_upload"
         And I push "first" package
             | codebase_id=None | package_name=test_package | src_path=artifacts_upload | inputs=None | outputs=None |
-        And I upload artifact to "package"
-        Then I recieve an artifact object
+        And I upload "1" artifacts to "package"
+        Then I receive an artifact object
 
     @packages.delete
     Scenario: Use with package name
@@ -34,8 +34,8 @@ Feature: Artifacts repository upload service testing
         When I generate package by the name of "test_package" to "artifacts_upload"
         And I push "first" package
             | codebase_id=None | package_name=test_package | src_path=artifacts_upload | inputs=None | outputs=None |
-        And I upload artifact to "package_name"
-        Then I recieve an artifact object
+        And I upload "1" artifacts to "package_name"
+        Then I receive an artifact object
 
      @packages.delete
      @services.delete
@@ -48,8 +48,8 @@ Feature: Artifacts repository upload service testing
          Given There is a service by the name of "artifacts-upload" with module name "default_module" saved to context "service"
          When I create an execution with "None"
              | sync=False |
-         And I upload artifact to "execution"
-         Then I recieve an artifact object
+         And I upload "1" artifacts to "execution"
+         Then I receive an artifact object
 
      @packages.delete
      @services.delete
@@ -62,5 +62,5 @@ Feature: Artifacts repository upload service testing
          Given There is a service by the name of "artifacts-upload" with module name "default_module" saved to context "service"
          When I create an execution with "None"
              | sync=False |
-         And I upload artifact to "execution_id"
-         Then I recieve an artifact object
+         And I upload "1" artifacts to "execution_id"
+         Then I receive an artifact object

@@ -5,7 +5,6 @@ import traceback
 import datetime
 import logging
 import json
-from copy import deepcopy
 
 import requests
 import tqdm
@@ -111,7 +110,7 @@ class Downloader:
                     error="400",
                     message='Unknown items type to download. Expecting str or Item entities. Got "{}" instead'.format(
                         type(items[0])
-                    ),
+                    )
                 )
 
             # convert to list of list (like pages and page)

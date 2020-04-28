@@ -250,7 +250,7 @@ class Codebases:
                 item = self.items_repository.update(item=item, system_metadata=True)
 
         except Exception:
-            logger.exception('Error when packing:')
+            logger.error('Error when packing:')
             raise
         finally:
             # cleanup

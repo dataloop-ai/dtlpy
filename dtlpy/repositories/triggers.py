@@ -245,6 +245,8 @@ class Triggers:
 
         # payload
         payload = trigger.to_json()
+        payload['spec'].pop('resource')
+        payload['spec'].pop('actions')
 
         # request
         success, response = self._client_api.gen_request(req_type='patch',

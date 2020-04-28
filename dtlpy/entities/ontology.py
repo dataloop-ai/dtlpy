@@ -213,8 +213,10 @@ class Ontology(entities.BaseEntity):
         labels = list()
         for label in label_list:
 
-            if isinstance(label, entities.Label):
+            if isinstance(label, str):
+                label = entities.Label(tag=label)
 
+            if isinstance(label, entities.Label):
                 # label entity
                 labels.append(
                     {
@@ -226,7 +228,6 @@ class Ontology(entities.BaseEntity):
                     }
                 )
             else:
-
                 # dictionary
                 children = label.get("children", None)
                 label = label.get("value", label)

@@ -23,8 +23,8 @@ class Trigger(entities.BaseEntity):
     ###################
     # spec attributes #
     ###################
-    resource = attr.ib()
-    actions = attr.ib()
+    _resource = attr.ib()
+    _actions = attr.ib()
     execution_mode = attr.ib(repr=False)
     # name change
     function_name = attr.ib()
@@ -129,6 +129,22 @@ class Trigger(entities.BaseEntity):
         assert isinstance(self._service, entities.Service)
         return self._service
 
+    @property
+    def resource(self):
+        return self._resource
+
+    @resource.setter
+    def resource(self, value):
+        raise exceptions.PlatformException('400', 'Trigger resource cannot be changed! Please create a new trigger')
+
+    @property
+    def actions(self):
+        return self._actions
+
+    @actions.setter
+    def actions(self, value):
+        raise exceptions.PlatformException('400', 'Trigger resource cannot be actions! Please create a new trigger')
+
     ###########
     # methods #
     ###########
@@ -147,9 +163,9 @@ class Trigger(entities.BaseEntity):
                                                               attr.fields(Trigger).filters,
                                                               attr.fields(Trigger)._op_type,
                                                               attr.fields(Trigger)._spec,
-                                                              attr.fields(Trigger).resource,
+                                                              attr.fields(Trigger)._resource,
                                                               attr.fields(Trigger)._repositories,
-                                                              attr.fields(Trigger).actions,
+                                                              attr.fields(Trigger)._actions,
                                                               attr.fields(Trigger).service_id,
                                                               attr.fields(Trigger).webhook_id,
                                                               attr.fields(Trigger).execution_mode,

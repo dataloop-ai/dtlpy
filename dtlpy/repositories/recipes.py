@@ -70,7 +70,7 @@ class Recipes:
                                                _json=response.json(),
                                                dataset=self.dataset)
         else:
-            logger.exception('Failed to create Recipe')
+            logger.error('Failed to create Recipe')
             raise exceptions.PlatformException(response)
 
         # add recipe id to dataset system metadata
@@ -134,8 +134,8 @@ class Recipes:
                                                _json=response.json(),
                                                dataset=self.dataset)
         else:
-            logger.exception(
-                'Unable to get info from recipe. dataset id: {}, recipe_id id: {}'.format(self.dataset.id, recipe_id))
+            logger.error('Unable to get info from recipe. dataset id: {}, recipe_id id: {}'.format(self.dataset.id,
+                                                                                                   recipe_id))
             raise exceptions.PlatformException(response)
 
         return recipe
@@ -171,5 +171,5 @@ class Recipes:
         if success:
             return entities.Recipe.from_json(client_api=self._client_api, _json=response.json(), dataset=self.dataset)
         else:
-            logger.exception('Error while updating item:')
+            logger.error('Error while updating item:')
             raise exceptions.PlatformException(response)

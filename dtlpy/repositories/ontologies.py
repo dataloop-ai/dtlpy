@@ -65,7 +65,7 @@ class Ontologies:
                                                    client_api=self._client_api,
                                                    recipe=self._recipe)
         else:
-            logger.exception("Failed to create Ontology")
+            logger.error("Failed to create Ontology")
             raise exceptions.PlatformException(response)
         return ontology
 
@@ -162,7 +162,7 @@ class Ontologies:
             self.recipe.dataset._labels = ontology.labels
             return ontology
         else:
-            logger.exception("Failed to update ontology:")
+            logger.error("Failed to update ontology:")
             raise exceptions.PlatformException(response)
 
     @staticmethod
