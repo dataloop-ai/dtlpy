@@ -1,0 +1,29 @@
+{
+  "name": "default_package",
+  "modules": [
+    {
+      "name": "default_module",
+      "entryPoint": "main.py",
+      "initInputs": [],
+      "functions": [
+        {
+          "name": "run",
+          "description": "this description for your service",
+          "input": [
+            {
+              "name": "item",
+              "type": "Item"
+            }
+          ],
+          "output": []
+        },
+        {
+          "name": "hello",
+          "description": "hello function",
+          "input": [],
+          "output": []
+        }
+      ]
+    }
+  ]
+}
