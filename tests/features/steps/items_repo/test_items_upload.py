@@ -95,18 +95,50 @@ def step_impl(context, remote_path):
     assert remote_path in context.dataset.items.get(item_id=context.item.id).filename
 
 
-@behave.when(u'I upload the file in path "{local_path}" with remote name "{remote_filename}"')
-def step_impl(context, local_path, remote_filename):
+@behave.when(u'I upload the file in path "{local_path}", opened as a buffer, with remote name "{remote_name}"')
+def step_impl(context, local_path, remote_name):
     local_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], local_path)
 
     import io
 
     with open(local_path, "rb") as f:
         buffer = io.BytesIO(f.read())
-        buffer.name = remote_filename
+    
+    context.item = context.dataset.items.upload(
+        local_path=buffer, remote_path=None, remote_name=remote_name
+    )
+
+    
+@behave.when(u'I upload the file in path "{local_path}" with remote name "{remote_name}" set via the buffer interface')
+def step_impl(context, local_path, remote_name):
+    local_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], local_path)
+
+    import io
+
+    with open(local_path, "rb") as f:
+        buffer = io.BytesIO(f.read())
+        buffer.name = remote_name
 
     context.item = context.dataset.items.upload(
         local_path=buffer, remote_path=None
+    )
+
+
+@behave.when(u'I upload the file in path "{local_path}" with remote name "{remote_name}"')
+def step_impl(context, local_path, remote_name):
+    local_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], local_path)
+
+    context.item = context.dataset.items.upload(
+        local_path=local_path, remote_path=None, remote_name=remote_name
+    )
+
+
+@behave.when(u'I upload the file in path "{local_path}" with remote name "{remote_name}" to remote path "{remote_path}"')
+def step_impl(context, local_path, remote_path, remote_name):
+    local_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], local_path)
+
+    context.item = context.dataset.items.upload(
+        local_path=local_path, remote_path=remote_path, remote_name=remote_name
     )
 
 
@@ -192,4 +224,17 @@ def step_impl(context, item_count):
     filters = context.dl.Filters()
     filters.add(field='type', values='file')
     context.item_list = context.dataset.items.list(filters=filters)
-    assert len(context.item_list.items) == int(item_count) == context.items_uploaded
+    assert len(context.item_list.items) == int(
+        item_count) == context.items_uploaded
+
+
+@behave.when(u'I use a buffer to upload the file in path "{local_path}" with remote name "{remote_name}"')
+def step_impl(context, local_path, remote_name):
+    local_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], local_path)
+
+    import io
+
+    with open(local_path, "rb") as f:
+        buffer = io.BytesIO(f.read())
+        context.dataset.items.upload(
+            local_path=buffer, remote_name=remote_name)
