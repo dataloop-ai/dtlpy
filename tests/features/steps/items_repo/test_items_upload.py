@@ -224,8 +224,7 @@ def step_impl(context, item_count):
     filters = context.dl.Filters()
     filters.add(field='type', values='file')
     context.item_list = context.dataset.items.list(filters=filters)
-    assert len(context.item_list.items) == int(
-        item_count) == context.items_uploaded
+    assert len(context.item_list.items) == int(item_count) == context.items_uploaded
 
 
 @behave.when(u'I use a buffer to upload the file in path "{local_path}" with remote name "{remote_name}"')

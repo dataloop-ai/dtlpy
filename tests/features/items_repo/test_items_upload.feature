@@ -87,14 +87,13 @@ Feature: Items repository upload service testing
         And Item object from host equals item uploaded
         And Item in host when downloaded to "test_items_upload_downloaded_item" equals item in "assets_split/items_upload/0000000162.jpg"
 
-    # TODO
-    # Scenario: Upload item from URL with specific remote name
-    #     When I upload a file from a URL "http://some.domain/some_file.png" with remote name "file.png"
-    #     Then Item exist in host
-    #     And Item in host has name "file.jpg"
-    #     And Upload method returned an Item object
-    #     And Item object from host equals item uploaded
-    #     And Item in host when downloaded to "test_items_upload_downloaded_item" equals item available at "http://some.domain/some_file.png"
+    Scenario: Upload item from URL with specific remote name
+        When I upload a file from a URL "http://some.domain/some_file.png" with remote name "file.png"
+        Then Item exist in host
+        And Item in host has name "file.jpg"
+        And Upload method returned an Item object
+        And Item object from host equals item uploaded
+        And Item in host when downloaded to "test_items_upload_downloaded_item" equals item available at "http://some.domain/some_file.png"
 
     Scenario: Upload a single item - video
         When I upload a file in path "sample_video.mp4"
