@@ -371,6 +371,7 @@ class Items:
             local_annotations_path=None,
             # upload options
             remote_path="/",
+            remote_name=None,
             file_types=None,
             num_workers=32,
             overwrite=False,
@@ -386,6 +387,7 @@ class Items:
         :param local_path: list of local file, local folder, BufferIO, or url to upload
         :param local_annotations_path: path to dataloop format annotations json files.
         :param remote_path: remote path to save.
+        :param remote_name: remote base name to save.
         :param file_types: list of file type to upload. e.g ['.jpg', '.png']. default is all
         :param num_workers:
         :return: Output (list/single item)
@@ -402,6 +404,7 @@ class Items:
             local_annotations_path=local_annotations_path,
             # upload options
             remote_path=remote_path,
+            remote_name=remote_name,
             file_types=file_types,
             # config
             num_workers=num_workers,
