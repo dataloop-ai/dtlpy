@@ -1,10 +1,10 @@
 import multiprocessing
-from copy import deepcopy
 import threading
 import traceback
 import datetime
 import logging
 import json
+from copy import deepcopy
 
 import requests
 import tqdm
@@ -126,6 +126,9 @@ class Downloader:
             items_to_download = self.items_repository.list(filters=filters)
             num_items = items_to_download.items_count
 
+        if num_items == 0:
+            logger.warning('No items found! Nothing was downloaded')
+            return list()
         ####################
         # annotations json #
         ####################

@@ -9,19 +9,19 @@ Feature: Tasks repository delete method testing
 
   Scenario: Delete - by name
     When I create Task
-      | task_name=min_params | due_date=auto |
+      | task_name=min_params | due_date=auto | assignee_ids=auto |
     And I delete task by "name"
     Then Task has been deleted
 
   Scenario: Delete - by id
     When I create Task
-      | task_name=min_params | due_date=auto |
+      | task_name=min_params | due_date=auto | assignee_ids=auto |
     And I delete task by "id"
     Then Task has been deleted
 
 
   Scenario: Delete - by object
     When I create Task
-      | task_name=min_params | due_date=auto |
+      | task_name=min_params | due_date=auto | assignee_ids=auto |
     And I delete task by "object"
     Then Task has been deleted

@@ -52,6 +52,16 @@ from .entities import (
     Checkpoint,
     Workload,
     WorkloadUnit,
+    FiltersKnownFields,
+    FiltersResource,
+    FiltersOperations,
+    FiltersMethod,
+    FiltersOrderByDirection,
+    FiltersKnownFields as KnownFields,
+    TriggerResource,
+    TriggerAction,
+    TriggerExecutionMode,
+    PackageInputType
 )
 from .utilities import Converter, BaseServiceRunner, Progress
 from .services import DataloopLogger, ApiClient, check_sdk
@@ -189,7 +199,6 @@ class SimilarityTypeEnum:
     """
     State enum
     """
-
     ID = "id"
     URL = "url"
 
@@ -198,69 +207,8 @@ class LinkTypeEnum:
     """
     State enum
     """
-
     ID = "id"
     URL = "url"
-
-
-class TriggerResource:
-    ITEM = "Item"
-    DATASET = "Dataset"
-    ANNOTATION = "Annotation"
-
-
-class TriggerAction:
-    CREATED = "Created"
-    UPDATED = "Updated"
-    DELETED = "Deleted"
-
-
-class TriggerExecutionMode:
-    ONCE = "Once"
-    ALWAYS = "Always"
-
-
-class PackageInputType:
-    ITEM = "Item"
-    DATASET = "Dataset"
-    ANNOTATION = "Annotation"
-    JSON = "Json"
-
-
-class FiltersResource:
-    ITEM = "items"
-    ANNOTATION = "annotations"
-
-
-class FiltersOperations:
-    OR = "or"
-    AND = "and"
-    IN = "in"
-    NOT_EQUAL = "ne"
-    EQUAL = "eq"
-    GREATER_THAN = "gt"
-    LESS_THAN = "lt"
-
-
-class FiltersMethod:
-    OR = "or"
-    AND = "and"
-
-
-class FiltersOrderByDirection:
-    DESCENDING = "descending"
-    ASCENDING = "ascending"
-
-
-class KnownFields:
-    DIR = "dir"
-    ANNOTATED = "annotated"
-    FILENAME = "filename"
-    CREATED_AT = "createdAt"
-    UPDATED_AT = "updatedAt"
-    LABEL = "label"
-    NAME = "name"
-    HIDDEN = "hidden"
 
 
 class ExecutionStatus:
@@ -291,7 +239,6 @@ class AnnotationFormat:
 
 
 class InstanceCatalog:
-    REGULAR_MICRO = "regular-micro"
     REGULAR_XS = "regular-xs"
     REGULAR_S = "regular-s"
     REGULAR_M = "regular-m"

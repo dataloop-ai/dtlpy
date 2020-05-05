@@ -8,6 +8,11 @@ from .. import services, repositories, entities, exceptions
 logger = logging.getLogger("dataloop.service")
 
 
+class OnResetAction:
+    RERUN = 'rerun'
+    FAILED = 'failed'
+
+
 @attr.s
 class Service(entities.BaseEntity):
     """
@@ -36,6 +41,10 @@ class Service(entities.BaseEntity):
     driver_id = attr.ib(repr=False)
 
     # name change
+    run_execution_as_process = attr.ib(type=bool)
+    execution_timeout = attr.ib()
+    drain_time = attr.ib()
+    on_reset = attr.ib(type=OnResetAction)
     project_id = attr.ib()
     is_global = attr.ib()
 
@@ -95,6 +104,10 @@ class Service(entities.BaseEntity):
             is_global=_json.get("global", False),
             init_input=_json.get("initParams", dict()),
             module_name=_json.get("moduleName", None),
+            run_execution_as_process=_json.get('runExecutionAsProcess', False),
+            execution_timeout=_json.get('executionTimeout', 60*60),
+            drain_time=_json.get('drainTime', 60*10),
+            on_reset=_json.get('onReset', OnResetAction.FAILED),
             name=_json.get("name", None),
             url=_json.get("url", None),
             mq=_json.get('mq', dict()),
@@ -192,7 +205,11 @@ class Service(entities.BaseEntity):
                 attr.fields(Service).is_global,
                 attr.fields(Service).use_user_jwt,
                 attr.fields(Service).package_revision,
-                attr.fields(Service).driver_id)
+                attr.fields(Service).driver_id,
+                attr.fields(Service).run_execution_as_process,
+                attr.fields(Service).execution_timeout,
+                attr.fields(Service).drain_time,
+                attr.fields(Service).on_reset)
         )
 
         _json['projectId'] = self.project_id
@@ -204,6 +221,10 @@ class Service(entities.BaseEntity):
         _json['global'] = self.is_global
         _json['driverId'] = self.driver_id
         _json['packageRevision'] = self.package_revision
+        _json['runExecutionAsProcess'] = self.run_execution_as_process
+        _json['executionTimeout'] = self.execution_timeout
+        _json['drainTime'] = self.drain_time
+        _json['onReset'] = self.on_reset
 
         return _json
 
@@ -231,11 +252,12 @@ class Service(entities.BaseEntity):
         """
         return self.services.status(service_id=self.id)
 
-    def log(self, size=None, checkpoint=None, start=None, end=None, follow=False,
-            execution_id=None, function_name=None, replica_id=None, system=False, view=False):
+    def log(self, size=None, checkpoint=None, start=None, end=None, follow=False, text=None,
+            execution_id=None, function_name=None, replica_id=None, system=False, view=True):
         """
         Get service logs
 
+        :param text:
         :param view:
         :param system:
         :param end: iso format time
@@ -258,6 +280,7 @@ class Service(entities.BaseEntity):
                                  function_name=function_name,
                                  replica_id=replica_id,
                                  system=system,
+                                 text=text,
                                  view=view)
 
     def open_in_web(self):
@@ -281,7 +304,6 @@ class Service(entities.BaseEntity):
         """
         Execute a function on an existing service
 
-        :param service_id: service id to execute on
         :param function_name: function name to run
         :param project_id: resource's project
         :param execution_input: input dictionary or list of FunctionIO entities

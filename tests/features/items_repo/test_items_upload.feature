@@ -21,7 +21,7 @@ Feature: Items repository upload service testing
         And Item in host when downloaded to "test_items_upload_downloaded_item" equals item in "assets_split/items_upload/0000000162.jpg"
     
     Scenario: Upload a single item with a specific remote name set via the buffer interface
-        When I upload the file in path "assets_split/items_upload/0000000162.jpg" with remote name "file.jpg" set via the buffer interface
+        When I upload file in path "assets_split/items_upload/0000000162.jpg" with remote name "file.jpg" set via the buffer interface
         Then Item exist in host
         And Item in host has name "file.jpg"
         And Upload method returned an Item object
@@ -37,7 +37,7 @@ Feature: Items repository upload service testing
         And Item in host when downloaded to "test_items_upload_downloaded_item" equals item in "assets_split/items_upload/0000000162.jpg"
 
     Scenario: Upload a single item with a specific remote name to a specific remote path
-        When I upload the file in path "assets_split/items_upload/0000000162.jpg" with remote name "file.jpg" to remote path "/folder"
+        When I upload the file from path "assets_split/items_upload/0000000162.jpg" with remote name "file.jpg" to remote path "/folder"
         Then Item exist in host
         And Item in host is in folder "/folder"
         And Item in host has name "file.jpg"
@@ -52,8 +52,6 @@ Feature: Items repository upload service testing
         And Upload method returned an Item object
         And Item object from host equals item uploaded
         And Item in host when downloaded to "test_items_upload_downloaded_item" equals item in "assets_split/items_upload/0000000162.jpg"
-        #Todo
-        # And Item was overwrite to host
 
     Scenario: Upload a single item - merge
         Given Item in path "assets_split/items_upload/0000000162.jpg" is uploaded to "Dataset"
@@ -87,13 +85,13 @@ Feature: Items repository upload service testing
         And Item object from host equals item uploaded
         And Item in host when downloaded to "test_items_upload_downloaded_item" equals item in "assets_split/items_upload/0000000162.jpg"
 
-    Scenario: Upload item from URL with specific remote name
-        When I upload a file from a URL "http://some.domain/some_file.png" with remote name "file.png"
-        Then Item exist in host
-        And Item in host has name "file.jpg"
-        And Upload method returned an Item object
-        And Item object from host equals item uploaded
-        And Item in host when downloaded to "test_items_upload_downloaded_item" equals item available at "http://some.domain/some_file.png"
+#     # TODO - add tests for upload with remote name: url, link, multiview, similarity
+#     Scenario: Upload item from URL with specific remote name
+#         When I upload a file from a URL "http://some.domain/some_file.png" with remote name "file.png"
+#         Then Item exist in host
+#         And Item in host has name "file.jpg"
+#         And Upload method returned an Item object
+#         And Item object from host equals item uploaded
 
     Scenario: Upload a single item - video
         When I upload a file in path "sample_video.mp4"
@@ -101,5 +99,5 @@ Feature: Items repository upload service testing
         And Upload method returned an Item object
         And Item object from host equals item uploaded
         #todo
-        # And vidoe download from host equal video in "sample_video.mp4"
+        # And video download from host equal video in "sample_video.mp4"
 

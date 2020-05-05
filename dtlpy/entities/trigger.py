@@ -3,6 +3,23 @@ from collections import namedtuple
 from .. import entities, services, exceptions, repositories
 
 
+class TriggerResource:
+    ITEM = "Item"
+    DATASET = "Dataset"
+    ANNOTATION = "Annotation"
+
+
+class TriggerAction:
+    CREATED = "Created"
+    UPDATED = "Updated"
+    DELETED = "Deleted"
+
+
+class TriggerExecutionMode:
+    ONCE = "Once"
+    ALWAYS = "Always"
+
+
 @attr.s
 class Trigger(entities.BaseEntity):
     """

@@ -7,20 +7,16 @@ Feature: Assignments repository list method testing
         And There are items, path = "filters/image.jpg"
             |annotated_type={"box": 3, "polygon": 3}|metadata={"user.good": 3, "user.bad": 3}|
         When I create Task
-            | task_name=assignments_list | due_date=auto |
+            | task_name=assignments_list | due_date=auto | assignee_ids=annotator0@dataloop.ai |
 
     Scenario: List
         When I list assignments
-        Then I receive a list of "0" assignments
+        Then I receive a list of "1" assignments
         When I create an Assignment from "task" entity
             | assignment_name=assignments_list1 | assignee_id=annotator1@dataloop.ai | items=3 |
         And I list assignments
-        Then I receive a list of "1" assignments
-        When I create an Assignment from "task" entity
-            | assignment_name=assignments_list2 | assignee_id=annotator1@dataloop.ai | items=3 |
-        And I list assignments
         Then I receive a list of "2" assignments
         When I create an Assignment from "task" entity
-            | assignment_name=assignments_list3 | assignee_id=annotator1@dataloop.ai | items=3 |
+            | assignment_name=assignments_list2 | assignee_id=annotator2@dataloop.ai | items=3 |
         And I list assignments
         Then I receive a list of "3" assignments

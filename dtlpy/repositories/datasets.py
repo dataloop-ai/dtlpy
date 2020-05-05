@@ -464,5 +464,6 @@ class Datasets:
         pool.close()
         pool.join()
         pool.terminate()
+        progress.close()
 
         return local_path

@@ -16,7 +16,7 @@
 from .base_entity import BaseEntity
 from .item import Item, Modality
 from .links import Link, ItemLink, UrlLink
-from .trigger import Trigger
+from .trigger import Trigger, TriggerResource, TriggerAction, TriggerExecutionMode
 from .project import Project
 from .artifact import Artifact
 from .dataset import Dataset
@@ -24,7 +24,8 @@ from .codebase import Codebase
 from .annotation import Annotation, FrameAnnotation
 from .annotation_collection import AnnotationCollection
 from .paged_entities import PagedEntities
-from .filters import Filters
+from .filters import Filters, FiltersKnownFields, FiltersResource, FiltersOperations, FiltersMethod, \
+    FiltersOrderByDirection
 from .recipe import Recipe
 from .ontology import Ontology
 from .annotation_definitions import Box, Point, Segmentation, Polygon, Ellipse, Classification, Subtitle, \
@@ -32,7 +33,7 @@ from .annotation_definitions import Box, Point, Segmentation, Polygon, Ellipse, 
 from .label import Label
 from .package import Package
 from .package_module import PackageModule
-from .package_function import PackageFunction, FunctionIO
+from .package_function import PackageFunction, FunctionIO, PackageInputType
 from .package_defaults import DEFAULT_PACKAGE_MODULE, DEFAULT_PACKAGE_NAME, DEFAULT_PACKAGE_ENTRY_POINT, \
     DEFAULT_PACKAGE_METHOD, DEFAULT_PACKAGE_FUNCTION_NAME, DEFAULT_PACKAGE_MODULE_NAME
 from .time_series import TimeSeries

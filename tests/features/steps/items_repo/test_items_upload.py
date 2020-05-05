@@ -3,6 +3,7 @@ import os
 import cv2
 import time
 import shutil
+import io
 
 
 @behave.when(u'I upload a file in path "{item_local_path}"')
@@ -99,21 +100,17 @@ def step_impl(context, remote_path):
 def step_impl(context, local_path, remote_name):
     local_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], local_path)
 
-    import io
-
     with open(local_path, "rb") as f:
         buffer = io.BytesIO(f.read())
-    
+
     context.item = context.dataset.items.upload(
         local_path=buffer, remote_path=None, remote_name=remote_name
     )
 
-    
-@behave.when(u'I upload the file in path "{local_path}" with remote name "{remote_name}" set via the buffer interface')
+
+@behave.when(u'I upload file in path "{local_path}" with remote name "{remote_name}" set via the buffer interface')
 def step_impl(context, local_path, remote_name):
     local_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], local_path)
-
-    import io
 
     with open(local_path, "rb") as f:
         buffer = io.BytesIO(f.read())
@@ -133,7 +130,8 @@ def step_impl(context, local_path, remote_name):
     )
 
 
-@behave.when(u'I upload the file in path "{local_path}" with remote name "{remote_name}" to remote path "{remote_path}"')
+@behave.when(
+    u'I upload the file from path "{local_path}" with remote name "{remote_name}" to remote path "{remote_path}"')
 def step_impl(context, local_path, remote_path, remote_name):
     local_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], local_path)
 
@@ -231,9 +229,7 @@ def step_impl(context, item_count):
 def step_impl(context, local_path, remote_name):
     local_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], local_path)
 
-    import io
-
     with open(local_path, "rb") as f:
         buffer = io.BytesIO(f.read())
-        context.dataset.items.upload(
-            local_path=buffer, remote_name=remote_name)
+
+    context.item = context.dataset.items.upload(local_path=buffer, remote_name=remote_name)

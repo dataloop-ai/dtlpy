@@ -1,5 +1,4 @@
 import logging
-import shutil
 import uuid
 import os
 from urllib.parse import urlencode
@@ -190,7 +189,7 @@ class Checkpoints:
     def download(self, checkpoint_id=None, checkpoint=None, local_path=None):
         if checkpoint is None:
             if checkpoint_id is None:
-                raise
+                raise exceptions.PlatformException('400', 'Please provide checkpoint or checkpoint id')
             checkpoint = self.get(checkpoint_id=checkpoint_id)
 
         if local_path is None:

@@ -7,6 +7,8 @@ def step_impl(context):
     context.first_module_first_function_execution = context.first_service.executions.create(
         service_id=context.first_service.id,
         sync=True,
+        stream_logs=False,
+        return_output=False,
         execution_input=context.dl.FunctionIO(
             type='Item',
             value={'item_id': context.item.id},
@@ -15,6 +17,8 @@ def step_impl(context):
     context.first_module_second_function_execution = context.first_service.executions.create(
         service_id=context.first_service.id,
         sync=True,
+        stream_logs=False,
+        return_output=False,
         execution_input=context.dl.FunctionIO(
             type='Item',
             value={'item_id': context.item.id},
@@ -23,6 +27,8 @@ def step_impl(context):
     context.second_module_first_function_execution = context.second_service.executions.create(
         service_id=context.second_service.id,
         sync=True,
+        stream_logs=False,
+        return_output=False,
         execution_input=context.dl.FunctionIO(
             type='Item',
             value={'item_id': context.item.id},
@@ -31,6 +37,8 @@ def step_impl(context):
     context.second_module_second_function_execution = context.second_service.executions.create(
         service_id=context.second_service.id,
         sync=True,
+        stream_logs=False,
+        return_output=False,
         execution_input=context.dl.FunctionIO(
             type='Item',
             value={'item_id': context.item.id},

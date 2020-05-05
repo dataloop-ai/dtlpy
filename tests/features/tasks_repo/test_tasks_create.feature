@@ -9,7 +9,7 @@ Feature: Tasks repository create method testing
 
     Scenario: Create - minimum params
         When I create Task
-            | task_name=min_params | due_date=auto |
+            | task_name=min_params | due_date=auto | assignee_ids=auto |
         Then I receive a task entity
         And Task has the correct attributes
 

@@ -213,7 +213,8 @@ class Services:
 
     def _create(self, service_name=None, package=None, module_name=None, bot=None, revision=None, init_input=None,
                 runtime=None, pod_type=None, project_id=None, sdk_version=None, agent_versions=None, verify=True,
-                driver_id=None, **kwargs):
+                driver_id=None, run_execution_as_process=None, execution_timeout=None, drain_time=None, on_reset=None,
+                **kwargs):
         """
         Create service entity
         :param verify:
@@ -317,7 +318,12 @@ class Services:
             if 'gpu' in payload['runtime'] and payload['runtime']['gpu']:
                 pod_type = 'gpu-k80-s'
             else:
-                pod_type = 'regular-micro'
+                pod_type = 'regular-s'
+        elif 'podType' not in payload['runtime'] and payload['runtime']['podType'] != pod_type:
+            raise exceptions.PlatformException('400', 'Different pod_types given in param and in runtime.\n'
+                                                      'pod_type param = {}\n'
+                                                      'pod_type in runtime = {}'.format(pod_type,
+                                                                                        payload['runtime']['podType']))
 
         if is_global is not None:
             payload['global'] = is_global
@@ -327,6 +333,18 @@ class Services:
 
         if 'podType' not in payload['runtime']:
             payload['runtime']['podType'] = pod_type
+
+        if run_execution_as_process is not None:
+            payload['runExecutionAsProcess'] = run_execution_as_process
+
+        if drain_time is not None:
+            payload['drainTime'] = drain_time
+
+        if on_reset is not None:
+            payload['onReset'] = on_reset
+
+        if execution_timeout is not None:
+            payload['executionTimeout'] = execution_timeout
 
         # request
         success, response = self._client_api.gen_request(req_type='post',
@@ -400,11 +418,12 @@ class Services:
                                           package=package,
                                           project=self._project)
 
-    def log(self, service, size=None, checkpoint=None, start=None, end=None, follow=False,
-            execution_id=None, function_name=None, replica_id=None, system=False, view=False):
+    def log(self, service, size=None, checkpoint=None, start=None, end=None, follow=False, text=None,
+            execution_id=None, function_name=None, replica_id=None, system=False, view=True):
         """
         Get service logs
 
+        :param text:
         :param view:
         :param system:
         :param end: iso format time
@@ -434,6 +453,9 @@ class Services:
 
         if function_name is not None:
             payload['functionName'] = function_name
+
+        if text is not None:
+            payload['text'] = text
 
         if replica_id is not None:
             payload['replicaId'] = replica_id
@@ -514,10 +536,18 @@ class Services:
                project_id=None,
                driver_id=None,
                func=None,
+               run_execution_as_process=None,
+               execution_timeout=None,
+               drain_time=None,
+               on_reset=None,
                **kwargs):
         """
         Deploy service
 
+        :param on_reset:
+        :param drain_time:
+        :param execution_timeout:
+        :param run_execution_as_process:
         :param func:
         :param project_id:
         :param module_name:
@@ -586,7 +616,11 @@ class Services:
                                    module_name=module_name,
                                    driver_id=driver_id,
                                    jwt_forward=kwargs.get('jwt_forward', None),
-                                   is_global=kwargs.get('is_global', None))
+                                   is_global=kwargs.get('is_global', None),
+                                   run_execution_as_process=run_execution_as_process,
+                                   execution_timeout=execution_timeout,
+                                   drain_time=drain_time,
+                                   on_reset=on_reset)
         if checkout:
             self.checkout(service=service)
         return service
@@ -689,6 +723,10 @@ class Services:
         agent_versions = service_json.get('versions', None)
         verify = service_json.get('verify', True)
         module_name = service_json.get('module_name', None)
+        run_execution_as_process = service_json.get('run_execution_as_process', None)
+        execution_timeout = service_json.get('execution_timeout', None)
+        drain_time = service_json.get('drain_time', None)
+        on_reset = service_json.get('on_reset', None)
 
         service = self.deploy(bot=bot,
                               service_name=name,
@@ -700,6 +738,10 @@ class Services:
                               agent_versions=agent_versions,
                               verify=verify,
                               checkout=checkout,
+                              run_execution_as_process=run_execution_as_process,
+                              execution_timeout=execution_timeout,
+                              drain_time=drain_time,
+                              on_reset=on_reset,
                               module_name=module_name)
 
         triggers = repositories.Triggers(client_api=self._client_api, project=self._project)
@@ -771,6 +813,10 @@ class Services:
             init_input = service_input.get('initParams', None)
             module_name = service_input.get('module_name', None)
             driver_id = service_input.get('driverId', None)
+            run_execution_as_process = service_json.get('run_execution_as_process', None)
+            execution_timeout = service_json.get('execution_timeout', None)
+            drain_time = service_json.get('drain_time', None)
+            on_reset = service_json.get('on_reset', None)
             # create or update service
             if service_input['name'] in project_services:
                 service = project_services[service_input['name']]
@@ -793,6 +839,10 @@ class Services:
                                        sdk_version=sdk_version,
                                        verify=verify,
                                        module_name=module_name,
+                                       run_execution_as_process=run_execution_as_process,
+                                       execution_timeout=execution_timeout,
+                                       drain_time=drain_time,
+                                       on_reset=on_reset,
                                        driver_id=driver_id)
                 project_services[service.name] = service
 

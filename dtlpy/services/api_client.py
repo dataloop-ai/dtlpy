@@ -519,6 +519,7 @@ class ApiClient:
         headers = self.auth
         headers['User-Agent'] = requests_toolbelt.user_agent('dtlpy', __version__.version)
 
+        pbar = None
         if callback is None:
             if item_size > 10e6:
                 # size larger than 10MB
@@ -557,6 +558,8 @@ class ApiClient:
             except Exception as err:
                 response = AsyncResponseError(error=err, trace=traceback.format_exc())
             finally:
+                if pbar is not None:
+                    pbar.close()
                 with threadLock:
                     self.calls_counter.add()
         return response
@@ -872,15 +875,14 @@ class ApiClient:
     def set_api_counter(self, filepath):
         self.calls_counter = CallsCounter(filepath=filepath)
 
-    def _open_in_web(self,
-                     resource_type,
-                     project_id=None,
-                     dataset_id=None,
-                     item_id=None,
-                     package_id=None,
-                     service_id=None):
+    def _get_resource_url(self,
+                          resource_type,
+                          project_id=None,
+                          dataset_id=None,
+                          item_id=None,
+                          package_id=None,
+                          service_id=None):
 
-        import webbrowser
         env = self._environments[self._environment]['alias']
         if env == 'prod':
             head = 'https://console.dataloop.ai'
@@ -905,5 +907,21 @@ class ApiClient:
             url = head + '/projects/{}/packages/{}/services/{}'.format(project_id, package_id, service_id)
         else:
             raise exceptions.PlatformException(error='400', message='Unknown resource_type: {}'.format(resource_type))
+        return url
 
+    def _open_in_web(self,
+                     resource_type,
+                     project_id=None,
+                     dataset_id=None,
+                     item_id=None,
+                     package_id=None,
+                     service_id=None):
+
+        import webbrowser
+        url = self._get_resource_url(resource_type=resource_type,
+                                     project_id=project_id,
+                                     dataset_id=dataset_id,
+                                     item_id=item_id,
+                                     package_id=package_id,
+                                     service_id=service_id)
         webbrowser.open(url=url, new=2, autoraise=True)

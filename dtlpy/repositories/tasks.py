@@ -273,7 +273,6 @@ class Tasks:
 
         :param query:
         :param metadata:
-        :param task_name:
         :param assignee_ids:
         :param workload:
         :param dataset:
@@ -325,7 +324,7 @@ class Tasks:
 
         if workload is None:
             if assignee_ids is None:
-                workload = entities.Workload()
+                raise exceptions.PlatformException('400', 'Must provide either workload or assignee_ids')
             else:
                 workload = entities.Workload.generate(assignee_ids=assignee_ids)
 

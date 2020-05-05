@@ -2,7 +2,7 @@ import logging
 import json
 import attr
 
-from .. import miscellaneous, exceptions, entities
+from .. import exceptions, entities
 
 logger = logging.getLogger("dataloop.function")
 
@@ -67,20 +67,27 @@ class PackageFunction(entities.BaseEntity):
         return _json
 
 
+class PackageInputType:
+    ITEM = "Item"
+    DATASET = "Dataset"
+    ANNOTATION = "Annotation"
+    JSON = "Json"
+
+
 @attr.s
 class FunctionIO:
-    INPUT_TYPES = ['Json', 'Dataset', 'Item', 'Annotation']
+    INPUT_TYPES = [val for key, val in PackageInputType.__dict__.items() if not key.startswith('_')]
     type = attr.ib(type=str)
     value = attr.ib(default=None)
     name = attr.ib(type=str)
 
     @name.default
     def set_name(self):
-        if self.type == 'Item':
+        if self.type == PackageInputType.ITEM:
             return 'item'
-        elif self.type == 'Dataset':
+        elif self.type == PackageInputType.DATASET:
             return 'dataset'
-        elif self.type == 'Annotation':
+        elif self.type == PackageInputType.ANNOTATION:
             return 'annotation'
         else:
             return 'config'
@@ -106,25 +113,25 @@ class FunctionIO:
     def check_value(self, attribute, value):
         value_ok = True
         expected_value = 'Expected value should be:'
-        if self.type == 'Json':
+        if self.type == PackageInputType.JSON:
             expected_value = '{} json serializable'.format(expected_value)
             if not self.is_json_serializable(value):
                 value_ok = False
-        elif self.type == 'Dataset':
+        elif self.type == PackageInputType.DATASET:
             expected_value = '{} {{"dataset_id": <dataset id>}}'.format(expected_value)
             if not isinstance(value, dict):
                 value_ok = False
             else:
                 if 'dataset_id' not in value:
                     value_ok = False
-        elif self.type == 'Item':
+        elif self.type == PackageInputType.ITEM:
             expected_value = '{} {{"item_id": <item id>}}'.format(expected_value)
             if not isinstance(value, dict):
                 value_ok = False
             else:
                 if 'item_id' not in value:
                     value_ok = False
-        elif self.type == 'Annotation':
+        elif self.type == PackageInputType.ANNOTATION:
             expected_value = '{} {{"item_id": <item id>, "annotation_id": <annotation id>}}'.format(expected_value)
             if not isinstance(value, dict):
                 value_ok = False

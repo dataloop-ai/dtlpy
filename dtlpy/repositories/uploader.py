@@ -23,7 +23,8 @@ NUM_TRIES = 3  # try to upload 3 time before fail on item
 
 
 class UploadElement:
-    def __init__(self, element_type, buffer, remote_filepath, annotations_filepath, remote_name=None, link_dataset_id=None,
+    def __init__(self, element_type, buffer, remote_filepath, annotations_filepath, remote_name=None,
+                 link_dataset_id=None,
                  item_metadata=None):
         self.type = element_type
         self.buffer = buffer
@@ -94,27 +95,40 @@ class Uploader:
         # Convert inputs to list #
         ##########################
         local_annotations_path_list = None
+        remote_name_list = None
         if not isinstance(local_path, list):
             local_path_list = [local_path]
             if remote_name is not None:
-                if not isinstance(remote_name, str): 
-                    raise PlatformException(error="400", message='remote_name must be a string, got: {}'.format(type(remote_name)))
+                if not isinstance(remote_name, str):
+                    raise PlatformException(error="400",
+                                            message='remote_name must be a string, got: {}'.format(type(remote_name)))
                 remote_name_list = [remote_name]
             if local_annotations_path is not None:
                 if not isinstance(local_annotations_path, str):
-                    raise PlatformException(error="400", message='local_annotations_path must be a string, got: {}'.format(type(local_annotations_path)))
+                    raise PlatformException(error="400",
+                                            message='local_annotations_path must be a string, got: {}'.format(
+                                                type(local_annotations_path)))
                 local_annotations_path_list = [local_annotations_path]
         else:
             local_path_list = local_path
             if remote_name is not None:
                 if not isinstance(remote_name, list):
-                    raise PlatformException(error="400", message='remote_name must be a list, got: {}'.format(type(remote_name)))
+                    raise PlatformException(error="400",
+                                            message='remote_name must be a list, got: {}'.format(type(remote_name)))
                 if not len(remote_name) == len(local_path_list):
-                    raise PlatformException(error="400", message='remote_name and local_path_list must be of same length. Received: remote_name: {}, local_path_list: {}'.format(len(remote_name), len(local_path_list)))
+                    raise PlatformException(error="400",
+                                            message='remote_name and local_path_list must be of same length. '
+                                                    'Received: remote_name: {}, '
+                                                    'local_path_list: {}'.format(len(remote_name),
+                                                                                 len(local_path_list)))
                 remote_name_list = remote_name
             if local_annotations_path is not None:
                 if not len(local_annotations_path) == len(local_path_list):
-                    raise PlatformException(error="400", message='local_annotations_path and local_path_list must be of same lenght. Received: local_annotations_path: {}, local_path_list: {}'.format(len(local_annotations_path), len(local_path_list)))
+                    raise PlatformException(error="400",
+                                            message='local_annotations_path and local_path_list must be of same lenght.'
+                                                    ' Received: local_annotations_path: {}, '
+                                                    'local_path_list: {}'.format(len(local_annotations_path),
+                                                                                 len(local_path_list)))
                 local_annotations_path_list = local_annotations_path
 
         if local_annotations_path is None:
@@ -210,6 +224,7 @@ class Uploader:
                                      name='{}_link.json'.format(upload_item_element.name))
                 if remote_name is None:
                     remote_name = link.name
+
                 remote_filepath = '{}{}'.format(remote_path, remote_name)
 
                 element = UploadElement(element_type='link',
@@ -219,7 +234,10 @@ class Uploader:
                                         item_metadata=item_metadata)
                 elements.append(element)
             elif isinstance(upload_item_element, entities.Link):
-                remote_filepath = '{}{}_link.json'.format(remote_path, upload_item_element.name)
+                if remote_name is None:
+                    remote_name = upload_item_element.name
+
+                remote_filepath = '{}{}_link.json'.format(remote_path, remote_name)
 
                 element = UploadElement(element_type='link',
                                         buffer=upload_item_element,
@@ -228,10 +246,12 @@ class Uploader:
                                         item_metadata=item_metadata)
                 elements.append(element)
             elif isinstance(upload_item_element, entities.Similarity):
+                if remote_name:
+                    upload_item_element.name = remote_name
                 if upload_item_element.name is None:
                     upload_item_element.name = '{}_similarity.json'.format(upload_item_element.ref)
-                    remote_filepath = '{}{}'.format(remote_path, upload_item_element.name)
-                elif not upload_item_element.name.endswith('.json'):
+
+                if not upload_item_element.name.endswith('.json'):
                     remote_filepath = '{}{}.json'.format(remote_path, upload_item_element.name)
                 else:
                     remote_filepath = '{}{}'.format(remote_path, upload_item_element.name)
@@ -243,6 +263,9 @@ class Uploader:
                                         item_metadata=item_metadata)
                 elements.append(element)
             elif isinstance(upload_item_element, entities.MultiView):
+                if remote_name:
+                    upload_item_element.name = remote_name
+
                 if not upload_item_element.name.endswith('.json'):
                     upload_item_element.name = '{}.json'.format(upload_item_element.name)
 
@@ -258,11 +281,11 @@ class Uploader:
                     isinstance(upload_item_element, io.BufferedReader) or \
                     isinstance(upload_item_element, io.TextIOWrapper):
                 # binary element
-                if not hasattr(upload_item_element, "name"):
+                if not hasattr(upload_item_element, "name") and remote_name is None:
                     raise PlatformException(
                         error="400",
-                        message='Upload elemnet type was bytes. Must put attribute "name" on buffer (with file name) '
-                                'when uploading buffers')
+                        message='Upload element type was bytes. Must put attribute "name" on buffer (with file name) '
+                                'when uploading buffers or providing param "remote_name"')
                 if remote_name is None:
                     remote_name = upload_item_element.name
                 remote_filepath = remote_path + remote_name
@@ -282,8 +305,8 @@ class Uploader:
                     error="400",
                     message="Unknown element type to upload ('local_path'). received type: {}. "
                             "known types (or list of those types): str (dir, file, url), bytes, io.BytesIO, "
-                            "io.TextIOWrapper, Dataloop.Item, Dataloop.Link, Dataloop.Similarity".format(
-                        type(upload_item_element)))
+                            "io.TextIOWrapper, Dataloop.Item, Dataloop.Link, "
+                            "Dataloop.Similarity".format(type(upload_item_element)))
 
         num_files = len(elements)
         logger.info("Uploading {} items..".format(num_files))

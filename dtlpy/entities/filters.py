@@ -5,6 +5,43 @@ import os
 logger = logging.getLogger(name=__name__)
 
 
+class FiltersKnownFields:
+    DIR = "dir"
+    ANNOTATED = "annotated"
+    FILENAME = "filename"
+    CREATED_AT = "createdAt"
+    UPDATED_AT = "updatedAt"
+    LABEL = "label"
+    NAME = "name"
+    HIDDEN = "hidden"
+    TYPE = 'type'
+
+
+class FiltersResource:
+    ITEM = "items"
+    ANNOTATION = "annotations"
+
+
+class FiltersOperations:
+    OR = "or"
+    AND = "and"
+    IN = "in"
+    NOT_EQUAL = "ne"
+    EQUAL = "eq"
+    GREATER_THAN = "gt"
+    LESS_THAN = "lt"
+
+
+class FiltersMethod:
+    OR = "or"
+    AND = "and"
+
+
+class FiltersOrderByDirection:
+    DESCENDING = "descending"
+    ASCENDING = "ascending"
+
+
 class Filters:
     """
     Filters entity to filter items from pages in platform

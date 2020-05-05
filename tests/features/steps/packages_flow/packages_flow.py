@@ -72,7 +72,6 @@ def step_impl(context, package_directory_path):
     context.to_delete_services_ids.append(context.service.id)
 
 
-
 @behave.when(u'I upload item in "{item_path}" to dataset')
 def step_impl(context, item_path):
     time.sleep(10)

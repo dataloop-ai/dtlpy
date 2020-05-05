@@ -348,6 +348,30 @@ class Packages:
             except exceptions.Forbidden:
                 logger.debug('Failed to delete code-bases. Continue without')
 
+        # check if project exist
+        project_exists = True
+        if self._project is None:
+            try:
+                if package is not None and package.project is not None:
+                    self._project = package.project
+                else:
+                    self._project = repositories.Projects(client_api=self._client_api).get(
+                        project_id=package.project_id)
+            except exceptions.NotFound:
+                project_exists = False
+
+        if project_exists:
+            try:
+                # create codebases repo
+                codebases = repositories.Codebases(client_api=self._client_api, project=self._project)
+                # get package codebases
+                codebase_pages = codebases.list_versions(codebase_name=package_name)
+                for codebase_page in codebase_pages:
+                    for codebase in codebase_page:
+                        codebase.delete()
+            except exceptions.Forbidden:
+                logger.debug('Failed to delete code-bases. Continue without')
+
         # request
         success, response = self._client_api.gen_request(
             req_type="delete",
@@ -402,6 +426,10 @@ class Packages:
                verify=True,
                checkout=False,
                module_name=None,
+               run_execution_as_process=None,
+               execution_timeout=None,
+               drain_time=None,
+               on_reset=None,
                **kwargs):
         """
         Deploy package
@@ -410,6 +438,10 @@ class Packages:
         :param checkout:
         :param pod_type:
         :param bot:
+        :param drain_time:
+        :param execution_timeout:
+        :param run_execution_as_process:
+        :param on_reset:
         :param init_input:
         :param verify:
         :param agent_versions: - dictionary - - optional -versions of sdk, agent runner and agent proxy
@@ -439,7 +471,12 @@ class Packages:
                                        module_name=module_name,
                                        checkout=checkout,
                                        jwt_forward=kwargs.get('jwt_forward', None),
-                                       is_global=kwargs.get('is_global', None))
+                                       is_global=kwargs.get('is_global', None),
+                                       run_execution_as_process=run_execution_as_process,
+                                       execution_timeout=execution_timeout,
+                                       drain_time=drain_time,
+                                       on_reset=on_reset
+                                       )
 
     @staticmethod
     def generate(name=None, src_path=None, service_name=None, package_type=PackageCatalog.DEFAULT_PACKAGE_TYPE):

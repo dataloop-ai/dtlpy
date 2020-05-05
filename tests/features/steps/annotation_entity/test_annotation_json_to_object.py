@@ -43,6 +43,11 @@ def step_impl(context, entity):
             response = response.json()
             assert success
 
+            # TODO - temporary - need to check why platform dict doesnt have hash attribute
+            if ann_json.get('hash', None) is None and response.get('hash', None):
+                ann_json.pop('hash', None)
+                response.pop('hash', None)
+
             # remove metadata because response has no metadata
             if ann.type in ['segment', 'polyline']:
                 if 'metadata' in ann_json:

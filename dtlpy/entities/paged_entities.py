@@ -194,12 +194,9 @@ class PagedEntities:
         self.get_page()
 
     def load_annotations(self, result):
-        items = dict()
         annotations = [None] * len(result['items'])
         for i_json, _json in enumerate(result['items']):
-            if _json['itemId'] not in items:
-                items[_json['itemId']] = self.items_repository.get(item_id=_json['itemId'])
-            annotations[i_json] = self.item_entity.from_json(item=items[_json['itemId']], _json=_json)
+            annotations[i_json] = self.item_entity.from_json(_json=_json, client_api=self._client_api)
         return miscellaneous.List(annotations)
 
     def all(self):

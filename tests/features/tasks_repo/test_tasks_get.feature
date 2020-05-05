@@ -9,26 +9,26 @@ Feature: Tasks repository get method testing
 
     Scenario: Get - name
         When I create Task
-            | task_name=min_params | due_date=auto |
+            | task_name=min_params | due_date=auto | assignee_ids=auto |
         And I get task by "name"
         Then I receive a Task entity
         And Task received equals task created
 
     Scenario: Get - id
         When I create Task
-            | task_name=min_params | due_date=auto |
+            | task_name=min_params | due_date=auto | assignee_ids=auto |
         And I get task by "id"
         Then I receive a Task entity
         And Task received equals task created
 
     Scenario: Get - not existing - name
         When I create Task
-            | task_name=min_params | due_date=auto |
+            | task_name=min_params | due_date=auto | assignee_ids=auto |
         And I get task by wrong "name"
         Then "NotFound" exception should be raised
 
     Scenario: Get - not existing - id
         When I create Task
-            | task_name=min_params | due_date=auto |
+            | task_name=min_params | due_date=auto | assignee_ids=auto |
         And I get task by wrong "id"
         Then "NotFound" exception should be raised

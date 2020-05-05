@@ -14,13 +14,29 @@ class Annotations:
         Annotations repository
     """
 
-    def __init__(self, client_api, item=None):
+    def __init__(self, client_api, item=None, dataset=None):
         self._client_api = client_api
         self._item = item
+        self._dataset = dataset
 
     ############
     # entities #
     ############
+    @property
+    def dataset(self):
+        if self._dataset is None:
+            raise exceptions.PlatformException(
+                error='2001',
+                message='Missing "dataset". need to set a Dataset entity or use dataset.annotations repository')
+        assert isinstance(self._dataset, entities.Dataset)
+        return self._dataset
+
+    @dataset.setter
+    def dataset(self, dataset):
+        if not isinstance(dataset, entities.Dataset):
+            raise ValueError('Must input a valid Dataset entity')
+        self._dataset = dataset
+
     @property
     def item(self):
         if self._item is None:
@@ -56,21 +72,61 @@ class Annotations:
             raise exceptions.PlatformException(response)
         return annotation
 
-    def list(self):
+    def list(self, filters=None, page_offset=None, page_size=None):
         """
-            Get all annotations
+        List Annotation
 
-        :return: List of Annotation objects
+        :param filters: Filters entity or a dictionary containing filters parameters
+        :param page_offset:
+        :param page_size:
+        :return: Pages object
         """
+        if self._item is not None:
+            success, response = self._client_api.gen_request(req_type='get',
+                                                             path='/items/{}/annotations'.format(self.item.id))
+            if success:
+                annotations = entities.AnnotationCollection.from_json(_json=response.json(),
+                                                                      item=self.item)
+            else:
+                raise exceptions.PlatformException(response)
 
-        success, response = self._client_api.gen_request(req_type='get',
-                                                         path='/items/{}/annotations'.format(self.item.id))
-        if success:
-            annotations = entities.AnnotationCollection.from_json(_json=response.json(),
-                                                                  item=self.item)
-        else:
-            raise exceptions.PlatformException(response)
-        return annotations
+            return annotations
+
+        elif self._dataset is not None:
+            if filters is None:
+                filters = entities.Filters()
+                filters.resource = 'annotations'
+            # assert type filters
+            if not isinstance(filters, entities.Filters):
+                raise exceptions.PlatformException('400', 'Unknown filters type')
+
+            # page size
+            if page_size is None:
+                # take from default
+                page_size = filters.page_size
+            else:
+                filters.page_size = page_size
+
+            # page offset
+            if page_offset is None:
+                # take from default
+                page_offset = filters.page
+            else:
+                filters.page = page_offset
+
+            if filters.resource == 'items':
+                items_entity = entities.Item
+            else:
+                items_entity = entities.Annotation
+
+            paged = entities.PagedEntities(items_repository=self._dataset.items,
+                                           filters=filters,
+                                           page_offset=page_offset,
+                                           page_size=page_size,
+                                           client_api=self._client_api,
+                                           item_entity=items_entity)
+            paged.get_page()
+            return paged
 
     def show(self, image=None, thickness=1, with_text=False, height=None, width=None, annotation_format='mask'):
         """

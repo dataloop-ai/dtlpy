@@ -24,6 +24,7 @@ class Execution(entities.BaseEntity):
     duration = attr.ib()
     attempts = attr.ib()
     max_attempts = attr.ib()
+    to_terminate = attr.ib(type=bool)
 
     # name changed
     trigger_id = attr.ib()
@@ -95,6 +96,7 @@ class Execution(entities.BaseEntity):
             input=_json.get('input', None),
             url=_json.get('url', None),
             id=_json.get('id', None),
+            to_terminate=_json.get('toTerminate', False),
             client_api=client_api,
             service=service
         )
@@ -111,6 +113,7 @@ class Execution(entities.BaseEntity):
         _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(Execution)._client_api,
                                                               attr.fields(Execution)._service,
                                                               attr.fields(Execution)._project,
+                                                              attr.fields(Execution).to_terminate,
                                                               attr.fields(Execution)._repositories,
                                                               attr.fields(Execution).project_id,
                                                               attr.fields(Execution).service_id,
@@ -127,6 +130,7 @@ class Execution(entities.BaseEntity):
         _json['functionName'] = self.function_name
         _json['latestStatus'] = self.latest_status
         _json['maxAttempts'] = self.max_attempts
+        _json['toTerminate'] = self.to_terminate
         return _json
 
     @property
@@ -181,7 +185,7 @@ class Execution(entities.BaseEntity):
         """
         Print logs for execution
         """
-        self.executions.logs(execution_id=self.id)
+        self.services.log(execution_id=self.id, view=True, service=self.service)
 
     def increment(self):
         """
@@ -190,3 +194,11 @@ class Execution(entities.BaseEntity):
         :return:
         """
         self.attempts = self.executions.increment(self)
+
+    def terminate(self):
+        """
+        Terminate execution
+
+        :return:
+        """
+        return self.executions.terminate(self)

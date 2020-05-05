@@ -165,7 +165,7 @@ class Dataset(entities.BaseEntity):
     @_repositories.default
     def set_repositories(self):
         reps = namedtuple('repositories',
-                          field_names=['items', 'recipes', 'datasets', 'assignments', 'tasks'])
+                          field_names=['items', 'recipes', 'datasets', 'assignments', 'tasks', 'annotations'])
         if self._project is None:
             datasets = repositories.Datasets(client_api=self._client_api, project=self._project)
         else:
@@ -175,6 +175,7 @@ class Dataset(entities.BaseEntity):
                  recipes=repositories.Recipes(client_api=self._client_api, dataset=self),
                  assignments=repositories.Assignments(project=self._project, client_api=self._client_api, dataset=self),
                  tasks=repositories.Tasks(client_api=self._client_api, project=self._project, dataset=self),
+                 annotations=repositories.Annotations(client_api=self._client_api, dataset=self),
                  datasets=datasets)
         return r
 
@@ -202,6 +203,11 @@ class Dataset(entities.BaseEntity):
     def tasks(self):
         assert isinstance(self._repositories.tasks, repositories.Tasks)
         return self._repositories.tasks
+
+    @property
+    def datasets(self):
+        assert isinstance(self._repositories.datasets, repositories.Datasets)
+        return self._repositories.datasets
 
     @property
     def project(self):

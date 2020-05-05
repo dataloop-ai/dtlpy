@@ -115,6 +115,7 @@ class Converter:
         pool.close()
         pool.join()
         pool.terminate()
+        pbar.close()
 
     def __save_filtered_annotations_and_convert(self, item, filters, to_format, from_format, file_path,
                                                 save_locally=False,
@@ -185,6 +186,7 @@ class Converter:
         pool.close()
         pool.join()
         pool.terminate()
+        pbar.close()
 
         total_converted_annotations = list()
         for ls in converted_annotations:
