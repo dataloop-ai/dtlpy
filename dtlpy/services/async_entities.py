@@ -45,9 +45,9 @@ class AsyncResponseError(AsyncResponse):
         async_resp = DummyErrorResponse(error=error, trace=trace)
         _json = {'error': error}
         text = error
-        super(AsyncResponseError).__init__(async_resp=async_resp,
-                                           _json=_json,
-                                           text=text)
+        super().__init__(async_resp=async_resp,
+                         _json=_json,
+                         text=text)
 
 
 class AsyncUploadStream(io.IOBase):
