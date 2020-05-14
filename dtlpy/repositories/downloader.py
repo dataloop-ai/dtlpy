@@ -1,7 +1,6 @@
 import multiprocessing
 import threading
 import traceback
-import datetime
 import logging
 import json
 from copy import deepcopy
@@ -16,6 +15,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
 from .. import entities, miscellaneous, PlatformException
+from ..services import Reporter
 
 logger = logging.getLogger(name=__name__)
 
@@ -148,10 +148,7 @@ class Downloader:
         # downloading #
         ###############
         # create result lists
-        output = [None for _ in range(num_items)]
-        success = [False for _ in range(num_items)]
-        status = ["" for _ in range(num_items)]
-        errors = [None for _ in range(num_items)]
+        reporter = Reporter(num_workers=num_items, resource=Reporter.ITEMS_DOWNLOAD)
         jobs = [None for _ in range(num_items)]
         # pool
         pool = self.items_repository._client_api.thread_pools(pool_name='item.download')
@@ -173,9 +170,7 @@ class Downloader:
 
                         if os.path.isfile(item_local_filepath) and not overwrite:
                             logger.debug("File Exists: {}".format(item_local_filepath))
-                            status[i_item] = "exist"
-                            output[i_item] = item_local_filepath
-                            success[i_item] = True
+                            reporter.set_index(i_item=i_item, status='exist', output=item_local_filepath, success=True)
                             pbar.update()
                             if annotation_options and item.annotated:
                                 # download annotations only
@@ -207,10 +202,7 @@ class Downloader:
                             "item_local_filepath": item_local_filepath,
                             "save_locally": save_locally,
                             "annotation_options": annotation_options,
-                            "status": status,
-                            "output": output,
-                            "success": success,
-                            "errors": errors,
+                            "reporter": reporter,
                             "pbar": pbar,
                             "overwrite": overwrite,
                             "thickness": thickness,
@@ -224,27 +216,19 @@ class Downloader:
             _ = [j.wait() for j in jobs if isinstance(j, multiprocessing.pool.ApplyResult)]
             pbar.close()
         # reporting
-        n_download = status.count("download")
-        n_exist = status.count("exist")
-        n_error = status.count("error")
+        n_download = reporter.status_count(status='download')
+        n_exist = reporter.status_count(status='exist')
+        n_error = reporter.status_count(status='error')
         logger.info("Number of files downloaded:{}".format(n_download))
         logger.info("Number of files exists: {}".format(n_exist))
         logger.info("Total number of files: {}".format(n_download + n_exist))
 
         # log error
         if n_error > 0:
-            log_filepath = os.path.join(os.getcwd(),
-                                        "log_{}.txt".format(datetime.datetime.utcnow().strftime("%Y%m%d_%H%M%S")))
-            errors_list = [errors[i_job] for i_job, suc in enumerate(success) if suc is False]
-            ids_list = [output[i_job] for i_job, suc in enumerate(success) if suc is False]
-            errors_json = {item_id: error for item_id, error in zip(ids_list, errors_list)}
-            with open(log_filepath, "w") as f:
-                json.dump(errors_json, f, indent=2)
+            log_filepath = reporter.generate_log_files()
             logger.warning("Errors in {} files. See {} for full log".format(n_error, log_filepath))
-        if len(output) == 1:
-            return output[0]
-        else:
-            return output
+
+        return reporter.output
 
     def __need_to_download_annotations_zip(self, items_count):
         try:
@@ -276,7 +260,7 @@ class Downloader:
                                   # annotations params
                                   annotation_options, with_text, thickness,
                                   # threading params
-                                  status, output, success, errors, pbar):
+                                  reporter, pbar):
 
         download = False
         err = None
@@ -310,14 +294,10 @@ class Downloader:
         if not download:
             if err is None:
                 err = self.items_repository._client_api.platform_exception
-            status[i_item] = "error"
-            output[i_item] = item.id
-            success[i_item] = False
-            errors[i_item] = "{}\n{}".format(err, trace)
+            reporter.set_index(i_item=i_item, status="error", output=item.id, success=False,
+                               error="{}\n{}".format(err, trace))
         else:
-            status[i_item] = "download"
-            output[i_item] = download
-            success[i_item] = True
+            reporter.set_index(i_item=i_item, status="download", output=download, success=True)
 
     def download_annotations(self, dataset, local_path, overwrite=False, remote_path=None):
         """

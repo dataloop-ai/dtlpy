@@ -1,6 +1,5 @@
 import validators
 import traceback
-import datetime
 import tempfile
 import requests
 import asyncio
@@ -11,15 +10,15 @@ import time
 import tqdm
 import os
 import io
-import numpy as np
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
 from .. import PlatformException, entities, repositories
+from ..services import Reporter
 
 logger = logging.getLogger(name=__name__)
 
-NUM_TRIES = 3  # try to upload 3 time before fail on item
+NUM_TRIES = 5  # try to upload 3 time before fail on item
 
 
 class UploadElement:
@@ -310,10 +309,7 @@ class Uploader:
 
         num_files = len(elements)
         logger.info("Uploading {} items..".format(num_files))
-        output = [0 for _ in range(num_files)]
-        status = ["" for _ in range(num_files)]
-        success = [False for _ in range(num_files)]
-        errors = ["" for _ in range(num_files)]
+        reporter = Reporter(num_workers=num_files, resource=Reporter.ITEMS_UPLOAD)
         jobs = [None for _ in range(num_files)]
         disable_pbar = self.items_repository._client_api.verbose.disable_progress_bar or num_files == 1
         pbar = tqdm.tqdm(total=num_files, disable=disable_pbar)
@@ -333,37 +329,25 @@ class Uploader:
                                                              element=element,
                                                              mode=mode,
                                                              pbar=pbar,
-                                                             status=status,
-                                                             success=success,
-                                                             output=output,
-                                                             errors=errors)
+                                                             reporter=reporter)
         loop.run_until_complete(asyncio.gather(*jobs))
         loop.stop()
         loop.close()
         pbar.close()
         # summary
         logger.info("Number of total files: {}".format(num_files))
-        for action in np.unique(status):
-            n_for_action = status.count(action)
+        for action in reporter.status_list:
+            n_for_action = reporter.status_count(status=action)
             logger.info("Number of files {}: {}".format(action, n_for_action))
 
         # log error
-        errors_list = [errors[i_job] for i_job, suc in enumerate(success) if suc is False]
-        if len(errors_list) > 0:
-            log_filepath = os.path.join(os.getcwd(),
-                                        "log_{}.txt".format(datetime.datetime.utcnow().strftime("%Y%m%d_%H%M%S")))
-
-            with open(log_filepath, "w") as f:
-                f.write("\n".join(errors_list))
+        errors_count = reporter.failure_count
+        if errors_count > 0:
+            log_filepath = reporter.generate_log_files()
             logger.warning("Errors in {n_error} files. See {log_filepath} for full log".format(
-                n_error=len(errors_list), log_filepath=log_filepath))
+                n_error=errors_count, log_filepath=log_filepath))
 
-        # remove empty cells
-        output = [output[i_job] for i_job, suc in enumerate(success) if suc is True]
-        if len(output) == 1:
-            output = output[0]
-
-        return output
+        return reporter.output
 
     def __create_existence_dict_worker(self, remote_existence_dict, item_remote_filepaths):
         """
@@ -498,8 +482,7 @@ class Uploader:
             raise PlatformException(response)
         return item, response.headers.get('x-item-op', 'na')
 
-    async def __upload_single_item_wrapper(self, asyncio_semaphore, i_item, element, pbar, status, success, output,
-                                           errors, mode):
+    async def __upload_single_item_wrapper(self, asyncio_semaphore, i_item, element, pbar, reporter, mode):
         async with asyncio_semaphore:
             assert isinstance(element, UploadElement)
             item = False
@@ -537,7 +520,7 @@ class Uploader:
                                                                                                    id=item.id))
                     if isinstance(item, entities.Item):
                         break
-                    time.sleep(0.3 * (2 ** (NUM_TRIES - 1)))
+                    time.sleep(0.3 * (2 ** i_try))
                 except Exception as e:
                     logger.debug("Upload item: {path}. Try {i}/{n}. Fail.".format(path=remote_name,
                                                                                   i=i_try + 1,
@@ -548,14 +531,16 @@ class Uploader:
                     if saved_locally and os.path.isdir(temp_dir):
                         shutil.rmtree(temp_dir)
             if item:
-                status[i_item] = action
-                output[i_item] = item
-                success[i_item] = True
+                reporter.set_index(i_item=i_item, status=action, output=item, success=True, ref=item.id)
             else:
-                status[i_item] = "error"
-                output[i_item] = remote_folder + remote_name
-                success[i_item] = False
-                errors[i_item] = "{}\n{}".format(err, trace)
+                if isinstance(element.buffer, str):
+                    ref = element.buffer
+                elif hasattr(element.buffer, "name"):
+                    ref = element.buffer.name
+                else:
+                    ref = 'Unknown'
+                reporter.set_index(i_item=i_item, status='error', output=remote_folder + remote_name, success=False,
+                                   error="{}\n{}".format(err, trace), ref=ref)
             pbar.update()
 
     @staticmethod

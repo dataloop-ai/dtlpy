@@ -1,7 +1,7 @@
 [
   {
     "name": "default-service",
-    "packageName": "default_package",
+    "packageName": "default-package",
     "packageRevision": "latest",
     "runtime": {
       "gpu": false,

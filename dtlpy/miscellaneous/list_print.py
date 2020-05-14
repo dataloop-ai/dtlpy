@@ -30,7 +30,8 @@ class List(list):
             except Exception:
                 logger.exception('Error sorting printing:')
 
-            remove_keys_list = ['contributors', 'url', 'annotations', 'items', 'export', 'directoryTree',
+            remove_keys_list = ['contributors', 'url', 'annotations', 'items', 'export', 'directoryTree', 'org',
+                                '_contributors', 'role', 'account', 'featureConstraints',
                                 'attributes', 'partitions', 'metadata', 'stream', 'updatedAt', 'arch',
                                 'input', 'revisions', 'pipeline',  # task fields
                                 'feedbackQueue',  # session fields

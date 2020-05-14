@@ -111,7 +111,8 @@ class Package(entities.BaseEntity):
                           field_names=['executions', 'services', 'projects', 'packages'])
 
         r = reps(executions=repositories.Executions(client_api=self._client_api, project=self._project),
-                 services=repositories.Services(client_api=self._client_api, package=self, project=self._project),
+                 services=repositories.Services(client_api=self._client_api, package=self, project=self._project,
+                                                project_id=self.project_id),
                  projects=repositories.Projects(client_api=self._client_api),
                  packages=repositories.Packages(client_api=self._client_api, project=self._project))
         return r
@@ -208,6 +209,7 @@ class Package(entities.BaseEntity):
         """
         return self.project.packages.deploy(package=self,
                                             service_name=service_name,
+                                            project_id=self.project_id,
                                             revision=revision,
                                             init_input=init_input,
                                             runtime=runtime,

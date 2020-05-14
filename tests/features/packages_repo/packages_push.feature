@@ -4,7 +4,7 @@ Feature: Packages repository push service testing
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
         And There is a project by the name of "test_packages_push"
         And Directory "packages_push" is empty
-        When I generate package by the name of "test_package" to "packages_push"
+        When I generate package by the name of "test-package" to "packages_push"
 
     @packages.delete
     Scenario: Push local package - no params

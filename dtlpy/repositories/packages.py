@@ -416,6 +416,7 @@ class Packages:
                package_name=None,
                package=None,
                service_name=None,
+               project_id=None,
                revision=None,
                init_input=None,
                runtime=None,
@@ -434,6 +435,7 @@ class Packages:
         """
         Deploy package
 
+        :param project_id:
         :param module_name:
         :param checkout:
         :param pod_type:
@@ -465,6 +467,7 @@ class Packages:
                                        runtime=runtime,
                                        sdk_version=sdk_version,
                                        agent_versions=agent_versions,
+                                       project_id=project_id,
                                        pod_type=pod_type,
                                        bot=bot,
                                        verify=verify,
@@ -487,7 +490,7 @@ class Packages:
         """
         # name
         if name is None:
-            name = 'default_package'
+            name = 'default-package'
         if service_name is None:
             service_name = 'default-service'
 

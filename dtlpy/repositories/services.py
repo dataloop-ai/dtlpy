@@ -3,22 +3,25 @@ import inspect
 import logging
 import json
 import os
-import pickle
 import tempfile
 
 from urllib.parse import urlencode
 
-from .. import miscellaneous, exceptions, entities, repositories, assets, utilities
+from .. import miscellaneous, exceptions, entities, repositories, assets
 from ..__version__ import version as __version__
 
 logger = logging.getLogger(name=__name__)
 
 
 class Services:
-    def __init__(self, client_api, project=None, package=None):
+    def __init__(self, client_api, project=None, package=None, project_id=None):
         self._client_api = client_api
         self._package = package
         self._project = project
+        if project_id is None:
+            if project is not None:
+                project_id = project.id
+        self._project_id = project_id
 
     ############
     # entities #
@@ -211,6 +214,52 @@ class Services:
             raise exceptions.PlatformException(response)
         return response.json()
 
+    def _get_bot_email(self, bot=None):
+
+        if bot is None:
+            project = self._project
+            if project is None and self._project_id is not None:
+                project = repositories.Projects(client_api=self._client_api).get(project_id=self._project_id)
+
+            if project is None:
+                raise exceptions.PlatformException(error='2001',
+                                                   message='Need project entity or bot to perform this action')
+            bots = project.bots.list()
+            if len(bots) == 0:
+                logger.info('Bot not found for project. Creating a default bot')
+                bot = project.bots.create(name='default')
+            else:
+                bot = bots[0]
+                if len(bots) > 1:
+                    logger.debug('More than one bot users. Choosing first. email: {}'.format(bots[0].email))
+
+        if isinstance(bot, str):
+            bot_email = bot
+        elif isinstance(bot, entities.Bot) or isinstance(bot, entities.User):
+            bot_email = bot.email
+        else:
+            raise ValueError('input "bot" must be a str or a Bot type, got: {}'.format(type(bot)))
+
+        return bot_email
+
+    @staticmethod
+    def _parse_init_input(init_input):
+        if not isinstance(init_input, dict):
+            if init_input is None:
+                init_input = dict()
+            else:
+                init_params = dict()
+                if not isinstance(init_input, list):
+                    init_input = [init_input]
+                for param in init_input:
+                    if isinstance(param, entities.FunctionIO):
+                        init_params.update(param.to_json(resource='service'))
+                    else:
+                        raise exceptions.PlatformException('400', 'Unknown type of init params')
+                init_input = init_params
+
+        return init_input
+
     def _create(self, service_name=None, package=None, module_name=None, bot=None, revision=None, init_input=None,
                 runtime=None, pod_type=None, project_id=None, sdk_version=None, agent_versions=None, verify=True,
                 driver_id=None, run_execution_as_process=None, execution_timeout=None, drain_time=None, on_reset=None,
@@ -246,60 +295,30 @@ class Services:
                 "verify": verify
             }
 
-        if self._project is None and project_id is None:
-            raise exceptions.PlatformException('400', 'Please provide project id')
-        elif project_id is None:
-            project_id = self._project.id
+        if project_id is None:
+            if self._project is None and self._project_id is None:
+                raise exceptions.PlatformException('400', 'Please provide project id')
+            elif self._project_id is not None:
+                project_id = self._project_id
+            elif self._project is not None:
+                project_id = self._project.id
 
         if package is None:
             if self._package is None:
                 raise exceptions.PlatformException('400', 'Please provide param package')
             package = self._package
+
         if module_name is None:
             module_name = entities.DEFAULT_PACKAGE_MODULE.name
         if service_name is None:
             service_name = 'default-service'
 
-        if not isinstance(init_input, dict):
-            if init_input is None:
-                init_input = dict()
-            else:
-                init_params = dict()
-                if not isinstance(init_input, list):
-                    init_input = [init_input]
-                for param in init_input:
-                    if isinstance(param, entities.FunctionIO):
-                        init_params.update(param.to_json(resource='service'))
-                    else:
-                        raise exceptions.PlatformException('400', 'Unknown type of init params')
-                init_input = init_params
-
-        if bot is None:
-            if self._project is None:
-                raise exceptions.PlatformException(error='2001',
-                                                   message='Need project entity or bot to perform this action')
-            bots = self._project.bots.list()
-            if len(bots) == 0:
-                logger.info('Bot not found for project. Creating a default bot')
-                bot = self._project.bots.create(name='default')
-            else:
-                bot = bots[0]
-                if len(bots) > 1:
-                    logger.debug('More than one bot users. Choosing first. email: {}'.format(bots[0].email))
-
-        if isinstance(bot, str):
-            bot_email = bot
-        elif isinstance(bot, entities.Bot) or isinstance(bot, entities.User):
-            bot_email = bot.email
-        else:
-            raise ValueError('input "bot" must be a str or a Bot type, got: {}'.format(type(bot)))
-
         # payload
         payload = {'name': service_name,
                    'projectId': project_id,
                    'packageId': package.id,
-                   'initParams': init_input,
-                   'botUserName': bot_email,
+                   'initParams': self._parse_init_input(init_input=init_input),
+                   'botUserName': self._get_bot_email(bot=bot),
                    'versions': agent_versions,
                    'moduleName': module_name,
                    'driverId': driver_id}

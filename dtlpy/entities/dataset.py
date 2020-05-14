@@ -205,9 +205,9 @@ class Dataset(entities.BaseEntity):
         return self._repositories.tasks
 
     @property
-    def datasets(self):
-        assert isinstance(self._repositories.datasets, repositories.Datasets)
-        return self._repositories.datasets
+    def annotations(self):
+        assert isinstance(self._repositories.annotations, repositories.Annotations)
+        return self._repositories.annotations
 
     @property
     def project(self):
