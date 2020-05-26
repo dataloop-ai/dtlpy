@@ -66,46 +66,51 @@ class AnnotationCollection(entities.BaseEntity):
             metadata['user']['model'] = {'name': model_info['name'],
                                          'confidence': float(model_info['confidence'])}
 
-        if object_id is None:
-            # add new annotation to list
-            annotation = entities.Annotation.new(item=self.item,
-                                                 annotation_definition=annotation_definition,
-                                                 frame_num=frame_num,
-                                                 automated=automated,
-                                                 metadata=metadata,
-                                                 parent_id=parent_id)
-            self.annotations.append(annotation)
-            matched_ind = len(self.annotations) - 1
-        else:
-            # find matching element_id
-            matched_ind = [i_annotation
-                           for i_annotation, annotation in enumerate(self.annotations)
-                           if annotation.object_id == object_id]
-            if len(matched_ind) == 0:
-                # no matching object id found - create new one
+        # to support list of definitions with same parameters
+        if not isinstance(annotation_definition, list):
+            annotation_definition = [annotation_definition]
+
+        for single_definition in annotation_definition:
+            if object_id is None:
+                # add new annotation to list
                 annotation = entities.Annotation.new(item=self.item,
-                                                     annotation_definition=annotation_definition,
+                                                     annotation_definition=single_definition,
                                                      frame_num=frame_num,
                                                      automated=automated,
                                                      metadata=metadata,
-                                                     object_id=object_id,
                                                      parent_id=parent_id)
                 self.annotations.append(annotation)
                 matched_ind = len(self.annotations) - 1
-            elif len(matched_ind) == 1:
-                matched_ind = matched_ind[0]
             else:
-                raise PlatformException(error='400',
-                                        message='more than one annotation with same object id: {}'.format(object_id))
+                # find matching element_id
+                matched_ind = [i_annotation
+                               for i_annotation, annotation in enumerate(self.annotations)
+                               if annotation.object_id == object_id]
+                if len(matched_ind) == 0:
+                    # no matching object id found - create new one
+                    annotation = entities.Annotation.new(item=self.item,
+                                                         annotation_definition=single_definition,
+                                                         frame_num=frame_num,
+                                                         automated=automated,
+                                                         metadata=metadata,
+                                                         object_id=object_id,
+                                                         parent_id=parent_id)
+                    self.annotations.append(annotation)
+                    matched_ind = len(self.annotations) - 1
+                elif len(matched_ind) == 1:
+                    matched_ind = matched_ind[0]
+                else:
+                    raise PlatformException(error='400',
+                                            message='more than one annotation with same object id: {}'.format(object_id))
 
-        #  add frame if exists
-        if frame_num is not None or start_time is not None:
-            self.annotations[matched_ind].add_frames(annotation_definition=annotation_definition,
-                                                     frame_num=frame_num,
-                                                     end_frame_num=end_frame_num,
-                                                     start_time=start_time,
-                                                     end_time=end_time,
-                                                     fixed=fixed)
+            #  add frame if exists
+            if frame_num is not None or start_time is not None:
+                self.annotations[matched_ind].add_frames(annotation_definition=single_definition,
+                                                         frame_num=frame_num,
+                                                         end_frame_num=end_frame_num,
+                                                         start_time=start_time,
+                                                         end_time=end_time,
+                                                         fixed=fixed)
 
     ############
     # Plotting #

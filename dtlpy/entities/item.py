@@ -335,6 +335,12 @@ class Item(entities.BaseEntity):
         self.items.open_in_web(item=self)
 
     def change_status(self, status):
+        # TODO - deprecate
+        logger.warning('This method will be deprecated after version 1.17.0\n'
+                       'Please use method update_status()')
+        self.update_status(status=status)
+
+    def update_status(self, status):
         if status not in ['completed', 'approved', 'discarded']:
             raise exceptions.PlatformException('400',
                                                'Unknown status: {}. Please chose from: completed, approved, discarded'.format(

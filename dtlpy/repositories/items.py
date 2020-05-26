@@ -455,7 +455,7 @@ class Items:
         # call multiprocess wrapper to run service on each item in list
         for page in items:
             for i_item, item in enumerate(page):
-                jobs[i_item] = pool.apply_async(func=item.change_status,
+                jobs[i_item] = pool.apply_async(func=item.update_status,
                                                 kwds={'status': status})
         # wait for jobs to be finish
         _ = [j.wait() for j in jobs]
