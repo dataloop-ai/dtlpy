@@ -1,13 +1,36 @@
+import traceback
 import logging
-from .. import entities
 import attr
 import copy
+
+from .. import entities
 
 logger = logging.getLogger(name=__name__)
 
 
 @attr.s
 class Artifact(entities.Item):
+
+    @staticmethod
+    def _protected_from_json(_json, client_api, dataset=None, project=None, is_fetched=True):
+        """
+        Same as from_json but with try-except to catch if error
+        :param _json:
+        :param client_api:
+        :param dataset:
+        :return:
+        """
+        try:
+            artifact = Artifact.from_json(_json=_json,
+                                          client_api=client_api,
+                                          dataset=dataset,
+                                          project=None,
+                                          is_fetched=True)
+            status = True
+        except Exception:
+            artifact = traceback.format_exc()
+            status = False
+        return status, artifact
 
     @classmethod
     def from_json(cls, _json, client_api, dataset=None, project=None, is_fetched=True):
@@ -29,6 +52,7 @@ class Artifact(entities.Item):
             project=project,
             # params
             annotations_link=_json.get('annotations_link', None),
+            annotations_count=_json.get('annotationsCount', None),
             createdAt=_json.get('createdAt', None),
             datasetId=_json.get('datasetId', None),
             thumbnail=_json.get('thumbnail', None),

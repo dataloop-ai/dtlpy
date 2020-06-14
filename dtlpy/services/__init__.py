@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with DTLPY.  If not, see <http://www.gnu.org/licenses/>.
 from .api_client import ApiClient
-from .async_entities import AsyncResponse
+from .async_utils import AsyncResponse, AsyncThreadEventLoop
 from .cookie import CookieIO
 from .create_logger import DataloopLogger
 from .reporter import Reporter

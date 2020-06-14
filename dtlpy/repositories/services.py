@@ -5,8 +5,6 @@ import json
 import os
 import tempfile
 
-from urllib.parse import urlencode
-
 from .. import miscellaneous, exceptions, entities, repositories, assets
 from ..__version__ import version as __version__
 
@@ -127,10 +125,12 @@ class Services:
                                                      package=self._package,
                                                      project=self._project)
             elif service_name is not None:
-                services = self.list(name=service_name)
-                if len(services) > 1:
+                services = self.list(filters=entities.Filters(resource=entities.FiltersResource.SERVICE,
+                                                              field='name',
+                                                              values=service_name))
+                if services.items_count > 1:
                     raise exceptions.PlatformException('404', 'More than one service with same name.')
-                elif len(services) == 0:
+                elif services.items_count == 0:
                     raise exceptions.PlatformException('404', 'Service not found: {}.'.format(service_name))
                 service = services[0]
             else:
@@ -150,41 +150,12 @@ class Services:
             self.checkout(service=service)
         return service
 
-    def list(self, name=None, project_id=None, package_id=None):
-        """
-        List project services
-        :return:
-        """
-        url = '/services'
-        query_params = {
-            'name': name
-        }
-
-        # either project or service
-        if project_id is None and self._project is not None:
-            project_id = self._project.id
-        if package_id is None and self._package is not None:
-            package_id = self._package.id
-
-        if package_id is not None:
-            query_params['packageId'] = package_id
-        if project_id is not None:
-            query_params['projects'] = project_id
-
-        url += '?{}'.format(urlencode({key: val for key, val in query_params.items() if val is not None}, doseq=True))
-
-        # request
-        success, response = self._client_api.gen_request(req_type='get',
-                                                         path=url)
-        if not success:
-            raise exceptions.PlatformException(response)
-
-        services_json = response.json()['items']
-        jobs = [None for _ in range(len(services_json))]
+    def _build_entities_from_response(self, response_items):
+        jobs = [None for _ in range(len(response_items))]
         pool = self._client_api.thread_pools(pool_name='entity.create')
 
         # return triggers list
-        for i_service, service in enumerate(services_json):
+        for i_service, service in enumerate(response_items):
             jobs[i_service] = pool.apply_async(entities.Service._protected_from_json,
                                                kwds={'client_api': self._client_api,
                                                      '_json': service,
@@ -199,6 +170,57 @@ class Services:
         # return good jobs
         return miscellaneous.List([r[1] for r in results if r[0] is True])
 
+    def _list(self, filters):
+        url = '/query/FaaS'
+        success, response = self._client_api.gen_request(req_type='POST',
+                                                         path=url,
+                                                         json_req=filters.prepare())
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        return response.json()
+
+    def list(self, filters=None, page_offset=None, page_size=None):
+        """
+        List project services
+        :return:
+        """
+        # default filters
+        if filters is None:
+            filters = entities.Filters(resource=entities.FiltersResource.SERVICE)
+            if self._project is not None:
+                filters.add(field='projectId', values=self._project.id)
+            elif self._project_id is not None:
+                filters.add(field='projectId', values=self._project_id)
+            if self._package is not None:
+                filters.add(field='packageId', values=self._package.id)
+
+        # assert type filters
+        if not isinstance(filters, entities.Filters):
+            raise exceptions.PlatformException('400', 'Unknown filters type')
+
+        # page size
+        if page_size is None:
+            # take from default
+            page_size = filters.page_size
+        else:
+            filters.page_size = page_size
+
+        # page offset
+        if page_offset is None:
+            # take from default
+            page_offset = filters.page
+        else:
+            filters.page = page_offset
+
+        paged = entities.PagedEntities(items_repository=self,
+                                       filters=filters,
+                                       page_offset=page_offset,
+                                       page_size=page_size,
+                                       client_api=self._client_api)
+        paged.get_page()
+        return paged
+
     def status(self, service_name=None, service_id=None):
         if service_id is None:
             if service_name is None:
@@ -207,9 +229,36 @@ class Services:
             service = self.get(service_name=service_name)
             service_id = service.id
         # request
-        # request
         success, response = self._client_api.gen_request(req_type="get",
                                                          path="/services/{}/status".format(service_id))
+        if not success:
+            raise exceptions.PlatformException(response)
+        return response.json()
+
+    def pause(self, service_name=None, service_id=None):
+        if service_id is None:
+            if service_name is None:
+                raise exceptions.PlatformException(error='400',
+                                                   message='must input "service_name" or "service_id" to pause service')
+            service = self.get(service_name=service_name)
+            service_id = service.id
+        # request
+        success, response = self._client_api.gen_request(req_type="post",
+                                                         path="/services/{}/stop".format(service_id))
+        if not success:
+            raise exceptions.PlatformException(response)
+        return response.json()
+
+    def resume(self, service_name=None, service_id=None):
+        if service_id is None:
+            if service_name is None:
+                raise exceptions.PlatformException(error='400',
+                                                   message='must input "service_name" or "service_id" to resume')
+            service = self.get(service_name=service_name)
+            service_id = service.id
+        # request
+        success, response = self._client_api.gen_request(req_type="post",
+                                                         path="/services/{}/resume".format(service_id))
         if not success:
             raise exceptions.PlatformException(response)
         return response.json()
@@ -393,10 +442,8 @@ class Services:
             if service_name is None:
                 raise exceptions.PlatformException('400', 'Must provide either service id or service name')
             else:
-                services = self.list()
-                for service in services:
-                    if service.name == service_name:
-                        service_id = service.id
+                service_id = self.get(service_name=service_name).id
+
         # request
         success, response = self._client_api.gen_request(
             req_type="delete",
@@ -603,12 +650,22 @@ class Services:
                     error='400',
                     message='Unknown init_input type. expecting list or dict, got: {}'.format(type(init_input)))
 
-        services = self.list(name=service_name, project_id=project_id)
-        if len(services) > 1:
+        if project_id is None:
+            if self._project is not None:
+                project_id = self._project.id
+            else:
+                project_id = self._project_id
+
+        filters = entities.Filters(resource=entities.FiltersResource.SERVICE)
+        filters.add(field='name', values=service_name)
+        if project_id is not None:
+            filters.add(field='projectId', values=project_id)
+        services = self.list(filters=filters)
+        if services.items_count > 1:
             raise exceptions.PlatformException('400',
                                                'More than 1 service by this name are associated with this user. '
                                                'Please provide project_id')
-        elif len(services) > 0:
+        elif services.items_count > 0:
             service = services[0]
             if runtime is not None:
                 service.runtime = runtime

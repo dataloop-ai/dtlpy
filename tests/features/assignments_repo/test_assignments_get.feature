@@ -6,10 +6,10 @@ Feature: Assignments repository get method testing
         And I create a dataset with a random name
         And There are items, path = "filters/image.jpg"
             |annotated_type={"box": 3, "polygon": 3}|metadata={"user.good": 3, "user.bad": 3}|
+        And I save dataset items to context
         When I create Task
-            | task_name=min_params | due_date=auto | assignee_ids=auto |
-        And I create an Assignment from "task" entity
-            | assignment_name=min_params | assignee_id=annotator1@dataloop.ai | items=3 |
+            | task_name=min_params | due_date=auto | assignee_ids=auto | items=3 |
+        And I get an Assignment
 
     Scenario: GET - id
         When I get assignment by "id"

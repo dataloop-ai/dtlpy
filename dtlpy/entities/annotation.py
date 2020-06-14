@@ -1,4 +1,5 @@
 import numpy as np
+import traceback
 import logging
 import attr
 import json
@@ -8,6 +9,12 @@ from .. import entities, PlatformException, repositories
 from ..services import ApiClient
 
 logger = logging.getLogger(name=__name__)
+
+
+class AnnotationOptions:
+    JSON = "json"
+    MASK = "mask"
+    INSTANCE = "instance"
 
 
 @attr.s
@@ -290,9 +297,11 @@ class Annotation(entities.BaseEntity):
     ##################
     # entity methods #
     ##################
-    def get_item(self):
-        if self.item is None:
-            self.item = self.items.get(item_id=self.item_id)
+    def update_status(self, status):
+        """
+        Open an issue on the annotation
+        """
+        return self.annotations.update_status(annotation=self, status=status)
 
     def delete(self):
         """
@@ -317,7 +326,7 @@ class Annotation(entities.BaseEntity):
         """
         return self.annotations.upload(annotations=self)[0]
 
-    def download(self, filepath, annotation_format='mask', height=None, width=None, thickness=1, with_text=False):
+    def download(self, filepath, annotation_format=AnnotationOptions.MASK, height=None, width=None, thickness=1, with_text=False):
         """
         Save annotation to file
         :param filepath: local path to where annotation will be downloaded to
@@ -358,7 +367,7 @@ class Annotation(entities.BaseEntity):
     # Plotting #
     ############
     def show(self, image=None, thickness=None, with_text=False, height=None, width=None,
-             annotation_format='mask', color=None):
+             annotation_format=AnnotationOptions.MASK, color=None):
         """
         Show annotations
 
@@ -634,8 +643,38 @@ class Annotation(entities.BaseEntity):
 
         return True
 
+    @staticmethod
+    def _protected_from_json(_json,
+                             item=None,
+                             client_api=None,
+                             annotations=None,
+                             is_video=None,
+                             fps=None,
+                             item_metadata=None):
+        """
+        Same as from_json but with try-except to catch if error
+        :param _json:
+        :param client_api:
+        :param dataset:
+        :return:
+        """
+        try:
+            annotation = Annotation.from_json(_json=_json,
+                                              item=item,
+                                              client_api=client_api,
+                                              annotations=annotations,
+                                              is_video=is_video,
+                                              fps=fps,
+                                              item_metadata=item_metadata)
+            status = True
+        except Exception:
+            annotation = traceback.format_exc()
+            status = False
+        return status, annotation
+
     @classmethod
-    def from_json(cls, _json,
+    def from_json(cls,
+                  _json,
                   item=None,
                   client_api=None,
                   annotations=None,

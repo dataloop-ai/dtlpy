@@ -1,3 +1,45 @@
+Release 1.16.10:
+
+    Features:
+        - add ItemStatus resource option to trigger
+        - add project contributor
+        - make sure workload loads sums to 100
+        - added service pause and resume
+        - added -v and --version to CLI in packages
+        - rql querying to FaaS entities
+        - avoid_unnecessary_annotation_download argument in items.download
+        - upload yolo/coco/voc dataset from local to paltform
+        - add the options to use filters in task.get_items
+        - added git remote url to codebase
+        - reporter generate json file
+        - added wait function to wait until execution completed
+        - added support for more than one polygon in binary mask
+        - remove open-cv requirement
+        - single request for annotations upload. len of page entity returns item count
+        - add a flag in packages deploy --package-name
+        - remove open cv requirement
+
+
+    Bugs:
+        - raise exception when unknown annotation option in downloader
+        - Collection classifier: Upload will not support overwrite option
+        - remote_name handling to similarity and multiview
+        - more informative log when upload and download error
+        - package.services methods that requires project did not work
+        - SDK-317 delete logs if directory is over 200MB
+        - using global event loop for uploading and fixed defaul num workers bug
+        - fix async annotations upload
+        - fix refresh token when login using m2m
+        - Annotation filter will return all annotations when result is false
+
+    Deprecation:
+        - task workload cannot be empty
+        - create assignment is now using task.add_items()
+        - change_status() was changes to update_status()
+        - annotation/s set_status was changes to update status
+        - removed show_dirs and show_hidden from tests
+        - deprecate num_workers from download
+
 Release 1.14.2
     Features:
         - Plug-119/Apply list by functionName to sdk

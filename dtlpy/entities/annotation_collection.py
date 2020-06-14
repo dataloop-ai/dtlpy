@@ -217,7 +217,7 @@ class AnnotationCollection(entities.BaseEntity):
 
         return mask
 
-    def download(self, filepath, img_filepath=None, annotation_format='mask', height=None, width=None, thickness=1,
+    def download(self, filepath, img_filepath=None, annotation_format=entities.AnnotationOptions.MASK, height=None, width=None, thickness=1,
                  with_text=False):
         """
             Save annotations to file

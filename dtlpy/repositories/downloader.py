@@ -34,7 +34,7 @@ class Downloader:
                  local_path=None,
                  file_types=None,
                  save_locally=True,
-                 num_workers=32,  # deprecated
+                 num_workers=None,  # deprecated
                  overwrite=False,
                  annotation_options=None,
                  to_items_folder=True,
@@ -72,7 +72,16 @@ class Downloader:
             annotation_options = list()
         elif not isinstance(annotation_options, list):
             annotation_options = [annotation_options]
-
+        options = ["mask", "instance", "img_mask", "vtt", "json"]
+        for ann_option in annotation_options:
+            if ann_option not in options:
+                raise PlatformException('400', 'Unknown annotation download option: {}, please chose from: {}'.format(
+                    ann_option, options))
+        if num_workers is not None:
+            logger.warning('[DeprecationWarning] input argument "num_workers"'
+                           ' will be deprecated from download() after version 1.17.0\n'
+                           'To set number of processes use "dtlpy.client_api.num_processes=int()"')
+            self.items_repository._client_api.num_processes = num_workers
         ##############
         # local path #
         ##############
@@ -294,7 +303,7 @@ class Downloader:
         if not download:
             if err is None:
                 err = self.items_repository._client_api.platform_exception
-            reporter.set_index(i_item=i_item, status="error", output=item.id, success=False,
+            reporter.set_index(i_item=i_item, status="error", ref=item.id, success=False,
                                error="{}\n{}".format(err, trace))
         else:
             reporter.set_index(i_item=i_item, status="download", output=download, success=True)

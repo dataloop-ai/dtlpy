@@ -14,14 +14,14 @@
 # You should have received a copy of the GNU General Public License
 # along with DTLPY.  If not, see <http://www.gnu.org/licenses/>.
 from .base_entity import BaseEntity
-from .item import Item, Modality
-from .links import Link, ItemLink, UrlLink
+from .item import Item, Modality, ModalityTypeEnum, ItemStatus
+from .links import Link, ItemLink, UrlLink, LinkTypeEnum
 from .trigger import Trigger, TriggerResource, TriggerAction, TriggerExecutionMode
 from .project import Project
 from .artifact import Artifact
 from .dataset import Dataset
 from .codebase import Codebase
-from .annotation import Annotation, FrameAnnotation
+from .annotation import Annotation, FrameAnnotation, AnnotationOptions
 from .annotation_collection import AnnotationCollection
 from .paged_entities import PagedEntities
 from .filters import Filters, FiltersKnownFields, FiltersResource, FiltersOperations, FiltersMethod, \
@@ -37,14 +37,15 @@ from .package_function import PackageFunction, FunctionIO, PackageInputType
 from .package_defaults import DEFAULT_PACKAGE_MODULE, DEFAULT_PACKAGE_NAME, DEFAULT_PACKAGE_ENTRY_POINT, \
     DEFAULT_PACKAGE_METHOD, DEFAULT_PACKAGE_FUNCTION_NAME, DEFAULT_PACKAGE_MODULE_NAME
 from .time_series import TimeSeries
-from .service import Service
-from .execution import Execution
+from .service import Service, KubernetesAutuscalerType, KubernetesRabbitmqAutoscaler, KubernetesAutoscaler, \
+    InstanceCatalog, KubernetesRuntime
+from .execution import Execution, ExecutionStatus
 from .assignment import Assignment, Workload, WorkloadUnit
 from .task import Task
 from .directory_tree import DirectoryTree
-from .similarity import Similarity, MultiView, SimilarityItem, MultiViewItem
+from .similarity import Similarity, MultiView, SimilarityItem, MultiViewItem, SimilarityTypeEnum
 from .user import User
 from .bot import Bot
-from .webhook import Webhook
+from .webhook import Webhook, HttpMethod
 from .model import Model
 from .checkpoint import Checkpoint

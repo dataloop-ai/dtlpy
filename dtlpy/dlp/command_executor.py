@@ -314,11 +314,14 @@ class CommandExecutor:
             logger.info('Service: "{}" deleted successfully'.format(service.name))
 
         elif args.services == "deploy":
-            project = self.dl.projects.get()
-            package = self.dl.packages.get()
+            project = self.dl.projects.get(project_name=args.project_name)
+            package = self.dl.packages.get(package_name=args.package_name)
+
             if project is None or package is None:
-                logger.info('Please checkout a project and a package')
+                logger.info(
+                    'Please checkout a project and a package or provide --package-name and --project-name params')
                 return
+
             services = package.services
             services._project = project
             service = services.deploy_from_local_folder(bot=args.bot,
@@ -384,7 +387,11 @@ class CommandExecutor:
 
         if args.triggers == "create":
             args.actions = [t.strip() for t in args.actions.split(",")]
-            service = self.utils.get_services_repo(args).get(service_name=args.service_name)
+            try:
+                service = self.utils.get_services_repo(args).get(service_name=args.service_name)
+            except exceptions.NotFound:
+                logger.critical('Service not found. Please check-out a service or provide valid service name')
+                return
 
             trigger = service.triggers.create(name=args.name,
                                               filters=json.loads('{}'.format(args.filters.replace("'", '"'))),

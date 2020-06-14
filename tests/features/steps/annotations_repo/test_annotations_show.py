@@ -1,6 +1,6 @@
-import behave, os
+import behave
+import os
 import numpy as np
-import random
 
 
 @behave.when(u'I show items annotations with param "{annotation_format}"')

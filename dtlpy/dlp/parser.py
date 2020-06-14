@@ -70,6 +70,7 @@ def get_parser():
     ###########
     # version #
     ###########
+    parser.add_argument("-v", "--version", action="store_true", help="dtlpy version")
     subparsers.add_parser("version", help="DTLPY SDK version")
 
     #######
@@ -451,6 +452,10 @@ def get_parser():
                           help="Path to service file")
     optional.add_argument("-b", "--bot", dest="bot", default=None,
                           help="User bot")
+    optional.add_argument("-p", "--package-name", dest="package_name", default=None,
+                          help="Package name")
+    optional.add_argument("-pr", "--project-name", dest="project_name", default=None,
+                          help="Project name")
 
     # generate
     a = subparser_parser.add_parser("generate", help="Create a boilerplate for a new package")

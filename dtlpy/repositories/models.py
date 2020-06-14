@@ -71,12 +71,14 @@ class Models:
                                                  _json=response.json(),
                                                  project=self._project)
             elif model_name is not None:
-                models = self.list(name=model_name)
-                if len(models) == 0:
+                models = self.list(entities.Filters(resource=entities.FiltersResource.MODEL,
+                                                    field='name',
+                                                    values=model_name))
+                if models.items_count == 0:
                     raise exceptions.PlatformException(
                         error='404',
                         message='Model not found. Name: {}'.format(model_name))
-                elif len(models) > 1:
+                elif models.items_count > 1:
                     raise exceptions.PlatformException(
                         error='400',
                         message='More than one file found by the name of: {}'.format(model_name))
@@ -96,35 +98,63 @@ class Models:
             self.checkout(model=model)
         return model
 
-    def list(self, name=None, creator=None):
+    def _list(self, filters):
+        url = '/query/machine-learning'
+        # TODO change endpoint to models/{}/query with filters
+
+        # query_params = {
+        #     'name': name,
+        #     'creator': creator
+        # }
+        #
+        # if self._project is not None:
+        #     query_params['projects'] = self._project.id
+        #
+        # url += '?{}'.format(urlencode({key: val for key, val in query_params.items() if val is not None}, doseq=True))
+
+        # request
+        success, response = self._client_api.gen_request(req_type='POST',
+                                                         path=url,
+                                                         json_req=filters.prepare())
+        if not success:
+            raise exceptions.PlatformException(response)
+        return response.json()
+
+    def list(self, filters=None, page_size=None, page_offset=None):
         """
         List project models
         :return:
         """
-        url = '/models'
-        query_params = {
-            'name': name,
-            'creator': creator
-        }
+        if filters is None:
+            filters = entities.Filters(resource=entities.FiltersResource.MODEL)
+            if self._project is not None:
+                filters.add(field='projectId', values=self._project.id)
 
-        if self._project is not None:
-            query_params['projects'] = self._project.id
+        # assert type filters
+        if not isinstance(filters, entities.Filters):
+            raise exceptions.PlatformException('400', 'Unknown filters type')
 
-        url += '?{}'.format(urlencode({key: val for key, val in query_params.items() if val is not None}, doseq=True))
+        # page size
+        if page_size is None:
+            # take from default
+            page_size = filters.page_size
+        else:
+            filters.page_size = page_size
 
-        # request
-        success, response = self._client_api.gen_request(req_type='get',
-                                                         path=url)
-        if not success:
-            raise exceptions.PlatformException(response)
+        # page offset
+        if page_offset is None:
+            # take from default
+            page_offset = filters.page
+        else:
+            filters.page = page_offset
 
-        # return models list
-        models = miscellaneous.List()
-        for model in response.json()['items']:
-            models.append(entities.Model.from_json(client_api=self._client_api,
-                                                   _json=model,
-                                                   project=self._project))
-        return models
+        paged = entities.PagedEntities(items_repository=self,
+                                       filters=filters,
+                                       page_offset=page_offset,
+                                       page_size=page_size,
+                                       client_api=self._client_api)
+        paged.get_page()
+        return paged
 
     def build(self, model, local_path=None, from_local=None):
         """
@@ -154,7 +184,8 @@ class Models:
                     model.name)
 
             codebase_id = model.codebase_id
-            path = self._project.codebases.unpack(codebase_id=codebase_id, local_path=local_path)
+            project = self._project if self._project is not None else model.project
+            path = project.codebases.unpack(codebase_id=codebase_id, local_path=local_path)
 
         # load module from path
         entry_point = os.path.join(path, model.entry_point)

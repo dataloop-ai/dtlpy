@@ -62,9 +62,10 @@ Feature: Items repository upload service testing
         And Item in host when downloaded to "test_items_upload_downloaded_item" equals item in "assets_split/items_upload/0000000162.jpg"
         And Item was merged to host
 
-    Scenario: Upload an item with an illegal name
-        When I try to upload file in path "assets_split/items_upload/0000000162.jpg" to remote path "/fol.der"
-        Then Number of error files should be larger by one
+#    ToDo - remove - this is no longer forbidden
+#    Scenario: Upload an item with an illegal name
+#        When I try to upload file in path "assets_split/items_upload/0000000162.jpg" to remote path "/fol.der"
+#        Then Number of error files should be larger by one
 
     Scenario: Upload a non-existing file
         When I try to upload file in path "non-existing-path/file.jpg"

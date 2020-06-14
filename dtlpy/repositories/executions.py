@@ -1,8 +1,7 @@
 import threading
 import logging
-from urllib.parse import urlencode
 
-from .. import exceptions, entities, repositories
+from .. import exceptions, entities, repositories, miscellaneous
 
 logger = logging.getLogger(name=__name__)
 
@@ -67,7 +66,8 @@ class Executions:
                     break
                 elif 'item_id' in val:
                     item_id = val['item_id']
-                    project_id = repositories.Items(client_api=self._client_api).get(item_id=item_id).dataset.projects[0]
+                    project_id = repositories.Items(client_api=self._client_api).get(item_id=item_id).dataset.projects[
+                        0]
                     break
                 elif 'dataset_id' in val:
                     dataset_id = val['dataset_id']
@@ -186,68 +186,95 @@ class Executions:
             return execution.output
         return execution
 
-    def list(self, service_id=None, page_offset=0, page_size=1000, order_by_type=None, function_name=None,
-             order_by_direction=None, project_id=None, status=None, resource_type=None, resource_id=None):
+    def _list(self, filters):
         """
         List service executions
         :return:
         """
-
-        # either project or service
-        if project_id is None and self._project is not None:
-            project_id = self._project.id
-        if service_id is None and self._service is not None:
-            service_id = self._service.id
-
-        paged = entities.PagedEntities(items_repository=self,
-                                       filters=None,
-                                       page_offset=page_offset,
-                                       page_size=page_size,
-                                       client_api=self._client_api,
-                                       item_entity=self,
-                                       service_id=service_id,
-                                       project_id=project_id,
-                                       order_by_direction=order_by_direction,
-                                       order_by_type=order_by_type,
-                                       execution_status=status,
-                                       execution_resource_id=resource_id,
-                                       execution_function_name=function_name,
-                                       execution_resource_type=resource_type)
-        paged.get_page()
-        return paged
-
-    def get_list(self, service_id=None, project_id=None, page_offset=None, page_size=None, order_by_type=None,
-                 order_by_direction=None, status=None, resource_type=None, resource_id=None, function_name=None):
-        """
-        List service executions
-        :return:
-        """
-        url = '/executions'
-        query_params = {
-            'orderByType': order_by_type,
-            'orderByDirection': order_by_direction,
-            'pageOffset': page_offset,
-            'pageSize': page_size,
-            'status': status,
-            'resourceType': resource_type,
-            'resourceId': resource_id,
-            'functionName': function_name
-        }
-
-        if service_id is not None:
-            query_params['service'] = service_id
-        else:
-            query_params['projects'] = project_id
-
-        url += '?{}'.format(urlencode({key: val for key, val in query_params.items() if val is not None}, doseq=True))
+        url = '/query/FaaS'
+        # query_params = {
+        #     'orderByType': order_by_type,
+        #     'orderByDirection': order_by_direction,
+        #     'pageOffset': page_offset,
+        #     'pageSize': page_size,
+        #     'status': status,
+        #     'resourceType': resource_type,
+        #     'resourceId': resource_id,
+        #     'functionName': function_name
+        # }
+        #
+        # if service_id is not None:
+        #     query_params['service'] = service_id
+        # else:
+        #     query_params['projects'] = project_id
+        #
+        # url += '?{}'.format(urlencode({key: val for key, val in query_params.items() if val is not None}, doseq=True))
 
         # request
-        success, response = self._client_api.gen_request(req_type='get',
-                                                         path=url)
+        success, response = self._client_api.gen_request(req_type='POST',
+                                                         path=url,
+                                                         json_req=filters.prepare())
         if not success:
             raise exceptions.PlatformException(response)
 
         return response.json()
+
+    def list(self, filters=None, page_offset=None, page_size=None):
+        """
+        List service executions
+        :return:
+        """
+        # default filtersf
+        if filters is None:
+            filters = entities.Filters(resource=entities.FiltersResource.EXECUTION)
+            if self._project is not None:
+                filters.add(field='projectId', values=self._project.id)
+            if self._service is not None:
+                filters.add(field='serviceId', values=self._service.id)
+
+        # assert type filters
+        if not isinstance(filters, entities.Filters):
+            raise exceptions.PlatformException(error='400', message='Unknown filters type')
+
+        # page size
+        if page_size is None:
+            # take from default
+            page_size = filters.page_size
+        else:
+            filters.page_size = page_size
+
+        # page offset
+        if page_offset is None:
+            # take from default
+            page_offset = filters.page
+        else:
+            filters.page = page_offset
+
+        paged = entities.PagedEntities(items_repository=self,
+                                       filters=filters,
+                                       page_offset=page_offset,
+                                       page_size=page_size,
+                                       client_api=self._client_api)
+        paged.get_page()
+        return paged
+
+    def _build_entities_from_response(self, response_items):
+        pool = self._client_api.thread_pools(pool_name='entity.create')
+        jobs = [None for _ in range(len(response_items))]
+        # return execution list
+        for i_item, item in enumerate(response_items):
+            jobs[i_item] = pool.apply_async(entities.Execution._protected_from_json,
+                                            kwds={'client_api': self._client_api,
+                                                  '_json': item,
+                                                  'service': self._service})
+        # wait for all jobs
+        _ = [j.wait() for j in jobs]
+        # get results
+        results = [j.get() for j in jobs]
+        # log errors
+        _ = [logger.warning(r[1]) for r in results if r[0] is False]
+        # return good jobs
+        return miscellaneous.List([r[1] for r in results if r[0] is True])
 
     def get(self, execution_id=None, sync=False):
         """
@@ -302,6 +329,31 @@ class Executions:
             raise exceptions.PlatformException(response)
         else:
             return response.json()
+
+    def wait(self, execution_id):
+        """
+        Get Service execution object
+
+        :param execution_id:
+        :return: Service execution object
+        """
+        url_path = "/executions/{}?sync=true".format(execution_id)
+        while True:
+            success, response = self._client_api.gen_request(req_type="get",
+                                                             path=url_path,
+                                                             log_error=False)
+            if response.status_code in [500, 504]:
+                # while timing out continue wait
+                pass
+            else:
+                break
+        # exception handling
+        if not success:
+            raise exceptions.PlatformException(response)
+        # return entity
+        return entities.Execution.from_json(client_api=self._client_api,
+                                            _json=response.json(),
+                                            service=self._service)
 
     def terminate(self, execution):
         """

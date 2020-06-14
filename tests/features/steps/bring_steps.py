@@ -101,6 +101,7 @@ from tests.features.steps.executions_repo import test_executions_get
 from tests.features.steps.executions_repo import test_executions_create
 from tests.features.steps.executions_repo import test_executions_list
 from tests.features.steps.executions_repo import test_executions_multiple
+from tests.features.steps.execution_monitoring import test_execution_monitoring
 
 from tests.features.steps.bots_repo import test_bots_create
 from tests.features.steps.bots_repo import test_bots_list
@@ -128,4 +129,4 @@ from tests.features.steps.assignments_repo import test_assignments_reassign
 from tests.features.steps.assignments_repo import test_assignments_redistribute
 from tests.features.steps.assignments_repo import test_assignments_items_operations
 
-from tests.features.steps.execution_monitoring import test_execution_monitoring
+from tests.features.steps.converter import converter

@@ -15,7 +15,7 @@ class Codebase(entities.Item):
     """
 
     @staticmethod
-    def _protected_from_json(_json, client_api, dataset=None):
+    def _protected_from_json(_json, client_api, dataset=None, project=None, is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
         :param _json:
@@ -24,14 +24,16 @@ class Codebase(entities.Item):
         :return:
         """
         try:
-            item = Codebase.from_json(_json=_json,
-                                      client_api=client_api,
-                                      dataset=dataset)
+            codebase = Codebase.from_json(_json=_json,
+                                          client_api=client_api,
+                                          dataset=dataset,
+                                          project=None,
+                                          is_fetched=True)
             status = True
         except Exception:
-            item = traceback.format_exc()
+            codebase = traceback.format_exc()
             status = False
-        return status, item
+        return status, codebase
 
     @classmethod
     def from_json(cls, _json, client_api, dataset=None, project=None, is_fetched=True):
@@ -53,6 +55,7 @@ class Codebase(entities.Item):
             project=project,
             # params
             annotations_link=_json.get('annotations', None),
+            annotations_count=_json.get('annotationsCount', None),
             createdAt=_json.get('createdAt', None),
             datasetId=_json.get('datasetId', None),
             annotated=_json.get('annotated', None),

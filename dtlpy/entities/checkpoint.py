@@ -1,4 +1,5 @@
 from collections import namedtuple
+import traceback
 import logging
 import attr
 
@@ -34,6 +35,27 @@ class Checkpoint(entities.BaseEntity):
     _project = attr.ib(repr=False)
     _client_api = attr.ib(type=services.ApiClient, repr=False)
     _repositories = attr.ib(repr=False)
+
+    @staticmethod
+    def _protected_from_json(_json, client_api, project, model, is_fetched=True):
+        """
+        Same as from_json but with try-except to catch if error
+        :param _json:
+        :param client_api:
+        :param dataset:
+        :return:
+        """
+        try:
+            checkpoint = Checkpoint.from_json(_json=_json,
+                                              client_api=client_api,
+                                              project=project,
+                                              model=model,
+                                              is_fetched=is_fetched)
+            status = True
+        except Exception:
+            checkpoint = traceback.format_exc()
+            status = False
+        return status, checkpoint
 
     @classmethod
     def from_json(cls, _json, client_api, project, model, is_fetched=True):
@@ -121,6 +143,7 @@ class Checkpoint(entities.BaseEntity):
         r = reps(projects=repositories.Projects(client_api=self._client_api),
                  checkpoints=repositories.Checkpoints(client_api=self._client_api,
                                                       project=self._project,
+                                                      project_id=self.project_id,
                                                       model=self.model),
                  models=repositories.Models(client_api=self._client_api, project=self._project))
         return r

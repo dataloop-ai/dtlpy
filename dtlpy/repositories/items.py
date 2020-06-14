@@ -76,7 +76,26 @@ class Items:
         items = [item for item in items if item is not None]
         return items
 
-    def get_list(self, filters):
+    def _build_entities_from_response(self, response_items):
+        pool = self._client_api.thread_pools(pool_name='entity.create')
+        jobs = [None for _ in range(len(response_items))]
+        # return triggers list
+        for i_item, item in enumerate(response_items):
+            jobs[i_item] = pool.apply_async(self.items_entity._protected_from_json,
+                                            kwds={'client_api': self._client_api,
+                                                  '_json': item,
+                                                  'dataset': self.dataset})
+        # wait for all jobs
+        _ = [j.wait() for j in jobs]
+        # get all results
+        results = [j.get() for j in jobs]
+        # log errors
+        _ = [logger.warning(r[1]) for r in results if r[0] is False]
+        # return good jobs
+        items = miscellaneous.List([r[1] for r in results if r[0] is True])
+        return items
+
+    def _list(self, filters):
         """
         Get dataset items list This is a browsing endpoint, for any given path item count will be returned,
         user is expected to perform another request then for every folder item to actually get the its item list.
@@ -123,17 +142,17 @@ class Items:
         else:
             filters.page = page_offset
 
-        if filters.resource == 'items':
-            items_entity = self.items_entity
+        if filters.resource == entities.FiltersResource.ITEM:
+            items_repository = self
         else:
-            items_entity = entities.Annotation
+            items_repository = repositories.Annotations(client_api=self._client_api,
+                                                        dataset=self._dataset)
 
-        paged = entities.PagedEntities(items_repository=self,
+        paged = entities.PagedEntities(items_repository=items_repository,
                                        filters=filters,
                                        page_offset=page_offset,
                                        page_size=page_size,
-                                       client_api=self._client_api,
-                                       item_entity=items_entity)
+                                       client_api=self._client_api)
         paged.get_page()
         return paged
 
@@ -161,7 +180,7 @@ class Items:
                     raise exceptions.PlatformException(response)
             elif filepath is not None:
                 filters = entities.Filters()
-                filters.show_hidden = True
+                filters.pop(field='hidden')
                 filters.add(field='filename', values=filepath)
                 paged_entity = self.list(filters=filters)
                 if len(paged_entity.items) == 0:
@@ -300,13 +319,13 @@ class Items:
         # update by filters
         else:
             # prepare request
-            url_path = "/datasets/{}/query".format(self.dataset.id)
+            prepared_filter = filters.prepare(operation='update',
+                                              system_update=system_update_values,
+                                              system_metadata=system_metadata,
+                                              update=update_values)
             success, response = self._client_api.gen_request(req_type="POST",
-                                                             path=url_path,
-                                                             json_req=filters.prepare(operation='update',
-                                                                                      system_update=system_update_values,
-                                                                                      system_metadata=system_metadata,
-                                                                                      update=update_values))
+                                                             path="/datasets/{}/query".format(self.dataset.id),
+                                                             json_req=prepared_filter)
             if not success:
                 raise exceptions.PlatformException(response)
             else:
@@ -327,7 +346,8 @@ class Items:
             to_items_folder=True,
             thickness=1,
             with_text=False,
-            without_relative_path=None
+            without_relative_path=None,
+            avoid_unnecessary_annotation_download=False
     ):
         """
         Download dataset by filters.
@@ -341,6 +361,7 @@ class Items:
         :param items: download Item entity or item_id (or a list of item)
         :param file_types: a list of file type to download. e.g ['video/webm', 'video/mp4', 'image/jpeg', 'image/png']
         :param num_workers: default - 32
+        :param avoid_unnecessary_annotation_download: default - False
         :param save_locally: bool. save to disk or return a buffer
         :param annotation_options: download annotations options: ['mask', 'img_mask', 'instance', 'json']
         :param with_text: optional - add text to annotations, default = False
@@ -361,7 +382,8 @@ class Items:
             to_items_folder=to_items_folder,
             thickness=thickness,
             with_text=with_text,
-            without_relative_path=without_relative_path
+            without_relative_path=without_relative_path,
+            avoid_unnecessary_annotation_download=avoid_unnecessary_annotation_download
         )
 
     def upload(
@@ -373,7 +395,7 @@ class Items:
             remote_path="/",
             remote_name=None,
             file_types=None,
-            num_workers=32,
+            num_workers=None,
             overwrite=False,
             item_metadata=None
     ):

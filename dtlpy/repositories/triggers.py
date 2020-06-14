@@ -62,8 +62,9 @@ class Triggers:
     ###########
     # methods #
     ###########
-    def create(self, service_id=None, webhook_id=None, name=None, filters=None, function_name=None,
-               resource='Item', actions=None, active=True, execution_mode=None, project_id=None, **kwargs):
+    def create(self, service_id=None, webhook_id=None, name=None, filters=None, function_name='run',
+               resource=entities.TriggerResource.ITEM, actions=None, active=True,
+               execution_mode=entities.TriggerExecutionMode.ONCE, project_id=None, **kwargs):
         """
         Create a Trigger
 
@@ -74,12 +75,13 @@ class Triggers:
         :param execution_mode:
         :param service_id: Id of services to be triggered
         :param filters: optional - Item/Annotation metadata filters, default = none
-        :param resource: optional - dataset/item/annotation, default = item
+        :param resource: optional - Dataset/Item/Annotation/ItemStatus, default = Item
         :param actions: optional - Created/Updated/Deleted, default = create
         :param active: optional - True/False, default = True
         :return: Trigger entity
         """
         scope = kwargs.get('scope', None)
+
         if service_id is None and webhook_id is None:
             if self._service is not None:
                 service_id = self._service.id
@@ -97,15 +99,7 @@ class Triggers:
         if filters is None:
             filters = dict()
         elif isinstance(filters, entities.Filters):
-            filters = filters.prepare()['filter']
-
-        if function_name is None:
-            function_name = 'run'
-
-        # actions
-        if actions is not None:
-            if not isinstance(actions, list):
-                actions = [actions]
+            filters = filters.prepare(query_only=True)
 
         if service_id is None:
             operation = {
@@ -120,24 +114,19 @@ class Triggers:
 
             }
 
-        spec = {
-            'filter': filters,
-            'operation': operation,
-        }
-
-        # add optionals
-        if resource is not None:
-            spec['resource'] = resource
         if actions is not None:
             if not isinstance(actions, list):
                 actions = [actions]
-            spec['actions'] = actions
         else:
-            spec['actions'] = ['Created']
-        if execution_mode is not None:
-            spec['executionMode'] = execution_mode
-        else:
-            spec['executionMode'] = 'Once'
+            actions = [entities.TriggerAction.CREATED]
+
+        spec = {
+            'filter': filters,
+            'operation': operation,
+            'resource': resource,
+            'executionMode': execution_mode,
+            'actions': actions
+        }
 
         # payload
         if self._project_id is None and project_id is None:
@@ -201,10 +190,10 @@ class Triggers:
             if trigger_name is None:
                 raise exceptions.PlatformException('400', 'Must provide either trigger name or trigger id')
             else:
-                triggers = self.list(name=trigger_name)
-                if len(triggers) == 0:
+                triggers = self.list(filters=entities.Filters(field='name', values=trigger_name, resource=entities.FiltersResource.TRIGGER))
+                if triggers.items_count == 0:
                     raise exceptions.PlatformException('404', 'Trigger not found')
-                elif len(triggers) == 1:
+                elif triggers.items_count == 1:
                     trigger = triggers[0]
                 else:
                     raise exceptions.PlatformException('404',
@@ -263,48 +252,77 @@ class Triggers:
                                           project=self._project,
                                           service=self._service)
 
-    def list(self, active=None, page_offset=None, resource=None, service_id=None, name=None, project_id=None):
+    def _build_entities_from_response(self, response_items):
+        pool = self._client_api.thread_pools(pool_name='entity.create')
+        jobs = [None for _ in range(len(response_items))]
+        # return triggers list
+        for i_trigger, trigger in enumerate(response_items):
+            jobs[i_trigger] = pool.apply_async(entities.Trigger._protected_from_json,
+                                               kwds={'client_api': self._client_api,
+                                                     '_json': trigger,
+                                                     'project': self._project,
+                                                     'service': self._service})
+        # wait for all jobs
+        _ = [j.wait() for j in jobs]
+        # get all results
+        results = [j.get() for j in jobs]
+        # log errors
+        _ = [logger.warning(r[1]) for r in results if r[0] is False]
+        # return good jobs
+        triggers = miscellaneous.List([r[1] for r in results if r[0] is True])
+        return triggers
+
+    def _list(self, filters):
         """
         List project triggers
         :return:
         """
-        url = '/triggers'
-        query_params = {
-            'name': name,
-            'resource': resource,
-            'active': active,
-            'pageOffset': page_offset
-        }
+        url = '/query/FaaS'
 
-        # either project or service
-        if project_id is None:
-            if self._project_id is not None:
-                project_id = self._project_id
-        if service_id is None:
-            if self._service is not None:
-                service_id = self._service.id
-
-        if service_id is not None:
-            query_params['serviceId'] = service_id
-        else:
-            query_params['projects'] = project_id
-
-        url += '?{}'.format(urlencode({key: val for key, val in query_params.items() if val is not None}, doseq=True))
-
-        # request
-        success, response = self._client_api.gen_request(req_type='get',
-                                                         path=url)
+        success, response = self._client_api.gen_request(req_type='POST',
+                                                         path=url,
+                                                         json_req=filters.prepare())
         if not success:
             raise exceptions.PlatformException(response)
+        return response.json()
 
-        # return triggers list
-        triggers = miscellaneous.List()
-        for trigger in response.json()['items']:
-            triggers.append(entities.Trigger.from_json(client_api=self._client_api,
-                                                       _json=trigger,
-                                                       project=self._project,
-                                                       service=self._service))
-        return triggers
+    def list(self, filters=None, page_offset=None, page_size=None):
+        """
+        List project packages
+        :return:
+        """
+        if filters is None:
+            filters = entities.Filters(resource=entities.FiltersResource.TRIGGER)
+            if self._project is not None:
+                filters.add(field='projectId', values=self._project.id)
+            if self._service is not None:
+                filters.add(field='spec.operation.serviceId', values=self._service.id)
+
+        # assert type filters
+        if not isinstance(filters, entities.Filters):
+            raise exceptions.PlatformException('400', 'Unknown filters type')
+
+        # page size
+        if page_size is None:
+            # take from default
+            page_size = filters.page_size
+        else:
+            filters.page_size = page_size
+
+        # page offset
+        if page_offset is None:
+            # take from default
+            page_offset = filters.page
+        else:
+            filters.page = page_offset
+
+        paged = entities.PagedEntities(items_repository=self,
+                                       filters=filters,
+                                       page_offset=page_offset,
+                                       page_size=page_size,
+                                       client_api=self._client_api)
+        paged.get_page()
+        return paged
 
     def resource_information(self, resource, resource_type, action='Created'):
         """

@@ -21,7 +21,6 @@ def step_impl(context, item_path):
             context.item.width = 1536
 
 
-
 @behave.given(u'There are a few annotations in the item')
 def step_impl(context):
     labels = [
@@ -54,17 +53,17 @@ def step_impl(context):
     context.dataset.attributes = ['attr1', 'attr2']
     context.project.datasets.update(dataset=context.dataset, system_metadata=True)
     annotation1 = {'attributes': ['attr1'],
-                   'coordinates': [[{'x': 100, 'y': 100},
-                                    {'x': 320, 'y': 100},
-                                    {'x': 320, 'y': 250},
-                                    {'x': 100, 'y': 250}]],
+                   'coordinates': [{'x': 100, 'y': 100},
+                                   {'x': 320, 'y': 100},
+                                   {'x': 320, 'y': 250},
+                                   {'x': 100, 'y': 250}],
                    'label': 'dog',
                    'type': 'box'}
     annotation2 = {'attributes': ['attr2'],
-                   'coordinates': [[{'x': 400, 'y': 300},
-                                    {'x': 700, 'y': 300},
-                                    {'x': 700, 'y': 400},
-                                    {'x': 400, 'y': 400}]],
+                   'coordinates': [{'x': 400, 'y': 300},
+                                   {'x': 700, 'y': 300},
+                                   {'x': 700, 'y': 400},
+                                   {'x': 400, 'y': 400}],
                    'label': 'cat',
                    'type': 'box'}
     context.annotations = [annotation1, annotation2]
@@ -73,6 +72,8 @@ def step_impl(context):
 
 @behave.when(u'I download dataset annotations')
 def step_impl(context):
+    if os.path.isdir(os.path.join(os.environ['DATALOOP_TEST_ASSETS'], 'json')):
+        shutil.rmtree(os.path.join(os.environ['DATALOOP_TEST_ASSETS'], 'json'))
     context.dataset.download_annotations(local_path=os.environ['DATALOOP_TEST_ASSETS'], overwrite=True)
 
 

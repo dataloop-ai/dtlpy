@@ -9,7 +9,7 @@ Feature: Packages entity method testing
     @packages.delete
     Scenario: To Json
         When I push "first" package
-            |codebase_id=None|package_name=test_package|src_path=packages_get|inputs=None|outputs=None|
-        When I get package by the name of "test_package"
+            |codebase_id=None|package_name=test-package|src_path=packages_get|inputs=None|outputs=None|
+        When I get package by the name of "test-package"
         Then I get a package entity
         And Object "Package" to_json() equals to Platform json.

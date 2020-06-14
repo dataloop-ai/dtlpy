@@ -179,9 +179,9 @@ class Task:
         """
         return self.tasks.remove_items(dataset=self.dataset, task=self, filters=filters, items=items)
 
-    def get_items(self):
+    def get_items(self, filters=None):
         """
 
         :return:
         """
-        return self.tasks.get_items(task_id=self.id, dataset=self.dataset)
+        return self.tasks.get_items(task_id=self.id, dataset=self.dataset, filters=filters)

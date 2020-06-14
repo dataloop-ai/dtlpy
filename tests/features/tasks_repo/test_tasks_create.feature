@@ -6,6 +6,7 @@ Feature: Tasks repository create method testing
         And I create a dataset with a random name
         And There are items, path = "filters/image.jpg"
             |annotated_type={"box": 3, "polygon": 3}|metadata={"user.good": 3, "user.bad": 3}|
+        And I save dataset items to context
 
     Scenario: Create - minimum params
         When I create Task
@@ -21,6 +22,6 @@ Feature: Tasks repository create method testing
 
     Scenario: Create - maximum params - items
         When I create Task
-            | task_name=items_task | due_date=auto | assignee_ids=None | workload=auto | dataset=auto | task_owner=auto | status=close | task_type=annotation | task_parent_id=None | project_id=auto | recipe_id=auto | assignments_ids=None | metadata={"key": "value"} | filters=None | items=10 |
+            | task_name=items_task | due_date=auto | assignee_ids=None | workload=auto | dataset=auto | task_owner=auto | status=close | task_type=annotation | task_parent_id=None | project_id=auto | recipe_id=auto | assignments_ids=None | metadata={"key": "value"} | filters=None | items=3 |
         Then I receive a task entity
         And Task has the correct attributes

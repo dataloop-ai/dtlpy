@@ -4,7 +4,7 @@ import json
 
 @behave.given(u'There are no services')
 def step_impl(context):
-    assert len(context.package.services.list()) == 0
+    assert context.package.services.list().items_count == 0
 
 
 @behave.when(u'I deploy a service')
@@ -48,5 +48,5 @@ def step_impl(context):
 @behave.then(u'There is only one service')
 def step_impl(context):
     services_list = context.package.services.list()
-    assert len(services_list) == 1
+    assert services_list.items_count == 1
     assert services_list[0].to_json() == context.service.to_json()

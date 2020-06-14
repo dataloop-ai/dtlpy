@@ -72,7 +72,13 @@ def get_value(params, context):
         filters.custom_filter = json.loads(val)
         val = filters
     elif key == 'items' and val is not None:
-        val = context.dataset.items.list().items[0:int(val)]
+        if len(context.items_in_dataset) >= int(val):
+            items = list()
+            for _ in range(int(val)):
+                items.append(context.items_in_dataset.pop())
+            val = items
+        else:
+            raise Exception('Not enough items in dataset')
     elif key == 'metadata' and val is not None:
         val = json.loads(val)
     elif key == 'due_date':
@@ -108,7 +114,13 @@ def get_assignment_value(params, context):
         filters.custom_filter = json.loads(val)
         val = filters
     elif key == 'items' and val is not None:
-        val = context.dataset.items.list().items[0:int(val)]
+        if len(context.items_in_dataset) >= int(val):
+            items = list()
+            for _ in range(int(val)):
+                items.append(context.items_in_dataset.pop())
+            val = items
+        else:
+            raise Exception('Not enough items in dataset')
     elif key == 'metadata' and val is not None:
         val = json.loads(val)
     elif key == 'project_id':

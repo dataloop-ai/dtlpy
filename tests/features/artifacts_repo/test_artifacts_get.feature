@@ -5,12 +5,12 @@ Feature: Artifacts repository get artifact testing
     Given Platform Interface is initialized as dlp and Environment is set according to git branch
     And There is a project by the name of "test_artifacts_upload"
     And Directory "artifacts_upload" is empty
-    When I generate package by the name of "test_package" to "artifacts_upload"
+    When I generate package by the name of "test-package" to "artifacts_upload"
     Given Context "artifact_filepath" is "artifacts_repo/artifact_item.jpg"
     And Directory "artifacts_upload" is empty
-    When I generate package by the name of "test_package" to "artifacts_upload"
+    When I generate package by the name of "test-package" to "artifacts_upload"
     And I push "first" package
-      | codebase_id=None | package_name=test_package | src_path=artifacts_upload | inputs=None | outputs=None | modules=no_input |
+      | codebase_id=None | package_name=test-package | src_path=artifacts_upload | inputs=None | outputs=None | modules=no_input |
 
   @packages.delete
   Scenario: Get by name - item

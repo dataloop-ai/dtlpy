@@ -5,7 +5,7 @@ Feature: Executions repository get service testing
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
         And There is a project by the name of "execution_get"
         And I create a dataset with a random name
-        And There is a package (pushed from "executions/item") by the name of "execution_get"
+        And There is a package (pushed from "executions/item") by the name of "execution-get"
         And I upload item in "0000000162.jpg" to dataset
         And There is a service by the name of "executions-get" with module name "default_module" saved to context "service"
         When I create an execution with "inputs"

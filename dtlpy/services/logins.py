@@ -8,8 +8,19 @@ import jwt
 import os
 from urllib.parse import urlencode
 
+from .default_environments import DEFAULT_ENVIRONMENT
+
 logger = logging.getLogger(name=__name__)
 threadLock = threading.Lock()
+
+
+def login_m2m(api_client, email, password, client_id, client_secret, force=False):
+    login_secret(api_client=api_client,
+                 email=email,
+                 password=password,
+                 client_id=client_id,
+                 client_secret=client_secret,
+                 force=force)
 
 
 def login_secret(api_client, email, password, client_id, client_secret, force=False):
@@ -74,6 +85,8 @@ def login_secret(api_client, email, password, client_id, client_secret, force=Fa
         api_client.token = response_dict['id_token']  # this will also set the refresh_token to None
         if 'refresh_token' in response_dict:
             api_client.refresh_token = response_dict['refresh_token']
+        # set new client id for refresh
+        api_client.environments[environment]['client_id'] = client_id
         payload = jwt.decode(api_client.token, algorithms=['HS256'], verify=False)
         if 'email' in payload:
             logger.info('[Done] Login Secret. User: {}'.format(payload['email']))
@@ -116,7 +129,7 @@ def login(api_client, audience=None, auth0_url=None, client_id=None):
     ################################
     # get env from url
     if api_client.environment in api_client.environments.keys():
-        env_params = api_client.environments[api_client.environment]
+        env_params = DEFAULT_ENVIRONMENT[api_client.environment]
         audience = env_params['audience']
         client_id = env_params['client_id']
         auth0_url = env_params['auth0_url']
@@ -214,7 +227,7 @@ def login(api_client, audience=None, auth0_url=None, client_id=None):
                 api_client.token = final_token  # this will also set the refresh_token to None
                 if 'refresh_token' in response_dict:
                     api_client.refresh_token = response_dict['refresh_token']
-
+                api_client.environments[api_client.environment]['client_id'] = client_id
                 payload = jwt.decode(api_client.token, algorithms=['HS256'], verify=False)
                 if 'email' in payload:
                     logger.info('Logged in: %s' % payload['email'])

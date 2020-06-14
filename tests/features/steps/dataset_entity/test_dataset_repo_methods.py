@@ -1,3 +1,5 @@
+import shutil
+
 import behave
 import os
 
@@ -5,6 +7,8 @@ import os
 @behave.when(u'I download dataset entity annotations to assets')
 def step_impl(context):
     local_path = os.environ['DATALOOP_TEST_ASSETS']
+    if os.path.isdir(os.path.join(local_path, 'json')):
+        shutil.rmtree(os.path.join(local_path, 'json'))
     context.dataset.download_annotations(local_path=local_path, overwrite=True)
 
 
@@ -12,9 +16,9 @@ def step_impl(context):
 def step_impl(context, local_path):
     local_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], local_path)
     context.dataset.download(filters=None,
-                            local_path=local_path,
-                            annotation_options=['mask', 'instance', 'json'],
-                            thickness=3)
+                             local_path=local_path,
+                             annotation_options=['mask', 'instance', 'json'],
+                             thickness=3)
 
 
 @behave.when(u'I delete a dataset entity')

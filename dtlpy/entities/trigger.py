@@ -1,5 +1,7 @@
 import attr
+import traceback
 from collections import namedtuple
+
 from .. import entities, services, exceptions, repositories
 
 
@@ -7,6 +9,7 @@ class TriggerResource:
     ITEM = "Item"
     DATASET = "Dataset"
     ANNOTATION = "Annotation"
+    ITEM_STATUS = "ItemStatus"
 
 
 class TriggerAction:
@@ -69,22 +72,25 @@ class Trigger(entities.BaseEntity):
     _op_type = attr.ib(default='service')
     _repositories = attr.ib(repr=False)
 
-    @_repositories.default
-    def set_repositories(self):
-        reps = namedtuple('repositories',
-                          field_names=['services'])
-        if self._project is None:
-            services = repositories.Services(client_api=self._client_api, project=self._project)
-        else:
-            services = self._project.services
-
-        r = reps(services=services)
-        return r
-
-    @property
-    def services(self):
-        assert isinstance(self._repositories.services, repositories.Services)
-        return self._repositories.services
+    @staticmethod
+    def _protected_from_json(_json, client_api, project, service=None):
+        """
+        Same as from_json but with try-except to catch if error
+        :param _json:
+        :param client_api:
+        :param project:
+        :return:
+        """
+        try:
+            trigger = Trigger.from_json(_json=_json,
+                                        client_api=client_api,
+                                        project=project,
+                                        service=service)
+            status = True
+        except Exception:
+            trigger = traceback.format_exc()
+            status = False
+        return status, trigger
 
     # noinspection PyShadowingBuiltins
     @classmethod
@@ -128,9 +134,30 @@ class Trigger(entities.BaseEntity):
             spec=spec,
         )
 
+    ################
+    # repositories #
+    ################
+    @_repositories.default
+    def set_repositories(self):
+        reps = namedtuple('repositories',
+                          field_names=['services'])
+        if self._project is None:
+            services = repositories.Services(client_api=self._client_api, project=self._project)
+        else:
+            services = self._project.services
+
+        r = reps(services=services)
+        return r
+
+    @property
+    def services(self):
+        assert isinstance(self._repositories.services, repositories.Services)
+        return self._repositories.services
+
     ############
     # entities #
     ############
+
     @property
     def project(self):
         if self._project is None:

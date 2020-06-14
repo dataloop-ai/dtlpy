@@ -13,6 +13,7 @@ class Reporter:
     CONVERTER = 'converter'
 
     def __init__(self, num_workers, resource):
+        self._num_workers = num_workers
         self._refs = [None for _ in range(num_workers)]
         self._success = [False for _ in range(num_workers)]
         self._status = ["" for _ in range(num_workers)]
@@ -22,10 +23,7 @@ class Reporter:
 
     @property
     def has_errors(self):
-        if self._resource == Reporter.CONVERTER:
-            return len([suc for suc in self._success if not suc]) > 0
-        else:
-            return self._status.count("error") > 0
+        return self.failure_count > 0
 
     @property
     def output(self):
@@ -35,6 +33,10 @@ class Reporter:
     @property
     def status_list(self):
         return np.unique(self._status)
+
+    @property
+    def num_workers(self):
+        return self._num_workers
 
     @property
     def failure_count(self):

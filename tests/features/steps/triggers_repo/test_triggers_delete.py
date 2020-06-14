@@ -14,4 +14,4 @@ def step_impl(context, deletion_format):
 
 @behave.then(u"There are no triggers")
 def step_impl(context):
-    assert len(context.service.triggers.list()) == 0
+    assert context.service.triggers.list().items_count == 0

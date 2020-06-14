@@ -9,6 +9,14 @@ class CollectionTypes:
     MULTIVIEW = 'multi'
 
 
+class SimilarityTypeEnum:
+    """
+    State enum
+    """
+    ID = "id"
+    URL = "url"
+
+
 class CollectionItem:
     """
     Base CollectionItem
@@ -82,7 +90,7 @@ class Collection:
 
             for item in items:
                 if isinstance(item, entities.Item):
-                    items_list.append({'type': 'id', 'ref': item.id})
+                    items_list.append({'type': SimilarityTypeEnum.ID, 'ref': item.id})
                 elif isinstance(item, SimilarityItem) or isinstance(item, MultiViewItem):
                     items_list.append(item.to_json())
                 elif isinstance(item, dict):
@@ -117,7 +125,7 @@ class Collection:
 
         return byte_io
 
-    def add(self, ref, type='id'):
+    def add(self, ref, type=SimilarityTypeEnum.ID):
         """
         Add item to collection
         """

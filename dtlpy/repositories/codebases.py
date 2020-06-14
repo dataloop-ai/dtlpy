@@ -94,7 +94,6 @@ class Codebases:
         filters = entities.Filters()
         filters.add(field='filename', values='/codebases/*')
         filters.add(field='type', values='dir')
-        filters.show_dirs = True
         codebases = self.items_repository.list(filters=filters)
         return codebases
 
@@ -238,13 +237,10 @@ class Codebases:
                     if 'git' not in item.metadata:
                         item.metadata['git'] = dict()
 
-                    # get info
-                    log = miscellaneous.GitUtils.git_log(path=directory)
-                    status = miscellaneous.GitUtils.git_status(path=directory)
-
                     # add to metadata
-                    item.metadata['git']['status'] = status
-                    item.metadata['git']['log'] = log
+                    item.metadata['git']['status'] = miscellaneous.GitUtils.git_status(path=directory)
+                    item.metadata['git']['log'] = miscellaneous.GitUtils.git_log(path=directory)
+                    item.metadata['git']['url'] = miscellaneous.GitUtils.git_url(path=directory)
 
                 # update item
                 item = self.items_repository.update(item=item, system_metadata=True)

@@ -1,9 +1,4 @@
 import behave
-import random
-import dtlpy as dl
-import subprocess
-import os
-import shutil
 
 
 @behave.then(u'Version is correct')

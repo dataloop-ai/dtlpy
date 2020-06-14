@@ -23,7 +23,6 @@ def step_impl(context, count):
     for i in range(int(count)):
         buffer.name = 'item-{}'.format(i)
         items.append(context.dataset.items.upload(local_path=buffer))
-    context.task.add_items(items=items)
     context.assignment.assign_items(items=items)
 
 

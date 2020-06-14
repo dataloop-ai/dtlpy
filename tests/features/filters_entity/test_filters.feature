@@ -220,7 +220,7 @@ Feature: Items repository list service testing
         And I join field "label" with values "dog" and operator "ne"
         And I join field "type" with values "point" and operator "None"
         And I list items with filters
-        Then I receive "3" items         
+        Then I receive "3" items
         When I delete items with filters
         And I list items with filters
         Then I receive "0" items

@@ -20,6 +20,13 @@ class FiltersKnownFields:
 class FiltersResource:
     ITEM = "items"
     ANNOTATION = "annotations"
+    EXECUTION = "executions"
+    PACKAGE = "packages"
+    SERVICE = "services"
+    TRIGGER = "triggers"
+    MODEL = "models"
+    CHECKPOINT = "checkpoints"
+    WEBHOOK = "webhooks"
 
 
 class FiltersOperations:
@@ -47,28 +54,98 @@ class Filters:
     Filters entity to filter items from pages in platform
     """
 
-    def __init__(self, field=None, values=None, operator=None, method=None, custom_filter=None):
+    def __init__(self, field=None, values=None, operator=None, method=None, custom_filter=None,
+                 resource=FiltersResource.ITEM):
         self.or_filter_list = list()
         self.and_filter_list = list()
         self.custom_filter = custom_filter
         self.known_operators = ['or', 'and', 'in', 'ne', 'eq', 'gt', 'glob', 'lt']
-        self.resource = 'items'
+        self._resource = resource
         self.page = 0
         self.page_size = 1000
-        self.method = 'and'
+        self.method = FiltersMethod.AND
         self.sort = dict()
-        self.show_hidden = False
-        self.show_dirs = False
         self.join = None
         self.recursive = True
+
+        # system only - task and assignment attributes
         self._ref_task = False
         self._ref_assignment = False
         self._ref_op = None
         self._ref_assignment_id = None
         self._ref_task_id = None
 
+        self.__add_defaults()
+
         if field is not None and values is not None:
             self.add(field=field, values=values, operator=operator, method=method)
+
+    @property
+    def resource(self):
+        return self._resource
+
+    @resource.setter
+    def resource(self, resource):
+        self._resource = resource
+        self.reset()
+        self.__add_defaults()
+
+    def reset(self):
+        self.or_filter_list = list()
+        self.and_filter_list = list()
+        self.custom_filter = None
+        self.page = 0
+        self.page_size = 1000
+        self.method = FiltersMethod.AND
+        self.sort = dict()
+        self.join = None
+        self.recursive = True
+        self._nullify_refs()
+
+    @property
+    def show_dirs(self):
+        logger.warning('[DeprecationWarning] This attribute will be deprecated after version 1.17.0\n'
+                       'To get directories please use filters.add(field="type", values="dir")')
+        show_dirs = True
+
+        if self.resource == FiltersResource.ITEM:
+            for single_filter in self.and_filter_list:
+                if single_filter.field == 'type':
+                    show_dirs = single_filter.values == 'dir'
+
+        return show_dirs
+
+    @show_dirs.setter
+    def show_dirs(self, val):
+        logger.warning('[DeprecationWarning] This attribute will be deprecated after version 1.17.0\n'
+                       'To get directories please use filters.add(field="type", values="dir")')
+        if self.resource == FiltersResource.ITEM:
+            if val:
+                self.pop(field='type')
+            else:
+                self.add(field="type", values='file', method='and')
+
+    @property
+    def show_hidden(self):
+        logger.warning('[DeprecationWarning] This attribute will be deprecated after version 1.17.0\n'
+                       'To get hidden files please use filters.add(field="hidden", values=True)')
+
+        show_hidden = True
+
+        if self.resource == FiltersResource.ITEM:
+            for single_filter in self.and_filter_list:
+                if single_filter.field == 'hidden':
+                    show_hidden = single_filter.values is True
+
+        return show_hidden
+
+    @show_hidden.setter
+    def show_hidden(self, val):
+        logger.warning('[DeprecationWarning] This attribute will be deprecated after version 1.17.0\n'
+                       'To get hidden files please use filters.add(field="hidden", values=True)')
+
+        if self.resource == FiltersResource.ITEM:
+            self.add(field="hidden", values=val, method='and')
 
     def _nullify_refs(self):
         self._ref_task = False
@@ -76,29 +153,6 @@ class Filters:
         self._ref_op = None
         self._ref_assignment_id = None
         self._ref_task_id = None
-
-    @property
-    def default_filter(self):
-        and_list = list()
-        if self.resource == 'items':
-            if not self.show_hidden:
-                and_list.append({'hidden': False})
-            if not self.show_dirs:
-                and_list.append({'type': 'file'})
-
-        default_filter = {
-            'items': {
-                'filter': {
-                    '$and': and_list
-                },
-                'sort': {'type': 'ascending', 'createdAt': 'descending'},
-            },
-            'annotations': {
-                'filter': dict(),
-                'sort': {'label': 'ascending', 'createdAt': 'descending'},
-            },
-        }
-        return default_filter[self.resource]
 
     def add(self, field, values, operator=None, method=None):
         """
@@ -112,22 +166,35 @@ class Filters:
         if method is None:
             method = self.method
 
-        # add ** if doesnt exist
-        if self.resource == 'items' and field == 'type':
-            if (isinstance(values, str) and values == 'dir') or (isinstance(values, list) and 'dir' in values):
-                self.show_dirs = True
-
         # create SingleFilter object and add to self.filter_list
-        if method == 'or':
+        if method == FiltersMethod.OR:
             self.or_filter_list.append(
                 SingleFilter(field=field, values=values, operator=operator)
             )
-        elif method == 'and':
-            self.and_filter_list.append(
-                SingleFilter(field=field, values=values, operator=operator)
-            )
+        elif method == FiltersMethod.AND:
+            self.__override(field=field, values=values, operator=operator)
         else:
             raise PlatformException('400', 'Unknown method {}, please select from: or/and'.format(method))
+
+    def __override(self, field, values, operator=None):
+        if field in self._unique_fields:
+            for i_single_filter, single_filter in enumerate(self.and_filter_list):
+                if single_filter.field == field:
+                    self.and_filter_list.pop(i_single_filter)
+        self.and_filter_list.append(
+            SingleFilter(field=field, values=values, operator=operator)
+        )
+
+    def has_field(self, field):
+        for single_filter in self.or_filter_list:
+            if single_filter.field == field:
+                return True
+
+        for single_filter in self.and_filter_list:
+            if single_filter.field == field:
+                return True
+
+        return False
 
     def pop(self, field):
         for single_filter in self.or_filter_list:
@@ -138,11 +205,8 @@ class Filters:
             if single_filter.field == field:
                 self.and_filter_list.remove(single_filter)
 
-        if field == 'type':
-            self.show_dirs = False
-
     def pop_join(self, field):
-        if self.resource == 'annotations':
+        if self.resource == FiltersResource.ANNOTATION:
             raise PlatformException('400', 'Cannot join to annotations filters')
         if self.join is not None:
             for single_filter in self.join['filter']['$and']:
@@ -150,49 +214,53 @@ class Filters:
                     self.join['filter']['$and'].remove(single_filter)
 
     def add_join(self, field, values, operator=None):
-        if self.resource == 'annotations':
-            raise PlatformException('400', 'Cannot join to annotations filters')
+        if self.resource != FiltersResource.ITEM:
+            raise PlatformException('400', 'Cannot join to {} filters'.format(self.resource))
+
         if self.join is None:
             self.join = dict()
         if 'on' not in self.join:
-            self.join['on'] = {'resource': 'annotations', 'local': 'itemId', 'forigen': 'id'}
+            self.join['on'] = {'resource': FiltersResource.ANNOTATION, 'local': 'itemId', 'forigen': 'id'}
         if 'filter' not in self.join:
             self.join['filter'] = dict()
         if '$and' not in self.join['filter']:
             self.join['filter']['$and'] = list()
         self.join['filter']['$and'].append(SingleFilter(field=field, values=values, operator=operator).prepare())
 
-    def __has_filters(self):
-        if self.and_filter_list or self.or_filter_list:
-            return True
-        else:
-            return False
+    def __add_defaults(self):
+        self._unique_fields = list()
+        # add items defaults
+        if self.resource == FiltersResource.ITEM:
+            self._unique_fields = ['type', 'hidden']
+            self.add(field='hidden', values=False, method='and')
+            self.add(field='type', values='file', method='and')
+            self.sort_by(field='type', value='ascending')
+            self.sort_by(field='createdAt', value='descending')
+        # add service defaults
+        elif self.resource == FiltersResource.SERVICE:
+            self._unique_fields = ['global']
+            self.add(field='global', values=False, method='and')
+        # add annotations defaults
+        elif self.resource == FiltersResource.ANNOTATION:
+            self.sort_by(field='label', value='ascending')
+            self.sort_by(field='createdAt', value='descending')
 
-    def __filters_list_to_dict(self):
+    def __generate_query(self):
         filters_dict = dict()
 
         if len(self.or_filter_list) > 0:
             or_filters = list()
             for single_filter in self.or_filter_list:
-                or_filters.append(single_filter.prepare(recursive=self.recursive and self.resource == 'items'))
+                or_filters.append(
+                    single_filter.prepare(recursive=self.recursive and self.resource == FiltersResource.ITEM))
             filters_dict['$or'] = or_filters
 
         if len(self.and_filter_list) > 0:
             and_filters = list()
             for single_filter in self.and_filter_list:
-                and_filters.append(single_filter.prepare(recursive=self.recursive and self.resource == 'items'))
+                and_filters.append(
+                    single_filter.prepare(recursive=self.recursive and self.resource == FiltersResource.ITEM))
             filters_dict['$and'] = and_filters
-
-        # add items defaults
-        if self.resource == 'items':
-            if not self.show_hidden:
-                if '$and' not in filters_dict:
-                    filters_dict['$and'] = list()
-                filters_dict['$and'] += Filters.hidden()
-            if not self.show_dirs:
-                if '$and' not in filters_dict:
-                    filters_dict['$and'] = list()
-                filters_dict['$and'] += Filters.no_dirs()
 
         return filters_dict
 
@@ -238,20 +306,12 @@ class Filters:
         ########
         # json #
         ########
-        if self.__has_filters() or self.custom_filter is not None:
-            # filters exist
-            # create json
-            _json = dict()
+        _json = dict()
 
-            # add filters to json
-            if self.custom_filter is None:
-                _json['filter'] = self.__filters_list_to_dict()
-            else:
-                _json['filter'] = self.__generate_custom_query()
-
+        if self.custom_filter is None:
+            _json['filter'] = self.__generate_query()
         else:
-            # no filters
-            _json = self.default_filter
+            _json['filter'] = self.__generate_custom_query()
 
         ##################
         # filter options #
@@ -290,7 +350,7 @@ class Filters:
             elif operation == 'delete':
                 _json[operation] = True
                 _json.pop('sort', None)
-                if self.resource == 'items':
+                if self.resource == FiltersResource.ITEM:
                     _json.pop('page', None)
                     _json.pop('pageSize', None)
             else:
@@ -304,18 +364,6 @@ class Filters:
         if value not in ['ascending', 'descending']:
             raise PlatformException(error='400', message='Sort can be by ascending or descending order only')
         self.sort[field] = value
-
-    @staticmethod
-    def hidden():
-        hidden = [{'hidden': False}]
-        assert isinstance(hidden, list)
-        return hidden
-
-    @staticmethod
-    def no_dirs():
-        no_dirs = [{'type': 'file'}]
-        assert isinstance(no_dirs, list)
-        return no_dirs
 
 
 class SingleFilter:

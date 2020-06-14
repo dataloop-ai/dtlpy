@@ -27,6 +27,12 @@ class Dataset(entities.BaseEntity):
     directoryTree = attr.ib(repr=False)
     export = attr.ib(repr=False)
 
+    # name change when to_json
+    created_at = attr.ib()
+    items_url = attr.ib(repr=False)
+    readable_type = attr.ib(repr=False)
+    access_level = attr.ib(repr=False)
+
     # api
     _client_api = attr.ib(type=services.ApiClient, repr=False)
     _instance_map = attr.ib(default=None, repr=False)
@@ -80,6 +86,9 @@ class Dataset(entities.BaseEntity):
         """
         inst = cls(metadata=_json.get('metadata', None),
                    directoryTree=_json.get('directoryTree', None),
+                   readable_type=_json.get('readableType', None),
+                   access_level=_json.get('accessLevel', None),
+                   created_at=_json.get('createdAt', None),
                    itemsCount=_json.get('itemsCount', None),
                    annotated=_json.get('annotated', None),
                    projects=_json.get('projects', None),
@@ -109,8 +118,14 @@ class Dataset(entities.BaseEntity):
                                                               attr.fields(Dataset)._labels,
                                                               attr.fields(Dataset)._directory_tree,
                                                               attr.fields(Dataset)._instance_map,
+                                                              attr.fields(Dataset).access_level,
+                                                              attr.fields(Dataset).readable_type,
+                                                              attr.fields(Dataset).created_at,
                                                               attr.fields(Dataset).items_url))
         _json.update({'items': self.items_url})
+        _json['readableType'] = self.readable_type
+        _json['createdAt'] = self.created_at
+        _json['accessLevel'] = self.access_level
         return _json
 
     @property

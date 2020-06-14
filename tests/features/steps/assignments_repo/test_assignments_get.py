@@ -17,3 +17,8 @@ def step_impl(context):
 @behave.then(u'Assignment received equals assignment created')
 def step_impl(context):
     assert context.assignment_get.to_json() == context.assignment.to_json()
+
+
+@behave.given(u'I save dataset items to context')
+def step_impl(context):
+    context.items_in_dataset = context.dataset.items.list().items

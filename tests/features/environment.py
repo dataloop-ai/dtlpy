@@ -57,6 +57,11 @@ def after_tag(context, tag):
             use_fixture(delete_second_project, context)
         except Exception:
             logging.exception('Failed to delete second project')
+    elif tag == 'converter.platform_dataset.delete':
+        try:
+            use_fixture(delete_converter_dataset, context)
+        except Exception:
+            logging.exception('Failed to delete converter dataset')
     else:
         raise ValueError('unknown tag: {}'.format(tag))
 
@@ -107,6 +112,12 @@ def delete_packages(context):
             all_deleted = False
             logging.exception('Failed deleting package: ')
     assert all_deleted
+
+
+@fixture
+def delete_converter_dataset(context):
+    if hasattr(context, 'platform_dataset'):
+        context.platform_dataset.delete(True, True)
 
 
 @fixture

@@ -125,7 +125,7 @@ def step_impl(context, resource_type):
         time.sleep(interval)
         execution = context.service.executions.get(execution_id=context.execution.id)
         if execution.latest_status['status'] == 'success':
-            success =  True
+            success = True
             break
 
     assert success

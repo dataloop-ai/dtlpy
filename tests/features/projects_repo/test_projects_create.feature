@@ -15,5 +15,4 @@ Feature: Projects repository create service testing
     Scenario: Create project with an existing project name
         Given I create a project by the name of "project_create_same_name"
         When I try to create a project by the name of "project_create_same_name"
-        Then "InternalServerError" exception should be raised
-        And Error message includes "already created"
+        Then "I receive error with status code "500"

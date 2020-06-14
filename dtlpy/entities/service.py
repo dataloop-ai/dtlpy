@@ -3,7 +3,7 @@ import traceback
 import logging
 import attr
 
-from .. import services, repositories, entities, exceptions
+from .. import services, repositories, entities
 
 logger = logging.getLogger("dataloop.service")
 
@@ -29,7 +29,6 @@ class Service(entities.BaseEntity):
 
     bot = attr.ib()
     use_user_jwt = attr.ib(repr=False)
-    runtime = attr.ib(repr=False)  # hw requirements
     init_input = attr.ib()
     versions = attr.ib(repr=False)
     module_name = attr.ib()
@@ -39,8 +38,11 @@ class Service(entities.BaseEntity):
     mq = attr.ib(repr=False)
     active = attr.ib()
     driver_id = attr.ib(repr=False)
+    revisions = attr.ib(type=list)
 
     # name change
+    runtime = attr.ib(repr=False)
+    queue_length_limit = attr.ib()
     run_execution_as_process = attr.ib(type=bool)
     execution_timeout = attr.ib()
     drain_time = attr.ib()
@@ -56,7 +58,7 @@ class Service(entities.BaseEntity):
     _repositories = attr.ib(repr=False)
 
     @staticmethod
-    def _protected_from_json(_json, client_api, package=None, project=None):
+    def _protected_from_json(_json, client_api, package=None, project=None, is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
         :param _json:
@@ -69,7 +71,8 @@ class Service(entities.BaseEntity):
             service = Service.from_json(_json=_json,
                                         client_api=client_api,
                                         package=package,
-                                        project=project)
+                                        project=project,
+                                        is_fetched=is_fetched)
             status = True
         except Exception:
             service = traceback.format_exc()
@@ -88,6 +91,10 @@ class Service(entities.BaseEntity):
         :return:
         """
         versions = _json.get('versions', dict())
+        runtime = _json.get("runtime", None)
+        if runtime:
+            runtime = KubernetesRuntime(**runtime)
+
         inst = cls(
             package_revision=_json.get("packageRevision", None),
             bot=_json.get("botUserName", None),
@@ -99,14 +106,16 @@ class Service(entities.BaseEntity):
             driver_id=_json.get('driverId', None),
             version=_json.get('version', None),
             creator=_json.get('creator', None),
+            revisions=_json.get('revisions', list()),
+            queue_length_limit=_json.get('queueLengthLimit', None),
             active=_json.get('active', None),
-            runtime=_json.get("runtime", dict()),
+            runtime=runtime,
             is_global=_json.get("global", False),
             init_input=_json.get("initParams", dict()),
             module_name=_json.get("moduleName", None),
             run_execution_as_process=_json.get('runExecutionAsProcess', False),
-            execution_timeout=_json.get('executionTimeout', 60*60),
-            drain_time=_json.get('drainTime', 60*10),
+            execution_timeout=_json.get('executionTimeout', 60 * 60),
+            drain_time=_json.get('drainTime', 60 * 10),
             on_reset=_json.get('onReset', OnResetAction.FAILED),
             name=_json.get("name", None),
             url=_json.get("url", None),
@@ -209,6 +218,8 @@ class Service(entities.BaseEntity):
                 attr.fields(Service).run_execution_as_process,
                 attr.fields(Service).execution_timeout,
                 attr.fields(Service).drain_time,
+                attr.fields(Service).runtime,
+                attr.fields(Service).queue_length_limit,
                 attr.fields(Service).on_reset)
         )
 
@@ -225,6 +236,12 @@ class Service(entities.BaseEntity):
         _json['executionTimeout'] = self.execution_timeout
         _json['drainTime'] = self.drain_time
         _json['onReset'] = self.on_reset
+
+        if self.runtime:
+            _json['runtime'] = self.runtime if isinstance(self.runtime, dict) else self.runtime.to_json()
+
+        if self.queue_length_limit is not None:
+            _json['queueLengthLimit'] = self.queue_length_limit
 
         return _json
 
@@ -294,6 +311,22 @@ class Service(entities.BaseEntity):
         """
         return self.services.checkout(service=self)
 
+    def pause(self):
+        """
+        pause
+
+        :return:
+        """
+        return self.services.pause(service_id=self.id)
+
+    def resume(self):
+        """
+        resume
+
+        :return:
+        """
+        return self.services.resume(service_id=self.id)
+
     def execute(self,
                 # executions info
                 execution_input=None, function_name=None,
@@ -327,3 +360,119 @@ class Service(entities.BaseEntity):
                                            project_id=project_id,
                                            return_output=return_output)
         return execution
+
+
+class InstanceCatalog:
+    REGULAR_XS = "regular-xs"
+    REGULAR_S = "regular-s"
+    REGULAR_M = "regular-m"
+    REGULAR_L = "regular-l"
+    REGULAR_XL = "regular-xl"
+    HIGHMEM_XS = "highmem-xs"
+    HIGHMEM_S = "highmem-s"
+    HIGHMEM_M = "highmem-m"
+    HIGHMEM_L = "highmem-l"
+    HIGHMEM_XL = "highmem-xl"
+    GPU_K80_S = "gpu-k80-s"
+
+
+class KubernetesAutuscalerType:
+    RABBITMQ = 'rabbitmq'
+    CPU = 'cpu'
+
+
+class KubernetesAutoscaler:
+    MIN_REPLICA_DEFAULT = 0
+    MAX_REPLICA_DEFAULT = 1
+    AUTOSCALER_TYPE_DEFAULT = KubernetesAutuscalerType.RABBITMQ
+
+    def __init__(self,
+                 autoscaler_type=AUTOSCALER_TYPE_DEFAULT,
+                 min_replicas=MIN_REPLICA_DEFAULT,
+                 max_replicas=MAX_REPLICA_DEFAULT,
+                 **kwargs):
+        self.autoscaler_type = kwargs.get('type', autoscaler_type)
+        self.min_replicas = kwargs.get('minReplicas', min_replicas)
+        self.max_replicas = kwargs.get('maxReplicas', max_replicas)
+
+    def to_json(self):
+        _json = {
+            'type': self.autoscaler_type,
+            'minReplicas': self.min_replicas,
+            'maxReplicas': self.max_replicas
+        }
+        return _json
+
+
+class KubernetesRabbitmqAutoscaler(KubernetesAutoscaler):
+    QUEUE_LENGTH_DEFAULT = 1000
+
+    def __init__(self,
+                 min_replicas=KubernetesAutoscaler.MIN_REPLICA_DEFAULT,
+                 max_replicas=KubernetesAutoscaler.MAX_REPLICA_DEFAULT,
+                 queue_length=QUEUE_LENGTH_DEFAULT,
+                 **kwargs):
+        super().__init__(min_replicas=min_replicas, max_replicas=max_replicas,
+                         autoscaler_type=KubernetesAutuscalerType.RABBITMQ, **kwargs)
+        self.queue_length = kwargs.get('queueLength', queue_length)
+
+    def to_json(self):
+        _json = super().to_json()
+        _json['queueLength'] = self.queue_length
+        return _json
+
+
+class RuntimeType:
+    KUBERNETES = 'kubernetes'
+
+
+class ServiceRuntime:
+    def __init__(self, service_type=RuntimeType.KUBERNETES):
+        self.service_type = service_type
+
+
+class KubernetesRuntime(ServiceRuntime):
+    DEFAULT_POD_TYPE = InstanceCatalog.REGULAR_S
+    DEFAULT_NUM_REPLICAS = 1
+    DEFAULT_CONCURRENCY = 6
+
+    def __init__(self,
+                 pod_type=DEFAULT_POD_TYPE,
+                 num_replicas=DEFAULT_NUM_REPLICAS,
+                 concurrency=DEFAULT_CONCURRENCY,
+                 runner_image=None,
+                 autoscaler=None,
+                 **kwargs):
+
+        super().__init__(service_type=RuntimeType.KUBERNETES)
+        self.pod_type = kwargs.get('podType', pod_type)
+        self.num_replicas = kwargs.get('numReplicas', num_replicas)
+        self.concurrency = kwargs.get('concurrency', concurrency)
+        self.runner_image = kwargs.get('runnerImage', runner_image)
+        self._proxy_image = kwargs.get('proxyImage', None)
+
+        self.autoscaler = kwargs.get('autoscaler', autoscaler)
+        if self.autoscaler is not None and isinstance(self.autoscaler, dict):
+            if self.autoscaler['type'] == KubernetesAutuscalerType.RABBITMQ:
+                self.autoscaler = KubernetesRabbitmqAutoscaler(**self.autoscaler)
+            else:
+                raise NotImplementedError(
+                    'Unknown kubernetes autoscaler type: {}'.format(self.autoscaler['type']))
+
+    def to_json(self):
+        _json = {
+            'podType': self.pod_type,
+            'numReplicas': self.num_replicas,
+            'concurrency': self.concurrency
+        }
+
+        if self.runner_image is not None:
+            _json['runnerImage'] = self.runner_image
+
+        if self._proxy_image is not None:
+            _json['proxyImage'] = self._proxy_image
+
+        if self.autoscaler is not None:
+            _json['autoscaler'] = self.autoscaler.to_json()
+
+        return _json

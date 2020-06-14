@@ -6,6 +6,13 @@ from .. import services, repositories, entities
 logger = logging.getLogger("dataloop.service")
 
 
+class HttpMethod:
+    GET = "GET"
+    POST = "POST"
+    DELETE = "DELETE"
+    PATCH = "PATCH"
+
+
 @attr.s
 class Webhook(entities.BaseEntity):
     """

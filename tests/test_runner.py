@@ -146,7 +146,7 @@ if __name__ == '__main__':
         assert False, 'Cannot run test on user: "{}". only test users'.format(payload['email'])
 
     # run tests
-    pool = ThreadPool(processes=32)
+    pool = ThreadPool(processes=16)
     features_path = os.path.join(TEST_DIR, 'features')
 
     results = dict()

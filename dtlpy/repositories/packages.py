@@ -4,7 +4,6 @@ import json
 import os
 from copy import deepcopy
 from shutil import copyfile
-from urllib.parse import urlencode
 from multiprocessing.pool import ThreadPool
 
 from .. import entities, repositories, exceptions, utilities, miscellaneous, assets
@@ -103,12 +102,13 @@ class Packages:
                                                      _json=response.json(),
                                                      project=self._project)
             elif package_name is not None:
-                packages = self.list(name=package_name)
-                if len(packages) == 0:
+                packages = self.list(
+                    entities.Filters(field='name', values=package_name, resource=entities.FiltersResource.PACKAGE))
+                if packages.items_count == 0:
                     raise exceptions.PlatformException(
                         error='404',
                         message='Package not found. Name: {}'.format(package_name))
-                elif len(packages) > 1:
+                elif packages.items_count > 1:
                     raise exceptions.PlatformException(
                         error='400',
                         message='More than one file found by the name of: {}'.format(package_name))
@@ -128,35 +128,76 @@ class Packages:
             self.checkout(package=package)
         return package
 
-    def list(self, name=None, creator=None):
+    def _build_entities_from_response(self, response_items):
+        pool = self._client_api.thread_pools(pool_name='entity.create')
+        jobs = [None for _ in range(len(response_items))]
+        # return triggers list
+        for i_package, package in enumerate(response_items):
+            jobs[i_package] = pool.apply_async(entities.Package._protected_from_json,
+                                               kwds={'client_api': self._client_api,
+                                                     '_json': package,
+                                                     'project': self._project})
+        # wait for all jobs
+        _ = [j.wait() for j in jobs]
+        # get all results
+        results = [j.get() for j in jobs]
+        # log errors
+        _ = [logger.warning(r[1]) for r in results if r[0] is False]
+        # return good jobs
+        packages = miscellaneous.List([r[1] for r in results if r[0] is True])
+        return packages
+
+    def _list(self, filters):
+        url = '/query/FaaS'
+
+        # request
+        success, response = self._client_api.gen_request(req_type='post',
+                                                         path=url,
+                                                         json_req=filters.prepare())
+        if not success:
+            raise exceptions.PlatformException(response)
+        return response.json()
+
+    def list(self, filters=None, page_offset=None, page_size=None, project_id=None):
         """
         List project packages
         :return:
         """
-        url = '/packages'
-        query_params = {
-            'name': name,
-            'creator': creator
-        }
+        if filters is None:
+            filters = entities.Filters(resource=entities.FiltersResource.PACKAGE)
 
-        if self._project is not None:
-            query_params['projects'] = self._project.id
+        # assert type filters
+        if not isinstance(filters, entities.Filters):
+            raise exceptions.PlatformException('400', 'Unknown filters type')
 
-        url += '?{}'.format(urlencode({key: val for key, val in query_params.items() if val is not None}, doseq=True))
+        # page size
+        if page_size is None:
+            # take from default
+            page_size = filters.page_size
+        else:
+            filters.page_size = page_size
 
-        # request
-        success, response = self._client_api.gen_request(req_type='get',
-                                                         path=url)
-        if not success:
-            raise exceptions.PlatformException(response)
+        # page offset
+        if page_offset is None:
+            # take from default
+            page_offset = filters.page
+        else:
+            filters.page = page_offset
 
-        # return packages list
-        packages = miscellaneous.List()
-        for package in response.json()['items']:
-            packages.append(entities.Package.from_json(client_api=self._client_api,
-                                                       _json=package,
-                                                       project=self._project))
-        return packages
+        if project_id is None and self.project is not None:
+            project_id = self.project.id
+
+        if project_id is not None:
+            filters.add(field='projectId', values=project_id)
+
+        paged = entities.PagedEntities(items_repository=self,
+                                       filters=filters,
+                                       page_offset=page_offset,
+                                       page_size=page_size,
+                                       project_id=project_id,
+                                       client_api=self._client_api)
+        paged.get_page()
+        return paged
 
     def pull(self, package, version=None, local_path=None, project_id=None):
         """
@@ -200,7 +241,7 @@ class Packages:
 
         return local_path
 
-    def push(self, codebase_id=None, src_path=None, package_name=None, modules=None, checkout=False, project=None):
+    def push(self, codebase_id=None, src_path=None, package_name=None, modules=None, checkout=False):
         """
         Push local package
 
@@ -213,8 +254,16 @@ class Packages:
         """
         # get project
         if self._project is None:
-            raise exceptions.PlatformException('400', 'Repository does not have project. Please checkout a project,'
-                                                      'or create package from a project packages repository')
+            try:
+                self._project = repositories.Projects(client_api=self._client_api).get()
+            except:
+                pass
+
+        if self._project is None:
+            raise exceptions.PlatformException(
+                error='400',
+                message='Repository does not have project. '
+                        'Please checkout a project, or create package from a project packages repository')
 
         # source path
         if src_path is None:
@@ -230,7 +279,7 @@ class Packages:
 
         # get name
         if package_name is None:
-            package_name = package_from_json.get('name', 'default_package')
+            package_name = package_from_json.get('name', 'default-package')
 
         if modules is None and 'modules' in package_from_json:
             modules = package_from_json['modules']
@@ -240,7 +289,7 @@ class Packages:
             codebase_id = self._project.codebases.pack(directory=src_path, name=package_name).id
 
         # check if exist
-        packages = [package for package in self.list() if package.name == package_name]
+        packages = [package for package in self.list().all() if package.name == package_name]
         if len(packages) > 0:
             package = self._create(codebase_id=codebase_id,
                                    package_name=package_name,
@@ -499,32 +548,49 @@ class Packages:
             src_path = os.getcwd()
 
         package_asset = Packages._package_json_generator(package_name=name, package_catalog=package_type)
-        with open(os.path.join(src_path, assets.paths.PACKAGE_FILENAME), 'w') as f:
-            json.dump(package_asset, f, indent=2)
 
-        copyfile(assets.paths.ASSETS_GITIGNORE_FILEPATH, os.path.join(src_path, '.gitignore'))
+        to_generate = [
+            {'src': assets.paths.ASSETS_GITIGNORE_FILEPATH, 'dst': os.path.join(src_path, '.gitignore'),
+             'type': 'copy'},
+            {'src': package_asset,
+             'dst': os.path.join(src_path, assets.paths.PACKAGE_FILENAME), 'type': 'json'},
+            {'src': Packages._service_json_generator(package_catalog=package_type,
+                                                     package_name=name,
+                                                     service_name=service_name),
+             'dst': os.path.join(src_path, assets.paths.SERVICE_FILENAME), 'type': 'json'}
+        ]
 
         if package_type == PackageCatalog.DEFAULT_PACKAGE_TYPE:
-            copyfile(assets.paths.ASSETS_MOCK_FILEPATH, os.path.join(src_path, assets.paths.MOCK_FILENAME))
+            to_generate.append({'src': assets.paths.ASSETS_MOCK_FILEPATH,
+                                'dst': os.path.join(src_path, assets.paths.MOCK_FILENAME), 'type': 'copy'})
         else:
-            with open(os.path.join(src_path, assets.paths.MOCK_FILENAME), 'w') as f:
-                module = entities.PackageModule.from_json(package_asset['modules'][0])
-                function_name = module.functions[0].name
-                json.dump(Packages._mock_json_generator(module=module, function_name=function_name), f)
+            module = entities.PackageModule.from_json(package_asset['modules'][0])
+            function_name = module.functions[0].name
+
+            to_generate.append({'src': Packages._mock_json_generator(module=module, function_name=function_name),
+                                'dst': os.path.join(src_path, assets.paths.MOCK_FILENAME), 'type': 'json'})
 
         main_file_paths = Packages._entry_point_generator(package_catalog=package_type)
         if len(main_file_paths) == 1:
-            copyfile(main_file_paths[0], os.path.join(src_path, assets.paths.MAIN_FILENAME))
+            to_generate.append({'src': main_file_paths[0],
+                                'dst': os.path.join(src_path, assets.paths.MAIN_FILENAME),
+                                'type': 'copy'})
         else:
-            copyfile(main_file_paths[0], os.path.join(src_path, assets.paths.MODULE_A_FILENAME))
-            copyfile(main_file_paths[1], os.path.join(src_path, assets.paths.MODULE_B_FILENAME))
+            to_generate += [{'src': main_file_paths[0],
+                             'dst': os.path.join(src_path, assets.paths.MODULE_A_FILENAME),
+                             'type': 'copy'},
+                            {'src': main_file_paths[1],
+                             'dst': os.path.join(src_path, assets.paths.MODULE_B_FILENAME),
+                             'type': 'copy'}
+                            ]
 
-        service_json = Packages._service_json_generator(package_catalog=package_type,
-                                                        package_name=name,
-                                                        service_name=service_name)
-
-        with open(os.path.join(src_path, assets.paths.SERVICE_FILENAME), 'w')as f:
-            json.dump(service_json, f, indent=2)
+        for job in to_generate:
+            if not os.path.isfile(job['dst']):
+                if job['type'] == 'copy':
+                    copyfile(job['src'], job['dst'])
+                elif job['type'] == 'json':
+                    with open(job['dst'], 'w') as f:
+                        json.dump(job['src'], f)
 
         logger.info('Successfully generated package')
 
@@ -536,10 +602,10 @@ class Packages:
             func = funcs[0]
         else:
             raise exceptions.PlatformException('400', 'Other than 1 functions by the name of: {}'.format(function_name))
-        _json['config'] = {inpt.name: entities.Package._mockify_input(input_type=inpt.type) for inpt in
-                           module.init_inputs}
-        _json['inputs'] = [{'name': inpt.name, 'value': entities.Package._mockify_input(input_type=inpt.type)} for inpt
-                           in func.inputs]
+        _json['config'] = {inpt.name: entities.Package._mockify_input(input_type=inpt.type)
+                           for inpt in module.init_inputs}
+        _json['inputs'] = [{'name': inpt.name, 'value': entities.Package._mockify_input(input_type=inpt.type)}
+                           for inpt in func.inputs]
         return _json
 
     @staticmethod
@@ -833,6 +899,8 @@ class LocalServiceRunner:
         else:
             func = entities.PackageFunction(None, list(), list(), None).to_json()
         package_inputs = func['input']
+        current_level = logging.root.level
+        logging.root.setLevel('INFO')
         if not self.multithreading:
             kwargs = dict()
             progress = utilities.Progress()
@@ -868,6 +936,7 @@ class LocalServiceRunner:
                 job.wait()
                 results.append(job.get())
 
+        logging.root.level = current_level
         return results
 
     def get_dataset(self, resource_id, project=None):

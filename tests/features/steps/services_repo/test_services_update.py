@@ -36,7 +36,7 @@ def step_impl(context, attribute, value):
     if attribute in ['gpu', 'image']:
         context.service.runtime[attribute] = value
     elif attribute in ['numReplicas', 'concurrency']:
-        context.service.runtime[attribute] = int(value)
+        setattr(context.service.runtime, attribute, int(value))
     elif attribute in ['config']:
         context.service.config = json.loads(value)
     elif attribute in ['packageRevision']:
@@ -50,6 +50,26 @@ def step_impl(context):
     context.service_update = context.service.update()
 
 
-@behave.then(u"Service received equals service changed")
-def step_impl(context):
-    assert context.service_update.to_json() == context.service.to_json()
+@behave.then(u'Service received equals service changed except for "{updated_attribute}"')
+def step_impl(context, updated_attribute):
+    updated_to_json = context.service_update.to_json()
+    origin_to_json = context.service.to_json()
+    if 'runtime' in updated_attribute:
+        attribute = updated_attribute.split('.')[-1]
+        updated_to_json['runtime'].pop(attribute, None)
+        origin_to_json['runtime'].pop(attribute, None)
+    else:
+        updated_to_json.pop(updated_attribute, None)
+        origin_to_json.pop(updated_attribute, None)
+
+    updated_to_json.pop('updatedAt', None)
+    origin_to_json.pop('updatedAt', None)
+
+    updated_to_json.pop('version', None)
+    origin_to_json.pop('version', None)
+
+    updated_to_json.pop('revisions', None)
+    origin_to_json.pop('revisions', None)
+
+    assert len(context.service_update.revisions) == len(context.service.revisions) + 1
+    assert updated_to_json == origin_to_json

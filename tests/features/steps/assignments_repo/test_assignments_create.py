@@ -8,6 +8,9 @@ def step_impl(context, entity):
                       param in context.table.headings if
                       fixtures.get_assignment_value(params=param.split('='), context=context) is not None}
 
+    if entity != 'task':
+        context.params['task'] = context.task
+
     if entity == 'task':
         context.assignment = context.task.assignments.create(**context.params)
     elif entity == 'dataset':

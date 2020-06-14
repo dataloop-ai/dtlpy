@@ -7,7 +7,7 @@ Feature: Executions repository list service testing
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
         And There is a project by the name of "execution_list"
         And I create a dataset with a random name
-        And There is a package (pushed from "executions/item") by the name of "execution_list"
+        And There is a package (pushed from "executions/item") by the name of "execution-list"
         And I upload item in "0000000162.jpg" to dataset
         And There is a service by the name of "executions-list" with module name "default_module" saved to context "service"
         When I list service executions

@@ -8,7 +8,7 @@ from . import BaseAnnotationDefinition
 
 class Segmentation(BaseAnnotationDefinition):
     """
-        Segmentation annotation object
+    Segmentation annotation object
     """
 
     def __init__(self, geo, label, attributes=None):

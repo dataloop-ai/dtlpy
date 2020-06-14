@@ -5,7 +5,7 @@ Feature: Triggers repository list service testing
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
         And There is a project by the name of "triggers_list"
         And I create a dataset with a random name
-        And There is a package (pushed from "triggers/item") by the name of "triggers_list"
+        And There is a package (pushed from "triggers/item") by the name of "triggers-list"
         And There is a service by the name of "triggers-list" with module name "default_module" saved to context "service"
 
     @services.delete
@@ -18,7 +18,7 @@ Feature: Triggers repository list service testing
     @packages.delete
     Scenario: List when 1 exist
         Given I create a trigger
-            |name=triggers_list|filters=None|resource=Item|action=Created|active=True|executionMode=Once|
+            |name=triggers-list|filters=None|resource=Item|action=Created|active=True|executionMode=Once|
         When I list triggers
         Then I receive a Trigger list of "1" objects
 
@@ -26,8 +26,8 @@ Feature: Triggers repository list service testing
     @packages.delete
     Scenario: List when 2 exist
         Given I create a trigger
-            |name=triggers_list_1|filters=None|resource=Item|action=Created|active=True|executionMode=Once|
+            |name=triggers-list-1|filters=None|resource=Item|action=Created|active=True|executionMode=Once|
         And I create a trigger
-            |name=triggers_list_2|filters=None|resource=Item|action=Created|active=True|executionMode=Once|
+            |name=triggers-list-2|filters=None|resource=Item|action=Created|active=True|executionMode=Once|
         When I list triggers
         Then I receive a Trigger list of "2" objects

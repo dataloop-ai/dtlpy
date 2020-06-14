@@ -21,12 +21,21 @@ class DataloopLogger(handlers.BaseRotatingHandler):
     def clean_logs():
         log_path = DataloopLogger.get_log_path()
         now = datetime.datetime.utcnow().timestamp()
-        for filename in os.listdir(log_path):
-            filepath = os.path.join(log_path, filename)
+        files = [os.path.join(log_path, f) for f in os.listdir(log_path)]
+        files.sort(key=lambda x: -os.path.getmtime(x))  # newer first
+        total_logs_size = 0
+        for filepath in files:
+            # print(filepath)
             file_time = os.path.getmtime(filepath)
             # delete if older than a week
             if (now - file_time) > (60 * 60 * 24 * 7):  # sec * min * hour * days
                 os.remove(filepath)
+                continue
+            file_size = os.path.getsize(filepath)
+            if (total_logs_size + file_size) > 200 * 1e6:  # 100MB
+                os.remove(filepath)
+                continue
+            total_logs_size += file_size
 
     @staticmethod
     def get_log_path():

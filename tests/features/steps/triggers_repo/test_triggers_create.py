@@ -38,16 +38,12 @@ def step_impl(context):
             if param[1] != "None":
                 function_name = param[1]
 
-    context.trigger = context.service.triggers.create(
-        service_id=context.service.id,
-        name=name,
-        filters=filters,
-        resource=resource,
-        actions=actions,
-        active=active,
-        execution_mode=execution_mode,
-        function_name=function_name
-    )
+    params_temp = {'name': name, 'filters': filters, 'resource': resource, 'actions': actions, 'active': active,
+              'execution_mode': execution_mode, 'function_name': function_name, 'service_id': context.service.id}
+
+    params = {k: v for k, v in params_temp.items() if v is not None}
+
+    context.trigger = context.service.triggers.create(**params)
 
 
 @behave.then(u'I receive a Trigger entity')
@@ -88,7 +84,7 @@ def step_impl(context, item_type):
 @behave.given(u'There is a package (pushed from "{package_path}") by the name of "{package_name}"')
 def step_impl(context, package_name, package_path):
     package_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], package_path)
-    package_name = '{}_{}'.format(package_name, random.randrange(1000, 10000))
+    package_name = '{}-{}'.format(package_name, random.randrange(1000, 10000))
     context.package = context.project.packages.push(src_path=package_path, package_name=package_name)
     context.to_delete_packages_ids.append(context.package.id)
     assert isinstance(context.package, context.dl.entities.Package)
@@ -97,7 +93,7 @@ def step_impl(context, package_name, package_path):
 @behave.given(u'There is a package (pushed from "{package_path}") with function "{function_name}"')
 def step_impl(context, function_name, package_path):
     package_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], package_path)
-    package_name = '{}_{}'.format(function_name, random.randrange(1000, 10000))
+    package_name = '{}-{}'.format(function_name, random.randrange(1000, 10000))
 
     function_io = context.dl.FunctionIO(name='item', type=context.dl.PackageInputType.ITEM)
     function = context.dl.PackageFunction(name=function_name, inputs=function_io)

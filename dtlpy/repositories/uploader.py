@@ -88,6 +88,9 @@ class Uploader:
                 msg = '"item_metadata" should be a metadata dictionary. Got type: {}'.format(type(item_metadata))
                 raise PlatformException(error="400", message=msg)
         if num_workers is not None:
+            logger.warning('[DeprecationWarning] input argument "num_workers"'
+                           ' will be deprecated from upload() after version 1.17.0\n'
+                           'To set number of processes use "dtlpy.client_api.num_processes=int()"')
             self.items_repository._client_api.num_processes = num_workers
 
         ##########################
@@ -207,7 +210,7 @@ class Uploader:
                 elif self.is_url(upload_item_element):
                     # noinspection PyTypeChecker
                     if remote_name is None:
-                        remote_name = upload_item_element.split('/')[-1]
+                        remote_name = str(upload_item_element.split('/')[-1])
                     remote_filepath = remote_path + remote_name
 
                     element = UploadElement(element_type='url',
@@ -310,29 +313,21 @@ class Uploader:
         num_files = len(elements)
         logger.info("Uploading {} items..".format(num_files))
         reporter = Reporter(num_workers=num_files, resource=Reporter.ITEMS_UPLOAD)
-        jobs = [None for _ in range(num_files)]
         disable_pbar = self.items_repository._client_api.verbose.disable_progress_bar or num_files == 1
         pbar = tqdm.tqdm(total=num_files, disable=disable_pbar)
-
-        def exception_handler(loop, context):
-            logger.debug("[Asyc] Upload item caught the following exception: {}".format(context['message']))
-
-        loop = asyncio.new_event_loop()
-        loop.set_exception_handler(exception_handler)
-        asyncio.set_event_loop(loop)
-        asyncio_semaphore = asyncio.BoundedSemaphore(8 * self.items_repository._client_api._num_processes)
+        futures = [None for _ in range(num_files)]
         for i_item in range(num_files):
             element = elements[i_item]
             # upload
-            jobs[i_item] = self.__upload_single_item_wrapper(asyncio_semaphore=asyncio_semaphore,
-                                                             i_item=i_item,
-                                                             element=element,
-                                                             mode=mode,
-                                                             pbar=pbar,
-                                                             reporter=reporter)
-        loop.run_until_complete(asyncio.gather(*jobs))
-        loop.stop()
-        loop.close()
+            futures[i_item] = asyncio.run_coroutine_threadsafe(
+                self.__upload_single_item_wrapper(i_item=i_item,
+                                                  element=element,
+                                                  mode=mode,
+                                                  pbar=pbar,
+                                                  reporter=reporter),
+                loop=self.items_repository._client_api.event_loops('items.upload').loop)
+
+        _ = [future.result() for future in futures]
         pbar.close()
         # summary
         logger.info("Number of total files: {}".format(num_files))
@@ -368,7 +363,7 @@ class Uploader:
             # filters.add(field="type", values="file")
             # add remote paths to check existence
             filters = entities.Filters()
-            filters.show_hidden = True
+            filters.add(field="hidden", values=True)
             for remote_path in item_remote_paths:
                 if not remote_path.endswith('/'):
                     remote_path += '/'
@@ -396,7 +391,6 @@ class Uploader:
 
     async def __single_async_upload(self,
                                     filepath,
-                                    annotations,
                                     remote_path,
                                     uploaded_filename,
                                     last_try,
@@ -407,13 +401,13 @@ class Uploader:
         """
         Upload an item to dataset
 
-        :param annotations: platform format annotations file to add to the new item
         :param filepath: local filepath of the item
         :param remote_path: remote directory of filepath to upload
         :param uploaded_filename: optional - remote filename
         :param last_try: print log error only if last try
         :return: Item object
         """
+
         need_close = False
         if isinstance(filepath, str):
             # upload local file
@@ -473,17 +467,12 @@ class Uploader:
             item = self.items_repository.items_entity.from_json(client_api=self.items_repository._client_api,
                                                                 _json=response.json(),
                                                                 dataset=self.items_repository.dataset)
-            if annotations is not None:
-                try:
-                    self.__upload_annotations(annotations=annotations, item=item)
-                except Exception:
-                    logger.exception('Error uploading annotations to item id: {}'.format(item.id))
         else:
             raise PlatformException(response)
         return item, response.headers.get('x-item-op', 'na')
 
-    async def __upload_single_item_wrapper(self, asyncio_semaphore, i_item, element, pbar, reporter, mode):
-        async with asyncio_semaphore:
+    async def __upload_single_item_wrapper(self, i_item, element, pbar, reporter, mode):
+        async with self.items_repository._client_api.event_loops('items.upload').semaphore('items.upload'):
             assert isinstance(element, UploadElement)
             item = False
             err = None
@@ -509,7 +498,6 @@ class Uploader:
                     item, action = await self.__single_async_upload(filepath=element.buffer,
                                                                     mode=mode,
                                                                     item_metadata=element.item_metadata,
-                                                                    annotations=element.annotations_filepath,
                                                                     remote_path=remote_folder,
                                                                     uploaded_filename=remote_name,
                                                                     last_try=(i_try + 1) == NUM_TRIES,
@@ -522,15 +510,24 @@ class Uploader:
                         break
                     time.sleep(0.3 * (2 ** i_try))
                 except Exception as e:
-                    logger.debug("Upload item: {path}. Try {i}/{n}. Fail.".format(path=remote_name,
-                                                                                  i=i_try + 1,
-                                                                                  n=NUM_TRIES))
                     err = e
                     trace = traceback.format_exc()
+                    logger.debug("Upload item: {path}. Try {i}/{n}. Fail.\n{trace}".format(path=remote_name,
+                                                                                           i=i_try + 1,
+                                                                                           n=NUM_TRIES,
+                                                                                           trace=trace))
+
                 finally:
                     if saved_locally and os.path.isdir(temp_dir):
                         shutil.rmtree(temp_dir)
             if item:
+                if action in ['overwrite', 'created'] and element.annotations_filepath is not None:
+                    try:
+                        await self.__async_upload_annotations(annotations_filepath=element.annotations_filepath,
+                                                              item=item)
+                    except Exception:
+                        logger.exception('Error uploading annotations to item id: {}'.format(item.id))
+
                 reporter.set_index(i_item=i_item, status=action, output=item, success=True, ref=item.id)
             else:
                 if isinstance(element.buffer, str):
@@ -543,28 +540,11 @@ class Uploader:
                                    error="{}\n{}".format(err, trace), ref=ref)
             pbar.update()
 
-    @staticmethod
-    def __upload_annotations(annotations, item):
-        """
-        Upload annotations from file
-        :param annotations: file path
-        :param item: item
-        :return:
-        """
-        if isinstance(annotations, str) and os.path.isfile(annotations):
-            with open(annotations, "r") as f:
-                data = json.load(f)
-            if "annotations" in data:
-                annotations = data["annotations"]
-            elif isinstance(data, list):
-                annotations = data
-            else:
-                raise PlatformException(
-                    error="400",
-                    message='MISSING "annotations" in annotations file, cant upload. item_id: {}, '
-                            "annotations_filepath: {}".format(item.id, annotations),
-                )
-            item.annotations.upload(annotations=annotations)
+    async def __async_upload_annotations(self, annotations_filepath, item):
+        with open(annotations_filepath, 'r') as f:
+            annotations = json.load(f)
+        # wait for coroutines on the current event loop
+        return await item.annotations._async_upload_annotations(annotations=annotations['annotations'])
 
     @staticmethod
     def url_to_data(url):

@@ -283,12 +283,78 @@ class Assignments:
         else:
             raise exceptions.PlatformException(response)
 
-    def create(self, assignment_name, assignee_id,
+    # def create(self, assignment_name, assignee_id,
+    #            dataset=None, project_id=None,
+    #            filters=None, items=None,
+    #            status=None, metadata=None):
+    #     """
+    #     Create a new assignment
+    #     :param dataset:
+    #     :param items:
+    #     :param filters:
+    #     :param metadata:
+    #     :param project_id:
+    #     :param status:
+    #     :param assignee_id:
+    #     :param assignment_name:
+    #     :return: Assignment object
+    #     """
+    #
+    #     if filters is None and items is None:
+    #         raise exceptions.PlatformException('400', 'Must provide either filters or items list')
+    #
+    #     if dataset is None and self._dataset is None:
+    #         raise exceptions.PlatformException('400', 'Please provide a dataset entity')
+    #     elif dataset is None:
+    #         dataset = self._dataset
+    #
+    #     if project_id is None:
+    #         if self.project_id is None:
+    #             raise exceptions.PlatformException('400', 'Please provide a project_id')
+    #         project_id = self.project_id
+    #
+    #     payload = {'name': assignment_name,
+    #                'projectId': project_id,
+    #                'annotator': assignee_id}
+    #
+    #     if status is not None:
+    #         payload['status'] = status
+    #
+    #     if metadata is None:
+    #         metadata = dict()
+    #     metadata['system'] = {'datasetId': dataset.id}
+    #     payload['metadata'] = metadata
+    #
+    #     if self._task is not None:
+    #         payload['metadata']['system']['taskId'] = self._task.id
+    #
+    #     success, response = self._client_api.gen_request(req_type='post',
+    #                                                      path='/assignments',
+    #                                                      json_req=payload)
+    #     if success:
+    #         assignment = entities.Assignment.from_json(client_api=self._client_api,
+    #                                                    _json=response.json(), project=self._project,
+    #                                                    dataset=dataset, task=self._task)
+    #     else:
+    #         raise exceptions.PlatformException(response)
+    #     assert isinstance(assignment, entities.Assignment)
+    #
+    #     if self._task is not None:
+    #         self.task.assignmentIds.append(assignment.id)
+    #         self.task.update()
+    #
+    #     self.assign_items(dataset=dataset, assignment_id=assignment.id, filters=filters, items=items)
+    #
+    #     return assignment
+
+    def create(self, assignee_id, task=None,
+               assignment_name=None,
                dataset=None, project_id=None,
                filters=None, items=None,
                status=None, metadata=None):
         """
         Create a new assignment
+        :param task:
         :param dataset:
         :param items:
         :param filters:
@@ -299,53 +365,40 @@ class Assignments:
         :param assignment_name:
         :return: Assignment object
         """
+        if assignment_name:
+            logger.warning('DEPRECATED - Param {} will be deprecated after v1.17.0'.format(assignment_name))
+        if dataset:
+            logger.warning('DEPRECATED - Param {} will be deprecated after v1.17.0'.format(dataset))
+        if project_id:
+            logger.warning('DEPRECATED - Param {} will be deprecated after v1.17.0'.format(project_id))
+        if status:
+            logger.warning('DEPRECATED - Param {} will be deprecated after v1.17.0'.format(status))
+        if metadata:
+            logger.warning('DEPRECATED - Param {} will be deprecated after v1.17.0'.format(metadata))
+
+        return self._create_in_task(assignee_id=assignee_id, task=task, filters=filters, items=items)
+
+    def _create_in_task(self, assignee_id, task, filters=None, items=None):
+
+        if task is None:
+            if self._task is None:
+                raise exceptions.PlatformException('400', 'Must provide task')
+            task = self._task
+
+        assignments_before = [ass.id for ass in task.assignments.list()]
 
         if filters is None and items is None:
             raise exceptions.PlatformException('400', 'Must provide either filters or items list')
 
-        if dataset is None and self._dataset is None:
-            raise exceptions.PlatformException('400', 'Please provide a dataset entity')
-        elif dataset is None:
-            dataset = self._dataset
+        workload = entities.Workload.generate(assignee_ids=[assignee_id])
+        task = task.add_items(filters=filters, items=items, workload=workload, limit=0)
+        assignments = [ass for ass in task.assignments.list() if ass.id not in assignments_before]
 
-        if project_id is None:
-            if self.project_id is None:
-                raise exceptions.PlatformException('400', 'Please provide a project_id')
-            project_id = self.project_id
+        if len(assignments) < 1:
+            raise exceptions.PlatformException('Error creating an assignment, '
+                                               'Please use task.add_items() to perform this action')
 
-        payload = {'name': assignment_name,
-                   'projectId': project_id,
-                   'annotator': assignee_id}
-
-        if status is not None:
-            payload['status'] = status
-
-        if metadata is None:
-            metadata = dict()
-        metadata['system'] = {'datasetId': dataset.id}
-        payload['metadata'] = metadata
-
-        if self._task is not None:
-            payload['metadata']['system']['taskId'] = self._task.id
-
-        success, response = self._client_api.gen_request(req_type='post',
-                                                         path='/assignments',
-                                                         json_req=payload)
-        if success:
-            assignment = entities.Assignment.from_json(client_api=self._client_api,
-                                                       _json=response.json(), project=self._project,
-                                                       dataset=dataset, task=self._task)
-        else:
-            raise exceptions.PlatformException(response)
-        assert isinstance(assignment, entities.Assignment)
-
-        if self._task is not None:
-            self.task.assignmentIds.append(assignment.id)
-            self.task.update()
-
-        self.assign_items(dataset=dataset, assignment_id=assignment.id, filters=filters, items=items)
-
-        return assignment
+        return assignments[0]
 
     def __item_operations(self, dataset, op, assignment_id=None, assignment_name=None, filters=None, items=None):
         if assignment_id is None and assignment_name is None:
@@ -397,9 +450,10 @@ class Assignments:
         return self.__item_operations(dataset=dataset, assignment_id=assignment_id, filters=filters, items=items,
                                       op='delete', assignment_name=assignment_name)
 
-    def get_items(self, assignment=None, assignment_id=None, assignment_name=None, dataset=None):
+    def get_items(self, assignment=None, assignment_id=None, assignment_name=None, dataset=None, filters=None):
         """
 
+        :param filters:
         :param assignment:
         :param dataset:
         :param assignment_id:
@@ -425,5 +479,8 @@ class Assignments:
         elif dataset is None:
             dataset = self._dataset
 
-        filters = entities.Filters(field='metadata.system.refs.id', values=[assignment_id], operator='in')
+        if filters is None:
+            filters = entities.Filters()
+        filters.add(field='metadata.system.refs.id', values=[assignment_id], operator='in')
+
         return dataset.items.list(filters=filters)

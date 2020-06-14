@@ -239,17 +239,17 @@ class DlpCompleter(Completer):
                     self.param_suggestions = [value for key, value in self.dlp.PackageCatalog.__dict__.items() if
                                               not key.startswith('_')]
 
-                elif param in ['cd']:
-                    self.thread_state = StateEnum.CONTINUE
-                    if word_before_cursor != '' and os.path.isdir(os.path.join(os.getcwd(), word_before_cursor)):
-                        self.param_suggestions = [os.path.join(word_before_cursor, directory)
-                                                  for directory in
-                                                  os.listdir(os.path.join(os.getcwd(), word_before_cursor))
-                                                  if os.path.isdir(
-                                os.path.join(os.getcwd(), word_before_cursor, directory))]
-                    else:
-                        self.param_suggestions = [directory for directory in os.listdir(os.getcwd()) if
-                                                  os.path.isdir(directory)]
+                # elif param in ['cd']:
+                #     self.thread_state = StateEnum.CONTINUE
+                #     if word_before_cursor != '' and os.path.isdir(os.path.join(os.getcwd(), word_before_cursor)):
+                #         self.param_suggestions = [os.path.join(word_before_cursor, directory)
+                #                                   for directory in
+                #                                   os.listdir(os.path.join(os.getcwd(), word_before_cursor))
+                #                                   if os.path.isdir(
+                #                 os.path.join(os.getcwd(), word_before_cursor, directory))]
+                #     else:
+                #         self.param_suggestions = [directory for directory in os.listdir(os.getcwd()) if
+                #                                   os.path.isdir(directory)]
 
                 else:
                     self.thread_state = StateEnum.START

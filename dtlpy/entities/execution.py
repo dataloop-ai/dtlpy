@@ -1,6 +1,15 @@
 import attr
+import traceback
 from collections import namedtuple
+
 from .. import repositories, entities, services
+
+
+class ExecutionStatus:
+    SUCCESS = "success"
+    FAILED = "failed"
+    IN_PROGRESS = "inProgress"
+    CREATED = "created"
 
 
 @attr.s
@@ -73,6 +82,25 @@ class Execution(entities.BaseEntity):
     def executions(self):
         assert isinstance(self._repositories.executions, repositories.Executions)
         return self._repositories.executions
+
+    @staticmethod
+    def _protected_from_json(_json, client_api, service=None, is_fetched=True):
+        """
+        Same as from_json but with try-except to catch if error
+        :param _json:
+        :param client_api:
+        :return:
+        """
+        try:
+            execution = Execution.from_json(_json=_json,
+                                            client_api=client_api,
+                                            service=service,
+                                            is_fetched=is_fetched)
+            status = True
+        except Exception:
+            execution = traceback.format_exc()
+            status = False
+        return status, execution
 
     @classmethod
     def from_json(cls, _json, client_api, service=None, is_fetched=True):
@@ -179,7 +207,7 @@ class Execution(entities.BaseEntity):
         Update execution changes to platform
         :return: execution entity
         """
-        return self.executions.update(self)
+        return self.executions.update(execution=self)
 
     def logs(self):
         """
@@ -193,7 +221,7 @@ class Execution(entities.BaseEntity):
 
         :return:
         """
-        self.attempts = self.executions.increment(self)
+        self.attempts = self.executions.increment(execution=self)
 
     def terminate(self):
         """
@@ -201,4 +229,12 @@ class Execution(entities.BaseEntity):
 
         :return:
         """
-        return self.executions.terminate(self)
+        return self.executions.terminate(execution=self)
+
+    def wait(self):
+        """
+        Wait for execution
+
+        :return:
+        """
+        return self.executions.wait(execution_id=self.id)

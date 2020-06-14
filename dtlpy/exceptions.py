@@ -19,7 +19,8 @@ class PlatformException(Exception):
             '600': TokenExpired,
             '1001': ShowAnnotationError,
             '1002': ExportAnnotationError,
-            '2001': MissingEntity
+            '2001': MissingEntity,
+            '3001': SDKError
         }
 
         if isinstance(error, requests.models.Response) or isinstance(error, services.AsyncResponse):
@@ -93,5 +94,10 @@ class ShowAnnotationError(ExceptionMain):
 
 
 class ExportAnnotationError(ExceptionMain):
+    """ raised when error in annotations drawing"""
+    pass
+
+
+class SDKError(ExceptionMain):
     """ raised when error in annotations drawing"""
     pass

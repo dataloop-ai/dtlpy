@@ -1,6 +1,7 @@
 import os
 from collections import namedtuple
 import logging
+import traceback
 import attr
 import json
 
@@ -33,6 +34,26 @@ class Package(entities.BaseEntity):
     _project = attr.ib(repr=False)
     _client_api = attr.ib(type=services.ApiClient, repr=False)
     _repositories = attr.ib(repr=False)
+
+    @staticmethod
+    def _protected_from_json(_json, client_api, project, is_fetched=True):
+        """
+        Same as from_json but with try-except to catch if error
+        :param _json:
+        :param client_api:
+        :param dataset:
+        :return:
+        """
+        try:
+            package = Package.from_json(_json=_json,
+                                        client_api=client_api,
+                                        project=project,
+                                        is_fetched=is_fetched)
+            status = True
+        except Exception:
+            package = traceback.format_exc()
+            status = False
+        return status, package
 
     @classmethod
     def from_json(cls, _json, client_api, project, is_fetched=True):

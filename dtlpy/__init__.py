@@ -30,41 +30,35 @@ from .entities import (
     Subtitle,
     Polyline,
     Filters,
+    Webhook, HttpMethod,
     Trigger,
     AnnotationCollection,
-    Annotation,
-    Item,
+    Annotation, AnnotationOptions,
+    Item, ItemStatus,
     Codebase,
     Filters,
-    Execution,
+    Execution, ExecutionStatus,
     Recipe,
     Ontology,
     Label,
-    Similarity,
+    Similarity, SimilarityTypeEnum,
     MultiView,
-    ItemLink,
-    UrlLink,
+    ItemLink, UrlLink, LinkTypeEnum,
+    KubernetesAutuscalerType, KubernetesRabbitmqAutoscaler, KubernetesAutoscaler, KubernetesRuntime, InstanceCatalog,
     PackageModule,
     PackageFunction,
     FunctionIO,
-    Modality,
+    Modality, ModalityTypeEnum,
     Model,
     Checkpoint,
-    Workload,
-    WorkloadUnit,
-    FiltersKnownFields,
-    FiltersResource,
-    FiltersOperations,
-    FiltersMethod,
-    FiltersOrderByDirection,
+    Workload, WorkloadUnit,
+    FiltersKnownFields, FiltersResource, FiltersOperations, FiltersMethod, FiltersOrderByDirection,
     FiltersKnownFields as KnownFields,
-    TriggerResource,
-    TriggerAction,
-    TriggerExecutionMode,
+    TriggerResource, TriggerAction, TriggerExecutionMode,
     PackageInputType
 )
-from .utilities import Converter, BaseServiceRunner, Progress
-from .services import DataloopLogger, ApiClient, check_sdk
+from .utilities import Converter, BaseServiceRunner, Progress, AnnotationFormat
+from .services import DataloopLogger, ApiClient, check_sdk, Reporter
 from .repositories.packages import PackageCatalog
 
 # check python version
@@ -187,81 +181,8 @@ def checkout_state():
     return state
 
 
-class ModalityTypeEnum:
-    """
-    State enum
-    """
-
-    OVERLAY = "overlay"
-
-
-class SimilarityTypeEnum:
-    """
-    State enum
-    """
-    ID = "id"
-    URL = "url"
-
-
-class LinkTypeEnum:
-    """
-    State enum
-    """
-    ID = "id"
-    URL = "url"
-
-
-class ExecutionStatus:
-    SUCCESS = "success"
-    FAILED = "failed"
-    IN_PROGRESS = "inProgress"
-    CREATED = "created"
-
-
-class HttpMethod:
-    GET = "GET"
-    POST = "POST"
-    DELETE = "DELETE"
-    PATCH = "PATCH"
-
-
-class AnnotationOptions:
-    JSON = "json"
-    MASK = "mask"
-    INSTANCE = "instance"
-
-
-class AnnotationFormat:
-    COCO = "coco"
-    VOC = "voc"
-    YOLO = "yolo"
-    DATALOOP = "dataloop"
-
-
-class InstanceCatalog:
-    REGULAR_XS = "regular-xs"
-    REGULAR_S = "regular-s"
-    REGULAR_M = "regular-m"
-    REGULAR_L = "regular-l"
-    REGULAR_XL = "regular-xl"
-    HIGHMEM_MICRO = "highmem-micro"
-    HIGHMEM_XS = "highmem-xs"
-    HIGHMEM_S = "highmem-s"
-    HIGHMEM_M = "highmem-m"
-    HIGHMEM_L = "highmem-l"
-    HIGHMEM_XL = "highmem-xl"
-    GPU_K80_S = "gpu-k80-s"
-
-
 class LoggingLevel:
     DEBUG = "debug"
     WARNING = "warning"
     CRITICAL = "critical"
     INFO = "info"
-
-
-class ItemStatus:
-    COMPLETED = "completed"
-    APPROVED = "approved"
-    DISCARDED = "discarded"
-

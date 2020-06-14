@@ -13,4 +13,4 @@ def step_impl(context, deletion_format):
 
 @behave.then(u"There are no services")
 def step_impl(context):
-    assert len(context.package.services.list()) == 0
+    assert context.package.services.list().items_count == 0

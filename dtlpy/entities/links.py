@@ -4,6 +4,14 @@ import os
 import mimetypes
 
 
+class LinkTypeEnum:
+    """
+    State enum
+    """
+    ID = "id"
+    URL = "url"
+
+
 class Link:
 
     # noinspection PyShadowingBuiltins
@@ -21,7 +29,7 @@ class UrlLink(Link):
         if name is None:
             name = os.path.split(ref)[-1].replace('/', "").replace("\\", '').replace('.', '')
         # noinspection PyShadowingBuiltins
-        type = 'url'
+        type = LinkTypeEnum.URL
         if not mimetype:
             mimetype = mimetypes.guess_type(ref)[0] or 'image'
         super().__init__(name=name, type=type, mimetype=mimetype, ref=ref)
@@ -56,7 +64,7 @@ class ItemLink(Link):
             dataset_id = item.datasetId
 
         # noinspection PyShadowingBuiltins
-        type = 'id'
+        type = LinkTypeEnum.ID
         super().__init__(name=name, type=type, ref=ref, dataset_id=dataset_id)
 
     @staticmethod

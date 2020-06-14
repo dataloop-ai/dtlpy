@@ -6,7 +6,6 @@ import io
 import random
 from multiprocessing.pool import ThreadPool
 import logging
-import time
 
 
 @behave.given(u'There are items, path = "{item_path}"')

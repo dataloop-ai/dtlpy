@@ -9,6 +9,11 @@ def step_impl(context, get_method):
         context.assignment_get = context.task.assignments.delete(assignment_name=context.assignment.name)
 
 
+@behave.when(u'I get an Assignment')
+def step_impl(context):
+    context.assignment = context.task.assignments.list()[0]
+
+
 @behave.then(u'Assignment was deleted')
 def step_impl(context):
     try:

@@ -363,11 +363,6 @@ class Tasks:
         assert isinstance(task, entities.Task)
         return task
 
-    def __assign(self, assignments, task_id):
-        for assignment in assignments:
-            assignment.metadata['system']['taskId'] = task_id
-            self.assignments.update(assignment=assignment)
-
     def __item_operations(self, dataset, op, task=None, task_id=None, filters=None, items=None):
 
         if task is None and task_id is None:
@@ -476,9 +471,10 @@ class Tasks:
         return self.__item_operations(dataset=dataset, task_id=task_id, task=task, filters=filters, items=items,
                                       op='delete')
 
-    def get_items(self, task_id=None, task_name=None, dataset=None):
+    def get_items(self, task_id=None, task_name=None, dataset=None, filters=None):
         """
 
+        :param filters:
         :param dataset:
         :param task_id:
         :param task_name:
@@ -494,6 +490,8 @@ class Tasks:
         if dataset is None:
             dataset = self._dataset
 
-        filters = entities.Filters(field='metadata.system.refs.id', values=[task_id], operator='in')
-        return dataset.items.list(filters=filters)
+        if filters is None:
+            filters = entities.Filters()
+        filters.add(field='metadata.system.refs.id', values=[task_id], operator='in')
 
+        return dataset.items.list(filters=filters)

@@ -84,16 +84,29 @@ class GitUtils:
                       'commit_message': logs[0]['message']}
         except Exception:
             logging.warning('Error getting git info for git repository in: {}'.format(path))
-        # try:
-        #     repo = Repo(path)
-        #     branch = repo.active_branch.__str__()
-        #     commit_id = repo.active_branch.commit.__str__()
-        #     commit_author = repo.active_branch.commit.author.__str__()
-        #     commit_message = repo.active_branch.commit.message.__str__()
-        # except Exception:
-        #     status = dict()
 
         return status
+
+    @staticmethod
+    def git_url(path):
+        """
+        Get git remote url
+
+        :param path: directory - str
+        :return: String
+        """
+        url = ''
+        try:
+            p = subprocess.Popen(['git', '--git-dir', os.path.join(path, '.git'), 'config', '--get', 'remote.origin.url'],
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE)
+            output, err = p.communicate()
+            url = str(output, 'utf-8').splitlines()[0]
+
+        except Exception:
+            logging.warning('Error getting git info for git repository in: {}'.format(path))
+
+        return url
 
     @staticmethod
     def git_log(path):
@@ -125,25 +138,5 @@ class GitUtils:
             log = log[0:log_limit]
         except Exception:
             logging.warning('Error getting git log for git repository in: {}'.format(path))
-
-        # try:
-        #     log = list()
-        #     counter = 20
-        #     repo = Repo(path)
-        #     logs = repo.active_branch.log()
-        #     for log_record in reversed(logs):
-        #         if counter <= 0:
-        #             break
-        #         log_record = {
-        #             'author': log_record.actor.__str__(),
-        #             'message': log_record.message.__str__(),
-        #             'commit_id': log_record.newhexsha.__str__(),
-        #             'previous_commit_id': log_record.oldhexsha.__str__(),
-        #             'time': datetime.datetime.fromtimestamp(log_record.time[0]).isoformat()
-        #         }
-        #         log.append(log_record)
-        #         counter -= 1
-        # except Exception:
-        #     log = list()
 
         return log

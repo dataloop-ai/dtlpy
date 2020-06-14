@@ -20,7 +20,6 @@ class PagedEntities:
     page_size = attr.ib()
     filters = attr.ib()
     items_repository = attr.ib(repr=False)
-    item_entity = attr.ib(default=entities.Item, repr=False)
     has_next_page = attr.ib(default=False)
     total_pages_count = attr.ib(default=0)
     items_count = attr.ib(default=0)
@@ -50,67 +49,16 @@ class PagedEntities:
         if 'totalPagesCount' in result:
             self.total_pages_count = result['totalPagesCount']
         if 'items' in result:
-            items = None
-            if self.filters is not None:
-                # handle items and annotations
-                if self.filters.resource == 'items':
-                    items_json = result['items']
-                    pool = self._client_api.thread_pools(pool_name='entity.create')
-                    jobs = [None for _ in range(len(items_json))]
-                    # return triggers list
-                    for i_item, item in enumerate(items_json):
-                        jobs[i_item] = pool.apply_async(self.item_entity._protected_from_json,
-                                                        kwds={'client_api': self._client_api,
-                                                              '_json': item,
-                                                              'dataset': self.items_repository.dataset})
-                    # wait for all jobs
-                    _ = [j.wait() for j in jobs]
-                    # get all results
-                    results = [j.get() for j in jobs]
-                    # log errors
-                    _ = [logger.warning(r[1]) for r in results if r[0] is False]
-                    # return good jobs
-                    items = miscellaneous.List([r[1] for r in results if r[0] is True])
-                elif self.filters.resource == 'annotations':
-                    items = self.load_annotations(result=result)
-
-            elif isinstance(self.items_repository, repositories.Executions):
-                # handle execution
-                items_json = result['items']
-                pool = self._client_api.thread_pools(pool_name='entity.create')
-                jobs = [None for _ in range(len(items_json))]
-                # return execution list
-                for i_item, item in enumerate(items_json):
-                    jobs[i_item] = pool.apply_async(entities.Execution.from_json,
-                                                    kwds={'client_api': self._client_api,
-                                                          '_json': item,
-                                                          'service': self.items_repository._service})
-                # wait for all jobs
-                _ = [j.wait() for j in jobs]
-
-                # get all results
-                items = miscellaneous.List([j.get() for j in jobs])
-            elif isinstance(self.items_repository, repositories.Webhooks):
-                # handle execution
-                items_json = result['items']
-                pool = self._client_api.thread_pools(pool_name='entity.create')
-                jobs = [None for _ in range(len(items_json))]
-                # return execution list
-                for i_item, item in enumerate(items_json):
-                    jobs[i_item] = pool.apply_async(entities.Webhook.from_json,
-                                                    kwds={'client_api': self._client_api,
-                                                          '_json': item,
-                                                          'project': self.items_repository._project})
-                # wait for all jobs
-                _ = [j.wait() for j in jobs]
-
-                # get all results
-                items = miscellaneous.List([j.get() for j in jobs])
-            else:
-                raise exceptions.PlatformException('400', 'Unknown page entity type')
+            items = self.items_repository._build_entities_from_response(response_items=result['items'])
         else:
-            items = list()
+            items = miscellaneous.List(list())
         return items
+
+    def __getitem__(self, y):
+        return self.items[y]
+
+    def __len__(self):
+        return self.items_count
 
     def __iter__(self):
         self.page_offset = 0
@@ -139,23 +87,11 @@ class PagedEntities:
             filters = copy.copy(self.filters)
             filters.page = page_offset
             filters.page_size = page_size
-            result = self.items_repository.get_list(filters=filters)
+            result = self.items_repository._list(filters=filters)
             items = self.process_result(result)
             return items
-        elif isinstance(self.items_repository, repositories.Executions):
-            return self.process_result(self.items_repository.get_list(project_id=self._project_id,
-                                                                      service_id=self._service_id,
-                                                                      page_offset=page_offset,
-                                                                      page_size=page_size,
-                                                                      order_by_type=self._order_by_type,
-                                                                      order_by_direction=self._order_by_direction,
-                                                                      resource_type=self._execution_resource_type,
-                                                                      resource_id=self._execution_resource_id,
-                                                                      function_name=self._execution_function_name,
-                                                                      status=self._execution_status))
-        elif isinstance(self.items_repository, repositories.Webhooks):
-            return self.process_result(
-                self.items_repository.get_list(page_offset=page_offset, page_size=page_size))
+        else:
+            raise ValueError('Cant return page. Filters is empty')
 
     def get_page(self, page_offset=None, page_size=None):
         items = self.return_page(page_offset=page_offset,
@@ -192,12 +128,6 @@ class PagedEntities:
         """
         self.page_offset = page
         self.get_page()
-
-    def load_annotations(self, result):
-        annotations = [None] * len(result['items'])
-        for i_json, _json in enumerate(result['items']):
-            annotations[i_json] = self.item_entity.from_json(_json=_json, client_api=self._client_api)
-        return miscellaneous.List(annotations)
 
     def all(self):
         page_offset = 0

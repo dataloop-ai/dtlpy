@@ -1,17 +1,70 @@
 import copy
-import traceback
+import mimetypes
 from itertools import groupby
 from multiprocessing.pool import ThreadPool
 import os
 import json
 import tqdm
-import pickle
+from PIL import Image
 from .. import exceptions, entities, utilities
 from jinja2 import Environment, PackageLoader
 import numpy as np
 import logging
+import xml.etree.ElementTree as Et
+from ..services import Reporter
+import traceback
 
 logger = logging.getLogger(name=__name__)
+
+
+class AnnotationFormat:
+    YOLO = 'yolo'
+    COCO = 'coco'
+    VOC = 'voc'
+    DATALOOP = 'dataloop'
+
+
+class COCOUtils:
+
+    @staticmethod
+    def binary_mask_to_rle(binary_mask, height, width):
+        rle = {'counts': [], 'size': [height, width]}
+        counts = rle.get('counts')
+        for i, (value, elements) in enumerate(groupby(binary_mask.ravel(order='F'))):
+            if i == 0 and value == 1:
+                counts.append(0)
+            counts.append(len(list(elements)))
+        return rle
+
+    @staticmethod
+    def polygon_to_rle(geo, height, width):
+        segmentation = list()
+        for point in geo:
+            segmentation += [float(point[0]), float(point[1])]
+        area = np.sum(entities.Segmentation.from_polygon(geo=geo, label=None, shape=(height, width)).geo > 0)
+        return [segmentation], int(area)
+
+    @staticmethod
+    def rle_to_binary_mask(rle):
+        rows, cols = rle['size']
+        rle_numbers = rle['counts']
+
+        if len(rle_numbers) % 2 != 0:
+            rle_numbers.append(0)
+
+        rle_pairs = np.array(rle_numbers).reshape(-1, 2)
+        img = np.zeros(rows * cols, dtype=np.uint8)
+        index = 0
+        for i, length in rle_pairs:
+            index += i
+            img[index:index + length] = 1
+            index += length
+        img = img.reshape(cols, rows)
+        return img.T
+
+    @staticmethod
+    def rle_to_binary_polygon(segmentation):
+        return [segmentation[x:x + 2] for x in range(0, len(segmentation), 2)]
 
 
 class Converter:
@@ -20,16 +73,23 @@ class Converter:
     """
 
     def __init__(self):
-        self.known_formats = ["yolo", "coco", "voc", "dataloop"]
+        self.known_formats = [AnnotationFormat.YOLO,
+                              AnnotationFormat.COCO,
+                              AnnotationFormat.VOC,
+                              AnnotationFormat.DATALOOP]
         self.converter_dict = {
-            "yolo": {"from": self.from_yolo, "to": self.to_yolo},
-            "coco": {"from": self.from_coco, "to": self.to_coco},
-            "voc": {"from": self.from_voc, "to": self.to_voc},
+            AnnotationFormat.YOLO: {"from": self.from_yolo, "to": self.to_yolo},
+            AnnotationFormat.COCO: {"from": self.from_coco, "to": self.to_coco},
+            AnnotationFormat.VOC: {"from": self.from_voc, "to": self.to_voc},
         }
         self.dataset = None
-        self.item = None
         self.save_to_format = None
         self.xml_template_path = 'voc_annotation_template.xml'
+        self.labels = dict()
+
+    def _get_labels(self):
+        if self.dataset:
+            self.labels = {label.tag: i_label for i_label, label in enumerate(self.dataset.labels)}
 
     def convert_dataset(self,
                         dataset,
@@ -49,7 +109,7 @@ class Converter:
         :param filters: optional
         :return:
         """
-        if to_format.lower() == 'coco':
+        if to_format.lower() == AnnotationFormat.COCO:
             return self.__convert_dataset_to_coco(dataset=dataset,
                                                   local_path=local_path,
                                                   filters=filters,
@@ -68,16 +128,17 @@ class Converter:
         pages = dataset.items.list(filters=filters)
 
         # if yolo - create labels file
-        if to_format == 'yolo':
+        if to_format == AnnotationFormat.YOLO:
+            self._get_labels()
             labels = [label.tag for label in dataset.labels]
             with open('{}/{}.names'.format(local_path, dataset.name), 'w') as fp:
                 for label in labels:
                     fp.write("{}\n".format(label))
 
         pbar = tqdm.tqdm(total=pages.items_count)
+        reporter = Reporter(num_workers=pages.items_count, resource=Reporter.CONVERTER)
         for page in pages:
             for item in page:
-                i_item += 1
                 # create input annotations json
                 in_filepath = os.path.join(local_annotations_path, item.filename[1:])
                 name, ext = os.path.splitext(in_filepath)
@@ -90,84 +151,114 @@ class Converter:
 
                 converter = utilities.Converter()
                 converter.dataset = self.dataset
+                converter.labels = self.labels
                 converter.save_to_format = self.save_to_format
                 converter.xml_template_path = self.xml_template_path
 
-                if annotation_filter is None:
-                    method = converter.convert_file
-                else:
-                    method = converter.__save_filtered_annotations_and_convert
-
                 pool.apply_async(
-                    func=method,
+                    func=self.__save_filtered_annotations_and_convert,
                     kwds={
                         "to_format": to_format,
-                        "from_format": 'dataloop',
+                        "from_format": AnnotationFormat.DATALOOP,
                         "file_path": in_filepath,
                         "save_locally": True,
                         "save_to": save_to,
                         'conversion_func': conversion_func,
                         'item': item,
                         'pbar': pbar,
-                        'filters': annotation_filter
+                        'filters': annotation_filter,
+                        'reporter': reporter,
+                        'i_item': i_item
                     }
                 )
+                i_item += 1
         pool.close()
         pool.join()
         pool.terminate()
         pbar.close()
 
+        if reporter.has_errors:
+            log_filepath = reporter.generate_log_files()
+            logger.warning(
+                'Converted with some errors. Please see log in {} for more information.'.format(log_filepath))
+
+        logger.info('Total converted: {}'.format(reporter.status_count('success')))
+        logger.info('Total skipped: {}'.format(reporter.status_count('skip')))
+        logger.info('Total failed: {}'.format(reporter.status_count('failed')))
+
     def __save_filtered_annotations_and_convert(self, item, filters, to_format, from_format, file_path,
                                                 save_locally=False,
                                                 save_to=None, conversion_func=None,
-                                                pbar=None):
-        if item.annotated:
-            assert filters.resource == 'annotations'
-            copy_filters = copy.deepcopy(filters)
-            copy_filters.add(field='itemId', values=item.id, method='and')
-            annotations_page = item.dataset.items.list(filters=copy_filters)
-            annotations = item.annotations.builder()
-            for page in annotations_page:
-                for annotation in page:
-                    annotations.annotations.append(annotation)
+                                                pbar=None, **kwargs):
+        reporter = kwargs.get('reporter', None)
+        i_item = kwargs.get('i_item', None)
 
-            if not os.path.isdir(os.path.dirname(file_path)):
-                os.makedirs(os.path.dirname(file_path))
-            with open(file_path, 'w') as f:
-                json.dump(annotations.to_json(), f, indent=2)
-            self.convert_file(item=item, to_format=to_format, from_format=from_format, file_path=file_path,
-                              save_locally=save_locally,
-                              save_to=save_to, conversion_func=conversion_func,
-                              pbar=pbar)
+        try:
+            if item.annotated:
+                if filters is not None:
+                    assert filters.resource == entities.FiltersResource.ANNOTATION
+                    copy_filters = copy.deepcopy(filters)
+                    copy_filters.add(field='itemId', values=item.id, method='and')
+                    annotations_page = item.dataset.items.list(filters=copy_filters)
+                    annotations = item.annotations.builder()
+                    for page in annotations_page:
+                        for annotation in page:
+                            annotations.annotations.append(annotation)
+
+                    if not os.path.isdir(os.path.dirname(file_path)):
+                        os.makedirs(os.path.dirname(file_path))
+                    with open(file_path, 'w') as f:
+                        json.dump(annotations.to_json(), f, indent=2)
+
+                converted_annotations = self.convert_file(item=item,
+                                                          to_format=to_format,
+                                                          from_format=from_format,
+                                                          file_path=file_path,
+                                                          save_locally=save_locally,
+                                                          save_to=save_to,
+                                                          conversion_func=conversion_func,
+                                                          pbar=pbar)
+
+                success, errors = self._sort_annotations(annotations=converted_annotations)
+
+                if not success:
+                    raise Exception('Failed to convert item annotations: \n{}'.format(errors))
+                elif errors:
+                    raise Exception('Partial conversion: \n{}'.format(errors))
+
+                if reporter is not None and i_item is not None:
+                    reporter.set_index(i_item=i_item, status='success', success=True)
+            else:
+                if reporter is not None and i_item is not None:
+                    reporter.set_index(i_item=i_item, status='skip', success=True)
+        except Exception:
+            if reporter is not None and i_item is not None:
+                reporter.set_index(i_item=i_item, status='failed', success=False, error=traceback.format_exc(),
+                                   ref=item.id)
 
     @staticmethod
-    def _binary_mask_to_rle(binary_mask):
-        size = np.sum(binary_mask > 0)
-        rle = {'counts': [], 'size': size}
-        counts = rle.get('counts')
-        for i, (value, elements) in enumerate(groupby(binary_mask.ravel(order='F'))):
-            if i == 0 and value == 1:
-                counts.append(0)
-            counts.append(len(list(elements)))
-        return rle
+    def __gen_coco_categories(instance_map):
+        categories = list()
+        for label, label_id in instance_map.items():
+            label_name, sup = label.split('.')[-1], '.'.join(label.split('.')[0:-1])
+            category = {'id': label_id, 'name': label_name}
+            if sup:
+                category['supercategory'] = sup
+            categories.append(category)
+        return categories
 
     def __convert_dataset_to_coco(self, dataset: entities.Dataset, local_path, filters=None, annotation_filter=None):
         pages = dataset.items.list(filters=filters)
         dataset.download_annotations(local_path=local_path)
         path_to_dataloop_annotations_dir = os.path.join(local_path, 'json')
-
-        labels = [label.tag for label in dataset.labels]
-        np_labels = np.array(labels)
-        class_list = np.unique(np_labels)
-
-        label_to_id = {name: i for i, name in enumerate(class_list) if name not in ["done", 'completed', 'approved']}
-        categories = [{'id': i, 'name': name} for name, i in label_to_id.items()]
-
+        label_to_id = dataset.instance_map
+        categories = self.__gen_coco_categories(instance_map=label_to_id)
         images = [None for _ in range(pages.items_count)]
         converted_annotations = [None for _ in range(pages.items_count)]
         item_id_counter = 0
         pool = ThreadPool(processes=11)
         pbar = tqdm.tqdm(total=pages.items_count)
+        reporter = Reporter(num_workers=pages.items_count, resource=Reporter.CONVERTER)
         for page in pages:
             for item in page:
                 pool.apply_async(func=self.__single_item_to_coco,
@@ -176,6 +267,7 @@ class Converter:
                                      'images': images,
                                      'path_to_dataloop_annotations_dir': path_to_dataloop_annotations_dir,
                                      'item_id': item_id_counter,
+                                     'reporter': reporter,
                                      'converted_annotations': converted_annotations,
                                      'annotation_filter': annotation_filter,
                                      'label_to_id': label_to_id,
@@ -200,78 +292,289 @@ class Converter:
         with open(os.path.join(local_path, 'coco.json'), 'w+') as f:
             json.dump(coco_json, f)
 
+        if reporter.has_errors:
+            log_filepath = reporter.generate_log_files()
+            logger.warning(
+                'Converted with some errors. Please see log in {} for more information.'.format(log_filepath))
+
+        logger.info('Total converted: {}'.format(reporter.status_count('success')))
+        logger.info('Total failed: {}'.format(reporter.status_count('failed')))
+
         return coco_json
 
     def __single_item_to_coco(self, item, images, path_to_dataloop_annotations_dir, item_id, converted_annotations,
-                              annotation_filter, label_to_id, pbar=None):
-        images[item_id] = {'file_name': item.filename,
-                           'id': item_id,
-                           'width': item.width,
-                           'height': item.height
-                           }
-        if annotation_filter is None:
-            try:
-                filename, ext = os.path.splitext(item.filename)
-                filename = '{}.json'.format(filename[1:])
-                with open(os.path.join(path_to_dataloop_annotations_dir, filename), 'r') as f:
-                    annotations = json.load(f)['annotations']
-                annotations = entities.AnnotationCollection.from_json(annotations)
-            except Exception:
-                annotations = item.annotations.list()
-        else:
-            copy_filters = copy.deepcopy(annotation_filter)
-            copy_filters.add(field='itemId', values=item.id, method='and')
-            annotations_page = item.dataset.items.list(filters=copy_filters)
-            annotations = item.annotations.builder()
-            for page in annotations_page:
-                for annotation in page:
-                    annotations.annotations.append(annotation)
+                              annotation_filter, label_to_id, reporter, pbar=None):
+        try:
+            images[item_id] = {'file_name': item.name,
+                               'id': item_id,
+                               'width': item.width,
+                               'height': item.height
+                               }
+            if annotation_filter is None:
+                try:
+                    filename, ext = os.path.splitext(item.filename)
+                    filename = '{}.json'.format(filename[1:])
+                    with open(os.path.join(path_to_dataloop_annotations_dir, filename), 'r') as f:
+                        annotations = json.load(f)['annotations']
+                    annotations = entities.AnnotationCollection.from_json(annotations)
+                except Exception:
+                    annotations = item.annotations.list()
+            else:
+                copy_filters = copy.deepcopy(annotation_filter)
+                copy_filters.add(field='itemId', values=item.id, method='and')
+                annotations_page = item.dataset.items.list(filters=copy_filters)
+                annotations = item.annotations.builder()
+                for page in annotations_page:
+                    for annotation in page:
+                        annotations.annotations.append(annotation)
 
-        item_converted_annotations = list()
-        for i_annotation, annotation in enumerate(annotations.annotations):
-            try:
-                if annotation.type in ['binary', 'segment']:
-                    if annotation.type == 'segment':
-                        annotation_def = entities.Segmentation.from_polygon(geo=annotation.geo, label=annotation.label,
-                                                                            attributes=annotation.attributes,
-                                                                            shape=(item.height, item.width),
-                                                                            is_open=annotation.is_open)
-                        annotation = entities.Annotation.new(item=item, annotation_definition=annotation_def)
-                    rle = self._binary_mask_to_rle(annotation.geo)
-                    segmentation = [rle['counts']]
-                    area = float(rle['size'])
-                    x = annotation.left
-                    y = annotation.bottom
-                    w = annotation.right - x
-                    h = annotation.top - y
-                elif annotation.type == 'box':
-                    x = annotation.coordinates[0]['x']
-                    y = annotation.coordinates[0]['y']
-                    w = annotation.coordinates[1]['x'] - x
-                    h = annotation.coordinates[1]['y'] - y
-                    segmentation = [[0]]
-                    area = float(h * w)
-                else:
-                    logger.error('Unable to convert annotation of type {} to coco'.format(annotation.type))
-                    continue
+            item_converted_annotations = list()
+            for i_annotation, annotation in enumerate(annotations.annotations):
+                try:
+                    ann = self.to_coco(annotation=annotation, item=item)
+                    ann['category_id'] = label_to_id[annotation.label]
+                    ann['image_id'] = item_id
+                    ann['id'] = i_annotation
 
-                converted_ann = {'bbox': [float(x), float(y),float(w), float(h)],
-                                 'segmentation': segmentation,
-                                 'area': area,
-                                 'category_id': label_to_id[annotation.label],
-                                 'image_id': item_id,
-                                 'iscrowd': 0,
-                                 'id': i_annotation
-                                 }
-                item_converted_annotations.append(converted_ann)
-                converted_annotations[item_id] = item_converted_annotations
-            except Exception:
-                logger.exception('Item: {}, annotation: {} - fail to convert annotation')
+                    item_converted_annotations.append(ann)
+                except Exception:
+                    err = 'Error converting annotation: \n' \
+                          'Item: {}, annotation: {} - ' \
+                          'fail to convert some of the annotation\n{}'.format(item_id,
+                                                                              annotation.id,
+                                                                              traceback.format_exc())
+                    item_converted_annotations.append(err)
+            success, errors = self._sort_annotations(annotations=item_converted_annotations)
+            converted_annotations[item_id] = success
+            if errors:
+                reporter.set_index(i_item=item_id, ref=item.id, status='failed', success=False,
+                                   error=errors)
+            else:
+                reporter.set_index(i_item=item_id, status='success', success=True)
+        except Exception:
+            reporter.set_index(i_item=item_id, ref=item.id, status='failed', success=False,
+                               error=traceback.format_exc())
+            raise
 
         if pbar is not None:
             pbar.update()
 
-    def convert_directory(self, local_path, to_format, from_format, conversion_func=None, dataset=None):
+    def _upload_coco_labels(self, coco_json):
+        labels = coco_json.get('categories', None)
+        upload_labels = dict()
+        for label in labels:
+            if 'supercategory' in label:
+                if label['supercategory'] not in upload_labels:
+                    upload_labels[label['supercategory']] = entities.Label(tag=label['supercategory'])
+                upload_labels[label['supercategory']].children.append(entities.Label(tag=label['name']))
+                tag = '{}.{}'.format(label['supercategory'], label['name'])
+            else:
+                tag = label['name']
+                upload_labels[label['name']] = entities.Label(tag=tag)
+            self.labels[tag] = label['id']
+
+        self.dataset.add_labels(upload_labels.values())
+
+    def _upload_coco_dataset(self, local_items_path, local_annotations_path, only_bbox=False):
+        logger.info('loading annotations json...')
+        with open(local_annotations_path, 'r') as f:
+            coco_json = json.load(f)
+
+        try:
+            logger.info('Uploading labels to dataset')
+            self._upload_coco_labels(coco_json=coco_json)
+        except Exception:
+            logger.warning('Failed to upload labels to dataset, please add manually')
+            self._get_labels()
+
+        image_annotations = dict()
+        image_name_id = dict()
+        for image in coco_json['images']:
+            image_metadata = image
+            image_annotations[image['file_name']] = {
+                'id': image['id'],
+                'metadata': image_metadata,
+                'annotations': list()
+            }
+            image_name_id[image['id']] = image['file_name']
+        for ann in coco_json['annotations']:
+            image_annotations[image_name_id[ann['image_id']]]['annotations'].append(ann)
+
+        return self._upload_directory(local_items_path=local_items_path,
+                                      local_annotations_path=image_annotations,
+                                      from_format=AnnotationFormat.COCO,
+                                      only_bbox=only_bbox)
+
+    def _read_labels(self, labels_file_path):
+        if labels_file_path:
+            with open(labels_file_path, 'r') as fp:
+                labels = [line.strip() for line in fp.readlines()]
+                self.dataset.add_labels(label_list=labels)
+                self.labels = {label: i_label for i_label, label in enumerate(labels)}
+        else:
+            logger.warning('No labels file path provided (.names), skipping labels upload')
+            self._get_labels()
+
+    def _upload_yolo_dataset(self, local_items_path, local_annotations_path, labels_file_path):
+        self._read_labels(labels_file_path=labels_file_path)
+
+        return self._upload_directory(local_items_path=local_items_path,
+                                      local_annotations_path=local_annotations_path,
+                                      from_format=AnnotationFormat.YOLO)
+
+    def _upload_voc_dataset(self, local_items_path, local_annotations_path, **_):
+        # TODO - implement VOC annotations upload
+        logger.warning('labels upload from VOC dataset is not implemented, please upload labels manually')
+        return self._upload_directory(local_items_path=local_items_path,
+                                      local_annotations_path=local_annotations_path,
+                                      from_format=AnnotationFormat.VOC)
+
+    def _upload_directory(self, local_items_path, local_annotations_path, from_format, conversion_func=None, **kwargs):
+        """
+        Convert annotation files in entire directory
+
+        :param local_items_path:
+        :param local_annotations_path:
+        :param from_format:
+        :param conversion_func:
+        :return:
+        """
+        only_bbox = kwargs.get('only_bbox', False)
+        file_count = sum(len([file for file in files if not file.endswith('.xml')]) for _, _, files in
+                         os.walk(local_items_path))
+
+        reporter = Reporter(num_workers=file_count, resource=Reporter.CONVERTER)
+        pbar = tqdm.tqdm(total=file_count)
+
+        pool = ThreadPool(processes=6)
+        i_item = 0
+        metadata = None
+        for path, subdirs, files in os.walk(local_items_path):
+            for name in files:
+                if not os.path.isfile(os.path.join(path, name)):
+                    continue
+                if from_format == AnnotationFormat.COCO:
+                    item_filepath = os.path.join(path, name)
+                    ann_filepath = local_annotations_path[name]
+                    metadata = {'user': local_annotations_path[name]['metadata']}
+                elif from_format == AnnotationFormat.VOC:
+                    if name.endswith('.xml'):
+                        continue
+                    else:
+                        ext = os.path.splitext(name)[-1]
+                        try:
+                            m = mimetypes.types_map[ext.lower()]
+                        except Exception:
+                            m = ''
+
+                        if ext == '' or ext is None or 'image' not in m:
+                            continue
+
+                    item_filepath = os.path.join(path, name)
+                    ann_filepath = os.path.join(path, '.'.join(name.split('.')[0:-1] + ['xml'])).replace(
+                        local_items_path, local_annotations_path)
+                elif from_format == AnnotationFormat.YOLO:
+                    item_filepath = os.path.join(path, name)
+                    ann_filepath = os.path.join(path, os.path.splitext(name)[0]) + '.txt'
+                    ann_filepath = ann_filepath.replace(local_items_path, local_annotations_path)
+                converter = utilities.Converter()
+                converter.dataset = self.dataset
+                converter.labels = self.labels
+                if only_bbox:
+                    converter._only_bbox = True
+                pool.apply_async(
+                    func=converter._upload_item_and_convert,
+                    kwds={
+                        "from_format": from_format,
+                        "item_path": item_filepath,
+                        "ann_path": ann_filepath,
+                        'conversion_func': conversion_func,
+                        "reporter": reporter,
+                        'i_item': i_item,
+                        'pbar': pbar,
+                        'metadata': metadata
+                    }
+                )
+                i_item += 1
+        pool.close()
+        pool.join()
+        pool.terminate()
+
+        if reporter.has_errors:
+            log_filepath = reporter.generate_log_files()
+            logger.warning(
+                'Converted with some errors. Please see log in {} for more information.'.format(log_filepath))
+
+        logger.info('Total converted and uploaded: {}'.format(reporter.status_count('success')))
+        logger.info('Total failed: {}'.format(reporter.status_count('failed')))
+
+    def _upload_item_and_convert(self, item_path, ann_path, from_format, conversion_func=None, **kwargs):
+        reporter = kwargs.get('reporter', None)
+        i_item = kwargs.get('i_item', None)
+        pbar = kwargs.get('pbar', None)
+        metadata = kwargs.get('metadata', None)
+
+        try:
+            item = self.dataset.items.upload(local_path=item_path, item_metadata=metadata)
+            if from_format == AnnotationFormat.YOLO:
+                image = Image.open(item_path)
+                width, height = image.size
+                item.width = width
+                item.height = height
+            converted_annotations = self.convert_file(to_format=AnnotationFormat.DATALOOP,
+                                                      from_format=from_format,
+                                                      item=item,
+                                                      file_path=ann_path,
+                                                      save_locally=False,
+                                                      conversion_func=conversion_func,
+                                                      upload=True,
+                                                      pbar=pbar)
+            success, errors = self._sort_annotations(annotations=converted_annotations)
+            if not success:
+                raise Exception("Failed to convert item's annotations: {}\n{}".format(item_path, errors))
+            if errors:
+                if reporter is not None and i_item is not None:
+                    reporter.set_index(i_item=i_item, ref=item_path, status='warning', success=False,
+                                       error='partial annotations upload: \n{}'.format(errors))
+            else:
+                if reporter is not None and i_item is not None:
+                    reporter.set_index(i_item=i_item, status='success', success=True, ref=item_path)
+        except Exception:
+            if reporter is not None and i_item is not None:
+                reporter.set_index(i_item=i_item, status='failed', success=False, error=traceback.format_exc(),
+                                   ref=item_path)
+
+    def upload_local_dataset(self,
+                             from_format,
+                             dataset,
+                             local_items_path=None,
+                             local_labels_path=None,
+                             local_annotations_path=None,
+                             only_bbox=False):
+        """
+        Convert and Upload local dataset to dataloop platform
+
+        :param only_bbox: only for coco datasets
+        :param from_format:
+        :param dataset:
+        :param local_items_path:
+        :param local_annotations_path:
+        :param local_labels_path:
+        :param local_items_path:
+        :return:
+        """
+        self.dataset = dataset
+        if from_format.lower() == AnnotationFormat.COCO:
+            self._upload_coco_dataset(local_items_path=local_items_path, local_annotations_path=local_annotations_path,
+                                      only_bbox=only_bbox)
+        if from_format.lower() == AnnotationFormat.YOLO:
+            self._upload_yolo_dataset(local_items_path=local_items_path, local_annotations_path=local_annotations_path,
+                                      labels_file_path=local_labels_path)
+        if from_format.lower() == AnnotationFormat.VOC:
+            self._upload_voc_dataset(local_items_path=local_items_path, local_annotations_path=local_annotations_path,
+                                     labels_file_path=local_labels_path)
+
+    def convert_directory(self, local_path, to_format, from_format, dataset, conversion_func=None):
         """
         Convert annotation files in entire directory
 
@@ -282,7 +585,11 @@ class Converter:
         :param dataset:
         :return:
         """
+        file_count = sum(len(files) for _, _, files in os.walk(local_path))
+        reporter = Reporter(num_workers=file_count, resource=Reporter.CONVERTER)
+
         pool = ThreadPool(processes=6)
+        i_item = 0
         for path, subdirs, files in os.walk(local_path):
             for name in files:
                 save_to = os.path.join(os.path.split(local_path)[0], to_format)
@@ -297,47 +604,93 @@ class Converter:
                     converter.dataset = dataset
                 converter.save_to_format = self.save_to_format
                 pool.apply_async(
-                    func=converter.convert_file,
+                    func=converter._convert_and_report,
                     kwds={
                         "to_format": to_format,
                         "from_format": from_format,
                         "file_path": file_path,
                         "save_locally": True,
                         "save_to": save_to,
-                        'conversion_func': conversion_func
+                        'conversion_func': conversion_func,
+                        'reporter': reporter,
+                        'i_item': i_item
                     }
                 )
+                i_item += 1
         pool.close()
         pool.join()
         pool.terminate()
 
+        if reporter.has_errors:
+            log_filepath = reporter.generate_log_files()
+            logger.warning(
+                'Converted with some errors. Please see log in {} for more information.'.format(log_filepath))
+
+        logger.info('Total converted and uploaded: {}'.format(reporter.status_count('success')))
+        logger.info('Total failed: {}'.format(reporter.status_count('failed')))
+
+    def _convert_and_report(self, to_format, from_format, file_path, save_locally, save_to, conversion_func, reporter,
+                            i_item):
+        try:
+            converted_annotations = self.convert_file(to_format=to_format, from_format=from_format, file_path=file_path,
+                                                      save_locally=save_locally, save_to=save_to,
+                                                      conversion_func=conversion_func)
+            success, errors = self._sort_annotations(annotations=converted_annotations)
+            if errors:
+                reporter.set_index(i_item=i_item, ref=file_path, status='warning', success=False,
+                                   error='partial annotations upload')
+            else:
+                reporter.set_index(i_item=i_item, status='success', success=True)
+        except Exception:
+            reporter.set_index(i_item=i_item, ref=file_path, status='failed', success=False,
+                               error=traceback.format_exc())
+            raise
+
+    @staticmethod
+    def _extract_annotations_from_file(file_path, from_format, to_format, item):
+        item_id = None
+        annotations = None
+        if isinstance(file_path, dict):
+            annotations = file_path['annotations']
+        elif isinstance(file_path, str) and os.path.isfile(file_path):
+            with open(file_path, "r") as f:
+                if file_path.endswith(".json"):
+                    annotations = json.load(f)
+                    if from_format.lower() == AnnotationFormat.DATALOOP:
+                        if item is None:
+                            item_id = annotations.get('_id', annotations.get('id', None))
+                        annotations = annotations["annotations"]
+                elif from_format.lower() == AnnotationFormat.YOLO:
+                    annotations = [[float(param.replace('\n', '')) for param in ann.split(' ')] for ann in
+                                   f.readlines()]
+                elif file_path.endswith(".xml"):
+                    annotations = Et.parse(f)
+                    annotations = [e for e in annotations.iter('object')]
+                else:
+                    raise NotImplementedError('Unknown file format: {}'.format(file_path))
+        else:
+            raise NotImplementedError('Unknown file_path: {}'.format(file_path))
+
+        return item_id, annotations
+
     def convert_file(self, to_format, from_format, file_path, save_locally=False, save_to=None, conversion_func=None,
-                     item=None, pbar=None, filters=None):
+                     item=None, pbar=None, upload=False, **_):
         """
         Convert file containing annotations
 
         :param to_format:
         :param from_format:
         :param file_path:
+        :param pbar:
+        :param upload:
         :param save_locally:
         :param save_to:
         :param conversion_func:
         :param item:
         :return:
         """
-        item_id = None
-        with open(file_path, "r") as f:
-            if file_path.endswith(".json"):
-                annotations = json.load(f)
-                if from_format.lower() == "dataloop":
-                    if item is None:
-                        item_id = annotations.get('_id', annotations.get('id', None))
-                    annotations = annotations["annotations"]
-            elif to_format.lower() == 'yolo':
-                annotations = pickle.load(f)
-            else:
-                annotations = list()
-                # TODO -  implement xml formats
+        item_id, annotations = self._extract_annotations_from_file(to_format=to_format, from_format=from_format,
+                                                                   file_path=file_path, item=item)
 
         converted_annotations = self.convert(
             to_format=to_format,
@@ -346,17 +699,37 @@ class Converter:
             conversion_func=conversion_func,
             item=item
         )
-        if save_locally:
-            if item_id is not None:
-                item = self.dataset.items.get(item_id=item_id)
-            filename = os.path.split(file_path)[-1]
-            filename_no_ext = os.path.splitext(filename)[0]
-            save_to = os.path.join(save_to, filename_no_ext)
-            self.save_to_file(save_to=save_to, to_format=to_format, annotations=converted_annotations, item=item)
+
+        success, errors = self._sort_annotations(annotations=converted_annotations)
+
+        if success:
+            if save_locally:
+                if item_id is not None:
+                    item = self.dataset.items.get(item_id=item_id)
+                filename = os.path.split(file_path)[-1]
+                filename_no_ext = os.path.splitext(filename)[0]
+                save_to = os.path.join(save_to, filename_no_ext)
+                self.save_to_file(save_to=save_to, to_format=to_format, annotations=success, item=item)
+            elif upload and to_format == AnnotationFormat.DATALOOP:
+                item.annotations.upload(annotations=success)
 
         if pbar is not None:
             pbar.update()
+
         return converted_annotations
+
+    @staticmethod
+    def _sort_annotations(annotations):
+        errors = list()
+        success = list()
+
+        for ann in annotations:
+            if isinstance(ann, str) and 'Error converting annotation' in ann:
+                errors.append(ann)
+            else:
+                success.append(ann)
+
+        return success, errors
 
     def save_to_file(self, save_to, to_format, annotations, item=None):
         """
@@ -370,9 +743,9 @@ class Converter:
         """
         # what file format
         if self.save_to_format is None:
-            if to_format.lower() in ["dataloop", "coco"]:
+            if to_format.lower() in [AnnotationFormat.DATALOOP, AnnotationFormat.COCO]:
                 self.save_to_format = 'json'
-            elif to_format.lower() in ['yolo']:
+            elif to_format.lower() in [AnnotationFormat.YOLO]:
                 self.save_to_format = 'txt'
             else:
                 self.save_to_format = 'xml'
@@ -417,18 +790,7 @@ class Converter:
         else:
             raise exceptions.PlatformException('400', 'Unknown file format to save to')
 
-    def convert(self, annotations, from_format, to_format, conversion_func=None, item=None):
-        """
-        Convert annotations list or single annotation
-
-        :param item:
-        :param annotations:
-        :param from_format:
-        :param to_format:
-        :param conversion_func:
-        :return:
-        """
-        # check known format
+    def _check_formats(self, from_format, to_format, conversion_func):
         if from_format.lower() not in self.known_formats and conversion_func is None:
             raise exceptions.PlatformException(
                 "400",
@@ -444,200 +806,298 @@ class Converter:
                 ),
             )
 
+    def convert(self, annotations, from_format, to_format, conversion_func=None, item=None):
+        """
+        Convert annotations list or single annotation
+
+        :param item:
+        :param annotations:
+        :param from_format:
+        :param to_format:
+        :param conversion_func:
+        :return:
+        """
+        # check known format
+        self._check_formats(from_format=from_format, to_format=to_format, conversion_func=conversion_func)
+
         # check annotations param type
         if isinstance(annotations, entities.AnnotationCollection):
             annotations = annotations.annotations
         if not isinstance(annotations, list):
             annotations = [annotations]
 
-        # call method
-        if from_format == "dataloop":
-            converted_annotations = self.from_dataloop(
-                annotations=annotations,
-                to_format=to_format.lower(),
-                conversion_func=conversion_func,
-                item=item
-            )
-        elif to_format == "dataloop":
-            converted_annotations = self.to_dataloop(
-                annotations=annotations,
-                from_format=from_format.lower(),
-                conversion_func=conversion_func
-            )
-        else:
+        if AnnotationFormat.DATALOOP not in [to_format, from_format]:
             raise exceptions.PlatformException(
                 "400", "Can only convert from or to dataloop format"
             )
 
-        return converted_annotations
+        # call method
+        if conversion_func is None:
+            if from_format == AnnotationFormat.DATALOOP:
+                method = self.converter_dict[to_format]["to"]
+            else:
+                method = self.converter_dict[from_format]["from"]
+        else:
+            method = self.custom_format
 
-    def to_dataloop(self, annotations, from_format, conversion_func=None):
+        # run all annotations
         pool = ThreadPool(processes=6)
         for i_annotation, annotation in enumerate(annotations):
-            if conversion_func is None:
-                pool.apply_async(
-                    func=self.converter_dict[from_format]["from"],
-                    kwds={"annotation": annotation, "i_annotation": i_annotation, 'annotations': annotations},
-                )
-            else:
-                pool.apply_async(
-                    func=self.custom_format,
-                    kwds={
-                        "annotation": annotation,
-                        "i_annotation": i_annotation,
-                        "conversion_func": conversion_func,
-                        'annotations': annotations
-                    },
-                )
+            pool.apply_async(
+                func=self._convert_single,
+                kwds={
+                    "annotation": annotation,
+                    "i_annotation": i_annotation,
+                    "conversion_func": conversion_func,
+                    'annotations': annotations,
+                    'from_format': AnnotationFormat.DATALOOP,
+                    'item': item,
+                    'method': method
+                }
+            )
+
         pool.close()
         pool.join()
         pool.terminate()
         return annotations
-
-    def from_dataloop(self, annotations, to_format, conversion_func=None, item=None):
-        pool = ThreadPool(processes=6)
-        for i_annotation, annotation in enumerate(annotations):
-            if conversion_func is None:
-                pool.apply_async(
-                    func=self.converter_dict[to_format]["to"],
-                    kwds={"annotation": annotation,
-                          "i_annotation": i_annotation,
-                          'annotations': annotations,
-                          'item': item}
-                )
-            else:
-                pool.apply_async(
-                    func=self.custom_format,
-                    kwds={
-                        "annotation": annotation,
-                        "i_annotation": i_annotation,
-                        "conversion_func": conversion_func,
-                        'annotations': annotations,
-                        'from_format': 'dataloop'
-                    },
-                )
-        pool.close()
-        pool.join()
-        pool.terminate()
-        return annotations
-
-    def from_coco(self, annotation, i_annotation, annotations=None):
-        pass
-
-    def from_voc(self, annotation, i_annotation, annotations=None):
-        pass
-
-    def from_yolo(self, annotation, i_annotation, annotations=None):
-        pass
-
-    def to_yolo(self, annotation, i_annotation, annotations=None, item=None):
-        try:
-            if not isinstance(annotation, entities.Annotation):
-                if item is None:
-                    if self.item is None:
-                        self.item = self.dataset.items.get(item_id=annotation['itemId'])
-                    else:
-                        item = self.item
-                annotation = entities.Annotation.from_json(_json=annotation, item=item)
-            if annotation.type != "box":
-                annotations[i_annotation] = None
-                raise exceptions.PlatformException(
-                    "400", "Only box annotation ca be converted to Yolo"
-                )
-
-            dw = 1.0 / annotation.item.width
-            dh = 1.0 / annotation.item.height
-            x = (annotation.left + annotation.right) / 2.0
-            y = (annotation.top + annotation.bottom) / 2.0
-            w = annotation.right - annotation.left
-            h = annotation.bottom - annotation.top
-            x = x * dw
-            w = w * dw
-            y = y * dh
-            h = h * dh
-
-            labels = {label.tag: i_label for i_label, label in enumerate(self.dataset.labels)}
-            label_id = labels[annotation.label]
-
-            annotations[i_annotation] = (label_id, x, y, w, h)
-        except Exception:
-            annotations[i_annotation] = 'Error converting annotation: {}'.format(traceback.format_exc())
-
-    def to_coco(self, annotation, i_annotation, annotations=None, item=None):
-        try:
-            if not isinstance(annotation, entities.Annotation):
-                annotation = entities.Annotation.from_json(annotation, item=item)
-            # create segmentation list
-            rle = self._binary_mask_to_rle(annotation.geo)
-
-            # build annotation
-            if annotation.type == 'binary':
-                segmentation = [rle['counts']]
-                x = annotation.left
-                y = annotation.bottom
-                w = annotation.right - x
-                h = annotation.top - y
-            elif annotation.type == 'box':
-                x = annotation.coordinates[0]['x']
-                y = annotation.coordinates[0]['y']
-                w = annotation.coordinates[1]['x'] - x
-                h = annotation.coordinates[1]['y'] - y
-                segmentation = [[]]
-            else:
-                logger.error('Unable to convert annotation of type {} to coco'.format(annotation.type))
-                raise Exception('Unable to convert annotation of type {} to coco'.format(annotation.type))
-
-            ann = dict()
-            ann['bbox'] = [x, y, w, h],
-            ann["segmentation"] = segmentation
-            ann["area"] = rle['size']
-
-            # put converted annotation in self annotation
-            annotations[i_annotation] = ann
-        except Exception:
-            annotations[i_annotation] = 'Error converting annotation: {}'.format(traceback.format_exc())
 
     @staticmethod
-    def to_voc(annotation, i_annotation, annotations=None, item=None):
+    def _convert_single(method, **kwargs):
+        annotations = kwargs.get('annotations', None)
+        i_annotation = kwargs.get('i_annotation', None)
         try:
-            if not isinstance(annotation, entities.Annotation):
-                annotation = entities.Annotation.from_json(annotation, item=item)
-
-            if annotation.type != 'box':
-                raise exceptions.PlatformException('400', 'Annotation must be of type box')
-
-            label = annotation.label
-
-            if annotation.attributes is not None and isinstance(annotation.attributes, list) and len(
-                    annotation.attributes) > 0:
-                attributes = annotation.attributes
-            else:
-                attributes = list()
-
-            left = annotation.left
-            top = annotation.top
-            right = annotation.right
-            bottom = annotation.bottom
-
-            ann = {'name': label,
-                   'xmin': left,
-                   'ymin': top,
-                   'xmax': right,
-                   'ymax': bottom,
-                   'attributes': attributes,
-                   }
-
-            annotations[i_annotation] = ann
+            ann = method(**kwargs)
+            if annotations is not None and isinstance(i_annotation, int):
+                annotations[i_annotation] = ann
         except Exception:
-            annotations[i_annotation] = 'Error converting annotation: {}'.format(traceback.format_exc())
+            if annotations is not None and isinstance(i_annotation, int):
+                annotations[i_annotation] = 'Error converting annotation: {}'.format(traceback.format_exc())
+            else:
+                raise
 
-    def custom_format(self, annotation, i_annotation, conversion_func, annotations=None, from_format=None):
-        if from_format == 'dataloop' and isinstance(annotation, dict):
-            client_api = None
-            if self.item is not None:
-                client_api = self.item._client_api
-            annotation = entities.Annotation.from_json(_json=annotation, item=self.item, client_api=client_api)
+    @staticmethod
+    def from_voc(annotation, **_):
+        bndbox = annotation.find('bndbox')
 
-        annotations[i_annotation] = conversion_func(annotation)
+        if bndbox is None:
+            raise Exception('No bndbox field found in annotation object')
+
+        bottom = float(bndbox.find('ymax').text)
+        top = float(bndbox.find('ymin').text)
+        left = float(bndbox.find('xmin').text)
+        right = float(bndbox.find('xmax').text)
+        label = annotation.find('name').text
+
+        if annotation.find('segmented'):
+            if annotation.find('segmented') == '1':
+                logger.warning('Only bounding box conversion is supported in voc format. Segmentation will be ignored.')
+
+        attributes = list(annotation)
+        attrs = list()
+        for attribute in attributes:
+            if attribute.tag not in ['bndbox', 'name'] and len(list(attribute)) == 0:
+                if attribute.text not in ['0', '1']:
+                    attrs.append(attribute.text)
+                elif attribute.text == '1':
+                    attrs.append(attribute.tag)
+
+        ann_def = entities.Box(label=label, top=top, bottom=bottom, left=left, right=right, attributes=attrs)
+        return entities.Annotation.new(annotation_definition=ann_def)
+
+    def from_yolo(self, annotation, **kwargs):
+        (label_id, x, y, w, h) = annotation
+        label_id = int(label_id)
+        height = kwargs.get('height')
+        width = kwargs.get('width')
+        item = kwargs.get('item', None)
+        if height is None or width is None:
+            if item is None:
+                raise Exception('Need item width and height in order to convert yolo annotation to dataloop')
+            height = item.height
+            width = item.width
+
+        x_center = x * width
+        y_center = y * height
+        w = w * width
+        h = h * height
+
+        top = y_center - (h / 2)
+        bottom = y_center + (h / 2)
+        left = x_center - (w / 2)
+        right = x_center + (w / 2)
+
+        label = self._label_by_category_id(category_id=label_id)
+
+        ann_def = entities.Box(label=label, top=top, bottom=bottom, left=left, right=right)
+        return entities.Annotation.new(annotation_definition=ann_def, item=item)
+
+    def to_yolo(self, annotation, item=None, **_):
+        if not isinstance(annotation, entities.Annotation):
+            if item is None:
+                item = self.dataset.items.get(item_id=annotation['itemId'])
+            annotation = entities.Annotation.from_json(_json=annotation, item=item)
+        elif item is None:
+            item = annotation.item
+
+        if annotation.type != "box":
+            raise Exception('Only box annotations can be converted')
+        if item.width is None or item.height is None:
+            raise Exception('Item does not have width and height, cannot convert to yolo')
+
+        dw = 1.0 / item.width
+        dh = 1.0 / item.height
+        x = (annotation.left + annotation.right) / 2.0
+        y = (annotation.top + annotation.bottom) / 2.0
+        w = annotation.right - annotation.left
+        h = annotation.bottom - annotation.top
+        x = x * dw
+        w = w * dw
+        y = y * dh
+        h = h * dh
+
+        label_id = self.labels[annotation.label]
+
+        ann = (label_id, x, y, w, h)
+        return ann
+
+    def _label_by_category_id(self, category_id):
+        if len(self.labels) > 0:
+            for label_name, label_index in self.labels.items():
+                if label_index == category_id:
+                    return label_name
+        raise Exception('label category id not found: {}'.format(category_id))
+
+    def from_coco(self, annotation, **kwargs):
+        item = kwargs.get('item', None)
+        _id = annotation.get('id', None)
+        category_id = annotation.get('category_id', None)
+        segmentation = annotation.get('segmentation', None)
+        iscrowd = annotation.get('iscrowd', None)
+        label = self._label_by_category_id(category_id=category_id)
+
+        if hasattr(self, '_only_bbox') and self._only_bbox:
+            bbox = annotation.get('bbox', None)
+            left = bbox[0]
+            top = bbox[1]
+            right = left + bbox[2]
+            bottom = top + bbox[3]
+
+            ann_def = entities.Box(top=top, left=left, bottom=bottom, right=right, label=label)
+        else:
+            if int(iscrowd) == 1:
+                ann_def = entities.Segmentation(label=label, geo=COCOUtils.rle_to_binary_mask(rle=segmentation))
+            else:
+                if len(segmentation) == 1:
+                    segmentation = segmentation[0]
+                    if segmentation:
+                        ann_def = entities.Polygon(label=label, is_open=False,
+                                                   geo=COCOUtils.rle_to_binary_polygon(segmentation=segmentation))
+                    else:
+                        bbox = annotation.get('bbox', None)
+                        if bbox:
+                            left = bbox[0]
+                            top = bbox[1]
+                            right = left + bbox[2]
+                            bottom = top + bbox[3]
+                            ann_def = entities.Box(top=top, left=left, bottom=bottom, right=right, label=label)
+                        else:
+                            raise Exception('Unable to convert annotation, not coordinates')
+
+                else:
+                    # TODO - support conversion of split annotations
+                    raise exceptions.PlatformException('400',
+                                                       'unable to convert.'
+                                                       'Converter does not support split annotations: {}'.format(
+                                                           _id))
+
+        return entities.Annotation.new(annotation_definition=ann_def, item=item)
+
+    @staticmethod
+    def to_coco(annotation, item=None, **kwargs):
+        if not isinstance(annotation, entities.Annotation):
+            annotation = entities.Annotation.from_json(annotation, item=item)
+        area = 0
+        iscrowd = 0
+        height = kwargs.get('height', item.height)
+        width = kwargs.get('width', item.width)
+
+        if annotation.type in ['binary', 'segment']:
+            if height is None or width is None:
+                raise Exception('Item must have height and width to convert to coco')
+
+        # build annotation
+        if annotation.type == 'binary':
+            segmentation = COCOUtils.binary_mask_to_rle(binary_mask=annotation.geo, height=height, width=width)
+            area = int(annotation.geo.sum())
+            x = annotation.left
+            y = annotation.bottom
+            w = annotation.right - x
+            h = annotation.top - y
+            iscrowd = 1
+        elif annotation.type == 'box':
+            x = annotation.coordinates[0]['x']
+            y = annotation.coordinates[0]['y']
+            w = annotation.coordinates[1]['x'] - x
+            h = annotation.coordinates[1]['y'] - y
+            segmentation = [[]]
+        elif annotation.type == 'segment':
+            x = annotation.left
+            y = annotation.bottom
+            w = annotation.right - x
+            h = annotation.top - y
+            segmentation, area = COCOUtils.polygon_to_rle(geo=annotation.geo, height=height, width=width)
+        else:
+            logger.error('Unable to convert annotation of type {} to coco'.format(annotation.type))
+            raise Exception('Unable to convert annotation of type {} to coco'.format(annotation.type))
+
+        ann = dict()
+        ann['bbox'] = [float(x), float(y), float(w), float(h)]
+        ann["segmentation"] = segmentation
+        ann["area"] = area
+        ann["iscrowd"] = iscrowd
+
+        return ann
+
+    @staticmethod
+    def to_voc(annotation, item=None, **_):
+        if not isinstance(annotation, entities.Annotation):
+            annotation = entities.Annotation.from_json(annotation, item=item)
+
+        if annotation.type != 'box':
+            raise exceptions.PlatformException('400', 'Annotation must be of type box')
+
+        label = annotation.label
+
+        if annotation.attributes is not None and isinstance(annotation.attributes, list) and len(
+                annotation.attributes) > 0:
+            attributes = annotation.attributes
+        else:
+            attributes = list()
+
+        left = annotation.left
+        top = annotation.top
+        right = annotation.right
+        bottom = annotation.bottom
+
+        ann = {'name': label,
+               'xmin': left,
+               'ymin': top,
+               'xmax': right,
+               'ymax': bottom,
+               'attributes': attributes,
+               }
+
+        return ann
+
+    @staticmethod
+    def custom_format(annotation, conversion_func, i_annotation=None, annotations=None, from_format=None,
+                      item=None, **_):
+        if from_format == AnnotationFormat.DATALOOP and isinstance(annotation, dict):
+            annotation = entities.Annotation.from_json(_json=annotation, item=item)
+
+        ann = conversion_func(annotation)
+
         if isinstance(annotations[i_annotation], entities.Annotation) and annotations[i_annotation].item is None:
-            annotations[i_annotation].item = self.item
+            ann.item = item
+
+        return ann

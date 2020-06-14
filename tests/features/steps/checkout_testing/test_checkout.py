@@ -53,7 +53,7 @@ def step_impl(context, package_codebase):
     package_codebase = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], package_codebase)
     context.codebase = context.project.codebases.pack(
         directory=package_codebase,
-        name='package_codebase',
+        name='package-codebase',
         description="some description",
     )
 
@@ -81,6 +81,7 @@ def step_impl(context):
                 context.package = context.feature.package
             elif param == 'service':
                 context.service = context.feature.service
+
 
 @behave.given(u'Done setting')
 def step_impl(context):

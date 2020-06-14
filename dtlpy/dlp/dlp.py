@@ -40,7 +40,10 @@ def main():
         history_file = os.path.join(os.getcwd(), ".history.txt")
         command_executor = CommandExecutor(dl=dlp, parser=parser)
 
-        if args.operation == "shell":
+        if args.version:
+            logger.info("Dataloop SDK Version: {}".format(dlp.__version__))
+
+        elif args.operation == "shell":
             #######################
             # Open Dataloop shell #
             #######################

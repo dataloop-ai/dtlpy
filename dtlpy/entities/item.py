@@ -10,6 +10,12 @@ from .. import repositories, entities, services, exceptions
 logger = logging.getLogger(name=__name__)
 
 
+class ItemStatus:
+    COMPLETED = "completed"
+    APPROVED = "approved"
+    DISCARDED = "discarded"
+
+
 @attr.s
 class Item(entities.BaseEntity):
     """
@@ -31,6 +37,9 @@ class Item(entities.BaseEntity):
     id = attr.ib()
     hidden = attr.ib(repr=False)
     dir = attr.ib(repr=False)
+
+    # name change
+    annotations_count = attr.ib()
 
     # api
     _client_api = attr.ib(type=services.ApiClient, repr=False)
@@ -87,6 +96,7 @@ class Item(entities.BaseEntity):
             annotated=_json.get('annotated', None),
             dataset_url=_json.get('dataset', None),
             createdAt=_json.get('createdAt', None),
+            annotations_count=_json.get('annotationsCount', None),
             hidden=_json.get('hidden', False),
             stream=_json.get('stream', None),
             dir=_json.get('dir', None),
@@ -136,7 +146,7 @@ class Item(entities.BaseEntity):
 
         if self._dataset is None:
             items = repositories.Items(client_api=self._client_api,
-                                       dataset=None,
+                                       dataset=self._dataset,
                                        dataset_id=self.datasetId,
                                        datasets=repositories.Datasets(client_api=self._client_api, project=None))
             datasets = items.datasets
@@ -144,7 +154,10 @@ class Item(entities.BaseEntity):
             items = self.dataset.items
             datasets = self.dataset.datasets
 
-        r = reps(annotations=repositories.Annotations(client_api=self._client_api, item=self),
+        r = reps(annotations=repositories.Annotations(client_api=self._client_api,
+                                                      dataset_id=self.datasetId,
+                                                      item=self,
+                                                      dataset=self._dataset),
                  items=items,
                  datasets=datasets,
                  codebases=None,
@@ -231,10 +244,12 @@ class Item(entities.BaseEntity):
                                                         attr.fields(Item)._project,
                                                         attr.fields(Item)._client_api,
                                                         attr.fields(Item)._platform_dict,
+                                                        attr.fields(Item).annotations_count,
                                                         attr.fields(Item).dataset_url,
                                                         attr.fields(Item).annotations_link))
 
         _json.update({'annotations': self.annotations_link,
+                      'annotationsCount': self.annotations_count,
                       'dataset': self.dataset_url})
         return _json
 
@@ -336,8 +351,8 @@ class Item(entities.BaseEntity):
 
     def change_status(self, status):
         # TODO - deprecate
-        logger.warning('This method will be deprecated after version 1.17.0\n'
-                       'Please use method update_status()')
+        logger.warning('[DeprecationWarning] "change_status(status)" method will be deprecated after version 1.17.0\n'
+                       'Please use method "update_status(status)"')
         self.update_status(status=status)
 
     def update_status(self, status):
@@ -354,6 +369,14 @@ class Item(entities.BaseEntity):
             logger.error('Error updating status. Please use platform')
             logger.debug(traceback.format_exc())
             return False
+
+
+class ModalityTypeEnum:
+    """
+    State enum
+    """
+
+    OVERLAY = "overlay"
 
 
 class Modality:
@@ -381,7 +404,7 @@ class Modalities:
     def modalities(self):
         return self.item.metadata.get('modalities', None)
 
-    def create(self, name, ref, ref_type='id', modality_type='overlay'):
+    def create(self, name, ref, ref_type='id', modality_type=ModalityTypeEnum.OVERLAY):
         if self.modalities is None:
             self.item.metadata['modalities'] = list()
 

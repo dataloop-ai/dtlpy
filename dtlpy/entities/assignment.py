@@ -127,7 +127,7 @@ class Assignment(entities.BaseEntity):
 
         return self.assignments.remove_items(dataset=dataset, assignment_id=self.id, filters=filters, items=items)
 
-    def get_items(self, dataset=None):
+    def get_items(self, dataset=None, filters=None):
         """
 
         :param dataset:
@@ -136,7 +136,7 @@ class Assignment(entities.BaseEntity):
         if dataset is None:
             dataset = self.dataset
 
-        return self.assignments.get_items(dataset=dataset, assignment=self)
+        return self.assignments.get_items(dataset=dataset, assignment=self, filters=filters)
 
     def reassign(self, assignee_id):
         """

@@ -1,6 +1,5 @@
 import behave
 import os
-import cv2
 
 
 @behave.when(u'I download items annotations with mask to "{path}"')

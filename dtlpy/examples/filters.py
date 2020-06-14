@@ -14,9 +14,7 @@ def main():
     ##################
     # create filters #
     ##################
-    filters = dl.Filters()
-    # set resource - optional - default is item
-    filters.resource = dl.FiltersResource.ITEM
+    filters = dl.Filters(resource=dl.FiltersResource.ITEM)  # set resource - optional - default is item
     # add filter - only files
     filters.add(field='type', values='file')
     # add filter - only annotated items

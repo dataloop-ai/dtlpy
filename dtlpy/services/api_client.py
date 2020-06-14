@@ -1,6 +1,7 @@
 """
 Dataloop platform calls
 """
+import aiohttp.client_exceptions
 import requests_toolbelt
 import multiprocessing
 import threading
@@ -8,12 +9,14 @@ import traceback
 import datetime
 import requests
 import aiohttp
-import asyncio
 import logging
+import asyncio
+import time
 import tqdm
 import json
 import jwt
 import os
+import io
 from multiprocessing.pool import ThreadPool
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
@@ -23,7 +26,9 @@ import numpy as np
 from .calls_counter import CallsCounter
 from .cookie import CookieIO
 from .logins import login, login_secret
-from .async_entities import AsyncResponse, AsyncUploadStream, AsyncResponseError
+from .async_utils import AsyncResponse, AsyncUploadStream, AsyncResponseError, AsyncThreadEventLoop
+from .default_environments import DEFAULT_ENVIRONMENT
+from .aihttp_retry import RetryClient
 from .. import miscellaneous, exceptions, __version__
 
 logger = logging.getLogger(name=__name__)
@@ -152,6 +157,12 @@ class ApiClient:
         self.minimal_print = True
         # start refresh token
         self.refresh_token_active = True
+        # event and pools
+        self._thread_pools = dict()
+        self._event_loops_dict = dict()
+
+        # TODO- remove before release - only for debugging
+        self._stopped_pools = list()
 
         if cookie_filepath is None:
             self.cookie_io = CookieIO.init()
@@ -189,9 +200,8 @@ class ApiClient:
 
         # create a global thread pool to run multi threading
         if num_processes is None:
-            num_processes = multiprocessing.cpu_count()
+            num_processes = 4 * multiprocessing.cpu_count()
         self._num_processes = num_processes
-        self._thread_pools = dict()
         self._thread_pools_names = {'item.download': num_processes,
                                     'item.status_update': num_processes,
                                     'item.page': num_processes,
@@ -206,6 +216,8 @@ class ApiClient:
         for name, pool in self._thread_pools.items():
             pool.close()
             pool.terminate()
+        for name, thread in self._event_loops_dict.items():
+            thread.stop()
 
     @property
     def num_processes(self):
@@ -227,8 +239,29 @@ class ApiClient:
             self._thread_pools[pool].join()
             # terminate pool
             self._thread_pools[pool].terminate()
-
+        for name, thread in self._event_loops_dict:
+            thread.stop()
+        self._event_loops_dict = dict()
         self._thread_pools = dict()
+
+    def create_event_loop_thread(self, name):
+        loop = asyncio.new_event_loop()
+        event_loop = AsyncThreadEventLoop(loop=loop,
+                                          n=self._num_processes,
+                                          name=name)
+        event_loop.daemon = True
+        event_loop.start()
+        time.sleep(1)
+        return event_loop
+
+    def event_loops(self, name):
+        if name not in self._event_loops_dict:
+            self._event_loops_dict[name] = self.create_event_loop_thread(name=name)
+        if not self._event_loops_dict[name].loop.is_running():
+            if self._event_loops_dict[name].is_alive():
+                self._event_loops_dict[name].stop()
+            self._event_loops_dict[name] = self.create_event_loop_thread(name=name)
+        return self._event_loops_dict[name]
 
     def thread_pools(self, pool_name):
         if pool_name not in self._thread_pools_names:
@@ -242,6 +275,7 @@ class ApiClient:
         assert isinstance(pool, multiprocessing.pool.ThreadPool)
         if pool._state != multiprocessing.pool.RUN:
             # pool is closed, open a new one
+            self._stopped_pools.append(pool)
             logger.debug('Global ThreadPool is not running. Creating a new one')
             pool = ThreadPool(processes=num_processes)
             self._thread_pools[pool_name] = pool
@@ -275,13 +309,11 @@ class ApiClient:
 
     @property
     def fetch_entities(self):
-        _fetch_entities = self._fetch_entities
-        if _fetch_entities is None:
-            _fetch_entities = self.cookie_io.get('fetch_entities')
-            if _fetch_entities is None:
-                _fetch_entities = True
-                self.fetch_entities = _fetch_entities
-        return _fetch_entities
+        if self._fetch_entities is None:
+            self._fetch_entities = self.cookie_io.get('fetch_entities')
+            if self._fetch_entities is None:
+                self.fetch_entities = True  # default
+        return self._fetch_entities
 
     @fetch_entities.setter
     def fetch_entities(self, val):
@@ -302,56 +334,7 @@ class ApiClient:
             # if cookie is None  - init with defaults
             if _environments is None:
                 # default
-                _environments = {
-                    'https://dev-gate.dataloop.ai/api/v1':
-                        {'alias': 'dev',
-                         'audience': 'https://dataloop-development.auth0.com/api/v2/',
-                         'client_id': 'I4Arr9ixs5RT4qIjOGtIZ30MVXzEM4w8',
-                         'auth0_url': 'https://dataloop-development.auth0.com',
-                         'token': None,
-                         'refresh_token': None,
-                         'verify_ssl': True},
-                    'https://rc-gate.dataloop.ai/api/v1':
-                        {'alias': 'rc',
-                         'audience': 'https://dataloop-development.auth0.com/api/v2/',
-                         'client_id': 'I4Arr9ixs5RT4qIjOGtIZ30MVXzEM4w8',
-                         'auth0_url': 'https://dataloop-development.auth0.com',
-                         'token': None,
-                         'refresh_token': None,
-                         'verify_ssl': True},
-                    'https://gate.dataloop.ai/api/v1': {
-                        'alias': 'prod',
-                        'audience': 'https://dataloop-production.auth0.com/userinfo',
-                        'client_id': 'FrG0HZga1CK5UVUSJJuDkSDqItPieWGW',
-                        'auth0_url': 'https://dataloop-production.auth0.com',
-                        'token': None,
-                        'refresh_token': None,
-                        'verify_ssl': True},
-                    'https://localhost:8443/api/v1': {
-                        'alias': 'local',
-                        'audience': 'https://dataloop-local.auth0.com/userinfo',
-                        'client_id': 'ewGhbg5brMHOoL2XZLHBzhEanapBIiVO',
-                        'auth0_url': 'https://dataloop-local.auth0.com',
-                        'token': None,
-                        'refresh_token': None,
-                        'verify_ssl': False},
-                    'https://172.17.0.1:8443/api/v1': {
-                        'alias': 'docker_linux',
-                        'audience': 'https://dataloop-local.auth0.com/userinfo',
-                        'client_id': 'ewGhbg5brMHOoL2XZLHBzhEanapBIiVO',
-                        'auth0_url': 'https://dataloop-local.auth0.com',
-                        'token': None,
-                        'refresh_token': None,
-                        'verify_ssl': False},
-                    'https://host.docker.internal:8443/api/v1': {
-                        'alias': 'docker_windows',
-                        'audience': 'https://dataloop-local.auth0.com/userinfo',
-                        'client_id': 'ewGhbg5brMHOoL2XZLHBzhEanapBIiVO',
-                        'auth0_url': 'https://dataloop-local.auth0.com',
-                        'token': None,
-                        'refresh_token': None,
-                        'verify_ssl': False}
-                }
+                _environments = DEFAULT_ENVIRONMENT
                 # save to local variable
                 self.environments = _environments
             else:
@@ -514,6 +497,133 @@ class ApiClient:
             return_type = True
         return return_type, resp
 
+    @Decorators.token_expired_decorator
+    async def gen_async_request(self,
+                                req_type,
+                                path,
+                                data=None,
+                                json_req=None,
+                                files=None,
+                                stream=None,
+                                headers=None,
+                                log_error=True,
+                                filepath=None,
+                                chunk_size=8192,
+                                pbar=None,
+                                is_dataloop=True):
+        req_type = req_type.upper()
+        valid_request_type = ['GET', 'DELETE', 'POST', 'PUT', 'PATCH']
+        assert req_type in valid_request_type, '[ERROR] type: %s NOT in valid requests' % req_type
+
+        # prepare request
+        if is_dataloop:
+            full_url = self.environment + path
+            headers_req = self.auth
+            headers_req['User-Agent'] = requests_toolbelt.user_agent('dtlpy', __version__.version)
+        else:
+            full_url = path
+            headers = dict()
+            headers_req = headers
+
+        if headers is not None:
+            if not isinstance(headers, dict):
+                raise exceptions.PlatformException(error=400, message="Input 'headers' must be a dictionary")
+            for k, v in headers.items():
+                headers_req[k] = v
+        req = requests.Request(method=req_type,
+                               url=full_url,
+                               json=json_req,
+                               files=files,
+                               data=data,
+                               headers=headers_req)
+        # prepare to send
+        prepared = req.prepare()
+        # save curl for debug
+        command = "curl -X {method} -H {headers} -d '{data}' '{uri}'"
+        headers = ['"{0}: {1}"'.format(k, v) for k, v in prepared.headers.items()]
+        headers = " -H ".join(headers)
+        curl = command.format(method=prepared.method,
+                              headers=headers,
+                              data=prepared.body,
+                              uri=prepared.url)
+        self.last_curl = curl
+        self.last_request = prepared
+        # send request
+        try:
+            timeout = aiohttp.ClientTimeout(total=0)
+            async with RetryClient(headers=headers_req,
+                                   timeout=timeout) as session:
+                try:
+                    async with session._request(request=session._client.request,
+                                                url=self.environment + path,
+                                                method=req_type,
+                                                json=json_req,
+                                                data=data,
+                                                headers=headers_req,
+                                                chunked=stream,
+                                                retry_attempts=5,
+                                                retry_exceptions={aiohttp.client_exceptions.ClientOSError,
+                                                                  aiohttp.client_exceptions.ServerDisconnectedError,
+                                                                  aiohttp.client_exceptions.ClientPayloadError},
+                                                raise_for_status=False) as request:
+                        if stream:
+                            pbar = self.__get_pbar(pbar=pbar,
+                                                   total_length=request.headers.get("content-length"))
+                            if filepath is not None:
+                                to_close = False
+                                if isinstance(filepath, str):
+                                    to_close = True
+                                    buffer = open(filepath, 'wb')
+                                elif isinstance(filepath, io.BytesIO):
+                                    pass
+                                else:
+                                    raise ValueError('unknown data type to write file: {}'.format(type(filepath)))
+                                try:
+                                    while True:
+                                        chunk = await request.content.read(chunk_size)
+                                        if not chunk:
+                                            break
+                                        buffer.write(chunk)
+                                        if pbar is not None:
+                                            pbar.update(len(chunk))
+                                finally:
+                                    if to_close:
+                                        buffer.close()
+
+                            if pbar is not None:
+                                pbar.close()
+                        text = await request.text()
+                        try:
+                            _json = await request.json()
+                        except:
+                            _json = dict()
+                        response = AsyncResponse(text=text,
+                                                 _json=_json,
+                                                 async_resp=request)
+                except Exception as err:
+                    response = AsyncResponseError(error=err, trace=traceback.format_exc())
+                finally:
+                    with threadLock:
+                        self.calls_counter.add()
+        except Exception:
+            logger.error(self.print_request(req=prepared, to_return=True))
+            raise
+        self.last_response = response
+        # handle output
+        if not response.ok:
+            self.print_bad_response(response, log_error=log_error and not self.is_cli)
+            return_type = False
+        else:
+            try:
+                # print only what is printable (dont print get steam etc..)
+                if not stream:
+                    self.print_response(response)
+            except ValueError:
+                # no JSON returned
+                pass
+            return_type = True
+        return return_type, response
+
     async def upload_file_async(self, to_upload, item_type, item_size, remote_url, uploaded_filename,
                                 remote_path=None, callback=None, mode='skip', item_metadata=None):
         headers = self.auth
@@ -563,6 +673,24 @@ class ApiClient:
                 with threadLock:
                     self.calls_counter.add()
         return response
+
+    def __get_pbar(self, pbar, total_length):
+        # decide if create progress bar for item
+        if pbar:
+            try:
+                if total_length is not None and int(total_length) > 10e6:  # size larger than 10 MB:
+                    pbar = tqdm.tqdm(total=int(total_length),
+                                     unit='B',
+                                     unit_scale=True,
+                                     unit_divisor=1024,
+                                     position=1,
+                                     disable=self.verbose.disable_progress_bar)
+                else:
+                    pbar = None
+            except Exception as err:
+                pbar = None
+                logger.debug('Cant decide downloaded file length, bar will not be presented: {}'.format(err))
+        return pbar
 
     def send_session(self, prepared, stream=None):
         if self.session is None:
