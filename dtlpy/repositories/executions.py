@@ -219,7 +219,7 @@ class Executions:
 
         return response.json()
 
-    def list(self, filters=None, page_offset=None, page_size=None):
+    def list(self, filters=None):
         """
         List service executions
         :return:
@@ -236,24 +236,10 @@ class Executions:
         if not isinstance(filters, entities.Filters):
             raise exceptions.PlatformException(error='400', message='Unknown filters type')
 
-        # page size
-        if page_size is None:
-            # take from default
-            page_size = filters.page_size
-        else:
-            filters.page_size = page_size
-
-        # page offset
-        if page_offset is None:
-            # take from default
-            page_offset = filters.page
-        else:
-            filters.page = page_offset
-
         paged = entities.PagedEntities(items_repository=self,
                                        filters=filters,
-                                       page_offset=page_offset,
-                                       page_size=page_size,
+                                       page_offset=filters.page,
+                                       page_size=filters.page_size,
                                        client_api=self._client_api)
         paged.get_page()
         return paged

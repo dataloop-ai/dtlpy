@@ -120,18 +120,6 @@ class Checkpoints:
     def _list(self, filters):
         url = '/query/machine-learning'
         # TODO change endpoint to models/{}/query with filters
-
-        # query_params = {
-        #     'modelId': model_id,
-        #     'creator': creator,
-        #     'name': checkpoint_name
-        # }
-        #
-        # if self._project is not None:
-        #     query_params['projects'] = self._project.id
-        #
-        # url += '?{}'.format(urlencode({key: val for key, val in query_params.items() if val is not None}, doseq=True))
-
         # request
         success, response = self._client_api.gen_request(req_type='POST',
                                                          path=url,
@@ -140,7 +128,7 @@ class Checkpoints:
             raise exceptions.PlatformException(response)
         return response.json()
 
-    def list(self, filters=None, page_offset=None, page_size=None):
+    def list(self, filters=None):
         """
         List project checkpoints
         :return:
@@ -157,24 +145,10 @@ class Checkpoints:
         if not isinstance(filters, entities.Filters):
             raise exceptions.PlatformException('400', 'Unknown filters type')
 
-        # page size
-        if page_size is None:
-            # take from default
-            page_size = filters.page_size
-        else:
-            filters.page_size = page_size
-
-        # page offset
-        if page_offset is None:
-            # take from default
-            page_offset = filters.page
-        else:
-            filters.page = page_offset
-
         paged = entities.PagedEntities(items_repository=self,
                                        filters=filters,
-                                       page_offset=page_offset,
-                                       page_size=page_size,
+                                       page_offset=filters.page,
+                                       page_size=filters.page_size,
                                        client_api=self._client_api)
         paged.get_page()
         return paged

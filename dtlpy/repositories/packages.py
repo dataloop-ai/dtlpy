@@ -158,7 +158,7 @@ class Packages:
             raise exceptions.PlatformException(response)
         return response.json()
 
-    def list(self, filters=None, page_offset=None, page_size=None, project_id=None):
+    def list(self, filters=None, project_id=None):
         """
         List project packages
         :return:
@@ -170,20 +170,6 @@ class Packages:
         if not isinstance(filters, entities.Filters):
             raise exceptions.PlatformException('400', 'Unknown filters type')
 
-        # page size
-        if page_size is None:
-            # take from default
-            page_size = filters.page_size
-        else:
-            filters.page_size = page_size
-
-        # page offset
-        if page_offset is None:
-            # take from default
-            page_offset = filters.page
-        else:
-            filters.page = page_offset
-
         if project_id is None and self.project is not None:
             project_id = self.project.id
 
@@ -192,8 +178,8 @@ class Packages:
 
         paged = entities.PagedEntities(items_repository=self,
                                        filters=filters,
-                                       page_offset=page_offset,
-                                       page_size=page_size,
+                                       page_offset=filters.page,
+                                       page_size=filters.page_size,
                                        project_id=project_id,
                                        client_api=self._client_api)
         paged.get_page()

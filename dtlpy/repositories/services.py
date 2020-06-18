@@ -92,7 +92,7 @@ class Services:
     ###########
     # methods #
     ###########
-    def get(self, service_name=None, service_id=None, checkout=False, fetch=None):
+    def get(self, service_name=None, service_id=None, checkout=False, fetch=None, **kwargs):
         """
         Get service
 
@@ -102,6 +102,8 @@ class Services:
         :param fetch: optional - fetch entity from platform, default taken from cookie
         :return: Service object
         """
+        get_globals = kwargs.get('get_globals', False)
+
         if fetch is None:
             fetch = self._client_api.fetch_entities
 
@@ -125,9 +127,12 @@ class Services:
                                                      package=self._package,
                                                      project=self._project)
             elif service_name is not None:
-                services = self.list(filters=entities.Filters(resource=entities.FiltersResource.SERVICE,
-                                                              field='name',
-                                                              values=service_name))
+                filters = entities.Filters(resource=entities.FiltersResource.SERVICE,
+                                           field='name',
+                                           values=service_name)
+                if get_globals:
+                    filters.pop('global')
+                services = self.list(filters=filters)
                 if services.items_count > 1:
                     raise exceptions.PlatformException('404', 'More than one service with same name.')
                 elif services.items_count == 0:
@@ -180,7 +185,7 @@ class Services:
 
         return response.json()
 
-    def list(self, filters=None, page_offset=None, page_size=None):
+    def list(self, filters=None, **kwargs):
         """
         List project services
         :return:
@@ -194,29 +199,17 @@ class Services:
                 filters.add(field='projectId', values=self._project_id)
             if self._package is not None:
                 filters.add(field='packageId', values=self._package.id)
+            if kwargs.get('get_globals', False):
+                filters.pop('global')
 
         # assert type filters
         if not isinstance(filters, entities.Filters):
             raise exceptions.PlatformException('400', 'Unknown filters type')
 
-        # page size
-        if page_size is None:
-            # take from default
-            page_size = filters.page_size
-        else:
-            filters.page_size = page_size
-
-        # page offset
-        if page_offset is None:
-            # take from default
-            page_offset = filters.page
-        else:
-            filters.page = page_offset
-
         paged = entities.PagedEntities(items_repository=self,
                                        filters=filters,
-                                       page_offset=page_offset,
-                                       page_size=page_size,
+                                       page_offset=filters.page,
+                                       page_size=filters.page_size,
                                        client_api=self._client_api)
         paged.get_page()
         return paged
