@@ -55,9 +55,10 @@ class Filters:
     """
 
     def __init__(self, field=None, values=None, operator=None, method=None, custom_filter=None,
-                 resource=FiltersResource.ITEM):
+                 resource=FiltersResource.ITEM, use_defaults=True):
         self.or_filter_list = list()
         self.and_filter_list = list()
+        self._unique_fields = list()
         self.custom_filter = custom_filter
         self.known_operators = ['or', 'and', 'in', 'ne', 'eq', 'gt', 'glob', 'lt']
         self._resource = resource
@@ -75,9 +76,10 @@ class Filters:
         self._ref_assignment_id = None
         self._ref_task_id = None
 
+        self._use_defaults = use_defaults
         self.__add_defaults()
 
-        if field is not None and values is not None:
+        if field is not None:
             self.add(field=field, values=values, operator=operator, method=method)
 
     @property
@@ -93,6 +95,7 @@ class Filters:
     def reset(self):
         self.or_filter_list = list()
         self.and_filter_list = list()
+        self._unique_fields = list()
         self.custom_filter = None
         self.page = 0
         self.page_size = 1000
@@ -168,9 +171,7 @@ class Filters:
 
         # create SingleFilter object and add to self.filter_list
         if method == FiltersMethod.OR:
-            self.or_filter_list.append(
-                SingleFilter(field=field, values=values, operator=operator)
-            )
+            self.or_filter_list.append(SingleFilter(field=field, values=values, operator=operator))
         elif method == FiltersMethod.AND:
             self.__override(field=field, values=values, operator=operator)
         else:
@@ -228,22 +229,24 @@ class Filters:
         self.join['filter']['$and'].append(SingleFilter(field=field, values=values, operator=operator).prepare())
 
     def __add_defaults(self):
-        self._unique_fields = list()
-        # add items defaults
-        if self.resource == FiltersResource.ITEM:
-            self._unique_fields = ['type', 'hidden']
-            self.add(field='hidden', values=False, method='and')
-            self.add(field='type', values='file', method='and')
-            self.sort_by(field='type', value='ascending')
-            self.sort_by(field='createdAt', value='descending')
-        # add service defaults
-        elif self.resource == FiltersResource.SERVICE:
-            self._unique_fields = ['global']
-            self.add(field='global', values=False, method='and')
-        # add annotations defaults
-        elif self.resource == FiltersResource.ANNOTATION:
-            self.sort_by(field='label', value='ascending')
-            self.sort_by(field='createdAt', value='descending')
+        if self._use_defaults:
+            # add items defaults
+            if self.resource == FiltersResource.ITEM:
+                self._unique_fields = ['type', 'hidden']
+                self.add(field='hidden', values=False, method=FiltersMethod.AND)
+                self.add(field='type', values='file', method=FiltersMethod.AND)
+                self.sort_by(field='type', value=FiltersOrderByDirection.ASCENDING)
+                self.sort_by(field='createdAt', value=FiltersOrderByDirection.DESCENDING)
+            # add service defaults
+            elif self.resource == FiltersResource.SERVICE:
+                self._unique_fields = ['global']
+                self.add(field='global', values=False, method=FiltersMethod.AND)
+            # add annotations defaults
+            elif self.resource == FiltersResource.ANNOTATION:
+                self._unique_fields = ['type']
+                self.add(field='type', values='note', operator=FiltersOperations.NOT_EQUAL, method=FiltersMethod.AND)
+                self.sort_by(field='label', value=FiltersOrderByDirection.ASCENDING)
+                self.sort_by(field='createdAt', value=FiltersOrderByDirection.DESCENDING)
 
     def __generate_query(self):
         filters_dict = dict()

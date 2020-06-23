@@ -307,17 +307,12 @@ class AnnotationCollection(entities.BaseEntity):
     @staticmethod
     def _json_to_annotation(item, w_json, is_video=None, fps=25, item_metadata=None):
         try:
-            # ignore notes
-            if w_json['type'] == 'note':
-                annotation = 'note'
-                status = False
-            else:
-                annotation = entities.Annotation.from_json(_json=w_json,
-                                                           fps=fps,
-                                                           item_metadata=item_metadata,
-                                                           is_video=is_video,
-                                                           item=item)
-                status = True
+            annotation = entities.Annotation.from_json(_json=w_json,
+                                                       fps=fps,
+                                                       item_metadata=item_metadata,
+                                                       is_video=is_video,
+                                                       item=item)
+            status = True
         except Exception:
             annotation = traceback.format_exc()
             status = False
@@ -371,7 +366,7 @@ class AnnotationCollection(entities.BaseEntity):
                                                       is_video=is_video,
                                                       w_json=single_json)
         # log errors
-        _ = [logger.warning(j[1]) for j in results if j[0] is False and j[1] != 'note']
+        _ = [logger.warning(j[1]) for j in results if j[0] is False]
 
         # return good jobs
         annotations = [j[1] for j in results if j[0] is True]

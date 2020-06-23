@@ -29,7 +29,7 @@ from .filters import Filters, FiltersKnownFields, FiltersResource, FiltersOperat
 from .recipe import Recipe
 from .ontology import Ontology
 from .annotation_definitions import Box, Point, Segmentation, Polygon, Ellipse, Classification, Subtitle, \
-    Polyline, Comparison, UndefinedAnnotationType
+    Polyline, Comparison, UndefinedAnnotationType, Note
 from .label import Label
 from .package import Package
 from .package_module import PackageModule

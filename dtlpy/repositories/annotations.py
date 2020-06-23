@@ -123,23 +123,13 @@ class Annotations:
         :param page_size:
         :return: Pages object
         """
-        if filters is None and self._item is not None:
-            success, response = self._client_api.gen_request(req_type='get',
-                                                             path='/items/{}/annotations'.format(self.item.id))
-            if success:
-                annotations = entities.AnnotationCollection.from_json(_json=response.json(),
-                                                                      item=self.item)
-            else:
-                raise exceptions.PlatformException(response)
-
-            return annotations
-
-        elif self._dataset_id is not None:
+        if self._dataset_id is not None:
             if filters is None:
                 filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION)
 
             if self._item is not None and not filters.has_field('itemId'):
                 filters = deepcopy(filters)
+                filters.page_size = 1000
                 filters.add(field='itemId', values=self.item.id, method=entities.FiltersMethod.AND)
 
             # assert type filters
@@ -166,7 +156,17 @@ class Annotations:
                                            page_size=page_size,
                                            client_api=self._client_api)
             paged.get_page()
-            return paged
+
+            if self._item is not None:
+                if paged.total_pages_count > 1:
+                    annotations = list()
+                    for page in paged:
+                        annotations += page
+                else:
+                    annotations = paged.items
+                return entities.AnnotationCollection(annotations=annotations, item=self._item)
+            else:
+                return paged
         else:
             raise exceptions.PlatformException('400',
                                                'Please use item.annotations.list() or dataset.annotations.list() '

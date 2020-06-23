@@ -23,6 +23,7 @@ from .__version__ import version as __version__
 from .entities import (
     Box,
     Point,
+    Note,
     Segmentation,
     Polygon,
     Ellipse,

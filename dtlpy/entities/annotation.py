@@ -198,6 +198,18 @@ class Annotation(entities.BaseEntity):
         self.annotation_definition.left = left
 
     @property
+    def description(self):
+        description = None
+        if 'system' in self.metadata:
+            description = self.metadata['system'].get('description', None)
+        return description
+
+    @description.setter
+    def description(self, description):
+        if 'system' in self.metadata:
+            self.metadata['system']['description'] = description
+
+    @property
     def right(self):
         return self.annotation_definition.right
 
@@ -695,10 +707,6 @@ class Annotation(entities.BaseEntity):
         if item_metadata is None:
             item_metadata = dict()
 
-        # handle 'note'
-        if _json['type'] == 'note':
-            return None
-
         if is_video is None:
             if item is None:
                 is_video = False
@@ -1104,6 +1112,8 @@ class FrameAnnotation(entities.BaseEntity):
             annotation = entities.Ellipse.from_json(_json)
         elif _json['type'] == 'comparison':
             annotation = entities.Comparison.from_json(_json)
+        elif _json['type'] == 'note':
+            annotation = entities.Note.from_json(_json)
         else:
             annotation = entities.UndefinedAnnotationType.from_json(_json)
         return annotation

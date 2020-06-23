@@ -2,9 +2,9 @@ options:
   docker: true
 pipelines:
   tags:
-    "v*":
+    "*":
       - step:
-          image: gcr.io/google.com/cloudsdktool/cloud-sdk:271.0.0
+          image: gcr.io/google.com/cloudsdktool/cloud-sdk:latest
           name: Build SDK Container
           script:
             - case "$BITBUCKET_TAG" in "") export BITBUCKET_TAG="build-$BITBUCKET_BUILD_NUMBER"; esac

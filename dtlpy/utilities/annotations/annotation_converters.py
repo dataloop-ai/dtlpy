@@ -101,7 +101,7 @@ class BaseConverterFromPlatform:
                     # check if annotations file exists
                     if not os.path.isfile(in_filepath):
                         self.results[i_item] = False
-                        self.errors[i_item] = 'file note found: %s' % in_filepath
+                        self.errors[i_item] = 'file not found: %s' % in_filepath
                         continue
 
                     with open(in_filepath, 'r') as f:
