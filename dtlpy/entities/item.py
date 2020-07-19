@@ -277,7 +277,7 @@ class Item(entities.BaseEntity):
         :param file_types: a list of file type to download. e.g ['video/webm', 'video/mp4', 'image/jpeg', 'image/png']
         :param num_workers: default - 32
         :param save_locally: bool. save to disk or return a buffer
-        :param annotation_options: download annotations options: ['mask', 'img_mask', 'instance', 'json']
+        :param annotation_options: download annotations options: dl.ViewAnnotationOptions.list()
         :param with_text: optional - add text to annotations, default = False
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :return: Output (list)

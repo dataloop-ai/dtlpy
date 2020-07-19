@@ -25,8 +25,9 @@ class FiltersResource:
     SERVICE = "services"
     TRIGGER = "triggers"
     MODEL = "models"
-    CHECKPOINT = "checkpoints"
+    SNAPSHOT = "checkpoints"
     WEBHOOK = "webhooks"
+    RECIPE = 'recipe'
 
 
 class FiltersOperations:
@@ -185,6 +186,15 @@ class Filters:
         self.and_filter_list.append(
             SingleFilter(field=field, values=values, operator=operator)
         )
+
+    def generate_url_query_params(self, url):
+        url = '{}?'.format(url)
+        for f in self.and_filter_list:
+            if isinstance(f.values, list):
+                url = '{}{}={}&'.format(url, f.field, ','.join(f.values))
+            else:
+                url = '{}{}={}&'.format(url, f.field, f.values)
+        return '{}&pageOffset={}&pageSize={}'.format(url, self.page, self.page_size)
 
     def has_field(self, field):
         for single_filter in self.or_filter_list:

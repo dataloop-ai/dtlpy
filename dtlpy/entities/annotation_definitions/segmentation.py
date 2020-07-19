@@ -5,6 +5,8 @@ from PIL import Image
 
 from . import BaseAnnotationDefinition
 
+from .box import Box
+
 
 class Segmentation(BaseAnnotationDefinition):
     """
@@ -34,29 +36,29 @@ class Segmentation(BaseAnnotationDefinition):
     @property
     def left(self):
         left = 0
-        if len(self.pts[0]) > 0:
-            left = np.min(self.pts[0])
+        if len(self.pts[1]) > 0:
+            left = np.min(self.pts[1])
         return left
 
     @property
     def top(self):
         top = 0
-        if len(self.pts[1]) > 0:
-            top = np.min(self.pts[1])
+        if len(self.pts[0]) > 0:
+            top = np.min(self.pts[0])
         return top
 
     @property
     def right(self):
         right = 0
-        if len(self.pts[0]) > 0:
-            right = np.max(self.pts[0])
+        if len(self.pts[1]) > 0:
+            right = np.max(self.pts[1])
         return right
 
     @property
     def bottom(self):
         bottom = 0
-        if len(self.pts[1]) > 0:
-            bottom = np.max(self.pts[1])
+        if len(self.pts[0]) > 0:
+            bottom = np.max(self.pts[0])
         return bottom
 
     def show(self, image, thickness, with_text, height, width, annotation_format, color):
@@ -67,7 +69,7 @@ class Segmentation(BaseAnnotationDefinition):
         :param with_text: not required
         :param height: item height
         :param width: item width
-        :param annotation_format: ['mask', 'instance']
+        :param annotation_format: options: dl.ViewAnnotationOptions.list()
         :param color: color
         :return: ndarray
         """
@@ -93,6 +95,14 @@ class Segmentation(BaseAnnotationDefinition):
         new_image_string = base64.b64encode(buff.getvalue()).decode("utf-8")
         coordinates = "data:image/png;base64,%s" % new_image_string
         return coordinates
+
+    def to_box(self):
+        return Box(left=self.left,
+                   top=self.top,
+                   right=self.right,
+                   bottom=self.bottom,
+                   label= self.label,
+                   attributes=self.attributes)
 
     @classmethod
     def from_polygon(cls, geo, label, shape, is_open=False, attributes=None):

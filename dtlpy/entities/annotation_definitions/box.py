@@ -42,7 +42,7 @@ class Box(BaseAnnotationDefinition):
         :param with_text: not required
         :param height: item height
         :param width: item width
-        :param annotation_format: ['mask', 'instance']
+        :param annotation_format: options: dl.ViewAnnotationOptions.list()
         :param color: color
         :return: ndarray
         """
@@ -99,3 +99,30 @@ class Box(BaseAnnotationDefinition):
             label=_json["label"],
             attributes=attributes,
         )
+
+    @classmethod
+    def from_segmentation(cls, mask, label, attributes=None):
+        """
+        Convert binary mask to Polygon
+        :param mask: binary mask (0,1)
+        :param label: annotation label
+        :param attributes: annotations list of attributes
+        :return: Box annotation
+        """
+        left = 0
+        if len(mask[1]) > 0:
+            left = np.min(mask[1])
+
+        top = 0
+        if len(mask[0]) > 0:
+            top = np.min(mask[0])
+
+        right = 0
+        if len(mask[1]) > 0:
+            right = np.max(mask[1])
+
+        bottom = 0
+        if len(mask[0]) > 0:
+            bottom = np.max(mask[0])
+
+        return cls(left=left, top=top, right=right, bottom=bottom, label=label, attributes=attributes)

@@ -27,7 +27,7 @@ from .calls_counter import CallsCounter
 from .cookie import CookieIO
 from .logins import login, login_secret
 from .async_utils import AsyncResponse, AsyncUploadStream, AsyncResponseError, AsyncThreadEventLoop
-from .default_environments import DEFAULT_ENVIRONMENT
+from .service_defaults import DEFAULT_ENVIRONMENTS, DEFAULT_ENVIRONMENT
 from .aihttp_retry import RetryClient
 from .. import miscellaneous, exceptions, __version__
 
@@ -146,7 +146,6 @@ class ApiClient:
         self._token = None
         self._environments = None
         self._environment = None
-        self._environments = None
         self._verbose = None
         self._fetch_entities = None
         # define other params
@@ -175,20 +174,12 @@ class ApiClient:
         ##################
         # configurations #
         ##################
-        # read URL
-        environment = self.environment
-        if environment is None:
-            self.setenv('prod')
-
         # check for proxies in connection
         self.check_proxy()
 
         # set token if input
         if token is not None:
             self.token = token
-
-        # validate token
-        self.token_expired()
 
         # STDOUT
         self.remove_keys_list = ['contributors', 'url', 'annotations', 'items', 'export', 'directoryTree',
@@ -299,6 +290,8 @@ class ApiClient:
         _environment = self._environment
         if _environment is None:
             _environment = self.cookie_io.get('url')
+            if _environment is None:
+                _environment = DEFAULT_ENVIRONMENT
             self._environment = _environment
         return _environment
 
@@ -334,7 +327,7 @@ class ApiClient:
             # if cookie is None  - init with defaults
             if _environments is None:
                 # default
-                _environments = DEFAULT_ENVIRONMENT
+                _environments = DEFAULT_ENVIRONMENTS
                 # save to local variable
                 self.environments = _environments
             else:
@@ -454,7 +447,7 @@ class ApiClient:
         headers_req['User-Agent'] = requests_toolbelt.user_agent('dtlpy', __version__.version)
         if headers is not None:
             if not isinstance(headers, dict):
-                raise exceptions.PlatformException(error=400, message="Input 'headers' must be a dictionary")
+                raise exceptions.PlatformException(error='400', message="Input 'headers' must be a dictionary")
             for k, v in headers.items():
                 headers_req[k] = v
         req = requests.Request(method=req_type,
@@ -527,7 +520,7 @@ class ApiClient:
 
         if headers is not None:
             if not isinstance(headers, dict):
-                raise exceptions.PlatformException(error=400, message="Input 'headers' must be a dictionary")
+                raise exceptions.PlatformException(error='400', message="Input 'headers' must be a dictionary")
             for k, v in headers.items():
                 headers_req[k] = v
         req = requests.Request(method=req_type,
@@ -803,12 +796,13 @@ class ApiClient:
                 else:
                     logger.debug('Unknown response type: {}. cant print'.format(type(results)))
                     return
+                request_id = resp.headers.get('x-request-id', 'na')
                 logger.debug('--- [Request] Start ---')
                 logger.debug(self.print_request(req=resp.request, to_return=True))
                 logger.debug('--- [Request] End ---')
-                logger.debug('--- [Response] Start ---')
+                logger.debug('--- [Response][x-request-id:{}] Start ---'.format(request_id))
                 to_print.print(show_all=False, level='debug')
-                logger.debug('--- [Response] End ---')
+                logger.debug('--- [Response][x-request-id:{}] End ---'.format(request_id))
         except Exception:
             logger.exception('Printing response from gate:')
 
@@ -829,15 +823,16 @@ class ApiClient:
         if hasattr(resp, 'text'):
             msg += '[Text: {val}]'.format(val=resp.text)
 
+        request_id = resp.headers.get('x-request-id', 'na')
         logger.debug('--- [Request] Start ---')
         logger.debug(self.print_request(req=resp.request, to_return=True))
         logger.debug('--- [Request] End ---')
-        logger.debug('--- [Response] Start ---')
+        logger.debug('--- [Response][x-request-id:{}] Start ---'.format(request_id))
         if log_error:
             logger.error(msg)
         else:
             logger.debug(msg)
-        logger.debug('--- [Response] End ---')
+        logger.debug('--- [Response][x-request-id:{}] End ---'.format(request_id))
         self.platform_exception = PlatformError(resp)
 
     def print_request(self, req=None, to_return=False, with_auth=False):
@@ -968,7 +963,7 @@ class ApiClient:
             self.refresh_token_active = False
         if self.environment not in self.environments.keys():
             # env params missing
-            logger.error('RefreshToken: Missing environments params for refreshing token')
+            logger.debug('RefreshToken: Missing environments params for refreshing token')
             self.refresh_token_active = False
 
         if self.refresh_token_active is False:

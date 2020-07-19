@@ -50,7 +50,7 @@ class Classification(BaseAnnotationDefinition):
         :param with_text: not required
         :param height: item height
         :param width: item width
-        :param annotation_format: ['mask', 'instance']
+        :param annotation_format: options: dl.ViewAnnotationOptions.list()
         :param color: color
         :return: ndarray
         """

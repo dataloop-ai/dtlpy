@@ -1,6 +1,6 @@
 import logging
 
-from .. import entities, exceptions, repositories, miscellaneous
+from .. import entities, exceptions, repositories, miscellaneous, services
 
 logger = logging.getLogger(name=__name__)
 
@@ -10,7 +10,11 @@ class Items:
     Items repository
     """
 
-    def __init__(self, client_api, datasets=None, dataset=None, dataset_id=None, items_entity=None):
+    def __init__(self,
+                 client_api: services.ApiClient,
+                 datasets: repositories.Datasets = None,
+                 dataset: entities.Dataset = None,
+                 dataset_id=None, items_entity=None):
         self._client_api = client_api
         self._dataset = dataset
         self._dataset_id = dataset_id
@@ -18,12 +22,14 @@ class Items:
         # set items entity to represent the item (Item, Codebase, Artifact etc...)
         if items_entity is None:
             self.items_entity = entities.Item
+        if self._dataset_id is None and self._dataset is not None:
+            self._dataset_id = self._dataset.id
 
     ############
     # entities #
     ############
     @property
-    def dataset(self):
+    def dataset(self) -> entities.Dataset:
         if self._dataset is None:
             if self._dataset_id is None:
                 raise exceptions.PlatformException(
@@ -34,7 +40,7 @@ class Items:
         return self._dataset
 
     @dataset.setter
-    def dataset(self, dataset):
+    def dataset(self, dataset: entities.Dataset):
         if not isinstance(dataset, entities.Dataset):
             raise ValueError('Must input a valid Dataset entity')
         self._dataset = dataset
@@ -43,7 +49,7 @@ class Items:
     # repositories #
     ################
     @property
-    def datasets(self):
+    def datasets(self) -> repositories.Datasets:
         if self._datasets is None:
             self._datasets = repositories.Datasets(client_api=self._client_api)
         assert isinstance(self._datasets, repositories.Datasets)
@@ -59,7 +65,7 @@ class Items:
             raise exceptions.PlatformException(error="403",
                                                message="Unable to set given entity. Entity give: {}".format(entity))
 
-    def get_all_items(self, filters=None):
+    def get_all_items(self, filters: entities.Filters = None) -> [entities.Item]:
         """
         Get all items in dataset
 
@@ -76,7 +82,7 @@ class Items:
         items = [item for item in items if item is not None]
         return items
 
-    def _build_entities_from_response(self, response_items):
+    def _build_entities_from_response(self, response_items) -> miscellaneous.List[entities.Item]:
         pool = self._client_api.thread_pools(pool_name='entity.create')
         jobs = [None for _ in range(len(response_items))]
         # return triggers list
@@ -95,7 +101,7 @@ class Items:
         items = miscellaneous.List([r[1] for r in results if r[0] is True])
         return items
 
-    def _list(self, filters):
+    def _list(self, filters: entities.Filters):
         """
         Get dataset items list This is a browsing endpoint, for any given path item count will be returned,
         user is expected to perform another request then for every folder item to actually get the its item list.
@@ -111,7 +117,7 @@ class Items:
             raise exceptions.PlatformException(response)
         return response.json()
 
-    def list(self, filters=None, page_offset=None, page_size=None):
+    def list(self, filters: entities.Filters = None, page_offset=None, page_size=None) -> entities.PagedEntities:
         """
         List items
 
@@ -156,7 +162,7 @@ class Items:
         paged.get_page()
         return paged
 
-    def get(self, filepath=None, item_id=None, fetch=None):
+    def get(self, filepath=None, item_id=None, fetch=None) -> entities.Item:
         """
         Get Item object
 
@@ -228,7 +234,7 @@ class Items:
             raise exceptions.PlatformException(response)
         return cloned_item
 
-    def delete(self, filename=None, item_id=None, filters=None):
+    def delete(self, filename=None, item_id=None, filters: entities.Filters = None):
         """
         Delete item from platform
 
@@ -270,7 +276,12 @@ class Items:
         else:
             raise exceptions.PlatformException(response)
 
-    def update(self, item=None, filters=None, update_values=None, system_update_values=None, system_metadata=False):
+    def update(self,
+               item: entities.Item = None,
+               filters: entities.Filters = None,
+               update_values=None,
+               system_update_values=None,
+               system_metadata=False):
         """
         Update items metadata
 
@@ -334,7 +345,7 @@ class Items:
 
     def download(
             self,
-            filters=None,
+            filters: entities.Filters = None,
             items=None,
             # download options
             local_path=None,
@@ -363,7 +374,7 @@ class Items:
         :param num_workers: default - 32
         :param avoid_unnecessary_annotation_download: default - False
         :param save_locally: bool. save to disk or return a buffer
-        :param annotation_options: download annotations options: ['mask', 'img_mask', 'instance', 'json']
+        :param annotation_options: download annotations options:  dl.ViewAnnotationOptions.list()
         :param with_text: optional - add text to annotations, default = False
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :param without_relative_path: string - remote path - download items without the relative path from platform
@@ -490,3 +501,82 @@ class Items:
         else:
             logger.error(out_errors)
             logger.error('Item/s updated with {} errors'.format(len(out_errors)))
+
+    def make_dir(self, directory, dataset: entities.Dataset = None) -> entities.Item:
+        """
+        Create a directory in a dataset
+
+        :param directory: name of directory
+        :param dataset: optional
+        :return:
+        """
+        if self._dataset_id is None and dataset is None:
+            raise exceptions.PlatformException('400', 'Please provide parameter dataset')
+
+        payload = {
+            'type': 'dir',
+            'path': directory
+        }
+        headers = {'content-type': 'application/x-www-form-urlencoded'}
+        success, response = self._client_api.gen_request(req_type="post",
+                                                         headers=headers,
+                                                         path="/datasets/{}/items".format(self._dataset_id),
+                                                         data=payload)
+        if success:
+            item = self.items_entity.from_json(client_api=self._client_api,
+                                               _json=response.json(),
+                                               dataset=self._dataset)
+        else:
+            raise exceptions.PlatformException(response)
+
+        return item
+
+    def move_items(self, destination, filters: entities.Filters = None, items=None,
+                   dataset: entities.Dataset = None) -> bool:
+        """
+        Move items to another directory.
+
+        If directory does not exist we will create it
+
+        :param destination: destination directory
+        :param filters: optional - either this or items. Query of items to move
+        :param items: optional - either this or filters. A list of items to move
+        :param dataset: optional
+        :return: True if success
+        """
+        if filters is None and items is None:
+            raise exceptions.PlatformException('400', 'Must provide either filters or items')
+
+        dest_dir_filter = entities.Filters(resource=entities.FiltersResource.ITEM, field='type', values='dir')
+        dest_dir_filter.recursive = False
+        dest_dir_filter.add(field='filename', values=destination)
+        dirs_page = self.list(filters=dest_dir_filter)
+
+        if dirs_page.items_count == 0:
+            directory = self.make_dir(directory=destination, dataset=dataset)
+        elif dirs_page.items_count == 1:
+            directory = dirs_page.items[0]
+        else:
+            raise exceptions.PlatformException('404', 'More than one directory by the name of: {}'.format(destination))
+
+        if filters is not None:
+            items = self.list(filters=filters)
+        elif isinstance(items, list):
+            items = [items]
+        elif not isinstance(items, entities.PagedEntities):
+            raise exceptions.PlatformException('400', 'items must be a list of items or a pages entity not {}'.format(
+                type(items)))
+
+        item_ids = list()
+        for page in items:
+            for item in page:
+                item_ids.append(item.id)
+
+        success, response = self._client_api.gen_request(req_type="put",
+                                                         path="/datasets/{}/items/{}".format(self._dataset_id,
+                                                                                             directory.id),
+                                                         json_req=item_ids)
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        return success

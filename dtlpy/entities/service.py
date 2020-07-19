@@ -58,7 +58,7 @@ class Service(entities.BaseEntity):
     _repositories = attr.ib(repr=False)
 
     @staticmethod
-    def _protected_from_json(_json, client_api, package=None, project=None, is_fetched=True):
+    def _protected_from_json(_json: dict, client_api: services.ApiClient, package=None, project=None, is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
         :param _json:
@@ -80,7 +80,7 @@ class Service(entities.BaseEntity):
         return status, service
 
     @classmethod
-    def from_json(cls, _json, client_api, package=None, project=None, is_fetched=True):
+    def from_json(cls, _json: dict, client_api: services.ApiClient, package=None, project=None, is_fetched=True):
         """
 
         :param _json:
@@ -127,6 +127,7 @@ class Service(entities.BaseEntity):
             project=project
         )
         inst.is_fetched = is_fetched
+        inst.runtime.service = inst
         return inst
 
     ############
@@ -381,12 +382,13 @@ class KubernetesAutuscalerType:
     CPU = 'cpu'
 
 
-class KubernetesAutoscaler:
+class KubernetesAutoscaler(entities.BaseEntity):
     MIN_REPLICA_DEFAULT = 0
     MAX_REPLICA_DEFAULT = 1
     AUTOSCALER_TYPE_DEFAULT = KubernetesAutuscalerType.RABBITMQ
 
     def __init__(self,
+                 runtime,
                  autoscaler_type=AUTOSCALER_TYPE_DEFAULT,
                  min_replicas=MIN_REPLICA_DEFAULT,
                  max_replicas=MAX_REPLICA_DEFAULT,
@@ -394,6 +396,7 @@ class KubernetesAutoscaler:
         self.autoscaler_type = kwargs.get('type', autoscaler_type)
         self.min_replicas = kwargs.get('minReplicas', min_replicas)
         self.max_replicas = kwargs.get('maxReplicas', max_replicas)
+        self.runtime = runtime
 
     def to_json(self):
         _json = {
@@ -403,16 +406,23 @@ class KubernetesAutoscaler:
         }
         return _json
 
+    def delete(self):
+        self.runtime._delete_autoscaler()
+
+    def update(self):
+        self.runtime.service.update()
+
 
 class KubernetesRabbitmqAutoscaler(KubernetesAutoscaler):
     QUEUE_LENGTH_DEFAULT = 1000
 
     def __init__(self,
+                 runtime,
                  min_replicas=KubernetesAutoscaler.MIN_REPLICA_DEFAULT,
                  max_replicas=KubernetesAutoscaler.MAX_REPLICA_DEFAULT,
                  queue_length=QUEUE_LENGTH_DEFAULT,
                  **kwargs):
-        super().__init__(min_replicas=min_replicas, max_replicas=max_replicas,
+        super().__init__(min_replicas=min_replicas, max_replicas=max_replicas, runtime=runtime,
                          autoscaler_type=KubernetesAutuscalerType.RABBITMQ, **kwargs)
         self.queue_length = kwargs.get('queueLength', queue_length)
 
@@ -426,9 +436,21 @@ class RuntimeType:
     KUBERNETES = 'kubernetes'
 
 
-class ServiceRuntime:
-    def __init__(self, service_type=RuntimeType.KUBERNETES):
+class ServiceRuntime(entities.BaseEntity):
+    def __init__(self, service=None, service_type=RuntimeType.KUBERNETES):
         self.service_type = service_type
+        self.service = service
+        self._autoscaler_delete_mode = False
+
+    def update(self, service=None):
+        if service is None and self.service is None:
+            raise Exception('Cannot update without a service attribute or service param. Please set service')
+        self.service.update()
+
+    def _delete_autoscaler(self):
+        self._autoscaler_delete_mode = True
+        self.autoscaler = None
+        self.service.update()
 
 
 class KubernetesRuntime(ServiceRuntime):
@@ -437,6 +459,7 @@ class KubernetesRuntime(ServiceRuntime):
     DEFAULT_CONCURRENCY = 6
 
     def __init__(self,
+                 service=None,
                  pod_type=DEFAULT_POD_TYPE,
                  num_replicas=DEFAULT_NUM_REPLICAS,
                  concurrency=DEFAULT_CONCURRENCY,
@@ -444,7 +467,7 @@ class KubernetesRuntime(ServiceRuntime):
                  autoscaler=None,
                  **kwargs):
 
-        super().__init__(service_type=RuntimeType.KUBERNETES)
+        super().__init__(service_type=RuntimeType.KUBERNETES, service=service)
         self.pod_type = kwargs.get('podType', pod_type)
         self.num_replicas = kwargs.get('numReplicas', num_replicas)
         self.concurrency = kwargs.get('concurrency', concurrency)
@@ -454,7 +477,7 @@ class KubernetesRuntime(ServiceRuntime):
         self.autoscaler = kwargs.get('autoscaler', autoscaler)
         if self.autoscaler is not None and isinstance(self.autoscaler, dict):
             if self.autoscaler['type'] == KubernetesAutuscalerType.RABBITMQ:
-                self.autoscaler = KubernetesRabbitmqAutoscaler(**self.autoscaler)
+                self.autoscaler = KubernetesRabbitmqAutoscaler(**self.autoscaler, runtime=self)
             else:
                 raise NotImplementedError(
                     'Unknown kubernetes autoscaler type: {}'.format(self.autoscaler['type']))
@@ -474,5 +497,8 @@ class KubernetesRuntime(ServiceRuntime):
 
         if self.autoscaler is not None:
             _json['autoscaler'] = self.autoscaler.to_json()
+        elif self._autoscaler_delete_mode:
+            _json['autoscaler'] = None
+            self._autoscaler_delete_mode = False
 
         return _json

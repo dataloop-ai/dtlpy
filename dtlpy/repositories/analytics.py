@@ -1,7 +1,7 @@
 import logging
 import pandas as pd
 
-from dtlpy import entities, exceptions
+from dtlpy import entities, exceptions, services
 
 logger = logging.getLogger(name=__name__)
 
@@ -11,7 +11,7 @@ class Analytics:
     Time series Repository
     """
 
-    def __init__(self, client_api, project=None):
+    def __init__(self, client_api: services.ApiClient, project: entities.Project = None):
         self._client_api = client_api
         self._project = project
 
@@ -19,7 +19,7 @@ class Analytics:
     # entities #
     ############
     @property
-    def project(self):
+    def project(self) -> entities.Project:
         if self._project is None:
             raise exceptions.PlatformException(
                 error='2001',
@@ -28,7 +28,7 @@ class Analytics:
         return self._project
 
     @project.setter
-    def project(self, project):
+    def project(self, project: entities.Project):
         if not isinstance(project, entities.Project):
             raise ValueError('Must input a valid Project entity')
         self._project = project
@@ -36,17 +36,19 @@ class Analytics:
     ############
     #  methods #
     ############
-    def get_samples(self, query=None):
+    def get_samples(self, query=None, return_field='samples') -> pd.DataFrame:
         """
         Get Analytics table
         :param query: match filters to get specific data from series
+        :param return_field: name of field to return from response. default: "samples"
         :return:
         """
         success, response = self._client_api.gen_request(req_type='post',
-                                                         path='/projects/{}/analytics/itemQuery'.format(self.project.id),
+                                                         path='/projects/{}/analytics/itemQuery'.format(
+                                                             self.project.id),
                                                          json_req=query)
         if success:
-            res = response.json()['samples']
+            res = response.json()[return_field]
             if isinstance(res, dict):
                 df = pd.DataFrame([res])
             elif isinstance(res, list):

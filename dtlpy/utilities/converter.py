@@ -314,7 +314,7 @@ class Converter:
                 try:
                     filename, ext = os.path.splitext(item.filename)
                     filename = '{}.json'.format(filename[1:])
-                    with open(os.path.join(path_to_dataloop_annotations_dir, filename), 'r') as f:
+                    with open(os.path.join(path_to_dataloop_annotations_dir, filename), 'r', encoding="utf8") as f:
                         annotations = json.load(f)['annotations']
                     annotations = entities.AnnotationCollection.from_json(annotations)
                 except Exception:
@@ -377,7 +377,7 @@ class Converter:
 
     def _upload_coco_dataset(self, local_items_path, local_annotations_path, only_bbox=False):
         logger.info('loading annotations json...')
-        with open(local_annotations_path, 'r') as f:
+        with open(local_annotations_path, 'r', encoding="utf8") as f:
             coco_json = json.load(f)
 
         try:

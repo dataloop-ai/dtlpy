@@ -39,7 +39,7 @@ class Webhook(entities.BaseEntity):
     _webhooks = attr.ib(default=None)
 
     @classmethod
-    def from_json(cls, _json, client_api, project=None):
+    def from_json(cls, _json: dict, client_api: services.ApiClient, project=None):
         return cls(
             http_method=_json.get('httpMethod', None),
             createdAt=_json.get("createdAt", None),

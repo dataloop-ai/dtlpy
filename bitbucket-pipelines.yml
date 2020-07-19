@@ -18,10 +18,24 @@ pipelines:
             - chmod +x ./build-docker.sh
             - ./build-docker.sh $BITBUCKET_TAG
             - git checkout -b "$BITBUCKET_TAG"
-    "run-test-5":
+            - git clone https://$GIT_USER:$GIT_PASSWORD@bitbucket.org/dataloop-ai/piper-agent-runner.git
+            - cd piper-agent-runner
+            - git config user.email $GIT_EMAIL
+            - git checkout master
+            - python3 bumpversion.py --hard $BITBUCKET_TAG.0
+            - git push --follow-tags
+            - cd ..
+            - git clone https://$GIT_USER:$GIT_PASSWORD@bitbucket.org/dataloop-ai/piper-agent-proxy.git
+            - cd piper-agent-proxy
+            - git config user.email $GIT_EMAIL
+            - git checkout master
+            - python3 bumpversion.py --hard $BITBUCKET_TAG.0
+            - git push --follow-tags
+            - cd ..
+    "run-test-python-3.5.4":
       - step:
-          image: python:3.5
-          name: Tests3.5
+          image: python:3.5.4
+          name: Tests-3.5.4
           script:
             - python --version
             - PYTHONPATH=$PWD
@@ -33,10 +47,10 @@ pipelines:
             - pip install gsutil
             - gsutil -m cp -R gs://dtlpy/assets tests/
             - python tests/test_runner.py
-    "run-test-6":
+    "run-test-python-3.6.11":
       - step:
-          image: python:3.6
-          name: Tests3.6
+          image: python:3.6.11
+          name: Tests-3.6.11
           script:
             - python --version
             - PYTHONPATH=$PWD
@@ -48,10 +62,10 @@ pipelines:
             - pip install gsutil
             - gsutil -m cp -R gs://dtlpy/assets tests/
             - python tests/test_runner.py
-    "run-test-7":
+    "run-test-python-3.7.8":
       - step:
-          image: python:3.7
-          name: Tests3.7
+          image: python:3.7.8
+          name: Tests3.7.8
           script:
             - python --version
             - PYTHONPATH=$PWD
@@ -63,10 +77,10 @@ pipelines:
             - pip install gsutil
             - gsutil -m cp -R gs://dtlpy/assets tests/
             - python tests/test_runner.py
-    "run-test-8":
+    "run-test-python-3.8.4":
       - step:
-          image: python:3.8
-          name: Tests3.8
+          image: python:3.8.4
+          name: Tests-3.8.4
           script:
             - python --version
             - PYTHONPATH=$PWD
@@ -80,8 +94,8 @@ pipelines:
             - python tests/test_runner.py
     "examples":
       - step:
-          image: python:3.5
-          name: Tests3.5
+          image: python:3.5.4
+          name: Examples-3.5.4
           script:
             - python --version
             - PYTHONPATH=$PWD

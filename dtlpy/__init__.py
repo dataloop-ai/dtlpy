@@ -17,6 +17,7 @@ import logging
 import sys
 import os
 
+from .services import DataloopLogger, ApiClient, check_sdk, Reporter
 from .exceptions import PlatformException
 from . import repositories, exceptions, entities, examples
 from .__version__ import version as __version__
@@ -26,6 +27,7 @@ from .entities import (
     Note,
     Segmentation,
     Polygon,
+    Project,
     Ellipse,
     Classification,
     Subtitle,
@@ -34,7 +36,7 @@ from .entities import (
     Webhook, HttpMethod,
     Trigger,
     AnnotationCollection,
-    Annotation, AnnotationOptions,
+    Annotation, ViewAnnotationOptions,
     Item, ItemStatus,
     Codebase,
     Filters,
@@ -51,7 +53,7 @@ from .entities import (
     FunctionIO,
     Modality, ModalityTypeEnum,
     Model,
-    Checkpoint,
+    Snapshot,
     Workload, WorkloadUnit,
     FiltersKnownFields, FiltersResource, FiltersOperations, FiltersMethod, FiltersOrderByDirection,
     FiltersKnownFields as KnownFields,
@@ -59,7 +61,6 @@ from .entities import (
     PackageInputType
 )
 from .utilities import Converter, BaseServiceRunner, Progress, AnnotationFormat
-from .services import DataloopLogger, ApiClient, check_sdk, Reporter
 from .repositories.packages import PackageCatalog
 
 # check python version
@@ -119,16 +120,7 @@ assignments = repositories.Assignments(client_api=client_api)
 tasks = repositories.Tasks(client_api=client_api)
 annotations = repositories.Annotations(client_api=client_api)
 models = repositories.Models(client_api=client_api)
-checkpoints = repositories.Checkpoints(client_api=client_api)
-
-if client_api.token_expired():
-    logger.error(
-        "Token expired, Please login."
-        "\nSDK login options: dl.login(), dl.login_token(), "
-        "dl.login_secret()"
-        "\nCLI login options: dlp login, dlp login-token, "
-        "dlp login-secret"
-    )
+snapshots = repositories.Snapshots(client_api=client_api)
 
 try:
     check_sdk.check(version=__version__, client_api=client_api)

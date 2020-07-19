@@ -120,7 +120,7 @@ class Execution(entities.BaseEntity):
             output=_json.get('output', None),
             status=_json.get('status', None),
             duration=_json.get('duration', None),
-            function_name=_json.get('functionName', entities.DEFAULT_PACKAGE_FUNCTION_NAME),
+            function_name=_json.get('functionName', entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME),
             input=_json.get('input', None),
             url=_json.get('url', None),
             id=_json.get('id', None),

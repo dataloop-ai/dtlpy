@@ -2,6 +2,7 @@ import datetime
 import os
 from logging import handlers
 
+from .service_defaults import DATALOOP_PATH
 
 class DataloopLogger(handlers.BaseRotatingHandler):
     """
@@ -39,7 +40,7 @@ class DataloopLogger(handlers.BaseRotatingHandler):
 
     @staticmethod
     def get_log_path():
-        log_path = os.path.join(os.path.expanduser('~'), '.dataloop', 'logs')
+        log_path = os.path.join(DATALOOP_PATH, 'logs')
         if not os.path.isdir(log_path):
             os.makedirs(log_path)
         return log_path

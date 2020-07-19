@@ -104,7 +104,7 @@ class BaseConverterFromPlatform:
                         self.errors[i_item] = 'file not found: %s' % in_filepath
                         continue
 
-                    with open(in_filepath, 'r') as f:
+                    with open(in_filepath, 'r', encoding="utf8") as f:
                         data = json.load(f)
 
                     pool.apply_async(self.threading_wrapper, kwds={'func': self.convert_single_file,

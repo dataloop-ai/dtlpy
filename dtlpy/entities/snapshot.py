@@ -9,16 +9,16 @@ logger = logging.getLogger(name=__name__)
 
 
 @attr.s
-class Checkpoint(entities.BaseEntity):
+class Snapshot(entities.BaseEntity):
     """
-    Checkpoint object
+    Snapshot object
     """
     # platform
     id = attr.ib()
     project_id = attr.ib()
     dataset_id = attr.ib(repr=False)
     model_id = attr.ib(repr=False)
-    parent_checkpoint_id = attr.ib(repr=False)
+    parent_snapshot_id = attr.ib(repr=False)
     artifacts_id = attr.ib()
 
     name = attr.ib()
@@ -40,40 +40,43 @@ class Checkpoint(entities.BaseEntity):
     def _protected_from_json(_json, client_api, project, model, is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
-        :param _json:
-        :param client_api:
-        :param dataset:
-        :return:
+
+        :param _json: platform representation of snapshot
+        :param client_api: ApiClient entity
+        :param project: project that owns the snapshot
+        :param model: model entity of the snapshot
+        :param is_fetched: is Entity fetched from Platform
+        :return: Snapshot entity
         """
         try:
-            checkpoint = Checkpoint.from_json(_json=_json,
-                                              client_api=client_api,
-                                              project=project,
-                                              model=model,
-                                              is_fetched=is_fetched)
+            snapshot = Snapshot.from_json(_json=_json,
+                                          client_api=client_api,
+                                          project=project,
+                                          model=model,
+                                          is_fetched=is_fetched)
             status = True
         except Exception:
-            checkpoint = traceback.format_exc()
+            snapshot = traceback.format_exc()
             status = False
-        return status, checkpoint
+        return status, snapshot
 
     @classmethod
     def from_json(cls, _json, client_api, project, model, is_fetched=True):
         """
-        Turn platform representation of checkpoint into a checkpoint entity
+        Turn platform representation of snapshot into a snapshot entity
 
-        :param _json: platform representation of checkpoint
-        :param client_api:
-        :param project:
-        :param model:
+        :param _json: platform representation of snapshot
+        :param client_api: ApiClient entity
+        :param project: project that owns the snapshot
+        :param model: model entity of the snapshot
         :param is_fetched: is Entity fetched from Platform
-        :return: Checkpoint entity
+        :return: Snapshot entity
         """
         inst = cls(
             project_id=_json.get('projectId', None),
             dataset_id=_json.get('datasetId', None),
             model_id=_json.get('modelId', None),
-            parent_checkpoint_id=_json.get('parentCheckpointId', None),
+            parent_snapshot_id=_json.get('parentCheckpointId', None),
             artifacts_id=_json.get('artifactId', None),
             query=_json.get('query', None),
             createdAt=_json.get('createdAt', None),
@@ -92,25 +95,25 @@ class Checkpoint(entities.BaseEntity):
 
     def to_json(self):
         """
-        Turn Checkpoint entity into a platform representation of Checkpoint
+        Turn Snapshot entity into a platform representation of Snapshot
 
-        :return: platform json of checkpoint
+        :return: platform json of snapshot
         """
         _json = attr.asdict(self,
-                            filter=attr.filters.exclude(attr.fields(Checkpoint)._project,
-                                                        attr.fields(Checkpoint)._model,
-                                                        attr.fields(Checkpoint)._repositories,
-                                                        attr.fields(Checkpoint)._client_api,
-                                                        attr.fields(Checkpoint).model_id,
-                                                        attr.fields(Checkpoint).parent_checkpoint_id,
-                                                        attr.fields(Checkpoint).project_id,
-                                                        attr.fields(Checkpoint).dataset_id,
-                                                        attr.fields(Checkpoint).artifacts_id,
+                            filter=attr.filters.exclude(attr.fields(Snapshot)._project,
+                                                        attr.fields(Snapshot)._model,
+                                                        attr.fields(Snapshot)._repositories,
+                                                        attr.fields(Snapshot)._client_api,
+                                                        attr.fields(Snapshot).model_id,
+                                                        attr.fields(Snapshot).parent_snapshot_id,
+                                                        attr.fields(Snapshot).project_id,
+                                                        attr.fields(Snapshot).dataset_id,
+                                                        attr.fields(Snapshot).artifacts_id,
                                                         ))
 
         _json['projectId'] = self.project_id
         _json['datasetId'] = self.dataset_id
-        _json['parentCheckpointId'] = self.parent_checkpoint_id
+        _json['parentCheckpointId'] = self.parent_snapshot_id
         _json['artifactId'] = self.artifacts_id
         _json['modelId'] = self.model_id
         return _json
@@ -138,13 +141,13 @@ class Checkpoint(entities.BaseEntity):
     @_repositories.default
     def set_repositories(self):
         reps = namedtuple('repositories',
-                          field_names=['projects', 'checkpoints', 'models'])
+                          field_names=['projects', 'snapshots', 'models'])
 
         r = reps(projects=repositories.Projects(client_api=self._client_api),
-                 checkpoints=repositories.Checkpoints(client_api=self._client_api,
-                                                      project=self._project,
-                                                      project_id=self.project_id,
-                                                      model=self.model),
+                 snapshots=repositories.Snapshots(client_api=self._client_api,
+                                                  project=self._project,
+                                                  project_id=self.project_id,
+                                                  model=self.model),
                  models=repositories.Models(client_api=self._client_api, project=self._project))
         return r
 
@@ -154,9 +157,9 @@ class Checkpoint(entities.BaseEntity):
         return self._repositories.projects
 
     @property
-    def checkpoints(self):
-        assert isinstance(self._repositories.checkpoints, repositories.Checkpoints)
-        return self._repositories.checkpoints
+    def snapshots(self):
+        assert isinstance(self._repositories.snapshots, repositories.Snapshots)
+        return self._repositories.snapshots
 
     @property
     def models(self):
@@ -168,22 +171,30 @@ class Checkpoint(entities.BaseEntity):
     ###########
     def update(self):
         """
-        Update Checkpoint changes to platform
+        Update Snapshot changes to platform
 
-        :return: Checkpoint entity
+        :return: Snapshot entity
         """
-        return self.checkpoints.update(checkpoint=self)
+        return self.snapshots.update(snapshot=self)
+
+    def upload(self, local_path, overwrite=True):
+        """
+        Upload files to existing Snapshot
+
+        :return: Snapshot entity
+        """
+        return self.snapshots.upload(snapshot=self, local_path=local_path, overwrite=overwrite)
 
     def download(self, local_path):
         """
-        Download artifacts from checkpoint
+        Download artifacts from snapshot
         """
-        return self.checkpoints.download(checkpoint=self, local_path=local_path)
+        return self.snapshots.download(snapshot=self, local_path=local_path)
 
     def delete(self):
         """
-        Delete Checkpoint object
+        Delete Snapshot object
 
         :return: True
         """
-        return self.checkpoints.delete(checkpoint=self)
+        return self.snapshots.delete(snapshot=self)

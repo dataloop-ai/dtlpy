@@ -1,0 +1,14 @@
+FROM python:3.6
+
+RUN apt-get -y update
+
+ADD docs /users/dataloop/docs
+ADD dtlpy /users/dataloop/dtlpy
+WORKDIR /users/dataloop/docs
+
+RUN pip3 install -r requirements.txt
+RUN sphinx-apidoc -f -o . ../dtlpy/
+RUN sphinx-build -T -d _build/doctrees-readthedocs -D language=en . _build/html
+
+CMD ["python3", "serve.py"]
+

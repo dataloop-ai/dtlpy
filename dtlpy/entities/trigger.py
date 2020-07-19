@@ -109,9 +109,13 @@ class Trigger(entities.BaseEntity):
         else:
             raise exceptions.PlatformException('400', 'unknown trigger operation type: {}'.format(op_type))
 
+        project_id = _json.get('projectId', None)
+        if project_id is not None and project is not None:
+            if project_id != project.id:
+                project = None
+
         return cls(
             execution_mode=spec.get('executionMode', None),
-            project_id=_json.get('projectId', None),
             updatedAt=_json.get('updatedAt', None),
             createdAt=_json.get('createdAt', None),
             resource=spec.get('resource', None),
@@ -123,6 +127,7 @@ class Trigger(entities.BaseEntity):
             scope=_json.get('scope', None),
             name=_json.get('name', None),
             service_id=service_id,
+            project_id=project_id,
             url=_json.get('url', None),
             webhook_id=webhook_id,
             client_api=client_api,

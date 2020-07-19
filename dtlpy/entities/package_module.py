@@ -9,12 +9,13 @@ logger = logging.getLogger("dataloop.module")
 @attr.s
 class PackageModule(entities.BaseEntity):
     """
-    Webhook object
+    PackageModule object
     """
     # platform
-    name = attr.ib(default='default_module')
+    name = attr.ib(default=entities.package_defaults.DEFAULT_PACKAGE_MODULE_NAME)
     init_inputs = attr.ib()
-    entry_point = attr.ib(default='main.py')
+    entry_point = attr.ib(default=entities.package_defaults.DEFAULT_PACKAGE_ENTRY_POINT)
+    class_name = attr.ib(default=entities.package_defaults.DEFAULT_PACKAGE_CLASS_NAME)
     functions = attr.ib()
 
     @functions.default
@@ -33,8 +34,9 @@ class PackageModule(entities.BaseEntity):
         init_inputs = _json.get("initInputs", list())
         return cls(
             init_inputs=init_inputs,
-            entry_point=_json.get("entryPoint", 'main.py'),
-            name=_json.get("name", 'default_module'),
+            entry_point=_json.get("entryPoint", entities.package_defaults.DEFAULT_PACKAGE_ENTRY_POINT),
+            class_name=_json.get("className", entities.package_defaults.DEFAULT_PACKAGE_CLASS_NAME),
+            name=_json.get("name", entities.package_defaults.DEFAULT_PACKAGE_MODULE_NAME),
             functions=functions,
         )
 
@@ -53,6 +55,7 @@ class PackageModule(entities.BaseEntity):
             self,
             filter=attr.filters.exclude(attr.fields(PackageModule).functions,
                                         attr.fields(PackageModule).entry_point,
+                                        attr.fields(PackageModule).class_name,
                                         attr.fields(PackageModule).init_inputs))
 
         # check in inputs is a list
@@ -72,6 +75,7 @@ class PackageModule(entities.BaseEntity):
             functions = [function.to_json() for function in functions]
 
         _json['entryPoint'] = self.entry_point
+        _json['className'] = self.class_name
         _json['initInputs'] = init_inputs
         _json['functions'] = functions
         return _json

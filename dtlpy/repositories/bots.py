@@ -1,5 +1,5 @@
 import logging
-from .. import entities, miscellaneous, exceptions
+from .. import entities, miscellaneous, exceptions, services
 
 logger = logging.getLogger(name=__name__)
 
@@ -9,12 +9,12 @@ class Bots:
     Bots repository
     """
 
-    def __init__(self, client_api, project):
+    def __init__(self, client_api: services.ApiClient, project: entities.Project):
         self._client_api = client_api
         self._project = project
 
     @property
-    def project(self):
+    def project(self) -> entities.Project:
         if self._project is None:
             raise exceptions.PlatformException(
                 error='2001',
@@ -23,7 +23,7 @@ class Bots:
         return self._project
 
     @project.setter
-    def project(self, project):
+    def project(self, project: entities.Project):
         if not isinstance(project, entities.Project):
             raise ValueError('Must input a valid Project entity')
         self._project = project
@@ -31,7 +31,7 @@ class Bots:
     ###########
     # methods #
     ###########
-    def list(self):
+    def list(self) -> miscellaneous.List[entities.Bot]:
         """
         Get project's bots list.
         :return: List of Bots objects

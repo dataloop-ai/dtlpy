@@ -14,7 +14,7 @@ from PIL import Image
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
-from .. import entities, miscellaneous, PlatformException
+from .. import entities, miscellaneous, PlatformException, services
 from ..services import Reporter
 
 logger = logging.getLogger(name=__name__)
@@ -28,7 +28,7 @@ class Downloader:
 
     def download(self,
                  # filter options
-                 filters=None,
+                 filters: entities.Filters = None,
                  items=None,
                  # download options
                  local_path=None,
@@ -56,7 +56,7 @@ class Downloader:
         :param file_types: a list of file type to download. e.g ['video/webm', 'video/mp4', 'image/jpeg', 'image/png']
         :param num_workers: default - 32
         :param save_locally: bool. save to disk or return a buffer
-        :param annotation_options: download annotations options: ['mask', 'img_mask', 'instance', 'json']
+        :param annotation_options: download annotations options. options: dl.ViewAnnotationOptions.list()
         :param to_items_folder: Create 'items' folder and download items to it
         :param with_text: optional - add text to annotations, default = False
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
@@ -72,11 +72,13 @@ class Downloader:
             annotation_options = list()
         elif not isinstance(annotation_options, list):
             annotation_options = [annotation_options]
-        options = ["mask", "instance", "img_mask", "vtt", "json"]
         for ann_option in annotation_options:
-            if ann_option not in options:
-                raise PlatformException('400', 'Unknown annotation download option: {}, please chose from: {}'.format(
-                    ann_option, options))
+            if not isinstance(ann_option, entities.ViewAnnotationOptions):
+                if ann_option not in entities.ViewAnnotationOptions.list():
+                    raise PlatformException(
+                        error='400',
+                        message='Unknown annotation download option: {}, please chose from: {}'.format(
+                            ann_option, entities.ViewAnnotationOptions.list()))
         if num_workers is not None:
             logger.warning('[DeprecationWarning] input argument "num_workers"'
                            ' will be deprecated from download() after version 1.17.0\n'
@@ -143,8 +145,11 @@ class Downloader:
         ####################
         # download annotations' json files in a new thread
         # items will start downloading and if json not exists yet - will download for each file
-        if num_items > 1 and annotation_options and not avoid_unnecessary_annotation_download and self.__need_to_download_annotations_zip(
-                items_count=self.__get_annotated_count(items=items, filters=filters)):
+        if num_items > 1 and \
+                annotation_options and \
+                not avoid_unnecessary_annotation_download and \
+                self.__need_to_download_annotations_zip(
+                    items_count=self.__get_annotated_count(items=items, filters=filters)):
             # a new folder named 'json' will be created under the "local_path"
             logger.info("Downloading annotations formats: {}".format(annotation_options))
             thread = threading.Thread(target=self.download_annotations,
@@ -308,7 +313,7 @@ class Downloader:
         else:
             reporter.set_index(i_item=i_item, status="download", output=download, success=True)
 
-    def download_annotations(self, dataset, local_path, overwrite=False, remote_path=None):
+    def download_annotations(self, dataset: entities.Dataset, local_path, overwrite=False, remote_path=None):
         """
         Download annotations json for entire dataset
 
@@ -377,8 +382,13 @@ class Downloader:
             download_single_chunk(w_url=None, w_filepath=zip_filepath, remote_path=remote_path)
 
     @staticmethod
-    def _download_img_annotations(item, img_filepath, local_path, overwrite, annotation_options,
-                                  thickness=1, with_text=False):
+    def _download_img_annotations(item: entities.Item,
+                                  img_filepath,
+                                  local_path,
+                                  overwrite,
+                                  annotation_options,
+                                  thickness=1,
+                                  with_text=False):
 
         # fix local path
         if local_path.endswith("/items") or local_path.endswith("\\items"):
@@ -394,7 +404,7 @@ class Downloader:
         if os.path.isfile(annotations_json_filepath):
 
             # if exists take from json file
-            with open(annotations_json_filepath, "r") as f:
+            with open(annotations_json_filepath, "r", encoding="utf8") as f:
                 data = json.load(f)
             if "annotations" in data:
                 data = data["annotations"]
@@ -421,7 +431,7 @@ class Downloader:
                 os.makedirs(os.path.dirname(annotation_filepath), exist_ok=True)
             temp_path, ext = os.path.splitext(annotation_filepath)
 
-            if option == "json":
+            if option == entities.ViewAnnotationOptions.JSON:
                 if not os.path.isfile(annotations_json_filepath):
                     annotations.download(
                         filepath=annotations_json_filepath,
@@ -429,8 +439,11 @@ class Downloader:
                         height=img_shape[0],
                         width=img_shape[1],
                     )
-            elif option in ["mask", "instance", "img_mask", "vtt"]:
-                if option == 'vtt':
+            elif option in [entities.ViewAnnotationOptions.MASK,
+                            entities.ViewAnnotationOptions.INSTANCE,
+                            entities.ViewAnnotationOptions.ANNOTATION_ON_IMAGE,
+                            entities.ViewAnnotationOptions.VTT]:
+                if option == entities.ViewAnnotationOptions.VTT:
                     annotation_filepath = temp_path + ".vtt"
                 else:
                     annotation_filepath = temp_path + ".png"
@@ -439,8 +452,10 @@ class Downloader:
                     if not os.path.exists(os.path.dirname(annotation_filepath)):
                         # create folder if not exists
                         os.makedirs(os.path.dirname(annotation_filepath), exist_ok=True)
-                    if option == 'img_mask' and img_filepath is None:
-                        raise PlatformException(error="1002", message="Missing image for annotation option img_mask")
+                    if option == entities.ViewAnnotationOptions.ANNOTATION_ON_IMAGE and img_filepath is None:
+                        raise PlatformException(
+                            error="1002",
+                            message="Missing image for annotation option dl.ViewAnnotationOptions.ANNOTATION_ON_IMAGE")
                     annotations.download(
                         filepath=annotation_filepath,
                         img_filepath=img_filepath,
@@ -522,7 +537,7 @@ class Downloader:
         :param save_locally: bool. save to file or return buffer
         :param local_path: optional - local folder or filename to save to.
         :param chunk_size: size of chunks to download - optional. default = 8192
-        :param annotation_options: download annotations options: ['mask', 'img_mask', 'instance', 'json']
+        :param annotation_options: download annotations options: dl.ViewAnnotationOptions.list()
         :return:
         """
         # check if need to download image binary from platform
@@ -603,24 +618,21 @@ class Downloader:
         # create default local path
         if self.items_repository._dataset is None:
             local_path = os.path.join(
-                os.path.expanduser("~"),
-                ".dataloop",
+                services.service_defaults.DATALOOP_PATH,
                 "items",
             )
         else:
             if self.items_repository.dataset._project is None:
                 # by dataset name
                 local_path = os.path.join(
-                    os.path.expanduser("~"),
-                    ".dataloop",
+                    services.service_defaults.DATALOOP_PATH,
                     "datasets",
                     "{}_{}".format(self.items_repository.dataset.name, self.items_repository.dataset.id),
                 )
             else:
                 # by dataset and project name
                 local_path = os.path.join(
-                    os.path.expanduser("~"),
-                    ".dataloop",
+                    services.service_defaults.DATALOOP_PATH,
                     "projects",
                     self.items_repository.dataset.project.name,
                     "datasets",

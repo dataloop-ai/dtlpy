@@ -2,9 +2,8 @@ import importlib.util
 import logging
 import os
 from shutil import copyfile
-from urllib.parse import urlencode
 
-from .. import entities, repositories, exceptions, miscellaneous, assets
+from .. import entities, repositories, exceptions, miscellaneous, assets, services
 
 logger = logging.getLogger(name=__name__)
 
@@ -14,7 +13,7 @@ class Models:
     Models Repository
     """
 
-    def __init__(self, client_api, project=None):
+    def __init__(self, client_api: services.ApiClient, project: entities.Project = None):
         self._client_api = client_api
         self._project = project
 
@@ -22,7 +21,7 @@ class Models:
     # entities #
     ############
     @property
-    def project(self):
+    def project(self) -> entities.Project:
         if self._project is None:
             try:
                 self._project = repositories.Projects(client_api=self._client_api).get()
@@ -33,7 +32,7 @@ class Models:
         return self._project
 
     @project.setter
-    def project(self, project):
+    def project(self, project: entities.Project):
         if not isinstance(project, entities.Project):
             raise ValueError('Must input a valid Project entity')
         self._project = project
@@ -41,7 +40,7 @@ class Models:
     ###########
     # methods #
     ###########
-    def get(self, model_name=None, model_id=None, checkout=False, fetch=None):
+    def get(self, model_name=None, model_id=None, checkout=False, fetch=None) -> entities.Model:
         """
         Get model object
 
@@ -98,7 +97,26 @@ class Models:
             self.checkout(model=model)
         return model
 
-    def _list(self, filters):
+    def _build_entities_from_response(self, response_items) -> miscellaneous.List[entities.Model]:
+        jobs = [None for _ in range(len(response_items))]
+        pool = self._client_api.thread_pools(pool_name='entity.create')
+
+        # return triggers list
+        for i_service, service in enumerate(response_items):
+            jobs[i_service] = pool.apply_async(entities.Model._protected_from_json,
+                                               kwds={'client_api': self._client_api,
+                                                     '_json': service,
+                                                     'project': self._project})
+        # wait for all jobs
+        _ = [j.wait() for j in jobs]
+        # get all results
+        results = [j.get() for j in jobs]
+        # log errors
+        _ = [logger.warning(r[1]) for r in results if r[0] is False]
+        # return good jobs
+        return miscellaneous.List([r[1] for r in results if r[0] is True])
+
+    def _list(self, filters: entities.Filters):
         url = '/query/machine-learning'
         # request
         success, response = self._client_api.gen_request(req_type='POST',
@@ -108,7 +126,7 @@ class Models:
             raise exceptions.PlatformException(response)
         return response.json()
 
-    def list(self, filters=None):
+    def list(self, filters: entities.Filters = None) -> entities.PagedEntities:
         """
         List project models
         :return:
@@ -130,7 +148,7 @@ class Models:
         paged.get_page()
         return paged
 
-    def build(self, model, local_path=None, from_local=None):
+    def build(self, model: entities.Model, local_path=None, from_local=None):
         """
         :param model: Model entity
         :param from_local: bool. use current directory to build
@@ -152,8 +170,7 @@ class Models:
             # download codebase locally
             if local_path is None:
                 local_path = os.path.join(
-                    os.path.expanduser("~"),
-                    ".dataloop",
+                    services.service_defaults.DATALOOP_PATH,
                     "models",
                     model.name)
 
@@ -167,7 +184,7 @@ class Models:
         foo = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(foo)
         adapter_model = foo.AdapterModel
-        return adapter_model()
+        return adapter_model(model_entity=model)
 
     def push(self, model_name, description='', src_path=None, entry_point='adapter_model.py', codebase_id=None,
              checkout=False):
@@ -200,7 +217,7 @@ class Models:
         if not os.path.isfile(os.path.join(src_path, entry_point)):
             raise ValueError('entry point not found. filepath: {}'.format(os.path.join(src_path, entry_point)))
         # check if exist
-        models = [model for model in self.list() if model.name == model_name]
+        models = [model for model in self.list().all() if model.name == model_name]
         if len(models) > 0:
             model = self._create(codebase_id=codebase_id,
                                  model_name=model_name,
@@ -224,7 +241,7 @@ class Models:
                 description='',
                 codebase_id=None,
                 push=False,
-                model=None):
+                model=None) -> entities.Model:
         """
         Create a model in platform
 
@@ -264,7 +281,7 @@ class Models:
                                         client_api=self._client_api,
                                         project=self._project)
 
-    def delete(self, model=None, model_name=None, model_id=None):
+    def delete(self, model: entities.Model = None, model_name=None, model_id=None):
         """
         Delete Model object
 
@@ -292,15 +309,13 @@ class Models:
         # return results
         return True
 
-    def update(self, model):
+    def update(self, model: entities.Model) -> entities.Model:
         """
         Update Model changes to platform
 
         :param model:
         :return: Model entity
         """
-        assert isinstance(model, entities.Model)
-
         # payload
         payload = model.to_json()
 
@@ -339,7 +354,7 @@ class Models:
             model = entities.Model.from_json(_json=model, client_api=self._client_api, project=self._project)
         return model
 
-    def checkout(self, model=None, model_id=None, model_name=None):
+    def checkout(self, model: entities.Model = None, model_id=None, model_name=None):
         """
         Checkout as model
 

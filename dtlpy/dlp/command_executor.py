@@ -348,7 +348,10 @@ class CommandExecutor:
 
         elif args.services == "execute":
             try:
-                service = self.dl.services.get()
+                if args.service_name:
+                    service = self.utils.get_services_repo(args=args).get(service_name=args.service_name)
+                else:
+                    service = self.dl.services.get()
             except Exception:
                 logger.info('Please checkout a service')
                 return
@@ -458,8 +461,8 @@ class CommandExecutor:
                     os.chdir('..')
 
         elif args.packages == "deploy":
-            project = self.dl.projects.get()
-            package = self.dl.packages.get()
+            project = self.dl.projects.get(project_name=args.project_name)
+            package = self.dl.packages.get(package_name=args.package_name)
             if project is None or package is None:
                 logger.info('Please checkout a project and a package')
                 return

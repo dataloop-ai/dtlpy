@@ -5,6 +5,7 @@
 bitbucket-pipelines.yml
 build-docker.sh
 Dockerfile
+Dockerfile.docs
 docs
 dtlpy
 LICENSE

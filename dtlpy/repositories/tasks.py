@@ -1,6 +1,6 @@
 import logging
 import json
-from .. import exceptions, miscellaneous, entities, repositories
+from .. import exceptions, miscellaneous, entities, repositories, services
 
 logger = logging.getLogger(name=__name__)
 URL_PATH = '/annotationtasks'
@@ -11,7 +11,11 @@ class Tasks:
     Tasks repository
     """
 
-    def __init__(self, client_api, project=None, dataset=None, project_id=None):
+    def __init__(self,
+                 client_api: services.ApiClient,
+                 project: entities.Project = None,
+                 dataset: entities.Dataset = None,
+                 project_id: str = None):
         self._client_api = client_api
         self._project = project
         self._dataset = dataset
@@ -30,7 +34,7 @@ class Tasks:
     # entities #
     ############
     @property
-    def project(self):
+    def project(self) -> entities.Project:
         if self._project is None:
             raise exceptions.PlatformException(
                 error='2001',
@@ -39,13 +43,13 @@ class Tasks:
         return self._project
 
     @project.setter
-    def project(self, project):
+    def project(self, project: entities.Project):
         if not isinstance(project, entities.Project):
             raise ValueError('Must input a valid Project entity')
         self._project = project
 
     @property
-    def dataset(self):
+    def dataset(self) -> entities.Dataset:
         if self._dataset is None:
             raise exceptions.PlatformException(
                 error='2001',
@@ -54,13 +58,13 @@ class Tasks:
         return self._dataset
 
     @dataset.setter
-    def dataset(self, dataset):
+    def dataset(self, dataset: entities.Dataset):
         if not isinstance(dataset, entities.Dataset):
             raise ValueError('Must input a valid Dataset entity')
         self._dataset = dataset
 
     @property
-    def assignments(self):
+    def assignments(self) -> repositories.Assignments:
         if self._assignments is None:
             self._assignments = repositories.Assignments(client_api=self._client_api, project=self._project)
         assert isinstance(self._assignments, repositories.Assignments)
@@ -79,7 +83,7 @@ class Tasks:
              creator=None,
              assignments=None,
              min_date=None,
-             max_date=None):
+             max_date=None) -> miscellaneous.List[entities.Task]:
         """
         Get Annotation Task list
 
@@ -149,7 +153,7 @@ class Tasks:
 
         return tasks
 
-    def get(self, task_name=None, task_id=None):
+    def get(self, task_name=None, task_id=None) -> entities.Task:
         """
         Get an Annotation Task object
         :param task_name: optional - search by name
@@ -188,7 +192,7 @@ class Tasks:
         assert isinstance(task, entities.Task)
         return task
 
-    def delete(self, task=None, task_name=None, task_id=None):
+    def delete(self, task: entities.Task = None, task_name=None, task_id=None):
         """
         Delete an Annotation Task
         :param task_id:
@@ -216,7 +220,7 @@ class Tasks:
             raise exceptions.PlatformException(response)
         return True
 
-    def update(self, task=None, system_metadata=False):
+    def update(self, task: entities.Task = None, system_metadata=False) -> entities.Task:
         """
         Update an Annotation Task
         :return: Annotation Task object
@@ -236,7 +240,7 @@ class Tasks:
         else:
             raise exceptions.PlatformException(response)
 
-    def create_qa_task(self, due_date, task, assignee_ids, filters=None, items=None, query=None):
+    def create_qa_task(self, due_date, task, assignee_ids, filters=None, items=None, query=None) -> entities.Task:
         if filters is None and items is None and query is None:
             query = json.loads(task.query)
         return self.create(task_name='{}_qa'.format(task.name),
@@ -267,7 +271,7 @@ class Tasks:
                metadata=None,
                filters=None,
                items=None,
-               query=None):
+               query=None) -> entities.Task:
         """
         Create a new Annotation Task
 
@@ -363,7 +367,7 @@ class Tasks:
         assert isinstance(task, entities.Task)
         return task
 
-    def __item_operations(self, dataset, op, task=None, task_id=None, filters=None, items=None):
+    def __item_operations(self, dataset: entities.Dataset, op, task=None, task_id=None, filters=None, items=None):
 
         if task is None and task_id is None:
             raise exceptions.PlatformException('400', 'Must provide either task or task id')
@@ -392,11 +396,15 @@ class Tasks:
             if filters is not None:
                 filters._nullify_refs()
 
-    def add_items(self, task=None,
-                  task_id=None, filters=None,
-                  items=None, assignee_ids=None,
-                  query=None, workload=None,
-                  limit=None):
+    def add_items(self,
+                  task: entities.Task = None,
+                  task_id=None,
+                  filters: entities.Filters = None,
+                  items=None,
+                  assignee_ids=None,
+                  query=None,
+                  workload=None,
+                  limit=None) -> entities.Task:
         """
         Add items to Task
 
@@ -458,7 +466,12 @@ class Tasks:
         assert isinstance(task, entities.Task)
         return task
 
-    def remove_items(self, dataset, task=None, task_id=None, filters=None, items=None):
+    def remove_items(self,
+                     dataset: entities.Dataset,
+                     task: entities.Task = None,
+                     task_id=None,
+                     filters: entities.Filters = None,
+                     items=None):
         """
 
         :param task:
@@ -468,10 +481,18 @@ class Tasks:
         :param items:
         :return:
         """
-        return self.__item_operations(dataset=dataset, task_id=task_id, task=task, filters=filters, items=items,
+        return self.__item_operations(dataset=dataset,
+                                      task_id=task_id,
+                                      task=task,
+                                      filters=filters,
+                                      items=items,
                                       op='delete')
 
-    def get_items(self, task_id=None, task_name=None, dataset=None, filters=None):
+    def get_items(self,
+                  task_id: str = None,
+                  task_name: str = None,
+                  dataset: entities.Dataset = None,
+                  filters: entities.Filters = None) -> entities.PagedEntities:
         """
 
         :param filters:

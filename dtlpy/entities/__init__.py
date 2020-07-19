@@ -13,6 +13,8 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with DTLPY.  If not, see <http://www.gnu.org/licenses/>.
+from . import package_defaults
+from .annotation_definitions import BaseAnnotationDefinition
 from .base_entity import BaseEntity
 from .item import Item, Modality, ModalityTypeEnum, ItemStatus
 from .links import Link, ItemLink, UrlLink, LinkTypeEnum
@@ -21,7 +23,7 @@ from .project import Project
 from .artifact import Artifact
 from .dataset import Dataset
 from .codebase import Codebase
-from .annotation import Annotation, FrameAnnotation, AnnotationOptions
+from .annotation import Annotation, FrameAnnotation, ViewAnnotationOptions
 from .annotation_collection import AnnotationCollection
 from .paged_entities import PagedEntities
 from .filters import Filters, FiltersKnownFields, FiltersResource, FiltersOperations, FiltersMethod, \
@@ -34,8 +36,6 @@ from .label import Label
 from .package import Package
 from .package_module import PackageModule
 from .package_function import PackageFunction, FunctionIO, PackageInputType
-from .package_defaults import DEFAULT_PACKAGE_MODULE, DEFAULT_PACKAGE_NAME, DEFAULT_PACKAGE_ENTRY_POINT, \
-    DEFAULT_PACKAGE_METHOD, DEFAULT_PACKAGE_FUNCTION_NAME, DEFAULT_PACKAGE_MODULE_NAME
 from .time_series import TimeSeries
 from .service import Service, KubernetesAutuscalerType, KubernetesRabbitmqAutoscaler, KubernetesAutoscaler, \
     InstanceCatalog, KubernetesRuntime
@@ -48,4 +48,4 @@ from .user import User
 from .bot import Bot
 from .webhook import Webhook, HttpMethod
 from .model import Model
-from .checkpoint import Checkpoint
+from .snapshot import Snapshot

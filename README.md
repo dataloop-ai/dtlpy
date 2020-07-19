@@ -1,5 +1,7 @@
-# DTLPY #
+![logo](https://mk0dataloop4fni44fjg.kinstacdn.com/wp-content/uploads/2020/03/logo.svg)
 
-DTLPY is SDK and CLI for Dataloop.ai platform
+This is the SDK and CLI open source repository for [Dataloop.ai](https://dataloop.ai/) platform
 
-For full documnetation [here](https://dtlpy.readthedocs.io/en/latest/index.html)
+For full platform documentation click [here](https://docs.dataloop.ai/docs)
+
+For full SDK documentation click [here](https://console.dataloop.ai/sdk-docs/)

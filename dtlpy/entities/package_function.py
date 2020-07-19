@@ -13,10 +13,13 @@ class PackageFunction(entities.BaseEntity):
     Webhook object
     """
     # platform
-    name = attr.ib(default='run')
-    inputs = attr.ib()
-    description = attr.ib(default='')
+    display_name = attr.ib(default=None)
+    display_icon = attr.ib(repr=False, default=None)
+    display_scope = attr.ib(default=None)
     outputs = attr.ib()
+    name = attr.ib(default=entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME)
+    description = attr.ib(default='')
+    inputs = attr.ib()
 
     @classmethod
     def from_json(cls, _json):
@@ -27,6 +30,9 @@ class PackageFunction(entities.BaseEntity):
             name=_json.get("name", None),
             inputs=inputs,
             outputs=outputs,
+            display_icon=_json.get('displayIcon', None),
+            display_name=_json.get('displayName', None),
+            display_scope=_json.get('displayScope', None),
         )
 
     @outputs.default
@@ -43,7 +49,11 @@ class PackageFunction(entities.BaseEntity):
         _json = attr.asdict(
             self,
             filter=attr.filters.exclude(attr.fields(PackageFunction).inputs,
-                                        attr.fields(PackageFunction).outputs),
+                                        attr.fields(PackageFunction).outputs,
+                                        attr.fields(PackageFunction).display_icon,
+                                        attr.fields(PackageFunction).display_name,
+                                        attr.fields(PackageFunction).display_scope,
+                                        ),
         )
         inputs = self.inputs
         # check in inputs is a list
@@ -63,7 +73,9 @@ class PackageFunction(entities.BaseEntity):
 
         _json['input'] = inputs
         _json['output'] = outputs
-
+        _json['displayName'] = self.display_name
+        _json['displayIcon'] = self.display_icon
+        _json['displayScope'] = self.display_scope
         return _json
 
 
@@ -72,6 +84,12 @@ class PackageInputType:
     DATASET = "Dataset"
     ANNOTATION = "Annotation"
     JSON = "Json"
+    MODEL = "Model"
+    SNAPSHOT = "Snapshot"
+    PACKAGE = "Package"
+    SERVICE = "Service"
+    PROJECT = "Project"
+    EXECUTION = "Execution"
 
 
 @attr.s
@@ -89,6 +107,18 @@ class FunctionIO:
             return 'dataset'
         elif self.type == PackageInputType.ANNOTATION:
             return 'annotation'
+        elif self.type == PackageInputType.PROJECT:
+            return 'project'
+        elif self.type == PackageInputType.PACKAGE:
+            return 'package'
+        elif self.type == PackageInputType.SERVICE:
+            return 'service'
+        elif self.type == PackageInputType.EXECUTION:
+            return 'execution'
+        elif self.type == PackageInputType.MODEL:
+            return 'model'
+        elif self.type == PackageInputType.SNAPSHOT:
+            return 'snapshot'
         else:
             return 'config'
 
@@ -117,31 +147,10 @@ class FunctionIO:
             expected_value = '{} json serializable'.format(expected_value)
             if not self.is_json_serializable(value):
                 value_ok = False
-        elif self.type == PackageInputType.DATASET:
-            expected_value = '{} {{"dataset_id": <dataset id>}}'.format(expected_value)
-            if not isinstance(value, dict):
+        else:
+            expected_value = '{} string or dictionary'.format(expected_value)
+            if type(value) not in [dict, str]:
                 value_ok = False
-            else:
-                if 'dataset_id' not in value:
-                    value_ok = False
-        elif self.type == PackageInputType.ITEM:
-            expected_value = '{} {{"item_id": <item id>}}'.format(expected_value)
-            if not isinstance(value, dict):
-                value_ok = False
-            else:
-                if 'item_id' not in value:
-                    value_ok = False
-        elif self.type == PackageInputType.ANNOTATION:
-            expected_value = '{} {{"item_id": <item id>, "annotation_id": <annotation id>}}'.format(expected_value)
-            if not isinstance(value, dict):
-                value_ok = False
-            else:
-                if 'item_id' not in value:
-                    value_ok = False
-                if 'dataset_id' not in value:
-                    value_ok = False
-                if 'annotation_id' not in value:
-                    value_ok = False
 
         if not value_ok and value is not None:
             raise exceptions.PlatformException('400', 'Illegal value. {}'.format(expected_value))

@@ -5,16 +5,27 @@ import attr
 import json
 from PIL import Image
 
-from .. import entities, PlatformException, repositories
-from ..services import ApiClient
+from .. import entities, PlatformException, repositories, ApiClient
 
 logger = logging.getLogger(name=__name__)
 
 
-class AnnotationOptions:
+class ViewAnnotationOptions:
     JSON = "json"
     MASK = "mask"
     INSTANCE = "instance"
+    ANNOTATION_ON_IMAGE = "img_mask"
+    VTT = "vtt"
+    OBJECT_ID = "object_id"
+
+    @staticmethod
+    def list():
+        return [ViewAnnotationOptions.JSON,
+                ViewAnnotationOptions.MASK,
+                ViewAnnotationOptions.INSTANCE,
+                ViewAnnotationOptions.VTT,
+                ViewAnnotationOptions.ANNOTATION_ON_IMAGE,
+                ViewAnnotationOptions.OBJECT_ID]
 
 
 @attr.s
@@ -23,7 +34,7 @@ class Annotation(entities.BaseEntity):
     Annotations object
     """
     # annotation definition
-    annotation_definition = attr.ib(repr=False)
+    annotation_definition = attr.ib(repr=False, type=entities.BaseAnnotationDefinition)
 
     # platform
     id = attr.ib()
@@ -93,7 +104,7 @@ class Annotation(entities.BaseEntity):
         return coordinates
 
     @property
-    def _client_api(self):
+    def _client_api(self) -> ApiClient:
         if self.__client_api is None:
             if self.item is None:
                 raise PlatformException('400',
@@ -338,18 +349,24 @@ class Annotation(entities.BaseEntity):
         """
         return self.annotations.upload(annotations=self)[0]
 
-    def download(self, filepath, annotation_format=AnnotationOptions.MASK, height=None, width=None, thickness=1, with_text=False):
+    def download(self,
+                 filepath,
+                 annotation_format=ViewAnnotationOptions.MASK,
+                 height=None,
+                 width=None,
+                 thickness=1,
+                 with_text=False):
         """
         Save annotation to file
         :param filepath: local path to where annotation will be downloaded to
-        :param annotation_format: ['mask'/'instance']
+        :param annotation_format: options: dl.ViewAnnotationOptions.list()
         :param height: image height
         :param width: image width
         :param thickness: thickness
         :param with_text: get mask with text
         :return: filepath
         """
-        if annotation_format == 'json':
+        if annotation_format == ViewAnnotationOptions.JSON:
             with open(filepath, 'w') as f:
                 json.dump(self.to_json(), f, indent=2)
         else:
@@ -379,7 +396,7 @@ class Annotation(entities.BaseEntity):
     # Plotting #
     ############
     def show(self, image=None, thickness=None, with_text=False, height=None, width=None,
-             annotation_format=AnnotationOptions.MASK, color=None):
+             annotation_format=ViewAnnotationOptions.MASK, color=None):
         """
         Show annotations
 
@@ -388,7 +405,7 @@ class Annotation(entities.BaseEntity):
         :param width: width
         :param thickness: line thickness
         :param with_text: add label to annotation
-        :param annotation_format: 'mask'/'instance'
+        :param annotation_format: dl.ViewAnnotationOptions.list()
         :param color: optional
         :return: ndarray of the annotations
         """
@@ -665,10 +682,14 @@ class Annotation(entities.BaseEntity):
                              item_metadata=None):
         """
         Same as from_json but with try-except to catch if error
-        :param _json:
         :param client_api:
-        :param dataset:
-        :return:
+        :param annotations:
+        :param is_video:
+        :param fps:
+        :param item_metadata:
+        :param _json: platform json
+        :param item: item
+        :return: annotation object
         """
         try:
             annotation = Annotation.from_json(_json=_json,

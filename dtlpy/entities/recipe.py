@@ -1,3 +1,4 @@
+import traceback
 from collections import namedtuple
 import logging
 import attr
@@ -30,23 +31,27 @@ class Recipe(entities.BaseEntity):
     # platform
     _client_api = attr.ib(type=services.ApiClient, repr=False)
     # entities
-    _dataset = attr.ib(repr=False)
+    _dataset = attr.ib(repr=False, default=None)
+    _project = attr.ib(repr=False, default=None)
     # repositories
     _repositories = attr.ib(repr=False)
 
     @classmethod
-    def from_json(cls, _json, dataset, client_api):
+    def from_json(cls, _json, client_api, dataset=None, project=None, is_fetched=True):
         """
         Build a Recipe entity object from a json
 
         :param _json: _json response from host
         :param dataset: recipe's dataset
+        :param project: recipe's project
         :param client_api: client_api
+        :param is_fetched: is Entity fetched from Platform
         :return: Recipe object
         """
-        return cls(
+        inst = cls(
             client_api=client_api,
             dataset=dataset,
+            project=project,
             id=_json['id'],
             creator=_json.get('creator', None),
             url=_json.get('url', None),
@@ -59,15 +64,40 @@ class Recipe(entities.BaseEntity):
             metadata=_json.get('metadata', None),
             examples=_json.get('examples', None),
             customActions=_json.get('customActions', None))
+        inst.is_fetched = is_fetched
+        return inst
+
+    @staticmethod
+    def _protected_from_json(_json, client_api, project=None, dataset=None, is_fetched=True):
+        """
+        Same as from_json but with try-except to catch if error
+        :param _json:
+        :param client_api:
+        :param dataset:
+        :return:
+        """
+        try:
+            recipe = Recipe.from_json(_json=_json,
+                                      client_api=client_api,
+                                      project=project,
+                                      dataset=dataset,
+                                      is_fetched=is_fetched)
+            status = True
+        except Exception:
+            recipe = traceback.format_exc()
+            status = False
+        return status, recipe
 
     @_repositories.default
     def set_repositories(self):
         reps = namedtuple('repositories',
                           field_names=['ontologies', 'recipes'])
-        if self.dataset is None:
-            recipes = repositories.Recipes(client_api=self._client_api, dataset=self.dataset)
-        else:
+        if self._dataset is None and self._project is None:
+            recipes = repositories.Recipes(client_api=self._client_api, dataset=self._dataset, project=self._project)
+        elif self._dataset is not None:
             recipes = self.dataset.recipes
+        else:
+            recipes = self.project.recipes
         r = reps(ontologies=repositories.Ontologies(recipe=self, client_api=self._client_api),
                  recipes=recipes)
         return r
@@ -76,6 +106,11 @@ class Recipe(entities.BaseEntity):
     def dataset(self):
         assert isinstance(self._dataset, entities.Dataset)
         return self._dataset
+
+    @property
+    def project(self):
+        assert isinstance(self._project, entities.Project)
+        return self._project
 
     @property
     def recipes(self):
@@ -95,6 +130,7 @@ class Recipe(entities.BaseEntity):
         """
         _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(Recipe)._client_api,
                                                               attr.fields(Recipe)._dataset,
+                                                              attr.fields(Recipe)._project,
                                                               attr.fields(Recipe).project_ids,
                                                               attr.fields(Recipe).ui_settings,
                                                               attr.fields(Recipe)._repositories))

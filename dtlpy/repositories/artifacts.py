@@ -1,6 +1,6 @@
 import logging
 
-from .. import entities, miscellaneous, PlatformException, exceptions
+from .. import entities, miscellaneous, PlatformException, exceptions, services
 
 logger = logging.getLogger(name=__name__)
 
@@ -10,7 +10,10 @@ class Artifacts:
     Artifacts repository
     """
 
-    def __init__(self, client_api, project=None, dataset=None):
+    def __init__(self,
+                 client_api: services.ApiClient,
+                 project: entities.Project = None,
+                 dataset: entities.Dataset = None):
         self._client_api = client_api
         if project is None and dataset is None:
             raise PlatformException('400', 'at least one must be not None: dataset or project')
@@ -22,12 +25,12 @@ class Artifacts:
     # entities #
     ############
     @property
-    def project(self):
+    def project(self) -> entities.Project:
         assert isinstance(self._project, entities.Project)
         return self._project
 
     @property
-    def dataset(self):
+    def dataset(self) -> entities.Dataset:
         if self._dataset is None:
             # get dataset from project
             try:
@@ -64,7 +67,8 @@ class Artifacts:
     # methods #
     ###########
     @staticmethod
-    def _build_path_header(package_name=None, package=None, execution_id=None, execution=None, model_name=None, checkpoint_name=None):
+    def _build_path_header(package_name=None, package=None, execution_id=None, execution=None, model_name=None,
+                           snapshot_name=None):
         remote_path = '/artifacts'
         if package_name is not None or package is not None:
             if package is not None:
@@ -76,12 +80,12 @@ class Artifacts:
             remote_path += '/executions/{}'.format(execution_id)
         if model_name is not None:
             remote_path += '/models/{}'.format(model_name)
-        if checkpoint_name is not None:
-            remote_path += '/checkpoints/{}'.format(checkpoint_name)
+        if snapshot_name is not None:
+            remote_path += '/snapshots/{}'.format(snapshot_name)
 
         return remote_path
 
-    def list(self, execution_id=None, package_name=None):
+    def list(self, execution_id=None, package_name=None) -> miscellaneous.List[entities.Artifact]:
         """
         List of artifacts
         :return: list of artifacts
@@ -95,7 +99,7 @@ class Artifacts:
         return miscellaneous.List(items)
 
     def get(self, artifact_id=None, artifact_name=None,
-            execution_id=None, package_name=None):
+            execution_id=None, package_name=None) -> entities.Artifact:
         """
 
         Get an artifact object by name, id or type
@@ -177,7 +181,7 @@ class Artifacts:
                filepath,
                # where to upload
                package_name=None, package=None, execution_id=None, execution=None, model_name=None,
-               checkpoint_name=None,
+               snapshot_name=None,
                # add information
                overwrite=False):
         """
@@ -189,7 +193,7 @@ class Artifacts:
         :param overwrite: optional - default = False
         :param filepath: local binary file
         :param model_name:
-        :param checkpoint_name:
+        :param snapshot_name:
         :param package_name:
         :param package:
         :param execution_id:
@@ -201,9 +205,9 @@ class Artifacts:
                                               execution=execution,
                                               execution_id=execution_id,
                                               model_name=model_name,
-                                              checkpoint_name=checkpoint_name)
+                                              snapshot_name=snapshot_name)
 
-        if all(elem is None for elem in [package_name, package, execution_id, execution, model_name, checkpoint_name]):
+        if all(elem is None for elem in [package_name, package, execution_id, execution, model_name, snapshot_name]):
             raise ValueError('Must input package or execution (id or entity)')
 
         artifact = self.items_repository.upload(local_path=filepath,

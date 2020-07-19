@@ -28,10 +28,10 @@ from .triggers import Triggers
 from .times_series import TimesSeries
 from .services import Services
 from .executions import Executions
-from .tasks import Tasks
 from .assignments import Assignments
+from .tasks import Tasks
 from .bots import Bots
 from .webhooks import Webhooks
 from .models import Models
-from .checkpoints import Checkpoints
+from .snapshots import Snapshots
 from .analytics import Analytics

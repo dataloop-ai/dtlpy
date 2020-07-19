@@ -56,7 +56,7 @@ class Polygon(BaseAnnotationDefinition):
         :param with_text: not required
         :param height: item height
         :param width: item width
-        :param annotation_format: ['mask', 'instance']
+        :param annotation_format: options: dl.ViewAnnotationOptions.list()
         :param color: color
         :return: ndarray
         """
@@ -156,7 +156,7 @@ class Polygon(BaseAnnotationDefinition):
         if "coordinates" in _json:
             geo = cls.from_coordinates(coordinates=_json["coordinates"][0])
         elif "data" in _json:
-            geo = cls.from_coordinates(coordinates=_json["data"])
+            geo = cls.from_coordinates(coordinates=_json["data"][0])
         else:
             raise ValueError(
                 'can not find "coordinates" or "data" in annotation. id: %s'

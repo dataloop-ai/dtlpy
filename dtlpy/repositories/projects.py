@@ -2,7 +2,7 @@ import logging
 
 import jwt
 
-from .. import entities, miscellaneous, exceptions
+from .. import entities, miscellaneous, exceptions, services
 
 logger = logging.getLogger(name=__name__)
 
@@ -12,16 +12,16 @@ class Projects:
     Projects repository
     """
 
-    def __init__(self, client_api):
+    def __init__(self, client_api: services.ApiClient):
         self._client_api = client_api
 
-    def __get_from_cache(self):
+    def __get_from_cache(self) -> entities.Project:
         project = self._client_api.state_io.get('project')
         if project is not None:
             project = entities.Project.from_json(_json=project, client_api=self._client_api)
         return project
 
-    def __get_by_id(self, project_id):
+    def __get_by_id(self, project_id: str) -> entities.Project:
         success, response = self._client_api.gen_request(req_type='get',
                                                          path='/projects/{}'.format(project_id))
         if success:
@@ -33,7 +33,7 @@ class Projects:
             raise exceptions.PlatformException(error="404", message="Project not found")
         return project
 
-    def __get_by_identifier(self, identifier=None):
+    def __get_by_identifier(self, identifier=None) -> entities.Project:
         projects = self.list()
         projects_by_name = [project for project in projects if identifier in project.id or identifier in project.name]
         if len(projects_by_name) == 1:
@@ -43,7 +43,7 @@ class Projects:
         else:
             raise Exception("Project not found")
 
-    def open_in_web(self, project_name=None, project_id=None, project=None):
+    def open_in_web(self, project_name: str = None, project_id: str = None, project: entities.Project = None):
         if project_id is None:
             if project is not None:
                 project_id = project.id
@@ -53,7 +53,11 @@ class Projects:
                 raise exceptions.PlatformException('400', 'Please provide project, project name or project id')
         self._client_api._open_in_web(resource_type='project', project_id=project_id)
 
-    def checkout(self, identifier=None, project_name=None, project_id=None, project=None):
+    def checkout(self,
+                 identifier: str = None,
+                 project_name: str = None,
+                 project_id: str = None,
+                 project: entities.Project = None):
         """
         Check-out a project
         :param project:
@@ -73,7 +77,7 @@ class Projects:
         self._client_api.state_io.put('project', project.to_json())
         logger.info('Checked out to project {}'.format(project.name))
 
-    def _send_mail(self, project_id, send_to, title, content):
+    def _send_mail(self, project_id: str, send_to: str, title: str, content: str) -> bool:
         url = '/projects/{}/mail'.format(project_id)
         assert isinstance(title, str)
         assert isinstance(content, str)
@@ -97,7 +101,7 @@ class Projects:
             raise exceptions.PlatformException(response)
         return True
 
-    def add_member(self, email, project_id, role='engineer'):
+    def add_member(self, email: str, project_id: str, role: str = 'engineer'):
         url_path = '/projects/{}/members/{}'.format(project_id, email)
         payload = dict(role=role)
         success, response = self._client_api.gen_request(req_type='post',
@@ -108,7 +112,7 @@ class Projects:
 
         return response.json()
 
-    def list(self):
+    def list(self) -> miscellaneous.List[entities.Project]:
         """
         Get users project's list.
         :return: List of Project objects
@@ -138,7 +142,11 @@ class Projects:
             raise exceptions.PlatformException(response)
         return projects
 
-    def get(self, project_name=None, project_id=None, checkout=False, fetch=None):
+    def get(self,
+            project_name: str = None,
+            project_id: str = None,
+            checkout: bool = False,
+            fetch: bool = None) -> entities.Project:
         """
         Get a Project object
         :param checkout:
@@ -189,7 +197,11 @@ class Projects:
             self.checkout(project=project)
         return project
 
-    def delete(self, project_name=None, project_id=None, sure=False, really=False):
+    def delete(self,
+               project_name: str = None,
+               project_id: str = None,
+               sure: bool = False,
+               really: bool = False) -> bool:
         """
         Delete a project forever!
         :param project_name: optional - search by name
@@ -214,7 +226,9 @@ class Projects:
                 error='403',
                 message='Cant delete project from SDK. Please login to platform to delete')
 
-    def update(self, project, system_metadata=False):
+    def update(self,
+               project: entities.Project,
+               system_metadata: bool = False) -> entities.Project:
         """
         Update a project
         :return: Project object
@@ -230,7 +244,9 @@ class Projects:
         else:
             raise exceptions.PlatformException(response)
 
-    def create(self, project_name, checkout=False):
+    def create(self,
+               project_name: str,
+               checkout: bool = False) -> entities.Project:
         """
         Create a new project
         :param checkout:

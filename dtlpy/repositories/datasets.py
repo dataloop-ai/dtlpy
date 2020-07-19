@@ -8,7 +8,7 @@ import logging
 from urllib.parse import urlencode
 from multiprocessing.pool import ThreadPool
 
-from .. import entities, repositories, miscellaneous, exceptions
+from .. import entities, repositories, miscellaneous, exceptions, services
 
 logger = logging.getLogger(name=__name__)
 
@@ -18,7 +18,7 @@ class Datasets:
     Datasets repository
     """
 
-    def __init__(self, client_api, project=None):
+    def __init__(self, client_api: services.ApiClient, project: entities.Project = None):
         self._client_api = client_api
         self._project = project
 
@@ -26,7 +26,7 @@ class Datasets:
     # entities #
     ############
     @property
-    def project(self):
+    def project(self) -> entities.Project:
         if self._project is None:
             # try get checkout
             project = self._client_api.state_io.get('project')
@@ -35,12 +35,13 @@ class Datasets:
         if self._project is None:
             raise exceptions.PlatformException(
                 error='2001',
-                message='Cannot perform action WITHOUT Project entity in Datasets repository. Please checkout or set a project')
+                message='Cannot perform action WITHOUT Project entity in Datasets repository.'
+                        ' Please checkout or set a project')
         assert isinstance(self._project, entities.Project)
         return self._project
 
     @project.setter
-    def project(self, project):
+    def project(self, project: entities.Project):
         if not isinstance(project, entities.Project):
             raise ValueError('Must input a valid Project entity')
         self._project = project
@@ -48,7 +49,7 @@ class Datasets:
     ###########
     # methods #
     ###########
-    def __get_from_cache(self):
+    def __get_from_cache(self) -> entities.Dataset:
         dataset = self._client_api.state_io.get('dataset')
         if dataset is not None:
             dataset = entities.Dataset.from_json(_json=dataset,
@@ -57,7 +58,7 @@ class Datasets:
                                                  project=self._project)
         return dataset
 
-    def __get_by_id(self, dataset_id):
+    def __get_by_id(self, dataset_id) -> entities.Dataset:
         success, response = self._client_api.gen_request(req_type='get',
                                                          path='/datasets/{}'.format(dataset_id))
         if dataset_id is None or dataset_id == '':
@@ -72,7 +73,7 @@ class Datasets:
             raise exceptions.PlatformException(response)
         return dataset
 
-    def __get_by_identifier(self, identifier=None):
+    def __get_by_identifier(self, identifier=None) -> entities.Dataset:
         datasets = self.list()
         datasets_by_name = [dataset for dataset in datasets if identifier in dataset.name or identifier in dataset.id]
         if len(datasets_by_name) == 1:
@@ -85,7 +86,9 @@ class Datasets:
     def open_in_web(self, dataset_name=None, dataset_id=None, dataset=None):
         if dataset is None:
             dataset = self.get(dataset_id=dataset_id, dataset_name=dataset_name)
-        self._client_api._open_in_web(resource_type='dataset', project_id=dataset._project.id, dataset_id=dataset.id)
+        self._client_api._open_in_web(resource_type='dataset',
+                                      project_id=dataset.project.id, # need to get the project otherwise will fail
+                                      dataset_id=dataset.id)
 
     def checkout(self, identifier=None, dataset_name=None, dataset_id=None, dataset=None):
         """
@@ -107,7 +110,7 @@ class Datasets:
         self._client_api.state_io.put('dataset', dataset.to_json())
         logger.info('Checked out to dataset {}'.format(dataset.name))
 
-    def list(self, name=None, creator=None):
+    def list(self, name=None, creator=None) -> miscellaneous.List[entities.Dataset]:
         """
         List all datasets.
 
@@ -150,7 +153,7 @@ class Datasets:
             raise exceptions.PlatformException(response)
         return datasets
 
-    def get(self, dataset_name=None, dataset_id=None, checkout=False, fetch=None):
+    def get(self, dataset_name=None, dataset_id=None, checkout=False, fetch=None) -> entities.Dataset:
         """
         Get dataset by name or id
 
@@ -221,7 +224,7 @@ class Datasets:
                 error='403',
                 message='Cant delete dataset from SDK. Please login to platform to delete')
 
-    def update(self, dataset, system_metadata=False):
+    def update(self, dataset: entities.Dataset, system_metadata=False) -> entities.Dataset:
         """
         Update dataset field
         :param dataset: Dataset entity
@@ -240,7 +243,7 @@ class Datasets:
         else:
             raise exceptions.PlatformException(response)
 
-    def directory_tree(self, dataset=None, dataset_name=None, dataset_id=None):
+    def directory_tree(self, dataset: entities.Dataset = None, dataset_name=None, dataset_id=None):
         """
         Get dataset's directory tree
         :return:
@@ -329,7 +332,8 @@ class Datasets:
         else:
             raise exceptions.PlatformException(response)
 
-    def create(self, dataset_name, labels=None, driver=None, attributes=None, ontology_ids=None, checkout=False):
+    def create(self, dataset_name, labels=None, driver=None, attributes=None, ontology_ids=None,
+               checkout=False) -> entities.Dataset:
         """
         Create a new dataset
 
@@ -401,16 +405,14 @@ class Datasets:
             if dataset.project is None:
                 # by dataset name
                 local_path = os.path.join(
-                    os.path.expanduser("~"),
-                    ".dataloop",
+                    services.service_defaults.DATALOOP_PATH,
                     "datasets",
                     "{}_{}".format(dataset.name, dataset.id),
                 )
             else:
                 # by dataset and project name
                 local_path = os.path.join(
-                    os.path.expanduser("~"),
-                    ".dataloop",
+                    services.service_defaults.DATALOOP_PATH,
                     "projects",
                     dataset.project.name,
                     "datasets",
@@ -432,7 +434,7 @@ class Datasets:
         filters.add(field='annotated', values=True)
 
         if annotation_options is None:
-            annotation_options = ['json']
+            annotation_options = [entities.ViewAnnotationOptions.JSON]
         if not isinstance(annotation_options, list):
             annotation_options = [annotation_options]
 

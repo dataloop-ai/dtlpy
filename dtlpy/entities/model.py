@@ -37,9 +37,10 @@ class Model(entities.BaseEntity):
     def _protected_from_json(_json, client_api, project, is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
-        :param _json:
+        :param _json: platform representation of model
         :param client_api:
-        :param dataset:
+        :param project:
+        :param is_fetched: is Entity fetched from Platform
         :return:
         """
         try:
@@ -118,13 +119,13 @@ class Model(entities.BaseEntity):
     @_repositories.default
     def set_repositories(self):
         reps = namedtuple('repositories',
-                          field_names=['projects', 'models', 'checkpoints'])
+                          field_names=['projects', 'models', 'snapshots'])
 
         r = reps(projects=repositories.Projects(client_api=self._client_api),
                  models=repositories.Models(client_api=self._client_api, project=self._project),
-                 checkpoints=repositories.Checkpoints(client_api=self._client_api,
-                                                      project=self._project,
-                                                      model=self),
+                 snapshots=repositories.Snapshots(client_api=self._client_api,
+                                                  project=self._project,
+                                                  model=self),
                  )
         return r
 
@@ -134,9 +135,9 @@ class Model(entities.BaseEntity):
         return self._repositories.projects
 
     @property
-    def checkpoints(self):
-        assert isinstance(self._repositories.checkpoints, repositories.Checkpoints)
-        return self._repositories.checkpoints
+    def snapshots(self):
+        assert isinstance(self._repositories.snapshots, repositories.Snapshots)
+        return self._repositories.snapshots
 
     @property
     def models(self):
@@ -216,7 +217,8 @@ class Model(entities.BaseEntity):
         """
         Push local model
 
-        :param local_path:
+        :param from_local: bool. use current directory to build
+        :param local_path: local path of the model (if from_local=False - codebase will be downloaded)
         :return:
         """
         return self.models.build(model=self,

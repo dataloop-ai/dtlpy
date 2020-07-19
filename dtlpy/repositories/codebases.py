@@ -4,7 +4,7 @@ import os
 import io
 import random
 
-from .. import entities, PlatformException, exceptions, repositories, miscellaneous
+from .. import entities, PlatformException, exceptions, repositories, miscellaneous, services
 
 logger = logging.getLogger(name=__name__)
 
@@ -14,7 +14,10 @@ class Codebases:
     Codebases repository
     """
 
-    def __init__(self, client_api, project=None, dataset=None):
+    def __init__(self,
+                 client_api: services.ApiClient,
+                 project: entities.Project = None,
+                 dataset: entities.Dataset = None):
         self._client_api = client_api
         if project is None and dataset is None:
             raise PlatformException('400', 'at least one must be not None: dataset or project')
@@ -23,7 +26,7 @@ class Codebases:
         self._items_repository = None
 
     @property
-    def items_repository(self):
+    def items_repository(self) -> repositories.Items:
         if self._items_repository is None:
             self._items_repository = self.dataset.items
             self._items_repository.set_items_entity(entities.Codebase)
@@ -31,14 +34,14 @@ class Codebases:
         return self._items_repository
 
     @property
-    def project(self):
+    def project(self) -> entities.Project:
         if self._project is None:
             self._project = self.dataset.project
         assert isinstance(self._project, entities.Project)
         return self._project
 
     @property
-    def dataset(self):
+    def dataset(self) -> entities.Dataset:
         if self._dataset is None:
             # get dataset from project
             try:
@@ -61,7 +64,7 @@ class Codebases:
         return self._dataset
 
     @dataset.setter
-    def dataset(self, dataset):
+    def dataset(self, dataset: entities.Dataset):
         if not isinstance(dataset, entities.Dataset):
             raise ValueError('Must input a valid Dataset entity')
         self._dataset = dataset
@@ -86,7 +89,7 @@ class Codebases:
         versions = self.items_repository.list(filters=filters)
         return versions
 
-    def list(self):
+    def list(self) -> entities.PagedEntities:
         """
         List all code bases
         :return: Paged entity
@@ -255,7 +258,7 @@ class Codebases:
                     os.remove(zip_filename)
         return item
 
-    def unpack_single(self, codebase, download_path, local_path):
+    def unpack_single(self, codebase: entities.Codebase, download_path, local_path):
         # downloading with specific filename
         artifact_filepath = self.items_repository.download(items=codebase.id,
                                                            save_locally=True,

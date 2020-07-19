@@ -42,7 +42,8 @@ def step_impl(context, package_number):
 
     if modules == 'no_input':
         func = context.dl.PackageFunction()
-        modules = context.dl.PackageModule(functions=func, name=context.dl.entities.DEFAULT_PACKAGE_MODULE_NAME)
+        modules = context.dl.PackageModule(functions=func,
+                                           name=context.dl.entities.package_defaults.DEFAULT_PACKAGE_MODULE_NAME)
 
     # module = context.dl.entities.DEFAULT_PACKAGE_MODULE
     package = context.project.packages.push(codebase_id=codebase_id,

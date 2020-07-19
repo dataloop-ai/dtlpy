@@ -1,7 +1,6 @@
-from urllib.parse import urlencode
 import logging
 
-from .. import entities, miscellaneous, exceptions
+from .. import entities, miscellaneous, exceptions, services
 
 logger = logging.getLogger(name=__name__)
 
@@ -11,7 +10,11 @@ class Triggers:
     Triggers repository
     """
 
-    def __init__(self, client_api, project=None, service=None, project_id=None):
+    def __init__(self,
+                 client_api: services.ApiClient,
+                 project: entities.Project = None,
+                 service: entities.Service = None,
+                 project_id: str = None):
         self._client_api = client_api
         self._project = project
         self._service = service
@@ -27,7 +30,7 @@ class Triggers:
     # entities #
     ############
     @property
-    def service(self):
+    def service(self) -> entities.Service:
         if self._service is None:
             raise exceptions.PlatformException(
                 error='2001',
@@ -36,13 +39,13 @@ class Triggers:
         return self._service
 
     @service.setter
-    def service(self, service):
+    def service(self, service: entities.Service):
         if not isinstance(service, entities.Service):
             raise ValueError('Must input a valid Service entity')
         self._service = service
 
     @property
-    def project(self):
+    def project(self) -> entities.Project:
         if self._project is None:
             if self._service is not None:
                 self._project = self._service._project
@@ -54,7 +57,7 @@ class Triggers:
         return self._project
 
     @project.setter
-    def project(self, project):
+    def project(self, project: entities.Project):
         if not isinstance(project, entities.Project):
             raise ValueError('Must input a valid Project entity')
         self._project = project
@@ -62,9 +65,18 @@ class Triggers:
     ###########
     # methods #
     ###########
-    def create(self, service_id=None, webhook_id=None, name=None, filters=None, function_name='run',
-               resource=entities.TriggerResource.ITEM, actions=None, active=True,
-               execution_mode=entities.TriggerExecutionMode.ONCE, project_id=None, **kwargs):
+    def create(self,
+               service_id: str = None,
+               webhook_id=None,
+               name: str = None,
+               filters=None,
+               function_name=entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME,
+               resource=entities.TriggerResource.ITEM,
+               actions=None,
+               active=True,
+               execution_mode=entities.TriggerExecutionMode.ONCE,
+               project_id=None,
+               **kwargs) -> entities.Trigger:
         """
         Create a Trigger
 
@@ -99,7 +111,7 @@ class Triggers:
         if filters is None:
             filters = dict()
         elif isinstance(filters, entities.Filters):
-            filters = filters.prepare(query_only=True)
+            filters = filters.prepare(query_only=True).get('filter', dict())
 
         if service_id is None:
             operation = {
@@ -162,7 +174,7 @@ class Triggers:
                                           project=self._project,
                                           service=self._service)
 
-    def get(self, trigger_id=None, trigger_name=None):
+    def get(self, trigger_id=None, trigger_name=None) -> entities.Trigger:
         """
         Get Trigger object
 
@@ -190,7 +202,8 @@ class Triggers:
             if trigger_name is None:
                 raise exceptions.PlatformException('400', 'Must provide either trigger name or trigger id')
             else:
-                triggers = self.list(filters=entities.Filters(field='name', values=trigger_name, resource=entities.FiltersResource.TRIGGER))
+                triggers = self.list(filters=entities.Filters(field='name', values=trigger_name,
+                                                              resource=entities.FiltersResource.TRIGGER))
                 if triggers.items_count == 0:
                     raise exceptions.PlatformException('404', 'Trigger not found')
                 elif triggers.items_count == 1:
@@ -224,14 +237,12 @@ class Triggers:
             raise exceptions.PlatformException(response)
         return True
 
-    def update(self, trigger):
+    def update(self, trigger: entities.Trigger) -> entities.Trigger:
         """
 
         :param trigger: Trigger entity
         :return: Trigger entity
         """
-        assert isinstance(trigger, entities.Trigger)
-
         # payload
         payload = trigger.to_json()
         payload['spec'].pop('resource')
@@ -252,7 +263,7 @@ class Triggers:
                                           project=self._project,
                                           service=self._service)
 
-    def _build_entities_from_response(self, response_items):
+    def _build_entities_from_response(self, response_items) -> miscellaneous.List[entities.Trigger]:
         pool = self._client_api.thread_pools(pool_name='entity.create')
         jobs = [None for _ in range(len(response_items))]
         # return triggers list
@@ -272,7 +283,7 @@ class Triggers:
         triggers = miscellaneous.List([r[1] for r in results if r[0] is True])
         return triggers
 
-    def _list(self, filters):
+    def _list(self, filters: entities.Filters):
         """
         List project triggers
         :return:
@@ -286,7 +297,7 @@ class Triggers:
             raise exceptions.PlatformException(response)
         return response.json()
 
-    def list(self, filters=None):
+    def list(self, filters: entities.Filters = None) -> entities.PagedEntities:
         """
         List project packages
         :return:

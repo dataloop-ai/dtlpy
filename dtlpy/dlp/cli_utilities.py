@@ -133,7 +133,7 @@ class DlpCompleter(Completer):
                     else:
                         packages = self.dlp.packages
                     package_list = packages.list()
-                    self.param_suggestions = ['"{}'.format(package.name) for package in package_list]
+                    self.param_suggestions = ['"{}'.format(package.name) for package in package_list.items]
                     self.thread_state = StateEnum.DONE
 
                 elif param == '--service-name':
@@ -150,7 +150,7 @@ class DlpCompleter(Completer):
                         services = self.dlp.services
 
                     service_list = services.list()
-                    self.param_suggestions = ['"{}'.format(service.name) for service in service_list]
+                    self.param_suggestions = ['"{}'.format(service.name) for service in service_list.items]
                     self.thread_state = StateEnum.DONE
 
                 elif param == '--trigger-name':
@@ -171,7 +171,7 @@ class DlpCompleter(Completer):
                         triggers = self.dlp.services
 
                     trigger_list = triggers.list()
-                    self.param_suggestions = ['"{}'.format(trigger.name) for trigger in trigger_list]
+                    self.param_suggestions = ['"{}'.format(trigger.name) for trigger in trigger_list.items]
                     self.thread_state = StateEnum.DONE
 
                 elif param == '--dataset-name':
@@ -305,7 +305,7 @@ class DlpCompleter(Completer):
         if self.need_param(cmd=cmd, word_before_cursor=word_before_cursor):
             param = self.get_param(cmd=cmd, word_before_cursor=word_before_cursor)
             if self.thread_state in [StateEnum.START, StateEnum.CONTINUE]:
-                if param in ['--project-name', '--dataset-name', '--remote-path']:
+                if param in ['--project-name', '--dataset-name', '--remote-path', '--package-name', '--service-name', '--trigger-name']:
                     thread = threading.Thread(target=self.get_param_suggestions,
                                               kwargs={"param": param,
                                                       'word_before_cursor': word_before_cursor,

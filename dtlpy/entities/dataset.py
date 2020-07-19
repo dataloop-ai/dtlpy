@@ -23,7 +23,6 @@ class Dataset(entities.BaseEntity):
     projects = attr.ib(repr=False)
     itemsCount = attr.ib()
     metadata = attr.ib(repr=False)
-    items_url = attr.ib(repr=False)  # name change when to_json
     directoryTree = attr.ib(repr=False)
     export = attr.ib(repr=False)
 
@@ -32,6 +31,7 @@ class Dataset(entities.BaseEntity):
     items_url = attr.ib(repr=False)
     readable_type = attr.ib(repr=False)
     access_level = attr.ib(repr=False)
+    driver = attr.ib(repr=False)
 
     # api
     _client_api = attr.ib(type=services.ApiClient, repr=False)
@@ -50,7 +50,11 @@ class Dataset(entities.BaseEntity):
     _directory_tree = attr.ib(default=None, repr=False)
 
     @staticmethod
-    def _protected_from_json(project, _json, client_api, datasets=None, is_fetched=True):
+    def _protected_from_json(project: entities.Project,
+                             _json: dict,
+                             client_api: services.ApiClient,
+                             datasets=None,
+                             is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
          :param is_fetched: is Entity fetched from Platform
@@ -73,7 +77,12 @@ class Dataset(entities.BaseEntity):
         return status, dataset
 
     @classmethod
-    def from_json(cls, project, _json, client_api, datasets=None, is_fetched=True):
+    def from_json(cls,
+                  project: entities.Project,
+                  _json: dict,
+                  client_api: services.ApiClient,
+                  datasets=None,
+                  is_fetched=True):
         """
         Build a Dataset entity object from a json
 
@@ -95,6 +104,7 @@ class Dataset(entities.BaseEntity):
                    creator=_json.get('creator', None),
                    items_url=_json.get('items', None),
                    export=_json.get('export', None),
+                   driver=_json.get('driver', None),
                    name=_json.get('name', None),
                    url=_json.get('url', None),
                    id=_json.get('id', None),
@@ -138,7 +148,7 @@ class Dataset(entities.BaseEntity):
     def labels_flat_dict(self):
         flatten_dict = dict()
 
-        def add_to_dict(tag, father):
+        def add_to_dict(tag: str, father: entities.Label):
             flatten_dict[tag] = father
             for child in father.children:
                 add_to_dict('{}.{}'.format(tag, child.tag), child)
@@ -157,7 +167,7 @@ class Dataset(entities.BaseEntity):
         return self._instance_map
 
     @instance_map.setter
-    def instance_map(self, value):
+    def instance_map(self, value: dict):
         """
         instance mapping for creating instance mask
         :param value: dictionary {label: map_id}
@@ -263,15 +273,13 @@ class Dataset(entities.BaseEntity):
 
     def __get_local_path__(self):
         if self._project is not None:
-            local_path = os.path.join(os.path.expanduser('~'),
-                                      '.dataloop',
+            local_path = os.path.join(services.service_defaults.DATALOOP_PATH,
                                       'projects',
                                       self.project.name,
                                       'datasets',
                                       self.name)
         else:
-            local_path = os.path.join(os.path.expanduser('~'),
-                                      '.dataloop',
+            local_path = os.path.join(services.service_defaults.DATALOOP_PATH,
                                       'datasets',
                                       '%s_%s' % (self.name, self.id))
         return local_path
@@ -461,7 +469,7 @@ class Dataset(entities.BaseEntity):
         :param to_items_folder: Create 'items' folder and download items to it
         :param overwrite: optional - default = False
         :param file_types: a list of file type to download. e.g ['video/webm', 'video/mp4', 'image/jpeg', 'image/png']
-        :param annotation_options: download annotations options: ['mask', 'img_mask', 'instance', 'json']
+        :param annotation_options: download annotations options: dl.ViewAnnotationOptions.list()
         :param with_text: optional - add text to annotations, default = False
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :param without_relative_path: string - remote path - download items without the relative path from platform

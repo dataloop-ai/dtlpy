@@ -4,6 +4,7 @@ import tempfile
 import requests
 import asyncio
 import logging
+import pandas
 import shutil
 import json
 import time
@@ -22,7 +23,12 @@ NUM_TRIES = 5  # try to upload 3 time before fail on item
 
 
 class UploadElement:
-    def __init__(self, element_type, buffer, remote_filepath, annotations_filepath, remote_name=None,
+    def __init__(self,
+                 element_type,
+                 buffer,
+                 remote_filepath,
+                 annotations_filepath,
+                 remote_name=None,
                  link_dataset_id=None,
                  item_metadata=None):
         self.type = element_type
@@ -37,7 +43,7 @@ class UploadElement:
 
 
 class Uploader:
-    def __init__(self, items_repository):
+    def __init__(self, items_repository: repositories.Items):
         assert isinstance(items_repository, repositories.Items)
         self.items_repository = items_repository
         self.__stop_create_existence_dict = False
@@ -76,6 +82,64 @@ class Uploader:
         mode = 'skip'
         if overwrite:
             mode = 'overwrite'
+        if num_workers is not None:
+            logger.warning('[DeprecationWarning] input argument "num_workers"'
+                           ' will be deprecated from upload() after version 1.17.0\n'
+                           'To set number of processes use "dtlpy.client_api.num_processes=int()"')
+            self.items_repository._client_api.num_processes = num_workers
+
+        if isinstance(local_path, pandas.DataFrame):
+            elements = self._build_elements_from_df(local_path)
+        else:
+            elements = self._build_elements_from_inputs(local_path=local_path,
+                                                        local_annotations_path=local_annotations_path,
+                                                        # upload options
+                                                        remote_path=remote_path,
+                                                        remote_name=remote_name,
+                                                        file_types=file_types,
+                                                        item_metadata=item_metadata)
+        num_files = len(elements)
+        logger.info("Uploading {} items..".format(num_files))
+        reporter = Reporter(num_workers=num_files, resource=Reporter.ITEMS_UPLOAD)
+        disable_pbar = self.items_repository._client_api.verbose.disable_progress_bar or num_files == 1
+        pbar = tqdm.tqdm(total=num_files, disable=disable_pbar)
+        futures = [None for _ in range(num_files)]
+        for i_item in range(num_files):
+            element = elements[i_item]
+            # upload
+            futures[i_item] = asyncio.run_coroutine_threadsafe(
+                self.__upload_single_item_wrapper(i_item=i_item,
+                                                  element=element,
+                                                  mode=mode,
+                                                  pbar=pbar,
+                                                  reporter=reporter),
+                loop=self.items_repository._client_api.event_loops('items.upload').loop)
+
+        _ = [future.result() for future in futures]
+        pbar.close()
+        # summary
+        logger.info("Number of total files: {}".format(num_files))
+        for action in reporter.status_list:
+            n_for_action = reporter.status_count(status=action)
+            logger.info("Number of files {}: {}".format(action, n_for_action))
+
+        # log error
+        errors_count = reporter.failure_count
+        if errors_count > 0:
+            log_filepath = reporter.generate_log_files()
+            logger.warning("Errors in {n_error} files. See {log_filepath} for full log".format(
+                n_error=errors_count, log_filepath=log_filepath))
+
+        return reporter.output
+
+    def _build_elements_from_inputs(self,
+                                    local_path,
+                                    local_annotations_path,
+                                    # upload options
+                                    remote_path,
+                                    file_types,
+                                    remote_name,
+                                    item_metadata):
         if remote_path is None:
             remote_path = '/'
         if not remote_path.endswith("/"):
@@ -87,11 +151,6 @@ class Uploader:
             if not isinstance(item_metadata, dict):
                 msg = '"item_metadata" should be a metadata dictionary. Got type: {}'.format(type(item_metadata))
                 raise PlatformException(error="400", message=msg)
-        if num_workers is not None:
-            logger.warning('[DeprecationWarning] input argument "num_workers"'
-                           ' will be deprecated from upload() after version 1.17.0\n'
-                           'To set number of processes use "dtlpy.client_api.num_processes=int()"')
-            self.items_repository._client_api.num_processes = num_workers
 
         ##########################
         # Convert inputs to list #
@@ -309,85 +368,36 @@ class Uploader:
                             "known types (or list of those types): str (dir, file, url), bytes, io.BytesIO, "
                             "io.TextIOWrapper, Dataloop.Item, Dataloop.Link, "
                             "Dataloop.Similarity".format(type(upload_item_element)))
+        return elements
 
-        num_files = len(elements)
-        logger.info("Uploading {} items..".format(num_files))
-        reporter = Reporter(num_workers=num_files, resource=Reporter.ITEMS_UPLOAD)
-        disable_pbar = self.items_repository._client_api.verbose.disable_progress_bar or num_files == 1
-        pbar = tqdm.tqdm(total=num_files, disable=disable_pbar)
-        futures = [None for _ in range(num_files)]
-        for i_item in range(num_files):
-            element = elements[i_item]
-            # upload
-            futures[i_item] = asyncio.run_coroutine_threadsafe(
-                self.__upload_single_item_wrapper(i_item=i_item,
-                                                  element=element,
-                                                  mode=mode,
-                                                  pbar=pbar,
-                                                  reporter=reporter),
-                loop=self.items_repository._client_api.event_loops('items.upload').loop)
+    def _build_elements_from_df(self, df: pandas.DataFrame):
+        elements = list()
+        for index, row in df.iterrows():
+            upload_item_element = row.get('local_path')
+            remote_path = row.get('remote_path', '/')
+            remote_name = row.get('remote_name', None)
+            annotations_filepath = row.get('local_annotations_path', None)
+            item_metadata = row.get('item_metadata', None)
+            if not remote_path.endswith('/'):
+                remote_path += '/'
 
-        _ = [future.result() for future in futures]
-        pbar.close()
-        # summary
-        logger.info("Number of total files: {}".format(num_files))
-        for action in reporter.status_list:
-            n_for_action = reporter.status_count(status=action)
-            logger.info("Number of files {}: {}".format(action, n_for_action))
+            if os.path.isfile(upload_item_element):
+                element_type = 'file'
+                if remote_name is None:
+                    remote_name = os.path.basename(upload_item_element)
+            elif self.is_url(upload_item_element):
+                element_type = 'url'
+                if remote_name is None:
+                    remote_name = str(upload_item_element.split('/')[-1])
+            else:
+                raise PlatformException("404", "Unknown local path: {}".format(upload_item_element))
+            elements.append(UploadElement(element_type=element_type,
+                                          buffer=upload_item_element,
+                                          remote_filepath=remote_path + remote_name,
+                                          annotations_filepath=annotations_filepath,
+                                          item_metadata=item_metadata))
 
-        # log error
-        errors_count = reporter.failure_count
-        if errors_count > 0:
-            log_filepath = reporter.generate_log_files()
-            logger.warning("Errors in {n_error} files. See {log_filepath} for full log".format(
-                n_error=errors_count, log_filepath=log_filepath))
-
-        return reporter.output
-
-    def __create_existence_dict_worker(self, remote_existence_dict, item_remote_filepaths):
-        """
-
-        :param remote_existence_dict: a dictionary that state for each desired remote path if file already exists
-        :param item_remote_filepaths: a list of all desired uploaded filepaths
-        :return:
-        """
-        try:
-            # get pages of item according to remote filepath
-
-            item_remote_paths = list()
-            for filepath in item_remote_filepaths:
-                path = os.path.dirname(filepath)
-                if path not in item_remote_paths:
-                    item_remote_paths.append(path)
-
-            # filters.add(field="type", values="file")
-            # add remote paths to check existence
-            filters = entities.Filters()
-            filters.add(field="hidden", values=True)
-            for remote_path in item_remote_paths:
-                if not remote_path.endswith('/'):
-                    remote_path += '/'
-                filters.add(field='filename', values={'$glob': remote_path + '*'})
-            filters.method = 'or'
-            pages = self.items_repository.list(filters=filters)
-
-            # join path and filename for all uploads
-
-            for page in pages:
-                if self.__stop_create_existence_dict:
-                    break
-                for item in page:
-                    # check in current remote item filename exists in uploaded list
-                    if item.filename in item_remote_filepaths:
-                        remote_existence_dict[item.filename] = item
-
-            # after listing all platform file make sure everything in dictionary
-            for item_remote_filepath in item_remote_filepaths:
-                if item_remote_filepath not in remote_existence_dict:
-                    remote_existence_dict[item_remote_filepath] = None
-
-        except Exception:
-            logger.error('{}\nCant create existence dictionary when uploading'.format(traceback.format_exc()))
+        return elements
 
     async def __single_async_upload(self,
                                     filepath,
@@ -541,7 +551,7 @@ class Uploader:
             pbar.update()
 
     async def __async_upload_annotations(self, annotations_filepath, item):
-        with open(annotations_filepath, 'r') as f:
+        with open(annotations_filepath, 'r', encoding="utf8") as f:
             annotations = json.load(f)
         # wait for coroutines on the current event loop
         return await item.annotations._async_upload_annotations(annotations=annotations['annotations'])

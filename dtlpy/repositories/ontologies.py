@@ -1,7 +1,7 @@
 import logging
 import traceback
 
-from .. import entities, miscellaneous, exceptions
+from .. import entities, miscellaneous, exceptions, services
 
 logger = logging.getLogger(name=__name__)
 
@@ -11,7 +11,7 @@ class Ontologies:
     Ontologies repository
     """
 
-    def __init__(self, client_api, recipe):
+    def __init__(self, client_api: services.ApiClient, recipe: entities.Recipe = None):
         self._client_api = client_api
         self._recipe = recipe
 
@@ -19,7 +19,7 @@ class Ontologies:
     # entities #
     ############
     @property
-    def recipe(self):
+    def recipe(self) -> entities.Recipe:
         if self._recipe is None:
             raise exceptions.PlatformException(
                 error='2001',
@@ -28,7 +28,7 @@ class Ontologies:
         return self._recipe
 
     @recipe.setter
-    def recipe(self, recipe):
+    def recipe(self, recipe: entities.Recipe):
         if not isinstance(recipe, entities.Recipe):
             raise ValueError('Must input a valid Recipe entity')
         self._recipe = recipe
@@ -36,7 +36,7 @@ class Ontologies:
     ###########
     # methods #
     ###########
-    def create(self, labels, project_ids=None, attributes=None):
+    def create(self, labels, project_ids=None, attributes=None) -> entities.Ontology:
         """
         Create a new ontology
 
@@ -69,7 +69,7 @@ class Ontologies:
             raise exceptions.PlatformException(response)
         return ontology
 
-    def list(self):
+    def list(self) -> miscellaneous.List[entities.Ontology]:
         """
         List ontologies for recipe
 
@@ -107,7 +107,7 @@ class Ontologies:
             status = False
         return status, ontology
 
-    def get(self, ontology_id):
+    def get(self, ontology_id) -> entities.Ontology:
         """
         Get Ontology object
 
@@ -139,7 +139,7 @@ class Ontologies:
         else:
             raise exceptions.PlatformException(response)
 
-    def update(self, ontology, system_metadata=False):
+    def update(self, ontology: entities.Ontology, system_metadata=False) -> entities.Ontology:
         """
         Update Ontology metadata
 

@@ -6,9 +6,19 @@ from copy import deepcopy
 from shutil import copyfile
 from multiprocessing.pool import ThreadPool
 
-from .. import entities, repositories, exceptions, utilities, miscellaneous, assets
+from .. import entities, repositories, exceptions, utilities, miscellaneous, assets, services
 
 logger = logging.getLogger(name=__name__)
+
+DEFAULT_PACKAGE_METHOD = entities.PackageFunction(name=entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME,
+                                                  description='',
+                                                  inputs=[],
+                                                  outputs=[])
+DEFAULT_PACKAGE_MODULE = entities.PackageModule(init_inputs=list(),
+                                                entry_point=entities.package_defaults.DEFAULT_PACKAGE_ENTRY_POINT,
+                                                class_name=entities.package_defaults.DEFAULT_PACKAGE_CLASS_NAME,
+                                                name=entities.package_defaults.DEFAULT_PACKAGE_MODULE_NAME,
+                                                functions=[DEFAULT_PACKAGE_METHOD])
 
 
 class PackageCatalog:
@@ -39,7 +49,7 @@ class Packages:
     Packages Repository
     """
 
-    def __init__(self, client_api, project=None):
+    def __init__(self, client_api: services.ApiClient, project: entities.Project = None):
         self._client_api = client_api
         self._project = project
         self.package_io = PackageIO()
@@ -48,7 +58,7 @@ class Packages:
     # entities #
     ############
     @property
-    def project(self):
+    def project(self) -> entities.Project:
         if self._project is None:
             try:
                 self._project = repositories.Projects(client_api=self._client_api).get()
@@ -59,7 +69,7 @@ class Packages:
         return self._project
 
     @project.setter
-    def project(self, project):
+    def project(self, project: entities.Project):
         if not isinstance(project, entities.Project):
             raise ValueError('Must input a valid Project entity')
         self._project = project
@@ -72,7 +82,7 @@ class Packages:
             package = self.get(package_name=package_name, package_id=package_id)
         self._client_api._open_in_web(resource_type='package', project_id=package.project_id, package_id=package.id)
 
-    def get(self, package_name=None, package_id=None, checkout=False, fetch=None):
+    def get(self, package_name=None, package_id=None, checkout=False, fetch=None) -> entities.Package:
         """
         Get Package object
 
@@ -128,7 +138,7 @@ class Packages:
             self.checkout(package=package)
         return package
 
-    def _build_entities_from_response(self, response_items):
+    def _build_entities_from_response(self, response_items) -> miscellaneous.List[entities.Package]:
         pool = self._client_api.thread_pools(pool_name='entity.create')
         jobs = [None for _ in range(len(response_items))]
         # return triggers list
@@ -147,7 +157,7 @@ class Packages:
         packages = miscellaneous.List([r[1] for r in results if r[0] is True])
         return packages
 
-    def _list(self, filters):
+    def _list(self, filters: entities.Filters):
         url = '/query/FaaS'
 
         # request
@@ -158,7 +168,7 @@ class Packages:
             raise exceptions.PlatformException(response)
         return response.json()
 
-    def list(self, filters=None, project_id=None):
+    def list(self, filters: entities.Filters = None, project_id=None) -> entities.PagedEntities:
         """
         List project packages
         :return:
@@ -170,8 +180,8 @@ class Packages:
         if not isinstance(filters, entities.Filters):
             raise exceptions.PlatformException('400', 'Unknown filters type')
 
-        if project_id is None and self.project is not None:
-            project_id = self.project.id
+        if project_id is None and self._project is not None:
+            project_id = self._project.id
 
         if project_id is not None:
             filters.add(field='projectId', values=project_id)
@@ -185,7 +195,7 @@ class Packages:
         paged.get_page()
         return paged
 
-    def pull(self, package, version=None, local_path=None, project_id=None):
+    def pull(self, package: entities.Package, version=None, local_path=None, project_id=None):
         """
         :param project_id:
         :param version:
@@ -205,8 +215,7 @@ class Packages:
 
         if local_path is None:
             local_path = os.path.join(
-                os.path.expanduser("~"),
-                ".dataloop",
+                services.service_defaults.DATALOOP_PATH,
                 "projects",
                 self._project.name,
                 "packages",
@@ -227,7 +236,8 @@ class Packages:
 
         return local_path
 
-    def push(self, codebase_id=None, src_path=None, package_name=None, modules=None, checkout=False):
+    def push(self, codebase_id=None, src_path=None, package_name=None, modules=None,
+             checkout=False) -> entities.Package:
         """
         Push local package
 
@@ -293,10 +303,10 @@ class Packages:
 
     def _create(self,
                 codebase_id=None,
-                package_name=entities.DEFAULT_PACKAGE_NAME,
+                package_name=entities.package_defaults.DEFAULT_PACKAGE_NAME,
                 modules=None,
                 push=False,
-                package=None):
+                package=None) -> entities.Package:
         """
         Create a package in platform
 
@@ -312,7 +322,7 @@ class Packages:
             package.modules = modules
             return self.update(package=package)
         if modules is None:
-            modules = [entities.DEFAULT_PACKAGE_MODULE]
+            modules = [DEFAULT_PACKAGE_MODULE]
 
         if not isinstance(modules, list):
             modules = [modules]
@@ -343,7 +353,7 @@ class Packages:
                                           client_api=self._client_api,
                                           project=self._project)
 
-    def delete(self, package=None, package_name=None, package_id=None):
+    def delete(self, package: entities.Package = None, package_name=None, package_id=None):
         """
         Delete Package object
 
@@ -420,15 +430,13 @@ class Packages:
         # return results
         return True
 
-    def update(self, package):
+    def update(self, package: entities.Package) -> entities.Package:
         """
         Update Package changes to platform
 
         :param package:
         :return: Package entity
         """
-        assert isinstance(package, entities.Package)
-
         # payload
         payload = package.to_json()
 
@@ -466,7 +474,7 @@ class Packages:
                execution_timeout=None,
                drain_time=None,
                on_reset=None,
-               **kwargs):
+               **kwargs) -> entities.Service:
         """
         Deploy package
 
@@ -581,7 +589,7 @@ class Packages:
         logger.info('Successfully generated package')
 
     @staticmethod
-    def _mock_json_generator(module, function_name):
+    def _mock_json_generator(module: entities.PackageModule, function_name):
         _json = dict(function_name=function_name, module_name=module.name)
         funcs = [func for func in module.functions if func.name == function_name]
         if len(funcs) == 1:
@@ -606,7 +614,7 @@ class Packages:
         annotation_input = entities.FunctionIO(name='annotation', type='Annotation')
         dataset_input = entities.FunctionIO(name='dataset', type='Dataset')
         json_input = entities.FunctionIO(name='config', type='Json')
-        func = entities.PackageFunction(name='run')
+        func = entities.PackageFunction(name=entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME)
         if package_catalog in [PackageCatalog.SINGLE_FUNCTION_ITEM, PackageCatalog.SINGLE_FUNCTION_ITEM_WITH_TRIGGER]:
             func.inputs = [item_input]
             modules = entities.PackageModule(functions=func)
@@ -655,8 +663,11 @@ class Packages:
             second_func.name = 'second_method'
             modules = entities.PackageModule(functions=[func, second_func])
         elif package_catalog in [PackageCatalog.MULTI_MODULE, PackageCatalog.MULTI_MODULE_WITH_TRIGGER]:
-            module_a = entities.PackageModule(functions=func, name='first_module', entry_point='first_module_class.py')
-            module_b = entities.PackageModule(functions=func, name='second_module',
+            module_a = entities.PackageModule(functions=func,
+                                              name='first_module',
+                                              entry_point='first_module_class.py')
+            module_b = entities.PackageModule(functions=func,
+                                              name='second_module',
                                               entry_point='second_module_class.py')
             modules = [module_a, module_b]
         elif package_catalog == PackageCatalog.SINGLE_FUNCTION_MULTI_INPUT:
@@ -693,7 +704,10 @@ class Packages:
                 trigger_a['resource'] = trigger_b['resource'] = 'Annotation'
             triggers += [trigger_a, trigger_b]
         elif 'trigger' in package_catalog:
-            trigger = dict(name='trigger_name', filter=dict(), actions=[], function='run',
+            trigger = dict(name='trigger_name',
+                           filter=dict(),
+                           actions=[],
+                           function=entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME,
                            executionMode='Once')
             if 'item' in package_catalog:
                 trigger['resource'] = 'Item'
@@ -769,8 +783,13 @@ class Packages:
 
         return is_multi
 
-    def test_local_package(self, cwd=None, concurrency=None, module_name='default_module', function_name='run',
-                           entry_point='main.py'):
+    def test_local_package(self,
+                           cwd=None,
+                           concurrency=None,
+                           module_name=entities.package_defaults.DEFAULT_PACKAGE_MODULE_NAME,
+                           function_name=entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME,
+                           class_name=entities.package_defaults.DEFAULT_PACKAGE_CLASS_NAME,
+                           entry_point=entities.package_defaults.DEFAULT_PACKAGE_ENTRY_POINT):
         """
         Test local package
         :return:
@@ -789,6 +808,7 @@ class Packages:
                                           concurrency=concurrency,
                                           module_name=module_name,
                                           function_name=function_name,
+                                          class_name=class_name,
                                           entry_point=entry_point)
 
         if self._project is None:
@@ -801,7 +821,7 @@ class Packages:
 
         return local_runner.run_local_project(project=project)
 
-    def __get_from_cache(self):
+    def __get_from_cache(self) -> entities.Package:
         package = self._client_api.state_io.get('package')
         if package is not None:
             package = entities.Package.from_json(_json=package, client_api=self._client_api, project=self._project)
@@ -827,8 +847,16 @@ class LocalServiceRunner:
     Service Runner Class
     """
 
-    def __init__(self, client_api, packages, cwd=None, multithreading=False, concurrency=32, module_name=None,
-                 function_name='run', entry_point='main.py'):
+    def __init__(self,
+                 client_api: services.ApiClient,
+                 packages,
+                 cwd=None,
+                 multithreading=False,
+                 concurrency=32,
+                 module_name=entities.package_defaults.DEFAULT_PACKAGE_MODULE_NAME,
+                 function_name=entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME,
+                 class_name=entities.package_defaults.DEFAULT_PACKAGE_CLASS_NAME,
+                 entry_point=entities.package_defaults.DEFAULT_PACKAGE_ENTRY_POINT):
         if cwd is None:
             self.cwd = os.getcwd()
         else:
@@ -842,6 +870,7 @@ class LocalServiceRunner:
         self.module_name = module_name
         self.function_name = function_name
         self.entry_point = entry_point
+        self.class_name = class_name
 
         with open(os.path.join(self.cwd, 'mock.json'), 'r') as f:
             self.mock_json = json.load(f)
@@ -861,13 +890,13 @@ class LocalServiceRunner:
         Get mainpy run service
         :return:
         """
-        # noinspection PyUnresolvedReferences
+        class_name = self.mock_json.get('class_name', self.class_name)
         entry_point = self.mock_json.get('entry_point', self.entry_point)
         entry_point = os.path.join(self.cwd, entry_point)
-        spec = importlib.util.spec_from_file_location("ServiceRunner", entry_point)
+        spec = importlib.util.spec_from_file_location(class_name, entry_point)
         foo = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(foo)
-        service_runner = foo.ServiceRunner
+        service_runner = getattr(foo, class_name)
         kwargs = self.mock_json.get('init_params', dict())
         return service_runner(**kwargs)
 
@@ -879,7 +908,7 @@ class LocalServiceRunner:
         if isinstance(modules, list) and len(modules) > 0:
             module = [module for module in modules if module['name'] == self.module_name][0]
         else:
-            module = entities.DEFAULT_PACKAGE_MODULE.to_json()
+            module = DEFAULT_PACKAGE_MODULE.to_json()
         if isinstance(module['functions'], list) and len(module['functions']) > 0:
             func = [func for func in module['functions'] if func['name'] == self.function_name][0]
         else:
@@ -925,7 +954,7 @@ class LocalServiceRunner:
         logging.root.level = current_level
         return results
 
-    def get_dataset(self, resource_id, project=None):
+    def get_dataset(self, resource_id, project=None) -> entities.Dataset:
         """
         Get dataset
         :param project:
@@ -944,7 +973,7 @@ class LocalServiceRunner:
 
         return datasets.get(dataset_id=dataset_id)
 
-    def get_item(self, resource_id, project=None):
+    def get_item(self, resource_id, project=None) -> entities.Item:
         """
         Get item
         :param project:
@@ -958,7 +987,7 @@ class LocalServiceRunner:
 
         return items.get(item_id=resource_id['item_id'])
 
-    def get_annotation(self, resource_id, project=None):
+    def get_annotation(self, resource_id, project=None) -> entities.Annotation:
         """
         Get annotation
         :param project:

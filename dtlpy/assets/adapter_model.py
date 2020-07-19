@@ -21,22 +21,22 @@ class AdapterModel:
     def load(self, local_path):
         raise NotImplementedError
 
-    def load_from_checkpoint(self, local_path, checkpoint_id):
-        checkpoint = dl.checkpoints.get(checkpoint_id=checkpoint_id)
-        checkpoint.download(local_path=local_path)
+    def load_from_snapshot(self, local_path, snapshot_id):
+        snapshot = dl.snapshots.get(snapshot_id=snapshot_id)
+        snapshot.download(local_path=local_path)
         self.load(local_path)
 
     def save(self, local_path):
         self.model.save(local_path)
 
-    def save_to_checkpoint(self, local_path):
+    def save_to_snapshot(self, local_path):
         self.save(local_path=local_path)
-        dl.checkpoints.upload()
+        dl.snapshots.upload()
 
     def train(self):
         pass
 
-    def get_checkpoint(self):
+    def get_snapshot(self):
         pass
 
     def get_metrics(self):

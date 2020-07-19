@@ -8,7 +8,7 @@ import jwt
 import os
 from urllib.parse import urlencode
 
-from .default_environments import DEFAULT_ENVIRONMENT
+from .service_defaults import DEFAULT_ENVIRONMENTS
 
 logger = logging.getLogger(name=__name__)
 threadLock = threading.Lock()
@@ -129,7 +129,7 @@ def login(api_client, audience=None, auth0_url=None, client_id=None):
     ################################
     # get env from url
     if api_client.environment in api_client.environments.keys():
-        env_params = DEFAULT_ENVIRONMENT[api_client.environment]
+        env_params = DEFAULT_ENVIRONMENTS[api_client.environment]
         audience = env_params['audience']
         client_id = env_params['client_id']
         auth0_url = env_params['auth0_url']

@@ -1,6 +1,6 @@
 import logging
 
-from .. import exceptions, miscellaneous, entities, repositories
+from .. import exceptions, miscellaneous, entities, repositories, services
 
 logger = logging.getLogger(name=__name__)
 
@@ -10,7 +10,12 @@ class Assignments:
     Assignments repository
     """
 
-    def __init__(self, client_api, project=None, task=None, dataset=None, project_id=None):
+    def __init__(self,
+                 client_api: services.ApiClient,
+                 project: entities.Project = None,
+                 task: entities.Task = None,
+                 dataset: entities.Dataset = None,
+                 project_id=None):
         self._client_api = client_api
         self._project = project
         self._dataset = dataset
@@ -24,7 +29,7 @@ class Assignments:
     # entities #
     ############
     @property
-    def task(self):
+    def task(self) -> entities.Task:
         if self._task is None:
             raise exceptions.PlatformException(
                 error='2001',
@@ -33,7 +38,7 @@ class Assignments:
         return self._task
 
     @task.setter
-    def task(self, task):
+    def task(self, task: entities.Task):
         if not isinstance(task, entities.Task):
             raise ValueError('Must input a valid Task entity')
         self._task = task
@@ -48,7 +53,7 @@ class Assignments:
             return None
 
     @property
-    def project(self):
+    def project(self) -> entities.Project:
         if self._project is None:
             raise exceptions.PlatformException(
                 error='2001',
@@ -57,7 +62,7 @@ class Assignments:
         return self._project
 
     @project.setter
-    def project(self, project):
+    def project(self, project: entities.Project):
         if not isinstance(project, entities.Project):
             raise ValueError('Must input a valid Project entity')
         self._project = project
@@ -66,7 +71,7 @@ class Assignments:
     # methods #
     ###########
     def list(self, project_ids=None, status=None, assignment_name=None, assignee_id=None, pages_size=None,
-             page_offset=None, task_id=None):
+             page_offset=None, task_id=None) -> miscellaneous.List[entities.Assignment]:
         """
         Get Assignments list
 
@@ -165,7 +170,7 @@ class Assignments:
         assert isinstance(assignment, entities.Assignment)
         return assignment
 
-    def delete(self, assignment=None, assignment_name=None, assignment_id=None):
+    def delete(self, assignment: entities.Assignment = None, assignment_name=None, assignment_id=None):
         """
         Delete an assignment
         :param assignment_id:
@@ -263,7 +268,7 @@ class Assignments:
         else:
             raise exceptions.PlatformException(response)
 
-    def update(self, assignment=None, system_metadata=False):
+    def update(self, assignment: entities.Assignment = None, system_metadata=False) -> entities.Assignment:
         """
         Update an assignment
         :return: Assignment object
@@ -283,75 +288,11 @@ class Assignments:
         else:
             raise exceptions.PlatformException(response)
 
-    # def create(self, assignment_name, assignee_id,
-    #            dataset=None, project_id=None,
-    #            filters=None, items=None,
-    #            status=None, metadata=None):
-    #     """
-    #     Create a new assignment
-    #     :param dataset:
-    #     :param items:
-    #     :param filters:
-    #     :param metadata:
-    #     :param project_id:
-    #     :param status:
-    #     :param assignee_id:
-    #     :param assignment_name:
-    #     :return: Assignment object
-    #     """
-    #
-    #     if filters is None and items is None:
-    #         raise exceptions.PlatformException('400', 'Must provide either filters or items list')
-    #
-    #     if dataset is None and self._dataset is None:
-    #         raise exceptions.PlatformException('400', 'Please provide a dataset entity')
-    #     elif dataset is None:
-    #         dataset = self._dataset
-    #
-    #     if project_id is None:
-    #         if self.project_id is None:
-    #             raise exceptions.PlatformException('400', 'Please provide a project_id')
-    #         project_id = self.project_id
-    #
-    #     payload = {'name': assignment_name,
-    #                'projectId': project_id,
-    #                'annotator': assignee_id}
-    #
-    #     if status is not None:
-    #         payload['status'] = status
-    #
-    #     if metadata is None:
-    #         metadata = dict()
-    #     metadata['system'] = {'datasetId': dataset.id}
-    #     payload['metadata'] = metadata
-    #
-    #     if self._task is not None:
-    #         payload['metadata']['system']['taskId'] = self._task.id
-    #
-    #     success, response = self._client_api.gen_request(req_type='post',
-    #                                                      path='/assignments',
-    #                                                      json_req=payload)
-    #     if success:
-    #         assignment = entities.Assignment.from_json(client_api=self._client_api,
-    #                                                    _json=response.json(), project=self._project,
-    #                                                    dataset=dataset, task=self._task)
-    #     else:
-    #         raise exceptions.PlatformException(response)
-    #     assert isinstance(assignment, entities.Assignment)
-    #
-    #     if self._task is not None:
-    #         self.task.assignmentIds.append(assignment.id)
-    #         self.task.update()
-    #
-    #     self.assign_items(dataset=dataset, assignment_id=assignment.id, filters=filters, items=items)
-    #
-    #     return assignment
-
     def create(self, assignee_id, task=None,
                assignment_name=None,
                dataset=None, project_id=None,
                filters=None, items=None,
-               status=None, metadata=None):
+               status=None, metadata=None) -> entities.Assignment:
         """
         Create a new assignment
         :param task:
@@ -378,7 +319,7 @@ class Assignments:
 
         return self._create_in_task(assignee_id=assignee_id, task=task, filters=filters, items=items)
 
-    def _create_in_task(self, assignee_id, task, filters=None, items=None):
+    def _create_in_task(self, assignee_id, task, filters=None, items=None) -> entities.Assignment:
 
         if task is None:
             if self._task is None:
@@ -400,7 +341,8 @@ class Assignments:
 
         return assignments[0]
 
-    def __item_operations(self, dataset, op, assignment_id=None, assignment_name=None, filters=None, items=None):
+    def __item_operations(self, dataset: entities.Dataset,
+                          op, assignment_id=None, assignment_name=None, filters=None, items=None):
         if assignment_id is None and assignment_name is None:
             raise exceptions.PlatformException('400', 'Must provide either assignment name or assignment id')
         elif assignment_id is None:
@@ -424,7 +366,8 @@ class Assignments:
             if filters is not None:
                 filters._nullify_refs()
 
-    def assign_items(self, dataset, assignment_id=None, assignment_name=None, filters=None, items=None):
+    def assign_items(self, dataset: entities.Dataset,
+                     assignment_id=None, assignment_name=None, filters=None, items=None):
         """
 
         :param assignment_name:
@@ -437,7 +380,8 @@ class Assignments:
         return self.__item_operations(dataset=dataset, assignment_id=assignment_id, filters=filters, items=items,
                                       op='create', assignment_name=assignment_name)
 
-    def remove_items(self, dataset, assignment_id=None, assignment_name=None, filters=None, items=None):
+    def remove_items(self, dataset: entities.Dataset,
+                     assignment_id=None, assignment_name=None, filters=None, items=None):
         """
 
         :param assignment_name:
@@ -450,7 +394,8 @@ class Assignments:
         return self.__item_operations(dataset=dataset, assignment_id=assignment_id, filters=filters, items=items,
                                       op='delete', assignment_name=assignment_name)
 
-    def get_items(self, assignment=None, assignment_id=None, assignment_name=None, dataset=None, filters=None):
+    def get_items(self, assignment: entities.Assignment = None,
+                  assignment_id=None, assignment_name=None, dataset=None, filters=None) -> entities.PagedEntities:
         """
 
         :param filters:

@@ -36,13 +36,14 @@ class Project(entities.BaseEntity):
     @_repositories.default
     def set_repositories(self):
         reps = namedtuple('repositories',
-                          'projects triggers datasets items packages codebases artifacts times_series services '
+                          'projects triggers datasets items recipes packages codebases artifacts times_series services '
                           'executions assignments tasks bots webhooks models analytics')
         datasets = repositories.Datasets(client_api=self._client_api, project=self)
 
         r = reps(projects=repositories.Projects(client_api=self._client_api),
                  webhooks=repositories.Webhooks(client_api=self._client_api, project=self),
                  items=repositories.Items(client_api=self._client_api, datasets=datasets),
+                 recipes=repositories.Recipes(client_api=self._client_api, project=self, project_id=self.id),
                  datasets=datasets,
                  executions=repositories.Executions(client_api=self._client_api, project=self),
                  triggers=repositories.Triggers(client_api=self._client_api, project=self),
@@ -68,6 +69,11 @@ class Project(entities.BaseEntity):
     def items(self):
         assert isinstance(self._repositories.items, repositories.Items)
         return self._repositories.items
+
+    @property
+    def recipes(self):
+        assert isinstance(self._repositories.recipes, repositories.Recipes)
+        return self._repositories.recipes
 
     @property
     def services(self):

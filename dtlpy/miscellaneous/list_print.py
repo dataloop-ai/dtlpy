@@ -1,17 +1,18 @@
 import datetime
 import tabulate
+import typing
 import logging
 import pandas
-from datetime import datetime
 
 from .. import exceptions
 
 logger = logging.getLogger(name=__name__)
 
+T = typing.TypeVar('T')
 
-class List(list):
 
-    def print(self, show_all=False, level='print', to_return=False):
+class List(list, typing.MutableSequence[T]):
+    def to_df(self, show_all=False):
         try:
             to_print = list()
             keys_list = list()
@@ -61,11 +62,18 @@ class List(list):
                         str_timestamp = str(element['createdAt'])
                         if len(str_timestamp) > 10:
                             str_timestamp = str_timestamp[:10]
-                        element['createdAt'] = datetime.datetime.utcfromtimestamp(int(str_timestamp)).strftime(
-                            '%Y-%m-%d %H:%M:%S')
+                        element['createdAt'] = datetime.datetime.utcfromtimestamp(int(str_timestamp)).isoformat()
                     except Exception:
                         pass
             df = pandas.DataFrame(to_print, columns=keys_list)
+            return df
+        except Exception:
+            raise exceptions.PlatformException(error='3002',
+                                               message='Failed converting to DataFrame')
+
+    def print(self, show_all=False, level='print', to_return=False):
+        try:
+            df = self.to_df(show_all=show_all)
             if 'name' in list(df.columns.values):
                 df['name'] = df['name'].astype(str)
 
@@ -80,4 +88,4 @@ class List(list):
                     raise ValueError('unknown log level in printing: {}'.format(level))
 
         except Exception:
-            raise exceptions.PlatformException('400', 'Printing error')
+            raise exceptions.PlatformException(error='3002', message='Failed printing entity')

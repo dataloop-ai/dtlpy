@@ -307,9 +307,9 @@ def get_parser():
         help="encode video to mp4, remove bframes and upload",
     )
 
-    ###############
+    ############
     # Services #
-    ###############
+    ############
     subparser = subparsers.add_parser("services", help="Operations with services")
     subparser_parser = subparser.add_subparsers(dest="services", help="services operations")
 
@@ -336,6 +336,10 @@ def get_parser():
     optional = a.add_argument_group("optional named arguments")
     optional.add_argument("-f", "--function-name", dest="function_name", default=None,
                           help="which function to run")
+    optional.add_argument("-s", "--service-name", dest="service_name", default=None,
+                          help="which service to run")
+    optional.add_argument("-pr", "--project-name", dest="project_name", default=None,
+                          help="Project name")
     optional.add_argument("-as", "--async", dest="asynchronous", default=True, action='store_false',
                           help="Async execution ")
     optional.add_argument("-i", "--item-id", dest="item_id", default=None,

@@ -4,15 +4,20 @@ import logging
 import json
 import os
 import tempfile
+from typing import Union, List, Callable
 
-from .. import miscellaneous, exceptions, entities, repositories, assets
+from .. import miscellaneous, exceptions, entities, repositories, assets, ApiClient
 from ..__version__ import version as __version__
 
 logger = logging.getLogger(name=__name__)
 
 
 class Services:
-    def __init__(self, client_api, project=None, package=None, project_id=None):
+    def __init__(self,
+                 client_api: ApiClient,
+                 project: entities.Project = None,
+                 package: entities.Package = None,
+                 project_id=None):
         self._client_api = client_api
         self._package = package
         self._project = project
@@ -25,7 +30,7 @@ class Services:
     # entities #
     ############
     @property
-    def package(self):
+    def package(self) -> entities.Package:
         if self._package is None:
             raise exceptions.PlatformException(
                 error='2001',
@@ -34,13 +39,13 @@ class Services:
         return self._package
 
     @package.setter
-    def package(self, package):
+    def package(self, package: entities.Package):
         if not isinstance(package, entities.Package):
             raise ValueError('Must input a valid package entity')
         self._package = package
 
     @property
-    def project(self):
+    def project(self) -> entities.Project:
         if self._project is None:
             # try to get from package
             if self._package is not None:
@@ -58,7 +63,7 @@ class Services:
         return self._project
 
     @project.setter
-    def project(self, project):
+    def project(self, project: entities.Project):
         if not isinstance(project, entities.Project):
             raise ValueError('Must input a valid Project entity')
         self._project = project
@@ -69,14 +74,16 @@ class Services:
         self._client_api._open_in_web(resource_type='service', project_id=service.project_id,
                                       package_id=service.package_id, service_id=service.id)
 
-    def __get_from_cache(self):
+    def __get_from_cache(self) -> entities.Service:
         service = self._client_api.state_io.get('service')
         if service is not None:
-            service = entities.Service.from_json(_json=service, client_api=self._client_api, project=self._project,
+            service = entities.Service.from_json(_json=service,
+                                                 client_api=self._client_api,
+                                                 project=self._project,
                                                  package=self._package)
         return service
 
-    def checkout(self, service=None, service_name=None, service_id=None):
+    def checkout(self, service: entities.Service = None, service_name=None, service_id=None):
         """
         Check-out a service
         :param service_id:
@@ -92,7 +99,7 @@ class Services:
     ###########
     # methods #
     ###########
-    def get(self, service_name=None, service_id=None, checkout=False, fetch=None, **kwargs):
+    def get(self, service_name=None, service_id=None, checkout=False, fetch=None) -> entities.Service:
         """
         Get service
 
@@ -102,8 +109,6 @@ class Services:
         :param fetch: optional - fetch entity from platform, default taken from cookie
         :return: Service object
         """
-        get_globals = kwargs.get('get_globals', False)
-
         if fetch is None:
             fetch = self._client_api.fetch_entities
 
@@ -129,9 +134,8 @@ class Services:
             elif service_name is not None:
                 filters = entities.Filters(resource=entities.FiltersResource.SERVICE,
                                            field='name',
-                                           values=service_name)
-                if get_globals:
-                    filters.pop('global')
+                                           values=service_name,
+                                           use_defaults=False)
                 services = self.list(filters=filters)
                 if services.items_count > 1:
                     raise exceptions.PlatformException('404', 'More than one service with same name.')
@@ -155,7 +159,7 @@ class Services:
             self.checkout(service=service)
         return service
 
-    def _build_entities_from_response(self, response_items):
+    def _build_entities_from_response(self, response_items) -> miscellaneous.List[entities.Service]:
         jobs = [None for _ in range(len(response_items))]
         pool = self._client_api.thread_pools(pool_name='entity.create')
 
@@ -175,7 +179,7 @@ class Services:
         # return good jobs
         return miscellaneous.List([r[1] for r in results if r[0] is True])
 
-    def _list(self, filters):
+    def _list(self, filters: entities.Filters):
         url = '/query/FaaS'
         success, response = self._client_api.gen_request(req_type='POST',
                                                          path=url,
@@ -185,7 +189,7 @@ class Services:
 
         return response.json()
 
-    def list(self, filters=None, **kwargs):
+    def list(self, filters: entities.Filters = None) -> entities.PagedEntities:
         """
         List project services
         :return:
@@ -193,14 +197,12 @@ class Services:
         # default filters
         if filters is None:
             filters = entities.Filters(resource=entities.FiltersResource.SERVICE)
-            if self._project is not None:
-                filters.add(field='projectId', values=self._project.id)
-            elif self._project_id is not None:
-                filters.add(field='projectId', values=self._project_id)
-            if self._package is not None:
-                filters.add(field='packageId', values=self._package.id)
-            if kwargs.get('get_globals', False):
-                filters.pop('global')
+        if self._project is not None:
+            filters.add(field='projectId', values=self._project.id)
+        elif self._project_id is not None:
+            filters.add(field='projectId', values=self._project_id)
+        if self._package is not None:
+            filters.add(field='packageId', values=self._package.id)
 
         # assert type filters
         if not isinstance(filters, entities.Filters):
@@ -305,7 +307,7 @@ class Services:
     def _create(self, service_name=None, package=None, module_name=None, bot=None, revision=None, init_input=None,
                 runtime=None, pod_type=None, project_id=None, sdk_version=None, agent_versions=None, verify=True,
                 driver_id=None, run_execution_as_process=None, execution_timeout=None, drain_time=None, on_reset=None,
-                **kwargs):
+                **kwargs) -> entities.Service:
         """
         Create service entity
         :param verify:
@@ -351,7 +353,7 @@ class Services:
             package = self._package
 
         if module_name is None:
-            module_name = entities.DEFAULT_PACKAGE_MODULE.name
+            module_name = entities.package_defaults.DEFAULT_PACKAGE_MODULE_NAME
         if service_name is None:
             service_name = 'default-service'
 
@@ -370,6 +372,8 @@ class Services:
             payload['packageRevision'] = revision
 
         if runtime is not None:
+            if isinstance(runtime, entities.KubernetesRuntime):
+                runtime = runtime.to_json()
             payload['runtime'] = runtime
         else:
             payload['runtime'] = {'gpu': False,
@@ -446,7 +450,7 @@ class Services:
             raise exceptions.PlatformException(response)
         return True
 
-    def update(self, service):
+    def update(self, service: entities.Service) -> entities.Service:
         """
         Update Service changes to platform
         :param service: Service entity
@@ -559,10 +563,20 @@ class Services:
         else:
             return log
 
-    def execute(self, service=None, service_id=None, service_name=None,
-                sync=False, function_name=None, stream_logs=False,
-                execution_input=None, resource=None, item_id=None, dataset_id=None, annotation_id=None, project_id=None,
-                ):
+    def execute(self,
+                service: entities.Service = None,
+                service_id: str = None,
+                service_name: str = None,
+                sync: bool = False,
+                function_name: str = None,
+                stream_logs: bool = False,
+                execution_input=None,
+                resource=None,
+                item_id=None,
+                dataset_id=None,
+                annotation_id=None,
+                project_id=None,
+                ) -> entities.Execution:
         if service is None:
             service = self.get(service_id=service_id, service_name=service_name)
         execution = repositories.Executions(service=service,
@@ -580,26 +594,28 @@ class Services:
         return execution
 
     def deploy(self,
-               service_name=None,
-               package=None,
-               bot=None,
-               revision=None,
-               init_input=None,
-               runtime=None,
-               pod_type=None,
-               sdk_version=None,
-               agent_versions=None,
-               verify=True,
-               checkout=False,
-               module_name=None,
-               project_id=None,
-               driver_id=None,
-               func=None,
-               run_execution_as_process=None,
-               execution_timeout=None,
-               drain_time=None,
-               on_reset=None,
-               **kwargs):
+               service_name: str = None,
+               package: entities.Package = None,
+               bot: Union[entities.Bot, str] = None,
+               revision: int = None,
+               init_input: Union[List[entities.FunctionIO], entities.FunctionIO, dict] = None,
+               runtime: Union[entities.KubernetesRuntime, dict] = None,
+               pod_type: str = None,
+               sdk_version: str = None,
+               agent_versions: dict = None,
+               verify: bool = True,
+               checkout: bool = False,
+               module_name: str = None,
+               project_id: str = None,
+               driver_id: str = None,
+               func: Callable = None,
+               run_execution_as_process: bool = None,
+               execution_timeout: int = None,
+               drain_time: int = None,
+               on_reset: str = None,
+               is_staticmethod: bool = False,
+               imports: List[dict] = None,
+               **kwargs) -> entities.Service:
         """
         Deploy service
 
@@ -622,10 +638,21 @@ class Services:
         :param driver_id:
         :param agent_versions: - dictionary - - optional -versions of sdk, agent runner and agent proxy
         :param sdk_version:  - optional - string - sdk version
+        :param imports: optional - if param func is given - dictionary of imports, example: [{'module': 'os'}, {'from': 'dictdiffer', 'module': 'diff'}, 'module': 'numpy', 'as': 'np']
+        :param is_staticmethod: optional - if param func is given - True/False
         :return:
         """
+        if service_name is None:
+            package = package if package is not None else self._package
+            if package is not None:
+                service_name = package.name
+            else:
+                service_name = 'default-service'
+            logger.warning('service_name not provided, using: {} by default'.format(service_name))
+
         if func is not None:
-            return self.__deploy_function(name=service_name, project=self._project, func=func)
+            return self.__deploy_function(name=service_name, project=self._project,
+                                          func=func, is_staticmethod=is_staticmethod, imports=imports)
 
         if init_input is not None and not isinstance(init_input, dict):
             if not isinstance(init_input, list):
@@ -695,7 +722,7 @@ class Services:
         return service
 
     @staticmethod
-    def __get_import_string(imports):
+    def __get_import_string(imports: List[dict]):
         imports_string = ''
         if imports is not None:
             for imprt in imports:
@@ -726,10 +753,15 @@ class Services:
             inpts.append(entities.FunctionIO(type=inpt_type, name=arg))
         return inpts
 
-    def __deploy_function(self, name, func, project, imports=None, is_staticmethod=True):
+    def __deploy_function(self,
+                          name: str,
+                          func: Callable,
+                          project: entities.Project,
+                          imports: List[dict] = None,
+                          is_staticmethod: bool = True) -> entities.Service:
         package_dir = tempfile.mkdtemp()
         imports_string = self.__get_import_string(imports=imports)
-        main_file = os.path.join(package_dir, 'main.py')
+        main_file = os.path.join(package_dir, entities.package_defaults.DEFAULT_PACKAGE_ENTRY_POINT)
         with open(assets.paths.PARTIAL_MAIN_FILEPATH, 'r') as f:
             main_string = f.read()
         lines = inspect.getsourcelines(func)
@@ -744,14 +776,15 @@ class Services:
                                                 method_func_string.replace('\n', '\n    ')))
 
         function = entities.PackageFunction(name=func.__name__, inputs=self.__get_inputs(func=func))
-        module = entities.PackageModule(functions=function, entry_point='main.py')
+        module = entities.PackageModule(functions=function,
+                                        entry_point=entities.package_defaults.DEFAULT_PACKAGE_ENTRY_POINT)
         packages = repositories.Packages(client_api=self._client_api, project=project)
         return packages.push(src_path=package_dir,
                              package_name=name,
                              checkout=True,
                              modules=module).deploy(service_name=name)
 
-    def deploy_from_local_folder(self, cwd=None, service_file=None, bot=None, checkout=False):
+    def deploy_from_local_folder(self, cwd=None, service_file=None, bot=None, checkout=False) -> entities.Service:
         """
         Deploy from local folder
         :param checkout:
@@ -1006,8 +1039,10 @@ class ServiceLog:
     Service Log
     """
 
-    def __init__(self, _json, service,
-                 services,
+    def __init__(self,
+                 _json: dict,
+                 service: entities.Service,
+                 services: Services,
                  start=None,
                  follow=None,
                  execution_id=None,

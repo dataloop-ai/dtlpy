@@ -5,7 +5,7 @@ import json
 import jwt
 import os
 
-from .. import entities, exceptions, miscellaneous
+from .. import entities, exceptions, miscellaneous, services
 
 logger = logging.getLogger(name=__name__)
 
@@ -15,7 +15,7 @@ class Annotations:
         Annotations repository
     """
 
-    def __init__(self, client_api, item=None, dataset=None, dataset_id=None):
+    def __init__(self, client_api: services.ApiClient, item=None, dataset=None, dataset_id=None):
         self._client_api = client_api
         self._item = item
         self._dataset = dataset
@@ -39,7 +39,7 @@ class Annotations:
         return self._dataset
 
     @dataset.setter
-    def dataset(self, dataset):
+    def dataset(self, dataset: entities.Dataset):
         if not isinstance(dataset, entities.Dataset):
             raise ValueError('Must input a valid Dataset entity')
         self._dataset = dataset
@@ -54,7 +54,7 @@ class Annotations:
         return self._item
 
     @item.setter
-    def item(self, item):
+    def item(self, item: entities.Item):
         if not isinstance(item, entities.Item):
             raise ValueError('Must input a valid Item entity')
         self._item = item
@@ -98,7 +98,7 @@ class Annotations:
         # return good jobs
         return miscellaneous.List([r[1] for r in results if r[0] is True])
 
-    def _list(self, filters):
+    def _list(self, filters: entities.Filters):
         """
         Get dataset items list This is a browsing endpoint, for any given path item count will be returned,
         user is expected to perform another request then for every folder item to actually get the its item list.
@@ -173,7 +173,7 @@ class Annotations:
                                                'to perform this action.')
 
     def show(self, image=None, thickness=1, with_text=False, height=None, width=None,
-             annotation_format=entities.AnnotationOptions.MASK):
+             annotation_format=entities.ViewAnnotationOptions.MASK):
         """
         Show annotations
 
@@ -182,7 +182,7 @@ class Annotations:
         :param width: width
         :param thickness: line thickness
         :param with_text: add label to annotation
-        :param annotation_format: 'mask'/'instance'
+        :param annotation_format: options: dl.ViewAnnotationOptions.list()
         :return: ndarray of the annotations
         """
         # get item's annotations
@@ -195,13 +195,13 @@ class Annotations:
                                 with_text=with_text,
                                 annotation_format=annotation_format)
 
-    def download(self, filepath, annotation_format=entities.AnnotationOptions.MASK, height=None, width=None,
+    def download(self, filepath, annotation_format=entities.ViewAnnotationOptions.MASK, height=None, width=None,
                  thickness=1, with_text=False):
         """
             Save annotation format to file
 
         :param filepath: Target download directory
-        :param annotation_format: optional - 'mask', 'instance', 'object_id', 'json'
+        :param annotation_format: optional - dl.ViewAnnotationOptions.list()
         :param height: optional - image height
         :param width: optional - image width
         :param thickness: optional - annotation format, default =1
@@ -379,7 +379,7 @@ class Annotations:
         if not isinstance(annotations, list):
             annotations = [annotations]
             if isinstance(annotations[0], str) and os.path.isfile(annotations[0]):
-                with open(annotations[0], 'r') as f:
+                with open(annotations[0], 'r', encoding="utf8") as f:
                     annotations = json.load(f)
                 if isinstance(annotations, dict):
                     if 'annotations' in annotations:
@@ -391,7 +391,7 @@ class Annotations:
         out_annotations = self._upload_annotations(annotations=annotations)
         return out_annotations
 
-    def update_status(self, annotation=None, annotation_id=None, status='issue'):
+    def update_status(self, annotation: entities.Annotation = None, annotation_id=None, status='issue'):
         """
         Set status on annotation
         :param annotation: optional - Annotation entity

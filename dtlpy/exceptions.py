@@ -20,7 +20,8 @@ class PlatformException(Exception):
             '1001': ShowAnnotationError,
             '1002': ExportAnnotationError,
             '2001': MissingEntity,
-            '3001': SDKError
+            '3001': SDKError,
+            '3002': EntityPrintError
         }
 
         if isinstance(error, requests.models.Response) or isinstance(error, services.AsyncResponse):
@@ -99,5 +100,10 @@ class ExportAnnotationError(ExceptionMain):
 
 
 class SDKError(ExceptionMain):
+    """ raised when error in annotations drawing"""
+    pass
+
+
+class EntityPrintError(ExceptionMain):
     """ raised when error in annotations drawing"""
     pass

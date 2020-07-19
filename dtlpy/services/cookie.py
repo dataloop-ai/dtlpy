@@ -6,7 +6,7 @@ import os
 import time
 import json
 import logging
-
+from .service_defaults import DATALOOP_PATH
 logger = logging.getLogger(name=__name__)
 
 NUM_TRIES = 3
@@ -25,8 +25,7 @@ class CookieIO:
 
     @staticmethod
     def init():
-        global_dataloop_dir = os.path.join(os.path.expanduser('~'), '.dataloop')
-        global_cookie_file = os.path.join(global_dataloop_dir, 'cookie.json')
+        global_cookie_file = os.path.join(DATALOOP_PATH, 'cookie.json')
         return CookieIO(global_cookie_file)
 
     @staticmethod

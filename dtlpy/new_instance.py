@@ -153,7 +153,7 @@ class Dtlpy:
         DELETE = 'DELETE'
         PATCH = 'PATCH'
 
-    class AnnotationOptions:
+    class ViewAnnotationOptions:
         JSON = 'json'
         MASK = 'mask'
         INSTANCE = 'instance'

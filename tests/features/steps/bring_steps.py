@@ -43,6 +43,7 @@ from tests.features.steps.items_repo import test_items_set_items_entity
 from tests.features.steps.items_repo import test_items_get_all_items
 from tests.features.steps.items_repo import test_items_download_batch
 from tests.features.steps.items_repo import test_items_upload_batch
+from tests.features.steps.items_repo import test_items_upload_dataframe
 from tests.features.steps.items_repo import test_items_delete
 from tests.features.steps.items_repo import test_items_download
 

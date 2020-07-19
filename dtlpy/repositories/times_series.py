@@ -1,7 +1,7 @@
 import logging
 import pandas as pd
 
-from dtlpy import entities, miscellaneous, exceptions
+from dtlpy import entities, miscellaneous, exceptions, services
 
 logger = logging.getLogger(name=__name__)
 
@@ -11,7 +11,7 @@ class TimesSeries:
     Time series Repository
     """
 
-    def __init__(self, client_api, project=None):
+    def __init__(self, client_api: services.ApiClient, project: entities.Project = None):
         self._client_api = client_api
         self._project = project
 
@@ -19,7 +19,7 @@ class TimesSeries:
     # entities #
     ############
     @property
-    def project(self):
+    def project(self) -> entities.Project:
         if self._project is None:
             raise exceptions.PlatformException(
                 error='2001',
@@ -28,7 +28,7 @@ class TimesSeries:
         return self._project
 
     @project.setter
-    def project(self, project):
+    def project(self, project: entities.Project):
         if not isinstance(project, entities.Project):
             raise ValueError('Must input a valid Project entity')
         self._project = project
@@ -36,7 +36,7 @@ class TimesSeries:
     ############
     #  methods #
     ############
-    def create(self, series_name):
+    def create(self, series_name) -> entities.TimeSeries:
         """
         Create a new time series
         :param series_name: name
@@ -53,7 +53,7 @@ class TimesSeries:
         assert isinstance(ts, entities.TimeSeries)
         return ts
 
-    def list(self):
+    def list(self) -> miscellaneous.List[entities.TimeSeries]:
         """
         List all time series for project
         :return:
@@ -67,7 +67,7 @@ class TimesSeries:
             raise exceptions.PlatformException(response)
         return tss
 
-    def get(self, series_name=None, series_id=None):
+    def get(self, series_name=None, series_id=None) -> entities.TimeSeries:
         """
         Get time series entity
         :param series_name: by name
@@ -144,7 +144,7 @@ class TimesSeries:
             raise exceptions.PlatformException(response)
         return True
 
-    def get_samples(self, series_id, filters=None):
+    def get_samples(self, series_id, filters=None) -> pd.DataFrame:
         """
         Get Series table
         :param series_id: TimeSeries id
@@ -188,7 +188,7 @@ class TimesSeries:
     ######################
     # Samples Operations #
     ######################
-    def get_sample(self, series_id, sample_id):
+    def get_sample(self, series_id, sample_id) -> pd.DataFrame:
         """
         Get single sample from series
         :param series_id: TimeSeries id

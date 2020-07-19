@@ -1,6 +1,6 @@
 import logging
 from urllib.parse import urlencode
-from .. import exceptions, entities, miscellaneous
+from .. import exceptions, entities, miscellaneous, services
 
 logger = logging.getLogger(name=__name__)
 
@@ -10,7 +10,9 @@ class Webhooks:
     Webhooks repository
     """
 
-    def __init__(self, client_api, project=None):
+    def __init__(self,
+                 client_api: services.ApiClient,
+                 project: entities.Project = None):
         self._project = project
         self._client_api = client_api
         self._url = '/webhooks'
@@ -19,7 +21,7 @@ class Webhooks:
     # entities #
     ############
     @property
-    def project(self):
+    def project(self) -> entities.Project:
         if self._project is None:
             raise exceptions.PlatformException(
                 error='2001',
@@ -28,7 +30,7 @@ class Webhooks:
         return self._project
 
     @project.setter
-    def project(self, project):
+    def project(self, project: entities.Project):
         if not isinstance(project, entities.Project):
             raise ValueError('Must input a valid Project entity')
         self._project = project
@@ -36,7 +38,12 @@ class Webhooks:
     ###########
     # methods #
     ###########
-    def create(self, name, project_id=None, http_method=None, hook_url=None, project=None):
+    def create(self,
+               name: str,
+               project_id: str = None,
+               http_method=None,
+               hook_url=None,
+               project: entities.Project = None) -> entities.Webhook:
         """
         Create web hook entity
         :return:
@@ -72,7 +79,7 @@ class Webhooks:
                                           client_api=self._client_api,
                                           project=project)
 
-    def list(self, filters = None, page_offset=0, page_size=1000):
+    def list(self, filters: entities.Filters = None) -> entities.PagedEntities:
         """
         List web hooks
         :return:
@@ -86,29 +93,15 @@ class Webhooks:
         if not isinstance(filters, entities.Filters):
             raise exceptions.PlatformException('400', 'Unknown filters type')
 
-        # page size
-        if page_size is None:
-            # take from default
-            page_size = filters.page_size
-        else:
-            filters.page_size = page_size
-
-        # page offset
-        if page_offset is None:
-            # take from default
-            page_offset = filters.page
-        else:
-            filters.page = page_offset
-
         paged = entities.PagedEntities(items_repository=self,
                                        filters=filters,
-                                       page_offset=page_offset,
-                                       page_size=page_size,
+                                       page_offset=filters.page,
+                                       page_size=filters.page_size,
                                        client_api=self._client_api)
         paged.get_page()
         return paged
 
-    def _build_entities_from_response(self, response_items):
+    def _build_entities_from_response(self, response_items) -> miscellaneous.List[entities.Webhook]:
         # handle execution
         pool = self._client_api.thread_pools(pool_name='entity.create')
         jobs = [None for _ in range(len(response_items))]
@@ -125,14 +118,14 @@ class Webhooks:
         items = miscellaneous.List([j.get() for j in jobs])
         return items
 
-    def _list(self, filters):
+    def _list(self, filters: entities.Filters):
         """
         List web hooks
         :return:
         """
 
         query_params = {
-            'pageOffset': filters.page_offset,
+            'pageOffset': filters.page,
             'pageSize': filters.page_size
         }
 
@@ -148,7 +141,7 @@ class Webhooks:
 
         return response.json()
 
-    def get(self, webhook_id=None, webhook_name=None):
+    def get(self, webhook_id=None, webhook_name=None) -> entities.Webhook:
         """
         Get Web hook
 
@@ -159,7 +152,8 @@ class Webhooks:
         if webhook_id is None and webhook_name is None:
             raise exceptions.PlatformException('400', 'Must provide webhook_id or webhook_name id')
         elif webhook_id is None:
-            webhooks_pages = self.list(filters=entities.Filters(field='name', values=webhook_name, resource=entities.FiltersResource.WEBHOOK))
+            webhooks_pages = self.list(
+                filters=entities.Filters(field='name', values=webhook_name, resource=entities.FiltersResource.WEBHOOK))
             if webhooks_pages.items_count == 0:
                 raise exceptions.PlatformException('404', 'Not found: web hook: {}'.format(webhook_name))
             elif webhooks_pages.items_count > 1:
@@ -208,7 +202,7 @@ class Webhooks:
             raise exceptions.PlatformException(response)
         return True
 
-    def update(self, webhook):
+    def update(self, webhook: entities.Webhook) -> entities.Webhook:
         """
 
         :param webhook: Webhook entity
