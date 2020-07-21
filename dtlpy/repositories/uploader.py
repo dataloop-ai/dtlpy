@@ -546,7 +546,7 @@ class Uploader:
                     ref = element.buffer.name
                 else:
                     ref = 'Unknown'
-                reporter.set_index(i_item=i_item, status='error', output=remote_folder + remote_name, success=False,
+                reporter.set_index(i_item=i_item, status='error', success=False,
                                    error="{}\n{}".format(err, trace), ref=ref)
             pbar.update()
 

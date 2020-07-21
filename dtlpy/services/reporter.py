@@ -58,7 +58,7 @@ class Reporter:
             self._refs[i_item] = ref
         if success is not None:
             self._success[i_item] = success
-        if output is not None:
+        if success and output is not None:
             self._output[i_item] = output
 
     def generate_log_files(self):
