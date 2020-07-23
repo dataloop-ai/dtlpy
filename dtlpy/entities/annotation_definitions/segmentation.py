@@ -101,7 +101,7 @@ class Segmentation(BaseAnnotationDefinition):
                    top=self.top,
                    right=self.right,
                    bottom=self.bottom,
-                   label= self.label,
+                   label=self.label,
                    attributes=self.attributes)
 
     @classmethod
@@ -125,7 +125,7 @@ class Segmentation(BaseAnnotationDefinition):
         # plot polygon on a blank mask with thickness -1 to fill the polyline
         mask = np.zeros(shape=shape, dtype=np.uint8)
         mask = cv2.drawContours(image=mask,
-                                contours=[geo.astype('int')],
+                                contours=[np.asarray(geo).astype('int')],
                                 contourIdx=-1,
                                 color=1,
                                 thickness=thickness)
