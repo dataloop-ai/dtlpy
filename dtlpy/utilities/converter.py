@@ -38,9 +38,7 @@ class COCOUtils:
 
     @staticmethod
     def polygon_to_rle(geo, height, width):
-        segmentation = list()
-        for point in geo:
-            segmentation += [float(point[0]), float(point[1])]
+        segmentation = [float(n) for n in geo.flatten()]
         area = np.sum(entities.Segmentation.from_polygon(geo=geo, label=None, shape=(height, width)).geo > 0)
         return [segmentation], int(area)
 
@@ -1026,26 +1024,19 @@ class Converter:
                 raise Exception('Item must have height and width to convert to coco')
 
         # build annotation
-        if annotation.type == 'binary':
-            segmentation = COCOUtils.binary_mask_to_rle(binary_mask=annotation.geo, height=height, width=width)
-            area = int(annotation.geo.sum())
+        if annotation.type in ['binary', 'box', 'segment']:
             x = annotation.left
-            y = annotation.bottom
+            y = annotation.top
             w = annotation.right - x
-            h = annotation.top - y
-            iscrowd = 1
-        elif annotation.type == 'box':
-            x = annotation.coordinates[0]['x']
-            y = annotation.coordinates[0]['y']
-            w = annotation.coordinates[1]['x'] - x
-            h = annotation.coordinates[1]['y'] - y
-            segmentation = [[]]
-        elif annotation.type == 'segment':
-            x = annotation.left
-            y = annotation.bottom
-            w = annotation.right - x
-            h = annotation.top - y
-            segmentation, area = COCOUtils.polygon_to_rle(geo=annotation.geo, height=height, width=width)
+            h = annotation.bottom - y
+            if annotation.type == 'binary':
+                segmentation = COCOUtils.binary_mask_to_rle(binary_mask=annotation.geo, height=height, width=width)
+                area = int(annotation.geo.sum())
+                iscrowd = 1
+            elif annotation.type == 'box':
+                segmentation = [[]]
+            elif annotation.type == 'segment':
+                segmentation, area = COCOUtils.polygon_to_rle(geo=annotation.geo, height=height, width=width)
         else:
             logger.error('Unable to convert annotation of type {} to coco'.format(annotation.type))
             raise Exception('Unable to convert annotation of type {} to coco'.format(annotation.type))
