@@ -276,14 +276,21 @@ class Converter:
         pool.close()
         pool.join()
         pool.terminate()
-        pbar.close()
 
         total_converted_annotations = list()
         for ls in converted_annotations:
             if ls is not None:
                 total_converted_annotations += ls
 
+        for i_ann, ann in enumerate(total_converted_annotations):
+            ann['id'] = i_ann
+
+        info = {
+            'description': dataset.name
+        }
+
         coco_json = {'images': [image for image in images if image is not None],
+                     'info': info,
                      'annotations': total_converted_annotations,
                      'categories': categories}
 
@@ -332,7 +339,7 @@ class Converter:
                     ann = self.to_coco(annotation=annotation, item=item)
                     ann['category_id'] = label_to_id[annotation.label]
                     ann['image_id'] = item_id
-                    ann['id'] = i_annotation
+                    ann['id'] = int('{}{}'.format(item_id, i_annotation))
 
                     item_converted_annotations.append(ann)
                 except Exception:
