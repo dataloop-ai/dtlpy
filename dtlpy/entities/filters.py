@@ -250,7 +250,10 @@ class Filters:
             # add service defaults
             elif self.resource == FiltersResource.SERVICE:
                 self._unique_fields = ['global']
-                self.add(field='global', values=False, method=FiltersMethod.AND)
+                self.add(field='global', values=True, operator=FiltersOperations.NOT_EQUAL, method=FiltersMethod.AND)
+            elif self.resource == FiltersResource.PACKAGE:
+                self._unique_fields = ['global']
+                self.add(field='global', values=True, operator=FiltersOperations.NOT_EQUAL, method=FiltersMethod.AND)
             # add annotations defaults
             elif self.resource == FiltersResource.ANNOTATION:
                 self._unique_fields = ['type']

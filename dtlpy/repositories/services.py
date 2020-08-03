@@ -136,9 +136,14 @@ class Services:
                                            field='name',
                                            values=service_name,
                                            use_defaults=False)
+                if self._project_id is not None:
+                    filters.add(field='projectId', values=self._project_id)
+                if self._package is not None:
+                    filters.add(field='packageId', values=self._package.id)
                 services = self.list(filters=filters)
                 if services.items_count > 1:
-                    raise exceptions.PlatformException('404', 'More than one service with same name.')
+                    raise exceptions.PlatformException('404', 'More than one service with same name. '
+                                                              'Please get services from package/project entity')
                 elif services.items_count == 0:
                     raise exceptions.PlatformException('404', 'Service not found: {}.'.format(service_name))
                 service = services[0]

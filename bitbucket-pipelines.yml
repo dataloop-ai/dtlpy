@@ -18,16 +18,16 @@ pipelines:
             - chmod +x ./build-docker.sh
             - ./build-docker.sh $BITBUCKET_TAG
             - git checkout -b "$BITBUCKET_TAG"
-            - git clone https://$GIT_USER:$GIT_PASSWORD@bitbucket.org/dataloop-ai/piper-agent-runner.git
+            - git clone git@bitbucket.org:dataloop-ai/piper-agent-runner.git
             - cd piper-agent-runner
-            - git config user.email $GIT_EMAIL
+            - git config user.email sdk@dataloop.ai
             - git checkout master
             - python3 bumpversion.py --hard $BITBUCKET_TAG.0
             - git push --follow-tags
             - cd ..
-            - git clone https://$GIT_USER:$GIT_PASSWORD@bitbucket.org/dataloop-ai/piper-agent-proxy.git
+            - git clone git@bitbucket.org:dataloop-ai/piper-agent-proxy.git
             - cd piper-agent-proxy
-            - git config user.email $GIT_EMAIL
+            - git config user.email sdk@dataloop.ai
             - git checkout master
             - python3 bumpversion.py --hard $BITBUCKET_TAG.0
             - git push --follow-tags

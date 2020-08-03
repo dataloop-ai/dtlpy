@@ -112,8 +112,11 @@ class Packages:
                                                      _json=response.json(),
                                                      project=self._project)
             elif package_name is not None:
-                packages = self.list(
-                    entities.Filters(field='name', values=package_name, resource=entities.FiltersResource.PACKAGE))
+                filters = entities.Filters(field='name', values=package_name, resource=entities.FiltersResource.PACKAGE,
+                                           use_defaults=False)
+                if self._project is not None:
+                    filters.add(field='projectId', values=self._project.id)
+                packages = self.list(filters=filters)
                 if packages.items_count == 0:
                     raise exceptions.PlatformException(
                         error='404',
@@ -121,7 +124,8 @@ class Packages:
                 elif packages.items_count > 1:
                     raise exceptions.PlatformException(
                         error='400',
-                        message='More than one file found by the name of: {}'.format(package_name))
+                        message='More than one file found by the name of: {} '
+                                'Please get package from a project entity'.format(package_name))
                 package = packages[0]
             else:
                 raise exceptions.PlatformException(

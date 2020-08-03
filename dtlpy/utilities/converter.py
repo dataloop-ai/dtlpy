@@ -368,7 +368,7 @@ class Converter:
         labels = coco_json.get('categories', None)
         upload_labels = dict()
         for label in labels:
-            if 'supercategory' in label:
+            if 'supercategory' in label and label['supercategory'] is not None:
                 if label['supercategory'] not in upload_labels:
                     upload_labels[label['supercategory']] = entities.Label(tag=label['supercategory'])
                 upload_labels[label['supercategory']].children.append(entities.Label(tag=label['name']))
