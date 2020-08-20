@@ -25,7 +25,7 @@ import numpy as np
 
 from .calls_counter import CallsCounter
 from .cookie import CookieIO
-from .logins import login, login_secret
+from .logins import login, login_secret, login_m2m
 from .async_utils import AsyncResponse, AsyncUploadStream, AsyncResponseError, AsyncThreadEventLoop
 from .service_defaults import DEFAULT_ENVIRONMENTS, DEFAULT_ENVIRONMENT
 from .aihttp_retry import RetryClient
@@ -119,9 +119,9 @@ class Decorators:
                 if inst.renew_token_method() is False:
                     raise exceptions.PlatformException('600', 'Token expired, Please login.'
                                                               '\nSDK login options: dl.login(), dl.login_token(), '
-                                                              'dl.login_secret()'
+                                                              'dl.login_m2m()'
                                                               '\nCLI login options: dlp login, dlp login-token, '
-                                                              'dlp login-secret')
+                                                              'dlp login-m2m')
             # the actual method call
             result = method(inst, *args, **kwargs)
             # after the method call
@@ -929,6 +929,23 @@ class ApiClient:
                             client_id=client_id,
                             client_secret=client_secret,
                             force=force)
+
+    def login_m2m(self, email, password, client_id, client_secret, force=False):
+        """
+        Login with email and password from environment variables
+        :param email: user email. if already logged in with same user - login will NOT happen. see "force"
+        :param password: user password
+        :param client_id:
+        :param client_secret:
+        :param force: force login. in case login with same user but want to get a new JWT
+        :return:
+        """
+        return login_m2m(api_client=self,
+                         email=email,
+                         password=password,
+                         client_id=client_id,
+                         client_secret=client_secret,
+                         force=force)
 
     def login_token(self, token):
         """

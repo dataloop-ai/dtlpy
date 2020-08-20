@@ -1,6 +1,8 @@
 import numpy as np
+import time
 
 from . import Box
+from ...services import ApiClient
 
 
 class Note(Box):
@@ -8,11 +10,11 @@ class Note(Box):
         Note annotation object
     """
 
-    def __init__(self, left, top, right, bottom, label, attributes=None, messages=None, status=None,
+    def __init__(self, left, top, right, bottom, label, attributes=None, messages=None, status='issue',
                  create_time=None, creator=None):
         super(Note, self).__init__(left=left, top=top, right=right, bottom=bottom, label=label, attributes=attributes)
         self.type = "note"
-        self.messages = messages
+        self.messages = messages if messages is not None else list()
         self.status = status
         self.create_time = create_time
         self.creator = creator
@@ -20,7 +22,7 @@ class Note(Box):
     def to_coordinates(self, color):
         box = super(Note, self).to_coordinates(color=color)
         note = {
-            'messages': self.messages,
+            'messages': [msg.to_json() for msg in self.messages],
             'status': self.status,
             'createTime': self.create_time,
             'creator': self.creator
@@ -53,7 +55,7 @@ class Note(Box):
         bottom = np.max(geo[:, 1])
 
         attributes = _json.get("attributes", list())
-        messages = note_data.get('messages', list())
+        messages = [Message.from_json(msg) for msg in note_data.get('messages', list())]
 
         return cls(
             left=left,
@@ -66,4 +68,40 @@ class Note(Box):
             status=note_data.get('status', 'open'),
             creator=note_data.get('creator', 'me'),
             create_time=note_data.get('createTime', 0),
+        )
+
+    def add_message(self, body: str = None):
+        self.messages.append(Message(body=body))
+
+
+class Message:
+    """
+    Note message object
+    """
+
+    def __init__(self, msg_id: str = None, creator: str = None, msg_time=None, body: str = None):
+        self.id = msg_id
+        self.time = msg_time if msg_time is not None else int(time.time() * 1000)
+        self.body = body
+        self.creator = creator
+        if self.creator is None:
+            api_client = ApiClient()
+            self.creator = api_client.info()['user_email']
+
+    def to_json(self):
+        _json = {
+            "id": self.id,
+            "creator": self.creator,
+            "time": self.time,
+            "body": self.body
+        }
+        return _json
+
+    @staticmethod
+    def from_json(_json):
+        return Message(
+            msg_id=_json.get('id', None),
+            msg_time=_json.get('time', None),
+            body=_json.get('body', None),
+            creator=_json.get('creator', None)
         )

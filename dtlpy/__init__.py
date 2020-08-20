@@ -131,6 +131,7 @@ verbose = client_api.verbose
 login = client_api.login
 login_token = client_api.login_token
 login_secret = client_api.login_secret
+login_m2m = client_api.login_m2m
 add_environment = client_api.add_environment
 setenv = client_api.setenv
 token_expired = client_api.token_expired

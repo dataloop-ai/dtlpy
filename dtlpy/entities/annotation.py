@@ -177,6 +177,26 @@ class Annotation(entities.BaseEntity):
             return None
 
     @property
+    def messages(self):
+        if hasattr(self.annotation_definition, 'messages'):
+            return self.annotation_definition.messages
+        else:
+            return None
+
+    @messages.setter
+    def messages(self, messages):
+        if self.type == 'note':
+            self.annotation_definition.messages = messages
+        else:
+            raise PlatformException('400', 'Annotation of type {} does not have attribute messages'.format(self.type))
+
+    def add_message(self, body: str = None):
+        if self.type == 'note':
+            return self.annotation_definition.add_message(body=body)
+        else:
+            raise PlatformException('400', 'Annotation of type {} does not have method add_message'.format(self.type))
+
+    @property
     def geo(self):
         return self.annotation_definition.geo
 
@@ -506,6 +526,12 @@ class Annotation(entities.BaseEntity):
             if 'system' not in metadata:
                 metadata['system'] = dict()
             metadata['system']['parentId'] = parent_id
+
+        # add note status to metadata
+        if annotation_definition is not None and annotation_definition.type == 'note':
+            if 'system' not in metadata:
+                metadata['system'] = dict()
+            metadata['system']['status'] = annotation_definition.status
 
         # frames
         frames = dict()

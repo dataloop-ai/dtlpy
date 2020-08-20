@@ -59,6 +59,13 @@ class CommandExecutor:
                              client_secret=args.client_secret)
         self.dl.info(with_token=False)
 
+    def login_m2m(self, args):
+        self.dl.login_m2m(email=args.email,
+                          password=args.password,
+                          client_id=args.client_id,
+                          client_secret=args.client_secret)
+        self.dl.info(with_token=False)
+
     def upgrade(self, args):
         url = 'dtlpy'
         if args.url is None:

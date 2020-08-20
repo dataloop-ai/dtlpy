@@ -1,2 +1,2 @@
 behave>=1.2.6
-opencv_python<4.0.0
+opencv_python==3.4.2.17

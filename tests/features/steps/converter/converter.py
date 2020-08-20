@@ -1,3 +1,5 @@
+import time
+
 from behave import given, when, then
 import os
 import traceback
@@ -78,6 +80,11 @@ def step_impl(context, to_format, local_path):
         annotation_filter=ann_filters,
         local_path=local_path
     )
+
+
+@when(u'I wait {seconds} seconds')
+def step_impl(_, seconds):
+    time.sleep(int(seconds))
 
 
 @given(u'Local path in "{reverse_path}" is clean')
