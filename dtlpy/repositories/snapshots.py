@@ -78,7 +78,7 @@ class Snapshots:
 
         if snapshot_id is not None:
             success, response = self._client_api.gen_request(req_type="get",
-                                                             path="/checkpoints/{}".format(snapshot_id))
+                                                             path="/snapshots/{}".format(snapshot_id))
             if not success:
                 raise exceptions.PlatformException(response)
             snapshot = entities.Snapshot.from_json(client_api=self._client_api,
@@ -101,7 +101,7 @@ class Snapshots:
         else:
             raise exceptions.PlatformException(
                 error='400',
-                message='Checked out not found, must provide either snapshot id or snapshot name')
+                message='No checked-out Snapshot was found, must checkout or provide an identifier in inputs')
 
         return snapshot
 
@@ -191,7 +191,7 @@ class Snapshots:
 
         # request
         success, response = self._client_api.gen_request(req_type='post',
-                                                         path='/checkpoints',
+                                                         path='/snapshots',
                                                          json_req=payload)
 
         # exception handling
@@ -269,7 +269,7 @@ class Snapshots:
         # request
         success, response = self._client_api.gen_request(
             req_type="delete",
-            path="/checkpoints/{}".format(snapshot.id)
+            path="/snapshots/{}".format(snapshot.id)
         )
 
         # exception handling
@@ -291,7 +291,7 @@ class Snapshots:
 
         # request
         success, response = self._client_api.gen_request(req_type='patch',
-                                                         path='/checkpoints/{}'.format(snapshot.id),
+                                                         path='/snapshots/{}'.format(snapshot.id),
                                                          json_req=payload)
 
         # exception handling

@@ -171,7 +171,7 @@ class Datasets:
             if dataset is None:
                 raise exceptions.PlatformException(
                     error='400',
-                    message='Checked out not found, must provide either dataset id or dataset name')
+                    message='No checked-out Dataset was found, must checkout or provide an identifier in inputs')
         elif fetch:
             if dataset_id is not None and dataset_id != '':
                 dataset = self.__get_by_id(dataset_id)

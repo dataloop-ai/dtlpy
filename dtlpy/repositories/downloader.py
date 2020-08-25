@@ -10,6 +10,8 @@ import tqdm
 import os
 import io
 
+import numpy as np
+
 from PIL import Image
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
@@ -34,6 +36,7 @@ class Downloader:
                  local_path=None,
                  file_types=None,
                  save_locally=True,
+                 to_array=False,
                  num_workers=None,  # deprecated
                  overwrite=False,
                  annotation_options=None,
@@ -53,6 +56,7 @@ class Downloader:
         :param items: download Item entity or item_id (or a list of item)
         :param overwrite: optional - default = False
         :param local_path: local folder or filename to save to.
+        :param to_array: returns Ndarray when True and local_path = False
         :param file_types: a list of file type to download. e.g ['video/webm', 'video/mp4', 'image/jpeg', 'image/png']
         :param num_workers: default - 32
         :param save_locally: bool. save to disk or return a buffer
@@ -215,6 +219,7 @@ class Downloader:
                             "item_local_path": item_local_path,
                             "item_local_filepath": item_local_filepath,
                             "save_locally": save_locally,
+                            "to_array": to_array,
                             "annotation_options": annotation_options,
                             "reporter": reporter,
                             "pbar": pbar,
@@ -270,13 +275,13 @@ class Downloader:
 
     def __thread_download_wrapper(self, i_item,
                                   # item params
-                                  item, item_local_path, item_local_filepath, save_locally, overwrite,
+                                  item, item_local_path, item_local_filepath, save_locally, to_array, overwrite,
                                   # annotations params
                                   annotation_options, with_text, thickness,
                                   # threading params
                                   reporter, pbar):
 
-        download = False
+        download = None
         err = None
         trace = None
         for i_try in range(NUM_TRIES):
@@ -286,6 +291,7 @@ class Downloader:
                                                                                      n=NUM_TRIES))
                 download = self.__thread_download(item=item,
                                                   save_locally=save_locally,
+                                                  to_array=to_array,
                                                   local_path=item_local_path,
                                                   local_filepath=item_local_filepath,
                                                   annotation_options=annotation_options,
@@ -296,7 +302,7 @@ class Downloader:
                                                                                                  i=i_try + 1,
                                                                                                  n=NUM_TRIES,
                                                                                                  id=item.id))
-                if download:
+                if download is not None:
                     break
             except Exception as e:
                 logger.debug("Download item: {path}. Try {i}/{n}. Fail.".format(path=item.filename,
@@ -305,7 +311,7 @@ class Downloader:
                 err = e
                 trace = traceback.format_exc()
         pbar.update()
-        if not download:
+        if download is None:
             if err is None:
                 err = self.items_repository._client_api.platform_exception
             reporter.set_index(i_item=i_item, status="error", ref=item.id, success=False,
@@ -522,6 +528,7 @@ class Downloader:
                           item,
                           save_locally,
                           local_path,
+                          to_array,
                           local_filepath,
                           overwrite,
                           annotation_options,
@@ -535,6 +542,7 @@ class Downloader:
 
         :param item: Item entity to download
         :param save_locally: bool. save to file or return buffer
+        :param to_array: returns Ndarray when True and local_path = False
         :param local_path: optional - local folder or filename to save to.
         :param chunk_size: size of chunks to download - optional. default = 8192
         :param annotation_options: download annotations options: dl.ViewAnnotationOptions.list()
@@ -611,6 +619,15 @@ class Downloader:
             # go back to the beginning of the stream
             data.seek(0)
             data.name = item.name
+            if not save_locally and to_array:
+                if 'image' not in item.mimetype:
+                    raise PlatformException(
+                        error="400",
+                        message='Download element type numpy.ndarray support for image only. '
+                                'Item Id: {} is {} type'.format(item.id, item.mimetype))
+
+                data = np.array(Image.open(data))
+
         return data
 
     def __default_local_path(self):

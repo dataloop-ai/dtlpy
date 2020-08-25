@@ -8,6 +8,7 @@ import os
 import dtlpy as dl
 import numpy as np
 from multiprocessing.pool import ThreadPool
+
 try:
     # for local import
     from tests.env_from_git_branch import get_env_from_git_branch
@@ -27,6 +28,19 @@ def clean_feature_log_file(log_filepath):
         os.remove(os.path.join(directory, 'pass_' + file))
     if os.path.isfile(os.path.join(directory, 'fail_' + file)):
         os.remove(os.path.join(directory, 'fail_' + file))
+
+
+def delete_projects():
+    start_phrase = 'to-delete-test-'
+
+    try:
+        projects = [p for p in dl.projects.list() if p.name.startswith(start_phrase) and (
+                p.creator.startswith('oa-test-1') or p.creator.startswith('oa-test-2') or
+                p.creator.startswith('oa-test-3') or p.creator.startswith('oa-test-4'))]
+        for p in projects:
+            p.delete(True, True)
+    except Exception:
+        print('Failed to delete projects')
 
 
 def test_feature_file(w_feature_filename):
@@ -142,7 +156,8 @@ if __name__ == '__main__':
     dl.setenv(get_env_from_git_branch())
     # check token
     payload = jwt.decode(dl.token(), algorithms=['HS256'], verify=False)
-    if payload['email'] not in ['oa-test-1@dataloop.ai', 'oa-test-4@dataloop.ai', 'oa-test-2@dataloop.ai', 'oa-test-3@dataloop.ai']:
+    if payload['email'] not in ['oa-test-1@dataloop.ai', 'oa-test-4@dataloop.ai', 'oa-test-2@dataloop.ai',
+                                'oa-test-3@dataloop.ai']:
         assert False, 'Cannot run test on user: "{}". only test users'.format(payload['email'])
 
     # run tests
@@ -217,6 +232,9 @@ if __name__ == '__main__':
             log_filename = result['log_file']
             i_try = result['try']
             print('{}\t in try: {}\tfeature: {}'.format(status, i_try, feature))
+
+    # delete projects
+    delete_projects()
 
     # return success/failure
     if passed:

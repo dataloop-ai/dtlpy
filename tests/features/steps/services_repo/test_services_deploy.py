@@ -49,4 +49,4 @@ def step_impl(context):
 def step_impl(context):
     services_list = context.package.services.list()
     assert services_list.items_count == 1
-    assert services_list[0].to_json() == context.service.to_json()
+    assert services_list.items[0].to_json() == context.service.to_json()

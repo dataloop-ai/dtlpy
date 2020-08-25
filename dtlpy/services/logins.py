@@ -14,7 +14,7 @@ logger = logging.getLogger(name=__name__)
 threadLock = threading.Lock()
 
 
-def login_m2m(api_client, email, password, client_id, client_secret, force=False):
+def login_m2m(api_client, email, password, client_id, client_secret=None, force=False):
     login_secret(api_client=api_client,
                  email=email,
                  password=password,
@@ -23,7 +23,7 @@ def login_m2m(api_client, email, password, client_id, client_secret, force=False
                  force=force)
 
 
-def login_secret(api_client, email, password, client_id, client_secret, force=False):
+def login_secret(api_client, email, password, client_id, client_secret=None, force=False):
     """
     Login with email and password from environment variables
     :param api_client: ApiClient instance
@@ -72,8 +72,9 @@ def login_secret(api_client, email, password, client_id, client_secret, force=Fa
                'audience': audience,
                'scope': 'openid email offline_access',
                'client_id': client_id,
-               'client_secret': client_secret
                }
+    if client_secret is not None:
+        payload['client_secret'] = client_secret
     headers = {'content-type': 'application/json'}
     token_url = auth0_url + '/oauth/token'
     resp = requests.request("POST", token_url, data=json.dumps(payload), headers=headers)
@@ -85,8 +86,12 @@ def login_secret(api_client, email, password, client_id, client_secret, force=Fa
         api_client.token = response_dict['id_token']  # this will also set the refresh_token to None
         if 'refresh_token' in response_dict:
             api_client.refresh_token = response_dict['refresh_token']
+
         # set new client id for refresh
-        api_client.environments[environment]['client_id'] = client_id
+        environments = api_client.environments
+        if environments[environment]['client_id'] != client_id:
+            environments[environment]['client_id'] = client_id
+            api_client.environments = environments
         payload = jwt.decode(api_client.token, algorithms=['HS256'], verify=False)
         if 'email' in payload:
             logger.info('[Done] Login Secret. User: {}'.format(payload['email']))
@@ -171,12 +176,12 @@ def login(api_client, audience=None, auth0_url=None, client_id=None):
 
     class RequestHandler(BaseHTTPRequestHandler):
 
-        def log_message(api_client, format, *args):
+        def log_message(self, format, *args):
             return
 
-        def do_GET(api_client):
+        def do_GET(self):
             global query_dict
-            parsed_path = urlparse(api_client.path)
+            parsed_path = urlparse(self.path)
             query_dict = parse_qs(parsed_path.query)
             try:
                 # working directory when running from command line
@@ -189,10 +194,10 @@ def login(api_client, audience=None, auth0_url=None, client_id=None):
                 if os.path.isfile(filename):
                     with open(filename, 'rb') as f:
                         # Open the static file requested and send it
-                        api_client.send_response(200)
-                        api_client.send_header('Content-type', 'image/jpg')
-                        api_client.end_headers()
-                        api_client.wfile.write(f.read())
+                        self.send_response(200)
+                        self.send_header('Content-type', 'image/jpg')
+                        self.end_headers()
+                        self.wfile.write(f.read())
             return
 
     port = 3001

@@ -112,6 +112,22 @@ class Projects:
 
         return response.json()
 
+    def list_members(self, project: entities.Project, role: str = None):
+        url_path = '/projects/{}/members'.format(project.id)
+        success, response = self._client_api.gen_request(req_type='get',
+                                                         path=url_path)
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        members = miscellaneous.List(
+            [entities.User.from_json(_json=user, client_api=self._client_api, project=project) for user in
+             response.json()])
+
+        if role is not None:
+            members = [member for member in members if member.role == role]
+
+        return members
+
     def list(self) -> miscellaneous.List[entities.Project]:
         """
         Get users project's list.
@@ -164,7 +180,7 @@ class Projects:
             if project is None:
                 raise exceptions.PlatformException(
                     error='400',
-                    message='Checked out not found, must provide either project id or project name')
+                    message='No checked-out Project was found, must checkout or provide an identifier in inputs')
         elif fetch:
             if project_id is not None:
                 project = self.__get_by_id(project_id)

@@ -19,6 +19,7 @@ from tests.features.steps.datasets_repo import test_datasets_download_annotation
 from tests.features.steps.datasets_repo import test_datasets_download
 
 from tests.features.steps.dataset_entity import test_dataset_repo_methods
+from tests.features.steps.dataset_entity import test_add_labels_methods
 
 from tests.features.steps.annotations_repo import test_annotations_get
 from tests.features.steps.annotations_repo import test_annotations_list
@@ -32,6 +33,7 @@ from tests.features.steps.annotations_repo import test_annotations_draw
 from tests.features.steps.annotation_entity import test_annotation_repo_methods
 from tests.features.steps.annotation_entity import test_upload_annotations
 from tests.features.steps.annotation_entity import test_annotation_json_to_object
+from tests.features.steps.annotation_entity import test_segmentation_to_box
 
 from tests.features.steps.annotation_collection import test_annotation_collection
 
@@ -46,6 +48,7 @@ from tests.features.steps.items_repo import test_items_upload_batch
 from tests.features.steps.items_repo import test_items_upload_dataframe
 from tests.features.steps.items_repo import test_items_delete
 from tests.features.steps.items_repo import test_items_download
+from tests.features.steps.items_repo import test_download_and_upload_ndarray_item
 
 from tests.features.steps.item_entity import test_item_repo_methods
 

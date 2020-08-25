@@ -238,6 +238,9 @@ class Service(entities.BaseEntity):
         _json['drainTime'] = self.drain_time
         _json['onReset'] = self.on_reset
 
+        if self.is_global is not None:
+            _json['global'] = self.is_global
+
         if self.runtime:
             _json['runtime'] = self.runtime if isinstance(self.runtime, dict) else self.runtime.to_json()
 

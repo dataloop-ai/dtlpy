@@ -58,7 +58,7 @@ class Models:
             if model is None:
                 raise exceptions.PlatformException(
                     error='400',
-                    message='Checked out not found, must provide either model id or model name')
+                    message='No checked-out Model was found, must checkout or provide an identifier in inputs')
         elif fetch:
             if model_id is not None:
                 success, response = self._client_api.gen_request(
@@ -85,7 +85,7 @@ class Models:
             else:
                 raise exceptions.PlatformException(
                     error='400',
-                    message='Checked out not found, must provide either model id or model name')
+                    message='No checked-out Model was found, must checkout or provide an identifier in inputs')
         else:
             model = entities.Model.from_json(_json={'id': model_id,
                                                     'name': model_name},

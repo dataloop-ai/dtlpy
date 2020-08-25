@@ -6,6 +6,7 @@ from PIL import Image
 from . import BaseAnnotationDefinition
 
 from .box import Box
+from .polygon import Polygon
 
 
 class Segmentation(BaseAnnotationDefinition):
@@ -97,12 +98,24 @@ class Segmentation(BaseAnnotationDefinition):
         return coordinates
 
     def to_box(self):
-        return Box(left=self.left,
-                   top=self.top,
-                   right=self.right,
-                   bottom=self.bottom,
-                   label=self.label,
-                   attributes=self.attributes)
+        '''
+
+        :return: Box annotations list  to each separated  segmentation
+        '''
+        polygons = Polygon.from_segmentation(mask=self.geo, label=self.label,
+                                             attributes=self.attributes, max_instances=None, is_open=False)
+
+        if not isinstance(polygons, list):
+            polygons = [polygons]
+
+        boxes = [Box(left=polygon.left,
+                     top=polygon.top,
+                     right=polygon.right,
+                     bottom=polygon.bottom,
+                     label=polygon.label,
+                     attributes=polygon.attributes) for polygon in polygons]
+
+        return boxes
 
     @classmethod
     def from_polygon(cls, geo, label, shape, is_open=False, attributes=None):

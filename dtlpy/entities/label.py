@@ -2,6 +2,8 @@ import attr
 import logging
 import random
 
+from .. import PlatformException
+
 logger = logging.getLogger(name=__name__)
 
 
@@ -41,12 +43,23 @@ class Label:
         :param root: _json representation of a label as it is in host
         :return: Label object
         """
-        children = [Label.from_root(child) for child in root['children']]
+        children = list()
+        if 'children' in root and root['children'] is not None:
+            children = [Label.from_root(child) for child in root['children']]
+
+        root = root.get("value", root)
+        if "tag" in root:
+            label_name = root["tag"]
+        elif "label_name" in root:
+            label_name = root["label_name"]
+        else:
+            raise PlatformException("400", "Invalid input - each label must have a tag")
+
         return cls(
-            tag=root['value']['tag'],
-            color=root['value']['color'],
-            display_label=root['value']['displayLabel'],
-            attributes=root['value']['attributes'],
+            tag=label_name,
+            color=root.get("color", None),
+            display_label=root.get("displayLabel", None),
+            attributes=root.get("attributes", None),
             children=children
         )
 

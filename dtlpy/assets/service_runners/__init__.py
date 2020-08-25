@@ -13,6 +13,7 @@ class PATHS:
     SINGLE_METHOD_ITEM = 'single_method_item.py'
     SINGLE_METHOD_ANNOTATION = 'single_method_annotation.py'
     MULTI_METHOD_ANNOTATION = 'multi_method_annotation.py'
+    CONVERTER = 'converter.py'
 
     ASSETS_PATH = os.path.dirname(__file__)
     MULTI_METHOD_SR_PATH = os.path.join(ASSETS_PATH, MULTI_METHOD)
@@ -26,6 +27,7 @@ class PATHS:
     SINGLE_METHOD_ANNOTATION_SR_PATH = os.path.join(ASSETS_PATH, SINGLE_METHOD_ANNOTATION)
     MULTI_METHOD_ANNOTATION_SR_PATH = os.path.join(ASSETS_PATH, MULTI_METHOD_ANNOTATION)
     SINGLE_METHOD_MULTI_INPUT_SR_PATH = os.path.join(ASSETS_PATH, SINGLE_METHOD_MULTI_INPUT)
+    CONVERTER_SR_PATH = os.path.join(ASSETS_PATH, CONVERTER)
 
 
 service_runner_paths = PATHS()

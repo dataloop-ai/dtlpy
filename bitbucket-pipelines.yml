@@ -39,6 +39,8 @@ pipelines:
           script:
             - python --version
             - PYTHONPATH=$PWD
+            - pip install --upgrade pip
+            - apt-get -y update && apt-get install -y libgl1-mesa-glx
             - pip install -r requirements.txt
             - pip install -r tests/requirements.txt
             - python setup.py build
@@ -54,6 +56,8 @@ pipelines:
           script:
             - python --version
             - PYTHONPATH=$PWD
+            - pip install --upgrade pip
+            - apt-get -y update && apt-get install -y libgl1-mesa-glx
             - pip install -r requirements.txt
             - pip install -r tests/requirements.txt
             - python setup.py build
@@ -69,6 +73,8 @@ pipelines:
           script:
             - python --version
             - PYTHONPATH=$PWD
+            - pip install --upgrade pip
+            - apt-get -y update && apt-get install -y libgl1-mesa-glx
             - pip install -r requirements.txt
             - pip install -r tests/requirements.txt
             - python setup.py build
@@ -84,6 +90,8 @@ pipelines:
           script:
             - python --version
             - PYTHONPATH=$PWD
+            - pip install --upgrade pip
+            - apt-get -y update && apt-get install -y libgl1-mesa-glx
             - pip install -r requirements.txt
             - pip install -r tests/requirements.txt
             - python setup.py build

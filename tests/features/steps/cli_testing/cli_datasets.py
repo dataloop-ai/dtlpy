@@ -1,9 +1,7 @@
 import behave
-import random
-import dtlpy as dl
-import subprocess
 import os
 import shutil
+
 
 @behave.then(u'There is a dataset by the name of "{dataset_name}" in project "{project_name}"')
 def step_impl(context, dataset_name, project_name):
@@ -13,8 +11,9 @@ def step_impl(context, dataset_name, project_name):
     project = context.dl.projects.get(project_name=project_name)
     project.datasets.get(dataset_name=dataset_name)
 
+
 @behave.given(u'I clean folder "{dir_path}"')
-def step_impl(context, dir_path):
+def step_impl(_, dir_path):
     rel_path = os.environ['DATALOOP_TEST_ASSETS']
     dir_path = dir_path.replace("<rel_path>", rel_path)
     for item in os.listdir(dir_path):

@@ -1,10 +1,79 @@
 import logging
 import json
+
 import attr
 
 from .. import exceptions, entities
 
 logger = logging.getLogger("dataloop.function")
+
+
+class FunctionPostActionType:
+    DOWNLOAD = 'download'
+    DRAW_ANNOTATION = 'drawAnnotation'
+    NO_ACTION = 'noAction'
+
+
+class FunctionDisplayScopeResource:
+    ANNOTATION = 'annotation'
+    ITEM = 'item'
+    DATASET = 'dataset'
+    DATASET_QUERY = 'datasetQuery'
+
+
+@attr.s
+class FunctionPostAction:
+    type = attr.ib(type=str)
+
+    @classmethod
+    def from_json(cls, _json):
+        return cls(
+            type=_json.get('type', FunctionPostActionType.NO_ACTION)
+        )
+
+    def to_json(self):
+        return {'type': self.type}
+
+
+@attr.s
+class FunctionDisplayScope:
+    resource = attr.ib(type=str)
+    filters = attr.ib(type=entities.Filters, default=None)
+
+    @classmethod
+    def from_json(cls, _json):
+        resource = _json.get('resource')
+        filters = None
+        if 'filter' in _json:
+            if isinstance(_json['filter'], dict) and len(_json['filter']) > 0:
+                filters = entities.Filters(resource=FunctionDisplayScope.__get_resource(resource=resource),
+                                           use_defaults=False,
+                                           custom_filter=_json['filter'].get('filter', _json['filter']))
+            else:
+                filters = _json.get('filter', None)
+
+        return cls(
+            resource=resource,
+            filters=filters,
+        )
+
+    @staticmethod
+    def __get_resource(resource: str):
+        if resource in [FunctionDisplayScopeResource.DATASET, FunctionDisplayScopeResource.DATASET_QUERY]:
+            return entities.FiltersResource.DATASET
+        elif resource == FunctionDisplayScopeResource.ITEM:
+            return entities.FiltersResource.ITEM
+        elif resource == FunctionDisplayScopeResource.ANNOTATION:
+            return entities.FiltersResource.ANNOTATION
+
+    def to_json(self):
+        _json = {'resource': self.resource}
+        if isinstance(self.filters, entities.Filters):
+            _json['filter'] = self.filters.prepare(query_only=True)['filter']
+        elif isinstance(self.filters, dict):
+            _json['filter'] = self.filters
+
+        return _json
 
 
 @attr.s
@@ -15,24 +84,43 @@ class PackageFunction(entities.BaseEntity):
     # platform
     display_name = attr.ib(default=None)
     display_icon = attr.ib(repr=False, default=None)
-    display_scope = attr.ib(default=None)
+    display_scopes = attr.ib(default=None, type=list)
+    post_action = attr.ib(default=None, type=FunctionPostAction)
     outputs = attr.ib()
     name = attr.ib(default=entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME)
     description = attr.ib(default='')
     inputs = attr.ib()
+    default_inputs = attr.ib(default=None, type=list)
+    input_options = attr.ib(default=None, type=list)
 
     @classmethod
     def from_json(cls, _json):
         inputs = [FunctionIO.from_json(_io) for _io in _json.get('input', list())]
         outputs = [FunctionIO.from_json(_io) for _io in _json.get('output', list())]
+
+        post_action = None
+        if 'postAction' in _json:
+            post_action = FunctionPostAction.from_json(_json.get('postAction'))
+
+        display_scopes = None
+        if 'displayScopes' in _json:
+            display_scopes = list()
+            for display_scope in _json.get('displayScopes'):
+                display_scopes.append(
+                    FunctionDisplayScope.from_json(_json=display_scope)
+                )
+
         return cls(
             description=_json.get("description", None),
             name=_json.get("name", None),
             inputs=inputs,
             outputs=outputs,
+            post_action=post_action,
             display_icon=_json.get('displayIcon', None),
             display_name=_json.get('displayName', None),
-            display_scope=_json.get('displayScope', None),
+            default_inputs=_json.get('defaultInputs', None),
+            input_options=_json.get('inputOptions', None),
+            display_scopes=display_scopes,
         )
 
     @outputs.default
@@ -52,7 +140,12 @@ class PackageFunction(entities.BaseEntity):
                                         attr.fields(PackageFunction).outputs,
                                         attr.fields(PackageFunction).display_icon,
                                         attr.fields(PackageFunction).display_name,
-                                        attr.fields(PackageFunction).display_scope,
+                                        attr.fields(PackageFunction).post_action,
+                                        attr.fields(PackageFunction).display_scopes,
+                                        attr.fields(PackageFunction).input_options,
+                                        attr.fields(PackageFunction).display_scopes,
+                                        attr.fields(PackageFunction).display_name,
+                                        attr.fields(PackageFunction).default_inputs,
                                         ),
         )
         inputs = self.inputs
@@ -73,9 +166,25 @@ class PackageFunction(entities.BaseEntity):
 
         _json['input'] = inputs
         _json['output'] = outputs
-        _json['displayName'] = self.display_name
-        _json['displayIcon'] = self.display_icon
-        _json['displayScope'] = self.display_scope
+
+        if self.display_icon is not None:
+            _json['displayIcon'] = self.display_icon
+
+        if self.display_name is not None:
+            _json['displayName'] = self.display_name
+
+        if self.display_scopes is not None:
+            _json['displayScopes'] = [ds.to_json() for ds in self.display_scopes]
+
+        if self.post_action is not None:
+            _json['postAction'] = self.post_action.to_json()
+
+        if self.input_options is not None:
+            _json['inputOptions'] = self.input_options
+
+        if self.default_inputs is not None:
+            _json['defaultInputs'] = self.default_inputs
+
         return _json
 
 

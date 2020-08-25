@@ -26,6 +26,7 @@ class Package(entities.BaseEntity):
     revisions = attr.ib(repr=False)
     modules = attr.ib()
     creator = attr.ib()
+    is_global = attr.ib()
 
     # name change
     project_id = attr.ib()
@@ -41,7 +42,6 @@ class Package(entities.BaseEntity):
         Same as from_json but with try-except to catch if error
         :param _json:
         :param client_api:
-        :param dataset:
         :return:
         """
         try:
@@ -75,6 +75,7 @@ class Package(entities.BaseEntity):
             revisions=_json.get('revisions', None),
             version=_json.get('version', None),
             creator=_json.get('creator', None),
+            is_global=_json.get('global', None),
             client_api=client_api,
             modules=modules,
             name=_json.get('name', None),
@@ -98,6 +99,7 @@ class Package(entities.BaseEntity):
                                                         attr.fields(Package).codebase_id,
                                                         attr.fields(Package).project_id,
                                                         attr.fields(Package).modules,
+                                                        attr.fields(Package).is_global,
                                                         ))
 
         modules = self.modules
@@ -110,6 +112,8 @@ class Package(entities.BaseEntity):
 
         _json['projectId'] = self.project_id
         _json['codebaseId'] = self.codebase_id
+        if self.is_global is not None:
+            _json['global'] = self.is_global
         _json['modules'] = modules
         return _json
 

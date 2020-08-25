@@ -56,18 +56,21 @@ class Recipes:
         if attributes is None:
             attributes = list()
         if project_ids is None:
-            project_ids = [self.dataset.project.id]
+            if self._dataset is not None:
+                project_ids = [self._dataset.project.id]
+            else:
+                raise exceptions.PlatformException('Must provide project_ids')
         if ontology_ids is None:
             ontolgies = repositories.Ontologies(client_api=self._client_api,
                                                 recipe=None)
             ontology = ontolgies.create(labels=labels,
-                                        project_ids=[self.dataset.project.id],
+                                        project_ids=project_ids,
                                         attributes=attributes)
             ontology_ids = [ontology.id]
         elif not isinstance(ontology_ids, list):
             ontology_ids = [ontology_ids]
         if recipe_name is None:
-            recipe_name = self.dataset.name + " Default Recipe"
+            recipe_name = self._dataset.name + " Default Recipe" if self._dataset is not None else "Default Recipe"
         payload = {'title': recipe_name,
                    'projectIds': project_ids,
                    'ontologyIds': ontology_ids}
@@ -77,20 +80,20 @@ class Recipes:
         if success:
             recipe = entities.Recipe.from_json(client_api=self._client_api,
                                                _json=response.json(),
-                                               dataset=self.dataset)
+                                               dataset=self._dataset)
         else:
             logger.error('Failed to create Recipe')
             raise exceptions.PlatformException(response)
 
         if self._dataset is not None:
             # add recipe id to dataset system metadata
-            if 'system' not in self.dataset.metadata:
-                self.dataset.metadata['system'] = dict()
-            if 'recipes' not in self.dataset.metadata['system']:
-                self.dataset.metadata['system']['recipes'] = list()
+            if 'system' not in self._dataset.metadata:
+                self._dataset.metadata['system'] = dict()
+            if 'recipes' not in self._dataset.metadata['system']:
+                self._dataset.metadata['system']['recipes'] = list()
             # TODO - supposed to be append but it doesn't work in platform
-            self.dataset.metadata['system']['recipes'] = [recipe.id]
-            self.dataset.update(system_metadata=True)
+            self._dataset.metadata['system']['recipes'] = [recipe.id]
+            self._dataset.update(system_metadata=True)
         return recipe
 
     def list(self, filters: entities.Filters = None) -> miscellaneous.List[entities.Recipe]:
@@ -99,7 +102,7 @@ class Recipes:
         """
         if self._dataset is not None:
             try:
-                recipes = [recipe_id for recipe_id in self.dataset.metadata['system']['recipes']]
+                recipes = [recipe_id for recipe_id in self._dataset.metadata['system']['recipes']]
             except KeyError:
                 recipes = list()
 
@@ -189,10 +192,9 @@ class Recipes:
         if success:
             recipe = entities.Recipe.from_json(client_api=self._client_api,
                                                _json=response.json(),
-                                               dataset=self.dataset)
+                                               dataset=self._dataset)
         else:
-            logger.error('Unable to get info from recipe. dataset id: {}, recipe_id id: {}'.format(self.dataset.id,
-                                                                                                   recipe_id))
+            logger.error('Unable to get info from recipe. Recipe_id id: {}'.format(recipe_id))
             raise exceptions.PlatformException(response)
 
         return recipe
@@ -226,7 +228,7 @@ class Recipes:
                                                          path=url_path,
                                                          json_req=recipe.to_json())
         if success:
-            return entities.Recipe.from_json(client_api=self._client_api, _json=response.json(), dataset=self.dataset)
+            return entities.Recipe.from_json(client_api=self._client_api, _json=response.json(), dataset=self._dataset)
         else:
             logger.error('Error while updating item:')
             raise exceptions.PlatformException(response)

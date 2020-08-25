@@ -34,7 +34,7 @@ ASSETS_PATH = os.path.join(TEST_DIR, 'assets')
 image_path = os.path.join(ASSETS_PATH, '0000000162.jpg')
 annotations_path = os.path.join(ASSETS_PATH, 'annotations_new.json')
 
-project = dl.projects.create('project_examples_tester_{}'.format(random.randrange(1000, 100000)))
+project = dl.projects.create('to-delete-test-project_examples_tester_{}'.format(random.randrange(1000, 100000)))
 dataset = project.datasets.create('dataset_examples_tester_{}'.format(random.randrange(1000, 100000)))
 item = dataset.items.upload(local_path=image_path, local_annotations_path=annotations_path)
 
@@ -45,7 +45,7 @@ examples.add_labels.main(project_name=project.name, dataset_name=dataset.name)
 examples.add_metadata_to_item.main(project_name=project.name, dataset_name=dataset.name, item_path=image_path)
 
 # annotation convert to voc
-second_project = dl.projects.create('project_examples_tester_{}'.format(random.randrange(1000, 100000)))
+second_project = dl.projects.create('to-delete-test-project_examples_tester_{}'.format(random.randrange(1000, 100000)))
 second_dataset = second_project.datasets.create('dataset_examples_tester_{}'.format(random.randrange(1000, 100000)))
 time.sleep(1)
 second_item = second_dataset.items.upload(local_path=image_path)

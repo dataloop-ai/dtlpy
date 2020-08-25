@@ -25,9 +25,11 @@ class FiltersResource:
     SERVICE = "services"
     TRIGGER = "triggers"
     MODEL = "models"
-    SNAPSHOT = "checkpoints"
+    SNAPSHOT = "snapshots"
     WEBHOOK = "webhooks"
     RECIPE = 'recipe'
+    DATASET = 'dataset'
+    ONTOLOGY = 'ontology'
 
 
 class FiltersOperations:

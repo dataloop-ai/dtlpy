@@ -190,7 +190,8 @@ class Dataset(entities.BaseEntity):
     @_repositories.default
     def set_repositories(self):
         reps = namedtuple('repositories',
-                          field_names=['items', 'recipes', 'datasets', 'assignments', 'tasks', 'annotations'])
+                          field_names=['items', 'recipes', 'datasets', 'assignments', 'tasks', 'annotations',
+                                       'ontologies'])
         if self._project is None:
             datasets = repositories.Datasets(client_api=self._client_api, project=self._project)
         else:
@@ -201,13 +202,19 @@ class Dataset(entities.BaseEntity):
                  assignments=repositories.Assignments(project=self._project, client_api=self._client_api, dataset=self),
                  tasks=repositories.Tasks(client_api=self._client_api, project=self._project, dataset=self),
                  annotations=repositories.Annotations(client_api=self._client_api, dataset=self),
-                 datasets=datasets)
+                 datasets=datasets,
+                 ontologies=repositories.Ontologies(client_api=self._client_api, dataset=self))
         return r
 
     @property
     def items(self):
         assert isinstance(self._repositories.items, repositories.Items)
         return self._repositories.items
+
+    @property
+    def ontologies(self):
+        assert isinstance(self._repositories.ontologies, repositories.Ontologies)
+        return self._repositories.ontologies
 
     @property
     def recipes(self):
@@ -334,9 +341,9 @@ class Dataset(entities.BaseEntity):
 
         :param clone_name: new dataset name
         :param filters: Filters entity or a query dict
-        :param with_items_annotations:
-        :param with_metadata:
-        :param with_task_annotations_status:
+        :param with_items_annotations: clone all item's annotations
+        :param with_metadata: clone metadata
+        :param with_task_annotations_status: clone task annotations status
         :return:
         """
         return self.datasets.clone(dataset_id=self.id,
@@ -413,11 +420,9 @@ class Dataset(entities.BaseEntity):
                                          children=children,
                                          attributes=attributes,
                                          display_label=display_label,
-                                         label=label)
+                                         label=label,
+                                         update_ontology=True)
 
-        # update and return
-        ontology = ontology.update(system_metadata=True)
-        self._labels = ontology.labels
         return added_label
 
     def add_labels(self, label_list, ontology_id=None, recipe_id=None):
@@ -440,11 +445,8 @@ class Dataset(entities.BaseEntity):
         ontology = recipe.ontologies.get(ontology_id=ontology_id)
 
         # add labels to ontology
-        added_labels = ontology.add_labels(label_list=label_list)
+        added_labels = ontology.add_labels(label_list=label_list, update_ontology=True)
 
-        # update and return
-        ontology = ontology.update(system_metadata=True)
-        self._labels = ontology.labels
         return added_labels
 
     def download(

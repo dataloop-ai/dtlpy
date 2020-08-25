@@ -1,9 +1,12 @@
+import traceback
 from collections import namedtuple
 import logging
 import random
 import attr
 
-from .. import entities, PlatformException, repositories, services
+from .. import entities, PlatformException, repositories, services, exceptions
+
+from .label import Label
 
 logger = logging.getLogger(name=__name__)
 
@@ -25,7 +28,9 @@ class Ontology(entities.BaseEntity):
     attributes = attr.ib()
 
     # entities
-    _recipe = attr.ib(repr=False)
+    _recipe = attr.ib(repr=False, default=None)
+    _dataset = attr.ib(repr=False, default=None)
+    _project = attr.ib(repr=False, default=None)
 
     # repositories
     _repositories = attr.ib(repr=False)
@@ -50,6 +55,16 @@ class Ontology(entities.BaseEntity):
     def recipe(self):
         assert isinstance(self._recipe, entities.Recipe)
         return self._recipe
+
+    @property
+    def dataset(self):
+        assert isinstance(self._dataset, entities.Dataset)
+        return self._dataset
+
+    @property
+    def project(self):
+        assert isinstance(self._project, entities.Project)
+        return self.project
 
     @property
     def ontologies(self):
@@ -78,11 +93,35 @@ class Ontology(entities.BaseEntity):
             self._instance_map = {label: (i_label + 1) for i_label, label in enumerate(labels)}
         return self._instance_map
 
+    @staticmethod
+    def _protected_from_json(_json, client_api, recipe, dataset, project, is_fetched=True):
+        """
+        Same as from_json but with try-except to catch if error
+        :param _json:
+        :param client_api:
+        :return:
+        """
+        try:
+            ontology = Ontology.from_json(_json=_json,
+                                          client_api=client_api,
+                                          project=project,
+                                          dataset=dataset,
+                                          recipe=recipe,
+                                          is_fetched=is_fetched)
+            status = True
+        except Exception:
+            ontology = traceback.format_exc()
+            status = False
+        return status, ontology
+
     @classmethod
-    def from_json(cls, _json, client_api, recipe):
+    def from_json(cls, _json, client_api, recipe, dataset=None, project=None, is_fetched=True):
         """
         Build an Ontology entity object from a json
 
+        :param is_fetched:
+        :param project:
+        :param dataset:
         :param _json: _json response from host
         :param recipe: ontology's recipe
         :param client_api: client_api
@@ -97,16 +136,21 @@ class Ontology(entities.BaseEntity):
         for root in _json["roots"]:
             labels.append(entities.Label.from_root(root=root))
 
-        return cls(
+        inst = cls(
             metadata=_json.get("metadata", None),
             creator=_json.get("creator", None),
             url=_json.get("url", None),
             id=_json["id"],
             attributes=attributes,
             client_api=client_api,
+            project=project,
+            dataset=dataset,
             recipe=recipe,
             labels=labels,
         )
+
+        inst.is_fetched = is_fetched
+        return inst
 
     def to_json(self):
         """
@@ -117,6 +161,8 @@ class Ontology(entities.BaseEntity):
         roots = [label.to_root() for label in self.labels]
         _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(Ontology)._client_api,
                                                               attr.fields(Ontology)._recipe,
+                                                              attr.fields(Ontology)._project,
+                                                              attr.fields(Ontology)._dataset,
                                                               attr.fields(Ontology)._instance_map,
                                                               attr.fields(Ontology)._repositories))
         _json["roots"] = roots
@@ -139,8 +185,88 @@ class Ontology(entities.BaseEntity):
         """
         return self.ontologies.update(self, system_metadata=system_metadata)
 
+    def _add_children(self, label_name, children, labels_node):
+        for child in children:
+            if not isinstance(child, entities.Label):
+                if isinstance(child, dict):
+                    if "label_name" in child:
+                        child = dict(child)
+                        child["label_name"] = "{}.{}".format(label_name, child["label_name"])
+                        labels_node += self._add_labels([child], update_ontology=False)
+                    else:
+                        raise PlatformException("400",
+                                                "Invalid parameters - child list must have label name attribute")
+                else:
+                    raise PlatformException("400", "Invalid parameters - child must be a dict type")
+            else:
+                child.tag = "{}.{}".format(label_name, child.tag)
+                labels_node += self._add_labels(labels=child, update_ontology=False)
+
+        return labels_node
+
+    def _add_labels(self, labels, update_ontology=True):
+        """
+        Add a single label to ontology using add label endpoint , nested label is also supported
+
+        :param labels = list of labels
+        :update_ontology - return json_req if False
+        :return: Ontology updated entire label entity
+        """
+        labels_node = list()
+        if not isinstance(labels, list):  # for case that add label get one label
+            labels = [labels]
+
+        for label in labels:
+            if isinstance(label, str):
+                # Generate label from string
+                label = entities.Label(tag=label)
+            elif not isinstance(label, entities.Label):
+                # Generate label from json
+                label = Label.from_root(label)
+
+            if isinstance(label, entities.Label):
+                # label entity
+                labels_node.append(
+                    {
+                        "tag": label.tag,
+                        "color": label.color,
+                        "attributes": label.attributes,
+                        "display_label": label.display_label,
+                    }
+                )
+                children = label.children
+                self._add_children(label.tag, children, labels_node)
+            else:
+                raise PlatformException("400",
+                                        "Invalid parameters - Label can be list of str, Labels or dict")
+
+        if not update_ontology or not len(labels_node):
+            return labels_node
+
+        json_req = {
+            "labelsNode": labels_node
+        }
+
+        success, response = self._client_api.gen_request(req_type="PATCH",
+                                                         path="/ontologies/%s/addLabels" % self.id,
+                                                         json_req=json_req)
+        if success:
+            logger.debug("Labels {} has been added successfully".format(json_req))
+        else:
+            raise exceptions.PlatformException(response)
+
+        added_label = list()
+        if "roots" not in response.json():
+            raise exceptions.PlatformException("error fetching updated labels from server")
+
+        for root in response.json()["roots"]:  # to get all labels
+            added_label.append(entities.Label.from_root(root=root))
+
+        self.labels = added_label
+        return added_label
+
     def add_label(self, label_name, color=None, children=None, attributes=None, display_label=None, label=None,
-                  add=True):
+                  add=True, update_ontology=False):
         """
         Add a single label to ontology
 
@@ -151,9 +277,27 @@ class Ontology(entities.BaseEntity):
         :param children: optional - children
         :param attributes: optional - attributes
         :param display_label: optional - display_label
+        :param update_ontology: update the ontology, default = False for backward compatible
         :return: Label entity
         """
+
+        if update_ontology:
+            if isinstance(label, entities.Label) or isinstance(label, str):
+                return self._add_labels(label=label, update_ontology=update_ontology)
+            else:
+                return self._add_labels({
+                    "tag": label_name,
+                    "displayLabel": display_label,
+                    "color": color,
+                    "attributes": attributes,
+                    "children": children
+                }, update_ontology=update_ontology)
+
         if not isinstance(label, entities.Label):
+            if "." in label_name:
+                raise PlatformException("400",
+                                        "Invalid parameters - nested label can work with update_ontology option only")
+
             if attributes is None:
                 attributes = list()
             if not isinstance(attributes, list):
@@ -200,16 +344,21 @@ class Ontology(entities.BaseEntity):
 
         if add:
             self.labels.append(added_label)
+            if update_ontology:
+                self.update()
         return added_label
 
-    def add_labels(self, label_list):
+    def add_labels(self, label_list, update_ontology=False):
         """
         Adds a list of labels to ontology
 
         :param label_list: list of labels [{"value": {"tag": "tag", "displayLabel": "displayLabel",
                                             "color": "#color", "attributes": [attributes]}, "children": [children]}]
+        :param update_ontology: update the ontology, default = False for backward compatible
         :return: List of label entities added
         """
+        if update_ontology:
+            return self._add_labels(labels=label_list)
         labels = list()
         for label in label_list:
 
@@ -218,49 +367,13 @@ class Ontology(entities.BaseEntity):
 
             if isinstance(label, entities.Label):
                 # label entity
-                labels.append(
-                    {
-                        "label_name": label.tag,
-                        "color": label.color,
-                        "children": label.children,
-                        "attributes": label.attributes,
-                        "display_label": label.display_label,
-                    }
-                )
+                labels.append(label)
             else:
                 # dictionary
-                children = label.get("children", None)
-                label = label.get("value", label)
-                if "tag" in label:
-                    label_name = label["tag"]
-                elif "label_name" in label:
-                    label_name = label["label_name"]
-                else:
-                    raise PlatformException("400", "Invalid input - each label must have a tag")
-                if "color" in label:
-                    color = label["color"]
-                else:
-                    logger.warning('No color given for label: {}, random color will be selected'.format(label_name))
-                    color = None
-                attributes = label.get("attributes", None)
-                display_label = label.get("displayLabel", None)
-                labels.append(
-                    {
-                        "label_name": label_name,
-                        "color": color,
-                        "children": children,
-                        "attributes": attributes,
-                        "display_label": display_label,
-                    }
-                )
-
+                labels.append(Label.from_root(label))
         added_labels = list()
         for label in labels:
-            added_labels.append(self.add_label(label_name=label["label_name"],
-                                               color=label["color"],
-                                               children=label["children"],
-                                               attributes=label["attributes"],
-                                               display_label=label["display_label"]))
+            added_labels.append(self.add_label(label.tag, label=label,update_ontology=update_ontology))
 
         return added_labels
 

@@ -11,9 +11,14 @@ class Ontologies:
     Ontologies repository
     """
 
-    def __init__(self, client_api: services.ApiClient, recipe: entities.Recipe = None):
+    def __init__(self, client_api: services.ApiClient,
+                 recipe: entities.Recipe = None,
+                 project: entities.Project = None,
+                 dataset: entities.Dataset = None):
         self._client_api = client_api
         self._recipe = recipe
+        self._project = project
+        self._dataset = dataset
 
     ############
     # entities #
@@ -33,6 +38,48 @@ class Ontologies:
             raise ValueError('Must input a valid Recipe entity')
         self._recipe = recipe
 
+    @property
+    def project(self) -> entities.Project:
+        if self._project is None:
+            raise exceptions.PlatformException(
+                error='2001',
+                message='Missing "project". need to set a Project entity or use project.ontologies repository')
+        assert isinstance(self._project, entities.Project)
+        return self._project
+
+    @project.setter
+    def project(self, project: entities.Project):
+        if not isinstance(project, entities.Project):
+            raise ValueError('Must input a valid Project entity')
+        self._project = project
+
+    @property
+    def dataset(self) -> entities.Dataset:
+        if self._dataset is None:
+            raise exceptions.PlatformException(
+                error='2001',
+                message='Missing "dataset". need to set a Dataset entity or use dataset.ontologies repository')
+        assert isinstance(self._dataset, entities.Dataset)
+        return self._dataset
+
+    @dataset.setter
+    def dataset(self, dataset: entities.Dataset):
+        if not isinstance(dataset, entities.Dataset):
+            raise ValueError('Must input a valid Dataset entity')
+        self._dataset = dataset
+
+    def __get_project_ids(self, project_ids):
+        if project_ids is not None:
+            return project_ids if isinstance(project_ids, list) else [project_ids]
+        elif self._recipe is not None:
+            return self._recipe.project_ids
+        elif self._project is not None:
+            return [self._project.id]
+        elif self._dataset is not None:
+            return self._dataset.projects
+        else:
+            return project_ids
+
     ###########
     # methods #
     ###########
@@ -45,10 +92,9 @@ class Ontologies:
         :param attributes: recipe attributes
         :return: Ontology object
         """
+        project_ids = self.__get_project_ids(project_ids=project_ids)
         if attributes is None:
             attributes = list()
-        if project_ids is None and self._recipe is not None:
-            project_ids = [self.recipe.dataset.project.id]
         elif not isinstance(project_ids, list):
             project_ids = [project_ids]
         # convert to platform label format (root)
@@ -69,21 +115,17 @@ class Ontologies:
             raise exceptions.PlatformException(response)
         return ontology
 
-    def list(self) -> miscellaneous.List[entities.Ontology]:
-        """
-        List ontologies for recipe
-
-        :return:
-        """
-        if self._recipe is None:
-            raise ("400", "Action is not permitted")
-
-        ontologies = [ontology_id for ontology_id in self.recipe.ontologyIds]
-
+    def _build_entities_from_response(self, response_items) -> miscellaneous.List[entities.Ontology]:
         pool = self._client_api.thread_pools(pool_name='entity.create')
-        jobs = [None for _ in range(len(ontologies))]
-        for i_ontology, ontology_id in enumerate(ontologies):
-            jobs[i_ontology] = pool.apply_async(self._protected_get, kwds={'ontology_id': ontology_id})
+        jobs = [None for _ in range(len(response_items))]
+        # return triggers list
+        for i_package, package in enumerate(response_items):
+            jobs[i_package] = pool.apply_async(entities.Ontology._protected_from_json,
+                                               kwds={'client_api': self._client_api,
+                                                     '_json': package,
+                                                     'project': self._project,
+                                                     'dataset': self._dataset,
+                                                     'recipe': self._recipe})
         # wait for all jobs
         _ = [j.wait() for j in jobs]
         # get all results
@@ -91,7 +133,69 @@ class Ontologies:
         # log errors
         _ = [logger.warning(r[1]) for r in results if r[0] is False]
         # return good jobs
-        return miscellaneous.List([r[1] for r in results if r[0] is True])
+        ontologies = miscellaneous.List([r[1] for r in results if r[0] is True])
+        return ontologies
+
+    def _list(self, filters: entities.Filters):
+        url = '/ontologies'
+        project_ids = None
+        if filters.has_field('projects'):
+            project_ids = filters.prepare()['filter']['$and'][0]['projects']
+
+        if project_ids:
+            url = '{}?projects={}'.format(url, ','.join(project_ids))
+
+        # request
+        success, response = self._client_api.gen_request(req_type='get',
+                                                         path=url)
+        if not success:
+            raise exceptions.PlatformException(response)
+        return response.json()
+
+    def __list(self, filters: entities.Filters) -> entities.PagedEntities:
+        """
+        List project ontologies
+        :return:
+        """
+        paged = entities.PagedEntities(items_repository=self,
+                                       filters=filters,
+                                       page_offset=filters.page,
+                                       page_size=filters.page_size,
+                                       client_api=self._client_api)
+        paged.get_page()
+        return paged
+
+    def list(self, project_ids=None) -> miscellaneous.List[entities.Ontology]:
+        """
+        List ontologies for recipe
+
+        :return:
+        """
+        if self._recipe is not None:
+            ontologies = [ontology_id for ontology_id in self.recipe.ontologyIds]
+
+            pool = self._client_api.thread_pools(pool_name='entity.create')
+            jobs = [None for _ in range(len(ontologies))]
+            for i_ontology, ontology_id in enumerate(ontologies):
+                jobs[i_ontology] = pool.apply_async(self._protected_get, kwds={'ontology_id': ontology_id})
+            # wait for all jobs
+            _ = [j.wait() for j in jobs]
+            # get all results
+            results = [j.get() for j in jobs]
+            # log errors
+            _ = [logger.warning(r[1]) for r in results if r[0] is False]
+            # return good jobs
+            return miscellaneous.List([r[1] for r in results if r[0] is True])
+        else:
+            filters = entities.Filters(resource=entities.FiltersResource.ONTOLOGY)
+            project_ids = self.__get_project_ids(project_ids=project_ids)
+            if project_ids:
+                filters.add(field='projects', values=self.__get_project_ids(project_ids=project_ids))
+            ontologies = list()
+            pages = self.__list(filters=filters)
+            for page in pages:
+                ontologies += page
+            return ontologies
 
     def _protected_get(self, ontology_id):
         """
@@ -159,7 +263,8 @@ class Ontologies:
             ontology = entities.Ontology.from_json(_json=response.json(),
                                                    client_api=self._client_api,
                                                    recipe=self._recipe)
-            self.recipe.dataset._labels = ontology.labels
+            if self._recipe is not None and self._recipe._dataset is not None:
+                self.recipe.dataset._labels = ontology.labels
             return ontology
         else:
             logger.error("Failed to update ontology:")

@@ -12,7 +12,7 @@ T = typing.TypeVar('T')
 
 
 class List(list, typing.MutableSequence[T]):
-    def to_df(self, show_all=False):
+    def to_df(self, show_all=False, columns=None):
         try:
             to_print = list()
             keys_list = list()
@@ -45,9 +45,21 @@ class List(list, typing.MutableSequence[T]):
                                 'scope'
                                 ]
             if not show_all:
-                for key in remove_keys_list:
-                    if key in keys_list:
-                        keys_list.remove(key)
+                if columns is not None:
+                    # take columns from inputs
+                    if not isinstance(columns, list):
+                        if not isinstance(columns, str):
+                            raise exceptions.PlatformException(
+                                error='3002',
+                                message='"columns" input must be str or list. found: {}'.format(type(columns)))
+                        columns = [columns]
+                    keys_list = columns
+                else:
+                    # take default columns
+                    for key in remove_keys_list:
+                        if key in keys_list:
+                            keys_list.remove(key)
+
             for element in to_print:
                 # handle printing errors for not ascii string when in cli
                 if 'name' in element:
@@ -71,9 +83,9 @@ class List(list, typing.MutableSequence[T]):
             raise exceptions.PlatformException(error='3002',
                                                message='Failed converting to DataFrame')
 
-    def print(self, show_all=False, level='print', to_return=False):
+    def print(self, show_all=False, level='print', to_return=False, columns=None):
         try:
-            df = self.to_df(show_all=show_all)
+            df = self.to_df(show_all=show_all, columns=columns)
             if 'name' in list(df.columns.values):
                 df['name'] = df['name'].astype(str)
 

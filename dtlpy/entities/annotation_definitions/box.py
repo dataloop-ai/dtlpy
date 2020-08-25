@@ -1,6 +1,7 @@
 import numpy as np
 
 from . import BaseAnnotationDefinition
+from .polygon import Polygon
 
 
 class Box(BaseAnnotationDefinition):
@@ -107,22 +108,19 @@ class Box(BaseAnnotationDefinition):
         :param mask: binary mask (0,1)
         :param label: annotation label
         :param attributes: annotations list of attributes
-        :return: Box annotation
+        :return: Box annotations list  to each separated  segmentation
         """
-        left = 0
-        if len(mask[1]) > 0:
-            left = np.min(mask[1])
+        polygons = Polygon.from_segmentation(mask=mask, label=label, attributes=attributes,
+                                             max_instances=None, is_open=False)
 
-        top = 0
-        if len(mask[0]) > 0:
-            top = np.min(mask[0])
+        if not isinstance(polygons, list):
+            polygons = [polygons]
 
-        right = 0
-        if len(mask[1]) > 0:
-            right = np.max(mask[1])
+        boxes = [cls(left=polygon.left,
+                     top=polygon.top,
+                     right=polygon.right,
+                     bottom=polygon.bottom,
+                     label=label,
+                     attributes=attributes) for polygon in polygons]
 
-        bottom = 0
-        if len(mask[0]) > 0:
-            bottom = np.max(mask[0])
-
-        return cls(left=left, top=top, right=right, bottom=bottom, label=label, attributes=attributes)
+        return boxes

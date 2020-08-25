@@ -86,8 +86,11 @@ class Converter:
         self.labels = dict()
 
     def _get_labels(self):
+        self.labels = dict()
         if self.dataset:
-            self.labels = {label.tag: i_label for i_label, label in enumerate(self.dataset.labels)}
+            labels = list(self.dataset.instance_map.keys())
+            labels.sort()
+            self.labels = {label: i for i, label in enumerate(labels)}
 
     def convert_dataset(self,
                         dataset,
@@ -128,8 +131,9 @@ class Converter:
         # if yolo - create labels file
         if to_format == AnnotationFormat.YOLO:
             self._get_labels()
-            labels = [label.tag for label in dataset.labels]
             with open('{}/{}.names'.format(local_path, dataset.name), 'w') as fp:
+                labels = list(self.labels.keys())
+                labels.sort()
                 for label in labels:
                     fp.write("{}\n".format(label))
 
@@ -378,7 +382,7 @@ class Converter:
                 upload_labels[label['name']] = entities.Label(tag=tag)
             self.labels[tag] = label['id']
 
-        self.dataset.add_labels(upload_labels.values())
+        self.dataset.add_labels(list(upload_labels.values()))
 
     def _upload_coco_dataset(self, local_items_path, local_annotations_path, only_bbox=False):
         logger.info('loading annotations json...')

@@ -207,7 +207,7 @@ class Triggers:
                 if triggers.items_count == 0:
                     raise exceptions.PlatformException('404', 'Trigger not found')
                 elif triggers.items_count == 1:
-                    trigger = triggers[0]
+                    trigger = triggers.items[0]
                 else:
                     raise exceptions.PlatformException('404',
                                                        'More than one trigger by name {} exist'.format(trigger_name))

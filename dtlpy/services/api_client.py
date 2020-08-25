@@ -913,13 +913,15 @@ class ApiClient:
     ##########
     # Log in #
     ##########
-    def login_secret(self, email, password, client_id, client_secret, force=False):
+    def login_secret(self, email, password, client_id, client_secret=None, force=False):
         """
-        Login with email and password from environment variables
-        :param email: user email. if already logged in with same user - login will NOT happen. see "force"
+        Login with email and password from environment variables.
+        If already logged in with same user - login will NOT happen. see "force"
+
+        :param email: user email.
         :param password: user password
-        :param client_id:
-        :param client_secret:
+        :param client_id: auth0 client id
+        :param client_secret: secret that match the client id
         :param force: force login. in case login with same user but want to get a new JWT
         :return:
         """
@@ -930,7 +932,7 @@ class ApiClient:
                             client_secret=client_secret,
                             force=force)
 
-    def login_m2m(self, email, password, client_id, client_secret, force=False):
+    def login_m2m(self, email, password, client_id, client_secret=None, force=False):
         """
         Login with email and password from environment variables
         :param email: user email. if already logged in with same user - login will NOT happen. see "force"

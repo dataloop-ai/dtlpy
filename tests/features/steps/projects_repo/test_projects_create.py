@@ -53,7 +53,7 @@ def step_impl(context):
         context.error = e
 
 
-@behave.then(u'"I receive error with status code "{status_code}"')
+@behave.then(u'I receive error with status code "{status_code}"')
 def step_impl(context, status_code):
     assert context.error.status_code == status_code
 

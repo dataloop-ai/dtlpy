@@ -19,9 +19,11 @@ class User(entities.BaseEntity):
     username = attr.ib()
     avatar = attr.ib(repr=False)
     email = attr.ib()
+    role = attr.ib()
     type = attr.ib()
     org = attr.ib()
     id = attr.ib()
+
     # api
     _project = attr.ib(repr=False)
     _client_api = attr.ib(default=None, repr=False)
@@ -75,6 +77,7 @@ class User(entities.BaseEntity):
             username=_json.get('username', None),
             avatar=_json.get('avatar', None),
             email=_json.get('email', None),
+            role=_json.get('role', None),
             type=_json.get('type', None),
             org=_json.get('org', None),
             id=_json.get('id', None),

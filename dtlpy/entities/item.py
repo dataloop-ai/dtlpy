@@ -259,6 +259,7 @@ class Item(entities.BaseEntity):
             local_path=None,
             file_types=None,
             save_locally=True,
+            to_array=False,
             num_workers=None,
             annotation_options=None,
             overwrite=False,
@@ -271,12 +272,13 @@ class Item(entities.BaseEntity):
         Filtering the dataset for items and save them local
         Optional - also download annotation, mask, instance and image mask of the item
 
-        :param local_path: local folder or filename to save to.
+        :param local_path: local folder or filename to save to disk or returns BytelsIO
         :param to_items_folder: Create 'items' folder and download items to it
         :param overwrite: optional - default = False
         :param file_types: a list of file type to download. e.g ['video/webm', 'video/mp4', 'image/jpeg', 'image/png']
         :param num_workers: default - 32
         :param save_locally: bool. save to disk or return a buffer
+        :param to_array: returns Ndarray when True and local_path = False
         :param annotation_options: download annotations options: dl.ViewAnnotationOptions.list()
         :param with_text: optional - add text to annotations, default = False
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
@@ -293,6 +295,7 @@ class Item(entities.BaseEntity):
                                    local_path=local_path,
                                    file_types=file_types,
                                    save_locally=save_locally,
+                                   to_array=to_array,
                                    num_workers=num_workers,
                                    annotation_options=annotation_options,
                                    overwrite=overwrite,
@@ -334,8 +337,18 @@ class Item(entities.BaseEntity):
 
         return self.update(system_metadata=True)
 
-    def clone(self, dst_dataset_id, remote_filepath=None, metadata=None,
-              with_annotations=True, with_metadata=True, with_task_annotations_status=False):
+    def clone(self, dst_dataset_id, remote_filepath=None, metadata=None, with_annotations=True,
+              with_metadata=True, with_task_annotations_status=False):
+        """
+        Clone item
+        :param dst_dataset_id: destination dataset id
+        :param remote_filepath: complete filepath
+        :param metadata: new metadata to add
+        :param with_annotations: clone annotations
+        :param with_metadata: clone metadata
+        :param with_task_annotations_status: clone task annotations status
+        :return: Item
+        """
         if remote_filepath is None:
             remote_filepath = self.filename
         return self.items.clone(item_id=self.id,

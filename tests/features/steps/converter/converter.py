@@ -1,11 +1,10 @@
-import time
-
 from behave import given, when, then
 import os
 import traceback
 import shutil
 import random
 import json
+import logging
 import xml.etree.ElementTree as Et
 from PIL import Image
 
@@ -80,11 +79,6 @@ def step_impl(context, to_format, local_path):
         annotation_filter=ann_filters,
         local_path=local_path
     )
-
-
-@when(u'I wait {seconds} seconds')
-def step_impl(_, seconds):
-    time.sleep(int(seconds))
 
 
 @given(u'Local path in "{reverse_path}" is clean')
@@ -178,6 +172,8 @@ def compare_yolo(src_path, dest_path):
                     with open(dest_file, 'r') as fp:
                         dest_labels = [label.strip() for label in fp.readlines()]
                     assert len(dest_labels) == len(src_labels)
+                    logging.error('Source Labels: {}\n Dest Labels: {}'.format(src_labels, dest_labels))
+                    assert dest_labels == src_labels
                     for label in src_labels:
                         assert label in dest_labels
             except AssertionError:
@@ -355,16 +351,43 @@ def compare_yolo_files(file_a, file_b):
         for line in src_lines:
             success = success and includes_yolo_line(line=line, lines=dest_lines)
 
+    if not success:
+        logging.error('Error in files: {}, {}'.format(file_a, file_b))
+        logging.error('{}:\n {}'.format(file_a, src_lines))
+        logging.error('{}:\n {}'.format(file_b, dest_lines))
+
     return success
 
 
 def get_items_height_and_width(dataset, to_format):
+
+    items_shapes = {
+        "picture3 copy.jpg": {
+            "width": 1200,
+            "height": 800},
+        "lena copy 2.png": {
+            "width": 512,
+            "height": 512
+        },
+        "picture2 copy 11.jpg": {
+            "width": 648,
+            "height": 365
+        }
+    }
+
     for page in dataset.items.list():
         for item in page:
             if item.width is None or item.height is None:
                 if to_format == 'coco':
-                    item.metadata['system']['height'] = item.metadata['user']['height']
-                    item.metadata['system']['width'] = item.metadata['user']['width']
+                    try:
+                        height = item.metadata['user']['height']
+                        width = item.metadata['user']['width']
+                    except Exception:
+                        height = items_shapes[item.name]['height']
+                        width = items_shapes[item.name]['width']
+
+                    item.metadata['system']['height'] = height
+                    item.metadata['system']['width'] = width
                 elif to_format in ['voc', 'yolo']:
                     im = Image.open(item.download(save_locally=False))
                     item.metadata['system']['height'] = im.size[1]

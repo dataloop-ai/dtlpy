@@ -28,6 +28,7 @@ class Reporter:
     @property
     def output(self):
         output = [output for output in self._output if output is not None]
+        # TODO 2.0 always return a list
         return output[0] if len(output) == 1 else output
 
     @property

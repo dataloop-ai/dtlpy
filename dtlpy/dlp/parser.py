@@ -41,28 +41,32 @@ def get_parser():
 
     a = subparsers.add_parser("login-secret", help="Login client id and secret")
     required = a.add_argument_group("required named arguments")
-    required.add_argument("-e", "--email", metavar='\b', help="user email", required=True)
     required.add_argument(
-        "-p", "--password", metavar='\b', help="user password", required=True
+        "-e", "--email", metavar='\b', help="user email", required=False, default=None
     )
     required.add_argument(
-        "-i", "--client-id", metavar='\b', help="client id", required=True
+        "-p", "--password", metavar='\b', help="user password", required=False, default=None
     )
     required.add_argument(
-        "-s", "--client-secret", metavar='\b', help="client secret", required=True
+        "-i", "--client-id", metavar='\b', help="client id", required=False, default=None
+    )
+    required.add_argument(
+        "-s", "--client-secret", metavar='\b', help="client secret", required=False, default=None
     )
 
     a = subparsers.add_parser("login-m2m", help="Login client id and secret")
     required = a.add_argument_group("required named arguments")
-    required.add_argument("-e", "--email", metavar='\b', help="user email", required=True)
     required.add_argument(
-        "-p", "--password", metavar='\b', help="user password", required=True
+        "-e", "--email", metavar='\b', help="user email", required=False, default=None
     )
     required.add_argument(
-        "-i", "--client-id", metavar='\b', help="client id", required=True
+        "-p", "--password", metavar='\b', help="user password", required=False, default=None
     )
     required.add_argument(
-        "-s", "--client-secret", metavar='\b', help="client secret", required=True
+        "-i", "--client-id", metavar='\b', help="client id", required=False, default=None
+    )
+    required.add_argument(
+        "-s", "--client-secret", metavar='\b', help="client secret", required=False, default=None
     )
     ########
     # Init #

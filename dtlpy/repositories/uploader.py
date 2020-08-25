@@ -6,6 +6,7 @@ import asyncio
 import logging
 import pandas
 import shutil
+import numpy
 import json
 import time
 import tqdm
@@ -13,6 +14,7 @@ import os
 import io
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
+from PIL import Image
 
 from .. import PlatformException, entities, repositories
 from ..services import Reporter
@@ -130,6 +132,7 @@ class Uploader:
             logger.warning("Errors in {n_error} files. See {log_filepath} for full log".format(
                 n_error=errors_count, log_filepath=log_filepath))
 
+        # TODO 2.0 always return a list
         return reporter.output
 
     def _build_elements_from_inputs(self,
@@ -202,6 +205,29 @@ class Uploader:
         total_size = 0
         for upload_item_element, remote_name, upload_annotations_element in zip(local_path_list, remote_name_list,
                                                                                 local_annotations_path_list):
+            if isinstance(upload_item_element, numpy.ndarray):
+                # convery numpy.ndarray to io.BytesI
+                if remote_name is None:
+                    raise PlatformException(
+                        error="400",
+                        message='Upload element type was numpy.ndarray. providing param "remote_name" is mandatory')
+                file_extension = os.path.splitext(remote_name)
+                if file_extension[1].lower() in ['.jpg', '.jpeg']:
+                    format = 'JPEG'
+                elif file_extension[1].lower() == '.png':
+                    format = 'PNG'
+                else:
+                    raise PlatformException(
+                        error="400",
+                        message='"remote_name" with  .jpg/.jpeg or .png extension are supported '
+                                'when upload element of numpy.ndarray type.')
+
+                buffer = io.BytesIO()
+                Image.fromarray(upload_item_element).save(buffer, format=format)
+                buffer.seek(0)
+                buffer.name = remote_name
+                upload_item_element = buffer
+
             if isinstance(upload_item_element, str):
                 with_head_folder = True
                 if upload_item_element.endswith('*'):

@@ -68,7 +68,7 @@ def step_impl(context, project_name):
         context.project = context.feature.dataloop_feature_project
     else:
         num = random.randint(10000, 100000)
-        project_name = 'test_{}_{}'.format(str(num), project_name)
+        project_name = 'to-delete-test-{}_{}'.format(str(num), project_name)
         context.project = context.dl.projects.create(project_name=project_name)
         context.to_delete_projects_ids.append(context.project.id)
         context.feature.dataloop_feature_project = context.project

@@ -35,7 +35,8 @@ from .annotation_definitions import Box, Point, Segmentation, Polygon, Ellipse, 
 from .label import Label
 from .package import Package
 from .package_module import PackageModule
-from .package_function import PackageFunction, FunctionIO, PackageInputType
+from .package_function import PackageFunction, FunctionIO, PackageInputType, FunctionPostAction, \
+    FunctionPostActionType, FunctionDisplayScope, FunctionDisplayScopeResource
 from .time_series import TimeSeries
 from .service import Service, KubernetesAutuscalerType, KubernetesRabbitmqAutoscaler, KubernetesAutoscaler, \
     InstanceCatalog, KubernetesRuntime

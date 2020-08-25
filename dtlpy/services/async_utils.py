@@ -40,7 +40,7 @@ class AsyncThreadEventLoop(threading.Thread):
 
     def semaphore(self, name):
         if name not in self._semaphores:
-            self._semaphores[name] = asyncio.Semaphore(self.n, loop=self.loop)
+            self._semaphores[name] = asyncio.BoundedSemaphore(self.n, loop=self.loop)
         return self._semaphores[name]
 
     def stop(self):

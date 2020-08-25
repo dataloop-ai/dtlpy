@@ -58,7 +58,7 @@ from .entities import (
     FiltersKnownFields, FiltersResource, FiltersOperations, FiltersMethod, FiltersOrderByDirection,
     FiltersKnownFields as KnownFields,
     TriggerResource, TriggerAction, TriggerExecutionMode,
-    PackageInputType
+    PackageInputType, FunctionPostAction, FunctionPostActionType, FunctionDisplayScope, FunctionDisplayScopeResource
 )
 from .utilities import Converter, BaseServiceRunner, Progress, AnnotationFormat
 from .repositories.packages import PackageCatalog
@@ -90,7 +90,7 @@ if len(logger.handlers) == 0:
     log_filepath = DataloopLogger.get_log_filepath()
     # set file handler to save all logs to file
     formatter = logging.Formatter(
-        fmt="%(asctime)s.%(msecs)03d [%(levelname)s]-[%(threadName)s] %(name)s: %(message)s",
+        fmt="%(asctime)s.%(msecs)03d [%(levelname)s]-[%(threadName)s]-[v"+__version__+"]%(name)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
     fh = DataloopLogger(log_filepath, maxBytes=(1048 * 1000 * 5))
@@ -121,6 +121,7 @@ tasks = repositories.Tasks(client_api=client_api)
 annotations = repositories.Annotations(client_api=client_api)
 models = repositories.Models(client_api=client_api)
 snapshots = repositories.Snapshots(client_api=client_api)
+ontologies = repositories.Ontologies(client_api=client_api)
 
 try:
     check_sdk.check(version=__version__, client_api=client_api)

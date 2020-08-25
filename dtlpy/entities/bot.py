@@ -53,6 +53,7 @@ class Bot(entities.User):
             avatar=_json.get('avatar', None),
             email=_json.get('email', None),
             type=_json.get('type', None),
+            role=_json.get('role', None),
             org=_json.get('org', None),
             id=_json.get('id', None),
             project=project,

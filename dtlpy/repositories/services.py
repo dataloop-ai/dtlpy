@@ -117,7 +117,7 @@ class Services:
             if service is None:
                 raise exceptions.PlatformException(
                     error='400',
-                    message='Checked out not found, must provide either service id or service name')
+                    message='No checked-out Service was found, must checkout or provide an identifier in inputs')
 
         elif fetch:
             if service_id is not None:
@@ -146,11 +146,11 @@ class Services:
                                                               'Please get services from package/project entity')
                 elif services.items_count == 0:
                     raise exceptions.PlatformException('404', 'Service not found: {}.'.format(service_name))
-                service = services[0]
+                service = services.items[0]
             else:
                 raise exceptions.PlatformException(
                     error='400',
-                    message='Checked out not found, must provide either service id or service name')
+                    message='No checked-out Service was found, must checkout or provide an identifier in inputs')
         else:
             service = entities.Service.from_json(_json={'id': service_id,
                                                         'name': service_name},
@@ -618,8 +618,6 @@ class Services:
                execution_timeout: int = None,
                drain_time: int = None,
                on_reset: str = None,
-               is_staticmethod: bool = False,
-               imports: List[dict] = None,
                **kwargs) -> entities.Service:
         """
         Deploy service
@@ -643,8 +641,6 @@ class Services:
         :param driver_id:
         :param agent_versions: - dictionary - - optional -versions of sdk, agent runner and agent proxy
         :param sdk_version:  - optional - string - sdk version
-        :param imports: optional - if param func is given - dictionary of imports, example: [{'module': 'os'}, {'from': 'dictdiffer', 'module': 'diff'}, 'module': 'numpy', 'as': 'np']
-        :param is_staticmethod: optional - if param func is given - True/False
         :return:
         """
         if service_name is None:
@@ -656,8 +652,7 @@ class Services:
             logger.warning('service_name not provided, using: {} by default'.format(service_name))
 
         if func is not None:
-            return self.__deploy_function(name=service_name, project=self._project,
-                                          func=func, is_staticmethod=is_staticmethod, imports=imports)
+            return self.__deploy_function(name=service_name, project=self._project, func=func)
 
         if init_input is not None and not isinstance(init_input, dict):
             if not isinstance(init_input, list):
@@ -691,7 +686,7 @@ class Services:
                                                'More than 1 service by this name are associated with this user. '
                                                'Please provide project_id')
         elif services.items_count > 0:
-            service = services[0]
+            service = services.items[0]
             if runtime is not None:
                 service.runtime = runtime
             if init_input is not None:
@@ -727,21 +722,11 @@ class Services:
         return service
 
     @staticmethod
-    def __get_import_string(imports: List[dict]):
-        imports_string = ''
+    def __get_import_string(imports: List[str]):
+        import_string = ''
         if imports is not None:
-            for imprt in imports:
-                as_string = ''
-                from_string = ''
-                import_from = imprt.get('from', None)
-                import_as = imprt.get('as', None)
-                import_module = imprt.get('module', None)
-                if import_from is not None:
-                    from_string = 'from {} '.format(import_from)
-                if import_as is not None:
-                    as_string = ' as {}'.format(import_as)
-                imports_string += '{}import {}{}\n'.format(from_string, import_module, as_string)
-        return imports_string
+            import_string = '\n'.join(imports)
+        return import_string
 
     @staticmethod
     def __get_inputs(func):
@@ -750,22 +735,24 @@ class Services:
         inpts = list()
         for arg in params:
             if arg == 'item':
-                inpt_type = 'Item'
+                inpt_type = entities.PackageInputType.ITEM
             elif arg == 'dataset':
-                inpt_type = 'Dataset'
+                inpt_type = entities.PackageInputType.DATASET
+            elif arg == 'annotation':
+                inpt_type = entities.PackageInputType.ANNOTATION
             else:
-                inpt_type = 'Json'
+                inpt_type = entities.PackageInputType.JSON
             inpts.append(entities.FunctionIO(type=inpt_type, name=arg))
         return inpts
 
     def __deploy_function(self,
                           name: str,
                           func: Callable,
-                          project: entities.Project,
-                          imports: List[dict] = None,
-                          is_staticmethod: bool = True) -> entities.Service:
+                          project: entities.Project) -> entities.Service:
         package_dir = tempfile.mkdtemp()
-        imports_string = self.__get_import_string(imports=imports)
+        # imports_string = self.__get_import_string()
+        imports_string = ''
+
         main_file = os.path.join(package_dir, entities.package_defaults.DEFAULT_PACKAGE_ENTRY_POINT)
         with open(assets.paths.PARTIAL_MAIN_FILEPATH, 'r') as f:
             main_string = f.read()
@@ -773,12 +760,8 @@ class Services:
         method_func_string = "".join(lines[0])
 
         with open(main_file, 'w') as f:
-            if is_staticmethod:
-                f.write('{}\n{}\n    @staticmethod\n    {}'.format(imports_string, main_string,
-                                                                   method_func_string.replace('\n', '\n    ')))
-            else:
-                f.write('{}\n{}\n    {}'.format(imports_string, main_string,
-                                                method_func_string.replace('\n', '\n    ')))
+            f.write('{}\n{}\n    @staticmethod\n    {}'.format(imports_string, main_string,
+                                                               method_func_string.replace('\n', '\n    ')))
 
         function = entities.PackageFunction(name=func.__name__, inputs=self.__get_inputs(func=func))
         module = entities.PackageModule(functions=function,

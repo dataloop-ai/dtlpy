@@ -1,9 +1,11 @@
-import logging
 import subprocess
+import logging
+import getpass
+import json
 import jwt
 import sys
 import os
-import json
+
 from dtlpy import repositories
 
 from .. import exceptions
@@ -53,6 +55,19 @@ class CommandExecutor:
         self.dl.info(with_token=False)
 
     def login_secret(self, args):
+        self.login_m2m(args=args)
+
+    def login_m2m(self, args):
+        if args.email is None:
+            args.email = input('Enter user email: ')
+        if args.password is None:
+            args.password = getpass.getpass('Enter password: ')
+        if args.client_id is None:
+            args.client_id = input('Enter client id: ')
+        if args.client_secret is None:
+            args.client_secret = getpass.getpass('Enter client secret (press Enter if None):')
+            if not args.client_secret:
+                args.client_secret = None
         self.dl.login_secret(email=args.email,
                              password=args.password,
                              client_id=args.client_id,
@@ -303,14 +318,6 @@ class CommandExecutor:
             print("[ERROR] token expired, please login.")
             return
 
-        if hasattr(args, 'project_name ') and args.project_name is not None:
-            project = self.dl.projects.get(project_name=args.project_name)
-        else:
-            try:
-                project = self.dl.projects.get()
-            except exceptions.NotFound:
-                project = None
-
         if args.services == "generate":
             self.dl.services.generate_services_json(path=args.local_path)
             logger.info('Successfully generated service file')
@@ -321,20 +328,11 @@ class CommandExecutor:
             logger.info('Service: "{}" deleted successfully'.format(service.name))
 
         elif args.services == "deploy":
-            project = self.dl.projects.get(project_name=args.project_name)
-            package = self.dl.packages.get(package_name=args.package_name)
-
-            if project is None or package is None:
-                logger.info(
-                    'Please checkout a project and a package or provide --package-name and --project-name params')
-                return
-
-            services = package.services
-            services._project = project
+            services = self.utils.get_services_repo(args=args)
             service = services.deploy_from_local_folder(bot=args.bot,
                                                         service_file=args.service_file,
                                                         checkout=True)
-            logger.info("Successfully deployed the service: {}".format(service.name))
+            logger.info("Successfully deployed the service: {}\nService id: {}".format(service.name, service.id))
 
         elif args.services == "ls":
             self.utils.get_services_repo(args=args).list().print()
@@ -430,7 +428,7 @@ class CommandExecutor:
             package_type = args.package_type if args.package_type else self.dl.PackageCatalog.DEFAULT_PACKAGE_TYPE
             packages.generate(name=args.package_name, src_path=os.getcwd(), package_type=package_type)
             self.utils.dl.client_api.state_io.put('package', {'name': args.package_name})
-            logger.info('Successfully generated package file')
+            logger.info('Successfully generated package files')
 
         elif args.packages == "delete":
             package = self.utils.get_packages_repo(args=args).get(package_name=args.package_name)
@@ -468,17 +466,11 @@ class CommandExecutor:
                     os.chdir('..')
 
         elif args.packages == "deploy":
-            project = self.dl.projects.get(project_name=args.project_name)
-            package = self.dl.packages.get(package_name=args.package_name)
-            if project is None or package is None:
-                logger.info('Please checkout a project and a package')
-                return
-            services = package.services
-            services._project = project
+            services = self.utils.get_services_repo(args=args)
             service = services.deploy_from_local_folder(bot=args.bot,
                                                         service_file=args.service_file,
                                                         checkout=True)
-            logger.info("Successfully deployed the service: {}".format(service.name))
+            logger.info("Successfully deployed the service: {}\nService id: {}".format(service.name, service.id))
 
         else:
             logger.info('Type "dlp packages --help" for options')

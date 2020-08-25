@@ -8,7 +8,7 @@ class Polygon(BaseAnnotationDefinition):
     Polygon annotation object
     """
 
-    def __init__(self, geo, label, is_open=True, attributes=None):
+    def __init__(self, geo, label, is_open=False, attributes=None):
         self.type = "segment"
         self.geo = geo
         self.label = label

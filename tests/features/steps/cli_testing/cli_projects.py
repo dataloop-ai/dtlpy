@@ -7,7 +7,7 @@ import time
 
 
 @behave.given(u"I am logged in")
-def step_impl(context):
+def step_impl(_):
     assert not dl.client_api.token_expired()
 
 
@@ -89,5 +89,5 @@ def step_impl(context, project_name):
 
 
 @behave.then(u'I wait "{seconds}"')
-def step_impl(context, seconds):
+def step_impl(_, seconds):
     time.sleep(int(seconds))

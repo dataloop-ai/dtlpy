@@ -212,6 +212,17 @@ class Items:
 
     def clone(self, item_id, dst_dataset_id, remote_filepath=None, metadata=None, with_annotations=True,
               with_metadata=True, with_task_annotations_status=False):
+        """
+        Clone item
+        :param item_id: item to clone
+        :param dst_dataset_id: destination dataset id
+        :param remote_filepath: complete filepath
+        :param metadata: new metadata to add
+        :param with_annotations: clone annotations
+        :param with_metadata: clone metadata
+        :param with_task_annotations_status: clone task annotations status
+        :return: Item
+        """
         if metadata is None:
             metadata = dict()
         payload = {"targetDatasetId": dst_dataset_id,
@@ -351,6 +362,7 @@ class Items:
             local_path=None,
             file_types=None,
             save_locally=True,
+            to_array=False,
             num_workers=None,
             annotation_options=None,
             overwrite=False,
@@ -374,6 +386,7 @@ class Items:
         :param num_workers: default - 32
         :param avoid_unnecessary_annotation_download: default - False
         :param save_locally: bool. save to disk or return a buffer
+        :param to_array: returns Ndarray when True and local_path = False
         :param annotation_options: download annotations options:  dl.ViewAnnotationOptions.list()
         :param with_text: optional - add text to annotations, default = False
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
@@ -387,6 +400,7 @@ class Items:
             local_path=local_path,
             file_types=file_types,
             save_locally=save_locally,
+            to_array=to_array,
             num_workers=num_workers,
             annotation_options=annotation_options,
             overwrite=overwrite,
@@ -417,10 +431,11 @@ class Items:
 
         :param item_metadata:
         :param overwrite: optional - default = False
-        :param local_path: list of local file, local folder, BufferIO, or url to upload
+        :param local_path: list of local file, local folder, BufferIO, numpy.ndarray or url to upload
         :param local_annotations_path: path to dataloop format annotations json files.
         :param remote_path: remote path to save.
         :param remote_name: remote base name to save.
+                            when upload numpy.ndarray as local path, remote_name with .jpg or .png ext is mandatory
         :param file_types: list of file type to upload. e.g ['.jpg', '.png']. default is all
         :param num_workers:
         :return: Output (list/single item)

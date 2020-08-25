@@ -55,7 +55,8 @@ class PagedEntities:
         return items
 
     def __getitem__(self, y):
-        return self.items[y]
+        self.go_to_page(y)
+        return self.items
 
     def __len__(self):
         return self.items_count
@@ -97,9 +98,6 @@ class PagedEntities:
         items = self.return_page(page_offset=page_offset,
                                  page_size=page_size)
         self.items = items
-
-    def print(self):
-        self.items.print()
 
     def next_page(self):
         """
@@ -147,3 +145,12 @@ class PagedEntities:
                     jobs.remove(job)
             if len(jobs) == 0:
                 break
+
+    ########
+    # misc #
+    ########
+    def print(self, columns=None):
+        self.items.print(columns=columns)
+
+    def to_df(self, columns=None):
+        self.items.to_df(columns=columns)

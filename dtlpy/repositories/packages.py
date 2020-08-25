@@ -42,6 +42,7 @@ class PackageCatalog:
     MULTI_FUNCTION_ITEM_WITH_TRIGGERS = 'multi_function_item_with_triggers'
     MULTI_FUNCTION_DATASET_WITH_TRIGGERS = 'multi_function_dataset_with_triggers'
     MULTI_FUNCTION_ANNOTATION_WITH_TRIGGERS = 'multi_function_annotation_with_triggers'
+    CONVERTER_FUNCTION = 'converter'
 
 
 class Packages:
@@ -100,7 +101,7 @@ class Packages:
             if package is None:
                 raise exceptions.PlatformException(
                     error='400',
-                    message='Checked out not found, must provide either package id or package name')
+                    message='No checked-out Package was found, must checkout or provide an identifier in inputs')
         elif fetch:
             if package_id is not None:
                 success, response = self._client_api.gen_request(
@@ -124,13 +125,13 @@ class Packages:
                 elif packages.items_count > 1:
                     raise exceptions.PlatformException(
                         error='400',
-                        message='More than one file found by the name of: {} '
+                        message='More than one package found by the name of: {} '
                                 'Please get package from a project entity'.format(package_name))
-                package = packages[0]
+                package = packages.items[0]
             else:
                 raise exceptions.PlatformException(
                     error='400',
-                    message='Checked out not found, must provide either package id or package name')
+                    message='No checked-out Package was found, must checkout or provide an identifier in inputs')
         else:
             package = entities.Package.from_json(_json={'id': package_id,
                                                         'name': package_name},
@@ -240,11 +241,12 @@ class Packages:
 
         return local_path
 
-    def push(self, codebase_id=None, src_path=None, package_name=None, modules=None,
+    def push(self, codebase_id=None, src_path=None, package_name=None, modules=None, is_global=False,
              checkout=False) -> entities.Package:
         """
         Push local package
 
+        :param is_global:
         :param checkout:
         :param codebase_id:
         :param src_path:
@@ -289,17 +291,22 @@ class Packages:
             codebase_id = self._project.codebases.pack(directory=src_path, name=package_name).id
 
         # check if exist
-        packages = [package for package in self.list().all() if package.name == package_name]
-        if len(packages) > 0:
+        filters = entities.Filters(resource=entities.FiltersResource.PACKAGE, use_defaults=False)
+        filters.add(field='projectId', values=self._project.id)
+        filters.add(field='name', values=package_name)
+        packages = self.list(filters=filters)
+        if packages.items_count > 0:
             package = self._create(codebase_id=codebase_id,
                                    package_name=package_name,
                                    modules=modules,
                                    push=True,
-                                   package=packages[0])
+                                   is_global=is_global,
+                                   package=packages.items[0])
         else:
             package = self._create(codebase_id=codebase_id,
                                    package_name=package_name,
                                    modules=modules,
+                                   is_global=is_global,
                                    push=False)
         if checkout:
             self.checkout(package=package)
@@ -307,6 +314,7 @@ class Packages:
 
     def _create(self,
                 codebase_id=None,
+                is_global=False,
                 package_name=entities.package_defaults.DEFAULT_PACKAGE_NAME,
                 modules=None,
                 push=False,
@@ -336,6 +344,7 @@ class Packages:
 
         payload = {'name': package_name,
                    'codebaseId': codebase_id,
+                   'global': is_global,
                    'modules': modules}
 
         if self._project is not None:
@@ -371,31 +380,6 @@ class Packages:
             if package is None:
                 package = self.get(package_id=package_id, package_name=package_name)
             package_id = package.id
-            package_name = package.name
-
-        # check if project exist
-        project_exists = True
-        if self._project is None:
-            try:
-                if package is not None and package.project is not None:
-                    self._project = package.project
-                else:
-                    self._project = repositories.Projects(client_api=self._client_api).get(
-                        project_id=package.project_id)
-            except exceptions.NotFound:
-                project_exists = False
-
-        if project_exists:
-            try:
-                # create codebases repo
-                codebases = repositories.Codebases(client_api=self._client_api, project=self._project)
-                # get package codebases
-                codebase_pages = codebases.list_versions(codebase_name=package_name)
-                for codebase_page in codebase_pages:
-                    for codebase in codebase_page:
-                        codebase.delete()
-            except exceptions.Forbidden:
-                logger.debug('Failed to delete code-bases. Continue without')
 
         # check if project exist
         project_exists = True
@@ -618,6 +602,8 @@ class Packages:
         annotation_input = entities.FunctionIO(name='annotation', type='Annotation')
         dataset_input = entities.FunctionIO(name='dataset', type='Dataset')
         json_input = entities.FunctionIO(name='config', type='Json')
+        query_input = entities.FunctionIO(name='query', type='Json')
+
         func = entities.PackageFunction(name=entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME)
         if package_catalog in [PackageCatalog.SINGLE_FUNCTION_ITEM, PackageCatalog.SINGLE_FUNCTION_ITEM_WITH_TRIGGER]:
             func.inputs = [item_input]
@@ -676,6 +662,9 @@ class Packages:
             modules = [module_a, module_b]
         elif package_catalog == PackageCatalog.SINGLE_FUNCTION_MULTI_INPUT:
             func.inputs = [item_input, dataset_input, json_input, annotation_input]
+            modules = entities.PackageModule(functions=func)
+        elif package_catalog == PackageCatalog.CONVERTER_FUNCTION:
+            func.inputs = [dataset_input, query_input]
             modules = entities.PackageModule(functions=func)
         else:
             raise exceptions.PlatformException('404', 'Unknown package catalog type: {}'.format(package_catalog))
@@ -765,6 +754,8 @@ class Packages:
                                        assets.service_runner_paths.SINGLE_METHOD_ITEM_SR_PATH]
         elif package_catalog == PackageCatalog.SINGLE_FUNCTION_MULTI_INPUT:
             paths_to_service_runner = assets.service_runner_paths.SINGLE_METHOD_MULTI_INPUT_SR_PATH
+        elif package_catalog == PackageCatalog.CONVERTER_FUNCTION:
+            paths_to_service_runner = assets.service_runner_paths.CONVERTER_SR_PATH
         else:
             raise exceptions.PlatformException('404', 'Unknown package catalog type: {}'.format(package_catalog))
 

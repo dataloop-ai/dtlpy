@@ -37,7 +37,7 @@ class Project(entities.BaseEntity):
     def set_repositories(self):
         reps = namedtuple('repositories',
                           'projects triggers datasets items recipes packages codebases artifacts times_series services '
-                          'executions assignments tasks bots webhooks models analytics')
+                          'executions assignments tasks bots webhooks models analytics ontologies')
         datasets = repositories.Datasets(client_api=self._client_api, project=self)
 
         r = reps(projects=repositories.Projects(client_api=self._client_api),
@@ -56,7 +56,8 @@ class Project(entities.BaseEntity):
                  assignments=repositories.Assignments(project=self, client_api=self._client_api),
                  tasks=repositories.Tasks(client_api=self._client_api, project=self),
                  bots=repositories.Bots(client_api=self._client_api, project=self),
-                 analytics=repositories.Analytics(client_api=self._client_api, project=self)
+                 analytics=repositories.Analytics(client_api=self._client_api, project=self),
+                 ontologies=repositories.Ontologies(client_api=self._client_api, project=self)
                  )
         return r
 
@@ -64,6 +65,11 @@ class Project(entities.BaseEntity):
     def triggers(self):
         assert isinstance(self._repositories.triggers, repositories.Triggers)
         return self._repositories.triggers
+
+    @property
+    def ontologies(self):
+        assert isinstance(self._repositories.ontologies, repositories.Ontologies)
+        return self._repositories.ontologies
 
     @property
     def items(self):
@@ -246,3 +252,6 @@ class Project(entities.BaseEntity):
 
     def add_member(self, email, role='engineer'):
         return self.projects.add_member(email=email, role=role, project_id=self.id)
+
+    def list_members(self, role: str = None):
+        return self.projects.list_members(project=self, role=role)
