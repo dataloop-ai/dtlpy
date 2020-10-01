@@ -6,7 +6,13 @@ import numpy as np
 @behave.when(u'I show items annotations with param "{annotation_format}"')
 def step_impl(context, annotation_format):
     context.item = context.item.update()
-    context.mask = context.item.annotations.show(height=768, width=1536, annotation_format=annotation_format)
+    annotation_collection = context.item.annotations.list()
+    annotation_collection.annotations = sorted(annotation_collection.annotations, key=lambda x: x.hash)
+    context.mask = annotation_collection.show(height=768,
+                                              width=1536,
+                                              thickness=1,
+                                              with_text=False,
+                                              annotation_format=annotation_format)
 
 
 @behave.then(u'I receive annotations mask and it is equal to mask in "{should_be_path}"')

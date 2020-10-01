@@ -131,7 +131,7 @@ class Segmentation(BaseAnnotationDefinition):
         try:
             import cv2
         except ImportError:
-            raise ModuleNotFoundError('opencv not found. Must install to perform this function')
+            raise ImportError('opencv not found. Must install to perform this function')
 
         thickness = 1 if is_open else -1
 

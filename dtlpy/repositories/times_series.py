@@ -1,6 +1,6 @@
 import logging
 import pandas as pd
-
+import datetime
 from dtlpy import entities, miscellaneous, exceptions, services
 
 logger = logging.getLogger(name=__name__)
@@ -135,6 +135,7 @@ class TimesSeries:
         :param filters: query to delete by
         :return:
         """
+        filters = self._validate_query(query=filters)
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/projects/{}/timeSeries/{}/remove'.format(
                                                              self.project.id,
@@ -144,6 +145,19 @@ class TimesSeries:
             raise exceptions.PlatformException(response)
         return True
 
+    @staticmethod
+    def _validate_query(query):
+        default_start_time = 0
+        default_end_time = datetime.datetime.now().timestamp() * 1000
+
+        if query is None:
+            query = dict(startTime=default_start_time, endTime=default_end_time)
+        else:
+            query['startTime'] = query.get('startTime', default_start_time)
+            query['endTime'] = query.get('endTime', default_end_time)
+
+        return query
+
     def get_samples(self, series_id, filters=None) -> pd.DataFrame:
         """
         Get Series table
@@ -151,8 +165,7 @@ class TimesSeries:
         :param filters: match filters to get specific data from series
         :return:
         """
-        if filters is None:
-            filters = dict()
+        filters = self._validate_query(query=filters)
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/projects/{}/timeSeries/{}/query'.format(self.project.id,
                                                                                                         series_id),

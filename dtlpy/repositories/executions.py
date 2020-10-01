@@ -233,7 +233,7 @@ class Executions:
         List service executions
         :return:
         """
-        url = '/query/FaaS'
+        url = '/query/faas'
 
         # request
         success, response = self._client_api.gen_request(req_type='POST',

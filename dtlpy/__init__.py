@@ -28,10 +28,12 @@ from .entities import (
     Segmentation,
     Polygon,
     Project,
+    Dataset,
     Ellipse,
     Classification,
     Subtitle,
     Polyline,
+    Description,
     Filters,
     Webhook, HttpMethod,
     Trigger,
@@ -57,7 +59,7 @@ from .entities import (
     Workload, WorkloadUnit,
     FiltersKnownFields, FiltersResource, FiltersOperations, FiltersMethod, FiltersOrderByDirection,
     FiltersKnownFields as KnownFields,
-    TriggerResource, TriggerAction, TriggerExecutionMode,
+    TriggerResource, TriggerAction, TriggerExecutionMode, TriggerType,
     PackageInputType, FunctionPostAction, FunctionPostActionType, FunctionDisplayScope, FunctionDisplayScopeResource
 )
 from .utilities import Converter, BaseServiceRunner, Progress, AnnotationFormat

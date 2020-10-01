@@ -2,6 +2,8 @@ import time
 import numpy as np
 import os
 import logging
+import dtlpy as dl
+import shutil
 
 logger = logging.getLogger(name=__name__)
 
@@ -15,41 +17,202 @@ class Videos:
 
     @staticmethod
     def get_info(filepath):
-        import ffmpeg
+        try:
+            import ffmpeg
+        except ImportError:
+            logger.error(
+                'Import Error! Cant import ffmpeg. '
+                'Annotations operations will be limited. import manually and fix errors')
+            raise
         probe = ffmpeg.probe(filepath)
         return probe
 
     @staticmethod
-    def disassemble(filepath, fps=None, loglevel='panic'):
+    def video_snapshots_generator(item_id=None, item=None, frame_interval=30, image_ext="png"):
+        """
+        Create video-snapshots
+
+        :param item_id: item id for the video
+        :param item: item id for the video
+        :param frame_interval: number of frames to take next snapshot
+        :param image_ext: png/jpg
+        :return: the uploaded items
+        """
+        if item_id is not None:
+            item = dl.items.get(item_id=item_id)
+
+        if item is None:
+            raise ValueError('Missing input item (or item_id)')
+
+        if not isinstance(frame_interval, int):
+            raise AttributeError('frame_interval is mast to be integer')
+
+        if "video" not in item.mimetype:
+            raise AttributeError("Got {} file type but only video files are supported".format(item.mimetype))
+
+        video_path = item.download()
+
+        # Get the time for single frame from metadata (duration/# of frames)
+        if 'system' in item.metadata and \
+                'ffmpeg' in item.metadata['system'] and \
+                'duration' in item.metadata['system']['ffmpeg'] and \
+                'nb_frames' in item.metadata['system']['ffmpeg']:
+            nb_frames = int(item.metadata["system"]["ffmpeg"]["nb_frames"])
+            duration = float(item.metadata["system"]["ffmpeg"]["duration"])
+            video_fps = duration / nb_frames
+        else:
+            try:
+                import cv2
+            except ImportError:
+                logger.error(
+                    'Import Error! Cant import cv2. '
+                    'Annotations operations will be limited. import manually and fix errors')
+                raise
+
+            video = cv2.VideoCapture(video_path)
+            video_fps = video.get(cv2.CAP_PROP_FPS)
+            nb_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+            duration = video_fps * nb_frames
+
+        images_path = Videos.disassemble(filepath=video_path, frame_interval=frame_interval, image_ext=image_ext)
+        snapshots_items = None
+        try:
+            # rename files
+            images = []
+            video_basename = os.path.basename(video_path)
+            for f in os.listdir(images_path):
+                images.append(f)
+            for image in images:
+                image_split_name, ext = os.path.splitext(image)
+                try:
+                    frame = int(image_split_name) * frame_interval
+                    os.rename(os.path.join(images_path, image),
+                              os.path.join(images_path,
+                                           "{}.frame.{}{}".format(video_basename, frame, ext)))
+                except Exception as e:
+                    logger.debug("Rename {} has been failed: {}".format(os.path.join(images_path, image), e))
+
+            remote_path = os.path.join(os.path.split(item.filename)[0], "snapshots")
+            snapshots_items = item.dataset.items.upload(local_path=images_path, remote_path=remote_path)
+
+            # classification tpe annotation creation for each file
+            builder = item.annotations.builder()
+            annotation_itemlinks = []
+            if not isinstance(snapshots_items, list):
+                snapshots_items = [snapshots_items]
+
+            for snapshot_item in snapshots_items:
+                item_frame = snapshot_item.name.rsplit("frame.", 1)[1].split(".")[0]
+                if item_frame.isnumeric():
+                    item_time = int(item_frame) * video_fps
+                else:
+                    item_frame = item_time = 0
+
+                snapshot_item.metadata["system"]["itemLinks"] = [{"type": "snapshotFrom",
+                                                                  "itemId": item.id,
+                                                                  "frame": item_frame,
+                                                                  "time": item_time}]
+
+                annotation_itemlinks.append({"type": "snapshotTo",
+                                             "itemId": snapshot_item.id,
+                                             "frame": item_frame,
+                                             "time": item_time})
+
+                snapshot_item.update(system_metadata=True)
+                annotation_definition = dl.Classification(label="Snapshot")
+
+                builder.add(annotation_definition=annotation_definition,
+                            frame_num=int(item_frame),
+                            end_frame_num=nb_frames if int(item_frame) + int(video_fps) > nb_frames else int(
+                                item_frame) + int(video_fps),
+                            start_time=item_time,
+                            end_time=duration if item_time + 1 > duration else item_time + 1)
+
+            annotations = item.annotations.upload(annotations=builder)
+
+            # update system metadata for annotations
+            count = 0
+            for annotation in annotations:
+                annotation.metadata["system"]["itemLinks"] = [annotation_itemlinks[count]]
+                count += 1
+
+            annotations.update(system_metadata=True)
+        except Exception as err:
+            logger.exception(err)
+        finally:
+            if os.path.isdir(images_path):
+                shutil.rmtree(images_path)
+            return snapshots_items
+
+    @staticmethod
+    def disassemble(filepath, fps=None, frame_interval=None, loglevel='panic', image_ext='jpg'):
         """
         Disassemble video to images
 
         :param filepath: input video filepath
         :param fps: rate of disassemble. e.g if 1 frame per second fps is 1. if None all frames will be extracted
+        :param frame_interval: take image every frame # (if exists function ignore fps)
+        :param image_ext: png/jpg
         :param loglevel: ffmpeg loglevel
         :return:
         """
-        import ffmpeg
+        try:
+            import ffmpeg
+        except ImportError:
+            logger.error(
+                'Import Error! Cant import ffmpeg. '
+                'Annotations operations will be limited. import manually and fix errors')
+            raise
+        # get video information
+        video_props = Videos.get_info(filepath)
+        if 'system' in video_props and \
+                'nb_frames' in video_props['system'][0]:
+            nb_frames = video_props['streams'][0]['nb_frames']
+        else:
+            try:
+                import cv2
+            except ImportError:
+                logger.error(
+                    'Import Error! Cant import cv2. '
+                    'Annotations operations will be limited. import manually and fix errors')
+                raise
+            nb_frames = int(cv2.VideoCapture(filepath).get(cv2.CAP_PROP_FRAME_COUNT))
+
         if not os.path.isfile(filepath):
             raise IOError('File doesnt exists: {}'.format(filepath))
         basename, ext = os.path.splitext(filepath)
         # create folder for the frames
-        if not os.path.exists(basename):
-            os.makedirs(basename, exist_ok=True)
-        # get video information
-        video_props = Videos.get_info(filepath)
+        if os.path.exists(basename):
+            shutil.rmtree(basename)
+
+        os.makedirs(basename, exist_ok=True)
+
         if fps is None:
             fps = eval(video_props['streams'][0]['avg_frame_rate'])
-        num_of_zeros = len(video_props['streams'][0]['nb_frames'])
+        num_of_zeros = len(str(nb_frames))
         # format the output filename
-        output_regex = os.path.join(basename, '%%0%dd.jpg' % num_of_zeros)
+        output_regex = os.path.join(basename, '%0{}d.{}'.format(num_of_zeros, image_ext))
 
         try:
-            stream = ffmpeg.input(filepath, **{'loglevel': loglevel}).output(output_regex,
-                                                                             **{'start_number': '0',
-                                                                                'r': str(fps)})
+            if frame_interval is not None:
+                frame_number = 0
+                select = ""
+                while frame_number < nb_frames:
+                    if select != "":
+                        select += '+'
+                    select += 'eq(n\\,{})'.format(frame_number)
+                    frame_number += frame_interval
+                stream = ffmpeg.input(filepath, **{'loglevel': loglevel}).output(output_regex,
+                                                                                 **{'start_number': '0',
+                                                                                    'vf': 'select=\'{}'.format(select),
+                                                                                    'vsync': 'vfr'})
+            else:
+                stream = ffmpeg.input(filepath, **{'loglevel': loglevel}).output(output_regex,
+                                                                                 **{'start_number': '0',
+                                                                                    'r': str(fps)})
+
             ffmpeg.overwrite_output(stream).run()
-        except Exception as e:
+        except Exception:
             logger.error('ffmpeg error in disassemble:')
             raise
         return basename
@@ -63,7 +226,13 @@ class Videos:
         :param loglevel: ffmpeg loglevel
         :return:
         """
-        import ffmpeg
+        try:
+            import ffmpeg
+        except ImportError:
+            logger.error(
+                'Import Error! Cant import ffmpeg. '
+                'Annotations operations will be limited. import manually and fix errors')
+            raise
         if not os.path.isfile(filepath):
             raise IOError('File doesnt exists: {}'.format(filepath))
         # re encode video without b frame and as mp4
@@ -113,7 +282,13 @@ class Videos:
         :param loglevel: ffmpeg loglevel
         :return:
         """
-        import ffmpeg
+        try:
+            import ffmpeg
+        except ImportError:
+            logger.error(
+                'Import Error! Cant import ffmpeg. '
+                'Annotations operations will be limited. import manually and fix errors')
+            raise
         # https://www.ffmpeg.org/ffmpeg-formats.html#Examples-9
 
         if not os.path.isfile(filepath):
@@ -124,9 +299,9 @@ class Videos:
         fps = eval(probe['streams'][0]['avg_frame_rate'])
         n_frames = eval(probe['streams'][0]['nb_frames'])
         video_length = eval(probe['streams'][0]['duration'])
-        logger.info('Video frame rate: %d[fps]' % fps)
-        logger.info('Video number of frames: %d' % n_frames)
-        logger.info('Video length in seconds: %d[s]' % video_length)
+        logger.info('Video frame rate: {}[fps]'.format(fps))
+        logger.info('Video number of frames: {}'.format(n_frames))
+        logger.info('Video length in seconds: {}[s]'.format(video_length))
 
         # check split params and calc split params for ffmpeg
         if split_seconds is not None:
@@ -165,7 +340,7 @@ class Videos:
         logger.info('Splitting to %d chunks' % split_count)
 
         basename, ext = os.path.splitext(filepath)
-        output_regex = os.path.join(basename, '%%03d%s' % '.mp4')
+        output_regex = os.path.join(basename, '%%03d.mp4')
         # create folder
         if not os.path.exists(basename):
             os.makedirs(basename, exist_ok=True)
@@ -181,7 +356,7 @@ class Videos:
                                                                                      list_frames_to_split])
                                                                                 })
             ffmpeg.overwrite_output(stream).run(capture_stdout=True)
-        except Exception as e:
+        except Exception:
             logger.exception('ffmpeg error in disassemble:')
             raise
 
@@ -202,7 +377,7 @@ class Videos:
             filenames.append(new_filename)
             # rename to informative name
             if os.path.isfile(new_filename):
-                logger.warning('File already exists. Overwriting!: %s' % new_filename)
+                logger.warning('File already exists. Overwriting!: {}'.format(new_filename))
                 os.remove(new_filename)
             os.rename(old_filename, new_filename)
             # check if in pairs, if not - delete
@@ -210,7 +385,7 @@ class Videos:
                 start_frames = [pair[0] for pair in split_pairs]
                 end_frames = [pair[1] for pair in split_pairs]
                 if (list_frames_to_split[n] // fps) in start_frames and (
-                            list_frames_to_split[n + 1] // fps) in end_frames:
+                        list_frames_to_split[n + 1] // fps) in end_frames:
                     # keep video
                     pass
                 else:

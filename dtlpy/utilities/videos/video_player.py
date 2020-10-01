@@ -1,22 +1,11 @@
-import datetime
 import logging
-import tkinter
 import json
 import time
 import os
-import PIL.ImageTk
-import PIL.Image
 import numpy as np
 import dtlpy as dl
 
 logger = logging.getLogger(name=__name__)
-
-try:
-    import cv2
-except ImportError:
-    logger.error(
-        'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
-    raise
 
 class VideoPlayer:
     """
@@ -26,6 +15,13 @@ class VideoPlayer:
     def __init__(self, project_name=None, project_id=None,
                  dataset_name=None, dataset_id=None,
                  item_filepath=None, item_id=None):
+        try:
+            import tkinter
+        except ImportError:
+            logger.error(
+                'Import Error! Cant import tkinter. Annotations operations will be limited. import manually and fix errors')
+            raise
+
         # init tkinter window
         self.window = tkinter.Tk()
         self.window.title('Dataloop Player')
@@ -192,7 +188,21 @@ class VideoPlayer:
         Create an annotated video saved to file
         :return:
         """
-        from tkinter import ttk
+
+        try:
+            import cv2
+        except ImportError:
+            logger.error(
+                'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
+            raise
+
+        try:
+            from tkinter import ttk
+        except ImportError:
+            logger.error(
+                'Import Error! Cant import ttk from tkinter. Annotations operations will be limited. import manually and fix errors')
+            raise
+
         # start progress bar
         p, ext = os.path.splitext(self.video_source)
         output_filename = p + '_out.mp4'
@@ -466,6 +476,28 @@ class VideoPlayer:
         :param frame_number:
         :return:
         """
+        try:
+            import cv2
+        except ImportError:
+            logger.error(
+                'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
+            raise
+
+        try:
+            import tkinter
+        except ImportError:
+            logger.error(
+                'Import Error! Cant import tkinter. Annotations operations will be limited. import manually and fix errors')
+            raise
+
+        try:
+            import PIL.ImageTk
+            import PIL.Image
+        except ImportError:
+            logger.error(
+                'Import Error! Cant import PIL.ImageTk/PIL.ImageTk. Annotations operations will be limited. '
+                'import manually and fix errors')
+            raise
         ret, frame = self.vid.get_frame(frame_number)
         if ret:
             if self.show_annotations:
@@ -510,8 +542,13 @@ class VideoCapture:
     """
     Video class using cv2 to play video
     """
-
     def __init__(self, source=0):
+        try:
+            import cv2
+        except ImportError:
+            logger.error(
+                'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
+            raise
         # Open the video source
         self.vid = cv2.VideoCapture(source)
         if not self.vid.isOpened():
@@ -529,6 +566,12 @@ class VideoCapture:
         :param frame_number:
         :return:
         """
+        try:
+            import cv2
+        except ImportError:
+            logger.error(
+                'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
+            raise
         if self.vid.isOpened():
             if self.frame_number is None:
                 self.frame_number = self.vid.get(cv2.CAP_PROP_POS_FRAMES)

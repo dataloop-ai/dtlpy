@@ -9,4 +9,5 @@ from .polygon import Polygon
 from .polyline import Polyline
 from .segmentation import Segmentation
 from .subtitle import Subtitle
+from .description import Description
 from .undefined_annotation import UndefinedAnnotationType

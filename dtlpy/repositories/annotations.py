@@ -19,6 +19,7 @@ class Annotations:
         self._client_api = client_api
         self._item = item
         self._dataset = dataset
+        self._bulk_annotation = 200
         if dataset_id is None:
             if dataset is not None:
                 dataset_id = dataset.id
@@ -341,7 +342,10 @@ class Annotations:
         return out_annotations
 
     def _upload_annotations(self, annotations):
+        bulk_annotations_list = list()
+        bulk_return_annotations = list()
         annotations_list = list()
+
         for annotation in annotations:
             if isinstance(annotation, str):
                 annotation = json.loads(annotation)
@@ -350,20 +354,30 @@ class Annotations:
             elif isinstance(annotation, dict):
                 annotation = annotation
             else:
-                raise exceptions.PlatformException('400',
-                                                   'unknown annotations type: {}'.format(type(annotation)))
+                raise exceptions.PlatformException(error='400',
+                                                   message='unknown annotations type: {}'.format(type(annotation)))
             annotations_list.append(annotation)
-        suc, response = self._client_api.gen_request(req_type='post',
-                                                     path='/items/{}/annotations'.format(self.item.id),
-                                                     json_req=annotations_list)
-        if suc:
-            return_annotations = response.json()
-            if not isinstance(return_annotations, list):
-                return_annotations = [return_annotations]
-            result = entities.AnnotationCollection.from_json(_json=return_annotations,
-                                                             item=self.item)
-        else:
-            raise exceptions.PlatformException(response)
+            if len(annotations_list) >= self._bulk_annotation:
+                bulk_annotations_list.append(annotations_list)
+                annotations_list = list()
+
+        bulk_annotations_list.append(annotations_list)
+        for annotations_list in bulk_annotations_list:
+            suc, response = self._client_api.gen_request(req_type='post',
+                                                         path='/items/{}/annotations'.format(self.item.id),
+                                                         json_req=annotations_list)
+            if suc:
+                return_annotations = response.json()
+                if not isinstance(return_annotations, list):
+                    return_annotations = [return_annotations]
+                bulk_return_annotations += return_annotations
+            else:
+                if len(bulk_return_annotations) > 0:
+                    logger.warning("Only {} annotations from {} annotations have been uploaded".
+                                   format(len(bulk_return_annotations), len(annotations)))
+                raise exceptions.PlatformException(response)
+
+        result = entities.AnnotationCollection.from_json(_json=bulk_return_annotations, item=self.item)
         return result
 
     def upload(self, annotations):
@@ -413,9 +427,13 @@ class Annotations:
     ##################
     # async function #
     ##################
+
     async def _async_upload_annotations(self, annotations):
         async with self._client_api.event_loops('items.upload').semaphore('annotations.upload'):
+            bulk_annotations_list = list()
+            bulk_return_annotations = list()
             annotations_list = list()
+
             for annotation in annotations:
                 if isinstance(annotation, str):
                     annotation = json.loads(annotation)
@@ -425,19 +443,28 @@ class Annotations:
                     annotation = annotation
                 else:
                     raise exceptions.PlatformException(error='400',
-                                                       message='unknown annotations type: {}'.format(
-                                                           type(annotation)))
+                                                       message='unknown annotations type: {}'.format(type(annotation)))
                 annotations_list.append(annotation)
-            success, response = await self._client_api.gen_async_request(
-                req_type='post',
-                path='/items/{}/annotations'.format(self.item.id),
-                json_req=annotations_list)
-            if success:
-                return_annotations = response.json()
-                if not isinstance(return_annotations, list):
-                    return_annotations = [return_annotations]
-                result = entities.AnnotationCollection.from_json(_json=return_annotations,
-                                                                 item=self.item)
-            else:
-                raise exceptions.PlatformException(response)
+                if len(annotations_list) >= self._bulk_annotation:
+                    bulk_annotations_list.append(annotations_list)
+                    annotations_list = list()
+
+            bulk_annotations_list.append(annotations_list)
+            for annotations_list in bulk_annotations_list:
+                success, response = await self._client_api.gen_async_request(req_type='post',
+                                                                             path='/items/{}/annotations'
+                                                                             .format(self.item.id),
+                                                                             json_req=annotations_list)
+                if success:
+                    return_annotations = response.json()
+                    if not isinstance(return_annotations, list):
+                        return_annotations = [return_annotations]
+                    bulk_return_annotations += return_annotations
+                else:
+                    if len(bulk_return_annotations) > 0:
+                        logger.warning("Only {} annotations from {} annotations have been uploaded".
+                                       format(len(bulk_return_annotations), len(annotations)))
+                    raise exceptions.PlatformException(response)
+
+            result = entities.AnnotationCollection.from_json(_json=bulk_return_annotations, item=self.item)
             return result

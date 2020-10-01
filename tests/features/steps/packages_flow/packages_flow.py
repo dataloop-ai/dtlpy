@@ -30,7 +30,7 @@ def step_impl(context, package_assets_path, package_directory_path):
     assets_mock['inputs'][0]['value']['item_id'] = context.item.id
 
     with open(package_mock_path, 'w') as f:
-        json.dump(assets_mock, f)
+        json.dump(assets_mock, f, indent=2)
 
     # service.json
     assets_service_path = os.path.join(package_assets_path, 'service.json')
@@ -40,7 +40,17 @@ def step_impl(context, package_assets_path, package_directory_path):
         assets_service = json.load(f)
 
     with open(package_service_path, 'w') as f:
-        json.dump(assets_service, f)
+        json.dump(assets_service, f, indent=2)
+
+    # package.json
+    assets_service_path = os.path.join(package_assets_path, 'package.json')
+    package_service_path = os.path.join(package_directory_path, 'package.json')
+
+    with open(assets_service_path, 'r') as f:
+        assets_service = json.load(f)
+
+    with open(package_service_path, 'w') as f:
+        json.dump(assets_service, f, indent=2)
 
     dataloop_dir = os.path.join(package_directory_path, '.dataloop')
     os.mkdir(dataloop_dir)

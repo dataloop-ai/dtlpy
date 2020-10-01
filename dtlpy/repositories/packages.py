@@ -1,4 +1,5 @@
-import importlib
+import importlib.util
+import inspect
 import logging
 import json
 import os
@@ -83,6 +84,27 @@ class Packages:
             package = self.get(package_name=package_name, package_id=package_id)
         self._client_api._open_in_web(resource_type='package', project_id=package.project_id, package_id=package.id)
 
+    def revisions(self, package: entities.Package = None, package_id=None):
+        """
+        Get package revisions history
+
+        :param package: Package entity
+        :param package_id: package id
+        """
+        if package is None and package_id is None:
+            raise exceptions.PlatformException(
+                error='400',
+                message='must provide an identifier in inputs: "package" or "package_id"')
+        if package is not None:
+            package_id = package.id
+
+        success, response = self._client_api.gen_request(
+            req_type="get",
+            path="/packages/{}/revisions".format(package_id))
+        if not success:
+            raise exceptions.PlatformException(response)
+        return response.json()
+
     def get(self, package_name=None, package_id=None, checkout=False, fetch=None) -> entities.Package:
         """
         Get Package object
@@ -163,7 +185,7 @@ class Packages:
         return packages
 
     def _list(self, filters: entities.Filters):
-        url = '/query/FaaS'
+        url = '/query/faas'
 
         # request
         success, response = self._client_api.gen_request(req_type='post',
@@ -242,7 +264,7 @@ class Packages:
         return local_path
 
     def push(self, codebase_id=None, src_path=None, package_name=None, modules=None, is_global=False,
-             checkout=False) -> entities.Package:
+             checkout=False, ignore_sanity_check=False) -> entities.Package:
         """
         Push local package
 
@@ -258,7 +280,7 @@ class Packages:
         if self._project is None:
             try:
                 self._project = repositories.Projects(client_api=self._client_api).get()
-            except:
+            except Exception:
                 pass
 
         if self._project is None:
@@ -286,6 +308,14 @@ class Packages:
         if modules is None and 'modules' in package_from_json:
             modules = package_from_json['modules']
 
+        if ignore_sanity_check:
+            logger.warning(
+                'Pushing a package without sanity check can cause errors when trying to deploy, '
+                'trigger and execute functions.\n'
+                'We highly recommend to not use the ignore_sanity_check flag')
+        else:
+            modules = self._sanity_before_push(src_path=src_path, modules=modules)
+
         # get or create codebase
         if codebase_id is None:
             codebase_id = self._project.codebases.pack(directory=src_path, name=package_name).id
@@ -296,18 +326,17 @@ class Packages:
         filters.add(field='name', values=package_name)
         packages = self.list(filters=filters)
         if packages.items_count > 0:
-            package = self._create(codebase_id=codebase_id,
-                                   package_name=package_name,
-                                   modules=modules,
-                                   push=True,
-                                   is_global=is_global,
-                                   package=packages.items[0])
+            # package exists - need to update
+            package = packages.items[0]
+            package.codebase_id = codebase_id
+            package.modules = modules
+            package.is_global = is_global
+            package = self.update(package=package)
         else:
             package = self._create(codebase_id=codebase_id,
                                    package_name=package_name,
                                    modules=modules,
-                                   is_global=is_global,
-                                   push=False)
+                                   is_global=is_global)
         if checkout:
             self.checkout(package=package)
         return package
@@ -316,30 +345,17 @@ class Packages:
                 codebase_id=None,
                 is_global=False,
                 package_name=entities.package_defaults.DEFAULT_PACKAGE_NAME,
-                modules=None,
-                push=False,
-                package=None) -> entities.Package:
+                modules=None) -> entities.Package:
         """
         Create a package in platform
 
-        :param package:
-        :param push:
         :param codebase_id: optional - package codebase
         :param package_name: optional - default: 'default package'
         :param modules: optional - PackageModules Entity
         :return: Package Entity
         """
-        if push:
-            package.codebase_id = codebase_id
-            package.modules = modules
-            return self.update(package=package)
-        if modules is None:
-            modules = [DEFAULT_PACKAGE_MODULE]
-
-        if not isinstance(modules, list):
-            modules = [modules]
-
-        if isinstance(modules[0], entities.PackageModule):
+        # if is dtlpy entity convert to dict
+        if modules and isinstance(modules[0], entities.PackageModule):
             modules = [module.to_json() for module in modules]
 
         payload = {'name': package_name,
@@ -738,7 +754,7 @@ class Packages:
         elif package_catalog == PackageCatalog.SINGLE_FUNCTION_JSON:
             paths_to_service_runner = assets.service_runner_paths.SINGLE_METHOD_JSON_SR_PATH
         elif package_catalog in [PackageCatalog.MULTI_FUNCTION_ITEM, PackageCatalog.MULTI_FUNCTION_ITEM_WITH_TRIGGERS]:
-            paths_to_service_runner = assets.service_runner_paths.MULTI_METHOD_JSON_SR_PATH
+            paths_to_service_runner = assets.service_runner_paths.MULTI_METHOD_ITEM_SR_PATH
         elif package_catalog in [PackageCatalog.MULTI_FUNCTION_ANNOTATION,
                                  PackageCatalog.MULTI_FUNCTION_ANNOTATION_WITH_TRIGGERS]:
             paths_to_service_runner = assets.service_runner_paths.MULTI_METHOD_ANNOTATION_SR_PATH
@@ -781,6 +797,7 @@ class Packages:
     def test_local_package(self,
                            cwd=None,
                            concurrency=None,
+                           package: entities.Package = None,
                            module_name=entities.package_defaults.DEFAULT_PACKAGE_MODULE_NAME,
                            function_name=entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME,
                            class_name=entities.package_defaults.DEFAULT_PACKAGE_CLASS_NAME,
@@ -799,6 +816,7 @@ class Packages:
         local_runner = LocalServiceRunner(self._client_api,
                                           packages=self,
                                           cwd=cwd,
+                                          package=package,
                                           multithreading=is_multithread,
                                           concurrency=concurrency,
                                           module_name=module_name,
@@ -836,6 +854,92 @@ class Packages:
         self._client_api.state_io.put('package', package.to_json())
         logger.info("Checked out to package {}".format(package.name))
 
+    @staticmethod
+    def _sanity_before_push(src_path, modules):
+        if modules is None:
+            modules = [DEFAULT_PACKAGE_MODULE]
+
+        if not isinstance(modules, list):
+            modules = [modules]
+
+        if not isinstance(modules[0], entities.PackageModule):
+            modules = [entities.PackageModule.from_json(_json=module) for module in modules]
+
+        missing = list()
+        for module in modules:
+            entry_point = module.entry_point
+            class_name = module.class_name
+
+            check_init = True
+            functions = module.functions
+            # check in inputs is a list
+            if not isinstance(functions, list):
+                functions = [functions]
+
+            for function in functions:
+                # entry point exists
+                entry_point_filepath = os.path.join(src_path, entry_point)
+                if not os.path.isfile(entry_point_filepath):
+                    missing.append('missing entry point file: {}'.format(entry_point_filepath))
+                    continue
+
+                # class name in entry point
+                try:
+                    spec = importlib.util.spec_from_file_location(class_name, entry_point_filepath)
+                    foo = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(foo)
+                except ImportError as e:
+                    logger.warning(
+                        'Cannot run sanity check to find conflicts between package module and source code'
+                        'because some packages in your source code are not installed in your local environment'.format(
+                            e.__str__())
+                    )
+                    return modules
+
+                if not hasattr(foo, class_name):
+                    missing.append('missing class: "{}" from file: "{}"'.format(class_name, entry_point_filepath))
+                    continue
+
+                # function in class
+                cls = getattr(foo, class_name)
+                if not hasattr(cls, function.name):
+                    missing.append(
+                        'missing function: "{}" from class: "{}"'.format(function.name, entry_point_filepath))
+                    continue
+
+                if check_init:
+                    check_init = False
+                    # input to __init__ and inputs definitions match
+                    func = getattr(cls, "__init__")
+                    func_inspect = inspect.getfullargspec(func)
+                    defined_input_names = [inp.name for inp in module.init_inputs]
+                    for input_name in func_inspect.args:
+                        if input_name in ['self', 'progress']:
+                            continue
+                        if input_name not in defined_input_names:
+                            missing.append('missing input name: "{}" in function definition: "{}"'.format(input_name,
+                                                                                                          "__init__"))
+
+                # input to function and inputs definitions match
+                func = getattr(cls, function.name)
+                func_inspect = inspect.getfullargspec(func)
+                inputs = function.inputs
+                if not isinstance(inputs, list):
+                    inputs = [inputs]
+                defined_input_names = [inp.name for inp in inputs]
+                for input_name in func_inspect.args:
+                    if input_name in ['self', 'progress']:
+                        continue
+                    if input_name not in defined_input_names:
+                        missing.append(
+                            'missing input name: "{}" in function definition: "{}"'.format(input_name, function.name))
+
+        if len(missing) != 0:
+            raise ValueError('There are conflicts between modules and source code:'
+                             '\n{}\n{}'.format(missing,
+                                               'Please fix conflicts or use flag ignore_sanity_check'))
+        return modules
+
 
 class LocalServiceRunner:
     """
@@ -848,6 +952,7 @@ class LocalServiceRunner:
                  cwd=None,
                  multithreading=False,
                  concurrency=32,
+                 package: entities.Package = None,
                  module_name=entities.package_defaults.DEFAULT_PACKAGE_MODULE_NAME,
                  function_name=entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME,
                  class_name=entities.package_defaults.DEFAULT_PACKAGE_CLASS_NAME,
@@ -866,6 +971,7 @@ class LocalServiceRunner:
         self.function_name = function_name
         self.entry_point = entry_point
         self.class_name = class_name
+        self.package = package
 
         with open(os.path.join(self.cwd, 'mock.json'), 'r') as f:
             self.mock_json = json.load(f)
@@ -896,16 +1002,27 @@ class LocalServiceRunner:
         return service_runner(**kwargs)
 
     def run_local_project(self, project=None):
-        self.validate_mock(mock_json=self.package_io.read_json())
+        if self.package is None:
+            self.validate_mock(mock_json=self.package_io.read_json())
+
         package_runner = self.get_mainpy_run_service()
 
-        modules = self.package_io.get('modules')
+        modules = self.package_io.get('modules') if self.package is None else [m.to_json() for m in
+                                                                               self.package.modules]
         if isinstance(modules, list) and len(modules) > 0:
-            module = [module for module in modules if module['name'] == self.module_name][0]
+            try:
+                module = [module for module in modules if module['name'] == self.module_name][0]
+            except Exception:
+                raise exceptions.PlatformException(
+                    'Module {} does not exist in package modules'.format(self.module_name))
         else:
             module = DEFAULT_PACKAGE_MODULE.to_json()
         if isinstance(module['functions'], list) and len(module['functions']) > 0:
-            func = [func for func in module['functions'] if func['name'] == self.function_name][0]
+            try:
+                func = [func for func in module['functions'] if func['name'] == self.function_name][0]
+            except Exception:
+                raise exceptions.PlatformException(
+                    'function {} does not exist in package module'.format(self.function_name))
         else:
             func = entities.PackageFunction(None, list(), list(), None).to_json()
         package_inputs = func['input']
@@ -914,7 +1031,12 @@ class LocalServiceRunner:
         if not self.multithreading:
             kwargs = dict()
             progress = utilities.Progress()
-            kwargs['progress'] = progress
+
+            func = getattr(package_runner, self.function_name)
+            params = list(inspect.signature(func).parameters)
+            if "progress" in params:
+                kwargs['progress'] = progress
+
             for package_input in package_inputs:
                 kwargs[package_input['name']] = self.get_field(field_name=package_input['name'],
                                                                field_type=package_input['type'],

@@ -4,7 +4,7 @@ Feature: Packages entity method testing
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
         And There is a project by the name of "test_packages_get"
         And Directory "packages_get" is empty
-        When I generate package by the name of "test_package" to "packages_entity"
+        When I generate package by the name of "test-package" to "packages_get"
 
     @packages.delete
     Scenario: To Json

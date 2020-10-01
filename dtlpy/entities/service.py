@@ -38,7 +38,6 @@ class Service(entities.BaseEntity):
     mq = attr.ib(repr=False)
     active = attr.ib()
     driver_id = attr.ib(repr=False)
-    revisions = attr.ib(type=list)
 
     # name change
     runtime = attr.ib(repr=False)
@@ -53,6 +52,7 @@ class Service(entities.BaseEntity):
     # SDK
     _package = attr.ib(repr=False)
     _client_api = attr.ib(type=services.ApiClient, repr=False)
+    _revisions = attr.ib(default=None, repr=False)
     # repositories
     _project = attr.ib(default=None, repr=False)
     _repositories = attr.ib(repr=False)
@@ -134,6 +134,12 @@ class Service(entities.BaseEntity):
     # Entities #
     ############
     @property
+    def revisions(self):
+        if self._revisions is None:
+            self._revisions = self.services.revisions(service=self)
+        return self._revisions
+
+    @property
     def project(self):
         if self._project is None:
             self._project = repositories.Projects(client_api=self._client_api).get(project_id=self.project_id,
@@ -205,6 +211,7 @@ class Service(entities.BaseEntity):
             filter=attr.filters.exclude(
                 attr.fields(Service)._project,
                 attr.fields(Service)._package,
+                attr.fields(Service)._revisions,
                 attr.fields(Service)._client_api,
                 attr.fields(Service)._repositories,
                 attr.fields(Service).project_id,

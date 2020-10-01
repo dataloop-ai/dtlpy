@@ -81,7 +81,7 @@ class Models:
                     raise exceptions.PlatformException(
                         error='400',
                         message='More than one file found by the name of: {}'.format(model_name))
-                model = models[0]
+                model = models.items[0]
             else:
                 raise exceptions.PlatformException(
                     error='400',

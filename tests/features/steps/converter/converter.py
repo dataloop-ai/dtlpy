@@ -352,9 +352,9 @@ def compare_yolo_files(file_a, file_b):
             success = success and includes_yolo_line(line=line, lines=dest_lines)
 
     if not success:
-        logging.error('Error in files: {}, {}'.format(file_a, file_b))
-        logging.error('{}:\n {}'.format(file_a, src_lines))
-        logging.error('{}:\n {}'.format(file_b, dest_lines))
+        print('Error in files: {}, {}'.format(file_a, file_b))
+        print('{}:\n {}'.format(file_a, src_lines))
+        print('{}:\n {}'.format(file_b, dest_lines))
 
     return success
 

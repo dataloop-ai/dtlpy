@@ -15,3 +15,4 @@
 # along with DTLPY.  If not, see <http://www.gnu.org/licenses/>.
 from .converter import Converter, AnnotationFormat
 from .base_package_runner import BaseServiceRunner, Progress
+from .videos import Videos

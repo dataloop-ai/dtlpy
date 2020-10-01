@@ -97,7 +97,7 @@ class Snapshots:
                 raise exceptions.PlatformException(
                     error='400',
                     message='More than one file found by the name of: {}'.format(snapshot_name))
-            snapshot = snapshots[0]
+            snapshot = snapshots.items[0]
         else:
             raise exceptions.PlatformException(
                 error='400',

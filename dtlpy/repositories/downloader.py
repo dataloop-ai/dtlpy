@@ -495,6 +495,9 @@ class Downloader:
     @staticmethod
     def __get_link_source(item):
         assert isinstance(item, entities.Item)
+        if not item.is_fetched:
+            return item, '', False
+
         if not item.filename.endswith('.json') or \
                 'system' not in item.metadata or \
                 'shebang' not in item.metadata['system'] or \

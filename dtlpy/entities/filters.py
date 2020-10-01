@@ -259,7 +259,9 @@ class Filters:
             # add annotations defaults
             elif self.resource == FiltersResource.ANNOTATION:
                 self._unique_fields = ['type']
-                self.add(field='type', values='note', operator=FiltersOperations.NOT_EQUAL, method=FiltersMethod.AND)
+                self.add(field='type',
+                         values=['box', 'class', 'comparison', 'ellipse', 'point', 'segment', 'polyline', 'binary',
+                                 'subtitle'], operator=FiltersOperations.IN, method=FiltersMethod.AND)
                 self.sort_by(field='label', value=FiltersOrderByDirection.ASCENDING)
                 self.sort_by(field='createdAt', value=FiltersOrderByDirection.DESCENDING)
 

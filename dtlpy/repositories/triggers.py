@@ -62,34 +62,52 @@ class Triggers:
             raise ValueError('Must input a valid Project entity')
         self._project = project
 
-    ###########
-    # methods #
-    ###########
     def create(self,
+               # for both trigger types
                service_id: str = None,
-               webhook_id=None,
+               trigger_type=entities.TriggerType.EVENT,
                name: str = None,
-               filters=None,
+               webhook_id=None,
                function_name=entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME,
+               project_id=None,
+               active=True,
+               # for event trigger
+               filters=None,
                resource=entities.TriggerResource.ITEM,
                actions=None,
-               active=True,
                execution_mode=entities.TriggerExecutionMode.ONCE,
-               project_id=None,
-               **kwargs) -> entities.Trigger:
+               # for cron triggers
+               start_at=None,
+               end_at=None,
+               inputs=None,
+               cron=None,
+               **kwargs) -> entities.BaseTrigger:
         """
-        Create a Trigger
+        Create a Trigger. Can create two types: a cron trigger or an event trigger.
+        Inputs are different for each type
 
-        :param function_name:
-        :param project_id:
-        :param webhook_id:
-        :param name:
-        :param execution_mode:
+        Inputs for all types:
+
         :param service_id: Id of services to be triggered
+        :param project_id: project id where trigger will work
+        :param webhook_id: id for webhook to be called
+        :param trigger_type: can be cron or event. use enum dl.TriggerType for the full list
+        :param name: name of the trigger
+        :param function_name: the fucntion name to be called when triggered. must be defined in the package
+        :param active: optional - True/False, default = True
+
+        Inputs for event trigger:
         :param filters: optional - Item/Annotation metadata filters, default = none
+        :param execution_mode: how many time trigger should be activate. default is "Once". enum dl.TriggerExecutionMode
         :param resource: optional - Dataset/Item/Annotation/ItemStatus, default = Item
         :param actions: optional - Created/Updated/Deleted, default = create
-        :param active: optional - True/False, default = True
+
+        Inputs for cron trigger:
+        :param start_at: iso format date string to start activating the cron trigger
+        :param end_at: iso format date string to end the cron activation
+        :param inputs: dictionary "name":"val" of inputs to the function
+        :param cron: cron spec specifying when it should run. more information: https://en.wikipedia.org/wiki/Cron
+
         :return: Trigger entity
         """
         scope = kwargs.get('scope', None)
@@ -132,13 +150,24 @@ class Triggers:
         else:
             actions = [entities.TriggerAction.CREATED]
 
-        spec = {
-            'filter': filters,
-            'operation': operation,
-            'resource': resource,
-            'executionMode': execution_mode,
-            'actions': actions
-        }
+        if trigger_type == entities.TriggerType.EVENT:
+            spec = {
+                'filter': filters,
+                'operation': operation,
+                'resource': resource,
+                'executionMode': execution_mode,
+                'actions': actions
+            }
+        elif trigger_type == entities.TriggerType.CRON:
+            spec = {
+                'endAt': end_at,
+                'startAt': start_at,
+                'cron': cron,
+                'input': dict() if inputs is None else inputs,
+                'operation': operation,
+            }
+        else:
+            raise ValueError('Unknown trigger type: "{}". Use dl.TriggerType for known types'.format(trigger_type))
 
         # payload
         if self._project_id is None and project_id is None:
@@ -147,6 +176,7 @@ class Triggers:
             project_id = self._project_id
 
         payload = {
+            'type': trigger_type,
             'active': active,
             'projectId': project_id,
             'name': name,
@@ -169,12 +199,12 @@ class Triggers:
             raise exceptions.PlatformException(response)
 
         # return entity
-        return entities.Trigger.from_json(_json=response.json(),
-                                          client_api=self._client_api,
-                                          project=self._project,
-                                          service=self._service)
+        return entities.BaseTrigger.from_json(_json=response.json(),
+                                              client_api=self._client_api,
+                                              project=self._project,
+                                              service=self._service)
 
-    def get(self, trigger_id=None, trigger_name=None) -> entities.Trigger:
+    def get(self, trigger_id=None, trigger_name=None) -> entities.BaseTrigger:
         """
         Get Trigger object
 
@@ -194,10 +224,10 @@ class Triggers:
                 raise exceptions.PlatformException(response)
 
             # return entity
-            trigger = entities.Trigger.from_json(client_api=self._client_api,
-                                                 _json=response.json(),
-                                                 project=self._project,
-                                                 service=self._service)
+            trigger = entities.BaseTrigger.from_json(client_api=self._client_api,
+                                                     _json=response.json(),
+                                                     project=self._project,
+                                                     service=self._service)
         else:
             if trigger_name is None:
                 raise exceptions.PlatformException('400', 'Must provide either trigger name or trigger id')
@@ -237,7 +267,7 @@ class Triggers:
             raise exceptions.PlatformException(response)
         return True
 
-    def update(self, trigger: entities.Trigger) -> entities.Trigger:
+    def update(self, trigger: entities.BaseTrigger) -> entities.BaseTrigger:
         """
 
         :param trigger: Trigger entity
@@ -258,17 +288,17 @@ class Triggers:
             raise exceptions.PlatformException(response)
 
         # return entity
-        return entities.Trigger.from_json(_json=response.json(),
-                                          client_api=self._client_api,
-                                          project=self._project,
-                                          service=self._service)
+        return entities.BaseTrigger.from_json(_json=response.json(),
+                                              client_api=self._client_api,
+                                              project=self._project,
+                                              service=self._service)
 
-    def _build_entities_from_response(self, response_items) -> miscellaneous.List[entities.Trigger]:
+    def _build_entities_from_response(self, response_items) -> miscellaneous.List[entities.BaseTrigger]:
         pool = self._client_api.thread_pools(pool_name='entity.create')
         jobs = [None for _ in range(len(response_items))]
         # return triggers list
         for i_trigger, trigger in enumerate(response_items):
-            jobs[i_trigger] = pool.apply_async(entities.Trigger._protected_from_json,
+            jobs[i_trigger] = pool.apply_async(entities.BaseTrigger._protected_from_json,
                                                kwds={'client_api': self._client_api,
                                                      '_json': trigger,
                                                      'project': self._project,
@@ -288,7 +318,7 @@ class Triggers:
         List project triggers
         :return:
         """
-        url = '/query/FaaS'
+        url = '/query/faas'
 
         success, response = self._client_api.gen_request(req_type='POST',
                                                          path=url,

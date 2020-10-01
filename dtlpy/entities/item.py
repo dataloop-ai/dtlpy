@@ -183,8 +183,6 @@ class Item(entities.BaseEntity):
     @property
     def items(self):
         assert isinstance(self._repositories.items, repositories.Items)
-        if self._repositories.items._dataset is None:
-            self._repositories.items._dataset = self.dataset
         return self._repositories.items
 
     ##############
@@ -375,7 +373,8 @@ class Item(entities.BaseEntity):
                                                    status))
         try:
             annotation_definition = entities.Classification(label=status)
-            entities.Annotation.new(item=self, annotation_definition=annotation_definition,
+            entities.Annotation.new(item=self,
+                                    annotation_definition=annotation_definition,
                                     metadata={'system': {'system': True}}).upload()
             return True
         except Exception:

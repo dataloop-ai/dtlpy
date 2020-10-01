@@ -10,7 +10,7 @@ Feature: Artifacts repository get artifact testing
     And Directory "artifacts_upload" is empty
     When I generate package by the name of "test-package" to "artifacts_upload"
     And I push "first" package
-      | codebase_id=None | package_name=test-package | src_path=artifacts_upload | inputs=None | outputs=None | modules=no_input |
+      | codebase_id=None | package_name=test-package | src_path=artifacts_upload | inputs=None | outputs=None | modules=None |
 
   @packages.delete
   Scenario: Download by artifact name - item
@@ -42,8 +42,10 @@ Feature: Artifacts repository get artifact testing
   Scenario: Download with execution id
     Given There is a service by the name of "artifacts-upload" with module name "default_module" saved to context "service"
     And Context has attribute execution_id = True
-    When I create an execution with "None"
-      | sync=False |
+    And I create a dataset with a random name
+    And Item in path "0000000162.jpg" is uploaded to "Dataset"
+    When I create an execution with "Item"
+      |sync=False|inputs=Item|
     And I upload "1" artifacts to "execution"
     And I get artifact by "execution_id"
     And I download artifact by "execution_id"

@@ -18,8 +18,6 @@ def step_impl(context, entity):
         entity_to_json = getattr(context, entity).to_json()
         response = response.json()
         assert success
-        if entity == 'package':
-            entity_to_json['modules'][0]['functions'][0].pop('description')
         if entity == 'item':
             if 'metadata' in response and 'system' in response['metadata']:
                 response['metadata']['system'].pop('executionLogs', None)

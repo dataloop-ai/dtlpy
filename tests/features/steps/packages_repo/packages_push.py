@@ -103,6 +103,5 @@ def step_impl(context):
 
     assert first_package_json.pop('codebaseId') != second_package_json.pop('codebaseId')
     assert first_package_json.pop('updatedAt') != second_package_json.pop('updatedAt')
-    second_package_json['revisions'].pop(first_package_json['version'] - 1)
     assert first_package_json.pop('version') == second_package_json.pop('version') - 1
     assert first_package_json == second_package_json

@@ -15,6 +15,7 @@ class PlatformException(Exception):
             '403': Forbidden,
             '404': NotFound,
             '408': RequestTimeout,
+            '409': Conflict,
             '500': InternalServerError,
             '600': TokenExpired,
             '1001': ShowAnnotationError,
@@ -59,6 +60,10 @@ class InternalServerError(ExceptionMain):
 
 
 class Forbidden(ExceptionMain):
+    pass
+
+
+class Conflict(ExceptionMain):
     pass
 
 

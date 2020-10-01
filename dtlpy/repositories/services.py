@@ -99,6 +99,27 @@ class Services:
     ###########
     # methods #
     ###########
+    def revisions(self, service: entities.Service = None, service_id=None):
+        """
+        Get service revisions history
+
+        :param service: Package entity
+        :param service_id: package id
+        """
+        if service is None and service_id is None:
+            raise exceptions.PlatformException(
+                error='400',
+                message='must provide an identifier in inputs: "service" or "service_id"')
+        if service is not None:
+            service_id = service.id
+
+        success, response = self._client_api.gen_request(
+            req_type="get",
+            path="/services/{}/revisions".format(service_id))
+        if not success:
+            raise exceptions.PlatformException(response)
+        return response.json()
+
     def get(self, service_name=None, service_id=None, checkout=False, fetch=None) -> entities.Service:
         """
         Get service
@@ -185,7 +206,7 @@ class Services:
         return miscellaneous.List([r[1] for r in results if r[0] is True])
 
     def _list(self, filters: entities.Filters):
-        url = '/query/FaaS'
+        url = '/query/faas'
         success, response = self._client_api.gen_request(req_type='POST',
                                                          path=url,
                                                          json_req=filters.prepare())
@@ -800,6 +821,7 @@ class Services:
         # get package
         package_name = service_json.get('packageName', None)
         packages = repositories.Packages(client_api=self._client_api, project=self._project)
+
         if package_name is None:
             package = packages.get()
         else:
@@ -834,26 +856,33 @@ class Services:
                               on_reset=on_reset,
                               module_name=module_name)
 
-        triggers = repositories.Triggers(client_api=self._client_api, project=self._project)
-        for trigger in service_triggers:
-            name = trigger.get('name', None)
-            filters = trigger.get('filter', dict())
-            resource = trigger['resource']
-            actions = trigger.get('actions', list())
-            active = trigger.get('active', True)
-            execution_mode = trigger.get('executionMode', None)
-            function_name = trigger.get('function', None)
+        logger.info('Service was deployed successfully. Service id: {}'.format(service.id))
 
-            triggers.create(service_id=service.id,
-                            name=name,
-                            filters=filters,
-                            resource=resource,
-                            actions=actions,
-                            active=active,
-                            execution_mode=execution_mode,
-                            function_name=function_name)
+        if len(service_triggers) > 0:
+            logger.info('Creating triggers...')
+            triggers = repositories.Triggers(client_api=self._client_api, project=self._project)
 
-        logging.debug('Successfully deployed!')
+            for trigger in service_triggers:
+                name = trigger.get('name', None)
+                filters = trigger.get('filter', dict())
+                resource = trigger['resource']
+                actions = trigger.get('actions', list())
+                active = trigger.get('active', True)
+                execution_mode = trigger.get('executionMode', None)
+                function_name = trigger.get('function', None)
+
+                trigger = triggers.create(service_id=service.id,
+                                          name=name,
+                                          filters=filters,
+                                          resource=resource,
+                                          actions=actions,
+                                          active=active,
+                                          execution_mode=execution_mode,
+                                          function_name=function_name)
+
+                logger.info('Trigger was created successfully. Service id: {}'.format(trigger.id))
+
+        logging.info('Successfully deployed!')
         return service
 
     def deploy_pipeline(self, service_json_path=None, project=None, bot=None):

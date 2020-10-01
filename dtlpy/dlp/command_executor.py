@@ -130,7 +130,7 @@ class CommandExecutor:
 
         if args.api == "setenv":
             self.dl.setenv(args.env)
-            logger.info("Platform environment: {}".format(self.dl.environment))
+            logger.info("Platform environment: {}".format(self.dl.environment()))
 
     def projects(self, args):
         if args.projects == "ls":

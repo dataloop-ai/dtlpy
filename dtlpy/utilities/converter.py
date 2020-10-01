@@ -1,18 +1,20 @@
-import copy
-import mimetypes
-from itertools import groupby
-from multiprocessing.pool import ThreadPool
-import os
-import json
-import tqdm
-from PIL import Image
-from .. import exceptions, entities, utilities
 from jinja2 import Environment, PackageLoader
-import numpy as np
-import logging
+from multiprocessing.pool import ThreadPool
+from multiprocessing import Lock
+from .base_package_runner import Progress
+from .. import exceptions, entities
 import xml.etree.ElementTree as Et
 from ..services import Reporter
+from itertools import groupby
+from PIL import Image
+import numpy as np
+import mimetypes
 import traceback
+import logging
+import json
+import copy
+import tqdm
+import os
 
 logger = logging.getLogger(name=__name__)
 
@@ -84,6 +86,34 @@ class Converter:
         self.save_to_format = None
         self.xml_template_path = 'voc_annotation_template.xml'
         self.labels = dict()
+        self._only_bbox = False
+        self._progress = None
+        self._progress_update_frequency = 5
+        self._update_agent_progress = False
+        self._progress_checkpoint = 0
+        self._checkpoint_lock = Lock()
+
+    def attach_agent_progress(self, progress: Progress, progress_update_frequency: int = None):
+        self._progress = progress
+        self._progress_update_frequency = progress_update_frequency if progress_update_frequency is not None \
+            else self._progress_update_frequency
+        self._update_agent_progress = True
+
+    @property
+    def _update_progress_active(self):
+        return self._progress is not None and self._update_agent_progress and isinstance(
+            self._progress_update_frequency, int)
+
+    def __update_progress(self, total, of_total):
+        if self._update_progress_active:
+            try:
+                progress = int((of_total / total) * 100)
+                if progress > self._progress_checkpoint and (progress % self._progress_update_frequency == 0):
+                    self._progress.update(progress=progress)
+                    with self._checkpoint_lock:
+                        self._progress_checkpoint = progress
+            except Exception:
+                logger.warning('[Converter] Failed to update agent progress')
 
     def _get_labels(self):
         self.labels = dict()
@@ -121,7 +151,9 @@ class Converter:
 
         # download annotations
         if annotation_filter is None:
+            logger.info('Downloading annotations...')
             dataset.download_annotations(local_path=local_path, overwrite=True)
+            logger.info('Annotations downloaded')
         local_annotations_path = os.path.join(local_path, "json")
         output_annotations_path = os.path.join(local_path, to_format)
         pool = ThreadPool(processes=num_workers)
@@ -151,12 +183,6 @@ class Converter:
                 if not os.path.isdir(save_to):
                     os.makedirs(save_to, exist_ok=True)
 
-                converter = utilities.Converter()
-                converter.dataset = self.dataset
-                converter.labels = self.labels
-                converter.save_to_format = self.save_to_format
-                converter.xml_template_path = self.xml_template_path
-
                 pool.apply_async(
                     func=self.__save_filtered_annotations_and_convert,
                     kwds={
@@ -177,7 +203,6 @@ class Converter:
         pool.close()
         pool.join()
         pool.terminate()
-        pbar.close()
 
         if reporter.has_errors:
             log_filepath = reporter.generate_log_files()
@@ -212,16 +237,16 @@ class Converter:
                     with open(file_path, 'w') as f:
                         json.dump(annotations.to_json(), f, indent=2)
 
-                converted_annotations = self.convert_file(item=item,
-                                                          to_format=to_format,
-                                                          from_format=from_format,
-                                                          file_path=file_path,
-                                                          save_locally=save_locally,
-                                                          save_to=save_to,
-                                                          conversion_func=conversion_func,
-                                                          pbar=pbar)
-
-                success, errors = self._sort_annotations(annotations=converted_annotations)
+                success, errors = self.convert_file(
+                    item=item,
+                    to_format=to_format,
+                    from_format=from_format,
+                    file_path=file_path,
+                    save_locally=save_locally,
+                    save_to=save_to,
+                    conversion_func=conversion_func,
+                    pbar=pbar
+                )
 
                 if not success:
                     raise Exception('Failed to convert item annotations: \n{}'.format(errors))
@@ -233,6 +258,8 @@ class Converter:
             else:
                 if reporter is not None and i_item is not None:
                     reporter.set_index(i_item=i_item, status='skip', success=True)
+            if reporter is not None:
+                self.__update_progress(total=reporter.num_workers, of_total=i_item)
         except Exception:
             if reporter is not None and i_item is not None:
                 reporter.set_index(i_item=i_item, status='failed', success=False, error=traceback.format_exc(),
@@ -368,6 +395,9 @@ class Converter:
         if pbar is not None:
             pbar.update()
 
+        if reporter is not None:
+            self.__update_progress(total=reporter.num_workers, of_total=item_id)
+
     def _upload_coco_labels(self, coco_json):
         labels = coco_json.get('categories', None)
         upload_labels = dict()
@@ -448,7 +478,7 @@ class Converter:
         :param conversion_func:
         :return:
         """
-        only_bbox = kwargs.get('only_bbox', False)
+        self._only_bbox = kwargs.get('only_bbox', False)
         file_count = sum(len([file for file in files if not file.endswith('.xml')]) for _, _, files in
                          os.walk(local_items_path))
 
@@ -460,6 +490,8 @@ class Converter:
         metadata = None
         for path, subdirs, files in os.walk(local_items_path):
             for name in files:
+                item_filepath = None
+                ann_filepath = None
                 if not os.path.isfile(os.path.join(path, name)):
                     continue
                 if from_format == AnnotationFormat.COCO:
@@ -486,13 +518,8 @@ class Converter:
                     item_filepath = os.path.join(path, name)
                     ann_filepath = os.path.join(path, os.path.splitext(name)[0]) + '.txt'
                     ann_filepath = ann_filepath.replace(local_items_path, local_annotations_path)
-                converter = utilities.Converter()
-                converter.dataset = self.dataset
-                converter.labels = self.labels
-                if only_bbox:
-                    converter._only_bbox = True
                 pool.apply_async(
-                    func=converter._upload_item_and_convert,
+                    func=self._upload_item_and_convert,
                     kwds={
                         "from_format": from_format,
                         "item_path": item_filepath,
@@ -530,15 +557,14 @@ class Converter:
                 width, height = image.size
                 item.width = width
                 item.height = height
-            converted_annotations = self.convert_file(to_format=AnnotationFormat.DATALOOP,
-                                                      from_format=from_format,
-                                                      item=item,
-                                                      file_path=ann_path,
-                                                      save_locally=False,
-                                                      conversion_func=conversion_func,
-                                                      upload=True,
-                                                      pbar=pbar)
-            success, errors = self._sort_annotations(annotations=converted_annotations)
+            success, errors = self.convert_file(to_format=AnnotationFormat.DATALOOP,
+                                                from_format=from_format,
+                                                item=item,
+                                                file_path=ann_path,
+                                                save_locally=False,
+                                                conversion_func=conversion_func,
+                                                upload=True,
+                                                pbar=pbar)
             if not success:
                 raise Exception("Failed to convert item's annotations: {}\n{}".format(item_path, errors))
             if errors:
@@ -548,6 +574,8 @@ class Converter:
             else:
                 if reporter is not None and i_item is not None:
                     reporter.set_index(i_item=i_item, status='success', success=True, ref=item_path)
+            if reporter is not None:
+                self.__update_progress(total=reporter.num_workers, of_total=i_item)
         except Exception:
             if reporter is not None and i_item is not None:
                 reporter.set_index(i_item=i_item, status='failed', success=False, error=traceback.format_exc(),
@@ -596,6 +624,7 @@ class Converter:
         """
         file_count = sum(len(files) for _, _, files in os.walk(local_path))
         reporter = Reporter(num_workers=file_count, resource=Reporter.CONVERTER)
+        self.dataset = dataset
 
         pool = ThreadPool(processes=6)
         i_item = 0
@@ -606,14 +635,8 @@ class Converter:
                 if not os.path.isdir(save_to):
                     os.mkdir(save_to)
                 file_path = os.path.join(path, name)
-                converter = utilities.Converter()
-                if dataset is None:
-                    converter.dataset = self.dataset
-                else:
-                    converter.dataset = dataset
-                converter.save_to_format = self.save_to_format
                 pool.apply_async(
-                    func=converter._convert_and_report,
+                    func=self._convert_and_report,
                     kwds={
                         "to_format": to_format,
                         "from_format": from_format,
@@ -641,10 +664,14 @@ class Converter:
     def _convert_and_report(self, to_format, from_format, file_path, save_locally, save_to, conversion_func, reporter,
                             i_item):
         try:
-            converted_annotations = self.convert_file(to_format=to_format, from_format=from_format, file_path=file_path,
-                                                      save_locally=save_locally, save_to=save_to,
-                                                      conversion_func=conversion_func)
-            success, errors = self._sort_annotations(annotations=converted_annotations)
+            success, errors = self.convert_file(
+                to_format=to_format,
+                from_format=from_format,
+                file_path=file_path,
+                save_locally=save_locally,
+                save_to=save_to,
+                conversion_func=conversion_func
+            )
             if errors:
                 reporter.set_index(i_item=i_item, ref=file_path, status='warning', success=False,
                                    error='partial annotations upload')
@@ -656,7 +683,7 @@ class Converter:
             raise
 
     @staticmethod
-    def _extract_annotations_from_file(file_path, from_format, to_format, item):
+    def _extract_annotations_from_file(file_path, from_format, item):
         item_id = None
         annotations = None
         if isinstance(file_path, dict):
@@ -698,8 +725,11 @@ class Converter:
         :param item:
         :return:
         """
-        item_id, annotations = self._extract_annotations_from_file(to_format=to_format, from_format=from_format,
-                                                                   file_path=file_path, item=item)
+        item_id, annotations = self._extract_annotations_from_file(
+            from_format=from_format,
+            file_path=file_path,
+            item=item
+        )
 
         converted_annotations = self.convert(
             to_format=to_format,
@@ -725,7 +755,7 @@ class Converter:
         if pbar is not None:
             pbar.update()
 
-        return converted_annotations
+        return success, errors
 
     @staticmethod
     def _sort_annotations(annotations):
@@ -1029,6 +1059,7 @@ class Converter:
         iscrowd = 0
         height = kwargs.get('height', item.height)
         width = kwargs.get('width', item.width)
+        segmentation = [[]]
 
         if annotation.type in ['binary', 'segment']:
             if height is None or width is None:
@@ -1044,8 +1075,6 @@ class Converter:
                 segmentation = COCOUtils.binary_mask_to_rle(binary_mask=annotation.geo, height=height, width=width)
                 area = int(annotation.geo.sum())
                 iscrowd = 1
-            elif annotation.type == 'box':
-                segmentation = [[]]
             elif annotation.type == 'segment':
                 segmentation, area = COCOUtils.polygon_to_rle(geo=annotation.geo, height=height, width=width)
         else:

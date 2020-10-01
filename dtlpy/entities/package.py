@@ -23,7 +23,6 @@ class Package(entities.BaseEntity):
     updatedAt = attr.ib(repr=False)
     name = attr.ib()
     codebase_id = attr.ib()
-    revisions = attr.ib(repr=False)
     modules = attr.ib()
     creator = attr.ib()
     is_global = attr.ib()
@@ -34,6 +33,7 @@ class Package(entities.BaseEntity):
     # sdk
     _project = attr.ib(repr=False)
     _client_api = attr.ib(type=services.ApiClient, repr=False)
+    _revisions = attr.ib(default=None, repr=False)
     _repositories = attr.ib(repr=False)
 
     @staticmethod
@@ -72,7 +72,6 @@ class Package(entities.BaseEntity):
             codebase_id=_json.get('codebaseId', None),
             createdAt=_json.get('createdAt', None),
             updatedAt=_json.get('updatedAt', None),
-            revisions=_json.get('revisions', None),
             version=_json.get('version', None),
             creator=_json.get('creator', None),
             is_global=_json.get('global', None),
@@ -96,6 +95,7 @@ class Package(entities.BaseEntity):
                             filter=attr.filters.exclude(attr.fields(Package)._project,
                                                         attr.fields(Package)._repositories,
                                                         attr.fields(Package)._client_api,
+                                                        attr.fields(Package)._revisions,
                                                         attr.fields(Package).codebase_id,
                                                         attr.fields(Package).project_id,
                                                         attr.fields(Package).modules,
@@ -120,6 +120,12 @@ class Package(entities.BaseEntity):
     ############
     # entities #
     ############
+    @property
+    def revisions(self):
+        if self._revisions is None:
+            self._revisions = self.packages.revisions(package=self)
+        return self._revisions
+
     @property
     def project(self):
         if self._project is None:
@@ -298,6 +304,24 @@ class Package(entities.BaseEntity):
 
     def open_in_web(self):
         self.packages.open_in_web(package=self)
+
+    def test(self,
+             cwd=None,
+             concurrency=None,
+             module_name=entities.package_defaults.DEFAULT_PACKAGE_MODULE_NAME,
+             function_name=entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME,
+             class_name=entities.package_defaults.DEFAULT_PACKAGE_CLASS_NAME,
+             entry_point=entities.package_defaults.DEFAULT_PACKAGE_ENTRY_POINT
+             ):
+        return self.project.packages.test_local_package(
+            cwd=cwd,
+            concurrency=concurrency,
+            package=self,
+            module_name=module_name,
+            function_name=function_name,
+            class_name=class_name,
+            entry_point=entry_point
+        )
 
     @staticmethod
     def _mockify_input(input_type):

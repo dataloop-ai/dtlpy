@@ -12,11 +12,10 @@ class ServiceRunner(dl.BaseServiceRunner):
 
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         """
         Init package attributes here
 
-        :param kwargs: config params
         :return:
         """
 

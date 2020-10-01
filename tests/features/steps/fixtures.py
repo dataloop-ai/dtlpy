@@ -10,6 +10,8 @@ def compare_dir_recursive(dir_a, dir_b):
 
     dir_a_items = [item for item in os.listdir(dir_a) if item != 'folder_keeper']
     dir_b_items = [item for item in os.listdir(dir_b) if item != 'folder_keeper']
+    if '__pycache__' in dir_a_items:
+        dir_a_items.remove('__pycache__')
     if len(dir_a_items) != len(dir_b_items):
         return False
 

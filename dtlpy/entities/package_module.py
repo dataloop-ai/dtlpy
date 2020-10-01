@@ -30,8 +30,11 @@ class PackageModule(entities.BaseEntity):
 
     @classmethod
     def from_json(cls, _json):
+        # convert to function json to objects
         functions = [entities.PackageFunction.from_json(_function) for _function in _json.get('functions', list())]
-        init_inputs = _json.get("initInputs", list())
+        # convert to init inputs json objects
+        init_inputs = [entities.FunctionIO(type=inp.get('type', None), name=inp.get('name', None))
+                       for inp in _json.get("initInputs", list())]
         return cls(
             init_inputs=init_inputs,
             entry_point=_json.get("entryPoint", entities.package_defaults.DEFAULT_PACKAGE_ENTRY_POINT),

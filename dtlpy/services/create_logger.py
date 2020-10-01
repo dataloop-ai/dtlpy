@@ -1,8 +1,11 @@
 import datetime
+import threading
+
 import os
-from logging import handlers
+from logging import handlers, getLogger
 
 from .service_defaults import DATALOOP_PATH
+
 
 class DataloopLogger(handlers.BaseRotatingHandler):
     """
@@ -16,27 +19,73 @@ class DataloopLogger(handlers.BaseRotatingHandler):
             mode = 'a'
         super().__init__(filename=filename, mode=mode, encoding=encoding, delay=delay)
         self.maxBytes = maxBytes
-        DataloopLogger.clean_logs()
+        DataloopLogger.clean_dataloop_cache()
 
     @staticmethod
-    def clean_logs():
-        log_path = DataloopLogger.get_log_path()
-        now = datetime.datetime.utcnow().timestamp()
-        files = [os.path.join(log_path, f) for f in os.listdir(log_path)]
+    def clean_dataloop_cache():
+        async_clean = True
+        dir_list = [os.path.join(DATALOOP_PATH, d) for d in os.listdir(DATALOOP_PATH)
+                    if os.path.isdir(os.path.join(DATALOOP_PATH, d))]
+        for path in dir_list:
+            if async_clean:
+                worker = threading.Thread(target=DataloopLogger.clean_dataloop_cache_thread, kwargs={'path': path})
+                worker.daemon = True
+                worker.start()
+            else:
+                DataloopLogger.clean_dataloop_cache_thread(path)
+
+    @staticmethod
+    def get_clean_parameter_per(path):
+        # (60 * 60 * 24 * 7):  # sec * min * hour * days - delete if older than a week
+        # 1e6 100MB
+        path_param = [{'type': 'datasets', 'max_time': 60 * 60 * 24 * 30},
+                      {'type': 'items', 'max_time': 60 * 60 * 24 * 30},
+                      {'type': 'logs', 'max_time': 60 * 60 * 24 * 7, 'max_size': 200 * 1e6},
+                      {'type': 'projects', 'max_time': 60 * 60 * 24 * 30}]
+        for param in path_param:
+            if param['type'] in path:
+                return param
+        return {'type': 'default', 'max_time': 60 * 60 * 24 * 30}
+
+    @staticmethod
+    def clean_dataloop_cache_thread(path, total_cache_size=0, max_param=None):
+        logger = getLogger(__name__)
+        is_root = False
+        if max_param is None:
+            max_param = DataloopLogger.get_clean_parameter_per(path)
+            is_root = True
+
+        now = datetime.datetime.timestamp(datetime.datetime.now())
+        files = [os.path.join(path, f) for f in os.listdir(path)]
         files.sort(key=lambda x: -os.path.getmtime(x))  # newer first
-        total_logs_size = 0
         for filepath in files:
-            # print(filepath)
-            file_time = os.path.getmtime(filepath)
-            # delete if older than a week
-            if (now - file_time) > (60 * 60 * 24 * 7):  # sec * min * hour * days
-                os.remove(filepath)
+            if os.path.isdir(filepath):
+                total_cache_size = DataloopLogger.\
+                    clean_dataloop_cache_thread(filepath, total_cache_size=total_cache_size, max_param=max_param)
+                # Remove the dir if empty
+                if len(os.listdir(filepath)) == 0:
+                    os.rmdir(filepath)
                 continue
-            file_size = os.path.getsize(filepath)
-            if (total_logs_size + file_size) > 200 * 1e6:  # 100MB
-                os.remove(filepath)
-                continue
-            total_logs_size += file_size
+            if 'max_time' in max_param:
+                file_time = os.path.getmtime(filepath)
+                if (now - file_time) > max_param['max_time']:
+                    try:
+                        os.remove(filepath)
+                    except Exception as e:
+                        logger.warning(e)
+                    continue
+            if 'max_size' in max_param:
+                file_size = os.path.getsize(filepath)
+                if (total_cache_size + file_size) > max_param['max_time']:
+                    try:
+                        os.remove(filepath)
+                    except Exception as e:
+                        logger.warning(e)
+                    continue
+                total_cache_size += file_size
+        if is_root:
+            logger.debug("clean_dataloop_cache_thread for {} directory has been ended".format(path))
+        return total_cache_size
 
     @staticmethod
     def get_log_path():
@@ -59,7 +108,7 @@ class DataloopLogger(handlers.BaseRotatingHandler):
             self.stream.close()
             self.stream = None
         # clean older logs (week old)
-        DataloopLogger.clean_logs()
+        DataloopLogger.clean_dataloop_cache()
         # create new log
         self.baseFilename = DataloopLogger.get_log_filepath()
         if not self.delay:

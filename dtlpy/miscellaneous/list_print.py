@@ -25,7 +25,7 @@ class List(list, typing.MutableSequence[T]):
                 [keys_list.append(key) for key in list(item_dict.keys()) if key not in keys_list]
             try:
                 # try sorting bt creation date
-                to_print = sorted(to_print, key=lambda k: k['createdAt'])
+                to_print = sorted(to_print, key=lambda k: k['createdAt'] if k['createdAt'] is not None else "")
             except KeyError:
                 pass
             except Exception:
@@ -42,7 +42,9 @@ class List(list, typing.MutableSequence[T]):
                                 # services fields
                                 'driverId', 'useUserJwt', 'versions', 'runtime', 'mq', 'global',
                                 # triggers
-                                'scope'
+                                'scope',
+                                # Package
+                                'modules'
                                 ]
             if not show_all:
                 if columns is not None:

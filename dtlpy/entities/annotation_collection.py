@@ -10,7 +10,7 @@ import os
 import numpy as np
 from PIL import Image
 
-from .. import entities, PlatformException
+from .. import entities, PlatformException, miscellaneous
 
 logger = logging.getLogger(name=__name__)
 
@@ -21,7 +21,28 @@ class AnnotationCollection(entities.BaseEntity):
         Collection of Annotation entity
     """
     item = attr.ib()
-    annotations = attr.ib()
+    annotations = attr.ib()  # type: miscellaneous.List[entities.Annotation]
+    _dataset = attr.ib(repr=False, default=None)
+    _colors = attr.ib(repr=False, default=None)
+
+    @property
+    def dataset(self):
+        if self._dataset is None:
+            self._dataset = self.item.dataset
+        assert isinstance(self._dataset, entities.Dataset)
+        return self._dataset
+
+    @property
+    def colors(self):
+        if self._colors is None:
+            self._colors = {key.lower(): label for key, label in self.dataset.labels_flat_dict.items()}
+        return self._colors
+
+    def get_color(self, label):
+        if label in self.colors:
+            return self.colors[label].rgb
+        else:
+            return (127, 127, 127)
 
     @annotations.default
     def set_annotations(self):
@@ -203,7 +224,7 @@ class AnnotationCollection(entities.BaseEntity):
         # gor over all annotations and put the id where the annotations is
         for annotation in self.annotations:
             if annotation_format == entities.ViewAnnotationOptions.MASK:
-                color = None
+                color = self.get_color(annotation.label.lower())
             elif annotation_format == entities.ViewAnnotationOptions.INSTANCE:
                 # if label not in dataset label - put it as background
                 color = label_instance_dict.get(annotation.label, 0)
@@ -441,6 +462,9 @@ class AnnotationCollection(entities.BaseEntity):
         }
 
         return _json
+
+    def print(self, to_return=False, columns=None):
+        return miscellaneous.List(self.annotations).print(to_return=to_return, columns=columns)
 
     #########################
     # For video annotations #

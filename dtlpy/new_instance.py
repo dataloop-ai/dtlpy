@@ -3,7 +3,7 @@ class Dtlpy:
     from . import repositories, exceptions, entities, examples
     from .__version__ import version as __version__
     from .entities import Box, Point, Segmentation, Polygon, Ellipse, Classification, Subtitle, Polyline, Filters, \
-        Trigger, \
+        Trigger, Description, \
         AnnotationCollection, Annotation, Item, Codebase, Filters, Execution, Recipe, Ontology, Label, Similarity, \
         ItemLink, UrlLink, PackageModule, PackageFunction, FunctionIO, Modality, Workload, WorkloadUnit
     from .utilities import Converter, BaseServiceRunner, Progress

@@ -23,8 +23,13 @@ class TriggerExecutionMode:
     ALWAYS = "Always"
 
 
+class TriggerType:
+    EVENT = "Event"
+    CRON = "Cron"
+
+
 @attr.s
-class Trigger(entities.BaseEntity):
+class BaseTrigger(entities.BaseEntity):
     """
     Trigger Entity
     """
@@ -38,14 +43,10 @@ class Trigger(entities.BaseEntity):
     creator = attr.ib()
     name = attr.ib()
     active = attr.ib()
+    type = attr.ib()
     scope = attr.ib()
+    is_global = attr.ib()
 
-    ###################
-    # spec attributes #
-    ###################
-    _resource = attr.ib()
-    _actions = attr.ib()
-    execution_mode = attr.ib(repr=False)
     # name change
     function_name = attr.ib()
     service_id = attr.ib()
@@ -59,7 +60,6 @@ class Trigger(entities.BaseEntity):
     ##############################
     # different name in platform #
     ##############################
-    filters = attr.ib()
     project_id = attr.ib()
     _spec = attr.ib()
 
@@ -73,6 +73,23 @@ class Trigger(entities.BaseEntity):
     _repositories = attr.ib(repr=False)
 
     @staticmethod
+    def _get_operation(operation):
+        op_type = operation.get('type', None)
+        if op_type == 'function':
+            service_id = operation.get('serviceId', None)
+            webhook_id = None
+        elif op_type == 'webhook':
+            webhook_id = operation.get('webhookId', None)
+            service_id = None
+        elif op_type == 'rabbitmq':
+            webhook_id = None
+            service_id = None
+        else:
+            raise exceptions.PlatformException('400', 'unknown trigger operation type: {}'.format(op_type))
+
+        return service_id, webhook_id
+
+    @staticmethod
     def _protected_from_json(_json, client_api, project, service=None):
         """
         Same as from_json but with try-except to catch if error
@@ -82,62 +99,26 @@ class Trigger(entities.BaseEntity):
         :return:
         """
         try:
-            trigger = Trigger.from_json(_json=_json,
-                                        client_api=client_api,
-                                        project=project,
-                                        service=service)
+            trigger = BaseTrigger.from_json(_json=_json,
+                                            client_api=client_api,
+                                            project=project,
+                                            service=service)
             status = True
         except Exception:
             trigger = traceback.format_exc()
             status = False
         return status, trigger
 
-    # noinspection PyShadowingBuiltins
     @classmethod
     def from_json(cls, _json, client_api, project, service=None):
-        spec = _json.get('spec', dict())
-        operation = spec.get('operation', dict())
-        filters = spec.get('filter', dict())
-        op_type = operation.get('type', None)
 
-        if op_type == 'function':
-            service_id = operation.get('serviceId', None)
-            webhook_id = None
-        elif op_type == 'webhook':
-            webhook_id = operation.get('webhookId', None)
-            service_id = None
+        trigger_type = _json.get('type', None)
+
+        if trigger_type == TriggerType.CRON:
+            ent = CronTrigger.from_json(_json, client_api, project, service)
         else:
-            raise exceptions.PlatformException('400', 'unknown trigger operation type: {}'.format(op_type))
-
-        project_id = _json.get('projectId', None)
-        if project_id is not None and project is not None:
-            if project_id != project.id:
-                project = None
-
-        return cls(
-            execution_mode=spec.get('executionMode', None),
-            updatedAt=_json.get('updatedAt', None),
-            createdAt=_json.get('createdAt', None),
-            resource=spec.get('resource', None),
-            creator=_json.get('creator', None),
-            special=_json.get('special', None),
-            actions=spec.get('actions', None),
-            active=_json.get('active', None),
-            function_name=operation.get('functionName', None),
-            scope=_json.get('scope', None),
-            name=_json.get('name', None),
-            service_id=service_id,
-            project_id=project_id,
-            url=_json.get('url', None),
-            webhook_id=webhook_id,
-            client_api=client_api,
-            filters=filters,
-            project=project,
-            service=service,
-            id=_json['id'],
-            op_type=op_type,
-            spec=spec,
-        )
+            ent = Trigger.from_json(_json, client_api, project, service)
+        return ent
 
     ################
     # repositories #
@@ -147,11 +128,11 @@ class Trigger(entities.BaseEntity):
         reps = namedtuple('repositories',
                           field_names=['services'])
         if self._project is None:
-            services = repositories.Services(client_api=self._client_api, project=self._project)
+            services_repo = repositories.Services(client_api=self._client_api, project=self._project)
         else:
-            services = self._project.services
+            services_repo = self._project.services
 
-        r = reps(services=services)
+        r = reps(services=services_repo)
         return r
 
     @property
@@ -162,7 +143,6 @@ class Trigger(entities.BaseEntity):
     ############
     # entities #
     ############
-
     @property
     def project(self):
         if self._project is None:
@@ -178,22 +158,6 @@ class Trigger(entities.BaseEntity):
         assert isinstance(self._service, entities.Service)
         return self._service
 
-    @property
-    def resource(self):
-        return self._resource
-
-    @resource.setter
-    def resource(self, value):
-        raise exceptions.PlatformException('400', 'Trigger resource cannot be changed! Please create a new trigger')
-
-    @property
-    def actions(self):
-        return self._actions
-
-    @actions.setter
-    def actions(self, value):
-        raise exceptions.PlatformException('400', 'Trigger resource cannot be actions! Please create a new trigger')
-
     ###########
     # methods #
     ###########
@@ -204,43 +168,24 @@ class Trigger(entities.BaseEntity):
         :return: platform json format of object
         """
         # get excluded
-        _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(Trigger)._client_api,
-                                                              attr.fields(Trigger).project_id,
-                                                              attr.fields(Trigger)._project,
-                                                              attr.fields(Trigger)._service,
-                                                              attr.fields(Trigger).special,
-                                                              attr.fields(Trigger).filters,
-                                                              attr.fields(Trigger)._op_type,
-                                                              attr.fields(Trigger)._spec,
-                                                              attr.fields(Trigger)._resource,
-                                                              attr.fields(Trigger)._repositories,
-                                                              attr.fields(Trigger)._actions,
-                                                              attr.fields(Trigger).service_id,
-                                                              attr.fields(Trigger).webhook_id,
-                                                              attr.fields(Trigger).execution_mode,
-                                                              attr.fields(Trigger).function_name
+        _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(BaseTrigger)._client_api,
+                                                              attr.fields(BaseTrigger).project_id,
+                                                              attr.fields(BaseTrigger)._project,
+                                                              attr.fields(BaseTrigger)._service,
+                                                              attr.fields(BaseTrigger).special,
+                                                              attr.fields(BaseTrigger)._op_type,
+                                                              attr.fields(BaseTrigger)._spec,
+                                                              attr.fields(BaseTrigger)._repositories,
+                                                              attr.fields(BaseTrigger).service_id,
+                                                              attr.fields(BaseTrigger).webhook_id,
+                                                              attr.fields(BaseTrigger).function_name,
+                                                              attr.fields(BaseTrigger).is_global
                                                               ))
 
         # rename
         _json['projectId'] = self.project_id
-        operation = {
-            'type': self._op_type,
-            'functionName': self.function_name
-        }
-
-        if self._op_type == 'function':
-            operation['serviceId'] = self.service_id
-        elif self._op_type == 'webhook':
-            operation['webhookId'] = self.webhook_id
-
-        _json['spec'] = {
-            'filter': self.filters,
-            'executionMode': self.execution_mode,
-            'resource': self.resource,
-            'actions': self.actions,
-            'operation': operation,
-        }
-
+        if self.is_global is not None:
+            _json['global'] = self.is_global
         return _json
 
     def delete(self):
@@ -257,3 +202,139 @@ class Trigger(entities.BaseEntity):
         :return: Trigger entity
         """
         return self.project.triggers.update(trigger=self)
+
+
+@attr.s
+class Trigger(BaseTrigger):
+    """
+    Trigger Entity
+    """
+    filters = attr.ib(default=None, repr=False)
+    execution_mode = attr.ib(default=TriggerExecutionMode.ONCE, repr=False)
+    actions = attr.ib(default=TriggerAction.CREATED, repr=False)
+    resource = attr.ib(default=TriggerResource.ITEM, repr=False)
+
+    def to_json(self):
+        _json = super().to_json()
+
+        operation = {
+            'type': self._op_type,
+            'functionName': self.function_name
+        }
+        if self._op_type == 'function':
+            operation['serviceId'] = self.service_id
+        elif self._op_type == 'webhook':
+            operation['webhookId'] = self.webhook_id
+
+        _json['spec'] = {
+            'filter': _json.pop('filters'),
+            'executionMode': _json.pop('execution_mode'),
+            'resource': _json.pop('resource'),
+            'actions': _json.pop('actions'),
+            'operation': operation,
+        }
+        return _json
+
+    @classmethod
+    def from_json(cls, _json, client_api, project, service=None):
+        project_id = _json.get('projectId', None)
+        if project_id is not None and project is not None:
+            if project_id != project.id:
+                project = None
+
+        spec = _json.get('spec', dict())
+        operation = spec.get('operation', dict())
+
+        service_id, webhook_id = cls._get_operation(operation=operation)
+
+        return cls(
+            execution_mode=spec.get('executionMode', None),
+            updatedAt=_json.get('updatedAt', None),
+            createdAt=_json.get('createdAt', None),
+            resource=spec.get('resource', None),
+            creator=_json.get('creator', None),
+            special=_json.get('special', None),
+            actions=spec.get('actions', None),
+            active=_json.get('active', None),
+            function_name=operation.get('functionName', None),
+            scope=_json.get('scope', None),
+            is_global=_json.get('global', None),
+            type=_json.get('type', None),
+            name=_json.get('name', None),
+            url=_json.get('url', None),
+            service_id=service_id,
+            project_id=project_id,
+            webhook_id=webhook_id,
+            client_api=client_api,
+            filters=spec.get('filter', dict()),
+            project=project,
+            service=service,
+            id=_json['id'],
+            op_type=operation.get('type', None),
+            spec=spec,
+        )
+
+
+@attr.s
+class CronTrigger(BaseTrigger):
+    start_at = attr.ib(default=None)
+    end_at = attr.ib(default=None)
+    cron = attr.ib(default=None)
+    inputs = attr.ib(default=None)
+
+    def to_json(self):
+        _json = super().to_json()
+        operation = {
+            'type': self._op_type,
+            'functionName': self.function_name
+        }
+        if self._op_type == 'function':
+            operation['serviceId'] = self.service_id
+        elif self._op_type == 'webhook':
+            operation['webhookId'] = self.webhook_id
+
+        _json['spec'] = {
+            'startAt': _json.pop('start_at'),
+            'endAt': _json.pop('end_at'),
+            'cron': _json.pop('cron'),
+            'inputs': _json.pop('inputs'),
+            'operation': operation,
+        }
+        return _json
+
+    @classmethod
+    def from_json(cls, _json, client_api, project, service=None):
+        spec = _json.get('spec', dict())
+        operation = spec.get('operation', dict())
+
+        project_id = _json.get('projectId', None)
+        if project_id is not None and project is not None:
+            if project_id != project.id:
+                project = None
+
+        service_id, webhook_id = cls._get_operation(operation=operation)
+        return cls(
+            updatedAt=_json.get('updatedAt', None),
+            createdAt=_json.get('createdAt', None),
+            creator=_json.get('creator', None),
+            special=_json.get('special', None),
+            active=_json.get('active', None),
+            function_name=operation.get('functionName', None),
+            scope=_json.get('scope', None),
+            is_global=_json.get('global', None),
+            type=_json.get('type', None),
+            name=_json.get('name', None),
+            end_at=spec.get('endAt', None),
+            start_at=spec.get('startAt', None),
+            cron=spec.get('cron', None),
+            url=_json.get('url', None),
+            service_id=service_id,
+            project_id=project_id,
+            webhook_id=webhook_id,
+            client_api=client_api,
+            project=project,
+            service=service,
+            id=_json['id'],
+            op_type=operation.get('type', None),
+            spec=spec,
+        )

@@ -35,7 +35,8 @@ class Zipping:
                 spec_src = f.read()
         else:
             spec_src = ''
-        spec = pathspec.PathSpec.from_lines(pathspec.patterns.GitWildMatchPattern, spec_src.splitlines())
+        ignore_lines = spec_src.splitlines() + ['.git', '.dataloop']
+        spec = pathspec.PathSpec.from_lines(pathspec.patterns.GitWildMatchPattern, ignore_lines)
 
         # init zip file
         zip_file = zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED)

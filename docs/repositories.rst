@@ -8,28 +8,42 @@ Interface with :meth:`Projects <dtlpy.repositories.projects>`
 
 Datasets
 --------
-Download, upload entire datasets.
-Can download with annotations as masks, instance or json files.
-
-More information at: :meth:`Dataset  <dtlpy.repositories.datasets>`
+Create, delete, edit Dataset entity
+More information at: :meth:`Datasets  <dtlpy.repositories.datasets>`
 
 Items
 -----
-Interface with :meth:`Items <dtlpy.repositories.items>`
+Download, upload entire items with DQL filters.
+Can download with annotations as masks, instance or json files.
 
+Interface with :meth:`Items <dtlpy.repositories.items>`
 
 Annotations
 -----------
-Interface with :meth:`Annotations <repositories.annotations>`
-
+Interface with :meth:`Annotations <dtlpy.repositories.annotations>`
 
 Tasks
 -----
 Interface with :meth:`Tasks <dtlpy.repositories.tasks>`
 
+Assignments
+-----------
+Interface with :meth:`Assignments <dtlpy.repositories.assignments>`
 
-Sessions
+Packages
 --------
-Interface with :meth:`Sessions <dtlpy.repositories.session>`
+Interface with :meth:`Packages <dtlpy.repositories.packages>`
+
+Services
+--------
+Interface with :meth:`Services <dtlpy.repositories.services>`
+
+Triggers
+--------
+Interface with :meth:`Triggers <dtlpy.repositories.triggers>`
+
+Executions
+----------
+Interface with :meth:`Executions <dtlpy.repositories.executions>`
 
 

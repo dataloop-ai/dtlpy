@@ -12,5 +12,5 @@ Feature: Projects repository create service testing
     Scenario: Create project with an existing project name
         Given I create a project by the name of "to-delete-test-project_create_same_name"
         When I try to create a project by the name of "to-delete-test-project_create_same_name"
-        # TODO - this line is different in prod and in rc - need to open a jira ticket for Assaf
-        Then I receive error with status code "500"
+        Then "Conflict" exception should be raised
+        And Error message includes "already created"

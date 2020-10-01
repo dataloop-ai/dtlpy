@@ -57,8 +57,8 @@ class Annotation(entities.BaseEntity):
     status = attr.ib(default=None, repr=False)
     object_id = attr.ib(default=None, repr=False)
     automated = attr.ib(default=None, repr=False)
-    height = attr.ib(default=None)
-    width = attr.ib(default=None)
+    item_height = attr.ib(default=None)
+    item_width = attr.ib(default=None)
 
     # snapshots
     frames = attr.ib(default=None, repr=False)
@@ -497,14 +497,14 @@ class Annotation(entities.BaseEntity):
             frame_num=None,
             parent_id=None,
             start_time=None,
-            height=None,
-            width=None):
+            item_height=None,
+            item_width=None):
         """
         Create a new annotation object annotations
 
         :param start_time:
-        :param width: annotation item's width
-        :param height: annotation item's height
+        :param item_width: annotation item's width
+        :param item_height: annotation item's height
         :param item: item to annotate
         :param annotation_definition: annotation type object
         :param object_id: object_id
@@ -581,8 +581,8 @@ class Annotation(entities.BaseEntity):
             type=ann_type,
             dataset_url=dataset_url,
             dataset_id=dataset_id,
-            height=height,
-            width=width,
+            item_height=item_height,
+            item_width=item_width,
 
             # meta
             metadata=metadata,
@@ -867,8 +867,8 @@ class Annotation(entities.BaseEntity):
             hash=_json.get('hash', None),
             object_id=object_id,
             type=_json['type'],
-            width=item_metadata.get('width', None),
-            height=item_metadata.get('height', None),
+            item_width=item_metadata.get('width', None),
+            item_height=item_metadata.get('height', None),
             # meta
             metadata=metadata,
             fps=fps,
