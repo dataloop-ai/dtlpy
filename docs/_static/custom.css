@@ -1,0 +1,83 @@
+/* This file intentionally left blank. */
+@import url('https://fonts.googleapis.com/css?family=Montserrat&display=swap');
+@import 'https://fonts.googleapis.com/css?family=Montserrat';
+@import 'https://fonts.googleapis.com/css?family=Lato';
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap');
+
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+
+/*Dataloop blue  #3452ff;*/
+html,body {
+ font-family: 'Montserrat', sans-serif !important;
+   font-family: "Montserrat", sans-serif !important;
+}
+body{
+background-color: white!important;
+}
+
+/*home icon and "dtlpy" */
+.wy-side-nav-search > a, .wy-nav-top > i , .wy-nav-top > a{
+color : white!important;
+}
+
+.wy-side-nav-search > a:hover{
+background-color : #3452ff!important;
+}
+/* bg color of top nav*/
+.wy-side-nav-search,.wy-nav-top{
+background-color : #3452ff!important;
+}
+
+/*search outline*/
+#rtd-search-form > input {
+color : white;
+}
+
+
+/*bottom left nav heading text*/
+.caption-text{
+color : White;
+}
+
+/*nav top level*/
+.wy-side-scroll toctree-l1:active{
+background-color : #eff3f8!important;
+}
+
+/*nav second level*/
+.wy-side-scroll .toctree-l2{
+background-color : #eff3f8;
+}
+
+
+/*nav third level*/
+.wy-side-scroll .toctree-l3>a{
+background-color : #e5eaf1!important;
+}
+
+.wy-side-scroll .toctree-l2.current>a{
+background-color : #e5eaf1!important;
+}
+
+/*nav forth level*/
+.wy-side-scroll .toctree-l4>a{
+background-color : #eff3f8!important;
+}
+
+
+/*bottom left nav*/
+.wy-side-scroll, .wy-nav-side{
+background-color : Black;
+}
+/*nav hover and active*/
+
+.wy-side-scroll .reference.internal:hover{
+background-color : white!important;
+color : #3452ff!important;
+}
+
+.wy-side-scroll .reference.internal:active{
+background-color : white!important;
+color : #3452ff!important;
+}
