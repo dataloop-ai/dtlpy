@@ -338,9 +338,21 @@ class Converter:
 
         return coco_json
 
+    @staticmethod
+    def __get_item_shape(item: entities.Item = None, local_path: str = None):
+        if isinstance(item, entities.Item) and (item.width is None or item.height is None):
+            try:
+                img = Image.open(item.download(save_locally=False)) if local_path is None else Image.open(local_path)
+                item.height = img.height
+                item.width = img.width
+            except Exception:
+                pass
+        return item
+
     def __single_item_to_coco(self, item, images, path_to_dataloop_annotations_dir, item_id, converted_annotations,
                               annotation_filter, label_to_id, reporter, pbar=None):
         try:
+            item = Converter.__get_item_shape(item=item)
             images[item_id] = {'file_name': item.name,
                                'id': item_id,
                                'width': item.width,
@@ -553,10 +565,7 @@ class Converter:
         try:
             item = self.dataset.items.upload(local_path=item_path, item_metadata=metadata)
             if from_format == AnnotationFormat.YOLO:
-                image = Image.open(item_path)
-                width, height = image.size
-                item.width = width
-                item.height = height
+                item = Converter.__get_item_shape(item=item, local_path=item_path)
             success, errors = self.convert_file(to_format=AnnotationFormat.DATALOOP,
                                                 from_format=from_format,
                                                 item=item,
@@ -943,14 +952,16 @@ class Converter:
         ann_def = entities.Box(label=label, top=top, bottom=bottom, left=left, right=right, attributes=attrs)
         return entities.Annotation.new(annotation_definition=ann_def)
 
-    def from_yolo(self, annotation, **kwargs):
+    def from_yolo(self, annotation, item=None, **kwargs):
         (label_id, x, y, w, h) = annotation
         label_id = int(label_id)
-        height = kwargs.get('height')
-        width = kwargs.get('width')
-        item = kwargs.get('item', None)
+
+        item = Converter.__get_item_shape(item=item)
+        height = kwargs.get('height', None)
+        width = kwargs.get('width', None)
+
         if height is None or width is None:
-            if item is None:
+            if item is None or item.width is None or item.height is None:
                 raise Exception('Need item width and height in order to convert yolo annotation to dataloop')
             height = item.height
             width = item.width
@@ -980,8 +991,11 @@ class Converter:
 
         if annotation.type != "box":
             raise Exception('Only box annotations can be converted')
-        if item.width is None or item.height is None:
-            raise Exception('Item does not have width and height, cannot convert to yolo')
+
+        item = Converter.__get_item_shape(item=item)
+
+        if item is None or item.width is None or item.height is None:
+            raise Exception("Cannot get item's width and height")
 
         dw = 1.0 / item.width
         dh = 1.0 / item.height
@@ -1052,18 +1066,21 @@ class Converter:
         return entities.Annotation.new(annotation_definition=ann_def, item=item)
 
     @staticmethod
-    def to_coco(annotation, item=None, **kwargs):
+    def to_coco(annotation, item=None, **_):
+        item = Converter.__get_item_shape(item=item)
+        height = item.height if item is not None else None
+        width = item.width if item is not None else None
+
         if not isinstance(annotation, entities.Annotation):
             annotation = entities.Annotation.from_json(annotation, item=item)
         area = 0
         iscrowd = 0
-        height = kwargs.get('height', item.height)
-        width = kwargs.get('width', item.width)
         segmentation = [[]]
 
         if annotation.type in ['binary', 'segment']:
             if height is None or width is None:
-                raise Exception('Item must have height and width to convert to coco')
+                raise Exception(
+                    'Item must have height and width to convert {} annotation to coco'.format(annotation.type))
 
         # build annotation
         if annotation.type in ['binary', 'box', 'segment']:

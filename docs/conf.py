@@ -96,9 +96,15 @@ html_theme = 'sphinx_rtd_theme'
 # documentation.
 #
 html_theme_options = {
+    'logo_name': True,
+    'description': "SDK and CLI for Dataloop platform",
+    'code_font_family': 'Montserrat',
+    'caption_font_family': 'Montserrat',
+    'font_family': 'Montserrat',
+    'head_font_family': 'Montserrat',
     'canonical_url': '',
     'analytics_id': 'UA-XXXXXXX-1',  # Provided by Google in your dashboard
-    'logo_only': False,
+    'logo_only': True,
     'display_version': True,
     'prev_next_buttons_location': 'bottom',
     'style_external_links': False,
@@ -109,12 +115,19 @@ html_theme_options = {
     'navigation_depth': 4,
     'includehidden': True,
     'titles_only': False
+
 }
+
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+html_css_files = [
+    'custom.css'
+]
+
+
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
