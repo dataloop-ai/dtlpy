@@ -87,11 +87,17 @@ class PackageFunction(entities.BaseEntity):
     display_scopes = attr.ib(default=None, type=list)
     post_action = attr.ib(default=None, type=FunctionPostAction)
     outputs = attr.ib()
-    name = attr.ib(default=entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME)
+    name = attr.ib()
     description = attr.ib(default='')
     inputs = attr.ib()
     default_inputs = attr.ib(default=None, type=list)
     input_options = attr.ib(default=None, type=list)
+
+    @name.default
+    def set_name(self):
+        logger.warning('No function name was given. Using default name: {}'.format(
+            entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME))
+        return entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME
 
     @classmethod
     def from_json(cls, _json):

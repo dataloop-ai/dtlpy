@@ -7,7 +7,8 @@ import numpy as np
 def step_impl(context, annotation_format):
     context.item = context.item.update()
     annotation_collection = context.item.annotations.list()
-    annotation_collection.annotations = sorted(annotation_collection.annotations, key=lambda x: x.hash)
+
+    annotation_collection.annotations = sorted(annotation_collection.annotations, key=lambda x: x.top)
     context.mask = annotation_collection.show(height=768,
                                               width=1536,
                                               thickness=1,

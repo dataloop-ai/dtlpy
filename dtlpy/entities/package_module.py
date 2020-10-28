@@ -1,7 +1,7 @@
 import logging
 import attr
 
-from .. import entities, miscellaneous
+from .. import entities
 
 logger = logging.getLogger("dataloop.module")
 
@@ -12,16 +12,42 @@ class PackageModule(entities.BaseEntity):
     PackageModule object
     """
     # platform
-    name = attr.ib(default=entities.package_defaults.DEFAULT_PACKAGE_MODULE_NAME)
+    name = attr.ib()
     init_inputs = attr.ib()
     entry_point = attr.ib(default=entities.package_defaults.DEFAULT_PACKAGE_ENTRY_POINT)
     class_name = attr.ib(default=entities.package_defaults.DEFAULT_PACKAGE_CLASS_NAME)
-    functions = attr.ib()
+    _functions = attr.ib()
 
-    @functions.default
+    @_functions.default
     def set_functions(self):
         functions = list()
         return functions
+
+    @_functions.validator
+    def validate_functions(self, attribute, value: list):
+        if not self.unique_functions(value):
+            raise Exception('Cannot have 2 functions by the same name in one module.')
+        if not isinstance(value, list):
+            raise Exception('Module functions must be a list.')
+
+    @property
+    def functions(self):
+        return self._functions
+
+    @functions.setter
+    def functions(self, functions: list):
+        self.validate_functions(attribute=None, value=functions)
+        self._functions = functions
+
+    @staticmethod
+    def unique_functions(functions: list):
+        return len(functions) == len(set([function.name for function in functions]))
+
+    @name.default
+    def set_name(self):
+        logger.warning('No module name was given. Using default name: {}'.format(
+            entities.package_defaults.DEFAULT_PACKAGE_MODULE_NAME))
+        return entities.package_defaults.DEFAULT_PACKAGE_MODULE_NAME
 
     @init_inputs.default
     def set_init_inputs(self):
@@ -56,7 +82,7 @@ class PackageModule(entities.BaseEntity):
     def to_json(self):
         _json = attr.asdict(
             self,
-            filter=attr.filters.exclude(attr.fields(PackageModule).functions,
+            filter=attr.filters.exclude(attr.fields(PackageModule)._functions,
                                         attr.fields(PackageModule).entry_point,
                                         attr.fields(PackageModule).class_name,
                                         attr.fields(PackageModule).init_inputs))
@@ -70,9 +96,11 @@ class PackageModule(entities.BaseEntity):
             init_inputs = [_io.to_json() for _io in init_inputs]
 
         functions = self.functions
+
         # check in inputs is a list
         if not isinstance(functions, list):
             functions = [functions]
+
         # if is dtlpy entity convert to dict
         if functions and isinstance(functions[0], entities.PackageFunction):
             functions = [function.to_json() for function in functions]

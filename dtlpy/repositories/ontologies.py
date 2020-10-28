@@ -195,7 +195,7 @@ class Ontologies:
             pages = self.__list(filters=filters)
             for page in pages:
                 ontologies += page
-            return ontologies
+            return miscellaneous.List(ontologies)
 
     def _protected_get(self, ontology_id):
         """

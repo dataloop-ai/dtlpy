@@ -50,7 +50,7 @@ class Annotations:
         if self._item is None:
             raise exceptions.PlatformException(
                 error='2001',
-                message='Missing "item". need to set a Item entity or use item.annotations repository')
+                message='Missing "item". need to set an Item entity or use item.annotations repository')
         assert isinstance(self._item, entities.Item)
         return self._item
 
@@ -75,6 +75,8 @@ class Annotations:
         if success:
             annotation = entities.Annotation.from_json(_json=response.json(),
                                                        annotations=self,
+                                                       dataset=self._dataset,
+                                                       client_api=self._client_api,
                                                        item=self._item)
         else:
             raise exceptions.PlatformException(response)
@@ -89,6 +91,7 @@ class Annotations:
                                             kwds={'client_api': self._client_api,
                                                   '_json': _json,
                                                   'item': self._item,
+                                                  'dataset': self._dataset,
                                                   'annotations': self})
         # wait for all jobs
         _ = [j.wait() for j in jobs]
@@ -127,6 +130,10 @@ class Annotations:
         if self._dataset_id is not None:
             if filters is None:
                 filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION)
+
+            if not filters.resource == entities.FiltersResource.ANNOTATION:
+                raise exceptions.PlatformException(error='400',
+                                                   message='Filters resource must to be FiltersResource.ANNOTATION')
 
             if self._item is not None and not filters.has_field('itemId'):
                 filters = deepcopy(filters)
@@ -231,7 +238,6 @@ class Annotations:
 
     def _delete_single_annotation(self, w_annotation_id):
         try:
-
             creator = jwt.decode(self._client_api.token, algorithms=['HS256'], verify=False)['email']
             payload = {'username': creator}
             success, response = self._client_api.gen_request(req_type='delete',
@@ -240,50 +246,68 @@ class Annotations:
 
             if not success:
                 raise exceptions.PlatformException(response)
-            status = True
+            return success
         except Exception:
-            status = False
-            response = traceback.format_exc()
-        return status, response
+            logger.exception('Failed to delete annotation')
+            raise
 
-    def delete(self, annotation=None, annotation_id=None):
+    def delete(self, annotation=None, annotation_id=None, filters: entities.Filters = None):
         """
             Remove an annotation from item
 
         :param annotation: Annotation object
         :param annotation_id: annotation id
+        :param filters: Filters entity or a dictionary containing filters parameters
         :return: True/False
         """
+        if annotation is not None:
+            if isinstance(annotation, entities.Annotation):
+                annotation_id = annotation.id
+            elif isinstance(annotation, str) and annotation.lower() == 'all':
+                if self._item is None:
+                    raise exceptions.PlatformException(error='400',
+                                                       message='To use "all" option repository must have an item')
+                filters = entities.Filters(
+                    resource=entities.FiltersResource.ANNOTATION,
+                    field='itemId',
+                    values=self._item.id,
+                    method=entities.FiltersMethod.AND
+                )
+            else:
+                raise exceptions.PlatformException(error='400',
+                                                   message='Unknown annotation type')
+
         if annotation_id is not None:
-            pass
-        elif annotation is not None and isinstance(annotation, entities.Annotation):
-            annotation_id = annotation.id
-        elif annotation is not None and isinstance(annotation, str) and annotation.lower() == 'all':
-            annotation_id = [annotation.id for annotation in self.list()]
-        else:
-            raise exceptions.PlatformException(error='400', message='Must input annotation id or annotation entity')
-        # get creator from token
+            if not isinstance(annotation_id, list):
+                return self._delete_single_annotation(w_annotation_id=annotation_id)
+            filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION,
+                                       field='annotationId',
+                                       values=annotation_id,
+                                       operator=entities.FiltersOperations.IN)
+            filters.pop(field="type")
 
-        if not isinstance(annotation_id, list):
-            annotation_id = [annotation_id]
+        if filters is None:
+            raise exceptions.PlatformException(error='400',
+                                               message='Must input filter, annotation id or annotation entity')
 
-        pool = self._client_api.thread_pools(pool_name='annotation.update')
-        jobs = [None for _ in range(len(annotation_id))]
-        for i_ann, ann_id in enumerate(annotation_id):
-            jobs[i_ann] = pool.apply_async(func=self._delete_single_annotation,
-                                           kwds={'w_annotation_id': ann_id})
-        # wait for jobs to be finish
-        _ = [j.wait() for j in jobs]
-        # get all results
-        results = [j.get() for j in jobs]
-        out_annotations = [r[1] for r in results if r[0] is True]
-        out_errors = [r[1] for r in results if r[0] is False]
-        if len(out_errors) == 0:
-            logger.debug('Annotation/s delete successfully. {}/{}'.format(len(out_annotations), len(results)))
+        if not filters.resource == entities.FiltersResource.ANNOTATION:
+            raise exceptions.PlatformException(error='400',
+                                               message='Filters resource must to be FiltersResource.ANNOTATION')
+
+        if self._item is not None and not filters.has_field('itemId'):
+            filters = deepcopy(filters)
+            filters.add(field='itemId', values=self._item.id, method=entities.FiltersMethod.AND)
+
+        if self._dataset is not None:
+            items_repo = self._dataset.items
+        elif self._item is not None:
+            items_repo = self._item.dataset.items
         else:
-            logger.error(out_errors)
-            logger.error('Annotation/s delete with {} errors'.format(len(out_errors)))
-        return True
+            raise exceptions.PlatformException(
+                error='2001',
+                message='Missing "dataset". need to set a Dataset entity or use dataset.annotations repository')
+
+        return items_repo.delete(filters=filters)
 
     def _update_single_annotation(self, w_annotation, system_metadata):
         try:
@@ -303,6 +327,7 @@ class Annotations:
             if suc:
                 result = entities.Annotation.from_json(_json=response.json(),
                                                        annotations=self,
+                                                       dataset=self._dataset,
                                                        item=self._item)
             else:
                 raise exceptions.PlatformException(response)
@@ -377,7 +402,8 @@ class Annotations:
                                    format(len(bulk_return_annotations), len(annotations)))
                 raise exceptions.PlatformException(response)
 
-        result = entities.AnnotationCollection.from_json(_json=bulk_return_annotations, item=self.item)
+        result = entities.AnnotationCollection.from_json(_json=bulk_return_annotations,
+                                                         item=self.item)
         return result
 
     def upload(self, annotations):
@@ -405,7 +431,9 @@ class Annotations:
         out_annotations = self._upload_annotations(annotations=annotations)
         return out_annotations
 
-    def update_status(self, annotation: entities.Annotation = None, annotation_id=None, status='issue'):
+    def update_status(self, annotation: entities.Annotation = None,
+                      annotation_id=None,
+                      status=entities.AnnotationStatus.ISSUE):
         """
         Set status on annotation
         :param annotation: optional - Annotation entity
@@ -416,7 +444,9 @@ class Annotations:
             if annotation_id is None:
                 raise ValueError('must input on of "annotation" or "annotation_id"')
             annotation = self.get(annotation_id=annotation_id)
-        if status not in ["issue", "approved", "review"]:
+        if status not in [entities.AnnotationStatus.ISSUE,
+                          entities.AnnotationStatus.APPROVED,
+                          entities.AnnotationStatus.REVIEW]:
             raise ValueError('status must be on of: "issue", "approved", "review"')
         annotation.status = status
         annotation.update(system_metadata=True)

@@ -65,6 +65,11 @@ class Model(entities.BaseEntity):
         :param is_fetched: is Entity fetched from Platform
         :return: Model entity
         """
+        if project is not None:
+            if project.id != _json.get('projectId', None):
+                logger.warning('Model has been fetched from a project that is not in it projects list')
+                project = None
+
         inst = cls(
             project_id=_json.get('projectId', None),
             codebase_id=_json.get('codebaseId', None),

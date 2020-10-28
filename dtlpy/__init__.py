@@ -38,7 +38,7 @@ from .entities import (
     Webhook, HttpMethod,
     Trigger,
     AnnotationCollection,
-    Annotation, ViewAnnotationOptions,
+    Annotation, ViewAnnotationOptions, AnnotationStatus,
     Item, ItemStatus,
     Codebase,
     Filters,

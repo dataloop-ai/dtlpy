@@ -23,7 +23,8 @@ class Package(entities.BaseEntity):
     updatedAt = attr.ib(repr=False)
     name = attr.ib()
     codebase_id = attr.ib()
-    modules = attr.ib()
+    _modules = attr.ib()
+    ui_hooks = attr.ib()
     creator = attr.ib()
     is_global = attr.ib()
 
@@ -35,6 +36,22 @@ class Package(entities.BaseEntity):
     _client_api = attr.ib(type=services.ApiClient, repr=False)
     _revisions = attr.ib(default=None, repr=False)
     _repositories = attr.ib(repr=False)
+
+    @property
+    def modules(self):
+        return self._modules
+
+    @modules.setter
+    def modules(self, modules: list):
+        if not self.unique_modules(modules):
+            raise Exception('Cannot have 2 modules by the same name in one package.')
+        if not isinstance(modules, list):
+            raise Exception('Package modules must be a list.')
+        self._modules = modules
+
+    @staticmethod
+    def unique_modules(modules: list):
+        return len(modules) == len(set([module.name for module in modules]))
 
     @staticmethod
     def _protected_from_json(_json, client_api, project, is_fetched=True):
@@ -66,6 +83,11 @@ class Package(entities.BaseEntity):
         :param is_fetched: is Entity fetched from Platform
         :return: Package entity
         """
+        if project is not None:
+            if project.id != _json.get('projectId', None):
+                logger.warning('Package has been fetched from a project that is not belong to it')
+                project = None
+
         modules = [entities.PackageModule.from_json(_module) for _module in _json.get('modules', list())]
         inst = cls(
             project_id=_json.get('projectId', None),
@@ -77,6 +99,7 @@ class Package(entities.BaseEntity):
             is_global=_json.get('global', None),
             client_api=client_api,
             modules=modules,
+            ui_hooks=_json.get('uiHooks', None),
             name=_json.get('name', None),
             url=_json.get('url', None),
             project=project,
@@ -98,8 +121,9 @@ class Package(entities.BaseEntity):
                                                         attr.fields(Package)._revisions,
                                                         attr.fields(Package).codebase_id,
                                                         attr.fields(Package).project_id,
-                                                        attr.fields(Package).modules,
+                                                        attr.fields(Package)._modules,
                                                         attr.fields(Package).is_global,
+                                                        attr.fields(Package).ui_hooks,
                                                         ))
 
         modules = self.modules
@@ -115,6 +139,8 @@ class Package(entities.BaseEntity):
         if self.is_global is not None:
             _json['global'] = self.is_global
         _json['modules'] = modules
+        if self.ui_hooks is not None:
+            _json['uiHooks'] = self.ui_hooks
         return _json
 
     ############
@@ -284,6 +310,8 @@ class Package(entities.BaseEntity):
         :param modules:
         :return:
         """
+        if modules is None:
+            modules = self.modules
         return self.project.packages.push(package_name=package_name if package_name is not None else self.name,
                                           codebase_id=codebase_id,
                                           src_path=src_path,

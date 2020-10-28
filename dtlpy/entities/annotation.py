@@ -10,6 +10,12 @@ from .. import entities, PlatformException, repositories, ApiClient
 logger = logging.getLogger(name=__name__)
 
 
+class AnnotationStatus:
+    ISSUE = "issue"
+    APPROVED = "approved"
+    REVIEW = "review"
+
+
 class ViewAnnotationOptions:
     JSON = "json"
     MASK = "mask"
@@ -40,7 +46,7 @@ class Annotation(entities.BaseEntity):
     id = attr.ib()
     url = attr.ib(repr=False)
     item_url = attr.ib(repr=False)
-    item = attr.ib(repr=False)
+    _item = attr.ib(repr=False)
     item_id = attr.ib()
     creator = attr.ib()
     createdAt = attr.ib()
@@ -106,11 +112,11 @@ class Annotation(entities.BaseEntity):
     @property
     def _client_api(self) -> ApiClient:
         if self.__client_api is None:
-            if self.item is None:
+            if self._item is None:
                 raise PlatformException('400',
                                         'This action cannot be performed without an item entity. Please set item')
             else:
-                self.__client_api = self.item._client_api
+                self.__client_api = self._item._client_api
         assert isinstance(self.__client_api, ApiClient)
         return self.__client_api
 
@@ -122,9 +128,16 @@ class Annotation(entities.BaseEntity):
         return self._dataset
 
     @property
+    def item(self):
+        if self._item is None:
+            self._item = self.items.get(item_id=self.item_id)
+        assert isinstance(self._item, entities.Item)
+        return self._item
+
+    @property
     def annotations(self):
         if self._annotations is None:
-            self._annotations = repositories.Annotations(client_api=self._client_api, item=self.item)
+            self._annotations = repositories.Annotations(client_api=self._client_api, item=self._item)
         assert isinstance(self._annotations, repositories.Annotations)
         return self._annotations
 
@@ -140,8 +153,8 @@ class Annotation(entities.BaseEntity):
         if self._items is None:
             if self._datasets is not None:
                 self._items = self._dataset.items
-            elif self.item is not None:
-                self._items = self.item.items
+            elif self._item is not None:
+                self._items = self._item.items
             else:
                 self._items = repositories.Items(client_api=self._client_api, dataset=self._dataset)
         assert isinstance(self._items, repositories.Items)
@@ -438,13 +451,13 @@ class Annotation(entities.BaseEntity):
 
         # height/width
         if height is None:
-            if self.item is None or self.item.height is None:
+            if self._item is None or self._item.height is None:
                 raise PlatformException('400', 'must provide item width and height')
-            height = self.item.height
+            height = self._item.height
         if width is None:
-            if self.item is None or self.item.width is None:
+            if self._item is None or self._item.width is None:
                 raise PlatformException('400', 'must provide item width and height')
-            width = self.item.width
+            width = self._item.width
 
         # color
         if color is None:
@@ -607,9 +620,9 @@ class Annotation(entities.BaseEntity):
                    fixed=True):
         # handle fps
         if self.fps is None:
-            if self.item is not None:
-                if self.item.fps is not None:
-                    self.fps = self.item.fps
+            if self._item is not None:
+                if self._item.fps is not None:
+                    self.fps = self._item.fps
         if self.fps is None:
             raise PlatformException('400', 'Annotation must have fps in order to perform this action')
 
@@ -638,9 +651,9 @@ class Annotation(entities.BaseEntity):
         """
         # handle fps
         if self.fps is None:
-            if self.item is not None:
-                if self.item.fps is not None:
-                    self.fps = self.item.fps
+            if self._item is not None:
+                if self._item.fps is not None:
+                    self.fps = self._item.fps
         if self.fps is None:
             raise PlatformException('400', 'Annotation must have fps in order to perform this action')
 
@@ -705,7 +718,8 @@ class Annotation(entities.BaseEntity):
                              annotations=None,
                              is_video=None,
                              fps=None,
-                             item_metadata=None):
+                             item_metadata=None,
+                             dataset=None):
         """
         Same as from_json but with try-except to catch if error
         :param client_api:
@@ -714,6 +728,7 @@ class Annotation(entities.BaseEntity):
         :param fps:
         :param item_metadata:
         :param _json: platform json
+        :param dataset
         :param item: item
         :return: annotation object
         """
@@ -724,7 +739,8 @@ class Annotation(entities.BaseEntity):
                                               annotations=annotations,
                                               is_video=is_video,
                                               fps=fps,
-                                              item_metadata=item_metadata)
+                                              item_metadata=item_metadata,
+                                              dataset=dataset)
             status = True
         except Exception:
             annotation = traceback.format_exc()
@@ -739,7 +755,8 @@ class Annotation(entities.BaseEntity):
                   annotations=None,
                   is_video=None,
                   fps=None,
-                  item_metadata=None):
+                  item_metadata=None,
+                  dataset=None):
         """
         Create an annotation object from platform json
         :param client_api:
@@ -747,6 +764,7 @@ class Annotation(entities.BaseEntity):
         :param is_video:
         :param fps:
         :param item_metadata:
+        :param dataset
         :param _json: platform json
         :param item: item
         :return: annotation object
@@ -766,6 +784,17 @@ class Annotation(entities.BaseEntity):
         item_id = _json.get('itemId', item.id if item is not None else None)
         dataset_url = _json.get('dataset', item.dataset_url if item is not None else None)
         dataset_id = _json.get('datasetId', item.datasetId if item is not None else None)
+
+        if item is not None:
+            if item.id != item_id:
+                logger.warning('Annotation has been fetched from a item that is not belong to it')
+                item = None
+
+        if dataset is not None:
+            if dataset.id != dataset_id:
+                logger.warning('Annotation has been fetched from a dataset that is not belong to it')
+                dataset = None
+
 
         # get id
         if 'id' in _json:
@@ -858,6 +887,7 @@ class Annotation(entities.BaseEntity):
             item_url=item_url,
             item=item,
             item_id=item_id,
+            dataset=dataset,
             dataset_url=dataset_url,
             dataset_id=dataset_id,
             creator=_json['creator'],
@@ -955,15 +985,20 @@ class Annotation(entities.BaseEntity):
                                                         attr.fields(Annotation).createdAt,
                                                         attr.fields(Annotation).updatedBy))
 
-        # property attributes                                                
-        _json['itemId'] = self.item_id
+        # property attributes
+        # TODO - should be self._item in next version
+        item_id = self.item_id
+        if item_id is None and self._item is not None:
+            item_id = self._item.id
+
+        _json['itemId'] = item_id
         _json['item'] = self.item_url
         _json['label'] = self.label
         _json['attributes'] = self.attributes
         _json['dataset'] = self.dataset_url
 
-        if self.item is not None and self.dataset_id is None:
-            _json['datasetId'] = self.item.datasetId
+        if self._item is not None and self.dataset_id is None:
+            _json['datasetId'] = self._item.datasetId
         else:
             _json['datasetId'] = self.dataset_id
 

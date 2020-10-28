@@ -200,8 +200,9 @@ class AnnotationCollection(entities.BaseEntity):
                 mask = np.zeros((height, width), dtype=np.uint8)
             else:
                 if len(image.shape) != 2:
-                    raise PlatformException(error='1001',
-                                            message='Image shape must be 2d array when trying to draw instance on image')
+                    raise PlatformException(
+                        error='1001',
+                        message='Image shape must be 2d array when trying to draw instance on image')
                 mask = image
             # create a dictionary of labels and ids
             if label_instance_dict is None:
@@ -212,8 +213,9 @@ class AnnotationCollection(entities.BaseEntity):
                 mask = np.zeros((height, width), dtype=np.uint8)
             else:
                 if len(image.shape) != 2:
-                    raise PlatformException(error='1001',
-                                            message='Image shape must be 2d array when trying to draw instance on image')
+                    raise PlatformException(
+                        error='1001',
+                        message='Image shape must be 2d array when trying to draw instance on image')
                 mask = image
         else:
             raise PlatformException(error='1001',
@@ -230,9 +232,10 @@ class AnnotationCollection(entities.BaseEntity):
                 color = label_instance_dict.get(annotation.label, 0)
             elif annotation_format == entities.ViewAnnotationOptions.OBJECT_ID:
                 if annotation.object_id is None:
-                    raise PlatformException(error='1001',
-                                            message='Try to show object_id but annotation has no value. annotation id: {}'.format(
-                                                annotation.id))
+                    raise PlatformException(
+                        error='1001',
+                        message='Try to show object_id but annotation has no value. annotation id: {}'.format(
+                            annotation.id))
                 color = annotation.object_id
             else:
                 raise PlatformException('404',

@@ -162,13 +162,14 @@ class Items:
         paged.get_page()
         return paged
 
-    def get(self, filepath=None, item_id=None, fetch=None) -> entities.Item:
+    def get(self, filepath=None, item_id=None, fetch=None, is_dir=False) -> entities.Item:
         """
         Get Item object
 
         :param filepath: optional - search by remote path
         :param item_id: optional - search by id
         :param fetch: optional - fetch entity from platform, default taken from cookie
+        :parm is_dir: True if you want to get an item from dir type
         :return: Item object
         """
         if fetch is None:
@@ -187,6 +188,9 @@ class Items:
             elif filepath is not None:
                 filters = entities.Filters()
                 filters.pop(field='hidden')
+                if is_dir:
+                    filters.add(field='type', values='dir')
+                    filters.recursive = False
                 filters.add(field='filename', values=filepath)
                 paged_entity = self.list(filters=filters)
                 if len(paged_entity.items) == 0:

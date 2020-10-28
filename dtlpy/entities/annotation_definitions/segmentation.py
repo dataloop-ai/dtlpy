@@ -98,10 +98,10 @@ class Segmentation(BaseAnnotationDefinition):
         return coordinates
 
     def to_box(self):
-        '''
+        """
 
         :return: Box annotations list  to each separated  segmentation
-        '''
+        """
         polygons = Polygon.from_segmentation(mask=self.geo, label=self.label,
                                              attributes=self.attributes, max_instances=None, is_open=False)
 

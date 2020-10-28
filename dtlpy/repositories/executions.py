@@ -209,6 +209,7 @@ class Executions:
         # return entity
         execution = entities.Execution.from_json(_json=response.json(),
                                                  client_api=self._client_api,
+                                                 project=self._project,
                                                  service=self._service)
 
         if sync and (stream_logs or return_output):
@@ -277,6 +278,7 @@ class Executions:
             jobs[i_item] = pool.apply_async(entities.Execution._protected_from_json,
                                             kwds={'client_api': self._client_api,
                                                   '_json': item,
+                                                  'project': self._project,
                                                   'service': self._service})
         # wait for all jobs
         _ = [j.wait() for j in jobs]
@@ -309,6 +311,7 @@ class Executions:
         # return entity
         return entities.Execution.from_json(client_api=self._client_api,
                                             _json=response.json(),
+                                            project=self._project,
                                             service=self._service)
 
     def logs(self, execution_id, follow=True, until_completed=True):
@@ -364,6 +367,7 @@ class Executions:
         # return entity
         return entities.Execution.from_json(client_api=self._client_api,
                                             _json=response.json(),
+                                            project=self._project,
                                             service=self._service)
 
     def terminate(self, execution: entities.Execution):
@@ -382,6 +386,7 @@ class Executions:
         else:
             return entities.Execution.from_json(_json=response.json(),
                                                 service=self._service,
+                                                project=self._project,
                                                 client_api=self._client_api)
 
     def update(self, execution: entities.Execution) -> entities.Execution:
@@ -403,6 +408,12 @@ class Executions:
             raise exceptions.PlatformException(response)
 
         # return entity
+        if self._project is not None:
+            project = self._project
+        else:
+            project = execution._project
+
+        # return
         if self._service is not None:
             service = self._service
         else:
@@ -410,6 +421,7 @@ class Executions:
 
         return entities.Execution.from_json(_json=response.json(),
                                             service=service,
+                                            project=self._project,
                                             client_api=self._client_api)
 
     def progress_update(self, execution_id, status=None, percent_complete=None, message=None, output=None):
@@ -456,6 +468,7 @@ class Executions:
         if success:
             return entities.Execution.from_json(_json=response.json(),
                                                 client_api=self._client_api,
+                                                project=self._project,
                                                 service=self._service)
         else:
             raise exceptions.PlatformException(response)

@@ -37,9 +37,9 @@ class Project(entities.BaseEntity):
     def set_repositories(self):
         reps = namedtuple('repositories',
                           'projects triggers datasets items recipes packages codebases artifacts times_series services '
-                          'executions assignments tasks bots webhooks models analytics ontologies')
+                          'executions assignments tasks bots webhooks models analytics ontologies, snapshots')
         datasets = repositories.Datasets(client_api=self._client_api, project=self)
-
+        artifacts = repositories.Artifacts(project=self, client_api=self._client_api)
         r = reps(projects=repositories.Projects(client_api=self._client_api),
                  webhooks=repositories.Webhooks(client_api=self._client_api, project=self),
                  items=repositories.Items(client_api=self._client_api, datasets=datasets),
@@ -50,14 +50,15 @@ class Project(entities.BaseEntity):
                  packages=repositories.Packages(project=self, client_api=self._client_api),
                  models=repositories.Models(project=self, client_api=self._client_api),
                  codebases=repositories.Codebases(project=self, client_api=self._client_api),
-                 artifacts=repositories.Artifacts(project=self, client_api=self._client_api),
+                 artifacts=artifacts,
                  times_series=repositories.TimesSeries(project=self, client_api=self._client_api),
                  services=repositories.Services(client_api=self._client_api, project=self),
                  assignments=repositories.Assignments(project=self, client_api=self._client_api),
                  tasks=repositories.Tasks(client_api=self._client_api, project=self),
                  bots=repositories.Bots(client_api=self._client_api, project=self),
                  analytics=repositories.Analytics(client_api=self._client_api, project=self),
-                 ontologies=repositories.Ontologies(client_api=self._client_api, project=self)
+                 ontologies=repositories.Ontologies(client_api=self._client_api, project=self),
+                 snapshots=repositories.Snapshots(client_api=self._client_api, project=self, artifacts=artifacts)
                  )
         return r
 
@@ -110,6 +111,11 @@ class Project(entities.BaseEntity):
     def models(self):
         assert isinstance(self._repositories.models, repositories.Models)
         return self._repositories.models
+
+    @property
+    def snapshots(self):
+        assert isinstance(self._repositories.snapshots, repositories.Snapshots)
+        return self._repositories.snapshots
 
     @property
     def codebases(self):

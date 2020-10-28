@@ -263,31 +263,43 @@ class Packages:
 
         return local_path
 
-    def push(self, codebase_id=None, src_path=None, package_name=None, modules=None, is_global=False,
+    def push(self, project=None, project_id=None,
+             package_name=None, src_path=None, codebase_id=None, modules=None, is_global=False,
              checkout=False, ignore_sanity_check=False) -> entities.Package:
         """
-        Push local package
+        Push local package.
+        Project will be taken in the following hierarchy: project(input) -> project_id(input) -> self.project(context) -> checked out
 
+        :param ignore_sanity_check:
+        :param project: optional - project entity to deploy to. if None project will be taked from context or checked-out
+        :param project_id: optional - project id to deploy to. if None project will be taked from context or checked-out
+        :param package_name: package name
+        :param checkout: checkout package to local dir
+        :param codebase_id: id of the codebase item
+        :param src_path: path to package codebase
+        :param modules: list of modules PackageModules of the package
         :param is_global:
-        :param checkout:
-        :param codebase_id:
-        :param src_path:
-        :param package_name:
-        :param modules:
         :return:
         """
         # get project
-        if self._project is None:
+        project_to_deploy = None
+        if project is not None:
+            project_to_deploy = project
+        elif project_id is not None:
+            project_to_deploy = repositories.Projects(client_api=self._client_api).get(project_id=project_id)
+        elif self._project is not None:
+            project_to_deploy = self._project
+        else:
             try:
-                self._project = repositories.Projects(client_api=self._client_api).get()
+                project_to_deploy = repositories.Projects(client_api=self._client_api).get()
             except Exception:
                 pass
 
-        if self._project is None:
+        if project_to_deploy is None:
             raise exceptions.PlatformException(
                 error='400',
-                message='Repository does not have project. '
-                        'Please checkout a project, or create package from a project packages repository')
+                message='Missing project from "packages.push" function. '
+                        'Please provide project or id, use Packages from a project.packages repository or checkout a project')
 
         # source path
         if src_path is None:
@@ -318,11 +330,11 @@ class Packages:
 
         # get or create codebase
         if codebase_id is None:
-            codebase_id = self._project.codebases.pack(directory=src_path, name=package_name).id
+            codebase_id = project_to_deploy.codebases.pack(directory=src_path, name=package_name).id
 
         # check if exist
         filters = entities.Filters(resource=entities.FiltersResource.PACKAGE, use_defaults=False)
-        filters.add(field='projectId', values=self._project.id)
+        filters.add(field='projectId', values=project_to_deploy.id)
         filters.add(field='name', values=package_name)
         packages = self.list(filters=filters)
         if packages.items_count > 0:
@@ -333,15 +345,18 @@ class Packages:
             package.is_global = is_global
             package = self.update(package=package)
         else:
-            package = self._create(codebase_id=codebase_id,
-                                   package_name=package_name,
-                                   modules=modules,
-                                   is_global=is_global)
+            package = self._create(
+                project_to_deploy=project_to_deploy,
+                codebase_id=codebase_id,
+                package_name=package_name,
+                modules=modules,
+                is_global=is_global)
         if checkout:
             self.checkout(package=package)
         return package
 
     def _create(self,
+                project_to_deploy=None,
                 codebase_id=None,
                 is_global=False,
                 package_name=entities.package_defaults.DEFAULT_PACKAGE_NAME,
@@ -363,8 +378,8 @@ class Packages:
                    'global': is_global,
                    'modules': modules}
 
-        if self._project is not None:
-            payload['projectId'] = self._project.id
+        if project_to_deploy is not None:
+            payload['projectId'] = project_to_deploy.id
         else:
             raise exceptions.PlatformException('400', 'Repository must have a project to perform this action')
 
@@ -380,7 +395,7 @@ class Packages:
         # return entity
         return entities.Package.from_json(_json=response.json(),
                                           client_api=self._client_api,
-                                          project=self._project)
+                                          project=project_to_deploy)
 
     def delete(self, package: entities.Package = None, package_name=None, package_id=None):
         """

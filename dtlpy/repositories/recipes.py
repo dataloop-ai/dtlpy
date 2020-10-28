@@ -192,6 +192,7 @@ class Recipes:
         if success:
             recipe = entities.Recipe.from_json(client_api=self._client_api,
                                                _json=response.json(),
+                                               project=self._project,
                                                dataset=self._dataset)
         else:
             logger.error('Unable to get info from recipe. Recipe_id id: {}'.format(recipe_id))

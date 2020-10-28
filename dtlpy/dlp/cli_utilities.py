@@ -305,7 +305,12 @@ class DlpCompleter(Completer):
         if self.need_param(cmd=cmd, word_before_cursor=word_before_cursor):
             param = self.get_param(cmd=cmd, word_before_cursor=word_before_cursor)
             if self.thread_state in [StateEnum.START, StateEnum.CONTINUE]:
-                if param in ['--project-name', '--dataset-name', '--remote-path', '--package-name', '--service-name', '--trigger-name']:
+                if param in ['--project-name',
+                             '--dataset-name',
+                             '--remote-path',
+                             '--package-name',
+                             '--service-name',
+                             '--trigger-name']:
                     thread = threading.Thread(target=self.get_param_suggestions,
                                               kwargs={"param": param,
                                                       'word_before_cursor': word_before_cursor,

@@ -5,7 +5,7 @@ import attr
 
 from .. import services, repositories, entities
 
-logger = logging.getLogger("dataloop.service")
+logger = logging.getLogger(name=__name__)
 
 
 class OnResetAction:
@@ -90,6 +90,16 @@ class Service(entities.BaseEntity):
         :param is_fetched: is Entity fetched from Platform
         :return:
         """
+        if project is not None:
+            if project.id != _json.get('projectId', None):
+                logger.warning('Service has been fetched from a project that is not belong to it')
+                project = None
+
+        if package is not None:
+            if package.id != _json.get('packageId', None):
+                logger.warning('Service has been fetched from a package that is not belong to it')
+                package = None
+
         versions = _json.get('versions', dict())
         runtime = _json.get("runtime", None)
         if runtime:

@@ -1,5 +1,9 @@
 import attr
+import logging
+
 from .. import repositories, entities, exceptions
+
+logger = logging.getLogger(name=__name__)
 
 
 @attr.s
@@ -34,6 +38,16 @@ class Task:
 
     @classmethod
     def from_json(cls, _json, client_api, project=None, dataset=None):
+        if project is not None:
+            if project.id != _json.get('projectId', None):
+                logger.warning('Task has been fetched from a project that is not belong to it')
+                project = None
+
+        if dataset is not None:
+            if dataset.id != _json.get('datasetId', None):
+                logger.warning('Task has been fetched from a dataset that is not belong to it')
+                dataset = None
+
         return cls(
             name=_json.get('name', None),
             status=_json.get('status', None),
@@ -130,11 +144,18 @@ class Task:
             self._dataset = repositories.Datasets(client_api=self._client_api, project=self._project).get(
                 dataset_id=self.dataset_id)
 
+    def delete(self):
+        """
+        Delete task from platform
+        :return: True
+        """
+        return self.tasks.delete(task_id=self.id)
+
     def update(self, system_metadata=False):
         return self.tasks.update(task=self, system_metadata=system_metadata)
 
-    def create_qa_task(self, assignee_ids):
-        return self.tasks.create_qa_task(task=self, assignee_ids=assignee_ids)
+    def create_qa_task(self, due_date, assignee_ids):
+        return self.tasks.create_qa_task(task=self, due_date=due_date, assignee_ids=assignee_ids)
 
     def create_assignment(self, assignment_name, assignee_id, items=None, filters=None):
         """
@@ -159,16 +180,22 @@ class Task:
         self.add_items(filters=filters, items=items)
         return assignment
 
-    def add_items(self, filters=None, items=None, workload=None, limit=0):
+    def add_items(self, filters=None, items=None, assignee_ids=None, workload=None, limit=0):
         """
 
         :param limit:
         :param workload:
+        :param assignee_ids:
         :param filters:
         :param items:
         :return:
         """
-        return self.tasks.add_items(task=self, filters=filters, items=items, workload=workload, limit=limit)
+        return self.tasks.add_items(task=self,
+                                    filters=filters,
+                                    items=items,
+                                    assignee_ids=assignee_ids,
+                                    workload=workload,
+                                    limit=limit)
 
     def remove_items(self, filters=None, items=None):
         """

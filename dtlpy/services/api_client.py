@@ -256,9 +256,9 @@ class ApiClient:
 
     def thread_pools(self, pool_name):
         if pool_name not in self._thread_pools_names:
-            raise ValueError('unknown thread pool name: {}. known name: {}'.format(pool_name,
-                                                                                   list(
-                                                                                       self._thread_pools_names.keys())))
+            raise ValueError('unknown thread pool name: {}. known name: {}'.format(
+                pool_name,
+                list(self._thread_pools_names.keys())))
         num_processes = self._thread_pools_names[pool_name]
         if pool_name not in self._thread_pools:
             self._thread_pools[pool_name] = ThreadPool(processes=num_processes)
@@ -647,7 +647,9 @@ class ApiClient:
                 form.add_field('path', os.path.join(remote_path, uploaded_filename).replace('\\', '/'))
                 if item_metadata is not None:
                     form.add_field('metadata', json.dumps(item_metadata))
-                form.add_field('file', AsyncUploadStream(buffer=to_upload, callback=callback))
+                form.add_field('file', AsyncUploadStream(buffer=to_upload,
+                                                         callback=callback,
+                                                         name=uploaded_filename))
                 url = '{}?mode={}'.format(self.environment + remote_url, mode)
                 async with session.post(url, data=form, verify_ssl=self.verify) as resp:
                     text = await resp.text()

@@ -93,6 +93,11 @@ class Dataset(entities.BaseEntity):
         :param client_api: client_api
         :return: Dataset object
         """
+        if project is not None:
+            if project.id not in _json.get('projects', None):
+                logger.warning('Dataset has been fetched from a project that is not in it projects list')
+                project = None
+
         inst = cls(metadata=_json.get('metadata', None),
                    directoryTree=_json.get('directoryTree', None),
                    readable_type=_json.get('readableType', None),

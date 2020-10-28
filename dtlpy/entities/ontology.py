@@ -53,22 +53,26 @@ class Ontology(entities.BaseEntity):
 
     @property
     def recipe(self):
-        assert isinstance(self._recipe, entities.Recipe)
+        if self._recipe is not None:
+            assert isinstance(self._recipe, entities.Recipe)
         return self._recipe
 
     @property
     def dataset(self):
-        assert isinstance(self._dataset, entities.Dataset)
+        if self._dataset is not None:
+            assert isinstance(self._dataset, entities.Dataset)
         return self._dataset
 
     @property
     def project(self):
-        assert isinstance(self._project, entities.Project)
-        return self.project
+        if self._project is not None:
+            assert isinstance(self._project, entities.Project)
+        return self._project
 
     @property
     def ontologies(self):
-        assert isinstance(self._repositories.ontologies, repositories.Ontologies)
+        if self._repositories.ontologies is not None:
+            assert isinstance(self._repositories.ontologies, repositories.Ontologies)
         return self._repositories.ontologies
 
     @property
@@ -283,7 +287,7 @@ class Ontology(entities.BaseEntity):
 
         if update_ontology:
             if isinstance(label, entities.Label) or isinstance(label, str):
-                return self._add_labels(label=label, update_ontology=update_ontology)
+                return self._add_labels(labels=label, update_ontology=update_ontology)
             else:
                 return self._add_labels({
                     "tag": label_name,
@@ -373,7 +377,7 @@ class Ontology(entities.BaseEntity):
                 labels.append(Label.from_root(label))
         added_labels = list()
         for label in labels:
-            added_labels.append(self.add_label(label.tag, label=label,update_ontology=update_ontology))
+            added_labels.append(self.add_label(label.tag, label=label, update_ontology=update_ontology))
 
         return added_labels
 

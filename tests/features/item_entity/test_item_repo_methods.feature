@@ -26,21 +26,6 @@ Feature: Item Entity repo services
         And Item in host was changed to "/test_name.jpg"
         And Only name attributes was changed
 
-    Scenario: Move folder with leading slash
-        Given There is an item
-        When I move item to "/main_dir/sub_dir"
-        Then Item in host moved to a new directory
-
-    Scenario: Move folder - no leading slas
-        Given There is an item
-        When I move item to "main_dir/sub_dir"
-        Then Item in host moved to a new directory
-    
-    Scenario: Move folder - with new name
-        Given There is an item
-        When I move item to "main_dir/sub_dir/new_name.jpg"
-        Then Item in host moved to a new directory
-
     Scenario: To Json - not annotated item
         Given I upload item in path "assets_split/ann_json_to_object/0000000162.jpg" to dataset
         Then Object "Item" to_json() equals to Platform json.

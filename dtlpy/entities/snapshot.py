@@ -72,6 +72,16 @@ class Snapshot(entities.BaseEntity):
         :param is_fetched: is Entity fetched from Platform
         :return: Snapshot entity
         """
+        if project is not None:
+            if project.id != _json.get('projectId', None):
+                logger.warning('Snapshot has been fetched from a project that is not in it projects list')
+                project = None
+
+        if model is not None:
+            if model.id != _json.get('modelId', None):
+                logger.warning('Snapshot has been fetched from a model that is not in it projects list')
+                model = None
+                
         inst = cls(
             project_id=_json.get('projectId', None),
             dataset_id=_json.get('datasetId', None),
@@ -147,7 +157,7 @@ class Snapshot(entities.BaseEntity):
                  snapshots=repositories.Snapshots(client_api=self._client_api,
                                                   project=self._project,
                                                   project_id=self.project_id,
-                                                  model=self.model),
+                                                  model=self._model),
                  models=repositories.Models(client_api=self._client_api, project=self._project))
         return r
 

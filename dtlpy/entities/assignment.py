@@ -19,6 +19,8 @@ class Assignment(entities.BaseEntity):
     metadata = attr.ib(repr=False)
     id = attr.ib()
     url = attr.ib(repr=False)
+    task_id = attr.ib(repr=False)
+    dataset_id = attr.ib(repr=False)
 
     # sdk
     _client_api = attr.ib(repr=False)
@@ -30,12 +32,29 @@ class Assignment(entities.BaseEntity):
 
     @classmethod
     def from_json(cls, _json, client_api, project=None, task=None, dataset=None):
-        return cls(
+        if project is not None:
+            if project.id != _json.get('projectId', None):
+                logger.warning('Assignment has been fetched from a project that is not belong to it')
+                project = None
+
+        metadata = _json.get('metadata', dict())
+        dataset_id = metadata.get('datasetId', None)
+        task_id = metadata.get('taskId', None)
+        if dataset_id is None:
+            system_metadata = metadata.get('system', dict())
+            dataset_id = system_metadata.get('datasetId', None)
+        if task_id is None:
+            system_metadata = metadata.get('system', dict())
+            task_id = system_metadata.get('taskId', None)
+
+        assignment = cls(
             name=_json.get('name', None),
             annotator=_json.get('annotator', None),
             status=_json.get('status', None),
             project_id=_json.get('projectId', None),
-            metadata=_json.get('metadata', dict()),
+            task_id=task_id,
+            dataset_id=dataset_id,
+            metadata=metadata,
             url=_json.get('url', None),
             id=_json['id'],
             client_api=client_api,
@@ -44,11 +63,25 @@ class Assignment(entities.BaseEntity):
             task=task
         )
 
+        if dataset is not None:
+            if assignment.dataset_id != dataset.id:
+                logger.warning('Assignment has been fetched from a dataset that is not belong to it')
+                assignment._dataset = None
+
+        if task is not None:
+            if assignment.task_id != task.id:
+                logger.warning('Assignment has been fetched from a task that is not belong to it')
+                assignment._task = None
+
+        return assignment
+
     @property
     def assignments(self):
         if self._assignments is None:
-            self._assignments = repositories.Assignments(client_api=self._client_api, project=self.project,
-                                                         task=self._task, dataset=self._dataset)
+            self._assignments = repositories.Assignments(client_api=self._client_api,
+                                                         project=self._project,
+                                                         task=self._task,
+                                                         dataset=self._dataset)
         assert isinstance(self._assignments, repositories.Assignments)
         return self._assignments
 
@@ -60,14 +93,6 @@ class Assignment(entities.BaseEntity):
 
         assert isinstance(self._project, entities.Project)
         return self._project
-
-    @property
-    def dataset_id(self):
-        dataset_id = self.metadata.get('datasetId', None)
-        if dataset_id is None:
-            system_metadata = self.metadata.get('system', dict())
-            dataset_id = system_metadata.get('datasetId', None)
-        return dataset_id
 
     @property
     def datasets(self):
@@ -83,6 +108,13 @@ class Assignment(entities.BaseEntity):
         assert isinstance(self._dataset, entities.Dataset)
         return self._dataset
 
+    @property
+    def task(self):
+        if self._task is None:
+            self._task = self._project.tasks.get(task_id=self.task_id)
+        assert isinstance(self._task, entities.Task)
+        return self._task
+
     def to_json(self):
         """
         Returns platform _json format of object
@@ -97,6 +129,13 @@ class Assignment(entities.BaseEntity):
                                                               attr.fields(Assignment)._task))
         _json['projectId'] = self.project_id
         return _json
+
+    def delete(self):
+        """
+        Delete assignments from platform
+        :return: True
+        """
+        return self.assignments.delete(assignment_id=self.id)
 
     def update(self, system_metadata=False):
         return self.assignments.update(assignment=self, system_metadata=system_metadata)
@@ -131,6 +170,7 @@ class Assignment(entities.BaseEntity):
         """
 
         :param dataset:
+        :param filters:
         :return:
         """
         if dataset is None:
@@ -221,7 +261,7 @@ class Workload:
                 index += 1
             else:
                 index = 0
-        loads = [l/100 for l in loads]
+        loads = [l / 100 for l in loads]
         return loads
 
     def _redistribute(self):

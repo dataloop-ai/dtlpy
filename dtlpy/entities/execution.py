@@ -1,8 +1,11 @@
 import attr
+import logging
 import traceback
 from collections import namedtuple
 
 from .. import repositories, entities, services
+
+logger = logging.getLogger(name=__name__)
 
 
 class ExecutionStatus:
@@ -84,7 +87,7 @@ class Execution(entities.BaseEntity):
         return self._repositories.executions
 
     @staticmethod
-    def _protected_from_json(_json, client_api, service=None, is_fetched=True):
+    def _protected_from_json(_json, client_api, project=None, service=None, is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
         :param _json:
@@ -94,6 +97,7 @@ class Execution(entities.BaseEntity):
         try:
             execution = Execution.from_json(_json=_json,
                                             client_api=client_api,
+                                            project=None,
                                             service=service,
                                             is_fetched=is_fetched)
             status = True
@@ -103,7 +107,18 @@ class Execution(entities.BaseEntity):
         return status, execution
 
     @classmethod
-    def from_json(cls, _json, client_api, service=None, is_fetched=True):
+    def from_json(cls, _json, client_api, project=None, service=None, is_fetched=True):
+        if project is not None:
+            if project.id != _json.get('projectId', None):
+                logger.warning('Execution has been fetched from a project that is not belong to it')
+                project = None
+
+        if service is not None:
+            if service.id != _json.get('serviceId', None):
+                logger.warning('Execution has been fetched from a service that is not belong to it')
+                service = None
+
+
         inst = cls(
             feedbackQueue=_json.get('feedbackQueue', None),
             service_id=_json.get('serviceId', None),
@@ -126,6 +141,7 @@ class Execution(entities.BaseEntity):
             id=_json.get('id', None),
             to_terminate=_json.get('toTerminate', False),
             client_api=client_api,
+            project=project,
             service=service
         )
         inst.is_fetched = is_fetched
@@ -209,11 +225,14 @@ class Execution(entities.BaseEntity):
         """
         return self.executions.update(execution=self)
 
-    def logs(self):
+    def logs(self, follow=False):
         """
         Print logs for execution
         """
-        self.services.log(execution_id=self.id, view=True, service=self.service)
+        self.services.log(execution_id=self.id,
+                          view=True,
+                          service=self.service,
+                          follow=follow)
 
     def increment(self):
         """

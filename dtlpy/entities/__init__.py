@@ -18,12 +18,13 @@ from .annotation_definitions import BaseAnnotationDefinition
 from .base_entity import BaseEntity
 from .item import Item, Modality, ModalityTypeEnum, ItemStatus
 from .links import Link, ItemLink, UrlLink, LinkTypeEnum
-from .trigger import Trigger, TriggerResource, TriggerAction, TriggerExecutionMode, BaseTrigger, CronTrigger, TriggerType
+from .trigger import Trigger, TriggerResource, TriggerAction, TriggerExecutionMode, BaseTrigger, CronTrigger, \
+    TriggerType
 from .project import Project
 from .artifact import Artifact
 from .dataset import Dataset
 from .codebase import Codebase
-from .annotation import Annotation, FrameAnnotation, ViewAnnotationOptions
+from .annotation import Annotation, FrameAnnotation, ViewAnnotationOptions, AnnotationStatus
 from .annotation_collection import AnnotationCollection
 from .paged_entities import PagedEntities
 from .filters import Filters, FiltersKnownFields, FiltersResource, FiltersOperations, FiltersMethod, \

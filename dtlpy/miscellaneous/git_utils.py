@@ -97,9 +97,10 @@ class GitUtils:
         """
         url = ''
         try:
-            p = subprocess.Popen(['git', '--git-dir', os.path.join(path, '.git'), 'config', '--get', 'remote.origin.url'],
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.PIPE)
+            p = subprocess.Popen(
+                ['git', '--git-dir', os.path.join(path, '.git'), 'config', '--get', 'remote.origin.url'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
             output, err = p.communicate()
             url = str(output, 'utf-8').splitlines()[0]
 

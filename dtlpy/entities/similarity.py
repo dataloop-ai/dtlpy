@@ -164,7 +164,7 @@ class Similarity(Collection):
     @property
     def target(self):
         """
-        Target item for similiraty
+        Target item for similarity
         """
         return SimilarityItem(ref=self.ref, type=self.type, target=True)
 
@@ -223,7 +223,8 @@ class MultiView(Collection):
 
     @classmethod
     def from_json(cls, _json):
-        return cls(items=_json.get('items', list()))
+        return cls(items=_json.get('items', list()),
+                   name=None)
 
     def to_json(self):
         """

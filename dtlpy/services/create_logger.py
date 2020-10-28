@@ -60,7 +60,7 @@ class DataloopLogger(handlers.BaseRotatingHandler):
         files.sort(key=lambda x: -os.path.getmtime(x))  # newer first
         for filepath in files:
             if os.path.isdir(filepath):
-                total_cache_size = DataloopLogger.\
+                total_cache_size = DataloopLogger. \
                     clean_dataloop_cache_thread(filepath, total_cache_size=total_cache_size, max_param=max_param)
                 # Remove the dir if empty
                 if len(os.listdir(filepath)) == 0:

@@ -28,12 +28,6 @@ Feature: Tasks repository list method testing
         When I list Tasks by param "project_ids" value "both"
         Then I receive a list of "4" tasks
 
-        When I list Tasks by param "status" value "open"
-        Then I receive a list of "1" tasks
-
-        When I list Tasks by param "status" value "close"
-        Then I receive a list of "2" tasks
-
         When I list Tasks by param "task_name" value "list_tasks"
         Then I receive a list of "2" tasks
 

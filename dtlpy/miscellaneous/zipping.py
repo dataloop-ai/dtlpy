@@ -21,7 +21,7 @@ class Zipping:
 
         :param directory:
         :param zip_filename:
-        :param ignore_max_file:
+        :param ignore_max_file_size: ignore the limitation on the zip file size
         :return:
         """
         # default path

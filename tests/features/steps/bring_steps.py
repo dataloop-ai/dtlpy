@@ -17,6 +17,8 @@ from tests.features.steps.datasets_repo import test_datasets_delete
 from tests.features.steps.datasets_repo import test_datasets_update
 from tests.features.steps.datasets_repo import test_datasets_download_annotations
 from tests.features.steps.datasets_repo import test_datasets_download
+from tests.features.steps.datasets_repo import test_dataset_context
+
 
 from tests.features.steps.dataset_entity import test_dataset_repo_methods
 from tests.features.steps.dataset_entity import test_add_labels_methods
@@ -29,6 +31,7 @@ from tests.features.steps.annotations_repo import test_annotations_update
 from tests.features.steps.annotations_repo import test_annotations_upload
 from tests.features.steps.annotations_repo import test_annotations_show
 from tests.features.steps.annotations_repo import test_annotations_draw
+from tests.features.steps.annotations_repo import test_annotations_context
 
 from tests.features.steps.annotation_entity import test_annotation_repo_methods
 from tests.features.steps.annotation_entity import test_upload_annotations
@@ -49,8 +52,10 @@ from tests.features.steps.items_repo import test_items_upload_dataframe
 from tests.features.steps.items_repo import test_items_delete
 from tests.features.steps.items_repo import test_items_download
 from tests.features.steps.items_repo import test_download_and_upload_ndarray_item
+from tests.features.steps.items_repo import test_items_context
 
 from tests.features.steps.item_entity import test_item_repo_methods
+from tests.features.steps.item_entity import test_item_move
 
 from tests.features.steps.ontologies_repo import test_ontologies_create
 from tests.features.steps.ontologies_repo import test_ontologies_get
@@ -84,13 +89,16 @@ from tests.features.steps.packages_repo import packages_generate
 from tests.features.steps.packages_repo import packages_push
 from tests.features.steps.packages_repo import packages_get
 from tests.features.steps.packages_repo import packages_list
+from tests.features.steps.packages_repo import test_packages_context
 from tests.features.steps.packages_flow import packages_flow
+
 
 from tests.features.steps.triggers_repo import test_triggers_create
 from tests.features.steps.triggers_repo import test_triggers_get
 from tests.features.steps.triggers_repo import test_triggers_list
 from tests.features.steps.triggers_repo import test_triggers_update
 from tests.features.steps.triggers_repo import test_triggers_delete
+from tests.features.steps.triggers_repo import test_triggers_context
 
 from tests.features.steps.services_repo import test_services_deploy
 from tests.features.steps.services_repo import test_services_create
@@ -98,6 +106,7 @@ from tests.features.steps.services_repo import test_services_get
 from tests.features.steps.services_repo import test_services_delete
 from tests.features.steps.services_repo import test_services_list
 from tests.features.steps.services_repo import test_services_update
+from tests.features.steps.services_repo import test_services_context
 
 from tests.features.steps.filters_entity import test_filters
 
@@ -105,6 +114,7 @@ from tests.features.steps.executions_repo import test_executions_get
 from tests.features.steps.executions_repo import test_executions_create
 from tests.features.steps.executions_repo import test_executions_list
 from tests.features.steps.executions_repo import test_executions_multiple
+from tests.features.steps.executions_repo import test_executions_context
 from tests.features.steps.execution_monitoring import test_execution_monitoring
 
 from tests.features.steps.bots_repo import test_bots_create
@@ -124,6 +134,7 @@ from tests.features.steps.tasks_repo import test_tasks_list
 from tests.features.steps.tasks_repo import test_tasks_delete
 from tests.features.steps.tasks_repo import test_tasks_qa_task
 from tests.features.steps.tasks_repo import test_tasks_add_and_get_items
+from tests.features.steps.tasks_repo import test_task_context
 
 from tests.features.steps.assignments_repo import test_assignments_create
 from tests.features.steps.assignments_repo import test_assignments_get
@@ -132,5 +143,6 @@ from tests.features.steps.assignments_repo import test_assignments_delete
 from tests.features.steps.assignments_repo import test_assignments_reassign
 from tests.features.steps.assignments_repo import test_assignments_redistribute
 from tests.features.steps.assignments_repo import test_assignments_items_operations
+from tests.features.steps.assignments_repo import test_assignments_context
 
 from tests.features.steps.converter import converter

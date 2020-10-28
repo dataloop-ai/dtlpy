@@ -262,7 +262,7 @@ class Tasks:
                workload=None,
                dataset=None,
                task_owner=None,
-               status='open',
+               status='open', # Deprecation don't use any more
                task_type='annotation',
                task_parent_id=None,
                project_id=None,
@@ -287,12 +287,17 @@ class Tasks:
         :param recipe_id:
         :param due_date:
         :param project_id:
-        :param status:
+        :param status: # Deprecation don't use any more
         :param task_name:
         :param task_type: "annotation" or "qa"
         :param task_parent_id: optional if type is qa - parent task id
         :return: Annotation Task object
         """
+
+        if status != 'open':
+            logger.warning('[DeprecationWarning] input argument "status"'
+                           ' will not affect the platform from v1.20.19\n'
+                           'This warning message will be deleted after v1.22.0')
         if dataset is None and self._dataset is None:
             raise exceptions.PlatformException('400', 'Please provide param dataset')
 

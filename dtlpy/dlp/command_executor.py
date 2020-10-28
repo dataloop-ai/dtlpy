@@ -449,7 +449,7 @@ class CommandExecutor:
                                     package_name=args.package_name,
                                     checkout=True)
 
-            logger.info("Successfully pushed package to platform\nPackage id:{}".format(package.id))
+            logger.info("Successfully pushed package to platform\nPackage id:{}\nPackage version:{}".format(package.id,package.version))
 
         elif args.packages == "test":
             go_back = False

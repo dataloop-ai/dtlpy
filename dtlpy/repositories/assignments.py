@@ -152,8 +152,10 @@ class Assignments:
                 raise exceptions.PlatformException('404', 'Assignment not found')
             else:
                 assignment = entities.Assignment.from_json(_json=response.json(),
-                                                           client_api=self._client_api, project=self._project,
-                                                           dataset=self._dataset, task=self._task)
+                                                           client_api=self._client_api,
+                                                           project=self._project,
+                                                           dataset=self._dataset,
+                                                           task=self._task)
         elif assignment_name is not None:
             assignments = [assignment for assignment in self.list() if assignment.name == assignment_name]
             if len(assignments) == 0:

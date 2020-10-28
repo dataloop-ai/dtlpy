@@ -213,7 +213,7 @@ class Converter:
         logger.info('Total skipped: {}'.format(reporter.status_count('skip')))
         logger.info('Total failed: {}'.format(reporter.status_count('failed')))
 
-    def __save_filtered_annotations_and_convert(self, item, filters, to_format, from_format, file_path,
+    def __save_filtered_annotations_and_convert(self, item: entities.Item, filters, to_format, from_format, file_path,
                                                 save_locally=False,
                                                 save_to=None, conversion_func=None,
                                                 pbar=None, **kwargs):
@@ -221,7 +221,7 @@ class Converter:
         i_item = kwargs.get('i_item', None)
 
         try:
-            if item.annotated:
+            if item.annotated and item.type != 'dir':
                 if filters is not None:
                     assert filters.resource == entities.FiltersResource.ANNOTATION
                     copy_filters = copy.deepcopy(filters)
@@ -338,55 +338,68 @@ class Converter:
 
         return coco_json
 
-    def __single_item_to_coco(self, item, images, path_to_dataloop_annotations_dir, item_id, converted_annotations,
+    @staticmethod
+    def __get_item_shape(item: entities.Item = None, local_path: str = None):
+        if isinstance(item, entities.Item) and (item.width is None or item.height is None):
+            try:
+                img = Image.open(item.download(save_locally=False)) if local_path is None else Image.open(local_path)
+                item.height = img.height
+                item.width = img.width
+            except Exception:
+                pass
+        return item
+
+    def __single_item_to_coco(self, item: entities.Item, images, path_to_dataloop_annotations_dir, item_id, converted_annotations,
                               annotation_filter, label_to_id, reporter, pbar=None):
         try:
-            images[item_id] = {'file_name': item.name,
-                               'id': item_id,
-                               'width': item.width,
-                               'height': item.height
-                               }
-            if annotation_filter is None:
-                try:
-                    filename, ext = os.path.splitext(item.filename)
-                    filename = '{}.json'.format(filename[1:])
-                    with open(os.path.join(path_to_dataloop_annotations_dir, filename), 'r', encoding="utf8") as f:
-                        annotations = json.load(f)['annotations']
-                    annotations = entities.AnnotationCollection.from_json(annotations)
-                except Exception:
-                    annotations = item.annotations.list()
-            else:
-                copy_filters = copy.deepcopy(annotation_filter)
-                copy_filters.add(field='itemId', values=item.id, method='and')
-                annotations_page = item.dataset.items.list(filters=copy_filters)
-                annotations = item.annotations.builder()
-                for page in annotations_page:
-                    for annotation in page:
-                        annotations.annotations.append(annotation)
+            if item.type != 'dir':
+                item = Converter.__get_item_shape(item=item)
+                images[item_id] = {'file_name': item.name,
+                                   'id': item_id,
+                                   'width': item.width,
+                                   'height': item.height
+                                   }
+                if annotation_filter is None:
+                    try:
+                        filename, ext = os.path.splitext(item.filename)
+                        filename = '{}.json'.format(filename[1:])
+                        with open(os.path.join(path_to_dataloop_annotations_dir, filename), 'r', encoding="utf8") as f:
+                            annotations = json.load(f)['annotations']
+                        annotations = entities.AnnotationCollection.from_json(annotations)
+                    except Exception:
+                        annotations = item.annotations.list()
+                else:
+                    copy_filters = copy.deepcopy(annotation_filter)
+                    copy_filters.add(field='itemId', values=item.id, method='and')
+                    annotations_page = item.dataset.items.list(filters=copy_filters)
+                    annotations = item.annotations.builder()
+                    for page in annotations_page:
+                        for annotation in page:
+                            annotations.annotations.append(annotation)
 
-            item_converted_annotations = list()
-            for i_annotation, annotation in enumerate(annotations.annotations):
-                try:
-                    ann = self.to_coco(annotation=annotation, item=item)
-                    ann['category_id'] = label_to_id[annotation.label]
-                    ann['image_id'] = item_id
-                    ann['id'] = int('{}{}'.format(item_id, i_annotation))
+                item_converted_annotations = list()
+                for i_annotation, annotation in enumerate(annotations.annotations):
+                    try:
+                        ann = self.to_coco(annotation=annotation, item=item)
+                        ann['category_id'] = label_to_id[annotation.label]
+                        ann['image_id'] = item_id
+                        ann['id'] = int('{}{}'.format(item_id, i_annotation))
 
-                    item_converted_annotations.append(ann)
-                except Exception:
-                    err = 'Error converting annotation: \n' \
-                          'Item: {}, annotation: {} - ' \
-                          'fail to convert some of the annotation\n{}'.format(item_id,
-                                                                              annotation.id,
-                                                                              traceback.format_exc())
-                    item_converted_annotations.append(err)
-            success, errors = self._sort_annotations(annotations=item_converted_annotations)
-            converted_annotations[item_id] = success
-            if errors:
-                reporter.set_index(i_item=item_id, ref=item.id, status='failed', success=False,
-                                   error=errors)
-            else:
-                reporter.set_index(i_item=item_id, status='success', success=True)
+                        item_converted_annotations.append(ann)
+                    except Exception:
+                        err = 'Error converting annotation: \n' \
+                              'Item: {}, annotation: {} - ' \
+                              'fail to convert some of the annotation\n{}'.format(item_id,
+                                                                                  annotation.id,
+                                                                                  traceback.format_exc())
+                        item_converted_annotations.append(err)
+                success, errors = self._sort_annotations(annotations=item_converted_annotations)
+                converted_annotations[item_id] = success
+                if errors:
+                    reporter.set_index(i_item=item_id, ref=item.id, status='failed', success=False,
+                                       error=errors)
+                else:
+                    reporter.set_index(i_item=item_id, status='success', success=True)
         except Exception:
             reporter.set_index(i_item=item_id, ref=item.id, status='failed', success=False,
                                error=traceback.format_exc())
@@ -414,7 +427,7 @@ class Converter:
 
         self.dataset.add_labels(list(upload_labels.values()))
 
-    def _upload_coco_dataset(self, local_items_path, local_annotations_path, only_bbox=False):
+    def _upload_coco_dataset(self, local_items_path, local_annotations_path, only_bbox=False, remote_items=False):
         logger.info('loading annotations json...')
         with open(local_annotations_path, 'r', encoding="utf8") as f:
             coco_json = json.load(f)
@@ -439,10 +452,15 @@ class Converter:
         for ann in coco_json['annotations']:
             image_annotations[image_name_id[ann['image_id']]]['annotations'].append(ann)
 
-        return self._upload_directory(local_items_path=local_items_path,
-                                      local_annotations_path=image_annotations,
-                                      from_format=AnnotationFormat.COCO,
-                                      only_bbox=only_bbox)
+        if remote_items:
+            return self._upload_annotations(local_annotations_path=image_annotations,
+                                            from_format=AnnotationFormat.COCO,
+                                            only_bbox=only_bbox)
+        else:
+            return self._upload_directory(local_items_path=local_items_path,
+                                          local_annotations_path=image_annotations,
+                                          from_format=AnnotationFormat.COCO,
+                                          only_bbox=only_bbox)
 
     def _read_labels(self, labels_file_path):
         if labels_file_path:
@@ -454,19 +472,108 @@ class Converter:
             logger.warning('No labels file path provided (.names), skipping labels upload')
             self._get_labels()
 
-    def _upload_yolo_dataset(self, local_items_path, local_annotations_path, labels_file_path):
+    def _upload_yolo_dataset(self, local_items_path, local_annotations_path, labels_file_path, remote_items=False):
         self._read_labels(labels_file_path=labels_file_path)
+        if remote_items:
+            return self._upload_annotations(local_annotations_path=local_annotations_path,
+                                            from_format=AnnotationFormat.YOLO)
+        else:
+            return self._upload_directory(local_items_path=local_items_path,
+                                          local_annotations_path=local_annotations_path,
+                                          from_format=AnnotationFormat.YOLO)
 
-        return self._upload_directory(local_items_path=local_items_path,
-                                      local_annotations_path=local_annotations_path,
-                                      from_format=AnnotationFormat.YOLO)
-
-    def _upload_voc_dataset(self, local_items_path, local_annotations_path, **_):
+    def _upload_voc_dataset(self, local_items_path, local_annotations_path, remote_items=False, **_):
         # TODO - implement VOC annotations upload
         logger.warning('labels upload from VOC dataset is not implemented, please upload labels manually')
-        return self._upload_directory(local_items_path=local_items_path,
-                                      local_annotations_path=local_annotations_path,
-                                      from_format=AnnotationFormat.VOC)
+
+        if remote_items:
+            return self._upload_annotations(local_annotations_path=local_annotations_path,
+                                            from_format=AnnotationFormat.VOC)
+        else:
+            return self._upload_directory(local_items_path=local_items_path,
+                                          local_annotations_path=local_annotations_path,
+                                          from_format=AnnotationFormat.VOC)
+
+    @staticmethod
+    def _find_yolo_voc_item_annotations(local_annotations_path: str, item: entities.Item, from_format: str):
+        found = False
+        metadata = None
+
+        extension = '.txt' if from_format == AnnotationFormat.YOLO else '.xml'
+        filename, _ = os.path.splitext(item.filename)
+        annotations_filepath = os.path.join(local_annotations_path, filename[1:] + extension)
+        if os.path.isfile(annotations_filepath):
+            found = True
+
+        return found, annotations_filepath, metadata
+
+    @staticmethod
+    def _find_coco_item_annotations(local_annotations_path: dict, item: entities.Item):
+        found = False
+        ann_dict = None
+        if item.name in local_annotations_path:
+            ann_dict = local_annotations_path[item.name]
+            found = True
+        elif item.filename in local_annotations_path:
+            ann_dict = local_annotations_path[item.filename]
+            found = True
+        metadata = ann_dict.get('metadata', None) if found else None
+        return found, ann_dict, metadata
+
+    def _upload_annotations(self, local_annotations_path, from_format, **kwargs):
+        self._only_bbox = kwargs.get('only_bbox', False)
+        file_count = self.remote_items.items_count
+        reporter = Reporter(num_workers=file_count, resource=Reporter.CONVERTER)
+        pbar = tqdm.tqdm(total=file_count)
+        pool = ThreadPool(processes=6)
+        i_item = 0
+
+        for page in self.remote_items:
+            for item in page:
+                if from_format == AnnotationFormat.COCO:
+                    found, ann_filepath, metadata = self._find_coco_item_annotations(
+                        local_annotations_path=local_annotations_path,
+                        item=item
+                    )
+                elif from_format in [AnnotationFormat.YOLO, AnnotationFormat.VOC]:
+                    found, ann_filepath, metadata = self._find_yolo_voc_item_annotations(
+                        local_annotations_path=local_annotations_path,
+                        item=item,
+                        from_format=from_format
+                    )
+                else:
+                    raise exceptions.PlatformException('400', 'Unknown annotation format: {}'.format(from_format))
+                if not found:
+                    pbar.update()
+                    reporter.set_index(i_item=i_item, ref=item.filename, status='skip', success=False,
+                                       error='Cannot find annotations for item')
+                    i_item += 1
+                    continue
+                pool.apply_async(
+                    func=self._upload_item_and_convert,
+                    kwds={
+                        "from_format": from_format,
+                        "item_path": item,
+                        "ann_path": ann_filepath,
+                        'conversion_func': None,
+                        "reporter": reporter,
+                        'i_item': i_item,
+                        'pbar': pbar,
+                        'metadata': metadata
+                    }
+                )
+                i_item += 1
+        pool.close()
+        pool.join()
+        pool.terminate()
+
+        if reporter.has_errors:
+            log_filepath = reporter.generate_log_files()
+            logger.warning(
+                'Converted with some errors. Please see log in {} for more information.'.format(log_filepath))
+
+        logger.info('Total converted and uploaded: {}'.format(reporter.status_count('success')))
+        logger.info('Total failed: {}'.format(reporter.status_count('failed')))
 
     def _upload_directory(self, local_items_path, local_annotations_path, from_format, conversion_func=None, **kwargs):
         """
@@ -551,12 +658,10 @@ class Converter:
         metadata = kwargs.get('metadata', None)
 
         try:
-            item = self.dataset.items.upload(local_path=item_path, item_metadata=metadata)
+            item = item_path if isinstance(item_path, entities.Item) else self.dataset.items.upload(
+                local_path=item_path, item_metadata=metadata)
             if from_format == AnnotationFormat.YOLO:
-                image = Image.open(item_path)
-                width, height = image.size
-                item.width = width
-                item.height = height
+                item = Converter.__get_item_shape(item=item, local_path=item_path)
             success, errors = self.convert_file(to_format=AnnotationFormat.DATALOOP,
                                                 from_format=from_format,
                                                 item=item,
@@ -587,10 +692,15 @@ class Converter:
                              local_items_path=None,
                              local_labels_path=None,
                              local_annotations_path=None,
-                             only_bbox=False):
+                             only_bbox=False,
+                             filters=None,
+                             remote_items=None
+                             ):
         """
         Convert and Upload local dataset to dataloop platform
 
+        :param remote_items:
+        :param filters:
         :param only_bbox: only for coco datasets
         :param from_format:
         :param dataset:
@@ -600,16 +710,23 @@ class Converter:
         :param local_items_path:
         :return:
         """
+        if remote_items is None:
+            remote_items = local_items_path is None
+
+        if remote_items:
+            logger.info('Getting remote items...')
+            self.remote_items = dataset.items.list(filters=filters)
+
         self.dataset = dataset
         if from_format.lower() == AnnotationFormat.COCO:
             self._upload_coco_dataset(local_items_path=local_items_path, local_annotations_path=local_annotations_path,
-                                      only_bbox=only_bbox)
+                                      only_bbox=only_bbox, remote_items=remote_items)
         if from_format.lower() == AnnotationFormat.YOLO:
             self._upload_yolo_dataset(local_items_path=local_items_path, local_annotations_path=local_annotations_path,
-                                      labels_file_path=local_labels_path)
+                                      labels_file_path=local_labels_path, remote_items=remote_items)
         if from_format.lower() == AnnotationFormat.VOC:
             self._upload_voc_dataset(local_items_path=local_items_path, local_annotations_path=local_annotations_path,
-                                     labels_file_path=local_labels_path)
+                                     labels_file_path=local_labels_path, remote_items=remote_items)
 
     def convert_directory(self, local_path, to_format, from_format, dataset, conversion_func=None):
         """
@@ -808,6 +925,7 @@ class Converter:
 
         # XML #
         elif self.save_to_format == 'xml':
+            item = Converter.__get_item_shape(item=item)
             output_annotation = {
                 'path': item.filename,
                 'filename': os.path.basename(item.filename),
@@ -943,14 +1061,16 @@ class Converter:
         ann_def = entities.Box(label=label, top=top, bottom=bottom, left=left, right=right, attributes=attrs)
         return entities.Annotation.new(annotation_definition=ann_def)
 
-    def from_yolo(self, annotation, **kwargs):
+    def from_yolo(self, annotation, item=None, **kwargs):
         (label_id, x, y, w, h) = annotation
         label_id = int(label_id)
-        height = kwargs.get('height')
-        width = kwargs.get('width')
-        item = kwargs.get('item', None)
+
+        item = Converter.__get_item_shape(item=item)
+        height = kwargs.get('height', None)
+        width = kwargs.get('width', None)
+
         if height is None or width is None:
-            if item is None:
+            if item is None or item.width is None or item.height is None:
                 raise Exception('Need item width and height in order to convert yolo annotation to dataloop')
             height = item.height
             width = item.width
@@ -980,8 +1100,11 @@ class Converter:
 
         if annotation.type != "box":
             raise Exception('Only box annotations can be converted')
-        if item.width is None or item.height is None:
-            raise Exception('Item does not have width and height, cannot convert to yolo')
+
+        item = Converter.__get_item_shape(item=item)
+
+        if item is None or item.width is None or item.height is None:
+            raise Exception("Cannot get item's width and height")
 
         dw = 1.0 / item.width
         dh = 1.0 / item.height
@@ -1052,18 +1175,21 @@ class Converter:
         return entities.Annotation.new(annotation_definition=ann_def, item=item)
 
     @staticmethod
-    def to_coco(annotation, item=None, **kwargs):
+    def to_coco(annotation, item=None, **_):
+        item = Converter.__get_item_shape(item=item)
+        height = item.height if item is not None else None
+        width = item.width if item is not None else None
+
         if not isinstance(annotation, entities.Annotation):
             annotation = entities.Annotation.from_json(annotation, item=item)
         area = 0
         iscrowd = 0
-        height = kwargs.get('height', item.height)
-        width = kwargs.get('width', item.width)
         segmentation = [[]]
 
         if annotation.type in ['binary', 'segment']:
             if height is None or width is None:
-                raise Exception('Item must have height and width to convert to coco')
+                raise Exception(
+                    'Item must have height and width to convert {} annotation to coco'.format(annotation.type))
 
         # build annotation
         if annotation.type in ['binary', 'box', 'segment']:

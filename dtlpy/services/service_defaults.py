@@ -1,6 +1,7 @@
 import os
 
-DATALOOP_PATH = os.environ['DATALOOP_PATH'] if 'DATALOOP_PATH' in os.environ else os.path.join(os.path.expanduser('~'), '.dataloop')
+DATALOOP_PATH = os.environ['DATALOOP_PATH'] if 'DATALOOP_PATH' in os.environ \
+    else os.path.join(os.path.expanduser('~'), '.dataloop')
 DEFAULT_ENVIRONMENT = 'https://gate.dataloop.ai/api/v1'
 DEFAULT_ENVIRONMENTS = {
     'https://dev-gate.dataloop.ai/api/v1':

@@ -48,6 +48,11 @@ class Recipe(entities.BaseEntity):
         :param is_fetched: is Entity fetched from Platform
         :return: Recipe object
         """
+        if project is not None:
+            if project.id not in _json.get('projectIds', None):
+                logger.warning('Recipe has been fetched from a project that is not belong to it')
+                project = None
+
         inst = cls(
             client_api=client_api,
             dataset=dataset,
@@ -104,12 +109,14 @@ class Recipe(entities.BaseEntity):
 
     @property
     def dataset(self):
-        assert isinstance(self._dataset, entities.Dataset)
+        if self._dataset is not None:
+            assert isinstance(self._dataset, entities.Dataset)
         return self._dataset
 
     @property
     def project(self):
-        assert isinstance(self._project, entities.Project)
+        if self._project is not None:
+            assert isinstance(self._project, entities.Project)
         return self._project
 
     @property

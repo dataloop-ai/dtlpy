@@ -39,7 +39,7 @@ def step_impl(context):
                 function_name = param[1]
 
     params_temp = {'name': name, 'filters': filters, 'resource': resource, 'actions': actions, 'active': active,
-              'execution_mode': execution_mode, 'function_name': function_name, 'service_id': context.service.id}
+                   'execution_mode': execution_mode, 'function_name': function_name, 'service_id': context.service.id}
 
     params = {k: v for k, v in params_temp.items() if v is not None}
 
@@ -97,7 +97,7 @@ def step_impl(context, function_name, package_path):
 
     function_io = context.dl.FunctionIO(name='item', type=context.dl.PackageInputType.ITEM)
     function = context.dl.PackageFunction(name=function_name, inputs=function_io)
-    module = context.dl.PackageModule(name='default_module', functions=function, entry_point='main.py')
+    module = context.dl.PackageModule(name='default_module', functions=[function], entry_point='main.py')
 
     context.package = context.project.packages.push(src_path=package_path,
                                                     package_name=package_name,

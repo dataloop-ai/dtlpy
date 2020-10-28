@@ -6,7 +6,9 @@ import os
 import time
 import json
 import logging
+import random
 from .service_defaults import DATALOOP_PATH
+
 logger = logging.getLogger(name=__name__)
 
 NUM_TRIES = 3
@@ -74,10 +76,10 @@ class CookieIO:
                     with open(self.COOKIE, 'r') as fp:
                         cfg = json.load(fp)
                     break
-                except ValueError:
+                except Exception:
                     if i == (NUM_TRIES - 1):
                         raise
-                    time.sleep(0.1)
+                    time.sleep(random.random())
                     continue
         return cfg
 

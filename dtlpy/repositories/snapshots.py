@@ -64,6 +64,7 @@ class Snapshots:
                         ' Please use model.snapshots or set a model')
         assert isinstance(self._model, entities.Model)
         return self._model
+
     ###########
     # methods #
     ###########

@@ -29,9 +29,10 @@ class AsyncThreadEventLoop(threading.Thread):
 
     def run(self):
         logger.debug('Starting event loop "{}" with bounded semaphore to {}'.format(self.name, self.n))
-        
+
         def exception_handler(loop, context):
-            logger.debug("[Asyc] EventLoop: {} caught the following exception: {}".format(self.name, context['message']))
+            logger.debug(
+                "[Asyc] EventLoop: {} caught the following exception: {}".format(self.name, context['message']))
 
         self.loop.set_exception_handler(exception_handler)
         asyncio.set_event_loop(self.loop)
@@ -97,10 +98,15 @@ class AsyncResponseError(AsyncResponse):
 
 
 class AsyncUploadStream(io.IOBase):
-    def __init__(self, buffer, callback=None):
+    def __init__(self, buffer, callback=None, name=''):
         self.buffer = buffer
         self.buffer.seek(0)
         self.callback = callback
+        self._name = name
+
+    @property
+    def name(self):
+        return self._name
 
     def read(self, size):
         if self.callback is not None:

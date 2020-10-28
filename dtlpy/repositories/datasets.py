@@ -87,7 +87,7 @@ class Datasets:
         if dataset is None:
             dataset = self.get(dataset_id=dataset_id, dataset_name=dataset_name)
         self._client_api._open_in_web(resource_type='dataset',
-                                      project_id=dataset.project.id, # need to get the project otherwise will fail
+                                      project_id=dataset.project.id,  # need to get the project otherwise will fail
                                       dataset_id=dataset.id)
 
     def checkout(self, identifier=None, dataset_name=None, dataset_id=None, dataset=None):

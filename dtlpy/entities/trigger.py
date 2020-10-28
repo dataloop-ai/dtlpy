@@ -1,9 +1,11 @@
 import attr
 import traceback
+import logging
 from collections import namedtuple
 
 from .. import entities, services, exceptions, repositories
 
+logger = logging.getLogger(name=__name__)
 
 class TriggerResource:
     ITEM = "Item"
@@ -111,6 +113,15 @@ class BaseTrigger(entities.BaseEntity):
 
     @classmethod
     def from_json(cls, _json, client_api, project, service=None):
+        if project is not None:
+            if project.id != _json.get('projectId', None):
+                logger.warning('Trigger has been fetched from a project that is not belong to it')
+                project = None
+
+        if service is not None:
+            if service.id != _json.get('serviceId', None):
+                logger.warning('Trigger has been fetched from a service that is not belong to it')
+                service = None
 
         trigger_type = _json.get('type', None)
 
@@ -237,11 +248,6 @@ class Trigger(BaseTrigger):
 
     @classmethod
     def from_json(cls, _json, client_api, project, service=None):
-        project_id = _json.get('projectId', None)
-        if project_id is not None and project is not None:
-            if project_id != project.id:
-                project = None
-
         spec = _json.get('spec', dict())
         operation = spec.get('operation', dict())
 
@@ -263,7 +269,7 @@ class Trigger(BaseTrigger):
             name=_json.get('name', None),
             url=_json.get('url', None),
             service_id=service_id,
-            project_id=project_id,
+            project_id=_json.get('projectId', None),
             webhook_id=webhook_id,
             client_api=client_api,
             filters=spec.get('filter', dict()),

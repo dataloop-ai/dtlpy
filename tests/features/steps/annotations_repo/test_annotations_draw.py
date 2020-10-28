@@ -12,7 +12,7 @@ def step_impl(context, annotation_format, im_path):
     context.item = context.item.update()
     annotation_collection = context.item.annotations.list()
     # sort to avoid test fail on order of drawing
-    annotation_collection.annotations = sorted(annotation_collection.annotations, key=lambda x: x.hash)
+    annotation_collection.annotations = sorted(annotation_collection.annotations, key=lambda x: x.top)
 
     context.mask = annotation_collection.show(height=768,
                                               width=1536,

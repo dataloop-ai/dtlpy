@@ -330,13 +330,13 @@ class Downloader:
         :return:
         """
 
-        def download_single_chunk(w_filepath, w_url, remote_path=None):
+        def download_single_chunk(w_filepath, w_url, w_remote_path=None):
             try:
                 # remove heading of the url
-                if remote_path is None:
+                if w_remote_path is None:
                     w_url = w_url[w_url.find('/dataset'):]
                 else:
-                    w_url = '/datasets/{}/annotations/zip?directory={}'.format(dataset.id, remote_path)
+                    w_url = '/datasets/{}/annotations/zip?directory={}'.format(dataset.id, w_remote_path)
                 # get zip from platform
                 success, response = dataset._client_api.gen_request(req_type="get",
                                                                     path=w_url,
@@ -385,7 +385,9 @@ class Downloader:
             _ = [j.wait() for j in jobs]
         else:
             zip_filepath = os.path.join(local_path, "annotations_{}.zip".format(remote_path.split('/')[-1]))
-            download_single_chunk(w_url=None, w_filepath=zip_filepath, remote_path=remote_path)
+            download_single_chunk(w_url=None,
+                                  w_filepath=zip_filepath,
+                                  w_remote_path=remote_path)
 
     @staticmethod
     def _download_img_annotations(item: entities.Item,

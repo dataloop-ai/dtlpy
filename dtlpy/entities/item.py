@@ -82,6 +82,11 @@ class Item(entities.BaseEntity):
         :param is_fetched: is Entity fetched from Platform
         :return: Item object
         """
+        if dataset is not None:
+            if dataset.id != _json.get('datasetId', None):
+                logger.warning('Item has been fetched from a dataset that is not belong to it')
+                dataset = None
+
         metadata = _json.get('metadata', dict())
         inst = cls(
             # sdk
@@ -319,19 +324,21 @@ class Item(entities.BaseEntity):
     def move(self, new_path):
         """
         Move item from one folder to another in Platform
-        :param new_path: new path to move item to. Format: /main_folder/sub_folder/.../item_name.type
-        :return: True
+        If the directory doesn't exist it will be created
+        :param new_path: new full path to move item to.
+        :return: True if update successfully
         """
         assert isinstance(new_path, str)
         if not new_path.startswith('/'):
             new_path = '/' + new_path
-        if '.' in new_path:
-            if len(new_path.split('.')) > 2:
-                raise exceptions.PlatformException('400', 'Remote path cannot include dots')
-            else:
-                self.filename = new_path
+        if new_path.endswith('/'):
+            self.filename = new_path + self.name
         else:
-            self.filename = new_path + '/' + self.name
+            try:
+                self.items.get(filepath=new_path, is_dir=True)
+                self.filename = new_path + '/' + self.name
+            except exceptions.NotFound:
+                self.filename = new_path
 
         return self.update(system_metadata=True)
 
@@ -369,8 +376,8 @@ class Item(entities.BaseEntity):
     def update_status(self, status):
         if status not in ['completed', 'approved', 'discarded']:
             raise exceptions.PlatformException('400',
-                                               'Unknown status: {}. Please chose from: completed, approved, discarded'.format(
-                                                   status))
+                                               'Unknown status: {}. Please chose from: completed, approved, discarded'
+                                               .format(status))
         try:
             annotation_definition = entities.Classification(label=status)
             entities.Annotation.new(item=self,

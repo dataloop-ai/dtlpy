@@ -2,16 +2,15 @@ import dictdiffer
 import logging
 
 logger = logging.getLogger(name=__name__)
+TYPE = 0
+FIELD = 1
+LIST = 2
 
 
-# noinspection PyPep8Naming
 class DictDiffer:
 
     @staticmethod
     def diff(origin, modified):
-        TYPE = 0
-        FIELD = 1
-        LIST = 2
 
         diffs = dict()
         dict_diff = list(dictdiffer.diff(origin, modified))
