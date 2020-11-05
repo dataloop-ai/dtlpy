@@ -3,3 +3,13 @@ import dtlpy as dl
 #get project object
 project = dl.projects.get(project_id='{{projectId}}')
 {{/projectId}}
+
+{{#datasetId}}
+#get project object
+dataset = project.datasets.get(dataset_id='{{datasetId}}')
+{{/datasetId}}
+
+{{#itemId}}
+#get project object
+item = dataset.items.get(item_id='{{itemId}}')
+{{/itemId}}
