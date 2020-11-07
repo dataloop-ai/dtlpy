@@ -9,6 +9,19 @@ project = dl.projects.get(project_id='{{projectId}}')
 dataset = project.datasets.get(dataset_id='{{datasetId}}')
 {{/datasetId}}
 
+{{#recipeId}}
+#get recipe object
+recipe = dataset.recipes.get(recipe_id='{{recipeId}}')
+{{#ontologyId}}
+#get ontology object
+ontology = recipe.ontologies.get(ontology_id='{{ontologyId}}')
+#get label
+childLabel = ontology.labels[x].children[y].children[z]
+{{/ontologyId}}
+
+{{/recipeId}}
+
+
 {{#itemId}}
 #get item object
 item = dataset.items.get(item_id='{{itemId}}')
