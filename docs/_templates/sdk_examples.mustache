@@ -12,4 +12,25 @@ dataset = project.datasets.get(dataset_id='{{datasetId}}')
 {{#itemId}}
 #get item object
 item = dataset.items.get(item_id='{{itemId}}')
+#metadata update
+item.metadata['user'] = dict()
+item.metadata['user']['MyKey'] = 'MyValue'
+#item.update()
 {{/itemId}}
+
+{{#taskId}}
+#get task object
+task=project.tasks.get(task_id='myTaskId')
+assignedItems=task.assignments.list()
+{{#itemId}}
+# Mark single item as completed
+#item.update_status(status=dl.ItemStatus.COMPLETED)
+{{/itemId}}
+{{/taskId}}
+
+{{#assignmentId}}
+# Get assignemnt
+task.assignments.get(assignment_id='{{assignmentId}}')
+#get assingment items 
+items_list=assignment.get_items()
+{{/assignmentId}}
