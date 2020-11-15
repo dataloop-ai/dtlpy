@@ -48,8 +48,9 @@ class Recipe(entities.BaseEntity):
         :param is_fetched: is Entity fetched from Platform
         :return: Recipe object
         """
-        if project is not None:
-            if project.id not in _json.get('projectIds', None):
+        project_ids = _json.get('projectIds', None)
+        if project is not None and project_ids is not None:
+            if project.id not in project_ids:
                 logger.warning('Recipe has been fetched from a project that is not belong to it')
                 project = None
 
@@ -61,7 +62,7 @@ class Recipe(entities.BaseEntity):
             creator=_json.get('creator', None),
             url=_json.get('url', None),
             title=_json.get('title', None),
-            project_ids=_json.get('projectIds', None),
+            project_ids=project_ids,
             description=_json.get('description', None),
             ontologyIds=_json.get('ontologyIds', None),
             instructions=_json.get('instructions', None),

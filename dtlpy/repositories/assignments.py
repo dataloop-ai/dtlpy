@@ -181,6 +181,8 @@ class Assignments:
 
         :return: True
         """
+        # TODO - deprecate
+        logger.warning('[DeprecationWarning] delete()" method will be deprecated after version 1.22.0\n')
         if assignment_id is None:
             if assignment is None:
                 if assignment_name is None:
@@ -308,16 +310,17 @@ class Assignments:
         :param assignment_name:
         :return: Assignment object
         """
+        # TODO - deprecate
         if assignment_name:
-            logger.warning('DEPRECATED - Param {} will be deprecated after v1.17.0'.format(assignment_name))
+            logger.warning('[DeprecationWarning] Param {} will be deprecated after v1.22.0'.format(assignment_name))
         if dataset:
-            logger.warning('DEPRECATED - Param {} will be deprecated after v1.17.0'.format(dataset))
+            logger.warning('[DeprecationWarning] Param {} will be deprecated after v1.22.0'.format(dataset))
         if project_id:
-            logger.warning('DEPRECATED - Param {} will be deprecated after v1.17.0'.format(project_id))
+            logger.warning('[DeprecationWarning]  Param {} will be deprecated after v1.22.0'.format(project_id))
         if status:
-            logger.warning('DEPRECATED - Param {} will be deprecated after v1.17.0'.format(status))
+            logger.warning('[DeprecationWarning] Param {} will be deprecated after v1.22.0'.format(status))
         if metadata:
-            logger.warning('DEPRECATED - Param {} will be deprecated after v1.17.0'.format(metadata))
+            logger.warning('[DeprecationWarning] Param {} will be deprecated after v1.22.0'.format(metadata))
 
         return self._create_in_task(assignee_id=assignee_id, task=task, filters=filters, items=items)
 
@@ -379,6 +382,8 @@ class Assignments:
         :param items:
         :return:
         """
+        # TODO - deprecate
+        logger.warning('[DeprecationWarning] "remove_items()" method will be deprecated after version 1.22.0\n')
         return self.__item_operations(dataset=dataset, assignment_id=assignment_id, filters=filters, items=items,
                                       op='create', assignment_name=assignment_name)
 
@@ -393,6 +398,8 @@ class Assignments:
         :param items:
         :return:
         """
+        # TODO - deprecate
+        logger.warning('[DeprecationWarning] "remove_items()" method will be deprecated after version 1.22.0\n')
         return self.__item_operations(dataset=dataset, assignment_id=assignment_id, filters=filters, items=items,
                                       op='delete', assignment_name=assignment_name)
 

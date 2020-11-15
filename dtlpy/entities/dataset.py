@@ -93,8 +93,9 @@ class Dataset(entities.BaseEntity):
         :param client_api: client_api
         :return: Dataset object
         """
-        if project is not None:
-            if project.id not in _json.get('projects', None):
+        projects = _json.get('projects', None)
+        if project is not None and projects is not None:
+            if project.id not in projects:
                 logger.warning('Dataset has been fetched from a project that is not in it projects list')
                 project = None
 
@@ -105,7 +106,7 @@ class Dataset(entities.BaseEntity):
                    created_at=_json.get('createdAt', None),
                    itemsCount=_json.get('itemsCount', None),
                    annotated=_json.get('annotated', None),
-                   projects=_json.get('projects', None),
+                   projects=projects,
                    creator=_json.get('creator', None),
                    items_url=_json.get('items', None),
                    export=_json.get('export', None),

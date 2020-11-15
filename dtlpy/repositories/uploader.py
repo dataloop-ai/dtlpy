@@ -59,7 +59,6 @@ class Uploader:
             remote_path=None,
             remote_name=None,
             file_types=None,
-            num_workers=None,
             overwrite=False,
             item_metadata=None
     ):
@@ -74,7 +73,6 @@ class Uploader:
         :param remote_path: remote path to save.
         :param remote_name: remote base name to save.
         :param file_types: list of file type to upload. e.g ['.jpg', '.png']. default is all
-        :param num_workers: NOT USED deprecated
         :param item_metadata: upload the items with the metadata dictionary
         :return: Output (list)
         """
@@ -84,11 +82,6 @@ class Uploader:
         mode = 'skip'
         if overwrite:
             mode = 'overwrite'
-        if num_workers is not None:
-            logger.warning('[DeprecationWarning] input argument "num_workers"'
-                           ' will be deprecated from upload() after version 1.17.0\n'
-                           'To set number of processes use "dtlpy.client_api.num_processes=int()"')
-            self.items_repository._client_api.num_processes = num_workers
 
         if isinstance(local_path, pandas.DataFrame):
             elements = self._build_elements_from_df(local_path)

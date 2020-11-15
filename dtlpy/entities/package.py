@@ -1,5 +1,6 @@
 import os
 from collections import namedtuple
+from typing import Union
 import logging
 import traceback
 import attr
@@ -8,6 +9,69 @@ import json
 from .. import repositories, entities, exceptions, services
 
 logger = logging.getLogger(name=__name__)
+
+
+class PackageCodebaseType:
+    ITEM = 'item'
+    GIT = 'git'
+
+
+class PackageCodebase:
+    def __init__(self, package_codebase_type=PackageCodebaseType.ITEM):
+        self.type = package_codebase_type
+
+    def to_json(self):
+        _json = {'type': self.type}
+        return _json
+
+    @staticmethod
+    def from_json(_json: dict):
+        if _json['type'] == PackageCodebaseType.GIT:
+            return GitCodebase.from_json(_json=_json)
+        elif _json['type'] == PackageCodebaseType.ITEM:
+            return ItemCodebase.from_json(_json=_json)
+        else:
+            raise ValueError('Unknown codebase type: {}'.format(_json['type']))
+
+
+class GitCodebase(PackageCodebase):
+    def __init__(self, git_url: str, git_commit: str, git_tag: str = None):
+        super().__init__(package_codebase_type=PackageCodebaseType.GIT)
+        self.git_url = git_url
+        self.git_commit = git_commit
+        self.git_tag = git_tag
+
+    def to_json(self):
+        _json = super().to_json()
+        _json['gitUrl'] = self.git_url
+        _json['gitCommit'] = self.git_commit
+        _json['gitTag'] = self.git_tag
+        return _json
+
+    @classmethod
+    def from_json(cls, _json: dict):
+        return cls(
+            git_url=_json.get('gitUrl'),
+            git_commit=_json.get('gitCommit'),
+            git_tag=_json.get('gitTag', None)
+        )
+
+
+class ItemCodebase(PackageCodebase):
+    def __init__(self, codebase_id: str):
+        super().__init__()
+        self.codebase_id = codebase_id
+
+    def to_json(self) -> dict:
+        _json = super().to_json()
+        _json['itemId'] = self.codebase_id
+        return _json
+
+    @classmethod
+    def from_json(cls, _json: dict):
+        return cls(
+            codebase_id=_json['itemId']
+        )
 
 
 @attr.s
@@ -22,7 +86,8 @@ class Package(entities.BaseEntity):
     createdAt = attr.ib()
     updatedAt = attr.ib(repr=False)
     name = attr.ib()
-    codebase_id = attr.ib()
+    _codebase_id = attr.ib()
+    codebase = attr.ib()
     _modules = attr.ib()
     ui_hooks = attr.ib()
     creator = attr.ib()
@@ -40,6 +105,13 @@ class Package(entities.BaseEntity):
     @property
     def modules(self):
         return self._modules
+
+    @property
+    def codebase_id(self):
+        if self.codebase is not None and self.codebase.type == PackageCodebaseType.ITEM:
+            return self.codebase.codebase_id
+        else:
+            return self._codebase_id
 
     @modules.setter
     def modules(self, modules: list):
@@ -89,9 +161,12 @@ class Package(entities.BaseEntity):
                 project = None
 
         modules = [entities.PackageModule.from_json(_module) for _module in _json.get('modules', list())]
+        codebase = PackageCodebase.from_json(_json=_json['codebase']) if 'codebase' in _json else None
+
         inst = cls(
             project_id=_json.get('projectId', None),
             codebase_id=_json.get('codebaseId', None),
+            codebase=codebase,
             createdAt=_json.get('createdAt', None),
             updatedAt=_json.get('updatedAt', None),
             version=_json.get('version', None),
@@ -119,28 +194,37 @@ class Package(entities.BaseEntity):
                                                         attr.fields(Package)._repositories,
                                                         attr.fields(Package)._client_api,
                                                         attr.fields(Package)._revisions,
-                                                        attr.fields(Package).codebase_id,
+                                                        attr.fields(Package)._codebase_id,
                                                         attr.fields(Package).project_id,
                                                         attr.fields(Package)._modules,
                                                         attr.fields(Package).is_global,
                                                         attr.fields(Package).ui_hooks,
+                                                        attr.fields(Package).codebase,
                                                         ))
 
         modules = self.modules
+
         # check in inputs is a list
         if not isinstance(modules, list):
             modules = [modules]
+
         # if is dtlpy entity convert to dict
         if modules and isinstance(modules[0], entities.PackageModule):
             modules = [module.to_json() for module in modules]
 
         _json['projectId'] = self.project_id
-        _json['codebaseId'] = self.codebase_id
+
+        if self._codebase_id is not None:
+            _json['codebaseId'] = self._codebase_id
+
         if self.is_global is not None:
             _json['global'] = self.is_global
         _json['modules'] = modules
+        if self.codebase is not None:
+            _json['codebase'] = self.codebase.to_json()
         if self.ui_hooks is not None:
             _json['uiHooks'] = self.ui_hooks
+
         return _json
 
     ############
@@ -201,7 +285,7 @@ class Package(entities.BaseEntity):
     def git_status(self):
         status = 'Git status unavailable'
         try:
-            codebase = self.project.codebases.get(codebase_id=self.codebase_id, version=self.version - 1)
+            codebase = self.project.codebases.get(codebase_id=self.codebase_id)
             if 'git' in codebase.metadata:
                 status = codebase.metadata['git'].get('status', status)
         except Exception:
@@ -212,7 +296,7 @@ class Package(entities.BaseEntity):
     def git_log(self):
         log = 'Git log unavailable'
         try:
-            codebase = self.project.codebases.get(codebase_id=self.codebase_id, version=self.version - 1)
+            codebase = self.project.codebases.get(codebase_id=self.codebase_id)
             if 'git' in codebase.metadata:
                 log = codebase.metadata['git'].get('log', log)
         except Exception:
@@ -230,7 +314,8 @@ class Package(entities.BaseEntity):
         """
         return self.packages.update(package=self)
 
-    def deploy(self, service_name=None,
+    def deploy(self,
+               service_name=None,
                revision=None,
                init_input=None,
                runtime=None,
@@ -244,10 +329,12 @@ class Package(entities.BaseEntity):
                execution_timeout=None,
                drain_time=None,
                on_reset=None,
+               max_attempts=None,
                **kwargs):
         """
         Deploy package
 
+        :param max_attempts: Maximum execution retries in-case of a service reset
         :param on_reset:
         :param drain_time:
         :param execution_timeout:
@@ -280,6 +367,7 @@ class Package(entities.BaseEntity):
                                             execution_timeout=execution_timeout,
                                             drain_time=drain_time,
                                             on_reset=on_reset,
+                                            max_attempts=max_attempts,
                                             jwt_forward=kwargs.get('jwt_forward', None),
                                             is_global=kwargs.get('is_global', None))
 
@@ -299,24 +387,36 @@ class Package(entities.BaseEntity):
         """
         return self.packages.delete(package=self)
 
-    def push(self, codebase_id=None, src_path=None, package_name=None, modules=None, checkout=False):
+    def push(self,
+             codebase_id: str = None,
+             codebase: Union[GitCodebase, ItemCodebase] = None,
+             src_path: str = None,
+             package_name: str = None,
+             modules: list = None,
+             checkout: bool = False,
+             revision_increment: str = None
+             ):
         """
          Push local package
 
-        :param checkout:
-        :param codebase_id:
-        :param src_path:
-        :param package_name:
-        :param modules:
+        :param codebase: PackageCode object - defines how to store the package code
+        :param checkout: save package to local checkout
+        :param codebase_id: ItemCodebase id - if codebase is stored as an item
+        :param src_path: location of pacjage codebase folder to zip
+        :param package_name: name of package
+        :param modules: list of PackageModule
+        :param revision_increment: optional - str - version bumping method - major/minor/patch - default = None
         :return:
         """
-        if modules is None:
-            modules = self.modules
-        return self.project.packages.push(package_name=package_name if package_name is not None else self.name,
-                                          codebase_id=codebase_id,
-                                          src_path=src_path,
-                                          modules=modules,
-                                          checkout=checkout)
+        return self.project.packages.push(
+            codebase_id=codebase_id if codebase_id is not None else self.codebase_id,
+            package_name=package_name if package_name is not None else self.name,
+            codebase=codebase if codebase is not None else self.codebase,
+            modules=modules if modules is not None else self.modules,
+            revision_increment=revision_increment,
+            src_path=src_path,
+            checkout=checkout
+        )
 
     def pull(self, version=None, local_path=None):
         """

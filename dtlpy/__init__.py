@@ -17,7 +17,7 @@ import logging
 import sys
 import os
 
-from .services import DataloopLogger, ApiClient, check_sdk, Reporter
+from .services import DataloopLogger, ApiClient, check_sdk, Reporter, VerboseLoggingLevel
 from .exceptions import PlatformException
 from . import repositories, exceptions, entities, examples
 from .__version__ import version as __version__
@@ -26,6 +26,9 @@ from .entities import (
     Point,
     Note,
     Segmentation,
+    GitCodebase,
+    ItemCodebase,
+    PackageCodebaseType,
     Polygon,
     Project,
     Dataset,
@@ -33,6 +36,7 @@ from .entities import (
     Classification,
     Subtitle,
     Polyline,
+    Pose,
     Description,
     Filters,
     Webhook, HttpMethod,
@@ -92,7 +96,7 @@ if len(logger.handlers) == 0:
     log_filepath = DataloopLogger.get_log_filepath()
     # set file handler to save all logs to file
     formatter = logging.Formatter(
-        fmt="%(asctime)s.%(msecs)03d [%(levelname)s]-[%(threadName)s]-[v"+__version__+"]%(name)s: %(message)s",
+        fmt="%(asctime)s.%(msecs)03d [%(levelname)s]-[%(threadName)s]-[v" + __version__ + "]%(name)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
     fh = DataloopLogger(log_filepath, maxBytes=(1048 * 1000 * 5))

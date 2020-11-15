@@ -108,51 +108,6 @@ class Filters:
         self.recursive = True
         self._nullify_refs()
 
-    @property
-    def show_dirs(self):
-        logger.warning('[DeprecationWarning] This attribute will be deprecated after version 1.17.0\n'
-                       'To get directories please use filters.add(field="type", values="dir")')
-        show_dirs = True
-
-        if self.resource == FiltersResource.ITEM:
-            for single_filter in self.and_filter_list:
-                if single_filter.field == 'type':
-                    show_dirs = single_filter.values == 'dir'
-
-        return show_dirs
-
-    @show_dirs.setter
-    def show_dirs(self, val):
-        logger.warning('[DeprecationWarning] This attribute will be deprecated after version 1.17.0\n'
-                       'To get directories please use filters.add(field="type", values="dir")')
-        if self.resource == FiltersResource.ITEM:
-            if val:
-                self.pop(field='type')
-            else:
-                self.add(field="type", values='file', method='and')
-
-    @property
-    def show_hidden(self):
-        logger.warning('[DeprecationWarning] This attribute will be deprecated after version 1.17.0\n'
-                       'To get hidden files please use filters.add(field="hidden", values=True)')
-
-        show_hidden = True
-
-        if self.resource == FiltersResource.ITEM:
-            for single_filter in self.and_filter_list:
-                if single_filter.field == 'hidden':
-                    show_hidden = single_filter.values is True
-
-        return show_hidden
-
-    @show_hidden.setter
-    def show_hidden(self, val):
-        logger.warning('[DeprecationWarning] This attribute will be deprecated after version 1.17.0\n'
-                       'To get hidden files please use filters.add(field="hidden", values=True)')
-
-        if self.resource == FiltersResource.ITEM:
-            self.add(field="hidden", values=val, method='and')
-
     def _nullify_refs(self):
         self._ref_task = False
         self._ref_assignment = False

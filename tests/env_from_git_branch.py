@@ -17,5 +17,4 @@ def get_env_from_git_branch():
         env_name = 'prod'
     else:
         print('unknown git branch. default is "dev"')
-    print('Environment is: {}'.format(env_name))
     return env_name

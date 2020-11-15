@@ -32,9 +32,9 @@ from .filters import Filters, FiltersKnownFields, FiltersResource, FiltersOperat
 from .recipe import Recipe
 from .ontology import Ontology
 from .annotation_definitions import Box, Point, Segmentation, Polygon, Ellipse, Classification, Subtitle, \
-    Polyline, Comparison, UndefinedAnnotationType, Note, Description
+    Polyline, Comparison, UndefinedAnnotationType, Note, Description, Pose
 from .label import Label
-from .package import Package
+from .package import Package, PackageCodebase, PackageCodebaseType, ItemCodebase, GitCodebase
 from .package_module import PackageModule
 from .package_function import PackageFunction, FunctionIO, PackageInputType, FunctionPostAction, \
     FunctionPostActionType, FunctionDisplayScope, FunctionDisplayScopeResource

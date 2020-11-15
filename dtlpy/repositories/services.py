@@ -333,7 +333,7 @@ class Services:
     def _create(self, service_name=None, package=None, module_name=None, bot=None, revision=None, init_input=None,
                 runtime=None, pod_type=None, project_id=None, sdk_version=None, agent_versions=None, verify=True,
                 driver_id=None, run_execution_as_process=None, execution_timeout=None, drain_time=None, on_reset=None,
-                **kwargs) -> entities.Service:
+                max_attempts=None, **kwargs) -> entities.Service:
         """
         Create service entity
         :param verify:
@@ -384,18 +384,17 @@ class Services:
             service_name = 'default-service'
 
         # payload
-        payload = {'name': service_name,
-                   'projectId': project_id,
-                   'packageId': package.id,
-                   'initParams': self._parse_init_input(init_input=init_input),
-                   'botUserName': self._get_bot_email(bot=bot),
-                   'versions': agent_versions,
-                   'moduleName': module_name,
-                   'driverId': driver_id}
-
-        # revision
-        if isinstance(revision, int):
-            payload['packageRevision'] = revision
+        payload = {
+            'name': service_name,
+            'projectId': project_id,
+            'packageId': package.id,
+            'initParams': self._parse_init_input(init_input=init_input),
+            'botUserName': self._get_bot_email(bot=bot),
+            'versions': agent_versions,
+            'moduleName': module_name,
+            'packageRevision': revision if revision is not None else package.version,
+            'driverId': driver_id
+        }
 
         if runtime is not None:
             if isinstance(runtime, entities.KubernetesRuntime):
@@ -418,6 +417,9 @@ class Services:
 
         if is_global is not None:
             payload['global'] = is_global
+
+        if max_attempts is not None:
+            payload['maxAttempts'] = max_attempts
 
         if jwt_forward is not None:
             payload['useUserJwt'] = jwt_forward
@@ -623,7 +625,7 @@ class Services:
                service_name: str = None,
                package: entities.Package = None,
                bot: Union[entities.Bot, str] = None,
-               revision: int = None,
+               revision: str or int = None,
                init_input: Union[List[entities.FunctionIO], entities.FunctionIO, dict] = None,
                runtime: Union[entities.KubernetesRuntime, dict] = None,
                pod_type: str = None,
@@ -638,11 +640,13 @@ class Services:
                run_execution_as_process: bool = None,
                execution_timeout: int = None,
                drain_time: int = None,
+               max_attempts: int = None,
                on_reset: str = None,
                **kwargs) -> entities.Service:
         """
         Deploy service
 
+        :param max_attempts: Maximum execution retries in-case of a service reset
         :param on_reset:
         :param drain_time:
         :param execution_timeout:
@@ -671,6 +675,11 @@ class Services:
             else:
                 service_name = 'default-service'
             logger.warning('service_name not provided, using: {} by default'.format(service_name))
+
+        if isinstance(revision, int):
+            logger.warning('Deprecation Warning - Package/service versions have been refactored'
+                           'The version you provided has type: int, it will be converted to: 1.0.{}'
+                           'Next time use a 3-level semver for package/service versions'.format(revision))
 
         if func is not None:
             return self.__deploy_function(name=service_name, project=self._project, func=func)
@@ -737,6 +746,7 @@ class Services:
                                    run_execution_as_process=run_execution_as_process,
                                    execution_timeout=execution_timeout,
                                    drain_time=drain_time,
+                                   max_attempts=max_attempts,
                                    on_reset=on_reset)
         if checkout:
             self.checkout(service=service)
@@ -785,13 +795,13 @@ class Services:
                                                                method_func_string.replace('\n', '\n    ')))
 
         function = entities.PackageFunction(name=func.__name__, inputs=self.__get_inputs(func=func))
-        module = entities.PackageModule(functions=function,
+        module = entities.PackageModule(functions=[function],
                                         entry_point=entities.package_defaults.DEFAULT_PACKAGE_ENTRY_POINT)
         packages = repositories.Packages(client_api=self._client_api, project=project)
         return packages.push(src_path=package_dir,
                              package_name=name,
                              checkout=True,
-                             modules=module).deploy(service_name=name)
+                             modules=[module]).deploy(service_name=name)
 
     def deploy_from_local_folder(self, cwd=None, service_file=None, bot=None, checkout=False) -> entities.Service:
         """
@@ -839,6 +849,7 @@ class Services:
         execution_timeout = service_json.get('execution_timeout', None)
         drain_time = service_json.get('drain_time', None)
         on_reset = service_json.get('on_reset', None)
+        max_attempts = service_json.get('maxAttempts', None)
 
         service = self.deploy(bot=bot,
                               service_name=name,
@@ -853,6 +864,7 @@ class Services:
                               run_execution_as_process=run_execution_as_process,
                               execution_timeout=execution_timeout,
                               drain_time=drain_time,
+                              max_attempts=max_attempts,
                               on_reset=on_reset,
                               module_name=module_name)
 
@@ -935,6 +947,7 @@ class Services:
             run_execution_as_process = service_json.get('run_execution_as_process', None)
             execution_timeout = service_json.get('execution_timeout', None)
             drain_time = service_json.get('drain_time', None)
+            max_attempts = service_json.get('maxAttempts', None)
             on_reset = service_json.get('on_reset', None)
             # create or update service
             if service_input['name'] in project_services:
@@ -945,6 +958,7 @@ class Services:
                 service.version = sdk_version
                 service.versions = agent_versions
                 service.verify = verify
+                service.max_attempts = max_attempts
                 service.driver_id = driver_id
                 project_services[service.name] = service
 
@@ -956,6 +970,7 @@ class Services:
                                        init_input=init_input,
                                        agent_versions=agent_versions,
                                        sdk_version=sdk_version,
+                                       max_attempts=max_attempts,
                                        verify=verify,
                                        module_name=module_name,
                                        run_execution_as_process=run_execution_as_process,

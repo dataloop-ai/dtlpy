@@ -37,7 +37,6 @@ class Downloader:
                  file_types=None,
                  save_locally=True,
                  to_array=False,
-                 num_workers=None,  # deprecated
                  overwrite=False,
                  annotation_options=None,
                  to_items_folder=True,
@@ -58,7 +57,6 @@ class Downloader:
         :param local_path: local folder or filename to save to.
         :param to_array: returns Ndarray when True and local_path = False
         :param file_types: a list of file type to download. e.g ['video/webm', 'video/mp4', 'image/jpeg', 'image/png']
-        :param num_workers: default - 32
         :param save_locally: bool. save to disk or return a buffer
         :param annotation_options: download annotations options. options: dl.ViewAnnotationOptions.list()
         :param to_items_folder: Create 'items' folder and download items to it
@@ -83,11 +81,6 @@ class Downloader:
                         error='400',
                         message='Unknown annotation download option: {}, please chose from: {}'.format(
                             ann_option, entities.ViewAnnotationOptions.list()))
-        if num_workers is not None:
-            logger.warning('[DeprecationWarning] input argument "num_workers"'
-                           ' will be deprecated from download() after version 1.17.0\n'
-                           'To set number of processes use "dtlpy.client_api.num_processes=int()"')
-            self.items_repository._client_api.num_processes = num_workers
         ##############
         # local path #
         ##############
@@ -563,7 +556,9 @@ class Downloader:
         response = None
         if need_to_download:
             if not is_url:
+                headers = {'x-dl-sanitize': '0'}
                 result, response = self.items_repository._client_api.gen_request(req_type="get",
+                                                                                 headers=headers,
                                                                                  path="/items/{}/stream".format(
                                                                                      item.id),
                                                                                  stream=True)

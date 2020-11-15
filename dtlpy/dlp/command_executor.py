@@ -206,8 +206,6 @@ class CommandExecutor:
 
         elif args.items == "upload":
             logger.info("Uploading directory...")
-            if isinstance(args.num_workers, str):
-                args.num_workers = int(args.num_workers)
             if isinstance(args.file_types, str):
                 args.file_types = [t.strip() for t in args.file_types.split(",")]
             project = self.dl.projects.get(project_name=args.project_name)
@@ -216,15 +214,12 @@ class CommandExecutor:
             dataset.items.upload(local_path=args.local_path,
                                  remote_path=args.remote_path,
                                  file_types=args.file_types,
-                                 num_workers=args.num_workers,
                                  overwrite=args.overwrite,
                                  local_annotations_path=args.local_annotations_path)
 
         elif args.items == "download":
             logger.info("Downloading dataset...")
 
-            if isinstance(args.num_workers, str):
-                args.num_workers = int(args.num_workers)
 
             project = self.dl.projects.get(project_name=args.project_name)
             dataset = project.datasets.get(dataset_name=args.dataset_name)
@@ -254,7 +249,6 @@ class CommandExecutor:
                                        local_path=args.local_path,
                                        annotation_options=annotation_options,
                                        overwrite=args.overwrite,
-                                       num_workers=args.num_workers,
                                        with_text=args.with_text,
                                        thickness=int(args.thickness),
                                        to_items_folder=not args.not_items_folder)
@@ -449,7 +443,8 @@ class CommandExecutor:
                                     package_name=args.package_name,
                                     checkout=True)
 
-            logger.info("Successfully pushed package to platform\nPackage id:{}\nPackage version:{}".format(package.id,package.version))
+            logger.info("Successfully pushed package to platform\nPackage id:{}\nPackage version:{}".format(package.id,
+                                                                                                            package.version))
 
         elif args.packages == "test":
             go_back = False
@@ -467,9 +462,11 @@ class CommandExecutor:
 
         elif args.packages == "deploy":
             services = self.utils.get_services_repo(args=args)
-            service = services.deploy_from_local_folder(bot=args.bot,
-                                                        service_file=args.service_file,
-                                                        checkout=True)
+            service = services.deploy_from_local_folder(
+                bot=args.bot,
+                service_file=args.service_file,
+                checkout=True
+            )
             logger.info("Successfully deployed the service: {}\nService id: {}".format(service.name, service.id))
 
         else:

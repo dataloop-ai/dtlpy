@@ -20,7 +20,7 @@ Feature: Cli Items
 
   Scenario: Items upload - maximum param given
         When I perform command:
-            |items|upload|-p|to-delete-test-<random>_cli_items_project|-d|test_<random>_cli_items_dataset|-l|<rel_path>/upload_batch/to_upload|-lap|<rel_path>/annotations_for_cli_upload|-nw|32|-f|.jpg,.png|-r|/items|-rp|
+            |items|upload|-p|to-delete-test-<random>_cli_items_project|-d|test_<random>_cli_items_dataset|-l|<rel_path>/upload_batch/to_upload|-lap|<rel_path>/annotations_for_cli_upload|-f|.jpg,.png|-r|/items|-rp|
         Then I succeed
 
     Scenario: Items upload - minimum param given
@@ -30,7 +30,7 @@ Feature: Cli Items
 
     Scenario: Items download - maximum param given
         When I perform command:
-            |items|download|-p|to-delete-test-<random>_cli_items_project|-d|test_<random>_cli_items_dataset|-l|<rel_path>/cli_dataset_download|-ao|mask,instance,json|-nw|32|-r|/**|-rp|-th|-1|-wt|
+            |items|download|-p|to-delete-test-<random>_cli_items_project|-d|test_<random>_cli_items_dataset|-l|<rel_path>/cli_dataset_download|-ao|mask,instance,json|-r|/**|-rp|-th|-1|-wt|
         Then I succeed
 
     Scenario: Items download - minimum param given

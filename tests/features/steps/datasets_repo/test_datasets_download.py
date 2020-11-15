@@ -11,7 +11,6 @@ def step_impl(context, local_path):
     context.dataset.items.download(filters=None,
                                    local_path=local_path,
                                    file_types=None,
-                                   num_workers=None,
                                    save_locally=True,
                                    annotation_options=['mask', 'instance', 'json'],
                                    with_text=False,

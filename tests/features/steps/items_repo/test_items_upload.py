@@ -59,7 +59,6 @@ def step_impl(context, item_local_path, download_path):
         local_path=download_path,
         file_types=None,
         save_locally=True,
-        num_workers=None,
         annotation_options=None,
         to_items_folder=False,
     )

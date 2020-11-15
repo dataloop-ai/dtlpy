@@ -25,10 +25,10 @@ class PackageModule(entities.BaseEntity):
 
     @_functions.validator
     def validate_functions(self, attribute, value: list):
-        if not self.unique_functions(value):
-            raise Exception('Cannot have 2 functions by the same name in one module.')
         if not isinstance(value, list):
             raise Exception('Module functions must be a list.')
+        if not self.unique_functions(value):
+            raise Exception('Cannot have 2 functions by the same name in one module.')
 
     @property
     def functions(self):

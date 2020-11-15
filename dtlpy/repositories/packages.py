@@ -6,6 +6,7 @@ import os
 from copy import deepcopy
 from shutil import copyfile
 from multiprocessing.pool import ThreadPool
+from typing import Union, List
 
 from .. import entities, repositories, exceptions, utilities, miscellaneous, assets, services
 
@@ -230,6 +231,11 @@ class Packages:
         :param local_path:
         :return:
         """
+        if isinstance(version, int):
+            logger.warning('Deprecation Warning - Package/service versions have been refactored'
+                           'The version you provided has type: int, it will be converted to: 1.0.{}'
+                           'Next time use a 3-level semver for package/service versions'.format(version))
+
         if self._project is None:
             if package is not None and package.project is not None:
                 self._project = package.project
@@ -263,21 +269,33 @@ class Packages:
 
         return local_path
 
-    def push(self, project=None, project_id=None,
-             package_name=None, src_path=None, codebase_id=None, modules=None, is_global=False,
-             checkout=False, ignore_sanity_check=False) -> entities.Package:
+    def push(self,
+             project: entities.Project = None,
+             project_id: str = None,
+             package_name: str = None,
+             src_path: str = None,
+             codebase_id: str = None,
+             codebase: Union[entities.GitCodebase, entities.ItemCodebase] = None,
+             modules: List[entities.PackageModule] = None,
+             is_global: bool = None,
+             checkout: bool = False,
+             revision_increment: str = None,
+             ignore_sanity_check: bool = False) -> entities.Package:
         """
         Push local package.
-        Project will be taken in the following hierarchy: project(input) -> project_id(input) -> self.project(context) -> checked out
+        Project will be taken in the following hierarchy:
+        project(input) -> project_id(input) -> self.project(context) -> checked out
 
+        :param codebase:
         :param ignore_sanity_check:
-        :param project: optional - project entity to deploy to. if None project will be taked from context or checked-out
-        :param project_id: optional - project id to deploy to. if None project will be taked from context or checked-out
+        :param project: optional - project entity to deploy to. default from context or checked-out
+        :param project_id: optional - project id to deploy to. default from context or checked-out
         :param package_name: package name
         :param checkout: checkout package to local dir
         :param codebase_id: id of the codebase item
         :param src_path: path to package codebase
         :param modules: list of modules PackageModules of the package
+        :param revision_increment: optional - str - version bumping method - major/minor/patch - default = None
         :param is_global:
         :return:
         """
@@ -299,11 +317,15 @@ class Packages:
             raise exceptions.PlatformException(
                 error='400',
                 message='Missing project from "packages.push" function. '
-                        'Please provide project or id, use Packages from a project.packages repository or checkout a project')
+                        'Please provide project or id, use Packages from a '
+                        'project.packages repository or checkout a project')
+
+        if codebase is None and codebase_id is not None:
+            codebase = entities.ItemCodebase(codebase_id=codebase_id)
 
         # source path
         if src_path is None:
-            if codebase_id is None:
+            if codebase is None:
                 src_path = os.getcwd()
                 logger.warning('No src_path is given, getting package information from cwd: {}'.format(src_path))
 
@@ -325,46 +347,68 @@ class Packages:
                 'Pushing a package without sanity check can cause errors when trying to deploy, '
                 'trigger and execute functions.\n'
                 'We highly recommend to not use the ignore_sanity_check flag')
-        else:
+        elif codebase is None:
             modules = self._sanity_before_push(src_path=src_path, modules=modules)
 
         # get or create codebase
-        if codebase_id is None:
-            codebase_id = project_to_deploy.codebases.pack(directory=src_path, name=package_name).id
+        codebase_item = None
+        if codebase is None:
+            codebase_item = project_to_deploy.codebases.pack(directory=src_path, name=package_name)
+            codebase = entities.ItemCodebase(codebase_id=codebase_item.id)
 
-        # check if exist
-        filters = entities.Filters(resource=entities.FiltersResource.PACKAGE, use_defaults=False)
-        filters.add(field='projectId', values=project_to_deploy.id)
-        filters.add(field='name', values=package_name)
-        packages = self.list(filters=filters)
-        if packages.items_count > 0:
-            # package exists - need to update
-            package = packages.items[0]
-            package.codebase_id = codebase_id
-            package.modules = modules
-            package.is_global = is_global
-            package = self.update(package=package)
-        else:
-            package = self._create(
-                project_to_deploy=project_to_deploy,
-                codebase_id=codebase_id,
-                package_name=package_name,
-                modules=modules,
-                is_global=is_global)
-        if checkout:
-            self.checkout(package=package)
+        try:
+            # check if exist
+            filters = entities.Filters(resource=entities.FiltersResource.PACKAGE, use_defaults=False)
+            filters.add(field='projectId', values=project_to_deploy.id)
+            filters.add(field='name', values=package_name)
+            packages = self.list(filters=filters)
+            if packages.items_count > 0:
+                # package exists - need to update
+                package = packages.items[0]
+
+                if codebase.type == entities.PackageCodebaseType.ITEM:
+                    package._codebase_id = codebase.codebase_id
+
+                if modules is not None:
+                    package.modules = modules
+
+                if is_global is not None:
+                    package.is_global = is_global
+
+                if codebase is not None:
+                    package.codebase = codebase
+
+                package = self.update(package=package, revision_increment=revision_increment)
+            else:
+                package = self._create(
+                    project_to_deploy=project_to_deploy,
+                    codebase_id=codebase_id,
+                    package_name=package_name,
+                    modules=modules,
+                    codebase=codebase,
+                    is_global=is_global)
+            if checkout:
+                self.checkout(package=package)
+        except Exception:
+            if codebase_item is not None:
+                codebase_item.delete()
+            raise
+
         return package
 
     def _create(self,
-                project_to_deploy=None,
-                codebase_id=None,
-                is_global=False,
-                package_name=entities.package_defaults.DEFAULT_PACKAGE_NAME,
-                modules=None) -> entities.Package:
+                project_to_deploy: entities.Project = None,
+                codebase_id: str = None,
+                codebase: Union[entities.GitCodebase, entities.ItemCodebase] = None,
+                is_global: bool = None,
+                package_name: str = entities.package_defaults.DEFAULT_PACKAGE_NAME,
+                modules: List[entities.PackageModule] = None
+                ) -> entities.Package:
         """
         Create a package in platform
 
         :param codebase_id: optional - package codebase
+        :param codebase:
         :param package_name: optional - default: 'default package'
         :param modules: optional - PackageModules Entity
         :return: Package Entity
@@ -373,10 +417,19 @@ class Packages:
         if modules and isinstance(modules[0], entities.PackageModule):
             modules = [module.to_json() for module in modules]
 
+        if is_global is None:
+            is_global = False
+
         payload = {'name': package_name,
-                   'codebaseId': codebase_id,
                    'global': is_global,
-                   'modules': modules}
+                   'modules': modules
+                   }
+
+        if codebase_id is not None:
+            payload['codebaseId'] = codebase_id
+
+        if codebase is not None:
+            payload['codebase'] = codebase.to_json()
 
         if project_to_deploy is not None:
             payload['projectId'] = project_to_deploy.id
@@ -449,13 +502,25 @@ class Packages:
         # return results
         return True
 
-    def update(self, package: entities.Package) -> entities.Package:
+    def update(self, package: entities.Package, revision_increment: str = None) -> entities.Package:
         """
         Update Package changes to platform
 
+        :param revision_increment: optional - str - version bumping method - major/minor/patch - default = None
         :param package:
         :return: Package entity
         """
+
+        if revision_increment is not None and isinstance(package.version, str) and len(package.version.split('.')) == 3:
+            major, minor, patch = package.version.split('.')
+            if revision_increment == 'patch':
+                patch = int(patch) + 1
+            elif revision_increment == 'minor':
+                minor = int(minor) + 1
+            elif revision_increment == 'major':
+                major = int(major) + 1
+            package.version = '{}.{}.{}'.format(major, minor, patch)
+
         # payload
         payload = package.to_json()
 
@@ -493,10 +558,12 @@ class Packages:
                execution_timeout=None,
                drain_time=None,
                on_reset=None,
+               max_attempts=None,
                **kwargs) -> entities.Service:
         """
         Deploy package
 
+        :param max_attempts: Maximum execution retries in-case of a service reset
         :param project_id:
         :param module_name:
         :param checkout:
@@ -540,7 +607,8 @@ class Packages:
                                        run_execution_as_process=run_execution_as_process,
                                        execution_timeout=execution_timeout,
                                        drain_time=drain_time,
-                                       on_reset=on_reset
+                                       on_reset=on_reset,
+                                       max_attempts=max_attempts
                                        )
 
     @staticmethod
@@ -638,20 +706,20 @@ class Packages:
         func = entities.PackageFunction(name=entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME)
         if package_catalog in [PackageCatalog.SINGLE_FUNCTION_ITEM, PackageCatalog.SINGLE_FUNCTION_ITEM_WITH_TRIGGER]:
             func.inputs = [item_input]
-            modules = entities.PackageModule(functions=func)
+            modules = entities.PackageModule(functions=[func])
         elif package_catalog in [PackageCatalog.SINGLE_FUNCTION_ANNOTATION,
                                  PackageCatalog.SINGLE_FUNCTION_ANNOTATION_WITH_TRIGGER]:
             func.inputs = [annotation_input]
-            modules = entities.PackageModule(functions=func)
+            modules = entities.PackageModule(functions=[func])
         elif package_catalog in [PackageCatalog.SINGLE_FUNCTION_DATASET,
                                  PackageCatalog.SINGLE_FUNCTION_DATASET_WITH_TRIGGER]:
             func.inputs = [dataset_input]
-            modules = entities.PackageModule(functions=func)
+            modules = entities.PackageModule(functions=[func])
         elif package_catalog in [PackageCatalog.SINGLE_FUNCTION_NO_INPUT]:
-            modules = entities.PackageModule(functions=func)
+            modules = entities.PackageModule(functions=[func])
         elif package_catalog == PackageCatalog.SINGLE_FUNCTION_JSON:
             func.inputs = json_input
-            modules = entities.PackageModule(functions=func)
+            modules = entities.PackageModule(functions=[func])
         elif package_catalog in [PackageCatalog.MULTI_FUNCTION_ITEM, PackageCatalog.MULTI_FUNCTION_ITEM_WITH_TRIGGERS]:
             func.inputs = [item_input]
             func.name = 'first_method'
@@ -684,19 +752,19 @@ class Packages:
             second_func.name = 'second_method'
             modules = entities.PackageModule(functions=[func, second_func])
         elif package_catalog in [PackageCatalog.MULTI_MODULE, PackageCatalog.MULTI_MODULE_WITH_TRIGGER]:
-            module_a = entities.PackageModule(functions=func,
+            module_a = entities.PackageModule(functions=[func],
                                               name='first_module',
                                               entry_point='first_module_class.py')
-            module_b = entities.PackageModule(functions=func,
+            module_b = entities.PackageModule(functions=[func],
                                               name='second_module',
                                               entry_point='second_module_class.py')
             modules = [module_a, module_b]
         elif package_catalog == PackageCatalog.SINGLE_FUNCTION_MULTI_INPUT:
             func.inputs = [item_input, dataset_input, json_input, annotation_input]
-            modules = entities.PackageModule(functions=func)
+            modules = entities.PackageModule(functions=[func])
         elif package_catalog == PackageCatalog.CONVERTER_FUNCTION:
             func.inputs = [dataset_input, query_input]
-            modules = entities.PackageModule(functions=func)
+            modules = entities.PackageModule(functions=[func])
         else:
             raise exceptions.PlatformException('404', 'Unknown package catalog type: {}'.format(package_catalog))
 
@@ -966,7 +1034,7 @@ class LocalServiceRunner:
                  packages,
                  cwd=None,
                  multithreading=False,
-                 concurrency=32,
+                 concurrency=10,
                  package: entities.Package = None,
                  module_name=entities.package_defaults.DEFAULT_PACKAGE_MODULE_NAME,
                  function_name=entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME,

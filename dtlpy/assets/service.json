@@ -6,7 +6,7 @@
     "runtime": {
       "gpu": false,
       "replicas": 1,
-      "concurrency": 6,
+      "concurrency": 10,
       "runnerImage": ""
     },
     "triggers": [

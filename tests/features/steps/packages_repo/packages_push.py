@@ -96,12 +96,28 @@ def step_impl(context):
     assert 'Package' in str(type(context.second_package))
 
 
+def compare_codebase_id(first_package, second_package):
+    if first_package.codebase.codebase_id is not None and second_package.codebase.codebase_id is not None:
+        return first_package.codebase.codebase_id != second_package.codebase.codebase_id
+    elif first_package.codebase_id is not None and second_package.codebase_id is not None:
+        return first_package.codebase_id != second_package.codebase_id
+    else:
+        raise Exception('Packages does not have codebase id')
+
+
 @behave.then(u'1st package and 2nd package only differ in code base id')
 def step_impl(context):
+    assert compare_codebase_id(context.first_package, context.second_package)
+
     first_package_json = context.first_package.to_json()
     second_package_json = context.second_package.to_json()
 
-    assert first_package_json.pop('codebaseId') != second_package_json.pop('codebaseId')
+    first_package_json.pop('codebase', None)
+    second_package_json.pop('codebase', None)
+    first_package_json.pop('codebaseId', None)
+    second_package_json.pop('codebaseId', None)
+
     assert first_package_json.pop('updatedAt') != second_package_json.pop('updatedAt')
-    assert first_package_json.pop('version') == second_package_json.pop('version') - 1
+    assert int(first_package_json.pop('version').replace(".", "")) == \
+           int(second_package_json.pop('version').replace(".", "")) - 1
     assert first_package_json == second_package_json

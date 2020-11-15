@@ -233,6 +233,24 @@ class Item(entities.BaseEntity):
     def system(self):
         return self.metadata.get('system', dict())
 
+    @property
+    def description(self):
+        description = None
+        if 'description' in self.metadata:
+            description = self.metadata['description'].get('text', None)
+        return description
+
+    @description.setter
+    def description(self, text: str):
+        """
+        Update Item description
+
+        :param text: if None or "" description will be deleted
+        :return
+        """
+        raise NotImplementedError("Set description update the item in platform, use set_description(text: str) instead")
+
+
     ###########
     # Functions #
     ###########
@@ -263,7 +281,6 @@ class Item(entities.BaseEntity):
             file_types=None,
             save_locally=True,
             to_array=False,
-            num_workers=None,
             annotation_options=None,
             overwrite=False,
             to_items_folder=True,
@@ -279,7 +296,6 @@ class Item(entities.BaseEntity):
         :param to_items_folder: Create 'items' folder and download items to it
         :param overwrite: optional - default = False
         :param file_types: a list of file type to download. e.g ['video/webm', 'video/mp4', 'image/jpeg', 'image/png']
-        :param num_workers: default - 32
         :param save_locally: bool. save to disk or return a buffer
         :param to_array: returns Ndarray when True and local_path = False
         :param annotation_options: download annotations options: dl.ViewAnnotationOptions.list()
@@ -299,7 +315,6 @@ class Item(entities.BaseEntity):
                                    file_types=file_types,
                                    save_locally=save_locally,
                                    to_array=to_array,
-                                   num_workers=num_workers,
                                    annotation_options=annotation_options,
                                    overwrite=overwrite,
                                    to_items_folder=to_items_folder,
@@ -367,12 +382,6 @@ class Item(entities.BaseEntity):
     def open_in_web(self):
         self.items.open_in_web(item=self)
 
-    def change_status(self, status):
-        # TODO - deprecate
-        logger.warning('[DeprecationWarning] "change_status(status)" method will be deprecated after version 1.17.0\n'
-                       'Please use method "update_status(status)"')
-        self.update_status(status=status)
-
     def update_status(self, status):
         if status not in ['completed', 'approved', 'discarded']:
             raise exceptions.PlatformException('400',
@@ -388,6 +397,44 @@ class Item(entities.BaseEntity):
             logger.error('Error updating status. Please use platform')
             logger.debug(traceback.format_exc())
             return False
+
+    def set_description(self, text: str):
+        """
+        Update Item description
+
+        :param text: if None or "" description will be deleted
+        :return
+        """
+        if text is None:
+            text = ""
+        if not isinstance(text, str):
+            raise ValueError("Description must get string")
+
+        filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION,
+                                   field='type',
+                                   values="item_description")
+
+        if text == "":
+            if self.description is not None:
+                self.metadata.pop('description', None)
+                self._platform_dict = self.update()._platform_dict
+                for annotation in self.annotations.list(filters=filters):
+                    annotation.delete()
+            return self
+
+        for annotation in self.annotations.list(filters=filters):
+            annotation.delete()
+        try:
+            annotation_definition = entities.Description(text=text)
+            editor = self._client_api.info()['user_email']
+            entities.Annotation.new(item=self,
+                                    annotation_definition=annotation_definition).upload(),
+            self.metadata['description'] = {'editor': editor, 'text': text}
+            self._platform_dict = self.update()._platform_dict
+            return self
+        except Exception:
+            logger.error('Error adding description. Please use platform')
+            logger.debug(traceback.format_exc())
 
 
 class ModalityTypeEnum:

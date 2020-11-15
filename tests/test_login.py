@@ -15,8 +15,20 @@ if __name__ == "__main__":
     password = args[2]
     client_id = args[3]
     client_secret = args[4]
+    env_name = None
+    try:
+        env_name = args[5]
+        if env_name not in ['dev', 'rc', 'prod']:
+            print('{} is unsupported env'.format(env_name))
+            env_name = None
+    except:
+        pass
 
-    dl.setenv(get_env_from_git_branch())
+    if env_name is None:
+        env_name = get_env_from_git_branch()
+    dl.setenv(env_name)
+    print('Environment is: {}'.format(env_name))
+
     dl.login_secret(
         email=username,
         password=password,

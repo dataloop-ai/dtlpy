@@ -11,9 +11,11 @@ import requests
 import aiohttp
 import logging
 import asyncio
+import certifi
 import time
 import tqdm
 import json
+import ssl
 import jwt
 import os
 import io
@@ -33,6 +35,14 @@ from .. import miscellaneous, exceptions, __version__
 
 logger = logging.getLogger(name=__name__)
 threadLock = threading.Lock()
+
+
+class VerboseLoggingLevel:
+    DEBUG = "debug"
+    INFO = "info"
+    WARNING = "warning"
+    ERROR = "error"
+    CRITICAL = "critical"
 
 
 class PlatformError(Exception):
@@ -282,6 +292,15 @@ class ApiClient:
         return verify
 
     @property
+    def use_ssl_context(self):
+        environments = self.environments
+        use_ssl_context = False
+        if self.environment in environments:
+            if 'use_ssl_context' in environments[self.environment]:
+                use_ssl_context = environments[self.environment]['use_ssl_context']
+        return use_ssl_context
+
+    @property
     def auth(self):
         return {'authorization': 'Bearer ' + self.token}
 
@@ -390,7 +409,7 @@ class ApiClient:
         self.environments = environments
 
     def add_environment(self, environment, audience, client_id, auth0_url,
-                        verify_ssl=True, token=None, refresh_token=None, alias=None):
+                        verify_ssl=True, token=None, refresh_token=None, alias=None, use_ssl_context=False):
         environments = self.environments
         if environment in environments:
             logger.warning('Environment exists. Overwriting. env: {}'.format(environment))
@@ -404,7 +423,8 @@ class ApiClient:
                                      'alias': alias,
                                      'token': token,
                                      'refresh_token': refresh_token,
-                                     'verify_ssl': verify_ssl}
+                                     'verify_ssl': verify_ssl,
+                                     'use_ssl_context': use_ssl_context}
         self.environments = environments
 
     def info(self, with_token=True):
@@ -651,7 +671,15 @@ class ApiClient:
                                                          callback=callback,
                                                          name=uploaded_filename))
                 url = '{}?mode={}'.format(self.environment + remote_url, mode)
-                async with session.post(url, data=form, verify_ssl=self.verify) as resp:
+
+                # use SSL context
+                ssl_context = None
+                if self.use_ssl_context:
+                    ssl_context = ssl.create_default_context(cafile=certifi.where())
+                async with session.post(url,
+                                        data=form,
+                                        verify_ssl=self.verify,
+                                        ssl=ssl_context) as resp:
                     text = await resp.text()
                     try:
                         _json = await resp.json()

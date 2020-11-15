@@ -505,7 +505,7 @@ class Annotation(entities.BaseEntity):
             item=None,
             annotation_definition=None,
             object_id=None,
-            automated=None,
+            automated=True,
             metadata=None,
             frame_num=None,
             parent_id=None,
@@ -919,7 +919,7 @@ class Annotation(entities.BaseEntity):
         # if has frames #
         #################
         if is_video:
-            if annotation.type == 'class' or annotation.type == 'subtitle':
+            if annotation.type in ['class' ,'subtitle', 'pose']:
                 if end_frame is None:
                     end_frame = start_frame
                 # for class type annotation create frames
@@ -986,7 +986,6 @@ class Annotation(entities.BaseEntity):
                                                         attr.fields(Annotation).updatedBy))
 
         # property attributes
-        # TODO - should be self._item in next version
         item_id = self.item_id
         if item_id is None and self._item is not None:
             item_id = self._item.id

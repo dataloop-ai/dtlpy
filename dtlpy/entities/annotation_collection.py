@@ -106,6 +106,7 @@ class AnnotationCollection(entities.BaseEntity):
                 annotation = entities.Annotation.new(item=self.item,
                                                      annotation_definition=single_definition,
                                                      frame_num=frame_num,
+                                                     start_time=start_time,
                                                      automated=automated,
                                                      metadata=metadata,
                                                      parent_id=parent_id)

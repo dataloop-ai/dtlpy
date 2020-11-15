@@ -367,7 +367,6 @@ class Items:
             file_types=None,
             save_locally=True,
             to_array=False,
-            num_workers=None,
             annotation_options=None,
             overwrite=False,
             to_items_folder=True,
@@ -387,7 +386,6 @@ class Items:
         :param overwrite: optional - default = False
         :param items: download Item entity or item_id (or a list of item)
         :param file_types: a list of file type to download. e.g ['video/webm', 'video/mp4', 'image/jpeg', 'image/png']
-        :param num_workers: default - 32
         :param avoid_unnecessary_annotation_download: default - False
         :param save_locally: bool. save to disk or return a buffer
         :param to_array: returns Ndarray when True and local_path = False
@@ -405,7 +403,6 @@ class Items:
             file_types=file_types,
             save_locally=save_locally,
             to_array=to_array,
-            num_workers=num_workers,
             annotation_options=annotation_options,
             overwrite=overwrite,
             to_items_folder=to_items_folder,
@@ -424,7 +421,6 @@ class Items:
             remote_path="/",
             remote_name=None,
             file_types=None,
-            num_workers=None,
             overwrite=False,
             item_metadata=None
     ):
@@ -441,7 +437,6 @@ class Items:
         :param remote_name: remote base name to save.
                             when upload numpy.ndarray as local path, remote_name with .jpg or .png ext is mandatory
         :param file_types: list of file type to upload. e.g ['.jpg', '.png']. default is all
-        :param num_workers:
         :return: Output (list/single item)
         """
         # fix remote path
@@ -459,7 +454,6 @@ class Items:
             remote_name=remote_name,
             file_types=file_types,
             # config
-            num_workers=num_workers,
             overwrite=overwrite,
             # metadata to upload with items
             item_metadata=item_metadata

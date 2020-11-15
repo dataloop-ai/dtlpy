@@ -209,8 +209,6 @@ def get_parser():
                           help="remote path to upload to. default: /")
     optional.add_argument("-f", "--file-types", metavar='\b', default=None,
                           help='Comma separated list of file types to upload, e.g ".jpg,.png". default: all')
-    optional.add_argument("-nw", "--num-workers", metavar='\b', default=None,
-                          help="num of threads workers")
     optional.add_argument("-lap", "--local-annotations-path", metavar='\b', default=None,
                           help="Path for local annotations to upload with items")
     optional.add_argument("-ow", "--overwrite", dest="overwrite", action='store_true', default=False,
@@ -229,8 +227,6 @@ def get_parser():
                           help="remote path to upload to. default: /")
     optional.add_argument("-ow", "--overwrite", action='store_true', default=False,
                           help="Overwrite existing item")
-    optional.add_argument("-nw", "--num-workers", metavar='\b', default=None,
-                          help="number of download workers")
     optional.add_argument("-t", "--not-items-folder", action='store_true', default=False,
                           help="Download WITHOUT 'items' folder")
     optional.add_argument("-wt", "--with-text", action='store_true', default=False,

@@ -486,6 +486,8 @@ class Tasks:
         :param items:
         :return:
         """
+        # TODO - deprecate
+        logger.warning('[DeprecationWarning] "remove_items()" method will be deprecated after version 1.22.0\n')
         return self.__item_operations(dataset=dataset,
                                       task_id=task_id,
                                       task=task,

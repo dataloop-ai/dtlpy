@@ -92,6 +92,7 @@ class Converter:
         self._update_agent_progress = False
         self._progress_checkpoint = 0
         self._checkpoint_lock = Lock()
+        self.remote_items = None
 
     def attach_agent_progress(self, progress: Progress, progress_update_frequency: int = None):
         self._progress = progress
@@ -349,8 +350,8 @@ class Converter:
                 pass
         return item
 
-    def __single_item_to_coco(self, item: entities.Item, images, path_to_dataloop_annotations_dir, item_id, converted_annotations,
-                              annotation_filter, label_to_id, reporter, pbar=None):
+    def __single_item_to_coco(self, item: entities.Item, images, path_to_dataloop_annotations_dir, item_id,
+                              converted_annotations, annotation_filter, label_to_id, reporter, pbar=None):
         try:
             if item.type != 'dir':
                 item = Converter.__get_item_shape(item=item)
