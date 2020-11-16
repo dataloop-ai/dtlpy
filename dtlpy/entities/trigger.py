@@ -119,7 +119,9 @@ class BaseTrigger(entities.BaseEntity):
                 project = None
 
         if service is not None:
-            if service.id != _json.get('serviceId', None):
+            spec = _json.get('spec', dict())
+            operation = spec.get('operation', dict())
+            if service.id != operation.get('serviceId', None):
                 logger.warning('Trigger has been fetched from a service that is not belong to it')
                 service = None
 
