@@ -1,4 +1,6 @@
 import dtlpy as dl
+import os
+import logging
 try:
     # for local import
     from tests.env_from_git_branch import get_env_from_git_branch
@@ -28,14 +30,13 @@ if __name__ == "__main__":
         env_name = get_env_from_git_branch()
     dl.setenv(env_name)
     print('Environment is: {}'.format(env_name))
-
     dl.login_secret(
         email=username,
         password=password,
         client_id=client_id,
         client_secret=client_secret
     )
-
+    print(dl.client_api.environments[dl.environment()])
     if dl.token_expired():
         sys.exit(1)
     else:

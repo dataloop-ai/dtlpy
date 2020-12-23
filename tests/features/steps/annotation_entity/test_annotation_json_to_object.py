@@ -46,8 +46,9 @@ def step_impl(context, entity):
                 ann_json.pop('hash', None)
                 response.pop('hash', None)
 
-            # remove metadata because response has no metadata
-            if ann.type in ['segment', 'polyline']:
+            # 'segment', 'polyline'  remove metadata because response has no metadata
+            # 'box', 'point', 'ellipse' sdk remove the system metadata if empty
+            if ann.type in ['segment', 'polyline', 'box', 'point', 'ellipse']:
                 if 'metadata' in ann_json:
                     ann_json.pop('metadata')
                 if 'metadata' in response:
