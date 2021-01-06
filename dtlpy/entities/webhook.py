@@ -1,12 +1,13 @@
 import logging
 import attr
+from enum import Enum
 
 from .. import services, repositories, entities
 
 logger = logging.getLogger("dataloop.service")
 
 
-class HttpMethod:
+class HttpMethod(str, Enum):
     GET = "GET"
     POST = "POST"
     DELETE = "DELETE"

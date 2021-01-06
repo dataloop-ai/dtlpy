@@ -1,15 +1,16 @@
 import json
 import io
+from enum import Enum
 from copy import deepcopy
 from .. import entities, exceptions
 
 
-class CollectionTypes:
+class CollectionTypes(str, Enum):
     SIMILARITY = 'collection'
     MULTIVIEW = 'multi'
 
 
-class SimilarityTypeEnum:
+class SimilarityTypeEnum(str, Enum):
     """
     State enum
     """
@@ -22,7 +23,7 @@ class CollectionItem:
     Base CollectionItem
     """
 
-    def __init__(self, type, ref):
+    def __init__(self, type: CollectionTypes, ref):
         assert isinstance(ref, str)
         self.ref = ref
         self.type = type
@@ -76,7 +77,7 @@ class Collection:
     Base Collection Entity
     """
 
-    def __init__(self, type, name, items=None):
+    def __init__(self, type: CollectionTypes, name, items=None):
         self.type = type
         self.name = name
         self._items = self._items_to_list(items=items)
@@ -125,7 +126,7 @@ class Collection:
 
         return byte_io
 
-    def add(self, ref, type=SimilarityTypeEnum.ID):
+    def add(self, ref, type: SimilarityTypeEnum = SimilarityTypeEnum.ID):
         """
         Add item to collection
         """

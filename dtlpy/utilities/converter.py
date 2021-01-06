@@ -1253,7 +1253,7 @@ class Converter:
         if from_format == AnnotationFormat.DATALOOP and isinstance(annotation, dict):
             annotation = entities.Annotation.from_json(_json=annotation, item=item)
 
-        ann = conversion_func(annotation)
+        ann = conversion_func(annotation, item)
 
         if isinstance(annotations[i_annotation], entities.Annotation) and annotations[i_annotation].item is None:
             ann.item = item

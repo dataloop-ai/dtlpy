@@ -35,7 +35,6 @@ def before_all(context):
         dl.client_api.set_api_counter(api_counter_filepath)
 
         # set context for run
-        dl.client_api.verbose.print_all_responses = True
         context.dl = dl
 
         # reset api counter

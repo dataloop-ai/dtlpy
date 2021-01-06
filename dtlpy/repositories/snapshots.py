@@ -1,6 +1,7 @@
 import logging
 import uuid
 import os
+from typing import Union, List
 
 from .. import entities, repositories, exceptions, miscellaneous, services
 
@@ -86,10 +87,35 @@ class Snapshots:
                                                    _json=response.json(),
                                                    project=self._project,
                                                    model=self._model)
+            # verify input model name is same as the given id
+            if snapshot_name is not None and snapshot.name != snapshot_name:
+                logger.warning(
+                    "Mismatch found in snapshots.get: snapshot_name is different then snapshot.name: {!r} != {!r}".format(
+                        snapshot_name,
+                        snapshot.name))
         elif snapshot_name is not None:
-            snapshots = self.list(entities.Filters(resource=entities.FiltersResource.SNAPSHOT,
-                                                   field='name',
-                                                   values=snapshot_name))
+
+            filters = entities.Filters(
+                resource=entities.FiltersResource.SNAPSHOT,
+                field='name',
+                values=snapshot_name
+            )
+
+            project_id = None
+
+            if self._project is not None:
+                project_id = self._project.id
+            elif self._project_id is not None:
+                project_id = self._project_id
+
+            if project_id is not None:
+                filters.add(field='projectId', values=project_id)
+
+            if self._model is not None:
+                filters.add(field='modelId', values=self._model.id)
+
+            snapshots = self.list(filters=filters)
+
             if snapshots.items_count == 0:
                 raise exceptions.PlatformException(
                     error='404',
@@ -161,34 +187,101 @@ class Snapshots:
         paged.get_page()
         return paged
 
-    def create(self, snapshot_name=None, description=None, project_id=None, scope='private') -> entities.Snapshot:
+    def create(
+            self,
+            snapshot_name: str,
+            dataset_id: str,
+            ontology_id: str = None,
+            ontology_spec: entities.OntologySpec = None,
+            description: str = None,
+            artifact: Union[entities.GitCodebase, entities.ItemCodebase, entities.FilesystemCodebase] = None,
+            # bucket: Union[entities.GcsBucket, entities.AwsBucket, entities.LocalBucket] , # TODO: we want to change it?
+            project_id=None,
+            is_global=None,
+            tags: List[str] = None,
+            model: entities.Model = None,
+            configuration: dict = None,
+    ) -> entities.Snapshot:
         """
             Create a Snapshot entity
 
         :param snapshot_name: name of the snapshot
+        :param dataset_id: dataset id
+        :param ontology_id:
+        :param ontology_spec: OntologySpec object
         :param description: description
+        :param artifact: optional
         :param project_id: project that owns the snapshot
-        :param scope: 'global'
+        :param is_global: bool
+        :param tags: list of string tags
+        :param model: optional - Model object
+        :param configuration: optional - snapshot configuration - dict
         :return: Snapshot Entity
         """
+
+        if ontology_id is None and \
+                ontology_spec is None:
+            raise exceptions.PlatformException(error='400',
+                                               message='Must provide arguments ontology_id OR ontology_spec')
+        elif ontology_id is not None and \
+                ontology_spec is not None and \
+                ontology_id != ontology_spec.ontology_id:
+            raise exceptions.PlatformException(error='400',
+                                               message="ontology id: {} don't match ontology_spec: {}. please provide matching ontology".format(
+                                                   ontology_id, ontology_spec.ontology_id))
+        elif ontology_id is not None:
+            ontologies = repositories.Ontologies(client_api=self._client_api)
+            ontology_spec = entities.OntologySpec(ontology_id=ontology_id,
+                                                  labels=[label.tag for label in
+                                                          ontologies.get(ontology_id=ontology_id).labels])
+
+        if artifact is not None and artifact.type != entities.PackageCodebaseType.ITEM:
+            raise NotImplementedError('Cannot create to snapshot without an Item artifact')
+
+        # TODO need to remove the entire project id user interface - need to take it from dataset id (in BE)
         if project_id is None:
-            project_id = self.project.id
+            if self._project is None:
+                raise exceptions.PlatformException('Please provide project_id')
+            project_id = self._project.id
         else:
-            if self._project is not None and self._project.id != project_id:
-                self._project = None
-            self._project_id = project_id
-        artifact_dir_item = self.artifacts.items_repository.make_dir(
-            directory=self.artifacts._build_path_header(model_name=self.model.name,
-                                                        snapshot_name='{}_{}'.format(snapshot_name,
-                                                                                     str(uuid.uuid1())),
-                                                        ))
+            if project_id != self._project_id:
+                logger.warning(
+                    "Note! you are specified project_id {!r} which is different from repository context: {!r}".format(
+                        project_id, self._project_id))
+
+        if model is None and self._model is None:
+            raise exceptions.PlatformException('Must provide a model or create from model.snapshots')
+        elif model is None:
+            model = self._model
+
+        if artifact is None:
+            artifact_dir_item = self.artifacts.items_repository.make_dir(
+                directory=self.artifacts._build_path_header(model_name=model.name,
+                                                            snapshot_name='{}_{}'.format(snapshot_name,
+                                                                                         str(uuid.uuid1()))))
+            artifact = entities.ItemCodebase(codebase_id=artifact_dir_item.id)
+
         # create payload for request
-        payload = {'name': snapshot_name,
-                   'description': description,
-                   'modelId': self.model.id,
-                   'projectId': project_id,
-                   'artifactId': artifact_dir_item.id,
-                   'scope': scope}
+        payload = {
+            'modelId': model.id,
+            'name': snapshot_name,
+            'projectId': project_id,
+            'datasetId': dataset_id,
+            'ontologySpec': ontology_spec.to_json(),
+            'artifact': artifact.to_json()
+        }
+
+        if configuration is not None:
+            payload['configuration'] = configuration
+
+        if tags is not None:
+            payload['tags'] = tags
+
+        if is_global is not None:
+            payload['global'] = is_global
+
+        if description is not None:
+            payload['description'] = description
 
         # request
         success, response = self._client_api.gen_request(req_type='post',
@@ -202,12 +295,12 @@ class Snapshots:
         snapshot = entities.Snapshot.from_json(_json=response.json(),
                                                client_api=self._client_api,
                                                project=self._project,
-                                               model=self.model)
+                                               model=model)
         return snapshot
 
     def upload(self,
                local_path: str,
-               snapshot: entities.Snapshot = None,
+               snapshot: entities.Snapshot,
                overwrite: bool = False):
         """
         Create a snapshot in platform
@@ -218,12 +311,15 @@ class Snapshots:
         :return: Snapshot Entity
         """
 
+        if snapshot.artifact is None or snapshot.artifact.type != entities.PackageCodebaseType.ITEM:
+            raise NotImplementedError('Cannot upload to snapshot without an Item artifact')
+
         # upload artifacts
         if not local_path.endswith('/'):
             local_path += '/'
         # snapshot binaries must be flatten (no directory trees)
         local_path += '*'
-        artifact_dir_item = self.artifacts.items_repository.get(item_id=snapshot.artifacts_id)
+        artifact_dir_item = self.artifacts.items_repository.get(item_id=snapshot.artifact.codebase_id)
         artifacts = self.artifacts.items_repository.upload(local_path=local_path,
                                                            remote_path=artifact_dir_item.filename,
                                                            overwrite=overwrite)
@@ -232,13 +328,21 @@ class Snapshots:
     def download(self, snapshot_id=None, snapshot=None, local_path=None):
         if snapshot is None:
             if snapshot_id is None:
-                raise exceptions.PlatformException('400', 'Please provide snapshot or snapshot id')
+                raise exceptions.PlatformException(error='400',
+                                                   message='Please provide snapshot or snapshot id')
             snapshot = self.get(snapshot_id=snapshot_id)
+        if snapshot.id != snapshot_id:
+            raise exceptions.PlatformException(error="409",
+                                               message="snapshot id {!r} does not match given sanpshot {}: {!r}".format(
+                                                   snapshot_id, snapshot.name, snapshot.id))
 
         if local_path is None:
             local_path = os.getcwd()
 
-        snapshot_artifact_item = self.artifacts.get(artifact_id=snapshot.artifacts_id)
+        if snapshot.artifact is None or snapshot.artifact.type != entities.PackageCodebaseType.ITEM:
+            raise NotImplementedError('Cannot upload to snapshot without an Item artifact')
+
+        snapshot_artifact_item = self.artifacts.get(artifact_id=snapshot.artifact.codebase_id)
         if snapshot_artifact_item.type == 'dir':
             filters = entities.Filters(field='dir', values='{}*'.format(snapshot_artifact_item.filename))
             artifacts = self.artifacts.items_repository.download(
@@ -250,27 +354,60 @@ class Snapshots:
             artifacts = snapshot_artifact_item.download(local_path=local_path)
         return artifacts
 
+    def download_data(self, snapshot_id=None, snapshot=None, local_path=None):
+        """
+        Download Frozen Dataset from snapshot, by Model format
+        """
+        # TODO: implememtn this function - this is only a rough sketch
+        if snapshot is None:
+            if snapshot_id is None:
+                raise exceptions.PlatformException('400', 'Please provide snapshot or snapshot id')
+            snapshot = self.get(snapshot_id=snapshot_id)
+        if snapshot.id != snapshot_id:
+            raise exceptions.PlatformException(error="409",
+                                               message="snapshot id {!r} does not match given sanpshot {}: {!r}".format(
+                                                   snapshot_id, snapshot.name, snapshot.id))
+
+        if local_path is None:
+            local_path = os.getcwd()
+
+        datasets = repositories.Datasets(client_api=self._client_api)
+        dataset = datasets.get(dataset_id=snapshot.dataset_id)
+        ret_list = dataset.download(local_path=local_path)  # Question - what is the return value? list of what?
+        # models = repositories.Models(client_api=self._client_api)
+        # model = modelsdebug(model_id=snapshot.model_id)  # TODO: can I use snapshot.model?
+        model = snapshot.model
+        # TODO: need to create the convertor / or use the adapter
+        adapter = model.build()
+        if adapter is not None:
+            ret_list = adapter.convert(ret_list)  # TODO: @Shefi + @Or define mandatory API for adapter
+
+        return ret_list
+
     def delete(self, snapshot: entities.Snapshot = None, snapshot_name=None, snapshot_id=None):
         """
         Delete Snapshot object
 
-        :param snapshot:
-        :param snapshot_name:
-        :param snapshot_id:
+        :param snapshot: Snapshot entity to delete
+        :param snapshot_name: delete by snapshot name
+        :param snapshot_id: delete by snapshot id
         :return: True
         """
         # get id and name
-        if snapshot is None:
-            snapshot = self.get(snapshot_id=snapshot_id, snapshot_name=snapshot_name)
-        try:
-            self.artifacts.items_repository.delete(item_id=snapshot.artifacts_id)
-        except exceptions.NotFound:
-            pass
+        if snapshot_id is None:
+            if snapshot is not None:
+                snapshot_id = snapshot.id
+            elif snapshot_name is not None:
+                snapshot = self.get(snapshot_name=snapshot_name)
+                snapshot_id = snapshot.id
+            else:
+                raise exceptions.PlatformException(error='400',
+                                                   message='Must input at least one parameter to snapshots.delete')
 
         # request
         success, response = self._client_api.gen_request(
             req_type="delete",
-            path="/snapshots/{}".format(snapshot.id)
+            path="/snapshots/{}".format(snapshot_id)
         )
 
         # exception handling

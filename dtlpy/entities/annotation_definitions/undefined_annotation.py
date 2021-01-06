@@ -6,8 +6,8 @@ class UndefinedAnnotationType(BaseAnnotationDefinition):
     UndefinedAnnotationType annotation object
     """
 
-    def __init__(self, type, label, coordinates, attributes=None):
-
+    def __init__(self, type, label, coordinates, attributes=None, description=None):
+        super().__init__(description=description)
         self.type = type
 
         self.label = label
@@ -48,7 +48,7 @@ class UndefinedAnnotationType(BaseAnnotationDefinition):
         :param with_text: not required
         :param height: item height
         :param width: item width
-        :param annotation_format: options: dl.ViewAnnotationOptions.list()
+        :param annotation_format: options: list(dl.ViewAnnotationOptions)
         :param color: color
         :return: ndarray
         """

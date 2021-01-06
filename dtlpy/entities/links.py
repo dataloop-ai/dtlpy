@@ -1,10 +1,11 @@
 from .. import entities
 from .. import PlatformException
+from enum import Enum
 import os
 import mimetypes
 
 
-class LinkTypeEnum:
+class LinkTypeEnum(str, Enum):
     """
     State enum
     """
@@ -15,7 +16,7 @@ class LinkTypeEnum:
 class Link:
 
     # noinspection PyShadowingBuiltins
-    def __init__(self, name, type, ref, mimetype=None, dataset_id=None):
+    def __init__(self, name, type: LinkTypeEnum, ref, mimetype=None, dataset_id=None):
         self.type = type
         self.ref = ref
         self.name = name
@@ -28,10 +29,11 @@ class UrlLink(Link):
     def __init__(self, ref, mimetype=None, name=None):
         if name is None:
             name = os.path.split(ref)[-1].replace('/', "").replace("\\", '').replace('.', '')
+            name = name.split('?')[0]
         # noinspection PyShadowingBuiltins
         type = LinkTypeEnum.URL
         if not mimetype:
-            mimetype = mimetypes.guess_type(ref)[0] or 'image'
+            mimetype = mimetypes.guess_type(ref.split('?')[0])[0] or 'image'
         super().__init__(name=name, type=type, mimetype=mimetype, ref=ref)
 
     @staticmethod

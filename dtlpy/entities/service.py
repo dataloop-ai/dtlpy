@@ -1,4 +1,5 @@
 from collections import namedtuple
+from enum import Enum
 import traceback
 import logging
 import attr
@@ -8,7 +9,7 @@ from .. import services, repositories, entities
 logger = logging.getLogger(name=__name__)
 
 
-class OnResetAction:
+class OnResetAction(str, Enum):
     RERUN = 'rerun'
     FAILED = 'failed'
 
@@ -271,13 +272,13 @@ class Service(entities.BaseEntity):
 
         return _json
 
-    def update(self):
+    def update(self, force=False):
         """
         Update Service changes to platform
 
         :return: Service entity
         """
-        return self.services.update(service=self)
+        return self.services.update(service=self, force=force)
 
     def delete(self):
         """
@@ -296,7 +297,7 @@ class Service(entities.BaseEntity):
         return self.services.status(service_id=self.id)
 
     def log(self, size=None, checkpoint=None, start=None, end=None, follow=False, text=None,
-            execution_id=None, function_name=None, replica_id=None, system=False, view=True):
+            execution_id=None, function_name=None, replica_id=None, system=False, view=True, until_completed=True):
         """
         Get service logs
 
@@ -324,7 +325,8 @@ class Service(entities.BaseEntity):
                                  replica_id=replica_id,
                                  system=system,
                                  text=text,
-                                 view=view)
+                                 view=view,
+                                 until_completed=until_completed)
 
     def open_in_web(self):
         self.services.open_in_web(service=self)
@@ -388,7 +390,7 @@ class Service(entities.BaseEntity):
         return execution
 
 
-class InstanceCatalog:
+class InstanceCatalog(str, Enum):
     REGULAR_XS = "regular-xs"
     REGULAR_S = "regular-s"
     REGULAR_M = "regular-m"
@@ -402,7 +404,7 @@ class InstanceCatalog:
     GPU_K80_S = "gpu-k80-s"
 
 
-class KubernetesAutuscalerType:
+class KubernetesAutuscalerType(str, Enum):
     RABBITMQ = 'rabbitmq'
     CPU = 'cpu'
 
@@ -413,7 +415,7 @@ class KubernetesAutoscaler(entities.BaseEntity):
     AUTOSCALER_TYPE_DEFAULT = KubernetesAutuscalerType.RABBITMQ
 
     def __init__(self,
-                 autoscaler_type=AUTOSCALER_TYPE_DEFAULT,
+                 autoscaler_type: KubernetesAutuscalerType.RABBITMQ = AUTOSCALER_TYPE_DEFAULT,
                  min_replicas=MIN_REPLICA_DEFAULT,
                  max_replicas=MAX_REPLICA_DEFAULT,
                  **kwargs):
@@ -448,14 +450,13 @@ class KubernetesRabbitmqAutoscaler(KubernetesAutoscaler):
         return _json
 
 
-class RuntimeType:
+class RuntimeType(str, Enum):
     KUBERNETES = 'kubernetes'
 
 
 class ServiceRuntime(entities.BaseEntity):
-    def __init__(self, service_type=RuntimeType.KUBERNETES):
+    def __init__(self, service_type: RuntimeType = RuntimeType.KUBERNETES):
         self.service_type = service_type
-        self._autoscaler_delete_mode = False
 
 
 class KubernetesRuntime(ServiceRuntime):
@@ -464,7 +465,7 @@ class KubernetesRuntime(ServiceRuntime):
     DEFAULT_CONCURRENCY = 10
 
     def __init__(self,
-                 pod_type=DEFAULT_POD_TYPE,
+                 pod_type: InstanceCatalog = DEFAULT_POD_TYPE,
                  num_replicas=DEFAULT_NUM_REPLICAS,
                  concurrency=DEFAULT_CONCURRENCY,
                  runner_image=None,
@@ -477,6 +478,7 @@ class KubernetesRuntime(ServiceRuntime):
         self.concurrency = kwargs.get('concurrency', concurrency)
         self.runner_image = kwargs.get('runnerImage', runner_image)
         self._proxy_image = kwargs.get('proxyImage', None)
+        self.single_agent = kwargs.get('singleAgent', False)
 
         self.autoscaler = kwargs.get('autoscaler', autoscaler)
         if self.autoscaler is not None and isinstance(self.autoscaler, dict):
@@ -490,7 +492,9 @@ class KubernetesRuntime(ServiceRuntime):
         _json = {
             'podType': self.pod_type,
             'numReplicas': self.num_replicas,
-            'concurrency': self.concurrency
+            'concurrency': self.concurrency,
+            'singleAgent': self.single_agent,
+            'autoscaler': None if self.autoscaler is None else self.autoscaler.to_json()
         }
 
         if self.runner_image is not None:
@@ -498,11 +502,5 @@ class KubernetesRuntime(ServiceRuntime):
 
         if self._proxy_image is not None:
             _json['proxyImage'] = self._proxy_image
-
-        if self.autoscaler is not None:
-            _json['autoscaler'] = self.autoscaler.to_json()
-        elif self._autoscaler_delete_mode:
-            _json['autoscaler'] = None
-            self._autoscaler_delete_mode = False
 
         return _json

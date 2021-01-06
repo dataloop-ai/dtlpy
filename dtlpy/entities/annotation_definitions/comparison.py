@@ -6,7 +6,8 @@ class Comparison(BaseAnnotationDefinition):
     Comparison annotation object
     """
 
-    def __init__(self, coordinates, label, attributes=None):
+    def __init__(self, coordinates, label, attributes=None, description=None):
+        super().__init__(description=description)
         self.type = "comparison"
         self.label = label
         self.coordinates = coordinates
@@ -46,7 +47,7 @@ class Comparison(BaseAnnotationDefinition):
         :param with_text: not required
         :param height: item height
         :param width: item width
-        :param annotation_format: options: dl.ViewAnnotationOptions.list()
+        :param annotation_format: options: list(dl.ViewAnnotationOptions)
         :param color: color
         :return: ndarray
         """

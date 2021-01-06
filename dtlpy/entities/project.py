@@ -1,4 +1,5 @@
 from collections import namedtuple
+from enum import Enum
 import traceback
 import logging
 import attr
@@ -6,6 +7,13 @@ import attr
 from .. import repositories, miscellaneous, services, entities
 
 logger = logging.getLogger(name=__name__)
+
+
+class MemberRole(str, Enum):
+    OWNER = "owner"
+    DEVELOPER = "engineer"
+    ANNOTATOR = "annotator"
+    ANNOTATION_MANAGER = "annotationManager"
 
 
 @attr.s()
@@ -23,6 +31,7 @@ class Project(entities.BaseEntity):
     updatedAt = attr.ib(repr=False)
     role = attr.ib(repr=False)
     account = attr.ib(repr=False)
+    isBlocked = attr.ib(repr=False)
 
     # name change
     feature_constraints = attr.ib()
@@ -192,6 +201,7 @@ class Project(entities.BaseEntity):
         """
         inst = cls(feature_constraints=_json.get('featureConstraints', None),
                    contributors=_json.get('contributors', None),
+                   isBlocked=_json.get('isBlocked', None),
                    createdAt=_json.get('createdAt', None),
                    updatedAt=_json.get('updatedAt', None),
                    creator=_json.get('creator', None),
@@ -256,8 +266,14 @@ class Project(entities.BaseEntity):
         """
         self.projects.open_in_web(project=self)
 
-    def add_member(self, email, role='engineer'):
+    def add_member(self, email, role: MemberRole = MemberRole.DEVELOPER):
         return self.projects.add_member(email=email, role=role, project_id=self.id)
 
-    def list_members(self, role: str = None):
+    def update_member(self, email, role: MemberRole = MemberRole.DEVELOPER):
+        return self.projects.update_member(email=email, role=role, project_id=self.id)
+
+    def remove_member(self, email):
+        return self.projects.remove_member(email=email, project_id=self.id)
+
+    def list_members(self, role: MemberRole = None):
         return self.projects.list_members(project=self, role=role)

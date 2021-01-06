@@ -1,6 +1,5 @@
 import behave
 import os
-import cv2
 
 
 @behave.when(u"I delete entity annotation x")
@@ -10,6 +9,7 @@ def step_impl(context):
 
 @behave.when(u'I download Entity annotation x with "{annotation_format}" to "{img_filepath}"')
 def step_impl(context, img_filepath, annotation_format):
+    import cv2
     path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], img_filepath)
     if not os.path.isdir(os.path.dirname(path)):
         os.makedirs(os.path.dirname(path), exist_ok=True)

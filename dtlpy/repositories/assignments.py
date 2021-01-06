@@ -172,34 +172,6 @@ class Assignments:
         assert isinstance(assignment, entities.Assignment)
         return assignment
 
-    def delete(self, assignment: entities.Assignment = None, assignment_name=None, assignment_id=None):
-        """
-        Delete an assignment
-        :param assignment_id:
-        :param assignment_name:
-        :param assignment:
-
-        :return: True
-        """
-        # TODO - deprecate
-        logger.warning('[DeprecationWarning] delete()" method will be deprecated after version 1.22.0\n')
-        if assignment_id is None:
-            if assignment is None:
-                if assignment_name is None:
-                    raise exceptions.PlatformException('400',
-                                                       'Must provide either assignment, '
-                                                       'assignment name or assignment id')
-                else:
-                    assignment = self.get(assignment_name=assignment_name)
-                    assignment_id = assignment.id
-        url = '/assignments/{}'.format(assignment_id)
-        success, response = self._client_api.gen_request(req_type='delete',
-                                                         path=url)
-
-        if not success:
-            raise exceptions.PlatformException(response)
-        return True
-
     def reassign(self, assignee_id, assignment=None, assignment_id=None, task=None, task_id=None):
         """
         Reassign an assignment
@@ -292,36 +264,15 @@ class Assignments:
         else:
             raise exceptions.PlatformException(response)
 
-    def create(self, assignee_id, task=None,
-               assignment_name=None,
-               dataset=None, project_id=None,
-               filters=None, items=None,
-               status=None, metadata=None) -> entities.Assignment:
+    def create(self, assignee_id, task=None, filters=None, items=None) -> entities.Assignment:
         """
         Create a new assignment
         :param task:
-        :param dataset:
         :param items:
         :param filters:
-        :param metadata:
-        :param project_id:
-        :param status:
         :param assignee_id:
-        :param assignment_name:
         :return: Assignment object
         """
-        # TODO - deprecate
-        if assignment_name:
-            logger.warning('[DeprecationWarning] Param {} will be deprecated after v1.22.0'.format(assignment_name))
-        if dataset:
-            logger.warning('[DeprecationWarning] Param {} will be deprecated after v1.22.0'.format(dataset))
-        if project_id:
-            logger.warning('[DeprecationWarning]  Param {} will be deprecated after v1.22.0'.format(project_id))
-        if status:
-            logger.warning('[DeprecationWarning] Param {} will be deprecated after v1.22.0'.format(status))
-        if metadata:
-            logger.warning('[DeprecationWarning] Param {} will be deprecated after v1.22.0'.format(metadata))
-
         return self._create_in_task(assignee_id=assignee_id, task=task, filters=filters, items=items)
 
     def _create_in_task(self, assignee_id, task, filters=None, items=None) -> entities.Assignment:
@@ -370,38 +321,6 @@ class Assignments:
         finally:
             if filters is not None:
                 filters._nullify_refs()
-
-    def assign_items(self, dataset: entities.Dataset,
-                     assignment_id=None, assignment_name=None, filters=None, items=None):
-        """
-
-        :param assignment_name:
-        :param filters:
-        :param assignment_id:
-        :param dataset:
-        :param items:
-        :return:
-        """
-        # TODO - deprecate
-        logger.warning('[DeprecationWarning] "remove_items()" method will be deprecated after version 1.22.0\n')
-        return self.__item_operations(dataset=dataset, assignment_id=assignment_id, filters=filters, items=items,
-                                      op='create', assignment_name=assignment_name)
-
-    def remove_items(self, dataset: entities.Dataset,
-                     assignment_id=None, assignment_name=None, filters=None, items=None):
-        """
-
-        :param assignment_name:
-        :param assignment_id:
-        :param dataset:
-        :param filters:
-        :param items:
-        :return:
-        """
-        # TODO - deprecate
-        logger.warning('[DeprecationWarning] "remove_items()" method will be deprecated after version 1.22.0\n')
-        return self.__item_operations(dataset=dataset, assignment_id=assignment_id, filters=filters, items=items,
-                                      op='delete', assignment_name=assignment_name)
 
     def get_items(self, assignment: entities.Assignment = None,
                   assignment_id=None, assignment_name=None, dataset=None, filters=None) -> entities.PagedEntities:

@@ -269,13 +269,22 @@ class Packages:
 
         return local_path
 
+    def _name_validation(self, name: str):
+        url = '/piper-misc/naming/packages/{}'.format(name)
+
+        # request
+        success, response = self._client_api.gen_request(req_type='get',
+                                                         path=url)
+        if not success:
+            raise exceptions.PlatformException(response)
+
     def push(self,
              project: entities.Project = None,
              project_id: str = None,
              package_name: str = None,
              src_path: str = None,
              codebase_id: str = None,
-             codebase: Union[entities.GitCodebase, entities.ItemCodebase] = None,
+             codebase: Union[entities.GitCodebase, entities.ItemCodebase, entities.FilesystemCodebase] = None,
              modules: List[entities.PackageModule] = None,
              is_global: bool = None,
              checkout: bool = False,
@@ -350,6 +359,8 @@ class Packages:
         elif codebase is None:
             modules = self._sanity_before_push(src_path=src_path, modules=modules)
 
+        self._name_validation(name=package_name)
+
         # get or create codebase
         codebase_item = None
         if codebase is None:
@@ -394,12 +405,17 @@ class Packages:
                 codebase_item.delete()
             raise
 
+        logger.info("Package name: {!r}, id: {!r} has been added to project name: {!r}, id: {!r}".format(
+            package.name,
+            package.id,
+            package.project.name,
+            package.project.id))
         return package
 
     def _create(self,
                 project_to_deploy: entities.Project = None,
                 codebase_id: str = None,
-                codebase: Union[entities.GitCodebase, entities.ItemCodebase] = None,
+                codebase: Union[entities.GitCodebase, entities.ItemCodebase, entities.FilesystemCodebase] = None,
                 is_global: bool = None,
                 package_name: str = entities.package_defaults.DEFAULT_PACKAGE_NAME,
                 modules: List[entities.PackageModule] = None
@@ -559,6 +575,7 @@ class Packages:
                drain_time=None,
                on_reset=None,
                max_attempts=None,
+               force=False,
                **kwargs) -> entities.Service:
         """
         Deploy package
@@ -574,6 +591,7 @@ class Packages:
         :param run_execution_as_process:
         :param on_reset:
         :param init_input:
+        :param force: optional - terminate old replicas immediately
         :param verify:
         :param agent_versions: - dictionary - - optional -versions of sdk, agent runner and agent proxy
         :param sdk_version:  - optional - string - sdk version
@@ -608,7 +626,8 @@ class Packages:
                                        execution_timeout=execution_timeout,
                                        drain_time=drain_time,
                                        on_reset=on_reset,
-                                       max_attempts=max_attempts
+                                       max_attempts=max_attempts,
+                                       force=force
                                        )
 
     @staticmethod
@@ -1050,62 +1069,75 @@ class LocalServiceRunner:
         self.package_io = PackageIO(cwd=self.cwd)
         self.multithreading = multithreading
         self.concurrency = concurrency
-        self.module_name = module_name
-        self.function_name = function_name
-        self.entry_point = entry_point
-        self.class_name = class_name
+        self._module_name = module_name
+        self._function_name = function_name
+        self._entry_point = entry_point
+        self._class_name = class_name
         self.package = package
 
         with open(os.path.join(self.cwd, 'mock.json'), 'r') as f:
             self.mock_json = json.load(f)
 
-    def validate_mock(self, mock_json):
-        """
-        Validate mock
-        :param mock_json:
-        :return:
-        """
-        self.function_name = mock_json.get('function_name', self.function_name)
-        self.module_name = mock_json.get('module_name', self.module_name)
+    @property
+    def function_name(self):
+        return self.mock_json.get('function_name', self._function_name)
 
-    # noinspection PyUnresolvedReferences
+    @property
+    def module_name(self):
+        return self.mock_json.get('module_name', self._function_name)
+
+    @property
+    def class_name(self):
+        return self.mock_json.get('class_name', self._class_name)
+
+    @property
+    def entry_point(self):
+        return self.mock_json.get('entry_point', self._entry_point)
+
     def get_mainpy_run_service(self):
         """
         Get mainpy run service
         :return:
         """
-        class_name = self.mock_json.get('class_name', self.class_name)
-        entry_point = self.mock_json.get('entry_point', self.entry_point)
-        entry_point = os.path.join(self.cwd, entry_point)
-        spec = importlib.util.spec_from_file_location(class_name, entry_point)
+        entry_point = os.path.join(self.cwd, self.entry_point)
+        spec = importlib.util.spec_from_file_location(self.class_name, entry_point)
         foo = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(foo)
-        service_runner = getattr(foo, class_name)
-        kwargs = self.mock_json.get('init_params', dict())
+        service_runner = getattr(foo, self.class_name)
+
+        if 'init_params' in self.mock_json:
+            kwargs = self.mock_json.get('init_params')
+        elif 'config' in self.mock_json:
+            kwargs = self.mock_json.get('config')
+        else:
+            kwargs = dict()
+
         return service_runner(**kwargs)
 
     def run_local_project(self, project=None):
-        if self.package is None:
-            self.validate_mock(mock_json=self.package_io.read_json())
-
         package_runner = self.get_mainpy_run_service()
 
-        modules = self.package_io.get('modules') if self.package is None else [m.to_json() for m in
-                                                                               self.package.modules]
+        modules = self.package_io.get('modules') if self.package is None else [
+            m.to_json() for m in self.package.modules
+        ]
+
         if isinstance(modules, list) and len(modules) > 0:
             try:
                 module = [module for module in modules if module['name'] == self.module_name][0]
             except Exception:
                 raise exceptions.PlatformException(
-                    'Module {} does not exist in package modules'.format(self.module_name))
+                    '400', 'Module {} does not exist in package modules'.format(self.module_name)
+                )
         else:
             module = DEFAULT_PACKAGE_MODULE.to_json()
+
         if isinstance(module['functions'], list) and len(module['functions']) > 0:
             try:
                 func = [func for func in module['functions'] if func['name'] == self.function_name][0]
             except Exception:
                 raise exceptions.PlatformException(
-                    'function {} does not exist in package module'.format(self.function_name))
+                    '400', 'function {} does not exist in package module'.format(self.function_name)
+                )
         else:
             func = entities.PackageFunction(None, list(), list(), None).to_json()
         package_inputs = func['input']
@@ -1161,9 +1193,9 @@ class LocalServiceRunner:
         :param resource_id:
         :return: Dataset entity
         """
-        if 'dataset_id' in resource_id:
-            dataset_id = resource_id['dataset_id']
-        else:
+        dataset_id = resource_id.get('dataset_id', None) if isinstance(resource_id, dict) else resource_id
+
+        if not isinstance(dataset_id, str):
             dataset_id = self._client_api.state_io.get('dataset')
 
         if project is not None:
@@ -1185,7 +1217,7 @@ class LocalServiceRunner:
         else:
             items = repositories.Items(client_api=self._client_api)
 
-        return items.get(item_id=resource_id['item_id'])
+        return items.get(item_id=resource_id['item_id'] if isinstance(resource_id, dict) else resource_id)
 
     def get_annotation(self, resource_id, project=None) -> entities.Annotation:
         """
@@ -1195,7 +1227,8 @@ class LocalServiceRunner:
         :return: Annotation entity
         """
         item = self.get_item(project=project, resource_id=resource_id)
-        return item.annotations.get(annotation_id=resource_id['annotation_id'])
+        return item.annotations.get(
+            annotation_id=resource_id['annotation_id'] if isinstance(resource_id, dict) else resource_id)
 
     def get_field(self, field_name, field_type, mock_json, project=None, mock_inputs=None):
         """

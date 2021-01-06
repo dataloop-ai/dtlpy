@@ -367,7 +367,9 @@ class Items:
             file_types=None,
             save_locally=True,
             to_array=False,
-            annotation_options=None,
+            annotation_options: entities.ViewAnnotationOptions = None,
+            annotation_filter_type=None,
+            annotation_filter_label=None,
             overwrite=False,
             to_items_folder=True,
             thickness=1,
@@ -380,20 +382,23 @@ class Items:
         Filtering the dataset for items and save them local
         Optional - also download annotation, mask, instance and image mask of the item
 
-        :param local_path: local folder or filename to save to.
         :param filters: Filters entity or a dictionary containing filters parameters
-        :param to_items_folder: Create 'items' folder and download items to it
-        :param overwrite: optional - default = False
         :param items: download Item entity or item_id (or a list of item)
+        :param local_path: local folder or filename to save to.
         :param file_types: a list of file type to download. e.g ['video/webm', 'video/mp4', 'image/jpeg', 'image/png']
-        :param avoid_unnecessary_annotation_download: default - False
         :param save_locally: bool. save to disk or return a buffer
         :param to_array: returns Ndarray when True and local_path = False
-        :param annotation_options: download annotations options:  dl.ViewAnnotationOptions.list()
-        :param with_text: optional - add text to annotations, default = False
+        :param annotation_options: download annotations options:  list(dl.ViewAnnotationOptions)
+        :param annotation_filter_type: list of annotation types when downloading annotation,
+                                                                                        not relevant for JSON option
+        :param annotation_filter_label: list of labels types when downloading annotation, not relevant for JSON option
+        :param overwrite: optional - default = False
+        :param to_items_folder: Create 'items' folder and download items to it
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
+        :param with_text: optional - add text to annotations, default = False
         :param without_relative_path: string - remote path - download items without the relative path from platform
-        :return: Output (list)
+        :param avoid_unnecessary_annotation_download: default - False
+        :return: `List` of local_path per each downloaded item
         """
         downloader = repositories.Downloader(self)
         return downloader.download(
@@ -404,6 +409,8 @@ class Items:
             save_locally=save_locally,
             to_array=to_array,
             annotation_options=annotation_options,
+            annotation_filter_type=annotation_filter_type,
+            annotation_filter_label=annotation_filter_label,
             overwrite=overwrite,
             to_items_folder=to_items_folder,
             thickness=thickness,

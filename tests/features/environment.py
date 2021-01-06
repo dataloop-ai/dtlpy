@@ -15,6 +15,8 @@ def after_feature(context, feature):
 
     if hasattr(feature, 'dataloop_feature_project'):
         try:
+            if 'frozen_dataset' in feature.tags:
+                fix_project_with_frozen_datasets(project=feature.dataloop_feature_project)
             feature.dataloop_feature_project.delete(True, True)
         except Exception:
             logging.exception('Failed to delete project')
@@ -33,6 +35,13 @@ def after_feature(context, feature):
                 json.dump(api_calls, f)
         except Exception:
             logging.exception('Failed to update api calls')
+
+
+def fix_project_with_frozen_datasets(project):
+    datasets = project.datasets.list()
+    for dataset in datasets:
+        if dataset.readonly:
+            dataset.set_readonly(False)
 
 
 @fixture
@@ -62,6 +71,8 @@ def after_tag(context, tag):
             use_fixture(delete_converter_dataset, context)
         except Exception:
             logging.exception('Failed to delete converter dataset')
+    elif tag == 'frozen_dataset':
+        pass
     else:
         raise ValueError('unknown tag: {}'.format(tag))
 

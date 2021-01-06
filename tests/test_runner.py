@@ -50,6 +50,7 @@ def test_feature_file(w_feature_filename):
     print('Starting feature file: {}'.format(feature_filepath))
     log_filepath = None
     w_i_try = -1
+    tic = time.time()
     try:
         for w_i_try in range(NUM_TRIES):
             log_filepath = os.path.join(log_path,
@@ -67,11 +68,12 @@ def test_feature_file(w_feature_filename):
             p.communicate()
             if p.returncode == 0:
                 break
-
+        toc = time.time() - tic
         if log_filepath is None:
             results[w_feature_filename] = {'status': False,
                                            'log_file': '',
-                                           'try': w_i_try}
+                                           'try': w_i_try,
+                                           'avgTime': '{:.2f}[s]'.format(toc / (1 + w_i_try))}
         else:
             directory, file = os.path.split(log_filepath)
             if p.returncode == 0:
@@ -81,7 +83,8 @@ def test_feature_file(w_feature_filename):
                     os.rename(log_filepath, new_log_filepath)
                 results[w_feature_filename] = {'status': True,
                                                'log_file': new_log_filepath,
-                                               'try': w_i_try}
+                                               'try': w_i_try,
+                                               'avgTime': '{:.2f}[s]'.format(toc / (1 + w_i_try))}
             else:
                 # failed
                 new_log_filepath = os.path.join(directory, 'fail_' + file)
@@ -89,12 +92,17 @@ def test_feature_file(w_feature_filename):
                     os.rename(log_filepath, new_log_filepath)
                 results[w_feature_filename] = {'status': False,
                                                'log_file': new_log_filepath,
-                                               'try': w_i_try}
+                                               'try': w_i_try,
+                                               'avgTime': '{:.2f}[s]'.format(toc / (1 + w_i_try))}
     except:
         print(traceback.format_exc())
         results[w_feature_filename] = {'status': False,
                                        'log_file': log_filepath,
-                                       'try': w_i_try}
+                                       'try': w_i_try,
+                                       'avgTime': '{:.2f}[s]'.format(-1)}
+
+
+import sys
 
 
 def create_project_for_alerts(contributors, project_name):
@@ -153,10 +161,19 @@ if __name__ == '__main__':
     # set timer and environment
     start_time = time.time()
     # set env to dev
-    dl.setenv(get_env_from_git_branch())
+    env_name = get_env_from_git_branch()
+    dl.setenv(env_name)
+    print('Environment is: {}'.format(env_name))
+
+    # set log level
+    dl.verbose.logging_level = "warning"
+    dl.verbose.print_all_responses = True
+
     # check token
     payload = jwt.decode(dl.token(), algorithms=['HS256'], verify=False)
-    if payload['email'] not in ['oa-test-1@dataloop.ai', 'oa-test-4@dataloop.ai', 'oa-test-2@dataloop.ai',
+    if payload['email'] not in ['oa-test-1@dataloop.ai',
+                                'oa-test-4@dataloop.ai',
+                                'oa-test-2@dataloop.ai',
                                 'oa-test-3@dataloop.ai']:
         assert False, 'Cannot run test on user: "{}". only test users'.format(payload['email'])
 
@@ -223,7 +240,8 @@ if __name__ == '__main__':
             status = 'passed' if result['status'] else 'failed'
             log_filename = result['log_file']
             i_try = result['try']
-            print('{}\t in try: {}\tfeature: {}'.format(status, i_try, feature))
+            avg_time = result['avgTime']
+            print('{}\t in try: {}\tavg time: {}\tfeature: {}'.format(status, i_try, avg_time, feature))
 
     # print passes
     for feature, result in results.items():
@@ -231,7 +249,8 @@ if __name__ == '__main__':
             status = 'passed' if result['status'] else 'failed'
             log_filename = result['log_file']
             i_try = result['try']
-            print('{}\t in try: {}\tfeature: {}'.format(status, i_try, feature))
+            avg_time = result['avgTime']
+            print('{}\t in try: {}\tavg time: {}\tfeature: {}'.format(status, i_try, avg_time, feature))
 
     # delete projects
     delete_projects()

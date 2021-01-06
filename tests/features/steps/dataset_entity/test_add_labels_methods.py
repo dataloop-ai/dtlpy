@@ -13,7 +13,7 @@ def compare_labels(input_labels, ontology_labels):
                     if 'color' in input_label:
                         assert input_label['color'] == ontology_label['color']
                     if 'display_label' in input_label:
-                        assert input_label['color'] == ontology_label['color']
+                        assert input_label['display_label'] == ontology_label['display_label']
                     if 'attributes' in input_label:
                         assert input_label['attributes'] == ontology_label['attributes']
                     if 'children' in input_label:
@@ -236,6 +236,53 @@ def step_impl(context):
                       {'label_name': 'bb',
                        'color': '#298565'}]}]
     context.dataset.add_labels(label_list=context.nested_labels)
+
+@behave.then(u'I update many labels')
+def step_impl(context):
+    context.nested_labels = [
+        {'label_name': 'aaa',
+         'color': '#220605',
+         'children': [{'label_name': 'XY',
+                       'color': '#227305',
+                       'children': [{'label_name': 'aaa',
+                                     'color': '#224705',
+                                     'display_label': 'display AAA',
+                                     'attributes': ['Name1', 'Age1'],
+                                     },
+                                    {'label_name': 'aab',
+                                     'color': '#842367'}]},
+                      {'label_name': 'XZ'}]},
+        {'label_name': 'bbb',
+         'color': '#287605',
+         'children': [{'label_name': 'ba',
+                       'color': '#298345'},
+                      {'label_name': 'bb',
+                       'color': '#298565'}]}]
+    context.dataset.update_labels(label_list=context.nested_labels)
+
+
+@behave.then(u'I upsert many labels')
+def step_impl(context):
+    context.nested_labels = [
+        {'label_name': 'aaa',
+         'color': '#220605',
+         'children': [{'label_name': 'XY',
+                       'color': '#227305',
+                       'children': [{'label_name': 'aaa',
+                                     'color': '#224705',
+                                     'display_label': 'display AAA',
+                                     'attributes': ['Name1', 'Age2'],
+                                     },
+                                    {'label_name': 'aabcd',
+                                     'color': '#842367'}]},
+                      {'label_name': 'XZ'}]},
+        {'label_name': 'bbb',
+         'color': '#287605',
+         'children': [{'label_name': 'ba',
+                       'color': '#298345'},
+                      {'label_name': 'bb',
+                       'color': '#298565'}]}]
+    context.dataset.update_labels(label_list=context.nested_labels, upsert=True)
 
 
 @behave.when(u'I add many nested labels')

@@ -4,7 +4,8 @@ import logging
 import attr
 import os
 
-from .. import repositories, entities, services
+from .. import repositories, entities, services, exceptions
+from .annotation import ViewAnnotationOptions
 
 logger = logging.getLogger(name=__name__)
 
@@ -32,6 +33,7 @@ class Dataset(entities.BaseEntity):
     readable_type = attr.ib(repr=False)
     access_level = attr.ib(repr=False)
     driver = attr.ib(repr=False)
+    _readonly = attr.ib(repr=False)
 
     # api
     _client_api = attr.ib(type=services.ApiClient, repr=False)
@@ -106,6 +108,7 @@ class Dataset(entities.BaseEntity):
                    created_at=_json.get('createdAt', None),
                    itemsCount=_json.get('itemsCount', None),
                    annotated=_json.get('annotated', None),
+                   readonly=_json.get('readonly', None),
                    projects=projects,
                    creator=_json.get('creator', None),
                    items_url=_json.get('items', None),
@@ -128,6 +131,7 @@ class Dataset(entities.BaseEntity):
         """
         _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(Dataset)._client_api,
                                                               attr.fields(Dataset)._project,
+                                                              attr.fields(Dataset)._readonly,
                                                               attr.fields(Dataset)._datasets,
                                                               attr.fields(Dataset)._repositories,
                                                               attr.fields(Dataset)._ontology_ids,
@@ -142,6 +146,7 @@ class Dataset(entities.BaseEntity):
         _json['readableType'] = self.readable_type
         _json['createdAt'] = self.created_at
         _json['accessLevel'] = self.access_level
+        _json['readonly'] = self._readonly
         return _json
 
     @property
@@ -149,6 +154,16 @@ class Dataset(entities.BaseEntity):
         if self._labels is None:
             self._labels = self.recipes.list()[0].ontologies.list()[0].labels
         return self._labels
+
+    @property
+    def readonly(self):
+        return self._readonly
+
+    @readonly.setter
+    def readonly(self, state):
+        raise exceptions.PlatformException(
+            error='400',
+            message='Cannot set attribute readonly. Please use "set_readonly({})" method'.format(state))
 
     @property
     def labels_flat_dict(self):
@@ -318,6 +333,30 @@ class Dataset(entities.BaseEntity):
         """
         return self.metadata['system']['recipes']
 
+    def switch_recipe(self, recipe_id=None, recipe=None):
+        """
+        Switch the recipe that linked to the dataset with the given one
+
+        :param: recipe_id
+        :param: recipe
+        :return:
+        """
+        if recipe is None and recipe_id is None:
+            raise exceptions.PlatformException('400', 'Must provide recipe or recipe_id')
+        if recipe_id is None:
+            if not isinstance(recipe, entities.Recipe):
+                raise exceptions.PlatformException('400', 'Recipe must me entities.Recipe type')
+            else:
+                recipe_id = recipe.id
+
+        # add recipe id to dataset metadata
+        if 'system' not in self.metadata:
+            self.metadata['system'] = dict()
+        if 'recipes' not in self.metadata['system']:
+            self.metadata['system']['recipes'] = list()
+        self.metadata['system']['recipes'] = [recipe_id]
+        self.update(system_metadata=True)
+
     def delete(self, sure=False, really=False):
         """
         Delete a dataset forever!
@@ -339,6 +378,18 @@ class Dataset(entities.BaseEntity):
         """
         return self.datasets.update(dataset=self,
                                     system_metadata=system_metadata)
+
+    def set_readonly(self, state: bool):
+        """
+        Set dataset readonly mode
+        :param state:
+        :return:
+        """
+        if not isinstance(state, bool):
+            raise exceptions.PlatformException(
+                error='400',
+                message='Argument "state" must be bool. input type: {}'.format(type(state)))
+        return self.datasets.set_readonly(dataset=self, state=state)
 
     def clone(self, clone_name, filters=None, with_items_annotations=True, with_metadata=True,
               with_task_annotations_status=True):
@@ -362,18 +413,40 @@ class Dataset(entities.BaseEntity):
     def download_annotations(self,
                              local_path=None,
                              filters=None,
-                             annotation_options=None,
+                             annotation_options: ViewAnnotationOptions = None,
+                             annotation_filter_type=None,
+                             annotation_filter_label=None,
                              overwrite=False,
                              thickness=1,
                              with_text=False,
                              remote_path=None,
                              num_workers=32):
+        """
+        Download dataset by filters.
+        Filtering the dataset for items and save them local
+        Optional - also download annotation, mask, instance and image mask of the item
+
+        :param local_path: local folder or filename to save to.
+        :param filters: Filters entity or a dictionary containing filters parameters
+        :param annotation_options: download annotations options: list(dl.ViewAnnotationOptions)
+        :param annotation_filter_type: list of annotation types when downloading annotation,
+                                                                                        not relevant for JSON option
+        :param annotation_filter_label: list of labels types when downloading annotation, not relevant for JSON option
+        :param overwrite: optional - default = False
+        :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
+        :param with_text: optional - add text to annotations, default = False
+        :remote_path: optinal - remote path to download
+        :num_workers:
+        :return: `List` of local_path per each downloaded item
+        """
 
         return self.datasets.download_annotations(dataset=self,
                                                   local_path=local_path,
                                                   overwrite=overwrite,
                                                   filters=filters,
                                                   annotation_options=annotation_options,
+                                                  annotation_filter_type=annotation_filter_type,
+                                                  annotation_filter_label=annotation_filter_label,
                                                   thickness=thickness,
                                                   with_text=with_text,
                                                   remote_path=remote_path,
@@ -455,12 +528,78 @@ class Dataset(entities.BaseEntity):
 
         return added_labels
 
+    def update_label(self, label_name, color=None, children=None, attributes=None, display_label=None, label=None,
+                     recipe_id=None, ontology_id=None, upsert=False):
+        """
+        Add single label to dataset
+
+        :param label_name:
+        :param color:
+        :param children:
+        :param attributes:
+        :param display_label:
+        :param label:
+        :param recipe_id: optional
+        :param ontology_id: optional
+        :param upsert if True will add in case it does not existing
+        :return: label entity
+        """
+        # get recipe
+
+        if recipe_id is None:
+            recipe_id = self.get_recipe_ids()[0]
+        recipe = self.recipes.get(recipe_id=recipe_id)
+
+        # get ontology
+        if ontology_id is None:
+            ontology_id = recipe.ontologyIds[0]
+        ontology = recipe.ontologies.get(ontology_id=ontology_id)
+
+        # add label
+        added_label = ontology.update_label(label_name=label_name,
+                                            color=color,
+                                            children=children,
+                                            attributes=attributes,
+                                            display_label=display_label,
+                                            label=label,
+                                            update_ontology=True,
+                                            upsert=upsert)
+
+        return added_label
+
+    def update_labels(self, label_list, ontology_id=None, recipe_id=None, upsert=False):
+        """
+        Add labels to dataset
+
+        :param label_list:
+        :param recipe_id: optional
+        :param ontology_id: optional
+        :param upsert if True will add in case it does not existing
+        :return: label entities
+        """
+        # get recipe
+        if recipe_id is None:
+            recipe_id = self.get_recipe_ids()[0]
+        recipe = self.recipes.get(recipe_id=recipe_id)
+
+        # get ontology
+        if ontology_id is None:
+            ontology_id = recipe.ontologyIds[0]
+        ontology = recipe.ontologies.get(ontology_id=ontology_id)
+
+        # add labels to ontology
+        added_labels = ontology.update_labels(label_list=label_list, update_ontology=True, upsert=upsert)
+
+        return added_labels
+
     def download(
             self,
             filters=None,
             local_path=None,
             file_types=None,
-            annotation_options=None,
+            annotation_options: ViewAnnotationOptions = None,
+            annotation_filter_type=None,
+            annotation_filter_label=None,
             overwrite=False,
             to_items_folder=True,
             thickness=1,
@@ -472,14 +611,17 @@ class Dataset(entities.BaseEntity):
         Filtering the dataset for items and save them local
         Optional - also download annotation, mask, instance and image mask of the item
 
-        :param local_path: local folder or filename to save to.
         :param filters: Filters entity or a dictionary containing filters parameters
-        :param to_items_folder: Create 'items' folder and download items to it
-        :param overwrite: optional - default = False
+        :param local_path: local folder or filename to save to.
         :param file_types: a list of file type to download. e.g ['video/webm', 'video/mp4', 'image/jpeg', 'image/png']
-        :param annotation_options: download annotations options: dl.ViewAnnotationOptions.list()
-        :param with_text: optional - add text to annotations, default = False
+        :param annotation_options: download annotations options: list(dl.ViewAnnotationOptions)
+        :param annotation_filter_type: list of annotation types when downloading annotation,
+                                                                                        not relevant for JSON option
+        :param annotation_filter_label: list of labels types when downloading annotation, not relevant for JSON option
+        :param overwrite: optional - default = False
+        :param to_items_folder: Create 'items' folder and download items to it
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
+        :param with_text: optional - add text to annotations, default = False
         :param without_relative_path: string - remote path - download items without the relative path from platform
         :return: Output (list)
         """
@@ -487,6 +629,8 @@ class Dataset(entities.BaseEntity):
                                    local_path=local_path,
                                    file_types=file_types,
                                    annotation_options=annotation_options,
+                                   annotation_filter_type=annotation_filter_type,
+                                   annotation_filter_label=annotation_filter_label,
                                    overwrite=overwrite,
                                    to_items_folder=to_items_folder,
                                    thickness=thickness,

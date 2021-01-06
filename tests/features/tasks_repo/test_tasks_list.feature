@@ -15,9 +15,9 @@ Feature: Tasks repository list method testing
         And I create Task in second project
             | task_name=list_tasks | due_date=auto | project_id=second |  recipe_id=second | assignee_ids=auto |
         And I create Task
-            | task_name=list_tasks | due_date=auto | status=close | recipe_id=auto | project_id=auto | assignee_ids=auto |
+            | task_name=list_tasks | due_date=auto | recipe_id=auto | project_id=auto | assignee_ids=auto |
         And I create Task
-            | task_name=list_tasks_different_name | due_date=next_week | status=close | project_id=auto | recipe_id=auto | assignee_ids=auto |
+            | task_name=list_tasks_different_name | due_date=next_week | project_id=auto | recipe_id=auto | assignee_ids=auto |
 
         When I list Tasks by param "project_ids" value "current_project"
         Then I receive a list of "3" tasks

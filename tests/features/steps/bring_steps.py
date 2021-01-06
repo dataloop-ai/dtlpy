@@ -15,10 +15,10 @@ from tests.features.steps.datasets_repo import test_datasets_list
 from tests.features.steps.datasets_repo import test_datasets_get
 from tests.features.steps.datasets_repo import test_datasets_delete
 from tests.features.steps.datasets_repo import test_datasets_update
+from tests.features.steps.datasets_repo import test_datasets_readonly
 from tests.features.steps.datasets_repo import test_datasets_download_annotations
 from tests.features.steps.datasets_repo import test_datasets_download
 from tests.features.steps.datasets_repo import test_dataset_context
-
 
 from tests.features.steps.dataset_entity import test_dataset_repo_methods
 from tests.features.steps.dataset_entity import test_add_labels_methods
@@ -67,6 +67,7 @@ from tests.features.steps.ontology_entity import test_ontology_repo_methods
 from tests.features.steps.recipes_repo import test_recipes_create
 from tests.features.steps.recipes_repo import test_recipes_update
 from tests.features.steps.recipes_repo import test_recipes_delete
+from tests.features.steps.recipes_repo import test_recipes_clone
 
 from tests.features.steps.codebases_repo import test_codebases_pack
 from tests.features.steps.codebases_repo import test_codebases_init
@@ -90,8 +91,8 @@ from tests.features.steps.packages_repo import packages_push
 from tests.features.steps.packages_repo import packages_get
 from tests.features.steps.packages_repo import packages_list
 from tests.features.steps.packages_repo import test_packages_context
+from tests.features.steps.packages_repo import packages_name_validation
 from tests.features.steps.packages_flow import packages_flow
-
 
 from tests.features.steps.triggers_repo import test_triggers_create
 from tests.features.steps.triggers_repo import test_triggers_get
@@ -139,10 +140,12 @@ from tests.features.steps.tasks_repo import test_task_context
 from tests.features.steps.assignments_repo import test_assignments_create
 from tests.features.steps.assignments_repo import test_assignments_get
 from tests.features.steps.assignments_repo import test_assignments_list
-from tests.features.steps.assignments_repo import test_assignments_delete
 from tests.features.steps.assignments_repo import test_assignments_reassign
 from tests.features.steps.assignments_repo import test_assignments_redistribute
 from tests.features.steps.assignments_repo import test_assignments_items_operations
 from tests.features.steps.assignments_repo import test_assignments_context
 
 from tests.features.steps.converter import converter
+
+from tests.features.steps.models_repo import test_models_create
+from tests.features.steps.models_repo import test_models_delete

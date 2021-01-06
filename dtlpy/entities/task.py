@@ -197,15 +197,6 @@ class Task:
                                     workload=workload,
                                     limit=limit)
 
-    def remove_items(self, filters=None, items=None):
-        """
-
-        :param filters:
-        :param items:
-        :return:
-        """
-        return self.tasks.remove_items(dataset=self.dataset, task=self, filters=filters, items=items)
-
     def get_items(self, filters=None):
         """
 

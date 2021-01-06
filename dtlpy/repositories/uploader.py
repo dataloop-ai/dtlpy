@@ -288,7 +288,8 @@ class Uploader:
                 elif self.is_url(upload_item_element):
                     # noinspection PyTypeChecker
                     if remote_name is None:
-                        remote_name = str(upload_item_element.split('/')[-1])
+                        remote_name = str(upload_item_element.split('/')[-1]).split('?')[0]
+
                     remote_filepath = remote_path + remote_name
 
                     element = UploadElement(element_type='url',
@@ -601,7 +602,7 @@ class Uploader:
         if save_locally:
             # save to file
             temp_dir = tempfile.mkdtemp()
-            temp_path = os.path.join(temp_dir, url.split('/')[-1])
+            temp_path = os.path.join(temp_dir, url.split('/')[-1].split('?')[0])
             with open(temp_path, "wb") as f:
                 for chunk in response.iter_content(chunk_size=chunk_size):
                     if chunk:  # filter out keep-alive new chunks

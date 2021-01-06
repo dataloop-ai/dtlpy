@@ -129,11 +129,21 @@ class Executions:
     ###########
     def create(self,
                # executions info
-               service_id=None, execution_input=None, function_name=None,
+               service_id=None,
+               execution_input=None,
+               function_name=None,
                # inputs info
-               resource=None, item_id=None, dataset_id=None, annotation_id=None, project_id=None,
+               resource: entities.PackageInputType = None,
+               item_id=None,
+               dataset_id=None,
+               annotation_id=None,
+               project_id=None,
                # execution config
-               sync=False, stream_logs=False, return_output=False) -> entities.Execution:
+               sync=False,
+               stream_logs=False,
+               return_output=False,
+               # misc
+               return_curl_only=False) -> entities.Execution:
         """
         Execute a function on an existing service
 
@@ -148,6 +158,7 @@ class Executions:
         :param sync: wait for function to end
         :param stream_logs: prints logs of the new execution. only works with sync=True
         :param return_output: if True and sync is True - will return the output directly
+        :param return_curl_only: return the cURL of the creation WITHOUT actually do it
         :return:
         """
         if service_id is None:
@@ -199,6 +210,13 @@ class Executions:
         url_path = '/executions/{service_id}'.format(service_id=service_id)
         if sync and not return_output and not stream_logs:
             url_path += '?sync=true'
+
+        if return_curl_only:
+            curl = self._client_api.export_curl_request(req_type='post',
+                                                        path=url_path,
+                                                        json_req=payload)
+            logger.warning(msg='Execution was NOT created. Exporting cURL only.')
+            return curl
         success, response = self._client_api.gen_request(req_type='post',
                                                          path=url_path,
                                                          json_req=payload)
@@ -219,6 +237,7 @@ class Executions:
                                           kwargs={'execution_id': execution.id,
                                                   'follow': True,
                                                   'until_completed': True})
+                thread.setDaemon(True)
                 thread.start()
             execution = self.get(execution_id=execution.id,
                                  sync=True)
@@ -318,15 +337,10 @@ class Executions:
         """
 
         """
-        logs = self.service.log(execution_id=execution_id, follow=follow)
-        end_string = '[Done] Executing function.'
-        try:
-            for log in logs:
-                print(log)
-                if until_completed and end_string in log:
-                    break
-        except KeyboardInterrupt:
-            pass
+        return self.service.log(execution_id=execution_id,
+                                follow=follow,
+                                until_completed=until_completed,
+                                view=True)
 
     def increment(self, execution: entities.Execution):
         """
@@ -424,19 +438,29 @@ class Executions:
                                             project=self._project,
                                             client_api=self._client_api)
 
-    def progress_update(self, execution_id, status=None, percent_complete=None, message=None, output=None):
+    def progress_update(
+            self,
+            execution_id: str,
+            status: entities.ExecutionStatus = None,
+            percent_complete: int = None,
+            message: str = None,
+            output: str = None,
+            service_version: str = None
+    ):
         """
         Update Execution Progress
 
         :param execution_id:
-        :param status:
+        :param status: ExecutionStatus
         :param percent_complete:
         :param message:
+        :param service_version:
         :param output:
         :return:
         """
         # create payload
         payload = dict()
+
         if status is not None:
             payload['status'] = status
         else:
@@ -452,10 +476,15 @@ class Executions:
 
         if percent_complete is not None:
             payload['percentComplete'] = percent_complete
+
         if message is not None:
             payload['message'] = message
+
         if output is not None:
             payload['output'] = output
+
+        if service_version is not None:
+            payload['serviceVersion'] = service_version
 
         # request
         success, response = self._client_api.gen_request(

@@ -1,0 +1,24 @@
+@frozen_dataset
+Feature: Datasets repository readonly mode testing
+
+    Background: Initiate Platform Interface and create a project
+        Given Platform Interface is initialized as dlp and Environment is set according to git branch
+        And There is a project by the name of "datasets_readonly"
+
+    Scenario: Set dataset readonly mode to True
+        Given There are no datasets
+        And I create a dataset with a random name
+        When I set dataset readonly mode to "True"
+        Then Dataset is in readonly mode
+
+    Scenario: Set and unset readonly mode
+        Given There are no datasets
+        And I create a dataset with a random name
+        When I set dataset readonly mode to "True"
+        Then Dataset is in readonly mode
+        When I set dataset readonly mode to "False"
+        Then Dataset is not in readonly mode
+        When I set dataset readonly mode to "True"
+        Then Dataset is in readonly mode
+        When I set dataset readonly mode to "False"
+        Then Dataset is not in readonly mode

@@ -3,18 +3,19 @@ import json
 
 import attr
 
+from enum import Enum
 from .. import exceptions, entities
 
 logger = logging.getLogger("dataloop.function")
 
 
-class FunctionPostActionType:
+class FunctionPostActionType(str, Enum):
     DOWNLOAD = 'download'
     DRAW_ANNOTATION = 'drawAnnotation'
     NO_ACTION = 'noAction'
 
 
-class FunctionDisplayScopeResource:
+class FunctionDisplayScopeResource(str, Enum):
     ANNOTATION = 'annotation'
     ITEM = 'item'
     DATASET = 'dataset'
@@ -194,7 +195,7 @@ class PackageFunction(entities.BaseEntity):
         return _json
 
 
-class PackageInputType:
+class PackageInputType(str, Enum):
     ITEM = "Item"
     DATASET = "Dataset"
     ANNOTATION = "Annotation"

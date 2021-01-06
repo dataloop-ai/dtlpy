@@ -8,7 +8,8 @@ class Polygon(BaseAnnotationDefinition):
     Polygon annotation object
     """
 
-    def __init__(self, geo, label, is_open=False, attributes=None):
+    def __init__(self, geo, label, is_open=False, attributes=None, description=None):
+        super().__init__(description=description)
         self.type = "segment"
         self.geo = geo
         self.label = label
@@ -56,7 +57,7 @@ class Polygon(BaseAnnotationDefinition):
         :param with_text: not required
         :param height: item height
         :param width: item width
-        :param annotation_format: options: dl.ViewAnnotationOptions.list()
+        :param annotation_format: options: list(dl.ViewAnnotationOptions)
         :param color: color
         :return: ndarray
         """
@@ -119,8 +120,12 @@ class Polygon(BaseAnnotationDefinition):
         # threshold the mask
         ret, thresh = cv2.threshold(mask, 0.5, 255, 0)
         # find contours
-        im2, contours, hierarchy = cv2.findContours(thresh.astype(np.uint8), cv2.RETR_TREE,
-                                                    cv2.CHAIN_APPROX_NONE)
+        major, minor, _ = cv2.__version__.split(".")
+        if int(major) > 3:
+            contours, hierarchy = cv2.findContours(thresh.astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+        else:
+            _, contours, hierarchy = cv2.findContours(thresh.astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+
         if len(contours) == 0:
             # no contours were found
             new_pts_list = []

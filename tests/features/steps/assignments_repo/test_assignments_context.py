@@ -1,6 +1,11 @@
 import behave
 
 
+@behave.when(u'I get an Assignment')
+def step_impl(context):
+    context.assignment = context.task.assignments.list()[0]
+
+
 @behave.given(u'I set Dataset to Dataset {dataset_index}')
 def step_impl(context, dataset_index):
     context.dataset = context.datasets[int(dataset_index) - 1]

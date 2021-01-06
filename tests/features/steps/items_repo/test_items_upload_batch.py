@@ -1,6 +1,5 @@
 import behave
 import os
-import cv2
 
 
 @behave.when(u'I upload item batch from "{local_path}"')
@@ -12,6 +11,7 @@ def step_impl(context, local_path):
 
 @behave.then(u'Items in "{download_path}" should equal items in "{upload_path}"')
 def step_impl(context, download_path, upload_path):
+    import cv2
     download_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], download_path)
     upload_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], upload_path)
 

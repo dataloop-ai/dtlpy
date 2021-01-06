@@ -130,41 +130,8 @@ class Assignment(entities.BaseEntity):
         _json['projectId'] = self.project_id
         return _json
 
-    def delete(self):
-        """
-        Delete assignments from platform
-        :return: True
-        """
-        return self.assignments.delete(assignment_id=self.id)
-
     def update(self, system_metadata=False):
         return self.assignments.update(assignment=self, system_metadata=system_metadata)
-
-    def assign_items(self, dataset=None, filters=None, items=None):
-        """
-
-        :param filters:
-        :param dataset:
-        :param items:
-        :return:
-        """
-        if dataset is None:
-            dataset = self.dataset
-
-        return self.assignments.assign_items(dataset=dataset, assignment_id=self.id, filters=filters, items=items)
-
-    def remove_items(self, dataset=None, filters=None, items=None):
-        """
-
-        :param dataset:
-        :param filters:
-        :param items:
-        :return:
-        """
-        if dataset is None:
-            dataset = self.dataset
-
-        return self.assignments.remove_items(dataset=dataset, assignment_id=self.id, filters=filters, items=items)
 
     def get_items(self, dataset=None, filters=None):
         """

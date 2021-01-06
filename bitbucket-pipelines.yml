@@ -25,13 +25,6 @@ pipelines:
             - python3 bumpversion.py --hard $BITBUCKET_TAG.0
             - git push --follow-tags
             - cd ..
-            - git clone git@bitbucket.org:dataloop-ai/piper-agent-proxy.git
-            - cd piper-agent-proxy
-            - git config user.email sdk@dataloop.ai
-            - git checkout master
-            - python3 bumpversion.py --hard $BITBUCKET_TAG.0
-            - git push --follow-tags
-            - cd ..
     "run-test-python-3.5.4":
       - step:
           image: python:3.5.4
@@ -45,7 +38,7 @@ pipelines:
             - pip install -r tests/requirements.txt
             - python setup.py build
             - python setup.py install
-            - python tests/test_login.py "$TEST_USER_PROD" "$TEST_PASSWORD_PROD" "$CLIENT_ID_PROD" "$CLIENT_SECRET_PROD"
+            - python tests/test_login.py
             - pip install gsutil
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - python tests/test_runner.py
@@ -62,7 +55,7 @@ pipelines:
             - pip install -r tests/requirements.txt
             - python setup.py build
             - python setup.py install
-            - python tests/test_login.py "$TEST_USER_PROD" "$TEST_PASSWORD_PROD" "$CLIENT_ID_PROD" "$CLIENT_SECRET_PROD"
+            - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - python tests/test_runner.py
     "run-test-python-3.7.8":
@@ -78,7 +71,7 @@ pipelines:
             - pip install -r tests/requirements.txt
             - python setup.py build
             - python setup.py install
-            - python tests/test_login.py "$TEST_USER_PROD" "$TEST_PASSWORD_PROD" "$CLIENT_ID_PROD" "$CLIENT_SECRET_PROD"
+            - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - python tests/test_runner.py
     "run-test-python-3.8.4":
@@ -88,13 +81,30 @@ pipelines:
           script:
             - python --version
             - PYTHONPATH=$PWD
+            - apt update
             - pip install --upgrade pip
             - apt-get -y update && apt-get install -y libgl1-mesa-glx
             - pip install -r requirements.txt
             - pip install -r tests/requirements.txt
             - python setup.py build
             - python setup.py install
-            - python tests/test_login.py "$TEST_USER_PROD" "$TEST_PASSWORD_PROD" "$CLIENT_ID_PROD" "$CLIENT_SECRET_PROD"
+            - python tests/test_login.py
+            - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
+            - python tests/test_runner.py
+    "run-test-python-3.9.0":
+      - step:
+          image: python:3.9.0
+          name: Tests-3.9.0
+          script:
+            - python --version
+            - PYTHONPATH=$PWD
+            - pip install --upgrade pip
+            - apt-get -y update && apt-get install -y libgl1-mesa-glx
+            - pip install -r requirements.txt
+            - pip install -r tests/requirements.txt
+            - python setup.py build
+            - python setup.py install
+            - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - python tests/test_runner.py
     "run-test-python-3.9.0":
@@ -126,7 +136,9 @@ pipelines:
             - pip install -r tests/requirements.txt
             - python setup.py build
             - python setup.py install
-            - python tests/test_login.py "$TEST_USERNAME" "$TEST_PASSWORD" "$TEST_CLIENT_ID" "$TEST_CLIENT_SECRET" rc
+            - export DLP_ENV_NAME="rc"
+            - python tests/test_login.py
+            - pip install gsutil
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - python tests/test_runner.py
 
@@ -143,7 +155,8 @@ pipelines:
             - pip install -r tests/requirements.txt
             - python setup.py build
             - python setup.py install
-            - python tests/test_login.py "$TEST_USER_PROD" "$TEST_PASSWORD_PROD" "$TEST_CLIENT_ID" "$TEST_CLIENT_SECRET" prod
+            - export DLP_ENV_NAME="prod"
+            - python tests/test_login.py
             - pip install gsutil
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - python tests/test_runner.py
@@ -159,6 +172,6 @@ pipelines:
             - pip install -r tests/requirements.txt
             - python setup.py build
             - python setup.py install
-            - python tests/test_login.py "$TEST_USER_PROD" "$TEST_PASSWORD_PROD" "$CLIENT_ID_PROD" "$CLIENT_SECRET_PROD"
+            - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - python tests/test_examples.py

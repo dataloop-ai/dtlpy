@@ -1,6 +1,7 @@
 import attr
 import logging
 import traceback
+from enum import Enum
 from collections import namedtuple
 
 from .. import repositories, entities, services
@@ -8,7 +9,7 @@ from .. import repositories, entities, services
 logger = logging.getLogger(name=__name__)
 
 
-class ExecutionStatus:
+class ExecutionStatus(str, Enum):
     SUCCESS = "success"
     FAILED = "failed"
     IN_PROGRESS = "inProgress"
@@ -43,6 +44,9 @@ class Execution(entities.BaseEntity):
     service_id = attr.ib()
     pipeline_id = attr.ib()
     project_id = attr.ib()
+    service_version = attr.ib()
+    package_id = attr.ib()
+    package_name = attr.ib()
 
     # sdk
     _client_api = attr.ib(type=services.ApiClient, repr=False)
@@ -118,7 +122,6 @@ class Execution(entities.BaseEntity):
                 logger.warning('Execution has been fetched from a service that is not belong to it')
                 service = None
 
-
         inst = cls(
             feedbackQueue=_json.get('feedbackQueue', None),
             service_id=_json.get('serviceId', None),
@@ -142,7 +145,10 @@ class Execution(entities.BaseEntity):
             to_terminate=_json.get('toTerminate', False),
             client_api=client_api,
             project=project,
-            service=service
+            service=service,
+            service_version=_json.get('serviceVersion', False),
+            package_id=_json.get('packageId', None),
+            package_name=_json.get('packageName', None)
         )
         inst.is_fetched = is_fetched
         return inst
@@ -154,18 +160,25 @@ class Execution(entities.BaseEntity):
         :return: platform json format of object
         """
         # get excluded
-        _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(Execution)._client_api,
-                                                              attr.fields(Execution)._service,
-                                                              attr.fields(Execution)._project,
-                                                              attr.fields(Execution).to_terminate,
-                                                              attr.fields(Execution)._repositories,
-                                                              attr.fields(Execution).project_id,
-                                                              attr.fields(Execution).service_id,
-                                                              attr.fields(Execution).pipeline_id,
-                                                              attr.fields(Execution).trigger_id,
-                                                              attr.fields(Execution).function_name,
-                                                              attr.fields(Execution).max_attempts,
-                                                              attr.fields(Execution).latest_status))
+        _json = attr.asdict(
+            self, filter=attr.filters.exclude(
+                attr.fields(Execution)._client_api,
+                attr.fields(Execution)._service,
+                attr.fields(Execution)._project,
+                attr.fields(Execution).to_terminate,
+                attr.fields(Execution)._repositories,
+                attr.fields(Execution).project_id,
+                attr.fields(Execution).service_id,
+                attr.fields(Execution).pipeline_id,
+                attr.fields(Execution).trigger_id,
+                attr.fields(Execution).function_name,
+                attr.fields(Execution).max_attempts,
+                attr.fields(Execution).latest_status,
+                attr.fields(Execution).service_version,
+                attr.fields(Execution).package_id,
+                attr.fields(Execution).package_name
+            )
+        )
         # rename
         _json['projectId'] = self.project_id
         _json['triggerId'] = self.trigger_id
@@ -175,6 +188,10 @@ class Execution(entities.BaseEntity):
         _json['latestStatus'] = self.latest_status
         _json['maxAttempts'] = self.max_attempts
         _json['toTerminate'] = self.to_terminate
+        _json['serviceVersion'] = self.service_version
+        _json['packageId'] = self.package_id
+        _json['packageName'] = self.package_name
+
         return _json
 
     @property
@@ -202,21 +219,32 @@ class Execution(entities.BaseEntity):
             raise ValueError('Must input a valid service entity')
         self._service = service
 
-    def progress_update(self, status=None, percent_complete=None, message=None, output=None):
+    def progress_update(
+            self,
+            status: ExecutionStatus = None,
+            percent_complete: int = None,
+            message: str = None,
+            output: str = None,
+            service_version: str = None
+    ):
         """
         Update Execution Progress
 
-        :param status:
+        :param service_version:
+        :param status: ExecutionStatus
         :param percent_complete:
         :param message:
         :param output:
         :return:
         """
-        return self.executions.progress_update(execution_id=self.id,
-                                               status=status,
-                                               percent_complete=percent_complete,
-                                               message=message,
-                                               output=output)
+        return self.executions.progress_update(
+            execution_id=self.id,
+            status=status,
+            percent_complete=percent_complete,
+            message=message,
+            output=output,
+            service_version=service_version
+        )
 
     def update(self):
         """

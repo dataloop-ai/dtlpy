@@ -14,6 +14,8 @@ logger = logging.getLogger(name=__name__)
 class PackageCodebaseType:
     ITEM = 'item'
     GIT = 'git'
+    FILESYSTEM = 'filesystem'
+    LOCAL = 'local'
 
 
 class PackageCodebase:
@@ -30,8 +32,12 @@ class PackageCodebase:
             return GitCodebase.from_json(_json=_json)
         elif _json['type'] == PackageCodebaseType.ITEM:
             return ItemCodebase.from_json(_json=_json)
+        elif _json['type'] == PackageCodebaseType.FILESYSTEM:
+            return FilesystemCodebase.from_json(_json=_json)
+        elif _json['type'] == PackageCodebaseType.LOCAL:
+            return LocalCodebase.from_json(_json=_json)
         else:
-            raise ValueError('Unknown codebase type: {}'.format(_json['type']))
+            raise ValueError('[PackageCodebase constructor] Unknown codebase type: {}'.format(_json['type']))
 
 
 class GitCodebase(PackageCodebase):
@@ -54,6 +60,58 @@ class GitCodebase(PackageCodebase):
             git_url=_json.get('gitUrl'),
             git_commit=_json.get('gitCommit'),
             git_tag=_json.get('gitTag', None)
+        )
+
+
+class LocalCodebase(PackageCodebase):
+    def __init__(self, local_path: str = None):
+        super().__init__(package_codebase_type=PackageCodebaseType.LOCAL)
+        self._local_path = local_path
+
+    def to_json(self):
+        _json = super().to_json()
+        if self._local_path is not None:
+            _json['localPath'] = self._local_path
+        return _json
+
+    @property
+    def local_path(self):
+        return os.path.expandvars(self._local_path)
+
+    @local_path.setter
+    def local_path(self, local_path: str):
+        self._local_path = local_path
+
+    @classmethod
+    def from_json(cls, _json: dict):
+        return cls(
+            local_path=_json.get('localPath', None),
+        )
+
+    def get_local_path(self):
+        """ Returns the local path using environment variables in the path"""
+        return os.path.expandvars(self.local_path)
+
+
+class FilesystemCodebase(PackageCodebase):
+    def __init__(self, container_path: str = None, host_path: str = None):
+        super().__init__(package_codebase_type=PackageCodebaseType.FILESYSTEM)
+        self.host_path = host_path
+        self.container_path = container_path
+
+    def to_json(self):
+        _json = super().to_json()
+        if self.host_path is not None:
+            _json['hostPath'] = self.host_path
+        if self.container_path is not None:
+            _json['containerPath'] = self.container_path
+        return _json
+
+    @classmethod
+    def from_json(cls, _json: dict):
+        return cls(
+            container_path=_json.get('containerPath', None),
+            host_path=_json.get('hostPath', None)
         )
 
 
@@ -101,6 +159,8 @@ class Package(entities.BaseEntity):
     _client_api = attr.ib(type=services.ApiClient, repr=False)
     _revisions = attr.ib(default=None, repr=False)
     _repositories = attr.ib(repr=False)
+    _artifacts = attr.ib(default=None)
+    _codebases = attr.ib(default=None)
 
     @property
     def modules(self):
@@ -192,6 +252,8 @@ class Package(entities.BaseEntity):
         _json = attr.asdict(self,
                             filter=attr.filters.exclude(attr.fields(Package)._project,
                                                         attr.fields(Package)._repositories,
+                                                        attr.fields(Package)._artifacts,
+                                                        attr.fields(Package)._codebases,
                                                         attr.fields(Package)._client_api,
                                                         attr.fields(Package)._revisions,
                                                         attr.fields(Package)._codebase_id,
@@ -278,6 +340,28 @@ class Package(entities.BaseEntity):
         assert isinstance(self._repositories.packages, repositories.Packages)
         return self._repositories.packages
 
+    @property
+    def codebases(self):
+        if self._codebases is None:
+            self._codebases = repositories.Codebases(
+                client_api=self._client_api,
+                project=self._project,
+                project_id=self.project_id
+            )
+        assert isinstance(self._codebases, repositories.Codebases)
+        return self._codebases
+
+    @property
+    def artifacts(self):
+        if self._artifacts is None:
+            self._artifacts = repositories.Artifacts(
+                client_api=self._client_api,
+                project=self._project,
+                project_id=self.project_id
+            )
+        assert isinstance(self._artifacts, repositories.Artifacts)
+        return self._artifacts
+
     ##############
     # properties #
     ##############
@@ -330,6 +414,7 @@ class Package(entities.BaseEntity):
                drain_time=None,
                on_reset=None,
                max_attempts=None,
+               force=False,
                **kwargs):
         """
         Deploy package
@@ -343,6 +428,7 @@ class Package(entities.BaseEntity):
         :param pod_type:
         :param bot:
         :param verify:
+        :param force: optional - terminate old replicas immediately
         :param agent_versions:
         :param sdk_version:
         :param runtime:
@@ -368,6 +454,7 @@ class Package(entities.BaseEntity):
                                             drain_time=drain_time,
                                             on_reset=on_reset,
                                             max_attempts=max_attempts,
+                                            force=force,
                                             jwt_forward=kwargs.get('jwt_forward', None),
                                             is_global=kwargs.get('is_global', None))
 
@@ -409,11 +496,11 @@ class Package(entities.BaseEntity):
         :return:
         """
         return self.project.packages.push(
-            codebase_id=codebase_id if codebase_id is not None else self.codebase_id,
             package_name=package_name if package_name is not None else self.name,
-            codebase=codebase if codebase is not None else self.codebase,
             modules=modules if modules is not None else self.modules,
             revision_increment=revision_increment,
+            codebase_id=codebase_id,
+            codebase=codebase,
             src_path=src_path,
             checkout=checkout
         )
@@ -493,7 +580,7 @@ class Package(entities.BaseEntity):
         for module in self.modules:
             mock['module_name'] = module.name
             mock['function_name'] = func.name
-            mock['config'] = {inpt.name: self._mockify_input(input_type=inpt.type) for inpt in module.init_inputs}
+            mock['init_params'] = {inpt.name: self._mockify_input(input_type=inpt.type) for inpt in module.init_inputs}
             mock['inputs'] = [{'name': inpt.name, 'value': self._mockify_input(input_type=inpt.type)} for inpt in
                               func.inputs]
 

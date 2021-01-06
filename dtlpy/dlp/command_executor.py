@@ -220,12 +220,18 @@ class CommandExecutor:
         elif args.items == "download":
             logger.info("Downloading dataset...")
 
-
             project = self.dl.projects.get(project_name=args.project_name)
             dataset = project.datasets.get(dataset_name=args.dataset_name)
             annotation_options = None
             if args.annotation_options is not None:
                 annotation_options = [t.strip() for t in args.annotation_options.split(",")]
+            annotation_filter_type = None
+            if args.annotation_filter_type is not None:
+                annotation_filter_type = [t.strip() for t in args.annotation_filter_type.split(",")]
+
+            annotation_filter_label = None
+            if args.annotation_filter_label is not None:
+                annotation_filter_label = [t.strip() for t in args.annotation_filter_label.split(",")]
 
             # create remote path filters
             filters = self.dl.Filters()
@@ -248,6 +254,8 @@ class CommandExecutor:
                 dataset.items.download(filters=filters,
                                        local_path=args.local_path,
                                        annotation_options=annotation_options,
+                                       annotation_filter_type=annotation_filter_type,
+                                       annotation_filter_label=annotation_filter_label,
                                        overwrite=args.overwrite,
                                        with_text=args.with_text,
                                        thickness=int(args.thickness),
@@ -260,6 +268,8 @@ class CommandExecutor:
                 dataset.download_annotations(filters=filters,
                                              local_path=args.local_path,
                                              annotation_options=annotation_options,
+                                             annotation_filter_type=annotation_filter_type,
+                                             annotation_filter_label=annotation_filter_label,
                                              overwrite=args.overwrite,
                                              with_text=args.with_text,
                                              thickness=int(args.thickness),
@@ -443,8 +453,9 @@ class CommandExecutor:
                                     package_name=args.package_name,
                                     checkout=True)
 
-            logger.info("Successfully pushed package to platform\nPackage id:{}\nPackage version:{}".format(package.id,
-                                                                                                            package.version))
+            logger.info("Successfully pushed package to platform\n"
+                        "Package id:{}\nPackage version:{}".format(package.id,
+                                                                   package.version))
 
         elif args.packages == "test":
             go_back = False
@@ -462,10 +473,12 @@ class CommandExecutor:
 
         elif args.packages == "deploy":
             services = self.utils.get_services_repo(args=args)
+            force = args.force is not None and args.force
             service = services.deploy_from_local_folder(
                 bot=args.bot,
                 service_file=args.service_file,
-                checkout=True
+                checkout=True,
+                force=force
             )
             logger.info("Successfully deployed the service: {}\nService id: {}".format(service.name, service.id))
 

@@ -1,31 +1,32 @@
 import attr
 import traceback
 import logging
+from enum import Enum
 from collections import namedtuple
 
 from .. import entities, services, exceptions, repositories
 
 logger = logging.getLogger(name=__name__)
 
-class TriggerResource:
+class TriggerResource(str, Enum):
     ITEM = "Item"
     DATASET = "Dataset"
     ANNOTATION = "Annotation"
     ITEM_STATUS = "ItemStatus"
 
 
-class TriggerAction:
+class TriggerAction(str, Enum):
     CREATED = "Created"
     UPDATED = "Updated"
     DELETED = "Deleted"
 
 
-class TriggerExecutionMode:
+class TriggerExecutionMode(str, Enum):
     ONCE = "Once"
     ALWAYS = "Always"
 
 
-class TriggerType:
+class TriggerType(str, Enum):
     EVENT = "Event"
     CRON = "Cron"
 

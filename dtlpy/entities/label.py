@@ -55,10 +55,13 @@ class Label:
         else:
             raise PlatformException("400", "Invalid input - each label must have a tag")
 
+        display_label = root.get("displayLabel", None)
+        if display_label is None:
+            display_label = root.get("display_label", None)
         return cls(
             tag=label_name,
             color=root.get("color", None),
-            display_label=root.get("displayLabel", None),
+            display_label=display_label,
             attributes=root.get("attributes", None),
             children=children
         )

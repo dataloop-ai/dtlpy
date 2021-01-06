@@ -1,6 +1,5 @@
 import behave
 import os
-import cv2
 
 
 @behave.when(u"I download batched items to buffer")
@@ -66,6 +65,7 @@ def step_impl(context, local_path):
 
 @behave.then(u'Items are saved in "{local_path}"')
 def step_impl(context, local_path):
+    import cv2
     local_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], local_path)
 
     compare_folder_path = 'downloaded_batch/should_be'

@@ -262,7 +262,6 @@ class Tasks:
                workload=None,
                dataset=None,
                task_owner=None,
-               status='open', # Deprecation don't use any more
                task_type='annotation',
                task_parent_id=None,
                project_id=None,
@@ -287,17 +286,12 @@ class Tasks:
         :param recipe_id:
         :param due_date:
         :param project_id:
-        :param status: # Deprecation don't use any more
         :param task_name:
         :param task_type: "annotation" or "qa"
         :param task_parent_id: optional if type is qa - parent task id
         :return: Annotation Task object
         """
 
-        if status != 'open':
-            logger.warning('[DeprecationWarning] input argument "status"'
-                           ' will not affect the platform from v1.20.19\n'
-                           'This warning message will be deleted after v1.22.0')
         if dataset is None and self._dataset is None:
             raise exceptions.PlatformException('400', 'Please provide param dataset')
 
@@ -309,7 +303,7 @@ class Tasks:
                     items = [items]
                 query = entities.Filters(field='id',
                                          values=[item.id for item in items],
-                                         operator='in').prepare(query_only=True)
+                                         operator=entities.FiltersOperations.IN).prepare(query_only=True)
             else:
                 query = filters.prepare(query_only=True)
 
@@ -349,7 +343,6 @@ class Tasks:
                    'workload': workload.to_json(),
                    'assignmentIds': assignments_ids,
                    'recipeId': recipe_id,
-                   'status': status,
                    'dueDate': due_date}
 
         if task_parent_id is not None:
@@ -384,7 +377,8 @@ class Tasks:
                 raise exceptions.PlatformException('400', 'Must provide either filters or items list')
 
             if filters is None:
-                filters = entities.Filters(field='id', values=[item.id for item in items], operator='in')
+                filters = entities.Filters(field='id', values=[item.id for item in items],
+                                           operator=entities.FiltersOperations.IN)
 
             if op == 'delete':
                 if task is None:
@@ -434,7 +428,8 @@ class Tasks:
             if filters is None:
                 if not isinstance(items, list):
                     items = [items]
-                filters = entities.Filters(field='id', values=[item.id for item in items], operator='in')
+                filters = entities.Filters(field='id', values=[item.id for item in items],
+                                           operator=entities.FiltersOperations.IN)
             query = filters.prepare(query_only=True)
 
         if workload is None:
@@ -471,30 +466,6 @@ class Tasks:
         assert isinstance(task, entities.Task)
         return task
 
-    def remove_items(self,
-                     dataset: entities.Dataset,
-                     task: entities.Task = None,
-                     task_id=None,
-                     filters: entities.Filters = None,
-                     items=None):
-        """
-
-        :param task:
-        :param filters:
-        :param task_id:
-        :param dataset:
-        :param items:
-        :return:
-        """
-        # TODO - deprecate
-        logger.warning('[DeprecationWarning] "remove_items()" method will be deprecated after version 1.22.0\n')
-        return self.__item_operations(dataset=dataset,
-                                      task_id=task_id,
-                                      task=task,
-                                      filters=filters,
-                                      items=items,
-                                      op='delete')
-
     def get_items(self,
                   task_id: str = None,
                   task_name: str = None,
@@ -520,6 +491,6 @@ class Tasks:
 
         if filters is None:
             filters = entities.Filters()
-        filters.add(field='metadata.system.refs.id', values=[task_id], operator='in')
+        filters.add(field='metadata.system.refs.id', values=[task_id], operator=entities.FiltersOperations.IN)
 
         return dataset.items.list(filters=filters)

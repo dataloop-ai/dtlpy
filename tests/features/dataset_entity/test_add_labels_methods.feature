@@ -49,9 +49,13 @@ Feature: Add Labels include nested Labels
         When I add labels of string type using ontology.add_labels when update_ontology is false
         Then Label has been added
 
-    Scenario: Add many labels
+    Scenario: Add and Update many labels
         When I add many labels
         Then Label has been added
+        And  I update many labels
+        And Label has been added
+        And  I upsert many labels
+        And Label has been added
 
     Scenario: Add many nested labels
         When I add many nested labels

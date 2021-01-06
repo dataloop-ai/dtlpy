@@ -1,11 +1,10 @@
 import behave
 import os
-import cv2
-import pandas
 
 
 @behave.when(u'I upload item using data frame from "{upload_path}"')
 def step_impl(context, upload_path):
+    import pandas
     upload_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], upload_path)
 
     # get filepathes

@@ -10,6 +10,7 @@ from .. import miscellaneous, exceptions, entities, repositories, assets, ApiCli
 from ..__version__ import version as __version__
 
 logger = logging.getLogger(name=__name__)
+FUNCTION_END_LINE = '[Done] Execution completed successfully :)'
 
 
 class Services:
@@ -243,6 +244,12 @@ class Services:
         return paged
 
     def status(self, service_name=None, service_id=None):
+        """
+
+        :param service_name:
+        :param service_id:
+        :return:
+        """
         if service_id is None:
             if service_name is None:
                 raise exceptions.PlatformException(error='400',
@@ -256,7 +263,14 @@ class Services:
             raise exceptions.PlatformException(response)
         return response.json()
 
-    def pause(self, service_name=None, service_id=None):
+    def pause(self, service_name=None, service_id=None, force=False):
+        """
+
+        :param service_name:
+        :param service_id:
+        :param force: optional - terminate old replicas immediately
+        :return:
+        """
         if service_id is None:
             if service_name is None:
                 raise exceptions.PlatformException(error='400',
@@ -264,13 +278,23 @@ class Services:
             service = self.get(service_name=service_name)
             service_id = service.id
         # request
+        url = "/services/{}/stop".format(service_id)
+        if force:
+            url = '{}?force=true'
         success, response = self._client_api.gen_request(req_type="post",
-                                                         path="/services/{}/stop".format(service_id))
+                                                         path=url)
         if not success:
             raise exceptions.PlatformException(response)
         return response.json()
 
-    def resume(self, service_name=None, service_id=None):
+    def resume(self, service_name=None, service_id=None, force=False):
+        """
+
+        :param service_name:
+        :param service_id:
+        :param force: optional - terminate old replicas immediately
+        :return:
+        """
         if service_id is None:
             if service_name is None:
                 raise exceptions.PlatformException(error='400',
@@ -278,8 +302,11 @@ class Services:
             service = self.get(service_name=service_name)
             service_id = service.id
         # request
+        url = "/services/{}/resume".format(service_id)
+        if force:
+            url = '{}?force=true'
         success, response = self._client_api.gen_request(req_type="post",
-                                                         path="/services/{}/resume".format(service_id))
+                                                         path=url)
         if not success:
             raise exceptions.PlatformException(response)
         return response.json()
@@ -329,6 +356,15 @@ class Services:
                 init_input = init_params
 
         return init_input
+
+    def name_validation(self, name: str):
+        url = '/piper-misc/naming/services/{}'.format(name)
+
+        # request
+        success, response = self._client_api.gen_request(req_type='get',
+                                                         path=url)
+        if not success:
+            raise exceptions.PlatformException(response)
 
     def _create(self, service_name=None, package=None, module_name=None, bot=None, revision=None, init_input=None,
                 runtime=None, pod_type=None, project_id=None, sdk_version=None, agent_versions=None, verify=True,
@@ -478,9 +514,10 @@ class Services:
             raise exceptions.PlatformException(response)
         return True
 
-    def update(self, service: entities.Service) -> entities.Service:
+    def update(self, service: entities.Service, force=False) -> entities.Service:
         """
         Update Service changes to platform
+        :param force: optional - terminate old replicas immediately
         :param service: Service entity
         :return: Service entity
         """
@@ -490,8 +527,11 @@ class Services:
         payload = service.to_json()
 
         # request
+        url = '/services/{}'.format(service.id)
+        if force:
+            url = '{}?force=true'.format(url)
         success, response = self._client_api.gen_request(req_type='patch',
-                                                         path='/services/{}'.format(service.id),
+                                                         path=url,
                                                          json_req=payload)
 
         # exception handling
@@ -510,7 +550,7 @@ class Services:
                                           project=self._project)
 
     def log(self, service, size=None, checkpoint=None, start=None, end=None, follow=False, text=None,
-            execution_id=None, function_name=None, replica_id=None, system=False, view=True):
+            execution_id=None, function_name=None, replica_id=None, system=False, view=True, until_completed=True):
         """
         Get service logs
 
@@ -587,7 +627,7 @@ class Services:
                          system=system)
 
         if view:
-            log.view()
+            log.view(until_completed=until_completed)
         else:
             return log
 
@@ -642,6 +682,7 @@ class Services:
                drain_time: int = None,
                max_attempts: int = None,
                on_reset: str = None,
+               force: bool = False,
                **kwargs) -> entities.Service:
         """
         Deploy service
@@ -659,6 +700,7 @@ class Services:
         :param pod_type:
         :param service_name: name
         :param package: package entity
+        :param force: optional - terminate old replicas immediately
         :param bot: bot email
         :param revision: version
         :param init_input: config to run at startup
@@ -727,7 +769,7 @@ class Services:
                 service.versions = agent_versions
             if driver_id is not None:
                 service.driver_id = driver_id
-            service = self.update(service=service)
+            service = self.update(service=service, force=force)
         else:
             service = self._create(service_name=service_name,
                                    package=package,
@@ -803,11 +845,13 @@ class Services:
                              checkout=True,
                              modules=[module]).deploy(service_name=name)
 
-    def deploy_from_local_folder(self, cwd=None, service_file=None, bot=None, checkout=False) -> entities.Service:
+    def deploy_from_local_folder(self, cwd=None, service_file=None, bot=None, checkout=False,
+                                 force=False) -> entities.Service:
         """
         Deploy from local folder
         :param checkout:
         :param bot:
+        :param force: optional - terminate old replicas immediately
         :return:
 
         :param cwd: optional - package working directory. Default=cwd
@@ -866,7 +910,9 @@ class Services:
                               drain_time=drain_time,
                               max_attempts=max_attempts,
                               on_reset=on_reset,
-                              module_name=module_name)
+                              module_name=module_name,
+                              force=force
+                              )
 
         logger.info('Service was deployed successfully. Service id: {}'.format(service.id))
 
@@ -897,7 +943,7 @@ class Services:
         logging.info('Successfully deployed!')
         return service
 
-    def deploy_pipeline(self, service_json_path=None, project=None, bot=None):
+    def deploy_pipeline(self, service_json_path=None, project=None, bot=None, force=False):
         """
         Deploy pipeline
 
@@ -954,12 +1000,12 @@ class Services:
                 service = project_services[service_input['name']]
                 service.runtime = runtime
                 service.init_input = init_input
-                service = project.services.update(service=service)
                 service.version = sdk_version
                 service.versions = agent_versions
                 service.verify = verify
                 service.max_attempts = max_attempts
                 service.driver_id = driver_id
+                service = project.services.update(service=service, force=force)
                 project_services[service.name] = service
 
             else:
@@ -1109,10 +1155,12 @@ class ServiceLog:
         self.checkpoint = log.checkpoint
         self.stop = log.stop
 
-    def view(self):
+    def view(self, until_completed):
         try:
             for log in self:
                 print(log)
+                if until_completed and FUNCTION_END_LINE in log:
+                    break
         except KeyboardInterrupt:
             return
 

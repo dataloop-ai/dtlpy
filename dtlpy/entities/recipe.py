@@ -3,7 +3,7 @@ from collections import namedtuple
 import logging
 import attr
 
-from .. import repositories, entities, services
+from .. import repositories, entities, services, exceptions
 
 logger = logging.getLogger(name=__name__)
 
@@ -162,3 +162,30 @@ class Recipe(entities.BaseEntity):
         :return: Recipe object
         """
         return self.recipes.update(recipe=self, system_metadata=system_metadata)
+
+    def clone(self, shallow=False):
+        """
+        Clone Recipe
+
+       :param shallow: If True, link ot existing ontology, clones all ontology that are link to the recipe as well
+       :return: Cloned ontology object
+        """
+        return self.recipes.clone(recipe=self,
+                                  shallow=shallow)
+
+    def get_annotation_template_id(self, template_name):
+        """
+        Get annotation template id by template name
+
+       :param template_name:
+       :return: template id or None if does not exist
+        """
+        collection_templates = list()
+        if 'system' in self.metadata and 'collectionTemplates' in self.metadata['system']:
+            collection_templates = self.metadata['system']['collectionTemplates']
+
+        for template in collection_templates:
+            if "name" and 'id' in template:
+                if template_name == template['name']:
+                    return template['id']
+        raise exceptions.NotFound('404', "annotation template {!r} not found".format(template_name))

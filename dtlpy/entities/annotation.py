@@ -4,34 +4,27 @@ import logging
 import attr
 import json
 from PIL import Image
+from enum import Enum
 
 from .. import entities, PlatformException, repositories, ApiClient
 
 logger = logging.getLogger(name=__name__)
 
 
-class AnnotationStatus:
+class AnnotationStatus(str, Enum):
     ISSUE = "issue"
     APPROVED = "approved"
     REVIEW = "review"
+    CLEAR = "clear"
 
 
-class ViewAnnotationOptions:
+class ViewAnnotationOptions(str, Enum):
     JSON = "json"
     MASK = "mask"
     INSTANCE = "instance"
     ANNOTATION_ON_IMAGE = "img_mask"
     VTT = "vtt"
     OBJECT_ID = "object_id"
-
-    @staticmethod
-    def list():
-        return [ViewAnnotationOptions.JSON,
-                ViewAnnotationOptions.MASK,
-                ViewAnnotationOptions.INSTANCE,
-                ViewAnnotationOptions.VTT,
-                ViewAnnotationOptions.ANNOTATION_ON_IMAGE,
-                ViewAnnotationOptions.OBJECT_ID]
 
 
 @attr.s
@@ -287,15 +280,18 @@ class Annotation(entities.BaseEntity):
 
     @property
     def color(self):
-        try:
-            lower_keys = {key.lower(): label for key, label in self.dataset.labels_flat_dict.items()}
-            if self.label.lower() in lower_keys:
-                color = lower_keys[self.label.lower()].rgb
-            else:
-                color = None
-            return color
-        except Exception:
-            return None
+        all_colors_lower = None
+        if self._dataset is not None:
+            all_colors_lower = {k.lower(): v for k, v in self._dataset.labels_flat_dict.items()}
+        else:
+            if self._item is not None and self._item._dataset is not None:
+                all_colors_lower = {k.lower(): v for k, v in self._item._dataset.labels_flat_dict.items()}
+
+        if all_colors_lower is not None and self.label.lower() in all_colors_lower:
+            color = all_colors_lower[self.label.lower()].rgb
+        else:
+            color = (255, 255, 255)
+        return color
 
     ####################
     # frame attributes #
@@ -353,7 +349,7 @@ class Annotation(entities.BaseEntity):
     ##################
     # entity methods #
     ##################
-    def update_status(self, status):
+    def update_status(self, status: AnnotationStatus = AnnotationStatus.ISSUE):
         """
         Open an issue on the annotation
         """
@@ -384,7 +380,7 @@ class Annotation(entities.BaseEntity):
 
     def download(self,
                  filepath,
-                 annotation_format=ViewAnnotationOptions.MASK,
+                 annotation_format: ViewAnnotationOptions = ViewAnnotationOptions.MASK,
                  height=None,
                  width=None,
                  thickness=1,
@@ -392,7 +388,7 @@ class Annotation(entities.BaseEntity):
         """
         Save annotation to file
         :param filepath: local path to where annotation will be downloaded to
-        :param annotation_format: options: dl.ViewAnnotationOptions.list()
+        :param annotation_format: options: list(dl.ViewAnnotationOptions)
         :param height: image height
         :param width: image width
         :param thickness: thickness
@@ -429,7 +425,8 @@ class Annotation(entities.BaseEntity):
     # Plotting #
     ############
     def show(self, image=None, thickness=None, with_text=False, height=None, width=None,
-             annotation_format=ViewAnnotationOptions.MASK, color=None):
+             annotation_format: ViewAnnotationOptions = ViewAnnotationOptions.MASK,
+             color=None, label_instance_dict=None):
         """
         Show annotations
 
@@ -438,7 +435,7 @@ class Annotation(entities.BaseEntity):
         :param width: width
         :param thickness: line thickness
         :param with_text: add label to annotation
-        :param annotation_format: dl.ViewAnnotationOptions.list()
+        :param annotation_format: list(dl.ViewAnnotationOptions)
         :param color: optional
         :return: ndarray of the annotations
         """
@@ -459,19 +456,11 @@ class Annotation(entities.BaseEntity):
                 raise PlatformException('400', 'must provide item width and height')
             width = self._item.width
 
-        # color
-        if color is None:
-            if self.color is not None:
-                color = self.color
+        if annotation_format == entities.ViewAnnotationOptions.MASK:
+            # create an empty mask
+            if image is None:
+                image = np.zeros((height, width, 4), dtype=np.uint8)
             else:
-                if self.label.lower() not in ['approved', 'completed']:
-                    logger.warning('No color given for label: {}, random color will be selected'.format(self.label))
-                color = (127, 127, 127)
-        if (isinstance(color, list) or isinstance(color, tuple)) and len(color) == 3:
-            # if color is a list or tuple and size of 3 - add alpha
-            color = (color[0], color[1], color[2], 255)
-            if image is not None:
-                # check matching dimensions
                 if len(image.shape) == 2:
                     # image is gray
                     image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGBA)
@@ -480,10 +469,65 @@ class Annotation(entities.BaseEntity):
                 elif image.shape[2] == 4:
                     pass
                 else:
-                    raise PlatformException(error='400',
-                                            message='Image size doesnt match colors. img shape: {}, color: {}'.format(
-                                                image.shape,
-                                                color))
+                    raise PlatformException(error='1001',
+                                            message='Unknown image shape. expected depth: gray or RGB or RGBA. got: {}'.format(
+                                                image.shape))
+        elif annotation_format == entities.ViewAnnotationOptions.ANNOTATION_ON_IMAGE:
+            if image is None:
+                raise PlatformException(error='1001',
+                                        message='Must input image with ANNOTATION_ON_IMAGE view option.')
+        elif annotation_format == entities.ViewAnnotationOptions.INSTANCE:
+            if image is None:
+                # create an empty mask
+                image = np.zeros((height, width), dtype=np.uint8)
+            else:
+                if len(image.shape) != 2:
+                    raise PlatformException(
+                        error='1001',
+                        message='Image shape must be 2d array when trying to draw instance on image')
+            # create a dictionary of labels and ids
+            if label_instance_dict is None:
+                if self._dataset is not None:
+                    label_instance_dict = self._dataset.instance_map
+                else:
+                    if self._item is not None and self._item._dataset is not None:
+                        label_instance_dict = self._item._dataset.instance_map
+                if label_instance_dict is None:
+                    label_instance_dict = dict()
+
+        elif annotation_format == entities.ViewAnnotationOptions.OBJECT_ID:
+            if image is None:
+                # create an empty mask
+                image = np.zeros((height, width), dtype=np.uint8)
+            else:
+                if len(image.shape) != 2:
+                    raise PlatformException(
+                        error='1001',
+                        message='Image shape must be 2d array when trying to draw instance on image')
+        else:
+            raise PlatformException(error='1001',
+                                    message='unknown annotations format: "{}". known formats: "{}"'.format(
+                                        annotation_format, '", "'.join(list(entities.ViewAnnotationOptions))))
+
+        # color
+        if annotation_format == entities.ViewAnnotationOptions.MASK:
+            color = self.color
+            if len(color) == 3:
+                color = color + (255,)
+        elif annotation_format == entities.ViewAnnotationOptions.INSTANCE:
+            # if label not in dataset label - put it as background
+            color = label_instance_dict.get(self.label, 1)
+        elif annotation_format == entities.ViewAnnotationOptions.OBJECT_ID:
+            if self.object_id is None:
+                raise PlatformException(
+                    error='1001',
+                    message='Try to show object_id but annotation has no value. annotation id: {}'.format(
+                        self.id))
+            color = self.object_id
+        else:
+            raise PlatformException('404',
+                                    'unknown annotations format: {}. known formats: "{}"'.format(
+                                        annotation_format, '", "'.join(list(entities.ViewAnnotationOptions))))
         # show annotation
         if image is None:
             image = np.zeros((height, width, len(color)), dtype=np.uint8)
@@ -795,7 +839,6 @@ class Annotation(entities.BaseEntity):
                 logger.warning('Annotation has been fetched from a dataset that is not belong to it')
                 dataset = None
 
-
         # get id
         if 'id' in _json:
             annotation_id = _json['id']
@@ -919,7 +962,7 @@ class Annotation(entities.BaseEntity):
         # if has frames #
         #################
         if is_video:
-            if annotation.type in ['class' ,'subtitle', 'pose']:
+            if annotation.type in ['class', 'subtitle', 'pose']:
                 if end_frame is None:
                     end_frame = start_frame
                 # for class type annotation create frames
@@ -1019,7 +1062,8 @@ class Annotation(entities.BaseEntity):
         if self.object_id is not None:
             _json['metadata']['system']['objectId'] = self.object_id
         if self.status is not None:
-            _json['metadata']['system']['status'] = self.status
+            # if status is CLEAR need to set status to None so it will be deleted in backend
+            _json['metadata']['system']['status'] = self.status if self.status != AnnotationStatus.CLEAR else None
         if self.type in ['segment', 'polyline']:
             _json['metadata']['system']['isOpen'] = self.is_open
 

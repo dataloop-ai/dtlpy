@@ -181,7 +181,7 @@ class Annotations:
                                                'to perform this action.')
 
     def show(self, image=None, thickness=1, with_text=False, height=None, width=None,
-             annotation_format=entities.ViewAnnotationOptions.MASK):
+             annotation_format: entities.ViewAnnotationOptions = entities.ViewAnnotationOptions.MASK):
         """
         Show annotations
 
@@ -190,7 +190,7 @@ class Annotations:
         :param width: width
         :param thickness: line thickness
         :param with_text: add label to annotation
-        :param annotation_format: options: dl.ViewAnnotationOptions.list()
+        :param annotation_format: options: list(dl.ViewAnnotationOptions)
         :return: ndarray of the annotations
         """
         # get item's annotations
@@ -203,13 +203,15 @@ class Annotations:
                                 with_text=with_text,
                                 annotation_format=annotation_format)
 
-    def download(self, filepath, annotation_format=entities.ViewAnnotationOptions.MASK, height=None, width=None,
+    def download(self, filepath,
+                 annotation_format: entities.ViewAnnotationOptions = entities.ViewAnnotationOptions.MASK,
+                 height=None, width=None,
                  thickness=1, with_text=False):
         """
             Save annotation format to file
 
         :param filepath: Target download directory
-        :param annotation_format: optional - dl.ViewAnnotationOptions.list()
+        :param annotation_format: optional - list(dl.ViewAnnotationOptions)
         :param height: optional - image height
         :param width: optional - image width
         :param thickness: optional - annotation format, default =1
@@ -433,7 +435,7 @@ class Annotations:
 
     def update_status(self, annotation: entities.Annotation = None,
                       annotation_id=None,
-                      status=entities.AnnotationStatus.ISSUE):
+                      status: entities.AnnotationStatus = entities.AnnotationStatus.ISSUE):
         """
         Set status on annotation
         :param annotation: optional - Annotation entity
@@ -444,10 +446,8 @@ class Annotations:
             if annotation_id is None:
                 raise ValueError('must input on of "annotation" or "annotation_id"')
             annotation = self.get(annotation_id=annotation_id)
-        if status not in [entities.AnnotationStatus.ISSUE,
-                          entities.AnnotationStatus.APPROVED,
-                          entities.AnnotationStatus.REVIEW]:
-            raise ValueError('status must be on of: "issue", "approved", "review"')
+        if status not in list(entities.AnnotationStatus):
+            raise ValueError('status must be on of: {}'.format(', '.join(list(entities.AnnotationStatus))))
         annotation.status = status
         annotation.update(system_metadata=True)
 

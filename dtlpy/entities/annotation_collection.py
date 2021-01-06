@@ -32,18 +32,6 @@ class AnnotationCollection(entities.BaseEntity):
         assert isinstance(self._dataset, entities.Dataset)
         return self._dataset
 
-    @property
-    def colors(self):
-        if self._colors is None:
-            self._colors = {key.lower(): label for key, label in self.dataset.labels_flat_dict.items()}
-        return self._colors
-
-    def get_color(self, label):
-        if label in self.colors:
-            return self.colors[label].rgb
-        else:
-            return (127, 127, 127)
-
     @annotations.default
     def set_annotations(self):
         return list()
@@ -101,6 +89,13 @@ class AnnotationCollection(entities.BaseEntity):
             annotation_definition = [annotation_definition]
 
         for single_definition in annotation_definition:
+            if isinstance(single_definition.description, str):
+                if metadata is None:
+                    metadata = dict()
+                if 'system' not in metadata:
+                    metadata['system'] = dict()
+                metadata['system']['description'] = single_definition.description
+
             if object_id is None:
                 # add new annotation to list
                 annotation = entities.Annotation.new(item=self.item,
@@ -148,7 +143,7 @@ class AnnotationCollection(entities.BaseEntity):
     # Plotting #
     ############
     def show(self, image=None, thickness=None, with_text=False, height=None, width=None,
-             annotation_format=entities.ViewAnnotationOptions.MASK,
+             annotation_format: entities.ViewAnnotationOptions = entities.ViewAnnotationOptions.MASK,
              label_instance_dict=None):
         """
             Show annotations according to annotation_format
@@ -158,7 +153,7 @@ class AnnotationCollection(entities.BaseEntity):
         :param width: width
         :param thickness: line thickness
         :param with_text: add label to annotation
-        :param annotation_format: how to show thw annotations. options: dl.ViewAnnotationOptions.list()
+        :param annotation_format: how to show thw annotations. options: list(dl.ViewAnnotationOptions)
         :param label_instance_dict: instance label map {'Label': 1, 'More': 2}
         :return: ndarray of the annotations
         """
@@ -171,89 +166,22 @@ class AnnotationCollection(entities.BaseEntity):
             logger.error(
                 'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
             raise
-
-        if height is None:
-            if self.item.height is None:
-                raise PlatformException('400', 'Height must be provided')
-            height = self.item.height
-        if width is None:
-            if self.item.width is None:
-                raise PlatformException('400', 'Width must be provided')
-            width = self.item.width
-
-        if annotation_format == entities.ViewAnnotationOptions.MASK:
-            # create an empty mask
-            if image is None:
-                mask = np.zeros((height, width, 4), dtype=np.uint8)
-            else:
-                if len(image.shape) == 2:
-                    # image is gray
-                    mask = cv2.cvtColor(image, cv2.COLOR_GRAY2RGBA)
-                elif image.shape[2] == 3:
-                    mask = cv2.cvtColor(image, cv2.COLOR_RGB2RGBA)
-                else:
-                    raise PlatformException(error='1001',
-                                            message='Unknown image shape. expected depth: gray or RGB. got: {}'.format(
-                                                image.shape))
-        elif annotation_format == entities.ViewAnnotationOptions.INSTANCE:
-            if image is None:
-                # create an empty mask
-                mask = np.zeros((height, width), dtype=np.uint8)
-            else:
-                if len(image.shape) != 2:
-                    raise PlatformException(
-                        error='1001',
-                        message='Image shape must be 2d array when trying to draw instance on image')
-                mask = image
-            # create a dictionary of labels and ids
-            if label_instance_dict is None:
-                label_instance_dict = self.item.dataset.instance_map
-        elif annotation_format == entities.ViewAnnotationOptions.OBJECT_ID:
-            if image is None:
-                # create an empty mask
-                mask = np.zeros((height, width), dtype=np.uint8)
-            else:
-                if len(image.shape) != 2:
-                    raise PlatformException(
-                        error='1001',
-                        message='Image shape must be 2d array when trying to draw instance on image')
-                mask = image
-        else:
-            raise PlatformException(error='1001',
-                                    message='unknown annotations format: "{}". known formats: "{}"'.format(
-                                        annotation_format, '", "'.join(entities.ViewAnnotationOptions.list())))
-
-        #############
         # gor over all annotations and put the id where the annotations is
         for annotation in self.annotations:
-            if annotation_format == entities.ViewAnnotationOptions.MASK:
-                color = self.get_color(annotation.label.lower())
-            elif annotation_format == entities.ViewAnnotationOptions.INSTANCE:
-                # if label not in dataset label - put it as background
-                color = label_instance_dict.get(annotation.label, 0)
-            elif annotation_format == entities.ViewAnnotationOptions.OBJECT_ID:
-                if annotation.object_id is None:
-                    raise PlatformException(
-                        error='1001',
-                        message='Try to show object_id but annotation has no value. annotation id: {}'.format(
-                            annotation.id))
-                color = annotation.object_id
-            else:
-                raise PlatformException('404',
-                                        'unknown annotations format: {}. known formats: "{}"'.format(
-                                            annotation_format, '", "'.join(entities.ViewAnnotationOptions.list())))
             # get the mask of the annotation
-            mask = annotation.show(thickness=thickness,
-                                   color=color,
-                                   with_text=with_text,
-                                   height=height,
-                                   width=width,
-                                   annotation_format=annotation_format,
-                                   image=mask)
+            image = annotation.show(thickness=thickness,
+                                    with_text=with_text,
+                                    height=height,
+                                    width=width,
+                                    label_instance_dict=label_instance_dict,
+                                    annotation_format=annotation_format,
+                                    image=image)
 
-        return mask
+        return image
 
-    def download(self, filepath, img_filepath=None, annotation_format=entities.ViewAnnotationOptions.MASK, height=None,
+    def download(self, filepath, img_filepath=None,
+                 annotation_format: entities.ViewAnnotationOptions = entities.ViewAnnotationOptions.MASK,
+                 height=None,
                  width=None, thickness=1,
                  with_text=False):
         """
@@ -273,8 +201,10 @@ class AnnotationCollection(entities.BaseEntity):
         if annotation_format == entities.ViewAnnotationOptions.JSON:
             if not ex:
                 filepath = '{}/{}.json'.format(dir_name, os.path.splitext(self.item.name)[0])
-            _json = {'_id': self.item.id,
-                     'filename': self.item.filename}
+            _json = dict()
+            if self.item is not None:
+                _json = {'_id': self.item.id,
+                         'filename': self.item.filename}
             annotations = list()
             for ann in self.annotations:
                 annotations.append(ann.to_json())

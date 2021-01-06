@@ -1,6 +1,6 @@
 import logging
 
-from .. import entities, miscellaneous, PlatformException, exceptions, services
+from .. import entities, miscellaneous, PlatformException, exceptions, services, repositories
 
 logger = logging.getLogger(name=__name__)
 
@@ -13,12 +13,20 @@ class Artifacts:
     def __init__(self,
                  client_api: services.ApiClient,
                  project: entities.Project = None,
-                 dataset: entities.Dataset = None):
+                 dataset: entities.Dataset = None,
+                 project_id: str = None,
+                 model: entities.Model = None,
+                 package: entities.Package = None):
         self._client_api = client_api
         if project is None and dataset is None:
-            raise PlatformException('400', 'at least one must be not None: dataset or project')
+            if project_id is None:
+                raise PlatformException('400', 'at least one must be not None: dataset, project or project_id')
+            else:
+                project = repositories.Projects(client_api=client_api).get(project_id=project_id)
         self._project = project
         self._dataset = dataset
+        self._model = model
+        self._package = package
         self._items_repository = None
 
     ############
@@ -67,8 +75,14 @@ class Artifacts:
     # methods #
     ###########
     @staticmethod
-    def _build_path_header(package_name=None, package=None, execution_id=None, execution=None, model_name=None,
-                           snapshot_name=None):
+    def _build_path_header(
+            package_name=None,
+            package=None,
+            execution_id=None,
+            execution=None,
+            model_name=None,
+            snapshot_name=None
+    ):
         remote_path = '/artifacts'
         if package_name is not None or package is not None:
             if package is not None:
@@ -85,36 +99,68 @@ class Artifacts:
 
         return remote_path
 
-    def list(self, execution_id=None, package_name=None) -> miscellaneous.List[entities.Artifact]:
+    def list(self,
+             execution_id=None,
+             package_name=None,
+             model_name=None,
+             snapshot_name=None) -> miscellaneous.List[entities.Artifact]:
         """
         List of artifacts
         :return: list of artifacts
         """
+        if self._model is not None:
+            model_name = self._model.name
+        if self._package is not None:
+            package_name = self._package.name
+
         filters = entities.Filters()
-        remote_path = self._build_path_header(package_name=package_name, execution_id=execution_id)
+        remote_path = self._build_path_header(
+            package_name=package_name,
+            execution_id=execution_id,
+            model_name=model_name,
+            snapshot_name=snapshot_name
+        )
+
         remote_path += '/*'
         filters.add(field='filename', values=remote_path)
         pages = self.items_repository.list(filters=filters)
         items = [item for page in pages for item in page]
         return miscellaneous.List(items)
 
-    def get(self, artifact_id=None, artifact_name=None,
-            execution_id=None, package_name=None) -> entities.Artifact:
+    def get(self,
+            artifact_id=None,
+            artifact_name=None,
+            model_name=None,
+            snapshot_name=None,
+            execution_id=None,
+            package_name=None) -> entities.Artifact:
         """
 
         Get an artifact object by name, id or type
         If by name or type - need to input also execution/task id for the artifact folder
+        :param snapshot_name:
+        :param model_name:
         :param package_name:
         :param artifact_id: optional - search by id
         :param artifact_name:
         :param execution_id:
         :return: Artifact object
         """
+        if self._model is not None:
+            model_name = self._model.name
+        if self._package is not None:
+            package_name = self._package.name
+
         if artifact_id is not None:
             artifact = self.items_repository.get(item_id=artifact_id)
             return artifact
         elif artifact_name is not None:
-            artifacts = self.list(execution_id=execution_id, package_name=package_name)
+            artifacts = self.list(
+                execution_id=execution_id,
+                package_name=package_name,
+                model_name=model_name,
+                snapshot_name=snapshot_name
+            )
             artifact = [artifact for artifact in artifacts if artifact.name == artifact_name]
             if len(artifact) == 1:
                 artifact = artifact[0]
@@ -127,14 +173,25 @@ class Artifacts:
             msg = 'one input must be not None: artifact_id or artifact_name'
             raise ValueError(msg)
 
-    def download(self, artifact_id=None, artifact_name=None,
-                 execution_id=None, package_name=None,
-                 local_path=None, overwrite=False, save_locally=True):
+    def download(
+            self,
+            artifact_id=None,
+            artifact_name=None,
+            execution_id=None,
+            package_name=None,
+            model_name=None,
+            snapshot_name=None,
+            local_path=None,
+            overwrite=False,
+            save_locally=True
+    ):
         """
 
         Download artifact binary.
         Get artifact by name, id or type
 
+        :param snapshot_name:
+        :param model_name:
         :param save_locally:
         :param overwrite: optional - default = False
         :param artifact_id: optional - search by id
@@ -144,6 +201,11 @@ class Artifacts:
         :param package_name:
         :return: Artifact object
         """
+        if self._model is not None:
+            model_name = self._model.name
+        if self._package is not None:
+            package_name = self._package.name
+
         if artifact_id is not None:
             artifact = self.items_repository.download(items=artifact_id,
                                                       save_locally=save_locally,
@@ -153,8 +215,12 @@ class Artifacts:
             if all(elem is None for elem in [package_name, execution_id]):
                 raise PlatformException(error='400', message='Must input package or execution (id or entity)')
 
-            remote_path = self._build_path_header(package_name=package_name,
-                                                  execution_id=execution_id)
+            remote_path = self._build_path_header(
+                package_name=package_name,
+                execution_id=execution_id,
+                model_name=model_name,
+                snapshot_name=snapshot_name
+            )
             without_relative_path = remote_path
             remote_path += '/*'
             filters = entities.Filters()
@@ -180,8 +246,7 @@ class Artifacts:
                # what to upload
                filepath,
                # where to upload
-               package_name=None, package=None, execution_id=None, execution=None, model_name=None,
-               snapshot_name=None,
+               package_name=None, package=None, execution_id=None, execution=None, model_name=None, snapshot_name=None,
                # add information
                overwrite=False):
         """
@@ -200,6 +265,11 @@ class Artifacts:
         :param execution:
         :return: Artifact Object
         """
+        if self._model is not None:
+            model_name = self._model.name
+        if self._package is not None:
+            package_name = self._package.name
+
         remote_path = self._build_path_header(package_name=package_name,
                                               package=package,
                                               execution=execution,
@@ -217,21 +287,51 @@ class Artifacts:
         logger.debug('Artifact uploaded successfully')
         return artifact
 
-    def delete(self, artifact_id=None, artifact_name=None, execution_id=None, package_name=None):
+    def delete(self,
+               artifact_id=None,
+               artifact_name=None,
+               execution_id=None,
+               model_name=None,
+               snapshot_name=None,
+               package_name=None):
+        """
+        Delete artifacts
+
+        :param artifact_id:
+        :param artifact_name:
+        :param execution_id:
+        :param model_name:
+        :param snapshot_name:
+        :param package_name:
+
+        :return: True if success
+        """
+        if self._model is not None:
+            model_name = self._model.name
+        if self._package is not None:
+            package_name = self._package.name
+
         if artifact_id is not None or artifact_name is not None:
-            artifacts = [self.get(artifact_id=artifact_id, artifact_name=artifact_name)]
+            artifacts = [
+                self.get(
+                    artifact_id=artifact_id,
+                    artifact_name=artifact_name,
+                    model_name=model_name,
+                    snapshot_name=snapshot_name
+                )
+            ]
         elif execution_id is not None or package_name is not None:
-            artifacts = self.list(execution_id=execution_id, package_name=package_name)
+            artifacts = self.list(
+                execution_id=execution_id,
+                package_name=package_name,
+                model_name=model_name,
+                snapshot_name=snapshot_name
+            )
         else:
             raise PlatformException('400',
                                     'Must provide one of: artifact_id, artifact_name, execution_id, package_name')
 
-        # TODO - Temporary
-        for artifact in artifacts:
-            self.items_repository.delete(item_id=artifact.id)
-
-        # TODO - when delete with filters is enabled again use this:
-        # values = [artifact.id for artifact in artifacts]
-        # self.items_repository.delete(filters=entities.Filters(field='id', values=values, operator='in'))
+        values = [artifact.id for artifact in artifacts]
+        self.items_repository.delete(filters=entities.Filters(field='id', values=values, operator='in'))
 
         return True

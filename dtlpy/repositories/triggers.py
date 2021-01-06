@@ -62,10 +62,19 @@ class Triggers:
             raise ValueError('Must input a valid Project entity')
         self._project = project
 
+    def name_validation(self, name: str):
+        url = '/piper-misc/naming/triggers/{}'.format(name)
+
+        # request
+        success, response = self._client_api.gen_request(req_type='get',
+                                                         path=url)
+        if not success:
+            raise exceptions.PlatformException(response)
+
     def create(self,
                # for both trigger types
                service_id: str = None,
-               trigger_type=entities.TriggerType.EVENT,
+               trigger_type: entities.TriggerType = entities.TriggerType.EVENT,
                name: str = None,
                webhook_id=None,
                function_name=entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME,
@@ -73,9 +82,9 @@ class Triggers:
                active=True,
                # for event trigger
                filters=None,
-               resource=entities.TriggerResource.ITEM,
-               actions=None,
-               execution_mode=entities.TriggerExecutionMode.ONCE,
+               resource: entities.TriggerResource = entities.TriggerResource.ITEM,
+               actions: entities.TriggerAction = None,
+               execution_mode: entities.TriggerExecutionMode = entities.TriggerExecutionMode.ONCE,
                # for cron triggers
                start_at=None,
                end_at=None,
@@ -201,7 +210,7 @@ class Triggers:
         # return entity
         return entities.BaseTrigger.from_json(_json=response.json(),
                                               client_api=self._client_api,
-                                              project=self._project,
+                                              project=self._project if self._project_id == project_id else None,
                                               service=self._service)
 
     def get(self, trigger_id=None, trigger_name=None) -> entities.BaseTrigger:

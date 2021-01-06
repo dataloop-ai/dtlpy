@@ -38,7 +38,9 @@ class Downloader:
                  save_locally=True,
                  to_array=False,
                  overwrite=False,
-                 annotation_options=None,
+                 annotation_options: entities.ViewAnnotationOptions = None,
+                 annotation_filter_type=None,
+                 annotation_filter_label=None,
                  to_items_folder=True,
                  thickness=1,
                  with_text=False,
@@ -50,19 +52,22 @@ class Downloader:
         Filtering the dataset for items and save them local
         Optional - also download annotation, mask, instance and image mask of the item
 
-        :param avoid_unnecessary_annotation_download:
         :param filters: Filters entity or a dictionary containing filters parameters
         :param items: download Item entity or item_id (or a list of item)
-        :param overwrite: optional - default = False
         :param local_path: local folder or filename to save to.
-        :param to_array: returns Ndarray when True and local_path = False
         :param file_types: a list of file type to download. e.g ['video/webm', 'video/mp4', 'image/jpeg', 'image/png']
         :param save_locally: bool. save to disk or return a buffer
-        :param annotation_options: download annotations options. options: dl.ViewAnnotationOptions.list()
+        :param to_array: returns Ndarray when True and local_path = False
+        :param overwrite: optional - default = False
+        :param annotation_options: download annotations options. options: list(dl.ViewAnnotationOptions)
+        :param annotation_filter_type:list of annotation types when downloading annotation, not relevant for JSON option
+        :param annotation_filter_label: list of labels types when downloading annotation, not relevant for JSON option
         :param to_items_folder: Create 'items' folder and download items to it
         :param with_text: optional - add text to annotations, default = False
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :param without_relative_path: string - remote path - download items without the relative path from platform
+        :param avoid_unnecessary_annotation_download:
+
         :return: Output (list)
         """
 
@@ -76,11 +81,11 @@ class Downloader:
             annotation_options = [annotation_options]
         for ann_option in annotation_options:
             if not isinstance(ann_option, entities.ViewAnnotationOptions):
-                if ann_option not in entities.ViewAnnotationOptions.list():
+                if ann_option not in list(entities.ViewAnnotationOptions):
                     raise PlatformException(
                         error='400',
-                        message='Unknown annotation download option: {}, please chose from: {}'.format(
-                            ann_option, entities.ViewAnnotationOptions.list()))
+                        message='Unknown annotation download option: {}, please choose from: {}'.format(
+                            ann_option, list(entities.ViewAnnotationOptions)))
         ##############
         # local path #
         ##############
@@ -130,7 +135,19 @@ class Downloader:
                 filters = entities.Filters()
             # file types
             if file_types is not None:
-                filters.add(field='metadata.system.mimetype', values=file_types, operator='in')
+                filters.add(field='metadata.system.mimetype', values=file_types, operator=entities.FiltersOperations.IN)
+            if annotation_filter_type is not None:
+                if not isinstance(annotation_filter_type, list):
+                    annotation_filter_type = [annotation_filter_type]
+                filters.add(field='annotated', values=True)
+                filters.add_join(field='type', values=annotation_filter_type, operator=entities.FiltersOperations.IN)
+
+            if annotation_filter_label is not None:
+                if not isinstance(annotation_filter_label, list):
+                    annotation_filter_label = [annotation_filter_label]
+                filters.add(field='annotated', values=True)
+                filters.add_join(field='label', values=annotation_filter_label, operator=entities.FiltersOperations.IN)
+
             items_to_download = self.items_repository.list(filters=filters)
             num_items = items_to_download.items_count
 
@@ -214,6 +231,8 @@ class Downloader:
                             "save_locally": save_locally,
                             "to_array": to_array,
                             "annotation_options": annotation_options,
+                            "annotation_filter_type": annotation_filter_type,
+                            "annotation_filter_label": annotation_filter_label,
                             "reporter": reporter,
                             "pbar": pbar,
                             "overwrite": overwrite,
@@ -268,9 +287,11 @@ class Downloader:
 
     def __thread_download_wrapper(self, i_item,
                                   # item params
-                                  item, item_local_path, item_local_filepath, save_locally, to_array, overwrite,
+                                  item, item_local_path, item_local_filepath,
+                                  save_locally, to_array, overwrite,
                                   # annotations params
-                                  annotation_options, with_text, thickness,
+                                  annotation_options, annotation_filter_type,
+                                  annotation_filter_label, with_text, thickness,
                                   # threading params
                                   reporter, pbar):
 
@@ -288,6 +309,8 @@ class Downloader:
                                                   local_path=item_local_path,
                                                   local_filepath=item_local_filepath,
                                                   annotation_options=annotation_options,
+                                                  annotation_filter_type=annotation_filter_type,
+                                                  annotation_filter_label=annotation_filter_label,
                                                   overwrite=overwrite,
                                                   thickness=thickness,
                                                   with_text=with_text)
@@ -388,6 +411,8 @@ class Downloader:
                                   local_path,
                                   overwrite,
                                   annotation_options,
+                                  annotation_filter_type,
+                                  annotation_filter_label,
                                   thickness=1,
                                   with_text=False):
 
@@ -410,10 +435,24 @@ class Downloader:
             if "annotations" in data:
                 data = data["annotations"]
             annotations = entities.AnnotationCollection.from_json(_json=data, item=item)
+            # Rebuild the annotation list filtered by annotation_filter_type
+            if annotation_filter_type is not None:
+                annotations.annotations = \
+                    [annotation for annotation in annotations if annotation.type in annotation_filter_type]
+            # Rebuild the annotation list filtered by annotation_filter_label
+            if annotation_filter_label is not None:
+                annotations.annotations = \
+                    [annotation for annotation in annotations if annotation.label in annotation_filter_label]
         else:
-
-            # if doesnt exist get from platform
-            annotations = item.annotations.list()
+            # if json file doesnt exist get the annotations from platform
+            filters = None
+            if annotation_filter_type is not None or annotation_filter_label is not None:
+                filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION)
+            if annotation_filter_type is not None:
+                filters.add(field='type', values=annotation_filter_type, operator=entities.FiltersOperations.IN)
+            if annotation_filter_label is not None:
+                filters.add(field='label', values=annotation_filter_label, operator=entities.FiltersOperations.IN)
+            annotations = item.annotations.list(filters=filters)
 
         # get image shape
         if item.width is not None and item.height is not None:
@@ -530,6 +569,8 @@ class Downloader:
                           local_filepath,
                           overwrite,
                           annotation_options,
+                          annotation_filter_type,
+                          annotation_filter_label,
                           chunk_size=8192,
                           thickness=1,
                           with_text=False
@@ -540,10 +581,20 @@ class Downloader:
 
         :param item: Item entity to download
         :param save_locally: bool. save to file or return buffer
+        :param local_path: item local folder to save to.
         :param to_array: returns Ndarray when True and local_path = False
-        :param local_path: optional - local folder or filename to save to.
+        :local_filepath: item local filepath
+        :overwrite: overwrite the file is existing
+        :param annotation_options: download annotations options: list(dl.ViewAnnotationOptions)
+        :param annotation_filter_type:
+                            list of annotation types when downloading annotation, not relevant for JSON option
+        :param annotation_filter_label:
+                            list of labels types when downloading annotation, not relevant for JSON option
         :param chunk_size: size of chunks to download - optional. default = 8192
-        :param annotation_options: download annotations options: dl.ViewAnnotationOptions.list()
+        :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
+        :param with_text: optional - add text to annotations, default = False
+
+
         :return:
         """
         # check if need to download image binary from platform
@@ -605,6 +656,8 @@ class Downloader:
                 self._download_img_annotations(item=item,
                                                img_filepath=local_filepath,
                                                annotation_options=annotation_options,
+                                               annotation_filter_type=annotation_filter_type,
+                                               annotation_filter_label=annotation_filter_label,
                                                local_path=local_path,
                                                overwrite=overwrite,
                                                thickness=thickness,

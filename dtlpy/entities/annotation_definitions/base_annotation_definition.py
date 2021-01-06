@@ -5,6 +5,9 @@ logger = logging.getLogger(name=__name__)
 
 
 class BaseAnnotationDefinition:
+    def __init__(self, description=None):
+        self.description = description
+
     @staticmethod
     def add_text_to_image(image, annotation):
         try:

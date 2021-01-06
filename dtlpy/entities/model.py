@@ -2,6 +2,7 @@ from collections import namedtuple
 import traceback
 import logging
 import attr
+from typing import Union
 
 from .. import repositories, entities, services
 
@@ -15,23 +16,39 @@ class Model(entities.BaseEntity):
     """
     # platform
     id = attr.ib()
-    url = attr.ib(repr=False)
-    version = attr.ib()
     createdAt = attr.ib()
     updatedAt = attr.ib(repr=False)
-    name = attr.ib()
-    description = attr.ib()
-    codebase_id = attr.ib()
-    entry_point = attr.ib()
     creator = attr.ib()
+    name = attr.ib()
+    url = attr.ib(repr=False)
+    codebase = attr.ib()
+    description = attr.ib()
+    version = attr.ib()
+    tags = attr.ib()
 
     # name change
+    is_global = attr.ib()
     project_id = attr.ib()
+    org_id = attr.ib()
+    entry_point = attr.ib()
+    input_type = attr.ib()
+    output_type = attr.ib()
+
+    # revisions
+    _revisions = attr.ib()
 
     # sdk
     _project = attr.ib(repr=False)
     _client_api = attr.ib(type=services.ApiClient, repr=False)
     _repositories = attr.ib(repr=False)
+    _codebases = attr.ib(default=None)
+    _artifacts = attr.ib(default=None)
+
+    @property
+    def revisions(self):
+        if self._revisions is None:
+            self._revisions = self.models.revisions(model=self)
+        return self._revisions
 
     @staticmethod
     def _protected_from_json(_json, client_api, project, is_fetched=True):
@@ -70,9 +87,11 @@ class Model(entities.BaseEntity):
                 logger.warning('Model has been fetched from a project that is not in it projects list')
                 project = None
 
+        codebase = entities.PackageCodebase.from_json(_json=_json['codebase']) if 'codebase' in _json else None
+
         inst = cls(
             project_id=_json.get('projectId', None),
-            codebase_id=_json.get('codebaseId', None),
+            codebase=codebase,
             createdAt=_json.get('createdAt', None),
             updatedAt=_json.get('updatedAt', None),
             version=_json.get('version', None),
@@ -83,7 +102,13 @@ class Model(entities.BaseEntity):
             name=_json.get('name', None),
             url=_json.get('url', None),
             project=project,
-            id=_json.get('id', None)
+            id=_json.get('id', None),
+            org_id=_json.get('orgId', None),
+            output_type=_json.get('outputType', None),
+            input_type=_json.get('inputType', None),
+            is_global=_json.get('global', None),
+            revisions=_json.get('revisions', None),
+            tags=_json.get('tags', None)
         )
         inst.is_fetched = is_fetched
         return inst
@@ -97,15 +122,27 @@ class Model(entities.BaseEntity):
         _json = attr.asdict(self,
                             filter=attr.filters.exclude(attr.fields(Model)._project,
                                                         attr.fields(Model)._repositories,
+                                                        attr.fields(Model)._codebases,
+                                                        attr.fields(Model)._revisions,
+                                                        attr.fields(Model).is_global,
+                                                        attr.fields(Model)._artifacts,
+                                                        attr.fields(Model).org_id,
+                                                        attr.fields(Model).input_type,
+                                                        attr.fields(Model).output_type,
                                                         attr.fields(Model)._client_api,
-                                                        attr.fields(Model).codebase_id,
+                                                        attr.fields(Model).codebase,
                                                         attr.fields(Model).entry_point,
                                                         attr.fields(Model).project_id,
                                                         ))
 
+        _json['global'] = self.is_global
+        _json['orgId'] = self.org_id
+        _json['inputType'] = self.input_type
+        _json['outputType'] = self.output_type
         _json['projectId'] = self.project_id
         _json['entryPoint'] = self.entry_point
-        _json['codebaseId'] = self.codebase_id
+        _json['codebase'] = self.codebase.to_json()
+
         return _json
 
     ############
@@ -127,12 +164,36 @@ class Model(entities.BaseEntity):
                           field_names=['projects', 'models', 'snapshots'])
 
         r = reps(projects=repositories.Projects(client_api=self._client_api),
-                 models=repositories.Models(client_api=self._client_api, project=self._project),
+                 models=repositories.Models(client_api=self._client_api,
+                                            project=self._project),
                  snapshots=repositories.Snapshots(client_api=self._client_api,
                                                   project=self._project,
-                                                  model=self),
+                                                  model=self)
                  )
         return r
+
+    @property
+    def codebases(self):
+        if self._codebases is None:
+            self._codebases = repositories.Codebases(
+                client_api=self._client_api,
+                project=self._project,
+                project_id=self.project_id
+            )
+        assert isinstance(self._codebases, repositories.Codebases)
+        return self._codebases
+
+    @property
+    def artifacts(self):
+        if self._artifacts is None:
+            self._artifacts = repositories.Artifacts(
+                client_api=self._client_api,
+                project=self._project,
+                project_id=self.project_id,
+                model=self
+            )
+        assert isinstance(self._artifacts, repositories.Artifacts)
+        return self._artifacts
 
     @property
     def projects(self):
@@ -156,9 +217,10 @@ class Model(entities.BaseEntity):
     def git_status(self):
         status = 'Git status unavailable'
         try:
-            codebase = self.project.codebases.get(codebase_id=self.codebase_id, version=self.version - 1)
-            if 'git' in codebase.metadata:
-                status = codebase.metadata['git'].get('status', status)
+            if self.codebase.type == entities.PackageCodebaseType.ITEM:
+                codebase = self.project.codebases.get(codebase_id=self.codebase.codebase_id)
+                if 'git' in codebase.metadata:
+                    status = codebase.metadata['git'].get('status', status)
         except Exception:
             logging.debug('Error getting codebase')
         return status
@@ -167,9 +229,10 @@ class Model(entities.BaseEntity):
     def git_log(self):
         log = 'Git log unavailable'
         try:
-            codebase = self.project.codebases.get(codebase_id=self.codebase_id, version=self.version - 1)
-            if 'git' in codebase.metadata:
-                log = codebase.metadata['git'].get('log', log)
+            if self.codebase.type == entities.PackageCodebaseType.ITEM:
+                codebase = self.project.codebases.get(codebase_id=self.codebase.codebase_id)
+                if 'git' in codebase.metadata:
+                    log = codebase.metadata['git'].get('log', log)
         except Exception:
             logging.debug('Error getting codebase')
         return log
@@ -201,22 +264,22 @@ class Model(entities.BaseEntity):
         """
         return self.models.delete(model=self)
 
-    def push(self, codebase_id=None, src_path=None, model_name=None, modules=None, checkout=False):
+    def push(self,
+             src_path: str = None,
+             entry_point: str = None,
+             codebase: entities.ItemCodebase = None):
         """
-         Push local model
+        Upload codebase to Model
 
-        :param checkout:
-        :param codebase_id:
-        :param src_path:
-        :param model_name:
-        :param modules:
+        :param src_path: codebase location. if None pwd will be taken
+        :param entry_point: location on the AdapterModel class
+        :param codebase: if none new will be created from src_path
         :return:
         """
-        return self.project.models.push(model_name=model_name if model_name is not None else self.name,
-                                        codebase_id=codebase_id,
-                                        src_path=src_path,
-                                        modules=modules,
-                                        checkout=checkout)
+        return self.project.models.push(model=self,
+                                        entry_point=entry_point,
+                                        codebase=codebase,
+                                        src_path=src_path)
 
     def build(self, local_path=None, from_local=None):
         """

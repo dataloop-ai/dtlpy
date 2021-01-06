@@ -11,6 +11,12 @@ from .label import Label
 logger = logging.getLogger(name=__name__)
 
 
+class LabelHandlerMode:
+    ADD = "add"
+    UPDATE = "update"
+    UPSERT = "upsert"
+
+
 @attr.s
 class Ontology(entities.BaseEntity):
     """
@@ -189,14 +195,14 @@ class Ontology(entities.BaseEntity):
         """
         return self.ontologies.update(self, system_metadata=system_metadata)
 
-    def _add_children(self, label_name, children, labels_node):
+    def _add_children(self, label_name, children, labels_node, mode):
         for child in children:
             if not isinstance(child, entities.Label):
                 if isinstance(child, dict):
                     if "label_name" in child:
                         child = dict(child)
                         child["label_name"] = "{}.{}".format(label_name, child["label_name"])
-                        labels_node += self._add_labels([child], update_ontology=False)
+                        labels_node += self._base_labels_handler(labels=[child], update_ontology=False, mode=mode)
                     else:
                         raise PlatformException("400",
                                                 "Invalid parameters - child list must have label name attribute")
@@ -204,19 +210,47 @@ class Ontology(entities.BaseEntity):
                     raise PlatformException("400", "Invalid parameters - child must be a dict type")
             else:
                 child.tag = "{}.{}".format(label_name, child.tag)
-                labels_node += self._add_labels(labels=child, update_ontology=False)
+                labels_node += self._base_labels_handler(labels=child, update_ontology=False, mode=mode)
 
         return labels_node
 
-    def _add_labels(self, labels, update_ontology=True):
+    def _labels_handler_update_mode(self, json_req, upsert=False, log_error=True):
+        json_req['upsert'] = upsert
+        success, response = self._client_api.gen_request(req_type="PATCH",
+                                                         path="/ontologies/%s/labels" % self.id,
+                                                         json_req=json_req,
+                                                         log_error=log_error)
+        if success:
+            logger.debug("Labels {} has been added successfully".format(json_req))
+        else:
+            raise exceptions.PlatformException(response)
+        return response
+
+    def _labels_handler_add_mode(self, json_req):
+        success, response = self._client_api.gen_request(req_type="PATCH",
+                                                         path="/ontologies/%s/addLabels" % self.id,
+                                                         json_req=json_req)
+        if success:
+            logger.debug("Labels {} has been added successfully".format(json_req))
+        else:
+            raise exceptions.PlatformException(response)
+        return response
+
+    def _base_labels_handler(self, labels, update_ontology=True, mode=LabelHandlerMode.ADD):
         """
         Add a single label to ontology using add label endpoint , nested label is also supported
 
         :param labels = list of labels
-        :update_ontology - return json_req if False
+        :param update_ontology - return json_req if False
+        :param mode add, update or upsert, relevant on update_ontology=True only
         :return: Ontology updated entire label entity
         """
         labels_node = list()
+        if mode not in [LabelHandlerMode.ADD,
+                        LabelHandlerMode.UPDATE,
+                        LabelHandlerMode.UPSERT]:
+            raise ValueError('mode must be on of: "add", "update", "upsert"')
+
         if not isinstance(labels, list):  # for case that add label get one label
             labels = [labels]
 
@@ -230,16 +264,17 @@ class Ontology(entities.BaseEntity):
 
             if isinstance(label, entities.Label):
                 # label entity
-                labels_node.append(
-                    {
-                        "tag": label.tag,
-                        "color": label.color,
-                        "attributes": label.attributes,
-                        "display_label": label.display_label,
-                    }
-                )
+                label_node = {"tag": label.tag}
+                if label.color is not None:
+                    label_node["color"] = label.color
+                if label.attributes is not None:
+                    label_node["attributes"] = label.attributes
+                if label.display_label is not None:
+                    label_node["displayLabel"] = label.display_label
+
+                labels_node.append(label_node)
                 children = label.children
-                self._add_children(label.tag, children, labels_node)
+                self._add_children(label.tag, children, labels_node, mode=mode)
             else:
                 raise PlatformException("400",
                                         "Invalid parameters - Label can be list of str, Labels or dict")
@@ -251,13 +286,12 @@ class Ontology(entities.BaseEntity):
             "labelsNode": labels_node
         }
 
-        success, response = self._client_api.gen_request(req_type="PATCH",
-                                                         path="/ontologies/%s/addLabels" % self.id,
-                                                         json_req=json_req)
-        if success:
-            logger.debug("Labels {} has been added successfully".format(json_req))
+        if mode == LabelHandlerMode.ADD:
+            response = self._labels_handler_add_mode(json_req)
+        elif mode == LabelHandlerMode.UPDATE:
+            response = self._labels_handler_update_mode(json_req)
         else:
-            raise exceptions.PlatformException(response)
+            response = self._labels_handler_update_mode(json_req, upsert=True, log_error=False)
 
         added_label = list()
         if "roots" not in response.json():
@@ -269,8 +303,8 @@ class Ontology(entities.BaseEntity):
         self.labels = added_label
         return added_label
 
-    def add_label(self, label_name, color=None, children=None, attributes=None, display_label=None, label=None,
-                  add=True, update_ontology=False):
+    def _label_handler(self, label_name, color=None, children=None, attributes=None, display_label=None, label=None,
+                       add=True, update_ontology=False, mode=LabelHandlerMode.ADD):
         """
         Add a single label to ontology
 
@@ -282,20 +316,21 @@ class Ontology(entities.BaseEntity):
         :param attributes: optional - attributes
         :param display_label: optional - display_label
         :param update_ontology: update the ontology, default = False for backward compatible
+        :param mode add, update or upsert, relevant on update_ontology=True only
         :return: Label entity
         """
 
         if update_ontology:
             if isinstance(label, entities.Label) or isinstance(label, str):
-                return self._add_labels(labels=label, update_ontology=update_ontology)
+                return self._base_labels_handler(labels=label, update_ontology=update_ontology, mode=mode)
             else:
-                return self._add_labels({
+                return self._base_labels_handler({
                     "tag": label_name,
                     "displayLabel": display_label,
                     "color": color,
                     "attributes": attributes,
                     "children": children
-                }, update_ontology=update_ontology)
+                }, update_ontology=update_ontology, mode=mode)
 
         if not isinstance(label, entities.Label):
             if "." in label_name:
@@ -320,7 +355,7 @@ class Ontology(entities.BaseEntity):
             added_children = list()
             for child in children:
                 if not isinstance(child, entities.Label):
-                    added_children.append(self.add_label(**child, add=False))
+                    added_children.append(self._label_handler(**child, add=False))
                 else:
                     added_children.append(child)
 
@@ -352,17 +387,18 @@ class Ontology(entities.BaseEntity):
                 self.update()
         return added_label
 
-    def add_labels(self, label_list, update_ontology=False):
+    def _labels_handler(self, label_list, update_ontology=False, mode=LabelHandlerMode.ADD):
         """
         Adds a list of labels to ontology
 
         :param label_list: list of labels [{"value": {"tag": "tag", "displayLabel": "displayLabel",
                                             "color": "#color", "attributes": [attributes]}, "children": [children]}]
         :param update_ontology: update the ontology, default = False for backward compatible
+        :param mode add, update or upsert, relevant on update_ontology=True only
         :return: List of label entities added
         """
         if update_ontology:
-            return self._add_labels(labels=label_list)
+            return self._base_labels_handler(labels=label_list, mode=mode)
         labels = list()
         for label in label_list:
 
@@ -377,7 +413,7 @@ class Ontology(entities.BaseEntity):
                 labels.append(Label.from_root(label))
         added_labels = list()
         for label in labels:
-            added_labels.append(self.add_label(label.tag, label=label, update_ontology=update_ontology))
+            added_labels.append(self._label_handler(label.tag, label=label, update_ontology=update_ontology))
 
         return added_labels
 
@@ -413,3 +449,73 @@ class Ontology(entities.BaseEntity):
             for i_label, label in enumerate(labels):
                 if label.tag == label_name:
                     labels.pop(i_label)
+
+    def add_label(self, label_name, color=None, children=None, attributes=None, display_label=None, label=None,
+                  add=True, update_ontology=False):
+        """
+        Add a single label to ontology
+
+        :param add:
+        :param label:
+        :param label_name: label name
+        :param color: optional - if not given a random color will be selected
+        :param children: optional - children
+        :param attributes: optional - attributes
+        :param display_label: optional - display_label
+        :param update_ontology: update the ontology, default = False for backward compatible
+        :return: Label entity
+        """
+        return self._label_handler(label_name=label_name, color=color, children=children, attributes=attributes,
+                                   display_label=display_label, label=label, add=add, update_ontology=update_ontology)
+
+    def add_labels(self, label_list, update_ontology=False):
+        """
+        Adds a list of labels to ontology
+
+        :param label_list: list of labels [{"value": {"tag": "tag", "displayLabel": "displayLabel",
+                                            "color": "#color", "attributes": [attributes]}, "children": [children]}]
+        :param update_ontology: update the ontology, default = False for backward compatible
+        :return: List of label entities added
+        """
+        self._labels_handler(label_list=label_list, update_ontology=update_ontology, mode=LabelHandlerMode.ADD)
+
+    def update_label(self, label_name, color=None, children=None, attributes=None, display_label=None, label=None,
+                     add=True, upsert=False, update_ontology=False):
+        """
+        Update a single label to ontology
+
+        :param add:
+        :param label:
+        :param label_name: label name
+        :param color: optional - if not given a random color will be selected
+        :param children: optional - children
+        :param attributes: optional - attributes
+        :param display_label: optional - display_label
+        :param upsert if True will add in case it does not existing
+        :param update_ontology: update the ontology, default = False for backward compatible
+        :return: Label entity
+        """
+        if upsert:
+            mode = LabelHandlerMode.UPSERT
+        else:
+            mode = LabelHandlerMode.UPDATE
+
+        return self._label_handler(label_name=label_name, color=color, children=children,
+                                   attributes=attributes, display_label=display_label, label=label,
+                                   add=add, update_ontology=update_ontology, mode=mode)
+
+    def update_labels(self, label_list, upsert=False, update_ontology=False):
+        """
+        Update a list of labels to ontology
+
+        :param label_list: list of labels [{"value": {"tag": "tag", "displayLabel": "displayLabel",
+                                            "color": "#color", "attributes": [attributes]}, "children": [children]}]
+        :param upsert if True will add in case it does not existing
+        :param update_ontology: update the ontology, default = False for backward compatible
+        :return: List of label entities added
+        """
+        if upsert:
+            mode = LabelHandlerMode.UPSERT
+        else:
+            mode = LabelHandlerMode.UPDATE
+        self._labels_handler(label_list=label_list, update_ontology=update_ontology, mode=mode)

@@ -11,8 +11,9 @@ class Note(Box):
     """
 
     def __init__(self, left, top, right, bottom, label, attributes=None, messages=None, status='issue',
-                 create_time=None, creator=None):
-        super(Note, self).__init__(left=left, top=top, right=right, bottom=bottom, label=label, attributes=attributes)
+                 create_time=None, creator=None, description=None):
+        super(Note, self).__init__(left=left, top=top, right=right, bottom=bottom,
+                                   label=label, attributes=attributes, description=description)
         self.type = "note"
         self.messages = messages if messages is not None else list()
         self.status = status

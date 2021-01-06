@@ -6,7 +6,8 @@ class Subtitle(BaseAnnotationDefinition):
         Subtitle annotation object
     """
 
-    def __init__(self, text, label, attributes=None):
+    def __init__(self, text, label, attributes=None, description=None):
+        super().__init__(description=description)
         self.type = "subtitle"
         self.text = text
         self.label = label

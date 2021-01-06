@@ -2,10 +2,13 @@ import importlib.util
 import logging
 import os
 from shutil import copyfile
+from typing import Union, List
 
 from .. import entities, repositories, exceptions, miscellaneous, assets, services
 
 logger = logging.getLogger(name=__name__)
+
+DEFAULT_ENTRY_POINT = 'adapter_model.py'
 
 
 class Models:
@@ -69,6 +72,12 @@ class Models:
                 model = entities.Model.from_json(client_api=self._client_api,
                                                  _json=response.json(),
                                                  project=self._project)
+                # verify input model name is same as the given id
+                if model_name is not None and model.name != model_name:
+                    logger.warning(
+                        "Mismatch found in models.get: model_name is different then model.name: {!r} != {!r}".format(
+                            model_name,
+                            model.name))
             elif model_name is not None:
                 models = self.list(entities.Filters(resource=entities.FiltersResource.MODEL,
                                                     field='name',
@@ -133,8 +142,8 @@ class Models:
         """
         if filters is None:
             filters = entities.Filters(resource=entities.FiltersResource.MODEL)
-            if self._project is not None:
-                filters.add(field='projectId', values=self._project.id)
+        if self._project is not None:
+            filters.add(field='projectId', values=self._project.id)
 
         # assert type filters
         if not isinstance(filters, entities.Filters):
@@ -156,6 +165,9 @@ class Models:
 
         :return:
         """
+        if model.codebase is None or model.codebase.type != entities.PackageCodebaseType.ITEM:
+            raise NotImplementedError('This method is not implemented for {} codebase yet'.format(model.codebase.type))
+
         if from_local is None:
             from_local = False
 
@@ -174,7 +186,7 @@ class Models:
                     "models",
                     model.name)
 
-            codebase_id = model.codebase_id
+            codebase_id = model.codebase.codebase_id
             project = self._project if self._project is not None else model.project
             path = project.codebases.unpack(codebase_id=codebase_id, local_path=local_path)
 
@@ -186,86 +198,115 @@ class Models:
         adapter_model = foo.AdapterModel
         return adapter_model(model_entity=model)
 
-    def push(self, model_name, description='', src_path=None, entry_point='adapter_model.py', codebase_id=None,
-             checkout=False):
+    def push(
+            self,
+            model: entities.Model,
+            src_path: str = None,
+            entry_point: str = DEFAULT_ENTRY_POINT,
+            codebase: entities.ItemCodebase = None,
+    ):
         """
-        Push local model
+        Uploads and updates codebase to Model
 
-        :param model_name: name of the model
-        :param description: model description
-        :param entry_point: location on the AdapterModel class
-        :param codebase_id: codebase entity id. if none new will be created from src_path
-        :param src_path: codebase location. if None pwd will be taken
-        :param checkout: checkout entity to state
+        :param model: Model entity
+        :param src_path: codebase location (path to directory of the code). if None pwd will be taken
+        :param entry_point: relative path to the module where `AdapterModel` class is defined
+        :param codebase: `dl.PackageCodebase' object - representing the model code  if None new will be created from src_path
         :return:
         """
-        # get project
-        if self._project is None:
-            raise exceptions.PlatformException('400', 'Repository does not have project. Please checkout a project,'
-                                                      'or create model from a project models repository')
-
-        # source path
-        if src_path is None:
-            if codebase_id is None:
-                src_path = os.getcwd()
-                logger.warning('No src_path is given, getting model information from cwd: {}'.format(src_path))
 
         # get or create codebase
-        if codebase_id is None:
-            codebase_id = self._project.codebases.pack(directory=src_path, name=model_name).id
+        if codebase is None:
+            if isinstance(model.codebase.type, entities.PackageCodebaseType.ITEM):
+                raise exceptions.PlatformException(
+                    error='400',
+                    message='Cant change codebase type implicitly. Please use codebase argument with dl.ItemCodebase')
+            if src_path is None:
+                src_path = os.getcwd()
+                logger.warning('No src_path is given, getting model information from cwd: {}'.format(src_path))
+            if not os.path.isfile(os.path.join(src_path, entry_point)):
+                raise ValueError('entry point not found. filepath: {}'.format(os.path.join(src_path, entry_point)))
+            codebase_id = model.codebases.pack(directory=src_path).id
+            codebase = entities.ItemCodebase(codebase_id=codebase_id)
 
-        if not os.path.isfile(os.path.join(src_path, entry_point)):
-            raise ValueError('entry point not found. filepath: {}'.format(os.path.join(src_path, entry_point)))
-        # check if exist
-        models = [model for model in self.list().all() if model.name == model_name]
-        if len(models) > 0:
-            model = self._create(codebase_id=codebase_id,
-                                 model_name=model_name,
-                                 description=description,
-                                 entry_point=entry_point,
-                                 push=True,
-                                 model=models[0])
-        else:
-            model = self._create(codebase_id=codebase_id,
-                                 entry_point=entry_point,
-                                 description=description,
-                                 model_name=model_name,
-                                 push=False)
-        if checkout:
-            self.checkout(model=model)
-        return model
+        model.codebase = codebase
+        return model.update()
 
-    def _create(self,
-                model_name,
-                entry_point,
-                description='',
-                codebase_id=None,
-                push=False,
-                model=None) -> entities.Model:
+    def create(self,
+               # offline mode
+               model_name: str,
+               description: str = None,
+               output_type: str = None,
+               input_type: str = None,
+               is_global: bool = None,
+               checkout: bool = False,
+               tags: List[str] = None,
+               # online mode
+               codebase: Union[entities.GitCodebase,
+                               entities.ItemCodebase,
+                               entities.FilesystemCodebase,
+                               entities.LocalCodebase] = None,
+               src_path: str = None,
+               entry_point: str = None,
+               ) -> entities.Model:
         """
-        Create a model in platform
+        Create and return a Model entity in platform
+        If "model" is given - default values will be taken from model information
+        Passed params will override default values
+        If any of the "online mode" params are entered - codebase will be pushed after creation
 
-        :param model:
+        For offline mode:
+        :param model_name: name of model
         :param description: model description
+        :param output_type: model output type (annotation type)
+        :param input_type: model input mimetype
+        :param is_global: is model global
+        :param checkout: checkout model to local state
+        :param tags: list of string tags
+        For online mode
+        :param codebase: optional - model codebase
+        :param src_path: codebase location. if None no codebase will be pushed
         :param entry_point: location on the AdapterModel class
-        :param codebase_id: optional - model codebase
-        :param model_name: optional - default: 'default model'
-        :param push:
+
         :return: Model Entity
         """
-        if push:
-            model.codebase_id = codebase_id
-            return self.update(model=model)
 
-        payload = {'name': model_name,
-                   'codebaseId': codebase_id,
-                   'entryPoint': entry_point,
-                   'description': description}
-
-        if self._project is not None:
-            payload['projectId'] = self._project.id
-        else:
+        if self._project is None:
             raise exceptions.PlatformException('400', 'Repository must have a project to perform this action')
+
+        if self._project.org is not None:
+            org_id = self._project.org['id']
+        else:
+            raise exceptions.PlatformException('Cannot create model in a project without an org')
+
+        payload = dict(
+            orgId=org_id,
+            projectId=self._project.id,
+            name=model_name
+        )
+
+        if input_type is not None:
+            payload['inputType'] = input_type
+
+        if output_type is not None:
+            payload['outputType'] = output_type
+
+        if description is not None:
+            payload['description'] = description
+
+        if tags is not None:
+            payload['tags'] = tags
+
+        if is_global is not None:
+            payload['is_global'] = is_global
+
+        if codebase is None:
+            if src_path is None:
+                src_path = os.getcwd()
+            codebase = entities.LocalCodebase(local_path=src_path)
+
+        payload['codebase'] = codebase.to_json()
+        payload['entryPoint'] = entry_point if entry_point is not None else DEFAULT_ENTRY_POINT
 
         # request
         success, response = self._client_api.gen_request(req_type='post',
@@ -276,10 +317,14 @@ class Models:
         if not success:
             raise exceptions.PlatformException(response)
 
+        model = entities.Model.from_json(_json=response.json(),
+                                         client_api=self._client_api,
+                                         project=self._project)
+
+        if checkout:
+            self.checkout(model=model)
         # return entity
-        return entities.Model.from_json(_json=response.json(),
-                                        client_api=self._client_api,
-                                        project=self._project)
+        return model
 
     def delete(self, model: entities.Model = None, model_name=None, model_id=None):
         """
@@ -367,3 +412,26 @@ class Models:
             model = self.get(model_id=model_id, model_name=model_name)
         self._client_api.state_io.put('model', model.to_json())
         logger.info("Checked out to model {}".format(model.name))
+
+    def revisions(self, model: entities.Model = None, model_id=None):
+        """
+        Get model revisions history
+
+        :param model: Package entity
+        :param model_id: package id
+        """
+        if model is None and model_id is None:
+            raise exceptions.PlatformException(
+                error='400',
+                message='must provide an identifier in inputs: "model" or "model_id"')
+
+        if model is not None:
+            model_id = model.id
+
+        success, response = self._client_api.gen_request(
+            req_type="get",
+            path="/models/{}/revisions".format(model_id))
+
+        if not success:
+            raise exceptions.PlatformException(response)
+        return response.json()

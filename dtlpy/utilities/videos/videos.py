@@ -188,7 +188,10 @@ class Videos:
         os.makedirs(basename, exist_ok=True)
 
         if fps is None:
-            fps = eval(video_props['streams'][0]['avg_frame_rate'])
+            try:
+                fps = eval(video_props['streams'][0]['avg_frame_rate'])
+            except ZeroDivisionError:
+                fps = 0
         num_of_zeros = len(str(nb_frames))
         # format the output filename
         output_regex = os.path.join(basename, '%0{}d.{}'.format(num_of_zeros, image_ext))

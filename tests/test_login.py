@@ -1,6 +1,4 @@
 import dtlpy as dl
-import os
-import logging
 try:
     # for local import
     from tests.env_from_git_branch import get_env_from_git_branch
@@ -9,27 +7,24 @@ except ImportError:
     from env_from_git_branch import get_env_from_git_branch
 
 import sys
+import os
 
 
-if __name__ == "__main__":
-    args = sys.argv
-    username = args[1]
-    password = args[2]
-    client_id = args[3]
-    client_secret = args[4]
-    env_name = None
-    try:
-        env_name = args[5]
-        if env_name not in ['dev', 'rc', 'prod']:
-            print('{} is unsupported env'.format(env_name))
-            env_name = None
-    except:
-        pass
-
-    if env_name is None:
-        env_name = get_env_from_git_branch()
+def test_login():
+    env_name = get_env_from_git_branch()
     dl.setenv(env_name)
-    print('Environment is: {}'.format(env_name))
+    if env_name in ['rc', 'dev']:
+        username = os.environ["TEST_USERNAME"]
+        password = os.environ["TEST_PASSWORD"]
+        client_id = os.environ["TEST_CLIENT_ID"]
+        client_secret = os.environ["TEST_CLIENT_SECRET"]
+    elif env_name == 'prod':
+        username = os.environ["TEST_USER_PROD"]
+        password = os.environ["TEST_PASSWORD_PROD"]
+        client_id = os.environ["CLIENT_ID_PROD"]
+        client_secret = os.environ["CLIENT_SECRET_PROD"]
+    else:
+        raise ValueError('unknown env alias: {}'.format(env_name))
     dl.login_secret(
         email=username,
         password=password,
@@ -38,6 +33,12 @@ if __name__ == "__main__":
     )
     print(dl.client_api.environments[dl.environment()])
     if dl.token_expired():
+        print('Token Expired')
         sys.exit(1)
     else:
+        print('Success')
         sys.exit(0)
+
+
+if __name__ == "__main__":
+    test_login()

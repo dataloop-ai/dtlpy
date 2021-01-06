@@ -1,11 +1,35 @@
 from collections import namedtuple
 import traceback
 import logging
+from typing import List
+
 import attr
 
 from .. import repositories, entities, services
 
 logger = logging.getLogger(name=__name__)
+
+
+class OntologySpec:
+
+    def __init__(self, ontology_id: str, labels: List[str] = None):
+        self.labels = labels if labels is not None else list()
+        self.ontology_id = ontology_id
+
+    def to_json(self) -> dict:
+        _json = {
+            'labels': self.labels,
+            'ontologyId': self.ontology_id
+        }
+
+        return _json
+
+    @classmethod
+    def from_json(cls, _json: dict):
+        return cls(
+            ontology_id=_json.get('ontologyId'),
+            labels=_json.get('labels')
+        )
 
 
 @attr.s
@@ -15,20 +39,24 @@ class Snapshot(entities.BaseEntity):
     """
     # platform
     id = attr.ib()
-    project_id = attr.ib()
-    dataset_id = attr.ib(repr=False)
-    model_id = attr.ib(repr=False)
-    parent_snapshot_id = attr.ib(repr=False)
-    artifacts_id = attr.ib()
-
-    name = attr.ib()
-    version = attr.ib()
-    query = attr.ib(repr=False)
-
-    url = attr.ib(repr=False)
+    creator = attr.ib()
     createdAt = attr.ib()
     updatedAt = attr.ib(repr=False)
-    creator = attr.ib()
+    artifact = attr.ib()
+    name = attr.ib()
+    description = attr.ib()
+    version = attr.ib()
+    is_global = attr.ib()
+    ontology_spec = attr.ib()
+    status = attr.ib()
+    tags = attr.ib()
+    configuration = attr.ib()
+
+    # name change
+    model_id = attr.ib(repr=False)
+    project_id = attr.ib()
+    org_id = attr.ib()
+    dataset_id = attr.ib(repr=False)
 
     # sdk
     _model = attr.ib(repr=False)
@@ -81,21 +109,28 @@ class Snapshot(entities.BaseEntity):
             if model.id != _json.get('modelId', None):
                 logger.warning('Snapshot has been fetched from a model that is not in it projects list')
                 model = None
+
+        artifact = entities.PackageCodebase.from_json(_json=_json.get('artifact'))
+        ontology_spec = OntologySpec.from_json(_json=_json.get('ontologySpec'))
                 
         inst = cls(
+            configuration=_json.get('configuration', None),
+            is_global=_json.get('global', None),
+            org_id=_json.get('orgId', None),
+            description=_json.get('description', None),
+            status=_json.get('status', None),
+            tags=_json.get('tags', None),
             project_id=_json.get('projectId', None),
             dataset_id=_json.get('datasetId', None),
             model_id=_json.get('modelId', None),
-            parent_snapshot_id=_json.get('parentCheckpointId', None),
-            artifacts_id=_json.get('artifactId', None),
-            query=_json.get('query', None),
+            artifact=artifact,
+            ontology_spec=ontology_spec,
             createdAt=_json.get('createdAt', None),
             updatedAt=_json.get('updatedAt', None),
             version=_json.get('version', None),
             creator=_json.get('creator', None),
             client_api=client_api,
             name=_json.get('name', None),
-            url=_json.get('url', None),
             project=project,
             model=model,
             id=_json.get('id', None)
@@ -115,17 +150,20 @@ class Snapshot(entities.BaseEntity):
                                                         attr.fields(Snapshot)._repositories,
                                                         attr.fields(Snapshot)._client_api,
                                                         attr.fields(Snapshot).model_id,
-                                                        attr.fields(Snapshot).parent_snapshot_id,
+                                                        attr.fields(Snapshot).org_id,
                                                         attr.fields(Snapshot).project_id,
                                                         attr.fields(Snapshot).dataset_id,
-                                                        attr.fields(Snapshot).artifacts_id,
+                                                        attr.fields(Snapshot).ontology_spec,
+                                                        attr.fields(Snapshot).artifact,
                                                         ))
 
+        _json['modelId'] = self.model_id
+        _json['orgId'] = self.org_id
         _json['projectId'] = self.project_id
         _json['datasetId'] = self.dataset_id
-        _json['parentCheckpointId'] = self.parent_snapshot_id
-        _json['artifactId'] = self.artifacts_id
-        _json['modelId'] = self.model_id
+        _json['artifact'] = self.artifact.to_json()
+        _json['ontologySpec'] = self.ontology_spec.to_json()
+
         return _json
 
     ############
@@ -144,6 +182,12 @@ class Snapshot(entities.BaseEntity):
             self._model = self.models.get(model_id=self.model_id)
         assert isinstance(self._model, entities.Model)
         return self._model
+
+    @property
+    def ontology_id(self):
+        if self.ontology_spec:
+            if self.ontology_spec.ontology_id:
+                return self.ontology_spec.ontology_id
 
     ################
     # repositories #
@@ -200,6 +244,13 @@ class Snapshot(entities.BaseEntity):
         Download artifacts from snapshot
         """
         return self.snapshots.download(snapshot=self, local_path=local_path)
+
+    def download_data(self, local_path):
+        """
+        Download Frozen Dataset from snapshot, by Model format
+        """
+        return self.snapshots.download_data(snapshot=self, local_path=local_path)
+
 
     def delete(self):
         """

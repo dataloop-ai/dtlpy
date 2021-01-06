@@ -101,9 +101,13 @@ class Projects:
             raise exceptions.PlatformException(response)
         return True
 
-    def add_member(self, email: str, project_id: str, role: str = 'engineer'):
+    def add_member(self, email: str, project_id: str, role: entities.MemberRole = entities.MemberRole.DEVELOPER):
         url_path = '/projects/{}/members/{}'.format(project_id, email)
         payload = dict(role=role)
+
+        if role not in list(entities.MemberRole):
+            raise ValueError('role must be on of: {}'.format(', '.join(list(entities.MemberRole))))
+
         success, response = self._client_api.gen_request(req_type='post',
                                                          path=url_path,
                                                          json_req=payload)
@@ -112,8 +116,36 @@ class Projects:
 
         return response.json()
 
-    def list_members(self, project: entities.Project, role: str = None):
+    def update_member(self, email: str, project_id: str, role: entities.MemberRole = entities.MemberRole.DEVELOPER):
+        url_path = '/projects/{}/members/{}'.format(project_id, email)
+        payload = dict(role=role)
+
+        if role not in list(entities.MemberRole):
+            raise ValueError('role must be on of: {}'.format(', '.join(list(entities.MemberRole))))
+
+        success, response = self._client_api.gen_request(req_type='patch',
+                                                         path=url_path,
+                                                         json_req=payload)
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        return response.json()
+
+    def remove_member(self, email: str, project_id: str):
+        url_path = '/projects/{}/members/{}'.format(project_id, email)
+        success, response = self._client_api.gen_request(req_type='delete',
+                                                         path=url_path)
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        return response.json()
+
+    def list_members(self, project: entities.Project, role: entities.MemberRole = None):
         url_path = '/projects/{}/members'.format(project.id)
+
+        if role is not None and role not in list(entities.MemberRole):
+            raise ValueError('role must be on of: {}'.format(', '.join(list(entities.MemberRole))))
+
         success, response = self._client_api.gen_request(req_type='get',
                                                          path=url_path)
         if not success:

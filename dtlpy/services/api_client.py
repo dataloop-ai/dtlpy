@@ -443,21 +443,16 @@ class ApiClient:
             information['token'] = self.token
         return information
 
-    @Decorators.token_expired_decorator
-    def gen_request(self, req_type, path, data=None, json_req=None, files=None, stream=False, headers=None,
-                    log_error=True):
-        """
-        Generic request from platform
-        :param req_type:
-        :param path:
-        :param data:
-        :param json_req:
-        :param files:
-        :param stream:
-        :param headers:
-        :param log_error:
-        :return:
-        """
+    def export_curl_request(self, req_type, path, headers=None, json_req=None, files=None, data=None):
+        curl, prepared = self._build_gen_request(req_type=req_type,
+                                                 path=path,
+                                                 headers=headers,
+                                                 json_req=json_req,
+                                                 files=files,
+                                                 data=data)
+        return curl
+
+    def _build_gen_request(self, req_type, path, headers, json_req, files, data):
         req_type = req_type.upper()
         valid_request_type = ['GET', 'DELETE', 'POST', 'PUT', 'PATCH']
         assert req_type in valid_request_type, '[ERROR] type: %s NOT in valid requests' % req_type
@@ -486,6 +481,29 @@ class ApiClient:
         headers = ['"{0}: {1}"'.format(k, v) for k, v in prepared.headers.items()]
         headers = " -H ".join(headers)
         curl = command.format(method=method, headers=headers, data=data, uri=uri)
+        return curl, prepared
+
+    @Decorators.token_expired_decorator
+    def gen_request(self, req_type, path, data=None, json_req=None, files=None, stream=False, headers=None,
+                    log_error=True):
+        """
+        Generic request from platform
+        :param req_type: type of the request: GET, POST etc
+        :param path: url (without host header - take from environment)
+        :param data: data to pass to request
+        :param json_req: json to pass to request
+        :param files: files to pass to request
+        :param stream: stream to pass the request
+        :param headers: headers to pass to request. auth will be added to it
+        :param log_error: if true - print the error log of the request
+        :return:
+        """
+        curl, prepared = self._build_gen_request(req_type=req_type,
+                                                 path=path,
+                                                 headers=headers,
+                                                 json_req=json_req,
+                                                 files=files,
+                                                 data=data)
         self.last_curl = curl
         self.last_request = prepared
         # send request
@@ -997,7 +1015,28 @@ class ApiClient:
                      auth0_url=auth0_url,
                      client_id=client_id)
 
+    def _renew_token_in_dual_agent(self):
+        renewed = False
+        try:
+            proxy_port = os.environ.get('AGENT_PROXY_MAIN_PORT') or "1001"
+            resp = requests.get('http://localhost:{port}/get_jwt'.format(port=proxy_port))
+            if resp.ok:
+                self.token = resp.json()['jwt']
+                renewed = True
+            else:
+                self.print_bad_response(resp)
+        except Exception:
+            logger.exception('Failed to get token from proxy')
+
+        return renewed
+
     def renew_token(self):
+        refresh_method = os.environ.get('DTLPY_REFRESH_TOKEN_METHOD', None)
+        if refresh_method is not None and refresh_method == 'proxy':
+            return self._renew_token_in_dual_agent()
+        return self._renew_token_with_refresh_token()
+
+    def _renew_token_with_refresh_token(self):
         renewed = False
         if self.refresh_token_active is False:
             return renewed

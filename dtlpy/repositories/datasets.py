@@ -224,9 +224,10 @@ class Datasets:
                 error='403',
                 message='Cant delete dataset from SDK. Please login to platform to delete')
 
-    def update(self, dataset: entities.Dataset, system_metadata=False) -> entities.Dataset:
+    def update(self, dataset: entities.Dataset, system_metadata=False, patch: dict = None) -> entities.Dataset:
         """
         Update dataset field
+        :param patch: Specific patch request
         :param dataset: Dataset entity
         :param system_metadata: bool
         :return: Dataset object
@@ -234,9 +235,13 @@ class Datasets:
         url_path = '/datasets/{}'.format(dataset.id)
         if system_metadata:
             url_path += '?system=true'
+
+        if patch is None:
+            patch = dataset.to_json()
+
         success, response = self._client_api.gen_request(req_type='patch',
                                                          path=url_path,
-                                                         json_req=dataset.to_json())
+                                                         json_req=patch)
         if success:
             logger.info('Dataset was updated successfully')
             return dataset
@@ -380,20 +385,44 @@ class Datasets:
     def download_annotations(dataset,
                              local_path=None,
                              filters=None,
-                             annotation_options=None,
+                             annotation_options: entities.ViewAnnotationOptions = None,
+                             annotation_filter_type=None,
+                             annotation_filter_label=None,
                              overwrite=False,
                              thickness=1,
                              with_text=False,
                              num_workers=32,
                              remote_path=None):
+        """
+        Download dataset by filters.
+        Filtering the dataset for items and save them local
+        Optional - also download annotation, mask, instance and image mask of the item
+
+        :param dataset: dataset to download from
+        :param local_path: local folder or filename to save to.
+        :param filters: Filters entity or a dictionary containing filters parameters
+        :param annotation_options: download annotations options: list(dl.ViewAnnotationOptions)
+        :param annotation_filter_type: list of annotation types when downloading annotation,
+                                                                                        not relevant for JSON option
+        :param annotation_filter_label: list of labels types when downloading annotation, not relevant for JSON option
+        :param overwrite: optional - default = False
+        :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
+        :param with_text: optional - add text to annotations, default = False
+        :param remote_path optinal - remote path to download
+        :param num_workers number of threads
+        :return: `List` of local_path per each downloaded item
+        """
+
         def download_single(i_item, i_img_filepath, i_local_path, i_overwrite, i_annotation_options,
-                            i_thickness, i_with_text):
+                            i_annotation_filter_type, i_annotation_filter_label, i_thickness, i_with_text):
             try:
                 repositories.Downloader._download_img_annotations(item=i_item,
                                                                   img_filepath=i_img_filepath,
                                                                   local_path=i_local_path,
                                                                   overwrite=i_overwrite,
                                                                   annotation_options=i_annotation_options,
+                                                                  annotation_filter_type=i_annotation_filter_type,
+                                                                  annotation_filter_label=i_annotation_filter_label,
                                                                   thickness=i_thickness,
                                                                   with_text=i_with_text)
             except Exception:
@@ -438,6 +467,21 @@ class Datasets:
         if not isinstance(annotation_options, list):
             annotation_options = [annotation_options]
 
+        if annotation_filter_type is not None or annotation_filter_label is not None:
+            if filters is None:
+                filters = entities.Filters(resource=entities.FiltersResource.ITEM)
+            filters.add(field='annotated', values=True)
+
+        if annotation_filter_type is not None:
+            if not isinstance(annotation_filter_type, list):
+                annotation_filter_type = [annotation_filter_type]
+            filters.add_join(field='type', values=annotation_filter_type, operator=entities.FiltersOperations.IN)
+
+        if annotation_filter_label is not None:
+            if not isinstance(annotation_filter_label, list):
+                annotation_filter_label = [annotation_filter_label]
+            filters.add_join(field='label', values=annotation_filter_label, operator=entities.FiltersOperations.IN)
+
         pages = dataset.items.list(filters=filters)
 
         if pages.items_count > dataset.annotated / 10:
@@ -458,6 +502,8 @@ class Datasets:
                         'i_local_path': local_path,
                         'i_overwrite': overwrite,
                         'i_annotation_options': annotation_options,
+                        'i_annotation_filter_type': annotation_filter_type,
+                        'i_annotation_filter_label': annotation_filter_label,
                         'i_thickness': thickness,
                         'i_with_text': with_text
                     }
@@ -469,3 +515,18 @@ class Datasets:
         progress.close()
 
         return local_path
+
+    def set_readonly(self, state: bool, dataset: entities.Dataset):
+        """
+        Set dataset readonly mode
+        :param state:
+        :param dataset:
+        :return:
+        """
+        if dataset.readonly != state:
+            patch = {'readonly': state}
+            self.update(dataset=dataset,
+                        patch=patch)
+            dataset._readonly = state
+        else:
+            logger.warning('Dataset is already "readonly={}". Nothing was done'.format(state))

@@ -17,10 +17,14 @@ class Codebases:
     def __init__(self,
                  client_api: services.ApiClient,
                  project: entities.Project = None,
-                 dataset: entities.Dataset = None):
+                 dataset: entities.Dataset = None,
+                 project_id: str = None):
         self._client_api = client_api
         if project is None and dataset is None:
-            raise PlatformException('400', 'at least one must be not None: dataset or project')
+            if project_id is None:
+                raise PlatformException('400', 'at least one must be not None: dataset, project or project_id')
+            else:
+                project = repositories.Projects(client_api=client_api).get(project_id=project_id)
         self._project = project
         self._dataset = dataset
         self._items_repository = None

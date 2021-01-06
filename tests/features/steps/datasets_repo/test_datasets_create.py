@@ -5,8 +5,12 @@ import string
 
 @behave.fixture
 def delete_all_datasets(context):
-    for item in context.project.datasets.list():
-        context.project.datasets.delete(dataset_id=item.id,
+    for dataset in context.project.datasets.list():
+
+        if dataset.readonly:
+            dataset.set_readonly(state=False)
+
+        context.project.datasets.delete(dataset_id=dataset.id,
                                         sure=True,
                                         really=True)
 

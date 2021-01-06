@@ -36,16 +36,24 @@ DEFAULT_ENVIRONMENTS = {
         'token': None,
         'refresh_token': None,
         'verify_ssl': False},
-    'https://172.17.0.1:8443/api/v1': {
-        'alias': 'docker_linux',
+    'https://poc-gate.dataloop.ai/api/v1': {
+        'alias': 'aws',
+        'audience': 'https://dataloop-aws-poc.eu.auth0.com/api/v2/',
+        'client_id': 'dHHctbFPa4TFgo1hh9Ig2Fyh71N46BEM',
+        'auth0_url': 'https://dataloop-aws-poc.eu.auth0.com',
+        'token': None,
+        'refresh_token': None,
+        'verify_ssl': True},
+    'https://host.docker.internal:8443/api/v1': {
+        'alias': 'docker_windows',
         'audience': 'https://dataloop-local.auth0.com/userinfo',
         'client_id': 'ewGhbg5brMHOoL2XZLHBzhEanapBIiVO',
         'auth0_url': 'https://dataloop-local.auth0.com',
         'token': None,
         'refresh_token': None,
         'verify_ssl': False},
-    'https://host.docker.internal:8443/api/v1': {
-        'alias': 'docker_windows',
+    'https://docker.for.mac.localhost:8443/api/v1': {
+        'alias': 'minikube_local_mac',
         'audience': 'https://dataloop-local.auth0.com/userinfo',
         'client_id': 'ewGhbg5brMHOoL2XZLHBzhEanapBIiVO',
         'auth0_url': 'https://dataloop-local.auth0.com',

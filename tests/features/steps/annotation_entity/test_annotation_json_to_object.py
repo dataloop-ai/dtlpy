@@ -17,12 +17,17 @@ def step_impl(context, entity):
         
         entity_to_json = getattr(context, entity).to_json()
         response = response.json()
+
         assert success
         if entity == 'item':
             if 'metadata' in response and 'system' in response['metadata']:
                 response['metadata']['system'].pop('executionLogs', None)
             if 'metadata' in entity_to_json and 'system' in entity_to_json['metadata']:
                 entity_to_json['metadata']['system'].pop('executionLogs', None)
+        elif entity == 'service':
+            if 'runtime' in response:
+                if 'autoscaler' not in response['runtime']:
+                    response['runtime']['autoscaler'] = None
         if entity_to_json != response:
             logging.error('FAILED: response json is:\n{}\n\nto_json is:\n{}'.format(json.dumps(response,
                                                                                                indent=2),

@@ -16,11 +16,11 @@
 from . import package_defaults
 from .annotation_definitions import BaseAnnotationDefinition
 from .base_entity import BaseEntity
-from .item import Item, Modality, ModalityTypeEnum, ItemStatus
+from .item import Item, ItemStatus, Modality, ModalityTypeEnum, ModalityRefTypeEnum
 from .links import Link, ItemLink, UrlLink, LinkTypeEnum
 from .trigger import Trigger, TriggerResource, TriggerAction, TriggerExecutionMode, BaseTrigger, CronTrigger, \
     TriggerType
-from .project import Project
+from .project import Project, MemberRole
 from .artifact import Artifact
 from .dataset import Dataset
 from .codebase import Codebase
@@ -34,7 +34,8 @@ from .ontology import Ontology
 from .annotation_definitions import Box, Point, Segmentation, Polygon, Ellipse, Classification, Subtitle, \
     Polyline, Comparison, UndefinedAnnotationType, Note, Description, Pose
 from .label import Label
-from .package import Package, PackageCodebase, PackageCodebaseType, ItemCodebase, GitCodebase
+from .package import Package, PackageCodebase, PackageCodebaseType, ItemCodebase, GitCodebase, FilesystemCodebase,\
+    LocalCodebase
 from .package_module import PackageModule
 from .package_function import PackageFunction, FunctionIO, PackageInputType, FunctionPostAction, \
     FunctionPostActionType, FunctionDisplayScope, FunctionDisplayScopeResource
@@ -50,4 +51,4 @@ from .user import User
 from .bot import Bot
 from .webhook import Webhook, HttpMethod
 from .model import Model
-from .snapshot import Snapshot
+from .snapshot import Snapshot, OntologySpec

@@ -1,4 +1,5 @@
 from collections import namedtuple
+from enum import Enum
 import traceback
 import logging
 import attr
@@ -6,11 +7,12 @@ import copy
 import os
 
 from .. import repositories, entities, services, exceptions
+from .annotation import ViewAnnotationOptions
 
 logger = logging.getLogger(name=__name__)
 
 
-class ItemStatus:
+class ItemStatus(str, Enum):
     COMPLETED = "completed"
     APPROVED = "approved"
     DISCARDED = "discarded"
@@ -250,7 +252,6 @@ class Item(entities.BaseEntity):
         """
         raise NotImplementedError("Set description update the item in platform, use set_description(text: str) instead")
 
-
     ###########
     # Functions #
     ###########
@@ -281,7 +282,7 @@ class Item(entities.BaseEntity):
             file_types=None,
             save_locally=True,
             to_array=False,
-            annotation_options=None,
+            annotation_options: ViewAnnotationOptions = None,
             overwrite=False,
             to_items_folder=True,
             thickness=1,
@@ -298,16 +299,20 @@ class Item(entities.BaseEntity):
         :param file_types: a list of file type to download. e.g ['video/webm', 'video/mp4', 'image/jpeg', 'image/png']
         :param save_locally: bool. save to disk or return a buffer
         :param to_array: returns Ndarray when True and local_path = False
-        :param annotation_options: download annotations options: dl.ViewAnnotationOptions.list()
+        :param annotation_options: download annotations options: list(dl.ViewAnnotationOptions)
         :param with_text: optional - add text to annotations, default = False
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :return: Output (list)
         """
         # if dir - concatenate local path and item name
         if local_path is not None:
-            _, ext = os.path.splitext(local_path)
-            if not ext:
+            if os.path.isdir(local_path):
                 local_path = os.path.join(local_path, self.name)
+            else:
+                _, ext = os.path.splitext(local_path)
+                if not ext:
+                    os.makedirs(local_path, exist_ok=True)
+                    local_path = os.path.join(local_path, self.name)
 
         # download
         return self.items.download(items=self,
@@ -382,11 +387,11 @@ class Item(entities.BaseEntity):
     def open_in_web(self):
         self.items.open_in_web(item=self)
 
-    def update_status(self, status):
-        if status not in ['completed', 'approved', 'discarded']:
-            raise exceptions.PlatformException('400',
-                                               'Unknown status: {}. Please chose from: completed, approved, discarded'
-                                               .format(status))
+    def update_status(self, status: ItemStatus):
+        if status not in list(ItemStatus):
+            raise exceptions.PlatformException(
+                error='400',
+                message='Unknown status: {}. Please choose from: {}'.format(status, list(ItemStatus)))
         try:
             annotation_definition = entities.Classification(label=status)
             entities.Annotation.new(item=self,
@@ -437,16 +442,23 @@ class Item(entities.BaseEntity):
             logger.debug(traceback.format_exc())
 
 
-class ModalityTypeEnum:
+class ModalityTypeEnum(str, Enum):
     """
     State enum
     """
-
     OVERLAY = "overlay"
 
 
+class ModalityRefTypeEnum(str, Enum):
+    """
+    State enum
+    """
+    ID = "id"
+    URL = "url"
+
+
 class Modality:
-    def __init__(self, _json=None, modality_type=None, ref=None, ref_type='id', name=None):
+    def __init__(self, _json=None, modality_type=None, ref=None, ref_type=ModalityRefTypeEnum.ID, name=None):
         if _json is None:
             _json = dict()
         self.type = _json.get('type', modality_type)
@@ -470,7 +482,9 @@ class Modalities:
     def modalities(self):
         return self.item.metadata.get('modalities', None)
 
-    def create(self, name, ref, ref_type='id', modality_type=ModalityTypeEnum.OVERLAY):
+    def create(self, name, ref,
+               ref_type: ModalityRefTypeEnum = ModalityRefTypeEnum.ID,
+               modality_type: ModalityTypeEnum = ModalityTypeEnum.OVERLAY):
         if self.modalities is None:
             self.item.metadata['modalities'] = list()
 

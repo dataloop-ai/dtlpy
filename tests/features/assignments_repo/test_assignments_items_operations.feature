@@ -11,12 +11,3 @@ Feature: Assignments repository items operations method testing
             | task_name=min_params | due_date=auto | assignee_ids=annotator1@dataloop.ai  | items=3 |
         And I get an Assignment
 
-    Scenario: Get/delete/add items
-        When I get assignment items
-        Then I receive a list of "3" assignment items
-        When I add "3" items to assignment
-        And I get assignment items
-        Then I receive a list of "6" assignment items
-        When I delete all items from assignment
-        And I get assignment items
-        Then I receive a list of "0" assignment items

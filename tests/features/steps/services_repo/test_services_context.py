@@ -1,6 +1,5 @@
 import behave
 import dtlpy as dl
-dl.verbose.logging_level = "warning"
 
 
 @behave.given(u'I append package to packages')

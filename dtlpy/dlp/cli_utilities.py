@@ -224,6 +224,13 @@ class DlpCompleter(Completer):
                     self.param_suggestions = ['mask', 'json', 'instance', '"mask, json"',
                                               '"mask, instance"', '"json, instance"', '"mask, json, instance"']
 
+                elif param in ['--annotation-filter-type']:
+                    self.thread_state = StateEnum.CONTINUE
+                    self.param_suggestions = ['box', 'segment', 'binary', '"box, segment"']
+
+                elif param in ['--annotation-filter-label']:
+                    self.thread_state = StateEnum.CONTINUE
+
                 elif param in ['--actions']:
                     self.thread_state = StateEnum.CONTINUE
                     self.param_suggestions = ['Created', 'Updated', 'Deleted', '"Created, Updated"',

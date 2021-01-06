@@ -14,7 +14,8 @@ class Segmentation(BaseAnnotationDefinition):
     Segmentation annotation object
     """
 
-    def __init__(self, geo, label, attributes=None):
+    def __init__(self, geo, label, attributes=None, description=None):
+        super().__init__(description=description)
         self.type = "binary"
         self.geo = geo
         self.label = label
@@ -70,7 +71,7 @@ class Segmentation(BaseAnnotationDefinition):
         :param with_text: not required
         :param height: item height
         :param width: item width
-        :param annotation_format: options: dl.ViewAnnotationOptions.list()
+        :param annotation_format: options: list(dl.ViewAnnotationOptions)
         :param color: color
         :return: ndarray
         """

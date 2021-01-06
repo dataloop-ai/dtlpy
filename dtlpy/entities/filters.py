@@ -1,11 +1,12 @@
 import logging
+from enum import Enum
 from ..exceptions import PlatformException
 import os
 
 logger = logging.getLogger(name=__name__)
 
 
-class FiltersKnownFields:
+class FiltersKnownFields(str, Enum):
     DIR = "dir"
     ANNOTATED = "annotated"
     FILENAME = "filename"
@@ -17,7 +18,7 @@ class FiltersKnownFields:
     TYPE = 'type'
 
 
-class FiltersResource:
+class FiltersResource(str, Enum):
     ITEM = "items"
     ANNOTATION = "annotations"
     EXECUTION = "executions"
@@ -32,7 +33,7 @@ class FiltersResource:
     ONTOLOGY = 'ontology'
 
 
-class FiltersOperations:
+class FiltersOperations(str, Enum):
     OR = "or"
     AND = "and"
     IN = "in"
@@ -40,14 +41,15 @@ class FiltersOperations:
     EQUAL = "eq"
     GREATER_THAN = "gt"
     LESS_THAN = "lt"
+    EXISTS = "exists"
 
 
-class FiltersMethod:
+class FiltersMethod(str, Enum):
     OR = "or"
     AND = "and"
 
 
-class FiltersOrderByDirection:
+class FiltersOrderByDirection(str, Enum):
     DESCENDING = "descending"
     ASCENDING = "ascending"
 
@@ -57,13 +59,14 @@ class Filters:
     Filters entity to filter items from pages in platform
     """
 
-    def __init__(self, field=None, values=None, operator=None, method=None, custom_filter=None,
-                 resource=FiltersResource.ITEM, use_defaults=True):
+    def __init__(self, field=None, values=None, operator: FiltersOperations = None,
+                 method: FiltersMethod = None, custom_filter=None,
+                 resource: FiltersResource = FiltersResource.ITEM, use_defaults=True):
         self.or_filter_list = list()
         self.and_filter_list = list()
         self._unique_fields = list()
         self.custom_filter = custom_filter
-        self.known_operators = ['or', 'and', 'in', 'ne', 'eq', 'gt', 'glob', 'lt']
+        self.known_operators = ['or', 'and', 'in', 'ne', 'eq', 'gt', 'glob', 'lt', 'exists']
         self._resource = resource
         self.page = 0
         self.page_size = 1000
@@ -115,7 +118,7 @@ class Filters:
         self._ref_assignment_id = None
         self._ref_task_id = None
 
-    def add(self, field, values, operator=None, method=None):
+    def add(self, field, values, operator: FiltersOperations = None, method: FiltersMethod = None):
         """
         Add filter
         :param method: Optional - or/and
@@ -181,7 +184,7 @@ class Filters:
                 if field in single_filter:
                     self.join['filter']['$and'].remove(single_filter)
 
-    def add_join(self, field, values, operator=None):
+    def add_join(self, field, values, operator: FiltersOperations = None):
         if self.resource != FiltersResource.ITEM:
             raise PlatformException('400', 'Cannot join to {} filters'.format(self.resource))
 
@@ -335,14 +338,14 @@ class Filters:
         # return json
         return _json
 
-    def sort_by(self, field, value='ascending'):
-        if value not in ['ascending', 'descending']:
+    def sort_by(self, field, value: FiltersOrderByDirection = FiltersOrderByDirection.ASCENDING):
+        if value not in [FiltersOrderByDirection.ASCENDING, FiltersOrderByDirection.DESCENDING]:
             raise PlatformException(error='400', message='Sort can be by ascending or descending order only')
         self.sort[field] = value
 
 
 class SingleFilter:
-    def __init__(self, field, values, operator=None):
+    def __init__(self, field, values, operator: FiltersOperations = None):
         self.field = field
         self.values = values
         self.operator = operator

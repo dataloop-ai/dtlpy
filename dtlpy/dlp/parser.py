@@ -223,6 +223,11 @@ def get_parser():
                           help="dataset name. Default taken from checked out (if checked out)")
     optional.add_argument("-ao", "--annotation-options", metavar='\b',
                           help="which annotation to download. options: json,instance,mask", default=None)
+    optional.add_argument("-aft", "--annotation-filter-type", metavar='\b',
+                          help="annotation type filter when downloading annotations. "
+                               "options: box,segment,binary etc", default=None)
+    optional.add_argument("-afl", "--annotation-filter-label", metavar='\b',
+                          help="labels filter when downloading annotations.", default=None)
     optional.add_argument("-r", "--remote-path", metavar='\b', default=None,
                           help="remote path to upload to. default: /")
     optional.add_argument("-ow", "--overwrite", action='store_true', default=False,
@@ -472,6 +477,8 @@ def get_parser():
                           help="Package name")
     optional.add_argument("-pr", "--project-name", dest="project_name", default=None,
                           help="Project name")
+    optional.add_argument("-force", dest="force", default=False,
+                          help="Immediately kill existing replicas")
 
     # generate
     a = subparser_parser.add_parser("generate", help="Create a boilerplate for a new package")
@@ -507,7 +514,7 @@ def get_parser():
         "test", help="Tests that Package locally using mock.json"
     )
     optional = a.add_argument_group("optional named arguments")
-    optional.add_argument("-c", "--concurrency", metavar='\b', default=1,
+    optional.add_argument("-c", "--concurrency", metavar='\b', default=10,
                           help="Revision to deploy if selected True")
     optional.add_argument("-f", "--function-name", metavar='\b', default='run',
                           help="Function to test")

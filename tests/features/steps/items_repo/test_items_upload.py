@@ -1,6 +1,5 @@
 import behave
 import os
-import cv2
 import time
 import shutil
 import io
@@ -50,6 +49,7 @@ def step_impl(context):
 
 @behave.then(u'Item in host when downloaded to "{download_path}" equals item in "{item_local_path}"')
 def step_impl(context, item_local_path, download_path):
+    import cv2
     download_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], download_path)
     file_to_compare = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], item_local_path)
 

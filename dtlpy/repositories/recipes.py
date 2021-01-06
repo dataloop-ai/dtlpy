@@ -86,14 +86,7 @@ class Recipes:
             raise exceptions.PlatformException(response)
 
         if self._dataset is not None:
-            # add recipe id to dataset system metadata
-            if 'system' not in self._dataset.metadata:
-                self._dataset.metadata['system'] = dict()
-            if 'recipes' not in self._dataset.metadata['system']:
-                self._dataset.metadata['system']['recipes'] = list()
-            # TODO - supposed to be append but it doesn't work in platform
-            self._dataset.metadata['system']['recipes'] = [recipe.id]
-            self._dataset.update(system_metadata=True)
+            self._dataset.switch_recipe(recipe.id)
         return recipe
 
     def list(self, filters: entities.Filters = None) -> miscellaneous.List[entities.Recipe]:
@@ -233,3 +226,39 @@ class Recipes:
         else:
             logger.error('Error while updating item:')
             raise exceptions.PlatformException(response)
+
+    def clone(self, recipe: entities.Recipe = None,
+              recipe_id=None,
+              shallow=False):
+        """
+        Clone Recipe
+
+       :param recipe: Recipe object
+       :param recipe_id: Recipe id
+       :param shallow: If True, link ot existing ontology, clones all ontology that are link to the recipe as well
+       :return: Cloned ontology object
+       """
+        if recipe is None and recipe_id is None:
+            raise exceptions.PlatformException('400', 'Must provide recipe or recipe_id')
+        if recipe_id is None:
+            if not isinstance(recipe, entities.Recipe):
+                raise exceptions.PlatformException('400', 'Recipe must me entities.Recipe type')
+            else:
+                recipe_id = recipe.id
+
+        payload = {'shallow': shallow}
+
+        success, response = self._client_api.gen_request(req_type='post',
+                                                         path='/recipes/{}/clone'.format(recipe_id),
+                                                         json_req=payload)
+        if success:
+            recipe = entities.Recipe.from_json(client_api=self._client_api,
+                                               _json=response.json())
+        else:
+            logger.error('Failed to clone Recipe')
+            raise exceptions.PlatformException(response)
+
+        assert isinstance(recipe, entities.Recipe)
+        logger.debug('Recipe has been cloned successfully. recipe id: {}'.format(recipe.id))
+
+        return recipe
