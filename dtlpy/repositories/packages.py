@@ -1084,7 +1084,7 @@ class LocalServiceRunner:
 
     @property
     def module_name(self):
-        return self.mock_json.get('module_name', self._function_name)
+        return self.mock_json.get('module_name', self._module_name)
 
     @property
     def class_name(self):
