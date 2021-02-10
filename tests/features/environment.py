@@ -3,6 +3,7 @@ from behave import use_fixture
 import os
 import json
 import logging
+from filelock import FileLock
 
 
 @fixture
@@ -31,8 +32,10 @@ def after_feature(context, feature):
                 api_calls[context.feature.name] += feature.dataloop_feature_dl.client_api.calls_counter.number
             else:
                 api_calls[context.feature.name] = feature.dataloop_feature_dl.client_api.calls_counter.number
-            with open(api_calls_path, 'w') as f:
-                json.dump(api_calls, f)
+            # lock the file for multi processes needs
+            with FileLock("api_calls.json.lock"):
+                with open(api_calls_path, 'w') as f:
+                    json.dump(api_calls, f)
         except Exception:
             logging.exception('Failed to update api calls')
 

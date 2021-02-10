@@ -149,3 +149,7 @@ from tests.features.steps.converter import converter
 
 from tests.features.steps.models_repo import test_models_create
 from tests.features.steps.models_repo import test_models_delete
+
+from tests.features.steps.model_entity import test_model_update
+
+from tests.features.steps.snapshots_repo import test_snapshots_create

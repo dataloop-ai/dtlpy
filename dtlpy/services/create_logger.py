@@ -77,7 +77,7 @@ class DataloopLogger(handlers.BaseRotatingHandler):
                         try:
                             os.remove(filepath)
                         except Exception as e:
-                            logger.warning(e)
+                            logger.warning("Old log file can not be removed: {}".format(e))
                         continue
                 if 'max_size' in max_param:
                     file_size = os.path.getsize(filepath)
@@ -85,7 +85,7 @@ class DataloopLogger(handlers.BaseRotatingHandler):
                         try:
                             os.remove(filepath)
                         except Exception as e:
-                            logger.info("Old log file can not be removed: {}".format(e))
+                            logger.warning("Old log file can not be removed: {}".format(e))
                         continue
                     total_cache_size += file_size
             if is_root:

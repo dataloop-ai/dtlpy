@@ -13,10 +13,10 @@ class Segmentation(BaseAnnotationDefinition):
     """
     Segmentation annotation object
     """
+    type = "binary"
 
     def __init__(self, geo, label, attributes=None, description=None):
         super().__init__(description=description)
-        self.type = "binary"
         self.geo = geo
         self.label = label
         if attributes is None:

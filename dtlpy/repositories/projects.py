@@ -216,6 +216,13 @@ class Projects:
         elif fetch:
             if project_id is not None:
                 project = self.__get_by_id(project_id)
+                # verify input project name is same as the given id
+                if project_name is not None and project.name != project_name:
+                    logger.warning(
+                        "Mismatch found in projects.get: project_name is different then project.name:"
+                        " {!r} != {!r}".format(
+                            project_name,
+                            project.name))
             elif project_name is not None:
                 projects = self.list()
                 project = [project for project in projects if project.name == project_name]

@@ -1,20 +1,14 @@
-import threading
+from urllib.parse import urlsplit, urlunsplit
 import requests
 import logging
-import hashlib
-import base64
 import json
 import jwt
 import os
-from urllib.parse import urlencode
-
-from .service_defaults import DEFAULT_ENVIRONMENTS
 
 logger = logging.getLogger(name=__name__)
-threadLock = threading.Lock()
 
 
-def login_m2m(api_client, email, password, client_id, client_secret=None, force=False):
+def login_m2m(api_client, email, password, client_id=None, client_secret=None, force=False):
     login_secret(api_client=api_client,
                  email=email,
                  password=password,
@@ -29,11 +23,12 @@ def login_secret(api_client, email, password, client_id, client_secret=None, for
     :param api_client: ApiClient instance
     :param email: user email. if already logged in with same user - login will NOT happen. see "force"
     :param password: user password
-    :param client_id:
-    :param client_secret:
+    :param client_id: DEPRECATED
+    :param client_secret: DEPRECATED
     :param force: force login. in case login with same user but want to get a new JWT
     :return:
     """
+    # TODO add deprecation warning to client_id
     # check if already logged in with SAME email
     if api_client.token is not None or api_client.token == '':
         try:
@@ -49,34 +44,17 @@ def login_secret(api_client, email, password, client_id, client_secret=None, for
             logger.debug('{}'.format('Cant decode token. Force login is used'))
 
     logger.info('[Start] Login Secret')
-    environment = api_client.environment
-    audience = None
-    auth0_url = None
-    for env, env_params in api_client.environments.items():
-        if env == environment:
-            audience = env_params['audience']
-            auth0_url = env_params['auth0_url']
-    missing = False
-    if audience is None:
-        logger.error('audience not found. Please add a new environment to SDK. env: {}'.format(environment))
-        missing = True
-    if auth0_url is None:
-        logger.error('auth0_url not found. Please add a new environment to SDK. env: {}'.format(environment))
-        missing = True
-    if missing:
-        raise ConnectionError('Some values are missing. See above for full error')
+    env_params = api_client.environments[api_client.environment]
     # need to login
     payload = {'username': email,
                'password': password,
-               'grant_type': 'password',
-               'audience': audience,
-               'scope': 'openid email offline_access',
-               'client_id': client_id,
+               'type': 'user_credentials'
                }
-    if client_secret is not None:
-        payload['client_secret'] = client_secret
     headers = {'content-type': 'application/json'}
-    token_url = auth0_url + '/oauth/token'
+    if 'gate_url' not in env_params:
+        env_params['gate_url'] = gate_url_from_host(environment=api_client.environment)
+        api_client.environments[api_client.environment] = env_params
+    token_url = env_params['gate_url'] + "/token?default"
     resp = requests.request("POST", token_url, data=json.dumps(payload), headers=headers)
     if not resp.ok:
         api_client.print_bad_response(resp)
@@ -88,10 +66,6 @@ def login_secret(api_client, email, password, client_id, client_secret=None, for
             api_client.refresh_token = response_dict['refresh_token']
 
         # set new client id for refresh
-        environments = api_client.environments
-        if environments[environment]['client_id'] != client_id:
-            environments[environment]['client_id'] = client_id
-            api_client.environments = environments
         payload = jwt.decode(api_client.token, algorithms=['HS256'], verify=False)
         if 'email' in payload:
             logger.info('[Done] Login Secret. User: {}'.format(payload['email']))
@@ -101,151 +75,112 @@ def login_secret(api_client, email, password, client_id, client_secret=None, for
     return True
 
 
-def login(api_client, audience=None, auth0_url=None, client_id=None):
-    """
-    Login using Auth0.
-    :param api_client: ApiClient instance
-    :param audience:
-    :param auth0_url:
-    :param client_id:
-    :return:
-    """
+def login(api_client, auth0_url=None, audience=None, client_id=None):
     import webbrowser
     from http.server import BaseHTTPRequestHandler, HTTPServer
     from urllib.parse import urlparse, parse_qs
 
     logger.info('Logging in to Dataloop...')
-    login_success = False
-    # create a Code Verifier
-    n_bytes = 64
-    verifier = base64.urlsafe_b64encode(os.urandom(n_bytes)).rstrip(b'=')
-    # https://tools.ietf.org/html/rfc7636#section-4.1
-    # minimum length of 43 characters and a maximum length of 128 characters.
-    if len(verifier) < 43:
-        raise ValueError("Verifier too short. n_bytes must be > 30.")
-    elif len(verifier) > 128:
-        raise ValueError("Verifier too long. n_bytes must be < 97.")
-    # Create a code challenge
-    digest = hashlib.sha256(verifier).digest()
-    challenge = base64.urlsafe_b64encode(digest).rstrip(b'=')
 
-    ################################
-    # auth0 parameters for request #
-    ################################
-    # get env from url
-    if api_client.environment in api_client.environments.keys():
-        env_params = DEFAULT_ENVIRONMENTS[api_client.environment]
-        audience = env_params['audience']
-        client_id = env_params['client_id']
-        auth0_url = env_params['auth0_url']
-    else:
-        missing = False
-        if audience is None:
-            logger.error('Missing parameter for environment missing. Need to input "audience"')
-            missing = True
-        if client_id is None:
-            logger.error('Missing parameter for environment missing. Need to input "client_id"')
-            missing = True
-        if auth0_url is None:
-            logger.error('Missing parameter for environment missing. Need to input "auth0_url"')
-            missing = True
-        if missing:
-            raise ConnectionError('Missing parameter for environment. see above')
-        # add to login parameters
-        api_client.add_environment(environment=api_client.environment,
-                                   audience=audience,
-                                   client_id=client_id,
-                                   auth0_url=auth0_url)
+    class LocalServer:
 
-    redirect_url = 'http://localhost:3001/token'
+        class Handler(BaseHTTPRequestHandler):
 
-    # set url request for auth0
-    payload = {'code_challenge_method': 'S256',
-               'code_challenge': challenge,
-               'response_type': 'code',
-               'audience': audience,
-               'scope': 'openid email offline_access',
-               'client_id': client_id,
-               'redirect_uri': redirect_url}
+            tokens_obtained = False
+            id_token = None
+            access_token = None
+            refresh_token = None
 
-    query_string = urlencode(payload, doseq=True)
+            def log_message(self, format, *args):
+                return
 
-    # set up local server to get response from auth0
-    global query_dict
-    query_dict = None
+            def do_GET(self):
+                parsed_path = urlparse(self.path)
+                query = parse_qs(parsed_path.query)
+                self.send_response(200)
 
-    class RequestHandler(BaseHTTPRequestHandler):
-
-        def log_message(self, format, *args):
-            return
-
-        def do_GET(self):
-            global query_dict
-            parsed_path = urlparse(self.path)
-            query_dict = parse_qs(parsed_path.query)
-            try:
-                # working directory when running from command line
-                location = os.path.dirname(os.path.realpath(__file__))
-            except NameError:
-                # working directory when running from console
-                location = './dtlpy/services'
-            filename = os.path.join(location, '..', 'assets', 'lock_open.png')
-            if query_dict and 'code' in query_dict:
+                # get display image
+                try:
+                    # working directory when running from command line
+                    location = os.path.dirname(os.path.realpath(__file__))
+                except NameError:
+                    # working directory when running from console
+                    location = './dtlpy/services'
+                filename = os.path.join(location, '..', 'assets', 'lock_open.png')
                 if os.path.isfile(filename):
                     with open(filename, 'rb') as f:
-                        # Open the static file requested and send it
-                        self.send_response(200)
                         self.send_header('Content-type', 'image/jpg')
                         self.end_headers()
                         self.wfile.write(f.read())
-            return
-
-    port = 3001
-    # print('Listening on localhost:%s' % port)
-    server = HTTPServer(('', port), RequestHandler)
-    # set timeout to 1min (waiting for user to login)
-    server.timeout = 60  # timeout 1 min
-    try:
-        # open browser to Auth0 login page
-        webbrowser.open(url=auth0_url + '/authorize' + '?%s' % query_string, new=2, autoraise=True)
-        # wait for request
-        server.handle_request()
-        # check the global list for the token
-        if query_dict and 'code' in query_dict:
-            # authentication code received from auth0 - can continue login
-            # payload for auth0 token request
-            payload = {'grant_type': 'authorization_code',
-                       'client_id': client_id,
-                       'code_verifier': verifier.decode(),
-                       'code': query_dict['code'][0],
-                       'redirect_uri': redirect_url}
-            resp = requests.request("POST",
-                                    auth0_url + '/oauth/token',
-                                    json=payload,
-                                    headers={'content-type': 'application/json'})
-            if not resp.ok:
-                api_client.print_bad_response(resp)
-                login_success = False
-            else:
-                response_dict = resp.json()
-                final_token = response_dict['id_token']
-                api_client.token = final_token  # this will also set the refresh_token to None
-                if 'refresh_token' in response_dict:
-                    api_client.refresh_token = response_dict['refresh_token']
-                api_client.environments[api_client.environment]['client_id'] = client_id
-                payload = jwt.decode(api_client.token, algorithms=['HS256'], verify=False)
-                if 'email' in payload:
-                    logger.info('Logged in: %s' % payload['email'])
                 else:
-                    logger.info('Logged in: unknown user')
-                login_success = True
+                    self.send_header('Content-type', 'text/html')
+                    self.end_headers()
+                    self.wfile.write(bytes("<!doctype html><html><body>Logged in successfully</body></html>", 'utf-8'))
+                self.__class__.id_token = query['id_token'][0]
+                self.__class__.access_token = query['access_token'][0]
+                self.__class__.refresh_token = query['refresh_token'][0]
+                self.__class__.tokens_obtained = True
+
+        def __init__(self):
+            self.port = 3001
+            self.server = HTTPServer(('', self.port), self.Handler)
+            self.server.timeout = 60
+
+        def process_request(self):
+            self.server.handle_request()
+
+            if self.Handler.tokens_obtained:
+                return True, {
+                    "id": self.Handler.id_token,
+                    "access": self.Handler.access_token,
+                    "refresh": self.Handler.refresh_token
+                }
+            else:
+                return False, {}
+
+        def local_endpoint(self):
+            return "http://localhost:{}".format(self.port)
+
+        def close(self):
+            self.server.server_close()
+
+    server = LocalServer()
+
+    try:
+        local_ep = server.local_endpoint()
+        env_params = api_client.environments[api_client.environment]
+        if 'gate_url' not in env_params:
+            env_params['gate_url'] = gate_url_from_host(environment=api_client.environment)
+            api_client.environments[api_client.environment] = env_params
+        remote_ep = env_params['gate_url']
+        login_page_url = "{}/login?callback={}".format(remote_ep, local_ep)
+        logger.info("Launching interactive login via {}".format(remote_ep))
+        webbrowser.open(url=login_page_url, new=2, autoraise=True)
+
+        success, tokens = server.process_request()
+
+        if success:
+            decoded_jwt = jwt.decode(tokens['id'], verify=False)
+
+            if 'email' in decoded_jwt:
+                logger.info('Logged in: {}'.format(decoded_jwt['email']))
+            else:
+                logger.info('Logged in: unknown user')
+
+            api_client.token = tokens['id']
+            api_client.refresh_token = tokens['refresh']
+
+            return True
         else:
-            # if time out passed (in seconds) break
-            logger.error('Timeout reached: getting token from server')
-            raise ConnectionError('Timeout reached: getting token from server')
+            logger.error('Login failed: no tokens obtained')
+            return False
     except Exception as err:
-        logger.exception('Error in http server for getting token')
+        logger.exception('Login failed: error while getting token', err)
+        return False
     finally:
-        # shutdown local server
-        server.server_close()
-    return login_success
+        server.close()
+
+
+def gate_url_from_host(environment):
+    parsed = urlsplit(environment)
+    return urlunsplit((parsed.scheme, parsed.netloc, '', '', ''))

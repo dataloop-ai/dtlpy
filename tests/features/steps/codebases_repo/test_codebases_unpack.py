@@ -24,7 +24,7 @@ def step_impl(context, unpack_path, codebase_name):
 @behave.when(u'I unpack a code base by the id of "{codebase_name}" to "{unpack_path}"')
 def step_impl(context, unpack_path, codebase_name):
     unpack_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], unpack_path)
-    context.project.codebases.unpack(codebase_id=context.codebase.id, local_path=unpack_path)
+    context.project.codebases.unpack(codebase_id=context.codebase.item_id, local_path=unpack_path)
     context.unpack_path = unpack_path
 
 

@@ -38,6 +38,11 @@ def project_should_exist_in_host(context, project_name):
     list_json.pop('role')
     project_json.pop('role')
 
+    # remove domain from get project results contributors
+    contributors = list_json.get('contributors', list())
+    for contributor in contributors:
+        contributor.pop('domain')
+
     assert list_json == project_json
     context.project.delete(True, True)
 
@@ -61,6 +66,11 @@ def step_impl(context, status_code):
 @behave.then(u'"{error}" exception should be raised')
 def step_impl(context, error):
     assert error in str(type(context.error))
+
+
+@behave.then(u'"{error_msg}" in error message')
+def step_impl(context, error_msg):
+    assert error_msg in context.error.message
 
 
 @behave.given(u'I create a project by the name of "{project_name}"')

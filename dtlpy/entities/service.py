@@ -402,6 +402,7 @@ class InstanceCatalog(str, Enum):
     HIGHMEM_L = "highmem-l"
     HIGHMEM_XL = "highmem-xl"
     GPU_K80_S = "gpu-k80-s"
+    GPU_K80_M = "gpu-k80-m"
 
 
 class KubernetesAutuscalerType(str, Enum):

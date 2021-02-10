@@ -8,6 +8,7 @@ from .. import entities, services, exceptions, repositories
 
 logger = logging.getLogger(name=__name__)
 
+
 class TriggerResource(str, Enum):
     ITEM = "Item"
     DATASET = "Dataset"
@@ -49,6 +50,7 @@ class BaseTrigger(entities.BaseEntity):
     type = attr.ib()
     scope = attr.ib()
     is_global = attr.ib()
+    input = attr.ib()
 
     # name change
     function_name = attr.ib()
@@ -245,6 +247,7 @@ class Trigger(BaseTrigger):
             'executionMode': _json.pop('execution_mode'),
             'resource': _json.pop('resource'),
             'actions': _json.pop('actions'),
+            'input': _json.pop('input', None),
             'operation': operation,
         }
         return _json
@@ -273,6 +276,7 @@ class Trigger(BaseTrigger):
             url=_json.get('url', None),
             service_id=service_id,
             project_id=_json.get('projectId', None),
+            input=spec.get('input', None),
             webhook_id=webhook_id,
             client_api=client_api,
             filters=spec.get('filter', dict()),
@@ -289,7 +293,6 @@ class CronTrigger(BaseTrigger):
     start_at = attr.ib(default=None)
     end_at = attr.ib(default=None)
     cron = attr.ib(default=None)
-    inputs = attr.ib(default=None)
 
     def to_json(self):
         _json = super().to_json()
@@ -306,7 +309,7 @@ class CronTrigger(BaseTrigger):
             'startAt': _json.pop('start_at'),
             'endAt': _json.pop('end_at'),
             'cron': _json.pop('cron'),
-            'inputs': _json.pop('inputs'),
+            'input': _json.pop('input'),
             'operation': operation,
         }
         return _json
@@ -333,6 +336,7 @@ class CronTrigger(BaseTrigger):
             is_global=_json.get('global', None),
             type=_json.get('type', None),
             name=_json.get('name', None),
+            input=spec.get('input', None),
             end_at=spec.get('endAt', None),
             start_at=spec.get('startAt', None),
             cron=spec.get('cron', None),

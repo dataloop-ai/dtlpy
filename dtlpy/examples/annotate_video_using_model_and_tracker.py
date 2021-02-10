@@ -56,7 +56,7 @@ def main():
         for element in tracked_elements:
             # element.bb - format of the bounding box is 2 points in 1 array - [x_left, y_top, x_right, y_bottom])
             # tracking id of each element is in element.id. to keep the ids of the detected elements
-            left, top, bottom, right = element.bb,  # points bounding box annotation
+            left, top, bottom, right = element.bb  # points bounding box annotation
             builder.add(annotation_definition=dl.Box(top=top,
                                                      left=left,
                                                      right=right,

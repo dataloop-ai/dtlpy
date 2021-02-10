@@ -5,10 +5,10 @@ class Comparison(BaseAnnotationDefinition):
     """
     Comparison annotation object
     """
+    type = "comparison"
 
     def __init__(self, coordinates, label, attributes=None, description=None):
         super().__init__(description=description)
-        self.type = "comparison"
         self.label = label
         self.coordinates = coordinates
         if attributes is None:

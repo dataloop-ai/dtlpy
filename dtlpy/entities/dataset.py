@@ -5,7 +5,7 @@ import attr
 import os
 
 from .. import repositories, entities, services, exceptions
-from .annotation import ViewAnnotationOptions
+from .annotation import ViewAnnotationOptions, AnnotationType
 
 logger = logging.getLogger(name=__name__)
 
@@ -410,11 +410,19 @@ class Dataset(entities.BaseEntity):
                                    with_items_annotations=with_items_annotations,
                                    with_task_annotations_status=with_task_annotations_status)
 
+    def sync(self):
+        """
+        Sync dataset with external storage
+
+        :return:
+        """
+        return self.datasets.sync(dataset_id=self.id)
+
     def download_annotations(self,
                              local_path=None,
                              filters=None,
                              annotation_options: ViewAnnotationOptions = None,
-                             annotation_filter_type=None,
+                             annotation_filter_type: AnnotationType = None,
                              annotation_filter_label=None,
                              overwrite=False,
                              thickness=1,
@@ -429,7 +437,7 @@ class Dataset(entities.BaseEntity):
         :param local_path: local folder or filename to save to.
         :param filters: Filters entity or a dictionary containing filters parameters
         :param annotation_options: download annotations options: list(dl.ViewAnnotationOptions)
-        :param annotation_filter_type: list of annotation types when downloading annotation,
+        :param annotation_filter_type: list (dl.AnnotationType) of annotation types when downloading annotation,
                                                                                         not relevant for JSON option
         :param annotation_filter_label: list of labels types when downloading annotation, not relevant for JSON option
         :param overwrite: optional - default = False
@@ -598,7 +606,7 @@ class Dataset(entities.BaseEntity):
             local_path=None,
             file_types=None,
             annotation_options: ViewAnnotationOptions = None,
-            annotation_filter_type=None,
+            annotation_filter_type: AnnotationType = None,
             annotation_filter_label=None,
             overwrite=False,
             to_items_folder=True,
@@ -615,7 +623,7 @@ class Dataset(entities.BaseEntity):
         :param local_path: local folder or filename to save to.
         :param file_types: a list of file type to download. e.g ['video/webm', 'video/mp4', 'image/jpeg', 'image/png']
         :param annotation_options: download annotations options: list(dl.ViewAnnotationOptions)
-        :param annotation_filter_type: list of annotation types when downloading annotation,
+        :param annotation_filter_type: list (dl.AnnotationType) of annotation types when downloading annotation,
                                                                                         not relevant for JSON option
         :param annotation_filter_label: list of labels types when downloading annotation, not relevant for JSON option
         :param overwrite: optional - default = False
@@ -623,7 +631,7 @@ class Dataset(entities.BaseEntity):
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :param with_text: optional - add text to annotations, default = False
         :param without_relative_path: string - remote path - download items without the relative path from platform
-        :return: Output (list)
+        :return: `List` of local_path per each downloaded item
         """
         return self.items.download(filters=filters,
                                    local_path=local_path,
@@ -648,3 +656,64 @@ class Dataset(entities.BaseEntity):
             for ontology in recipe.ontologies.list():
                 ontology.delete_labels(label_names=label_names)
         self._labels = None
+
+    def download_partition(self, partition, local_path=None, filters=None):
+        """
+        Download a specific partition of the dataset to local_path
+
+        This function is commonly used with dl.ModelAdapter which implements thc convert to specific model structure
+
+        :param partition: `dl.SnapshotPartitionType` name of the partition
+        :param local_path: local path directory to download the data
+        :param filters:  dl.entities.Filters to add the specific partitions constraint to
+        :return List `str` of the new downloaded path of each item
+        """
+        if local_path is None:
+            local_path = os.getcwd()
+        if filters is None:
+            filters = entities.Filters(resource=entities.FiltersResource.ITEM)
+
+        if partition == 'all':  # TODO: should it be all or None (all != list(SnapshotPartitions) )
+            logger.info("downloading all items - even without partitions")
+        else:
+            filters.add(field='metadata.system.snapshotPartition', values=partition)
+
+        return self.items.download(filters=filters,
+                                   local_path=local_path,
+                                   annotation_options=entities.ViewAnnotationOptions.JSON)
+
+    def set_partition(self, partition, filters=None):
+        """
+        Updates all items returned by filters in the dataset to specific partition
+
+        :param partition:  `dl.entities.SnapshotPartitionType` to set to
+        :param filters:  dl.entities.Filters to add the specific partitions constraint to
+        :return:  dl.PagedEntities
+        """
+        if filters is None:
+            filters = entities.Filters(resource=entities.FiltersResource.ITEM)
+        # TODO: How to preform update using the Filter - where do i set the field - docstring should state dict key-val while arg name is only values....
+        return self.items.update(filters=filters, system_update_values={'snapshotPartition': partition},
+                                 system_metadata=True)
+
+    def get_partitions(self, partitions, filters=None):
+        """
+        Returns PagedEntity of items from one or more partitions
+
+        :param partitions: `dl.entities.SnapshotPartitionType` or a list. Name of the partitions
+        :param filters:  dl.Filters to add the specific partitions constraint to
+        :return: `dl.PagedEntities` of `dl.Item`  preforms items.list()
+        """
+        # Question: do we have to give a partition? how do we get in case no partiton is defined?
+        if isinstance(partitions, str):
+            partitions = [partitions]
+        if filters is None:
+            filters = entities.Filters(resource=entities.FiltersResource.ITEM)
+
+        if partitions == 'all':
+            logger.info("downloading all items - even without partitions")
+        else:
+            filters.add(field='metadata.system.snapshotPartition',
+                        values=partitions,
+                        operator=entities.FiltersOperations.IN)
+        return self.items.list(filters=filters)

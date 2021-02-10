@@ -1,5 +1,4 @@
 import behave
-import os
 
 
 @behave.when(u'I get package by the name of "{package_name}"')

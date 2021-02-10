@@ -135,6 +135,13 @@ class Packages:
                 package = entities.Package.from_json(client_api=self._client_api,
                                                      _json=response.json(),
                                                      project=self._project)
+                # verify input package name is same as the given id
+                if package_name is not None and package.name != package_name:
+                    logger.warning(
+                        "Mismatch found in packages.get: package_name is different then package.name:"
+                        " {!r} != {!r}".format(
+                            package_name,
+                            package.name))
             elif package_name is not None:
                 filters = entities.Filters(field='name', values=package_name, resource=entities.FiltersResource.PACKAGE,
                                            use_defaults=False)
@@ -289,6 +296,7 @@ class Packages:
              is_global: bool = None,
              checkout: bool = False,
              revision_increment: str = None,
+             version: str = None,
              ignore_sanity_check: bool = False) -> entities.Package:
         """
         Push local package.
@@ -304,6 +312,7 @@ class Packages:
         :param codebase_id: id of the codebase item
         :param src_path: path to package codebase
         :param modules: list of modules PackageModules of the package
+        :param version: semver version f the package
         :param revision_increment: optional - str - version bumping method - major/minor/patch - default = None
         :param is_global:
         :return:
@@ -330,7 +339,8 @@ class Packages:
                         'project.packages repository or checkout a project')
 
         if codebase is None and codebase_id is not None:
-            codebase = entities.ItemCodebase(codebase_id=codebase_id)
+            codebase = entities.ItemCodebase(item_id=codebase_id,
+                                             client_api=self._client_api)
 
         # source path
         if src_path is None:
@@ -364,8 +374,7 @@ class Packages:
         # get or create codebase
         codebase_item = None
         if codebase is None:
-            codebase_item = project_to_deploy.codebases.pack(directory=src_path, name=package_name)
-            codebase = entities.ItemCodebase(codebase_id=codebase_item.id)
+            codebase = project_to_deploy.codebases.pack(directory=src_path, name=package_name)
 
         try:
             # check if exist
@@ -378,7 +387,7 @@ class Packages:
                 package = packages.items[0]
 
                 if codebase.type == entities.PackageCodebaseType.ITEM:
-                    package._codebase_id = codebase.codebase_id
+                    package._codebase_id = codebase.item_id
 
                 if modules is not None:
                     package.modules = modules
@@ -389,6 +398,9 @@ class Packages:
                 if codebase is not None:
                     package.codebase = codebase
 
+                if version is not None:
+                    package.version = version
+
                 package = self.update(package=package, revision_increment=revision_increment)
             else:
                 package = self._create(
@@ -397,7 +409,9 @@ class Packages:
                     package_name=package_name,
                     modules=modules,
                     codebase=codebase,
-                    is_global=is_global)
+                    is_global=is_global,
+                    version=version
+                )
             if checkout:
                 self.checkout(package=package)
         except Exception:
@@ -418,7 +432,8 @@ class Packages:
                 codebase: Union[entities.GitCodebase, entities.ItemCodebase, entities.FilesystemCodebase] = None,
                 is_global: bool = None,
                 package_name: str = entities.package_defaults.DEFAULT_PACKAGE_NAME,
-                modules: List[entities.PackageModule] = None
+                modules: List[entities.PackageModule] = None,
+                version: str = None,
                 ) -> entities.Package:
         """
         Create a package in platform
@@ -427,6 +442,7 @@ class Packages:
         :param codebase:
         :param package_name: optional - default: 'default package'
         :param modules: optional - PackageModules Entity
+        :param version: semver version of the package
         :return: Package Entity
         """
         # if is dtlpy entity convert to dict
@@ -446,6 +462,9 @@ class Packages:
 
         if codebase is not None:
             payload['codebase'] = codebase.to_json()
+
+        if version is not None:
+            payload['version'] = version
 
         if project_to_deploy is not None:
             payload['projectId'] = project_to_deploy.id
@@ -494,6 +513,7 @@ class Packages:
                 project_exists = False
 
         if project_exists:
+            # TODO can remove? in transactor?
             try:
                 # create codebases repo
                 codebases = repositories.Codebases(client_api=self._client_api, project=self._project)

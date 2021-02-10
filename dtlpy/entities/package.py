@@ -11,127 +11,6 @@ from .. import repositories, entities, exceptions, services
 logger = logging.getLogger(name=__name__)
 
 
-class PackageCodebaseType:
-    ITEM = 'item'
-    GIT = 'git'
-    FILESYSTEM = 'filesystem'
-    LOCAL = 'local'
-
-
-class PackageCodebase:
-    def __init__(self, package_codebase_type=PackageCodebaseType.ITEM):
-        self.type = package_codebase_type
-
-    def to_json(self):
-        _json = {'type': self.type}
-        return _json
-
-    @staticmethod
-    def from_json(_json: dict):
-        if _json['type'] == PackageCodebaseType.GIT:
-            return GitCodebase.from_json(_json=_json)
-        elif _json['type'] == PackageCodebaseType.ITEM:
-            return ItemCodebase.from_json(_json=_json)
-        elif _json['type'] == PackageCodebaseType.FILESYSTEM:
-            return FilesystemCodebase.from_json(_json=_json)
-        elif _json['type'] == PackageCodebaseType.LOCAL:
-            return LocalCodebase.from_json(_json=_json)
-        else:
-            raise ValueError('[PackageCodebase constructor] Unknown codebase type: {}'.format(_json['type']))
-
-
-class GitCodebase(PackageCodebase):
-    def __init__(self, git_url: str, git_commit: str, git_tag: str = None):
-        super().__init__(package_codebase_type=PackageCodebaseType.GIT)
-        self.git_url = git_url
-        self.git_commit = git_commit
-        self.git_tag = git_tag
-
-    def to_json(self):
-        _json = super().to_json()
-        _json['gitUrl'] = self.git_url
-        _json['gitCommit'] = self.git_commit
-        _json['gitTag'] = self.git_tag
-        return _json
-
-    @classmethod
-    def from_json(cls, _json: dict):
-        return cls(
-            git_url=_json.get('gitUrl'),
-            git_commit=_json.get('gitCommit'),
-            git_tag=_json.get('gitTag', None)
-        )
-
-
-class LocalCodebase(PackageCodebase):
-    def __init__(self, local_path: str = None):
-        super().__init__(package_codebase_type=PackageCodebaseType.LOCAL)
-        self._local_path = local_path
-
-    def to_json(self):
-        _json = super().to_json()
-        if self._local_path is not None:
-            _json['localPath'] = self._local_path
-        return _json
-
-    @property
-    def local_path(self):
-        return os.path.expandvars(self._local_path)
-
-    @local_path.setter
-    def local_path(self, local_path: str):
-        self._local_path = local_path
-
-    @classmethod
-    def from_json(cls, _json: dict):
-        return cls(
-            local_path=_json.get('localPath', None),
-        )
-
-    def get_local_path(self):
-        """ Returns the local path using environment variables in the path"""
-        return os.path.expandvars(self.local_path)
-
-
-class FilesystemCodebase(PackageCodebase):
-    def __init__(self, container_path: str = None, host_path: str = None):
-        super().__init__(package_codebase_type=PackageCodebaseType.FILESYSTEM)
-        self.host_path = host_path
-        self.container_path = container_path
-
-    def to_json(self):
-        _json = super().to_json()
-        if self.host_path is not None:
-            _json['hostPath'] = self.host_path
-        if self.container_path is not None:
-            _json['containerPath'] = self.container_path
-        return _json
-
-    @classmethod
-    def from_json(cls, _json: dict):
-        return cls(
-            container_path=_json.get('containerPath', None),
-            host_path=_json.get('hostPath', None)
-        )
-
-
-class ItemCodebase(PackageCodebase):
-    def __init__(self, codebase_id: str):
-        super().__init__()
-        self.codebase_id = codebase_id
-
-    def to_json(self) -> dict:
-        _json = super().to_json()
-        _json['itemId'] = self.codebase_id
-        return _json
-
-    @classmethod
-    def from_json(cls, _json: dict):
-        return cls(
-            codebase_id=_json['itemId']
-        )
-
-
 @attr.s
 class Package(entities.BaseEntity):
     """
@@ -168,8 +47,8 @@ class Package(entities.BaseEntity):
 
     @property
     def codebase_id(self):
-        if self.codebase is not None and self.codebase.type == PackageCodebaseType.ITEM:
-            return self.codebase.codebase_id
+        if self.codebase is not None and self.codebase.type == entities.PackageCodebaseType.ITEM:
+            return self.codebase.item_id
         else:
             return self._codebase_id
 
@@ -221,7 +100,11 @@ class Package(entities.BaseEntity):
                 project = None
 
         modules = [entities.PackageModule.from_json(_module) for _module in _json.get('modules', list())]
-        codebase = PackageCodebase.from_json(_json=_json['codebase']) if 'codebase' in _json else None
+        if 'codebase' in _json:
+            codebase = entities.Codebase.from_json(_json=_json['codebase'],
+                                                   client_api=client_api)
+        else:
+            codebase= None
 
         inst = cls(
             project_id=_json.get('projectId', None),
@@ -369,9 +252,9 @@ class Package(entities.BaseEntity):
     def git_status(self):
         status = 'Git status unavailable'
         try:
-            codebase = self.project.codebases.get(codebase_id=self.codebase_id)
-            if 'git' in codebase.metadata:
-                status = codebase.metadata['git'].get('status', status)
+            if self.codebase.type == entities.PackageCodebaseType.ITEM:
+                if 'git' in self.codebase.item.metadata:
+                    status = self.codebase.item.metadata['git'].get('status', status)
         except Exception:
             logging.debug('Error getting codebase')
         return status
@@ -380,9 +263,9 @@ class Package(entities.BaseEntity):
     def git_log(self):
         log = 'Git log unavailable'
         try:
-            codebase = self.project.codebases.get(codebase_id=self.codebase_id)
-            if 'git' in codebase.metadata:
-                log = codebase.metadata['git'].get('log', log)
+            if self.codebase.type == entities.PackageCodebaseType.ITEM:
+                if 'git' in self.codebase.item.metadata:
+                    log = self.codebase.item.metadata['git'].get('log', log)
         except Exception:
             logging.debug('Error getting codebase')
         return log
@@ -476,7 +359,7 @@ class Package(entities.BaseEntity):
 
     def push(self,
              codebase_id: str = None,
-             codebase: Union[GitCodebase, ItemCodebase] = None,
+             codebase: Union[entities.GitCodebase, entities.ItemCodebase] = None,
              src_path: str = None,
              package_name: str = None,
              modules: list = None,

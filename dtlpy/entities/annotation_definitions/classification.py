@@ -5,10 +5,10 @@ class Classification(BaseAnnotationDefinition):
     """
         Classification annotation object
     """
+    type = "class"
 
     def __init__(self, label, attributes=None, description=None):
         super().__init__(description=description)
-        self.type = "class"
         self.label = label
         if attributes is None:
             attributes = list()

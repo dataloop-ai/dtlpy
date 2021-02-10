@@ -24,7 +24,7 @@ from .project import Project, MemberRole
 from .artifact import Artifact
 from .dataset import Dataset
 from .codebase import Codebase
-from .annotation import Annotation, FrameAnnotation, ViewAnnotationOptions, AnnotationStatus
+from .annotation import Annotation, FrameAnnotation, ViewAnnotationOptions, AnnotationStatus, AnnotationType
 from .annotation_collection import AnnotationCollection
 from .paged_entities import PagedEntities
 from .filters import Filters, FiltersKnownFields, FiltersResource, FiltersOperations, FiltersMethod, \
@@ -34,8 +34,8 @@ from .ontology import Ontology
 from .annotation_definitions import Box, Point, Segmentation, Polygon, Ellipse, Classification, Subtitle, \
     Polyline, Comparison, UndefinedAnnotationType, Note, Description, Pose
 from .label import Label
-from .package import Package, PackageCodebase, PackageCodebaseType, ItemCodebase, GitCodebase, FilesystemCodebase,\
-    LocalCodebase
+from .codebase import Codebase, PackageCodebaseType, ItemCodebase, GitCodebase, FilesystemCodebase, LocalCodebase
+from .package import Package
 from .package_module import PackageModule
 from .package_function import PackageFunction, FunctionIO, PackageInputType, FunctionPostAction, \
     FunctionPostActionType, FunctionDisplayScope, FunctionDisplayScopeResource
@@ -50,5 +50,7 @@ from .similarity import Similarity, MultiView, SimilarityItem, MultiViewItem, Si
 from .user import User
 from .bot import Bot
 from .webhook import Webhook, HttpMethod
-from .model import Model
-from .snapshot import Snapshot, OntologySpec
+from .model import Model, ModelOutputType, ModelInputType
+from .snapshot import Snapshot, OntologySpec, SnapshotPartitionType
+from .bucket import BucketType, Bucket, ItemBucket, GCSBucket, LocalBucket
+from .base_model_adapter import BaseModelAdapter

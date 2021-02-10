@@ -18,6 +18,20 @@ class AnnotationStatus(str, Enum):
     CLEAR = "clear"
 
 
+class AnnotationType(str, Enum):
+    BOX = "box"
+    CLASSIFICATION = "class"
+    COMPARISON = "comparison"
+    ELLIPSE = "ellipse"
+    NOTE = "note"
+    POINT = "point"
+    POLYGON = "segment"
+    POLYLINE = "polyline"
+    POSE = "pose"
+    SEGMENTATION = "binary"
+    SUBTITLE = "subtitle"
+
+
 class ViewAnnotationOptions(str, Enum):
     JSON = "json"
     MASK = "mask"

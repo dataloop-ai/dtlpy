@@ -156,6 +156,13 @@ class Assignments:
                                                            project=self._project,
                                                            dataset=self._dataset,
                                                            task=self._task)
+                # verify input assignment name is same as the given id
+                if assignment_name is not None and assignment.name != assignment_name:
+                    logger.warning(
+                        "Mismatch found in assignments.get: assignment_name is different then assignment.name: "
+                        "{!r} != {!r}".format(
+                            assignment_name,
+                            assignment.name))
         elif assignment_name is not None:
             assignments = [assignment for assignment in self.list() if assignment.name == assignment_name]
             if len(assignments) == 0:

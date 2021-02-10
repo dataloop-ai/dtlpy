@@ -2,7 +2,7 @@ Feature: Models repository create testing
 
     Background: Initiate Platform Interface and create a project
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
-        And There is a project by the name of "model.update"
+        And There is a project by the name of "models_create"
 
     Scenario: Create a model with a legal name
         Given There are no models
@@ -13,7 +13,19 @@ Feature: Models repository create testing
     Scenario: Create a model with an existing model name
         Given There are no models
         And I create a model with a random name
-        When I try to create a model by the same name
+        When I create a model with the same name
         Then "BadRequest" exception should be raised
         And No model was created
 
+    Scenario: Create a model with an ItemCodebase
+        Given There are no models
+        When I create a model with a random name
+        And I push codebase from "models_codebase/dummy_codebase"
+        Then Model object has ItemCodebase
+
+
+    Scenario: Create a model with an ItemCodebase with wrong entry point
+        Given There are no models
+        When I create a model with a random name
+        And I push codebase from "models_codebase/dummy_codebase_wrong_entry_point"
+        Then "BadRequest" exception should be raised

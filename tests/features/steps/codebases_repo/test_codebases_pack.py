@@ -21,6 +21,7 @@ def step_impl(context):
         client_api=context.dataset.items._client_api,
     )
 
+
 @behave.given(u"Project has code bases repositiory")
 def step_impl(context):
     context.codebases = context.project.codebases
@@ -69,7 +70,7 @@ def step_impl(context):
 def step_impl(context, original_path, unpack_path):
     original_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], original_path)
     unpack_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], unpack_path)
-    context.project.codebases.unpack(codebase_id=context.codebase.id, local_path=unpack_path)
+    context.project.codebases.unpack(codebase_id=context.codebase.item_id, local_path=unpack_path)
     dirs = os.listdir(unpack_path)
     if 'folder_keeper' in dirs:
         dirs.pop(dirs.index('folder_keeper'))
@@ -88,11 +89,12 @@ def step_impl(context, binaries_dataset_name):
     )
 
 
-@behave.then(u'Codebase in host in dataset "{dataset_name}", when downloaded to "{unpack_path}" equals code base in path "{original_path}"')
+@behave.then(
+    u'Codebase in host in dataset "{dataset_name}", when downloaded to "{unpack_path}" equals code base in path "{original_path}"')
 def step_impl(context, original_path, dataset_name, unpack_path):
     original_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], original_path)
     unpack_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], unpack_path)
-    context.project.codebases.unpack(codebase_id=context.codebase.id, local_path=unpack_path)
+    context.project.codebases.unpack(codebase_id=context.codebase.item_id, local_path=unpack_path)
     dirs = os.listdir(unpack_path)
     if 'folder_keeper' in dirs:
         dirs.pop(dirs.index('folder_keeper'))
@@ -106,9 +108,15 @@ def step_impl(context, original_path, dataset_name, unpack_path):
 
 @behave.then(u'There should be "{version_count}" versions of the code base "{codebase_name}" in host')
 def step_impl(context, version_count, codebase_name):
-    codebase_name = os.path.split(os.path.split(context.codebase.filename)[0])[-1]
+    codebase_name = os.path.split(os.path.split(context.codebase.item.filename)[0])[-1]
     codebase_get = context.project.codebases.get(codebase_name=codebase_name, version="all")
-    assert codebase_get.items_count == int(version_count)
+    if isinstance(codebase_get, list):
+        count = len(codebase_get)
+    else:
+        # paged entity
+        count = codebase_get.items_count
+
+    assert count == int(version_count)
 
 
 @behave.when(u'I modify python file - (change version) in path "{file_path}"')

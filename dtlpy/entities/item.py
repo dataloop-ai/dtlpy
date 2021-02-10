@@ -242,6 +242,32 @@ class Item(entities.BaseEntity):
             description = self.metadata['description'].get('text', None)
         return description
 
+    @property
+    def snapshot_partition(self):
+        return self.metadata['system'].get('snapshotPartition', None)
+
+    @snapshot_partition.setter
+    def snapshot_partition(self, partition):
+        """
+        Adds partition to the item. this is need when working with dl.Snapshot
+
+        Note - correct usage is to use dl.Snapshot builtin methods
+        :param partition: `entities.SnapshotPartitionType
+        :return:  True if successful
+        """
+        if partition not in list(entities.SnapshotPartitionType):
+            raise exceptions.SDKError(message="{!r} is not a supported partition: {{ {} }}".format(
+                partition,
+                list(entities.SnapshotPartitionType)))
+        try:
+            self.metadata['system']['snapshotPartition'] = partition
+            self.update(system_metadata=True)
+            return True
+        except Exception:
+            logger.error('Error updating snapshot partition. Please use platform')
+            logger.debug(traceback.format_exc())
+            return False
+
     @description.setter
     def description(self, text: str):
         """
@@ -387,16 +413,27 @@ class Item(entities.BaseEntity):
     def open_in_web(self):
         self.items.open_in_web(item=self)
 
-    def update_status(self, status: ItemStatus):
+    def update_status(self, status: ItemStatus, clear=False):
         if status not in list(ItemStatus):
             raise exceptions.PlatformException(
                 error='400',
                 message='Unknown status: {}. Please choose from: {}'.format(status, list(ItemStatus)))
+        filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION)
+        filters.add(field='label', values=status)
+        filters.add(field='metadata.system.system', values=True)
+        filters.add(field='type', values='class')
+        annotations = self.annotations.list(filters)
+        if len(annotations) > 0:
+            if clear:
+                # delete all annotation (AnnotationCollection)
+                annotations.delete()
+            return True
         try:
-            annotation_definition = entities.Classification(label=status)
-            entities.Annotation.new(item=self,
-                                    annotation_definition=annotation_definition,
-                                    metadata={'system': {'system': True}}).upload()
+            if not clear:
+                annotation_definition = entities.Classification(label=status)
+                entities.Annotation.new(item=self,
+                                        annotation_definition=annotation_definition,
+                                        metadata={'system': {'system': True}}).upload()
             return True
         except Exception:
             logger.error('Error updating status. Please use platform')

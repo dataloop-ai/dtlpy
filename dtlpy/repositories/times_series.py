@@ -84,6 +84,13 @@ class TimesSeries:
                                                    project=self.project)
             else:
                 raise exceptions.PlatformException(response)
+            # verify input service name is same as the given id
+            if series_name is not None and ts.name != series_name:
+                logger.warning(
+                    "Mismatch found in timeSeries.get: series_name is different then timeSeries.name:"
+                    " {!r} != {!r}".format(
+                        series_name,
+                        ts.name))
         elif series_name is not None:
             tss = self.list()
             ts = [ts for ts in tss if ts.name == series_name]

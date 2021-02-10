@@ -1,4 +1,5 @@
 import dtlpy as dl
+
 try:
     # for local import
     from tests.env_from_git_branch import get_env_from_git_branch
@@ -31,7 +32,7 @@ def test_login():
         client_id=client_id,
         client_secret=client_secret
     )
-    print(dl.client_api.environments[dl.environment()])
+
     if dl.token_expired():
         print('Token Expired')
         sys.exit(1)

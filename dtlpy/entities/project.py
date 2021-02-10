@@ -67,7 +67,7 @@ class Project(entities.BaseEntity):
                  bots=repositories.Bots(client_api=self._client_api, project=self),
                  analytics=repositories.Analytics(client_api=self._client_api, project=self),
                  ontologies=repositories.Ontologies(client_api=self._client_api, project=self),
-                 snapshots=repositories.Snapshots(client_api=self._client_api, project=self, artifacts=artifacts)
+                 snapshots=repositories.Snapshots(client_api=self._client_api, project=self)
                  )
         return r
 

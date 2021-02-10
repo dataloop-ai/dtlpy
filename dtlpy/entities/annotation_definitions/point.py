@@ -7,10 +7,10 @@ class Point(BaseAnnotationDefinition):
     """
     Point annotation object
     """
+    type = "point"
 
     def __init__(self, x, y, label, attributes=None, description=None):
         super().__init__(description=description)
-        self.type = "point"
         self.y = y
         self.x = x
         self.label = label

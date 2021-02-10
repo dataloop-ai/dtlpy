@@ -7,10 +7,10 @@ class Ellipse(BaseAnnotationDefinition):
     """
         Ellipse annotation object
     """
+    type = "ellipse"
 
     def __init__(self, x, y, rx, ry, angle, label, attributes=None, description=None):
         super().__init__(description=description)
-        self.type = "ellipse"
         self.label = label
         self.angle = angle
         self.x = x

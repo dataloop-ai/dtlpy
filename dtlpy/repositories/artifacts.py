@@ -153,6 +153,13 @@ class Artifacts:
 
         if artifact_id is not None:
             artifact = self.items_repository.get(item_id=artifact_id)
+            # verify input artifact name is same as the given id
+            if artifact_name is not None and artifact.name != artifact_name:
+                logger.warning(
+                    "Mismatch found in artifacts.get: artifact_name is different then artifact.name:"
+                    " {!r} != {!r}".format(
+                        artifact_name,
+                        artifact.name))
             return artifact
         elif artifact_name is not None:
             artifacts = self.list(

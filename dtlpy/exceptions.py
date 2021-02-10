@@ -4,8 +4,14 @@ from . import services
 
 
 class PlatformException(Exception):
-
+    """
+    Dataloop Exceptions
+    """
     def __init__(self, error=None, message=None):
+        """
+        :param error: 'str' status code  out of list
+        :param message: `str` describing the error
+        """
         self.status_code = None
         self.message = message
 

@@ -7,10 +7,10 @@ class Polygon(BaseAnnotationDefinition):
     """
     Polygon annotation object
     """
+    type = "segment"
 
     def __init__(self, geo, label, is_open=False, attributes=None, description=None):
         super().__init__(description=description)
-        self.type = "segment"
         self.geo = geo
         self.label = label
         self.is_open = is_open

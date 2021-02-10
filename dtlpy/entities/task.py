@@ -166,12 +166,9 @@ class Task:
         :param filters:
         :return:
         """
-        assignment = self.assignments.create(assignment_name=assignment_name,
-                                             assignee_id=assignee_id,
-                                             project_id=self.project_id,
+        assignment = self.assignments.create(assignee_id=assignee_id,
                                              filters=filters,
-                                             items=items,
-                                             dataset=self.dataset)
+                                             items=items)
 
         assignment.metadata['system']['taskId'] = self.id
         assignment.update(system_metadata=True)

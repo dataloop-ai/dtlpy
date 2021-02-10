@@ -175,6 +175,13 @@ class Tasks:
                 task = entities.Task.from_json(_json=response.json(),
                                                client_api=self._client_api, project=self._project,
                                                dataset=self._dataset)
+            # verify input task name is same as the given id
+            if task_name is not None and task.name != task_name:
+                logger.warning(
+                    "Mismatch found in tasks.get: task_name is different then task.name:"
+                    " {!r} != {!r}".format(
+                        task_name,
+                        task.name))
         elif task_name is not None:
             tasks = [task for task in self.list() if
                      task.name == task_name]

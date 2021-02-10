@@ -175,6 +175,13 @@ class Webhooks:
             webhook = entities.Webhook.from_json(client_api=self._client_api,
                                                  _json=response.json(),
                                                  project=self._project)
+            # verify input webhook name is same as the given id
+            if webhook_name is not None and webhook.name != webhook_name:
+                logger.warning(
+                    "Mismatch found in webhooks.get: webhook_name is different then webhook.name:"
+                    " {!r} != {!r}".format(
+                        webhook_name,
+                        webhook.name))
 
         return webhook
 

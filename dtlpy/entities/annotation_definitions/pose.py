@@ -1,3 +1,5 @@
+import uuid
+
 from . import BaseAnnotationDefinition
 
 
@@ -6,11 +8,13 @@ class Pose(BaseAnnotationDefinition):
         Classification annotation object
     """
 
-    def __init__(self, label, template_id, instance_id, attributes=None, points=None, description=None):
+    def __init__(self, label, template_id, instance_id=None, attributes=None, points=None, description=None):
         super().__init__(description=description)
         self.type = "pose"
         self.label = label
         self.template_id = template_id
+        if instance_id is None:
+            instance_id = str(uuid.uuid1())
         self.instance_id = instance_id
         if attributes is None:
             attributes = list()

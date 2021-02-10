@@ -8,7 +8,7 @@ from .. import entities, repositories, exceptions, miscellaneous, assets, servic
 
 logger = logging.getLogger(name=__name__)
 
-DEFAULT_ENTRY_POINT = 'adapter_model.py'
+DEFAULT_ENTRY_POINT = 'model_adapter.py'
 
 
 class Models:
@@ -165,38 +165,43 @@ class Models:
 
         :return:
         """
-        if model.codebase is None or model.codebase.type != entities.PackageCodebaseType.ITEM:
-            raise NotImplementedError('This method is not implemented for {} codebase yet'.format(model.codebase.type))
+
+        if model.codebase is None:
+            raise exceptions.PlatformException(error='2001',
+                                               message="Model {!r} has no codebase. unable to build adapter".format(
+                                                   model.name))
 
         if from_local is None:
-            from_local = False
+            from_local = model.codebase.type == entities.PackageCodebaseType.LOCAL
 
-        if from_local:
-            # no need to download codebase
-            if local_path is None:
-                path = os.getcwd()
+        if local_path is None:
+            if model.codebase.type == entities.PackageCodebaseType.LOCAL:
+                path = model.codebase.local_path
+            elif model.codebase.type == entities.PackageCodebaseType.ITEM:
+                path = os.path.join(services.service_defaults.DATALOOP_PATH, "models", model.name)
             else:
-                path = local_path
-
+                logger.warning("No default path for codebase type {}. Will use cwd()".format(model.codebase.type))
+                path = os.getcwd()  # e.g. git codebase w/o specifying local_path will try using cwd
         else:
-            # download codebase locally
-            if local_path is None:
-                local_path = os.path.join(
-                    services.service_defaults.DATALOOP_PATH,
-                    "models",
-                    model.name)
+            path = local_path
 
-            codebase_id = model.codebase.codebase_id
-            project = self._project if self._project is not None else model.project
-            path = project.codebases.unpack(codebase_id=codebase_id, local_path=local_path)
+        if not from_local:
+            # Not local => download codebase
+            if model.codebase.type == entities.PackageCodebaseType.ITEM:
+                codebase_id = model.codebase.codebase_id
+                project = self._project if self._project is not None else model.project
+                path = project.codebases.unpack(codebase_id=codebase_id, local_path=path)
+            else:
+                raise NotImplementedError(
+                    'download not implemented for {} codebase yet. Build failed'.format(model.codebase.type))
 
         # load module from path
         entry_point = os.path.join(path, model.entry_point)
-        spec = importlib.util.spec_from_file_location("AdapterModel", entry_point)
-        foo = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(foo)
-        adapter_model = foo.AdapterModel
-        return adapter_model(model_entity=model)
+        spec = importlib.util.spec_from_file_location("ModelAdapter", entry_point)
+        adapter_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(adapter_module)
+        model_adapter = adapter_module.ModelAdapter
+        return model_adapter(model_entity=model)
 
     def push(
             self,
@@ -210,14 +215,14 @@ class Models:
 
         :param model: Model entity
         :param src_path: codebase location (path to directory of the code). if None pwd will be taken
-        :param entry_point: relative path to the module where `AdapterModel` class is defined
-        :param codebase: `dl.PackageCodebase' object - representing the model code  if None new will be created from src_path
+        :param entry_point: relative path to the module where `ModelAdapter` class is defined
+        :param codebase: `dl.Codebase' object - representing the model code  if None new will be created from src_path
         :return:
         """
 
         # get or create codebase
         if codebase is None:
-            if isinstance(model.codebase.type, entities.PackageCodebaseType.ITEM):
+            if isinstance(model.codebase, entities.ItemCodebase):
                 raise exceptions.PlatformException(
                     error='400',
                     message='Cant change codebase type implicitly. Please use codebase argument with dl.ItemCodebase')
@@ -225,19 +230,21 @@ class Models:
                 src_path = os.getcwd()
                 logger.warning('No src_path is given, getting model information from cwd: {}'.format(src_path))
             if not os.path.isfile(os.path.join(src_path, entry_point)):
-                raise ValueError('entry point not found. filepath: {}'.format(os.path.join(src_path, entry_point)))
-            codebase_id = model.codebases.pack(directory=src_path).id
-            codebase = entities.ItemCodebase(codebase_id=codebase_id)
+                raise exceptions.PlatformException(
+                    error='400',
+                    message='Entry point not found. filepath: {}'.format(os.path.join(src_path, entry_point)))
+            codebase = model.codebases.pack(directory=src_path)
 
         model.codebase = codebase
-        return model.update()
+        model.update()
+        return model
 
     def create(self,
                # offline mode
                model_name: str,
                description: str = None,
-               output_type: str = None,
-               input_type: str = None,
+               output_type: entities.ModelOutputType = None,
+               input_type: entities.ModelInputType = None,
                is_global: bool = None,
                checkout: bool = False,
                tags: List[str] = None,
@@ -266,7 +273,7 @@ class Models:
         For online mode
         :param codebase: optional - model codebase
         :param src_path: codebase location. if None no codebase will be pushed
-        :param entry_point: location on the AdapterModel class
+        :param entry_point: location on the ModelAdapter class
 
         :return: Model Entity
         """
@@ -379,19 +386,36 @@ class Models:
                                         project=self._project)
 
     @staticmethod
-    def generate(src_path=None):
+    def generate(src_path=None, entry_point=None, overwrite=False):
         """
-        Generate new model environment
+        Generate new model adapter file
+        :param src_path: `str` path where to create te model_adapter file (if None uses current working dir)
+        :param entry_point: `str` name of the python module to create (if None uses model_adapter.py as default)
+        :param overwrite:  `bool` whether to over write an existing file (default False)
 
-        :return:
+        :return: path where the adapter was created
         """
+
+        if entry_point is None:
+            entry_point = assets.paths.MODEL_ADAPTER
+
         # src path
         if src_path is None:
             src_path = os.getcwd()
+
+        local_path = os.path.join(src_path, entry_point)
+        if os.path.exists(local_path):
+            if overwrite:
+                logger.warning("Overwriting {} with a blank template".format(local_path))
+            else:
+                logger.error("can not overwrite existing model adapter at {}".format(local_path))
+                return None
+
         if not os.path.isfile(os.path.join(src_path, '.gitignore')):
             copyfile(assets.paths.ASSETS_GITIGNORE_FILEPATH, os.path.join(src_path, '.gitignore'))
-        copyfile(assets.paths.ASSETS_ADAPTER_MODEL_FILEPATH, os.path.join(src_path, assets.paths.ADAPTER_MODEL))
-        logger.info('Successfully generated model')
+        copyfile(assets.paths.ASSETS_MODEL_ADAPTER_FILEPATH, local_path)
+        logger.info('Successfully generated model adapter at {}'.format(local_path))
+        return local_path
 
     def __get_from_cache(self):
         model = self._client_api.state_io.get('model')

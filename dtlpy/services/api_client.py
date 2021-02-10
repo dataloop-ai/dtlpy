@@ -27,7 +27,7 @@ import numpy as np
 
 from .calls_counter import CallsCounter
 from .cookie import CookieIO
-from .logins import login, login_secret, login_m2m
+from .logins import login, login_secret, login_m2m, gate_url_from_host
 from .async_utils import AsyncResponse, AsyncUploadStream, AsyncResponseError, AsyncThreadEventLoop
 from .service_defaults import DEFAULT_ENVIRONMENTS, DEFAULT_ENVIRONMENT
 from .aihttp_retry import RetryClient
@@ -980,7 +980,7 @@ class ApiClient:
                             client_secret=client_secret,
                             force=force)
 
-    def login_m2m(self, email, password, client_id, client_secret=None, force=False):
+    def login_m2m(self, email, password, client_id=None, client_secret=None, force=False):
         """
         Login with email and password from environment variables
         :param email: user email. if already logged in with same user - login will NOT happen. see "force"
@@ -1060,13 +1060,18 @@ class ApiClient:
         refresh_token = self.refresh_token
 
         env_params = self.environments[self.environment]
-        client_id = env_params['client_id']
-        auth0_url = env_params['auth0_url']
-        payload = {'grant_type': 'refresh_token',
-                   'client_id': client_id,
-                   'refresh_token': self.refresh_token}
+        if 'gate_url' not in env_params:
+            env_params['gate_url'] = gate_url_from_host(environment=self.environment)
+            self.environments[self.environment] = env_params
+        token_endpoint = "{}/token?default".format(env_params['gate_url'])
+
+        payload = {
+            'type': 'refresh_token',
+            'refresh_token': refresh_token
+        }
+        logger.debug("RefreshToken: Refreshing token via {}".format(token_endpoint))
         resp = requests.request("POST",
-                                auth0_url + '/oauth/token',
+                                token_endpoint,
                                 json=payload,
                                 headers={'content-type': 'application/json'})
         if not resp.ok:

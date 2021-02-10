@@ -183,6 +183,13 @@ class Items:
                     item = self.items_entity.from_json(client_api=self._client_api,
                                                        _json=response.json(),
                                                        dataset=self._dataset)
+                    # verify input filepath is same as the given id
+                    if filepath is not None and item.filename != filepath:
+                        logger.warning(
+                            "Mismatch found in items.get: filepath is different then item.filename: "
+                            "{!r} != {!r}".format(
+                                filepath,
+                                item.filename))
                 else:
                     raise exceptions.PlatformException(response)
             elif filepath is not None:
@@ -368,7 +375,7 @@ class Items:
             save_locally=True,
             to_array=False,
             annotation_options: entities.ViewAnnotationOptions = None,
-            annotation_filter_type=None,
+            annotation_filter_type: entities.AnnotationType = None,
             annotation_filter_label=None,
             overwrite=False,
             to_items_folder=True,
@@ -389,7 +396,7 @@ class Items:
         :param save_locally: bool. save to disk or return a buffer
         :param to_array: returns Ndarray when True and local_path = False
         :param annotation_options: download annotations options:  list(dl.ViewAnnotationOptions)
-        :param annotation_filter_type: list of annotation types when downloading annotation,
+        :param annotation_filter_type: list (dl.AnnotationType)of annotation types when downloading annotation,
                                                                                         not relevant for JSON option
         :param annotation_filter_label: list of labels types when downloading annotation, not relevant for JSON option
         :param overwrite: optional - default = False
@@ -476,7 +483,8 @@ class Items:
                                       dataset_id=item.datasetId,
                                       item_id=item.id)
 
-    def update_status(self, status, items=None, item_ids=None, filters=None, dataset=None):
+    def update_status(self, status: entities.ItemStatus, items=None, item_ids=None,
+                      filters=None, dataset=None, clear=False):
 
         if items is None and item_ids is None and filters is None:
             raise exceptions.PlatformException('400', 'Must provide either items, item_ids or filters')
@@ -509,7 +517,8 @@ class Items:
         for page in items:
             for i_item, item in enumerate(page):
                 jobs[i_item] = pool.apply_async(func=item.update_status,
-                                                kwds={'status': status})
+                                                kwds={'status': status,
+                                                      'clear': clear})
         # wait for jobs to be finish
         _ = [j.wait() for j in jobs]
         # get all results

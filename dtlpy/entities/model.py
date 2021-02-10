@@ -1,12 +1,30 @@
 from collections import namedtuple
+from enum import Enum
 import traceback
 import logging
 import attr
-from typing import Union
 
 from .. import repositories, entities, services
 
 logger = logging.getLogger(name=__name__)
+
+
+class ModelInputType(str, Enum):
+    VIDEO = 'video'
+    IMAGE = 'image'
+    TEXT = 'text'
+    AUDIO = 'audio'
+
+
+class ModelOutputType(str, Enum):
+    BOX = entities.Box.type
+    CLASSIFICATION = entities.Classification.type
+    COMPARISON = entities.Comparison.type
+    ELLIPSE = entities.Ellipse.type
+    POINT = entities.Point.type
+    POLYGON = entities.Polygon.type
+    SEGMENTATION = entities.Segmentation.type
+    SUBTITLE = entities.Subtitle.type
 
 
 @attr.s
@@ -21,7 +39,7 @@ class Model(entities.BaseEntity):
     creator = attr.ib()
     name = attr.ib()
     url = attr.ib(repr=False)
-    codebase = attr.ib()
+    codebase = attr.ib(type=entities.Codebase)
     description = attr.ib()
     version = attr.ib()
     tags = attr.ib()
@@ -87,7 +105,11 @@ class Model(entities.BaseEntity):
                 logger.warning('Model has been fetched from a project that is not in it projects list')
                 project = None
 
-        codebase = entities.PackageCodebase.from_json(_json=_json['codebase']) if 'codebase' in _json else None
+        if 'codebase' in _json:
+            codebase = entities.Codebase.from_json(_json=_json['codebase'],
+                                                   client_api=client_api)
+        else:
+            codebase = None
 
         inst = cls(
             project_id=_json.get('projectId', None),
@@ -218,9 +240,8 @@ class Model(entities.BaseEntity):
         status = 'Git status unavailable'
         try:
             if self.codebase.type == entities.PackageCodebaseType.ITEM:
-                codebase = self.project.codebases.get(codebase_id=self.codebase.codebase_id)
-                if 'git' in codebase.metadata:
-                    status = codebase.metadata['git'].get('status', status)
+                if 'git' in self.codebase.item.metadata:
+                    status = self.codebase.item.metadata['git'].get('status', status)
         except Exception:
             logging.debug('Error getting codebase')
         return status
@@ -230,9 +251,8 @@ class Model(entities.BaseEntity):
         log = 'Git log unavailable'
         try:
             if self.codebase.type == entities.PackageCodebaseType.ITEM:
-                codebase = self.project.codebases.get(codebase_id=self.codebase.codebase_id)
-                if 'git' in codebase.metadata:
-                    log = codebase.metadata['git'].get('log', log)
+                if 'git' in self.codebase.item.metadata:
+                    log = self.codebase.item.metadata['git'].get('log', log)
         except Exception:
             logging.debug('Error getting codebase')
         return log
@@ -272,7 +292,7 @@ class Model(entities.BaseEntity):
         Upload codebase to Model
 
         :param src_path: codebase location. if None pwd will be taken
-        :param entry_point: location on the AdapterModel class
+        :param entry_point: location on the ModelAdapter class
         :param codebase: if none new will be created from src_path
         :return:
         """
@@ -292,3 +312,11 @@ class Model(entities.BaseEntity):
         return self.models.build(model=self,
                                  local_path=local_path,
                                  from_local=from_local)
+
+    def generate_adapter(self, local_path=None, overwrite=False):
+        """
+        Creates a local model_adapter file with virtual functions to be implemented
+        :param local_path: `str` path to save the adapter (if None uses current working dir)
+        :param overwrite:  `bool` whether to over write an existing file (default False)
+        """
+        self.models.generate(src_path=local_path, entry_point=self.entry_point, overwrite=overwrite)

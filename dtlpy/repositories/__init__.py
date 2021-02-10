@@ -35,3 +35,4 @@ from .webhooks import Webhooks
 from .models import Models
 from .snapshots import Snapshots
 from .analytics import Analytics
+from .buckets import Buckets

@@ -39,7 +39,7 @@ class Downloader:
                  to_array=False,
                  overwrite=False,
                  annotation_options: entities.ViewAnnotationOptions = None,
-                 annotation_filter_type=None,
+                 annotation_filter_type: entities.AnnotationType = None,
                  annotation_filter_label=None,
                  to_items_folder=True,
                  thickness=1,
@@ -60,7 +60,8 @@ class Downloader:
         :param to_array: returns Ndarray when True and local_path = False
         :param overwrite: optional - default = False
         :param annotation_options: download annotations options. options: list(dl.ViewAnnotationOptions)
-        :param annotation_filter_type:list of annotation types when downloading annotation, not relevant for JSON option
+        :param annotation_filter_type:list (dl.AnnotationType) of annotation types when
+                                                                downloading annotation, not relevant for JSON option
         :param annotation_filter_label: list of labels types when downloading annotation, not relevant for JSON option
         :param to_items_folder: Create 'items' folder and download items to it
         :param with_text: optional - add text to annotations, default = False
@@ -86,6 +87,15 @@ class Downloader:
                         error='400',
                         message='Unknown annotation download option: {}, please choose from: {}'.format(
                             ann_option, list(entities.ViewAnnotationOptions)))
+
+        # annotation_filter_type
+        if annotation_filter_type is not None:
+            if not isinstance(annotation_filter_type, list):
+                annotation_filter_type = [annotation_filter_type]
+            for annotation_type in annotation_filter_type:
+                if annotation_type not in list(entities.AnnotationType):
+                    raise ValueError('Got {!r} annotation_filter_type, but it must be one of: {}'
+                                     .format(annotation_type, ', '.join(list(entities.AnnotationType))))
         ##############
         # local path #
         ##############
@@ -455,10 +465,12 @@ class Downloader:
             annotations = item.annotations.list(filters=filters)
 
         # get image shape
+        is_url_item = item.metadata.get('system', dict()).get('shebang', dict()).get('linkInfo', dict()).get('type',
+                                                                                                             None) == 'url'
         if item.width is not None and item.height is not None:
             img_shape = (item.height, item.width)
         elif ('image' in item.mimetype and img_filepath is not None) or \
-                ('json' in item.mimetype and img_filepath is not None):
+                (is_url_item and img_filepath is not None):
             img_shape = Image.open(img_filepath).size[::-1]
         else:
             img_shape = (0, 0)

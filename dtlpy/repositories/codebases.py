@@ -33,7 +33,6 @@ class Codebases:
     def items_repository(self) -> repositories.Items:
         if self._items_repository is None:
             self._items_repository = self.dataset.items
-            self._items_repository.set_items_entity(entities.Codebase)
         assert isinstance(self._items_repository, repositories.Items)
         return self._items_repository
 
@@ -114,7 +113,16 @@ class Codebases:
         """
         if codebase_id is not None:
             matched_version = self.items_repository.get(item_id=codebase_id)
-            return matched_version
+            # verify input codebase name is same as the given id
+            if codebase_name is not None and matched_version.name != codebase_name:
+                logger.warning(
+                    "Mismatch found in codebases.get: codebase_name is different then codebase.name: "
+                    "{!r} != {!r}".format(
+                        codebase_name,
+                        matched_version.name))
+            codebase = entities.ItemCodebase(item_id=matched_version.id,
+                                             item=matched_version)
+            return codebase
 
         if codebase_name is None:
             raise PlatformException(error='400', message='Either "codebase_name" or "codebase_id" is needed')
@@ -128,7 +136,9 @@ class Codebases:
             except Exception:
                 raise PlatformException(error='404',
                                         message='No matching version was found. version: {}'.format(version))
-            return matched_version
+            codebase = entities.ItemCodebase(item_id=matched_version.id,
+                                             item=matched_version)
+            return codebase
 
         # get all or latest
         versions_pages = self.list_versions(codebase_name=codebase_name)
@@ -136,7 +146,8 @@ class Codebases:
             raise PlatformException(error='404', message='No codebase was found. name: {}'.format(codebase_name))
         else:
             if version == 'all':
-                matched_version = versions_pages
+                codebase = [entities.ItemCodebase(item_id=mv.id,
+                                                  item=mv) for mv in versions_pages.all()]
             elif version == 'latest':
                 max_ver = -1
                 matched_version = None
@@ -152,25 +163,27 @@ class Codebases:
                 if matched_version is None:
                     raise PlatformException(error='404',
                                             message='No codebase was found. name: {}'.format(codebase_name))
+                else:
+                    codebase = entities.ItemCodebase(item_id=matched_version.id,
+                                                     item=matched_version)
             else:
                 raise PlatformException(error='404', message='Unknown version string: {}'.format(version))
 
-        return matched_version
+        return codebase
 
     @staticmethod
     def get_current_version(all_versions_pages, zip_md):
         latest_version = 0
         same_version_found = None
         # go over all existing versions
-        for page in all_versions_pages:
-            for v_item in page:
-                # get latest version
-                if int(os.path.splitext(v_item.name)[0]) > latest_version:
-                    latest_version = int(os.path.splitext(v_item.name)[0])
-                # check md5 to find same codebase
-                if v_item.md5 == zip_md:
-                    same_version_found = v_item
-                    break
+        for v_item in all_versions_pages:
+            # get latest version
+            if int(os.path.splitext(v_item.item.name)[0]) > latest_version:
+                latest_version = int(os.path.splitext(v_item.item.name)[0])
+            # check md5 to find same codebase
+            if 'md5' in v_item.item.metadata['system'] and v_item.item.metadata['system']['md5'] == zip_md:
+                same_version_found = v_item
+                break
         return latest_version + 1, same_version_found
 
     def pack(self, directory, name=None, description=''):
@@ -218,7 +231,7 @@ class Codebases:
 
             if same_version_found is not None:
                 # same md5 hash file found in version - return the matched version
-                item = same_version_found
+                codebase = same_version_found
             else:
                 # no matched version was found - create a new version
                 # read from zipped file
@@ -251,7 +264,8 @@ class Codebases:
 
                 # update item
                 item = self.items_repository.update(item=item, system_metadata=True)
-
+                codebase = entities.ItemCodebase(item_id=item.id,
+                                                 client_api=self._client_api)
         except Exception:
             logger.error('Error when packing:')
             raise
@@ -260,20 +274,37 @@ class Codebases:
             if zip_filename is not None:
                 if os.path.isfile(zip_filename):
                     os.remove(zip_filename)
-        return item
+        return codebase
 
-    def unpack_single(self, codebase: entities.Codebase, download_path, local_path):
+    def unpack_single(self,
+                      codebase,
+                      download_path, local_path):
         # downloading with specific filename
-        artifact_filepath = self.items_repository.download(items=codebase.id,
-                                                           save_locally=True,
-                                                           local_path=os.path.join(download_path, codebase.name),
-                                                           to_items_folder=False)
-        if not os.path.isfile(artifact_filepath):
-            raise PlatformException(error='404',
-                                    message='error downloading codebase. see above for more information')
-        miscellaneous.Zipping.unzip_directory(zip_filename=artifact_filepath,
-                                              to_directory=local_path)
-        os.remove(artifact_filepath)
+        if isinstance(codebase, entities.ItemCodebase):
+            artifact_filepath = self.items_repository.download(items=codebase.item_id,
+                                                               save_locally=True,
+                                                               local_path=os.path.join(download_path,
+                                                                                       codebase.item.name),
+                                                               to_items_folder=False)
+            if not os.path.isfile(artifact_filepath):
+                raise PlatformException(error='404',
+                                        message='error downloading codebase. see above for more information')
+            miscellaneous.Zipping.unzip_directory(zip_filename=artifact_filepath,
+                                                  to_directory=local_path)
+            os.remove(artifact_filepath)
+        elif isinstance(codebase, entities.Item):
+            artifact_filepath = codebase.download(save_locally=True,
+                                                  local_path=os.path.join(download_path,
+                                                                          codebase.name),
+                                                  to_items_folder=False)
+            if not os.path.isfile(artifact_filepath):
+                raise PlatformException(error='404',
+                                        message='error downloading codebase. see above for more information')
+            miscellaneous.Zipping.unzip_directory(zip_filename=artifact_filepath,
+                                                  to_directory=local_path)
+            os.remove(artifact_filepath)
+        else:
+            raise ValueError('Not implemented: "unpack_single" for codebase type: {!r}'.format(codebase.type))
         return artifact_filepath
 
     def unpack(self, codebase_name=None, codebase_id=None, local_path=None, version=None):
@@ -297,7 +328,14 @@ class Codebases:
                                        download_path=download_path,
                                        local_path=local_path)
             return os.path.dirname(local_path)
-        elif isinstance(codebase, entities.Codebase):
+        elif isinstance(codebase, list):
+            for item in codebase:
+                local_path = os.path.join(download_path, 'v.' + item.item.name.split('.')[0])
+                self.unpack_single(codebase=item,
+                                   download_path=download_path,
+                                   local_path=local_path)
+            return os.path.dirname(local_path)
+        elif isinstance(codebase, entities.Codebase) or isinstance(codebase, entities.Item):
             artifact_filepath = self.unpack_single(codebase=codebase,
                                                    download_path=download_path,
                                                    local_path=local_path)

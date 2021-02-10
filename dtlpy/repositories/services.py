@@ -153,6 +153,13 @@ class Services:
                                                      _json=response.json(),
                                                      package=self._package,
                                                      project=self._project)
+                # verify input service name is same as the given id
+                if service_name is not None and service.name != service_name:
+                    logger.warning(
+                        "Mismatch found in services.get: service_name is different then service.name:"
+                        " {!r} != {!r}".format(
+                            service_name,
+                            service.name))
             elif service_name is not None:
                 filters = entities.Filters(resource=entities.FiltersResource.SERVICE,
                                            field='name',

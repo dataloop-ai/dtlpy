@@ -36,6 +36,10 @@ def step_impl(context):
             project_json = context.project.to_json()
             list_json.pop('role')
             project_json.pop('role')
+            # remove domain from get project results contributors
+            contributors = list_json.get('contributors', list())
+            for contributor in contributors:
+                contributor.pop('domain')
             assert list_json == project_json
     assert found is True
     context.project.delete(True, True)

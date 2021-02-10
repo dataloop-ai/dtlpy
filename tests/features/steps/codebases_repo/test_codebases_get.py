@@ -22,18 +22,18 @@ def step_impl(context):
 @behave.when(u'I get by id version "{version}" of code base "{codebase_name}"')
 def step_impl(context, version, codebase_name):
     context.codebase_get = context.project.codebases.get(codebase_name=None,
-                                                           codebase_id=context.codebase.id,
+                                                           codebase_id=context.codebase.item_id,
                                                            version=version)
 
 
 @behave.then(u"I receive a list of Codebase objects")
 def step_impl(context):
-    assert isinstance(context.codebase_get, context.dl.entities.PagedEntities)
+    assert isinstance(context.codebase_get, list)
 
 
-@behave.then(u'Codebase list have lenght of "{codebase_count}"')
+@behave.then(u'Codebase list have length of "{codebase_count}"')
 def step_impl(context, codebase_count):
-    assert len(context.codebase_get.items) == int(codebase_count)
+    assert len(context.codebase_get) == int(codebase_count)
 
 
 @behave.then(u'I delete all project code bases')

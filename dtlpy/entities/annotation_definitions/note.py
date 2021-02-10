@@ -11,7 +11,7 @@ class Note(Box):
     """
 
     def __init__(self, left, top, right, bottom, label, attributes=None, messages=None, status='issue',
-                 create_time=None, creator=None, description=None):
+                 assignee=None, create_time=None, creator=None, description=None):
         super(Note, self).__init__(left=left, top=top, right=right, bottom=bottom,
                                    label=label, attributes=attributes, description=description)
         self.type = "note"
@@ -19,6 +19,12 @@ class Note(Box):
         self.status = status
         self.create_time = create_time
         self.creator = creator
+        if self.creator is None:
+            api_client = ApiClient()
+            self.creator = api_client.info()['user_email']
+        self.assignee = assignee
+        if self.assignee is None:
+            self.assignee = self.creator
 
     def to_coordinates(self, color):
         box = super(Note, self).to_coordinates(color=color)
@@ -26,7 +32,8 @@ class Note(Box):
             'messages': [msg.to_json() for msg in self.messages],
             'status': self.status,
             'createTime': self.create_time,
-            'creator': self.creator
+            'creator': self.creator,
+            'assignee': self.assignee
         }
         coordinates = {
             'box': box,
@@ -68,6 +75,7 @@ class Note(Box):
             messages=messages,
             status=note_data.get('status', 'open'),
             creator=note_data.get('creator', 'me'),
+            assignee=note_data.get('assignee', 'me'),
             create_time=note_data.get('createTime', 0),
         )
 

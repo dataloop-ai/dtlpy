@@ -1,11 +1,10 @@
 import behave
 import os
 import json
-import tempfile
 import shutil
-from .. import fixtures
-import logging
 import random
+
+from .. import fixtures
 
 
 @behave.when(u'I push "{package_number}" package')
@@ -97,8 +96,8 @@ def step_impl(context):
 
 
 def compare_codebase_id(first_package, second_package):
-    if first_package.codebase.codebase_id is not None and second_package.codebase.codebase_id is not None:
-        return first_package.codebase.codebase_id != second_package.codebase.codebase_id
+    if first_package.codebase.item_id is not None and second_package.codebase.item_id is not None:
+        return first_package.codebase.item_id != second_package.codebase.item_id
     elif first_package.codebase_id is not None and second_package.codebase_id is not None:
         return first_package.codebase_id != second_package.codebase_id
     else:

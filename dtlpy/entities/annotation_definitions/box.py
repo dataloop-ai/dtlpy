@@ -8,10 +8,10 @@ class Box(BaseAnnotationDefinition):
     """
         Box annotation object
     """
+    type = "box"
 
     def __init__(self, left, top, right, bottom, label, attributes=None, description=None):
         super().__init__(description=description)
-        self.type = "box"
         self.left = left
         self.top = top
         self.right = right

@@ -48,5 +48,5 @@ Feature: Codebases repository Get method
         And I pack directory by name "codebase_name5"
         When I get by name version "all" of code base "codebase_name5"
         Then I receive a list of Codebase objects
-        And Codebase list have lenght of "2"
+        And Codebase list have length of "2"
 

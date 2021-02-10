@@ -175,6 +175,13 @@ class Datasets:
         elif fetch:
             if dataset_id is not None and dataset_id != '':
                 dataset = self.__get_by_id(dataset_id)
+                # verify input dataset name is same as the given id
+                if dataset_name is not None and dataset.name != dataset_name:
+                    logger.warning(
+                        "Mismatch found in datasets.get: dataset_name is different then dataset.name: "
+                        "{!r} != {!r}".format(
+                            dataset_name,
+                            dataset.name))
             elif dataset_name is not None:
                 datasets = self.list(name=dataset_name)
                 if not datasets:
@@ -306,10 +313,8 @@ class Datasets:
                                                          json_req=payload)
 
         if success:
-            return entities.Dataset.from_json(_json=response.json(),
-                                              project=self._project,
-                                              datasets=self,
-                                              client_api=self._client_api)
+            # TODO - support command entity
+            return True
         else:
             raise exceptions.PlatformException(response)
 
@@ -330,10 +335,25 @@ class Datasets:
                                                          json_req=payload)
 
         if success:
-            return entities.Dataset.from_json(_json=response.json(),
-                                              project=self._project,
-                                              datasets=self,
-                                              client_api=self._client_api)
+            # TODO - support command entity
+            return True
+        else:
+            raise exceptions.PlatformException(response)
+
+    def sync(self, dataset_id):
+        """
+        Sync dataset with external storage
+
+        :param dataset_id: to sync dataset
+        :return:
+        """
+
+        success, response = self._client_api.gen_request(req_type='post',
+                                                         path='/datasets/{}/sync'.format(dataset_id))
+
+        if success:
+            # TODO - support command entity
+            return True
         else:
             raise exceptions.PlatformException(response)
 
@@ -386,7 +406,7 @@ class Datasets:
                              local_path=None,
                              filters=None,
                              annotation_options: entities.ViewAnnotationOptions = None,
-                             annotation_filter_type=None,
+                             annotation_filter_type: entities.AnnotationType = None,
                              annotation_filter_label=None,
                              overwrite=False,
                              thickness=1,
@@ -402,7 +422,7 @@ class Datasets:
         :param local_path: local folder or filename to save to.
         :param filters: Filters entity or a dictionary containing filters parameters
         :param annotation_options: download annotations options: list(dl.ViewAnnotationOptions)
-        :param annotation_filter_type: list of annotation types when downloading annotation,
+        :param annotation_filter_type: list (dl.AnnotationType) of annotation types when downloading annotation,
                                                                                         not relevant for JSON option
         :param annotation_filter_label: list of labels types when downloading annotation, not relevant for JSON option
         :param overwrite: optional - default = False

@@ -8,7 +8,7 @@ class PATHS:
     GITIGNORE_FILENAME = 'package_gitignore'
     MAIN_FILENAME = 'main.py'
     MOCK_FILENAME = 'mock.json'
-    ADAPTER_MODEL = 'adapter_model.py'
+    MODEL_ADAPTER = 'model_adapter.py'
     PARTIAL_MAIN = 'main_partial.py'
     MODULE_A_FILENAME = 'first_module_class.py'
     MODULE_B_FILENAME = 'second_module_class.py'
@@ -19,7 +19,7 @@ class PATHS:
     ASSETS_PACKAGE_FILEPATH = os.path.join(ASSETS_PATH, PACKAGE_FILENAME)
     ASSETS_SERVICE_FILEPATH = os.path.join(ASSETS_PATH, SERVICE_FILENAME)
     ASSETS_GITIGNORE_FILEPATH = os.path.join(ASSETS_PATH, GITIGNORE_FILENAME)
-    ASSETS_ADAPTER_MODEL_FILEPATH = os.path.join(ASSETS_PATH, ADAPTER_MODEL)
+    ASSETS_MODEL_ADAPTER_FILEPATH = os.path.join(ASSETS_PATH, MODEL_ADAPTER)
     PARTIAL_MAIN_FILEPATH = os.path.join(ASSETS_PATH, PARTIAL_MAIN)
 
 

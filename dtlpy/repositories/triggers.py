@@ -162,7 +162,6 @@ class Triggers:
         if trigger_type == entities.TriggerType.EVENT:
             spec = {
                 'filter': filters,
-                'operation': operation,
                 'resource': resource,
                 'executionMode': execution_mode,
                 'actions': actions
@@ -172,11 +171,12 @@ class Triggers:
                 'endAt': end_at,
                 'startAt': start_at,
                 'cron': cron,
-                'input': dict() if inputs is None else inputs,
-                'operation': operation,
             }
         else:
             raise ValueError('Unknown trigger type: "{}". Use dl.TriggerType for known types'.format(trigger_type))
+
+        spec['input'] = dict() if inputs is None else inputs
+        spec['operation'] = operation
 
         # payload
         if self._project_id is None and project_id is None:
@@ -237,6 +237,13 @@ class Triggers:
                                                      _json=response.json(),
                                                      project=self._project,
                                                      service=self._service)
+            # verify input trigger name is same as the given id
+            if trigger_name is not None and trigger.name != trigger_name:
+                logger.warning(
+                    "Mismatch found in triggers.get: trigger_name is different then trigger.name:"
+                    " {!r} != {!r}".format(
+                        trigger_name,
+                        trigger.name))
         else:
             if trigger_name is None:
                 raise exceptions.PlatformException('400', 'Must provide either trigger name or trigger id')

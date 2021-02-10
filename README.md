@@ -2,6 +2,6 @@
 
 This is the SDK and CLI open source repository for [Dataloop.ai](https://dataloop.ai/) platform
 
-For full platform documentation click [here](https://docs.dataloop.ai/docs)
+For full platform documentation click [here](https://dataloop.ai/docs)
 
 For full SDK documentation click [here](https://console.dataloop.ai/sdk-docs/latest)

@@ -1,6 +1,7 @@
 import behave
 import random
 import string
+import os
 
 
 @behave.fixture
@@ -36,7 +37,7 @@ def step_impl(context):
     assert model_get.to_json() == context.model.to_json()
 
 
-@behave.when(u'When I try to create a model with a blank name')
+@behave.when(u'I create a model with a blank name')
 def step_impl(context):
     try:
         context.project.models.create('')
@@ -62,10 +63,12 @@ def step_impl(context):
     rand_str = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(5))
     model_name = 'random_model_{}'.format(rand_str)
     context.model = context.project.models.create(model_name=model_name)
+    if not hasattr(context, 'model_count'):
+        context.model_count = 0
     context.model_count += 1
 
 
-@behave.when(u'I try to create a model by the same name')
+@behave.when(u'I create a model with the same name')
 def step_impl(context):
     try:
         context.project.models.create(model_name=context.model.name)
@@ -77,3 +80,22 @@ def step_impl(context):
 @behave.then(u'No model was created')
 def step_impl(context):
     assert len(context.project.models.list()) == context.model_count
+
+
+@behave.when(u'I push codebase from "{codebase_path}"')
+def step_impl(context, codebase_path):
+    try:
+        codebase_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], codebase_path)
+        model = context.dl.models.push(
+            model=context.model,
+            src_path=codebase_path
+        )
+        context.error = None
+    except Exception as e:
+        context.error = e
+
+
+@behave.then(u'Model object has ItemCodebase')
+def step_impl(context):
+    model = context.dl.models.get(model_id=context.model.id)
+    assert isinstance(model.codebase, context.dl.ItemCodebase)

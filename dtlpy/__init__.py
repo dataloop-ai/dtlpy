@@ -44,10 +44,9 @@ from .entities import (
     Webhook, HttpMethod,
     Trigger,
     AnnotationCollection,
-    Annotation, ViewAnnotationOptions, AnnotationStatus,
+    Annotation, ViewAnnotationOptions, AnnotationStatus, AnnotationType,
     Item, ItemStatus,
     Codebase,
-    Filters,
     Execution, ExecutionStatus,
     Recipe,
     Ontology,
@@ -60,13 +59,16 @@ from .entities import (
     PackageFunction,
     FunctionIO,
     Modality, ModalityTypeEnum, ModalityRefTypeEnum,
-    Model,
-    Snapshot,
+    Model, ModelOutputType, ModelInputType,
+    Snapshot, SnapshotPartitionType,
+    BucketType, Bucket, ItemBucket, GCSBucket, LocalBucket,
+    BaseModelAdapter,
     Workload, WorkloadUnit,
     FiltersKnownFields, FiltersResource, FiltersOperations, FiltersMethod, FiltersOrderByDirection,
     FiltersKnownFields as KnownFields,
     TriggerResource, TriggerAction, TriggerExecutionMode, TriggerType,
-    PackageInputType, FunctionPostAction, FunctionPostActionType, FunctionDisplayScope, FunctionDisplayScopeResource
+    PackageInputType, FunctionPostAction, FunctionPostActionType, FunctionDisplayScope, FunctionDisplayScopeResource,
+    Service, Package
 )
 from .utilities import Converter, BaseServiceRunner, Progress, AnnotationFormat
 from .repositories.packages import PackageCatalog
@@ -214,13 +216,27 @@ HTTP_METHOD_PATCH = HttpMethod.PATCH
 VIEW_ANNOTATION_OPTIONS_JSON = ViewAnnotationOptions.JSON
 VIEW_ANNOTATION_OPTIONS_MASK = ViewAnnotationOptions.MASK
 VIEW_ANNOTATION_OPTIONS_ANNOTATION_ON_IMAGE = ViewAnnotationOptions.ANNOTATION_ON_IMAGE
-VIEW_ANNOTATION_OPTIONS_INSTANCE = ViewAnnotationOptions.ANNOTATION_ON_IMAGE
+VIEW_ANNOTATION_OPTIONS_INSTANCE = ViewAnnotationOptions.INSTANCE
 VIEW_ANNOTATION_OPTIONS_VTT = ViewAnnotationOptions.VTT
 VIEW_ANNOTATION_OPTIONS_OBJECT_ID = ViewAnnotationOptions.OBJECT_ID
 
 ANNOTATION_STATUS_ISSUE = AnnotationStatus.ISSUE
 ANNOTATION_STATUS_REVIEW = AnnotationStatus.REVIEW
 ANNOTATION_STATUS_APPROVED = AnnotationStatus.APPROVED
+ANNOTATION_STATUS_CLEAR = AnnotationStatus.CLEAR
+
+# class
+ANNOTATION_TYPE_BOX = AnnotationType.BOX
+ANNOTATION_TYPE_CLASSIFICATION = AnnotationType.CLASSIFICATION
+ANNOTATION_TYPE_COMPARISON = AnnotationType.COMPARISON
+ANNOTATION_TYPE_ELLIPSE = AnnotationType.ELLIPSE
+ANNOTATION_TYPE_NOTE = AnnotationType.NOTE
+ANNOTATION_TYPE_POINT = AnnotationType.POINT
+ANNOTATION_TYPE_POLYGON = AnnotationType.POLYGON
+ANNOTATION_TYPE_POLYLINE = AnnotationType.POLYLINE
+ANNOTATION_TYPE_POSE = AnnotationType.POSE
+ANNOTATION_TYPE_SEGMENTATION = AnnotationType.SEGMENTATION
+ANNOTATION_TYPE_SUBTITLE = AnnotationType.SUBTITLE
 
 ITEM_STATUS_COMPLETED = ItemStatus.COMPLETED
 ITEM_STATUS_APPROVED = ItemStatus.APPROVED
@@ -251,6 +267,7 @@ INSTANCE_CATALOG_HIGHMEM_M = InstanceCatalog.HIGHMEM_M
 INSTANCE_CATALOG_HIGHMEM_L = InstanceCatalog.HIGHMEM_L
 INSTANCE_CATALOG_HIGHMEM_XL = InstanceCatalog.HIGHMEM_XL
 INSTANCE_CATALOG_GPU_K80_S = InstanceCatalog.GPU_K80_S
+INSTANCE_CATALOG_GPU_K80_M = InstanceCatalog.GPU_K80_M
 
 MODALITY_TYPE_OVERLAY = ModalityTypeEnum.OVERLAY
 

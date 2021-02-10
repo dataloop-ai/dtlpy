@@ -99,6 +99,19 @@ class Bots:
             bot = entities.Bot.from_json(_json=response.json(),
                                          project=self.project,
                                          bots=self, client_api=self._client_api)
+            # verify input bot name and bot email are same as the given id
+            if bot_name is not None and bot.name != bot_name:
+                logger.warning(
+                    "Mismatch found in bots.get: bot_name is different then bot.name: "
+                    "{!r} != {!r}".format(
+                        bot_name,
+                        bot.name))
+            if bot_email is not None and bot.email != bot_email:
+                logger.warning(
+                    "Mismatch found in bots.get: bot_email is different then bot.email: "
+                    "{!r} != {!r}".format(
+                        bot_email,
+                        bot.email))
         else:
             raise exceptions.PlatformException(response)
 
