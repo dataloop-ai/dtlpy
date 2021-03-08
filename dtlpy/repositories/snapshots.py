@@ -289,6 +289,10 @@ class Snapshots:
                                                client_api=self._client_api,
                                                project=self._project,
                                                model=model)
+
+        if snapshot.dataset.readonly is False:
+            logger.error("Snapshot does not suport `unlocked dataset`\n\t please change {!r} to readonly".format(snapshot.dataset.name))
+
         return snapshot
 
     def upload_to_bucket(self,

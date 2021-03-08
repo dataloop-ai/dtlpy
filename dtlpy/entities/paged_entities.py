@@ -62,12 +62,17 @@ class PagedEntities:
         return self.items_count
 
     def __iter__(self):
-        self.page_offset = 0
-        self.has_next_page = True
-        while self.has_next_page:
+        if self.page_offset != 0:
+            # reset the count for page 0
+            self.page_offset = 0
             self.get_page()
-            self.page_offset += 1
+        while True:
             yield self.items
+            if self.has_next_page:
+                self.page_offset += 1
+                self.get_page()
+            else:
+                break
 
     def __reversed__(self):
         self.page_offset = self.total_pages_count - 1

@@ -106,7 +106,8 @@ class Projects:
         payload = dict(role=role)
 
         if role not in list(entities.MemberRole):
-            raise ValueError('role must be on of: {}'.format(', '.join(list(entities.MemberRole))))
+            raise ValueError('Unknown role {!r}, role must be one of: {}'.format(role,
+                                                                                 ', '.join(list(entities.MemberRole))))
 
         success, response = self._client_api.gen_request(req_type='post',
                                                          path=url_path,
@@ -121,7 +122,8 @@ class Projects:
         payload = dict(role=role)
 
         if role not in list(entities.MemberRole):
-            raise ValueError('role must be on of: {}'.format(', '.join(list(entities.MemberRole))))
+            raise ValueError('Unknown role {!r}, role must be one of: {}'.format(role,
+                                                                                 ', '.join(list(entities.MemberRole))))
 
         success, response = self._client_api.gen_request(req_type='patch',
                                                          path=url_path,
@@ -144,7 +146,8 @@ class Projects:
         url_path = '/projects/{}/members'.format(project.id)
 
         if role is not None and role not in list(entities.MemberRole):
-            raise ValueError('role must be on of: {}'.format(', '.join(list(entities.MemberRole))))
+            raise ValueError('Unknown role {!r}, role must be one of: {}'.format(role,
+                                                                                 ', '.join(list(entities.MemberRole))))
 
         success, response = self._client_api.gen_request(req_type='get',
                                                          path=url_path)

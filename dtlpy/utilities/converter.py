@@ -171,7 +171,9 @@ class Converter:
                     fp.write("{}\n".format(label))
 
         pbar = tqdm.tqdm(total=pages.items_count)
-        reporter = Reporter(num_workers=pages.items_count, resource=Reporter.CONVERTER)
+        reporter = Reporter(num_workers=pages.items_count,
+                            resource=Reporter.CONVERTER,
+                            print_error_logs=self.dataset._client_api.verbose.print_error_logs)
         for page in pages:
             for item in page:
                 # create input annotations json
@@ -207,8 +209,9 @@ class Converter:
 
         if reporter.has_errors:
             log_filepath = reporter.generate_log_files()
-            logger.warning(
-                'Converted with some errors. Please see log in {} for more information.'.format(log_filepath))
+            if log_filepath is not None:
+                logger.warning(
+                    'Converted with some errors. Please see log in {} for more information.'.format(log_filepath))
 
         logger.info('Total converted: {}'.format(reporter.status_count('success')))
         logger.info('Total skipped: {}'.format(reporter.status_count('skip')))
@@ -288,7 +291,9 @@ class Converter:
         item_id_counter = 0
         pool = ThreadPool(processes=11)
         pbar = tqdm.tqdm(total=pages.items_count)
-        reporter = Reporter(num_workers=pages.items_count, resource=Reporter.CONVERTER)
+        reporter = Reporter(num_workers=pages.items_count,
+                            resource=Reporter.CONVERTER,
+                            print_error_logs=dataset._client_api.verbose.print_error_logs)
         for page in pages:
             for item in page:
                 pool.apply_async(func=self.__single_item_to_coco,
@@ -331,8 +336,9 @@ class Converter:
 
         if reporter.has_errors:
             log_filepath = reporter.generate_log_files()
-            logger.warning(
-                'Converted with some errors. Please see log in {} for more information.'.format(log_filepath))
+            if log_filepath is not None:
+                logger.warning(
+                    'Converted with some errors. Please see log in {} for more information.'.format(log_filepath))
 
         logger.info('Total converted: {}'.format(reporter.status_count('success')))
         logger.info('Total failed: {}'.format(reporter.status_count('failed')))
@@ -524,7 +530,9 @@ class Converter:
     def _upload_annotations(self, local_annotations_path, from_format, **kwargs):
         self._only_bbox = kwargs.get('only_bbox', False)
         file_count = self.remote_items.items_count
-        reporter = Reporter(num_workers=file_count, resource=Reporter.CONVERTER)
+        reporter = Reporter(num_workers=file_count,
+                            resource=Reporter.CONVERTER,
+                            print_error_logs=self.dataset._client_api.verbose.print_error_logs)
         pbar = tqdm.tqdm(total=file_count)
         pool = ThreadPool(processes=6)
         i_item = 0
@@ -570,8 +578,9 @@ class Converter:
 
         if reporter.has_errors:
             log_filepath = reporter.generate_log_files()
-            logger.warning(
-                'Converted with some errors. Please see log in {} for more information.'.format(log_filepath))
+            if log_filepath is not None:
+                logger.warning(
+                    'Converted with some errors. Please see log in {} for more information.'.format(log_filepath))
 
         logger.info('Total converted and uploaded: {}'.format(reporter.status_count('success')))
         logger.info('Total failed: {}'.format(reporter.status_count('failed')))
@@ -590,7 +599,9 @@ class Converter:
         file_count = sum(len([file for file in files if not file.endswith('.xml')]) for _, _, files in
                          os.walk(local_items_path))
 
-        reporter = Reporter(num_workers=file_count, resource=Reporter.CONVERTER)
+        reporter = Reporter(num_workers=file_count,
+                            resource=Reporter.CONVERTER,
+                            print_error_logs=self.dataset._client_api.verbose.print_error_logs)
         pbar = tqdm.tqdm(total=file_count)
 
         pool = ThreadPool(processes=6)
@@ -646,8 +657,9 @@ class Converter:
 
         if reporter.has_errors:
             log_filepath = reporter.generate_log_files()
-            logger.warning(
-                'Converted with some errors. Please see log in {} for more information.'.format(log_filepath))
+            if log_filepath is not None:
+                logger.warning(
+                    'Converted with some errors. Please see log in {} for more information.'.format(log_filepath))
 
         logger.info('Total converted and uploaded: {}'.format(reporter.status_count('success')))
         logger.info('Total failed: {}'.format(reporter.status_count('failed')))
@@ -741,7 +753,9 @@ class Converter:
         :return:
         """
         file_count = sum(len(files) for _, _, files in os.walk(local_path))
-        reporter = Reporter(num_workers=file_count, resource=Reporter.CONVERTER)
+        reporter = Reporter(num_workers=file_count,
+                            resource=Reporter.CONVERTER,
+                            print_error_logs=self.dataset._client_api.verbose.print_error_logs)
         self.dataset = dataset
 
         pool = ThreadPool(processes=6)
@@ -773,8 +787,9 @@ class Converter:
 
         if reporter.has_errors:
             log_filepath = reporter.generate_log_files()
-            logger.warning(
-                'Converted with some errors. Please see log in {} for more information.'.format(log_filepath))
+            if log_filepath is not None:
+                logger.warning(
+                    'Converted with some errors. Please see log in {} for more information.'.format(log_filepath))
 
         logger.info('Total converted and uploaded: {}'.format(reporter.status_count('success')))
         logger.info('Total failed: {}'.format(reporter.status_count('failed')))

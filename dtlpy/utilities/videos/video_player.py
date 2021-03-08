@@ -513,7 +513,8 @@ class VideoPlayer:
                                     thickness=3)
 
             self.photo = PIL.ImageTk.PhotoImage(
-                image=PIL.Image.fromarray(frame).resize((self.window_width, self.window_height)))
+                image=PIL.Image.fromarray(frame).resize((self.window_width, self.window_height)),
+            master=self.canvas)
             self.canvas.create_image(0, 0, image=self.photo, anchor=tkinter.NW)
             # set timestamp
             self.current_frame_text.configure(text='Frame number:\n%d' % self.vid.frame_number)

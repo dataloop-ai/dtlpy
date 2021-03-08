@@ -31,7 +31,7 @@ from .filters import Filters, FiltersKnownFields, FiltersResource, FiltersOperat
     FiltersOrderByDirection
 from .recipe import Recipe
 from .ontology import Ontology
-from .annotation_definitions import Box, Point, Segmentation, Polygon, Ellipse, Classification, Subtitle, \
+from .annotation_definitions import Box, Cube, Point, Segmentation, Polygon, Ellipse, Classification, Subtitle, \
     Polyline, Comparison, UndefinedAnnotationType, Note, Description, Pose
 from .label import Label
 from .codebase import Codebase, PackageCodebaseType, ItemCodebase, GitCodebase, FilesystemCodebase, LocalCodebase

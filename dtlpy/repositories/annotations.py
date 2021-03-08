@@ -368,6 +368,22 @@ class Annotations:
             logger.error('Annotation/s updated with {} errors'.format(len(out_errors)))
         return out_annotations
 
+    @staticmethod
+    def _annotation_encoding(annotation):
+        last_frame = dict()
+        metadata = annotation.get('metadata', dict())
+        system = metadata.get('system', dict())
+        snapshots = system.get('snapshots_', dict())
+        offset = 0
+        for idx, frame in enumerate(deepcopy(snapshots)):
+            frame.pop("frame", None)
+            if frame == last_frame:
+                del snapshots[idx-offset]
+                offset += 1
+            else:
+                last_frame = frame
+        return annotation
+
     def _upload_annotations(self, annotations):
         bulk_annotations_list = list()
         bulk_return_annotations = list()
@@ -383,6 +399,7 @@ class Annotations:
             else:
                 raise exceptions.PlatformException(error='400',
                                                    message='unknown annotations type: {}'.format(type(annotation)))
+            annotation = self._annotation_encoding(annotation)
             annotations_list.append(annotation)
             if len(annotations_list) >= self._bulk_annotation:
                 bulk_annotations_list.append(annotations_list)
@@ -474,6 +491,7 @@ class Annotations:
                 else:
                     raise exceptions.PlatformException(error='400',
                                                        message='unknown annotations type: {}'.format(type(annotation)))
+                annotation = self._annotation_encoding(annotation)
                 annotations_list.append(annotation)
                 if len(annotations_list) >= self._bulk_annotation:
                     bulk_annotations_list.append(annotations_list)

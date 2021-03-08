@@ -10,16 +10,16 @@ def main():
     # that will trigger service with given id
     # when item is created
     trigger = project.triggers.create(service_ids=['some_service_id'],
-                                      resource='Item',
-                                      actions=['Created'],
+                                      resource=dl.FiltersResource.ITEM,
+                                      actions=dl.TriggerAction.CREATED,
                                       active=True)
 
     # create Annotation trigger
     # that will trigger service with given id
     # when Annotation is deleted
     trigger = project.triggers.create(service_ids=['some_service_id'],
-                                      resource='Annotation',
-                                      actions=['Deleted'],
+                                      resource=dl.FiltersResource.ANNOTATION,
+                                      actions=dl.TriggerAction.DELETED,
                                       active=True)
 
     ##################

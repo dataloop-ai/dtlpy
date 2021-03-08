@@ -55,6 +55,7 @@ class AnnotationCollection(entities.BaseEntity):
             end_time=None,
             automated=True,
             fixed=True,
+            object_visible=True,
             metadata=None,
             parent_id=None,
             model_info=None):
@@ -67,10 +68,11 @@ class AnnotationCollection(entities.BaseEntity):
         :param end_frame_num: video only, the end frame of the annotation
         :param start_time: video only, start time of the annotation
         :param end_time: video only, end time of the annotation
-        :param fixed: video only, mark frame as fixed
-        :param parent_id: set a parent for this annotation (parent annotation ID)
         :param automated:
+        :param fixed: video only, mark frame as fixed
+        :param object_visible: video only, does the annotated object is visible
         :param metadata: optional- metadata dictionary for annotation
+        :param parent_id: set a parent for this annotation (parent annotation ID)
         :param model_info: optional - set model on annotation {'name',:'', 'confidence':0}
         :return:
         """
@@ -137,7 +139,8 @@ class AnnotationCollection(entities.BaseEntity):
                                                          end_frame_num=end_frame_num,
                                                          start_time=start_time,
                                                          end_time=end_time,
-                                                         fixed=fixed)
+                                                         fixed=fixed,
+                                                         object_visible=object_visible)
 
     ############
     # Plotting #

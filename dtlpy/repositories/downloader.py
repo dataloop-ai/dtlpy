@@ -60,7 +60,7 @@ class Downloader:
         :param to_array: returns Ndarray when True and local_path = False
         :param overwrite: optional - default = False
         :param annotation_options: download annotations options. options: list(dl.ViewAnnotationOptions)
-        :param annotation_filter_type:list (dl.AnnotationType) of annotation types when
+        :param annotation_filter_type: list (dl.AnnotationType) of annotation types when
                                                                 downloading annotation, not relevant for JSON option
         :param annotation_filter_label: list of labels types when downloading annotation, not relevant for JSON option
         :param to_items_folder: Create 'items' folder and download items to it
@@ -186,12 +186,16 @@ class Downloader:
         # downloading #
         ###############
         # create result lists
-        reporter = Reporter(num_workers=num_items, resource=Reporter.ITEMS_DOWNLOAD)
+        client_api = self.items_repository._client_api
+
+        reporter = Reporter(num_workers=num_items,
+                            resource=Reporter.ITEMS_DOWNLOAD,
+                            print_error_logs=client_api.verbose.print_error_logs)
         jobs = [None for _ in range(num_items)]
         # pool
-        pool = self.items_repository._client_api.thread_pools(pool_name='item.download')
+        pool = client_api.thread_pools(pool_name='item.download')
         # download
-        pbar = tqdm.tqdm(total=num_items, disable=self.items_repository._client_api.verbose.disable_progress_bar)
+        pbar = tqdm.tqdm(total=num_items, disable=client_api.verbose.disable_progress_bar)
         try:
             i_item = 0
             for page in items_to_download:
@@ -267,7 +271,8 @@ class Downloader:
         # log error
         if n_error > 0:
             log_filepath = reporter.generate_log_files()
-            logger.warning("Errors in {} files. See {} for full log".format(n_error, log_filepath))
+            if log_filepath is not None:
+                logger.warning("Errors in {} files. See {} for full log".format(n_error, log_filepath))
 
         return reporter.output
 

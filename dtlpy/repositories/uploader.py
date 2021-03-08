@@ -94,9 +94,12 @@ class Uploader:
                                                         file_types=file_types,
                                                         item_metadata=item_metadata)
         num_files = len(elements)
+        client_api = self.items_repository._client_api
         logger.info("Uploading {} items..".format(num_files))
-        reporter = Reporter(num_workers=num_files, resource=Reporter.ITEMS_UPLOAD)
-        disable_pbar = self.items_repository._client_api.verbose.disable_progress_bar or num_files == 1
+        reporter = Reporter(num_workers=num_files,
+                            resource=Reporter.ITEMS_UPLOAD,
+                            print_error_logs=client_api.verbose.print_error_logs)
+        disable_pbar = client_api.verbose.disable_progress_bar or num_files == 1
         pbar = tqdm.tqdm(total=num_files, disable=disable_pbar)
         futures = [None for _ in range(num_files)]
         for i_item in range(num_files):
@@ -108,7 +111,7 @@ class Uploader:
                                                   mode=mode,
                                                   pbar=pbar,
                                                   reporter=reporter),
-                loop=self.items_repository._client_api.event_loops('items.upload').loop)
+                loop=client_api.event_loops('items.upload').loop)
 
         _ = [future.result() for future in futures]
         pbar.close()
@@ -122,8 +125,9 @@ class Uploader:
         errors_count = reporter.failure_count
         if errors_count > 0:
             log_filepath = reporter.generate_log_files()
-            logger.warning("Errors in {n_error} files. See {log_filepath} for full log".format(
-                n_error=errors_count, log_filepath=log_filepath))
+            if log_filepath is not None:
+                logger.warning("Errors in {n_error} files. See {log_filepath} for full log".format(
+                    n_error=errors_count, log_filepath=log_filepath))
 
         # TODO 2.0 always return a list
         return reporter.output

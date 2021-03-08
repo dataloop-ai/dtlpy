@@ -65,6 +65,7 @@ class Verbose:
     __DEFAULT_LOGGING_LEVEL = 'warning'
     __DEFAULT_DISABLE_PROGRESS_BAR = False
     __DEFAULT_PRINT_ALL_RESPONSES = False
+    __PRINT_ERROR_LOGS = False
 
     def __init__(self, cookie):
         self.cookie = cookie
@@ -75,18 +76,23 @@ class Verbose:
             self._logging_level = self.__DEFAULT_LOGGING_LEVEL
             self._disable_progress_bar = self.__DEFAULT_DISABLE_PROGRESS_BAR
             self._print_all_responses = self.__DEFAULT_PRINT_ALL_RESPONSES
+            self._print_error_logs = self.__PRINT_ERROR_LOGS
+            if os.getenv('DTLPY_REFRESH_TOKEN_METHOD', "") == "proxy":
+                self._print_error_logs = True
             self.to_cookie()
 
     def to_cookie(self):
         dictionary = {'logging_level': self._logging_level,
                       'disable_progress_bar': self._disable_progress_bar,
-                      'print_all_responses': self._print_all_responses}
+                      'print_all_responses': self._print_all_responses,
+                      'print_error_logs': self._print_error_logs}
         self.cookie.put(key='verbose', value=dictionary)
 
     def from_cookie(self, dictionary):
         self._logging_level = dictionary.get('logging_level', self.__DEFAULT_LOGGING_LEVEL)
         self._disable_progress_bar = dictionary.get('disable_progress_bar', self.__DEFAULT_DISABLE_PROGRESS_BAR)
         self._print_all_responses = dictionary.get('print_all_responses', self.__DEFAULT_PRINT_ALL_RESPONSES)
+        self._print_error_logs = dictionary.get('print_error_logs', self.__PRINT_ERROR_LOGS)
 
     @property
     def disable_progress_bar(self):
@@ -116,6 +122,15 @@ class Verbose:
     @print_all_responses.setter
     def print_all_responses(self, val):
         self._print_all_responses = val
+        self.to_cookie()
+
+    @property
+    def print_error_logs(self):
+        return self._print_error_logs
+
+    @print_error_logs.setter
+    def print_error_logs(self, val):
+        self._print_error_logs = val
         self.to_cookie()
 
 

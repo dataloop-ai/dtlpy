@@ -1,6 +1,9 @@
 import numpy as np
+import logging
 
 from . import BaseAnnotationDefinition
+
+logger = logging.getLogger(name=__name__)
 
 
 class Polygon(BaseAnnotationDefinition):
@@ -17,6 +20,11 @@ class Polygon(BaseAnnotationDefinition):
         if attributes is None:
             attributes = list()
         self.attributes = attributes
+
+        if self.is_open:
+            logger.warning(
+                'Deprecation Warning - is_open will be deprecated starting from version "1.27.0". '
+                'use Polygon for close and Polyline for open')
 
     @property
     def x(self):
@@ -95,7 +103,7 @@ class Polygon(BaseAnnotationDefinition):
         return image
 
     @classmethod
-    def from_segmentation(cls, mask, label, attributes=None, epsilon=None, max_instances=1, min_area=0, is_open=True):
+    def from_segmentation(cls, mask, label, attributes=None, epsilon=None, max_instances=1, min_area=0, is_open=False):
         """
         Convert binary mask to Polygon
         :param mask: binary mask (0,1)

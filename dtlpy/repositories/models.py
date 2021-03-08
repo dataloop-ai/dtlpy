@@ -157,7 +157,7 @@ class Models:
         paged.get_page()
         return paged
 
-    def build(self, model: entities.Model, local_path=None, from_local=None):
+    def build(self, model: entities.Model, local_path=None, from_local=None, log_level='INFO'):
         """
         :param model: Model entity
         :param from_local: bool. use current directory to build
@@ -201,7 +201,7 @@ class Models:
         adapter_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(adapter_module)
         model_adapter = adapter_module.ModelAdapter
-        return model_adapter(model_entity=model)
+        return model_adapter(model_entity=model, log_level=log_level)
 
     def push(
             self,

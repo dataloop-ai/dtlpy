@@ -183,14 +183,16 @@ class Model(entities.BaseEntity):
     @_repositories.default
     def set_repositories(self):
         reps = namedtuple('repositories',
-                          field_names=['projects', 'models', 'snapshots'])
+                          field_names=['projects', 'models', 'snapshots', 'buckets'])
 
         r = reps(projects=repositories.Projects(client_api=self._client_api),
                  models=repositories.Models(client_api=self._client_api,
                                             project=self._project),
                  snapshots=repositories.Snapshots(client_api=self._client_api,
                                                   project=self._project,
-                                                  model=self)
+                                                  model=self),
+                buckets=repositories.Buckets(client_api=self._client_api,
+                                             project=self._project)
                  )
         return r
 
@@ -226,6 +228,11 @@ class Model(entities.BaseEntity):
     def snapshots(self):
         assert isinstance(self._repositories.snapshots, repositories.Snapshots)
         return self._repositories.snapshots
+
+    @property
+    def buckets(self):
+        assert isinstance(self._repositories.buckets, repositories.Buckets)
+        return self._repositories.buckets
 
     @property
     def models(self):
@@ -301,7 +308,7 @@ class Model(entities.BaseEntity):
                                         codebase=codebase,
                                         src_path=src_path)
 
-    def build(self, local_path=None, from_local=None):
+    def build(self, local_path=None, from_local=None, log_level='INFO'):
         """
         Push local model
 
@@ -311,7 +318,8 @@ class Model(entities.BaseEntity):
         """
         return self.models.build(model=self,
                                  local_path=local_path,
-                                 from_local=from_local)
+                                 from_local=from_local,
+                                 log_level=log_level)
 
     def generate_adapter(self, local_path=None, overwrite=False):
         """

@@ -2,6 +2,9 @@ import os
 import datetime
 import json
 import numpy as np
+import logging
+
+logger = logging.getLogger(name=__name__)
 
 
 class Reporter:
@@ -12,7 +15,7 @@ class Reporter:
     ITEMS_UPLOAD = 'uploader'
     CONVERTER = 'converter'
 
-    def __init__(self, num_workers, resource):
+    def __init__(self, num_workers, resource, print_error_logs=False):
         self._num_workers = num_workers
         self._refs = [None for _ in range(num_workers)]
         self._success = [False for _ in range(num_workers)]
@@ -20,6 +23,7 @@ class Reporter:
         self._errors = [None for _ in range(num_workers)]
         self._output = [None for _ in range(num_workers)]
         self._resource = resource
+        self._print_error_logs = print_error_logs
 
     @property
     def has_errors(self):
@@ -69,7 +73,11 @@ class Reporter:
         errors_list = [self._errors[i_job] for i_job, suc in enumerate(self._success) if suc is False]
         ref_list = [self._refs[i_job] for i_job, suc in enumerate(self._success) if suc is False]
         errors_json = {item_ref: error for item_ref, error in zip(ref_list, errors_list)}
-        with open(log_filepath, "w") as f:
-            json.dump(errors_json, f, indent=2)
-
-        return log_filepath
+        if self._print_error_logs:
+            for key in errors_json:
+                logger.warning("{}\n{}".format(key, errors_json[key]))
+            return None
+        else:
+            with open(log_filepath, "w") as f:
+                json.dump(errors_json, f, indent=2)
+            return log_filepath

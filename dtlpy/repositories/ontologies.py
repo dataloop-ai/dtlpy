@@ -137,13 +137,22 @@ class Ontologies:
         return ontologies
 
     def _list(self, filters: entities.Filters):
-        url = '/ontologies'
+        url = '/ontologies?pageOffset={}&pageSize={}'.format(filters.page, filters.page_size)
         project_ids = None
-        if filters.has_field('projects'):
-            project_ids = filters.prepare()['filter']['$and'][0]['projects']
+        ids = None
+        for single_filter in filters.and_filter_list:
+            if single_filter.field == 'projects':
+                project_ids = single_filter.values
+                break
+        for single_filter in filters.and_filter_list:
+            if single_filter.field == 'ids':
+                ids = single_filter.values
+                break
 
         if project_ids:
-            url = '{}?projects={}'.format(url, ','.join(project_ids))
+            url = '{}&projects={}'.format(url, ','.join(project_ids))
+        if ids:
+            url = '{}&ids={}'.format(url, ','.join(ids))
 
         # request
         success, response = self._client_api.gen_request(req_type='get',
@@ -191,6 +200,8 @@ class Ontologies:
             project_ids = self.__get_project_ids(project_ids=project_ids)
             if project_ids:
                 filters.add(field='projects', values=self.__get_project_ids(project_ids=project_ids))
+            if self._dataset:
+                filters.add(field='ids', values=self._dataset.ontology_ids)
             ontologies = list()
             pages = self.__list(filters=filters)
             for page in pages:

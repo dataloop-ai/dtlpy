@@ -250,8 +250,7 @@ class Items:
         # check response
         if success:
             cloned_item = self.items_entity.from_json(client_api=self._client_api,
-                                                      _json=response.json(),
-                                                      dataset=self._dataset)
+                                                      _json=response.json())
         else:
             raise exceptions.PlatformException(response)
         return cloned_item

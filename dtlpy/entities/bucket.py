@@ -11,9 +11,23 @@ class BucketType:
 class Bucket:
     def __init__(self,
                  bucket_type=BucketType.LOCAL,
-                 buckets=None):
+                 buckets=None,
+                 client_api=None,
+                 ):
         self.type = bucket_type
+        if buckets is None and client_api is not None:
+            buckets = repositories.Buckets(client_api=client_api)
         self._buckets = buckets
+
+    # @_repositories.default
+    # def set_repositories(self):
+    #     reps = namedtuple('repositories',
+    #                       field_names=['projects', 'buckets'])
+
+    #     r = reps(projects=repositories.Projects(client_api=self._client_api),
+    #              buckets=repositories.Buckets(client_api=self._client_api,
+    #                                           project=self._project,
+    #                                           snapshot=self._snapshot)
 
     def to_json(self):
         _json = {'type': self.type}
@@ -52,10 +66,15 @@ class Bucket:
         """ Return whether the codebase is managed remotely and supports upload-download"""
         return self.type in [BucketType.ITEM, BucketType.GCS]
 
+    def list_content(self):
+        """
+        :return:  list of the the content in the bucket
+        """
+        return self.buckets.list_content(self)
 
 class ItemBucket(Bucket):
-    def __init__(self, directory_item_id: str):
-        super().__init__(bucket_type=BucketType.ITEM)
+    def __init__(self, directory_item_id: str, buckets=None):
+        super().__init__(bucket_type=BucketType.ITEM, buckets=buckets)
         self.directory_item_id = directory_item_id
 
     def to_json(self):
@@ -110,8 +129,8 @@ class LocalBucket(Bucket):
         Manage file on user responsibility
     """
 
-    def __init__(self, local_path: str = None):
-        super().__init__(bucket_type=BucketType.LOCAL)
+    def __init__(self, local_path: str = None, buckets=None):
+        super().__init__(bucket_type=BucketType.LOCAL, buckets=buckets)
         self._local_path = local_path
 
     def to_json(self):
@@ -143,10 +162,9 @@ class GCSBucket(Bucket):
     https://cloud.google.com/docs/authentication/getting-started
     """
 
-    def __init__(self, gcs_project_name: str, gcs_bucket_name: str, prefix: str = '/', gcs_url: str = None):
+    def __init__(self, gcs_project_name: str, gcs_bucket_name: str, prefix: str = '/', buckets=None):
         from google.cloud import storage
-        super().__init__(bucket_type=BucketType.GCS)
-        self.gcs_url = gcs_url
+        super().__init__(bucket_type=BucketType.GCS, buckets=buckets)
         self._gcs_project_name = gcs_project_name
         self._gcs_bucket_name = gcs_bucket_name
         self.prefix = prefix
@@ -154,11 +172,10 @@ class GCSBucket(Bucket):
         # Connect to GCS
         #   Requires application credentials
         self._client = storage.Client(project=self._gcs_project_name)
-        self._bucket = self._client().get_bucket(self._gcs_bucket_name)
+        self._bucket = self._client.get_bucket(self._gcs_bucket_name)
 
     def to_json(self):
         _json = super().to_json()
-        _json['gcsUrl'] = self.gcs_url
         _json['_gcs_project_name'] = self._gcs_project_name
         _json['_gcs_bucket_name'] = self._gcs_bucket_name
         return _json
@@ -168,7 +185,6 @@ class GCSBucket(Bucket):
                   client_api: services.ApiClient,
                   project: entities.Project):
         return cls(
-            gcs_url=_json.get('gcsUrl'),
             gcs_project_name=_json.get('_gcs_project_name'),
             gcs_bucket_name=_json.get('_gcs_bucket_name'),
         )
@@ -205,3 +221,4 @@ class GCSBucket(Bucket):
                               local_path=local_path,
                               remote_paths=self.prefix,
                               overwrite=overwrite)
+

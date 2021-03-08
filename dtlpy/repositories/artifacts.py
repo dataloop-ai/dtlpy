@@ -16,13 +16,15 @@ class Artifacts:
                  dataset: entities.Dataset = None,
                  project_id: str = None,
                  model: entities.Model = None,
-                 package: entities.Package = None):
+                 package: entities.Package = None,
+                 dataset_name='Binaries'):
         self._client_api = client_api
         if project is None and dataset is None:
             if project_id is None:
                 raise PlatformException('400', 'at least one must be not None: dataset, project or project_id')
             else:
                 project = repositories.Projects(client_api=client_api).get(project_id=project_id)
+        self.dataset_name = dataset_name
         self._project = project
         self._dataset = dataset
         self._model = model
@@ -42,14 +44,14 @@ class Artifacts:
         if self._dataset is None:
             # get dataset from project
             try:
-                self._dataset = self.project.datasets.get(dataset_name='Binaries')
+                self._dataset = self.project.datasets.get(dataset_name=self.dataset_name)
             except exceptions.NotFound:
                 self._dataset = None
             if self._dataset is None:
                 logger.debug(
-                    'Dataset for artifacts was not found. Creating... dataset name: "Binaries". project_id={id}'.format(
-                        id=self.project.id))
-                self._dataset = self.project.datasets.create(dataset_name='Binaries')
+                    'Dataset for artifacts was not found. Creating... dataset name: {ds!r}. project_id={id}'.format(
+                        ds=self.dataset_name, id=self.project.id))
+                self._dataset = self.project.datasets.create(dataset_name=self.dataset_name)
                 # add system to metadata
                 if 'metadata' not in self._dataset.to_json():
                     self._dataset.metadata = dict()
@@ -65,7 +67,7 @@ class Artifacts:
     @property
     def items_repository(self):
         if self._items_repository is None:
-            # load Binaries dataset
+            # load Binaries/snapshot dataset
             # load items repository
             self._items_repository = self.dataset.items
             self._items_repository.set_items_entity(entities.Artifact)
@@ -339,6 +341,7 @@ class Artifacts:
                                     'Must provide one of: artifact_id, artifact_name, execution_id, package_name')
 
         values = [artifact.id for artifact in artifacts]
-        self.items_repository.delete(filters=entities.Filters(field='id', values=values, operator='in'))
+        self.items_repository.delete(filters=entities.Filters(field='id', values=values,
+                                                              operator=entities.FiltersOperations.IN))
 
         return True

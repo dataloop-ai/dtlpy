@@ -20,6 +20,7 @@ class Task:
     id = attr.ib()
     url = attr.ib(repr=False)
     task_owner = attr.ib(repr=False)
+    item_status = attr.ib(repr=False)
     creator = attr.ib()
     due_date = attr.ib()
     dataset_id = attr.ib()
@@ -62,6 +63,7 @@ class Task:
             recipe_id=_json.get('recipeId', None),
             query=_json.get('query', None),
             task_owner=_json.get('taskOwner', None),
+            item_status=_json.get('itemStatus', None),
             assignmentIds=_json.get('assignmentIds', list()),
             dataset=dataset,
             project=project,
@@ -80,6 +82,7 @@ class Task:
                                                               attr.fields(Task).dataset_id,
                                                               attr.fields(Task).recipe_id,
                                                               attr.fields(Task).task_owner,
+                                                              attr.fields(Task).item_status,
                                                               attr.fields(Task).due_date,
                                                               attr.fields(Task)._tasks,
                                                               attr.fields(Task)._dataset,
@@ -88,7 +91,7 @@ class Task:
         _json['projectId'] = self.project_id
         _json['datasetId'] = self.dataset_id
         _json['recipeId'] = self.recipe_id
-        _json['task_owner'] = self.task_owner
+        _json['taskOwner'] = self.task_owner
         _json['dueDate'] = self.due_date
         return _json
 

@@ -1,6 +1,7 @@
 import numpy as np
 import traceback
 import logging
+import copy
 import attr
 import json
 from PIL import Image
@@ -20,6 +21,7 @@ class AnnotationStatus(str, Enum):
 
 class AnnotationType(str, Enum):
     BOX = "box"
+    CUBE = "cube"
     CLASSIFICATION = "class"
     COMPARISON = "comparison"
     ELLIPSE = "ellipse"
@@ -191,7 +193,7 @@ class Annotation(entities.BaseEntity):
 
     @property
     def angle(self):
-        if self.annotation_definition.type == 'ellipse':
+        if self.annotation_definition.type in ['ellipse', 'cube']:
             return self.annotation_definition.angle
         else:
             return None
@@ -337,6 +339,18 @@ class Annotation(entities.BaseEntity):
             self.frames[self.current_frame].fixed = fixed
 
     @property
+    def object_visible(self):
+        if len(self.frames) > 0:
+            return self.frames[self.current_frame].object_visible
+        else:
+            return False
+
+    @object_visible.setter
+    def object_visible(self, object_visible):
+        if len(self.frames) > 0:
+            self.frames[self.current_frame].object_visible = object_visible
+
+    @property
     def is_video(self):
         if len(self.frames) == 0:
             return False
@@ -348,6 +362,9 @@ class Annotation(entities.BaseEntity):
     ################
     @property
     def is_open(self):
+        logger.warning(
+            'Deprecation Warning - is_open will be deprecated starting from version "1.27.0". '
+            'use Polygon for close and Polyline for open')
         is_open = None
         if self.type in ['segment', 'polyline']:
             is_open = self.annotation_definition.is_open
@@ -355,6 +372,9 @@ class Annotation(entities.BaseEntity):
 
     @is_open.setter
     def is_open(self, is_open):
+        logger.warning(
+            'Deprecation Warning - is_open will be deprecated starting from version "1.27.0". '
+            'use Polygon for close and Polyline for open')
         if self.type in ['segment']:
             self.annotation_definition.is_open = is_open
         else:
@@ -674,8 +694,10 @@ class Annotation(entities.BaseEntity):
             platform_dict=dict(),
         )
 
-    def add_frames(self, annotation_definition, frame_num=None, end_frame_num=None, start_time=None, end_time=None,
-                   fixed=True):
+    def add_frames(self, annotation_definition,
+                   frame_num=None, end_frame_num=None,
+                   start_time=None, end_time=None,
+                   fixed=True, object_visible=True):
         # handle fps
         if self.fps is None:
             if self._item is not None:
@@ -696,15 +718,17 @@ class Annotation(entities.BaseEntity):
         for frame in range(frame_num, end_frame_num + 1):
             self.add_frame(annotation_definition=annotation_definition,
                            frame_num=frame,
-                           fixed=fixed)
+                           fixed=fixed,
+                           object_visible=object_visible)
 
-    def add_frame(self, annotation_definition, frame_num=None, fixed=True):
+    def add_frame(self, annotation_definition, frame_num=None, fixed=True, object_visible=True):
         """
         Add a frame state to annotation
 
         :param annotation_definition: annotation type object - must be same type as annotation
-        :param fixed: is fixed
         :param frame_num: frame number
+        :param fixed: is fixed
+        :param object_visible: does the annotated object is visible
         :return: annotation object
         """
         # handle fps
@@ -728,6 +752,7 @@ class Annotation(entities.BaseEntity):
             frame = FrameAnnotation.new(annotation_definition=annotation_definition,
                                         frame_num=frame_num,
                                         fixed=fixed,
+                                        object_visible=object_visible,
                                         annotation=self)
 
             self.frames[frame_num] = frame
@@ -753,6 +778,7 @@ class Annotation(entities.BaseEntity):
             frame = FrameAnnotation.new(annotation_definition=self.annotation_definition,
                                         frame_num=self.last_frame,
                                         fixed=fixed,
+                                        object_visible=object_visible,
                                         annotation=self)
 
             self.frames[self.start_frame] = frame
@@ -761,6 +787,7 @@ class Annotation(entities.BaseEntity):
         frame = FrameAnnotation.new(annotation_definition=annotation_definition,
                                     frame_num=frame_num,
                                     fixed=fixed,
+                                    object_visible=object_visible,
                                     annotation=self)
 
         self.frames[frame_num] = frame
@@ -1000,6 +1027,7 @@ class Annotation(entities.BaseEntity):
                     'attributes': first_frame_attributes,
                     'coordinates': first_frame_coordinates,
                     'fixed': True,
+                    'objectVisible': True,
                     'frame': first_frame_number,
                     'label': _json['label'],
                     'type': annotation.type,
@@ -1012,15 +1040,30 @@ class Annotation(entities.BaseEntity):
                 annotation.frames[frame.frame_num] = frame
                 annotation.annotation_definition = frame.annotation_definition
                 # put snapshots if there are any
+                last_frame = frame
                 for snapshot in _json['metadata']['system']['snapshots_']:
                     frame = FrameAnnotation.from_snapshot(_json=snapshot,
                                                           annotation=annotation,
                                                           fps=fps)
+                    while last_frame.frame_num < frame.frame_num - 1:
+                        last_frame = Annotation._add_reflected_frame(annotation=annotation, last_frame=last_frame)
+
                     annotation.frames[frame.frame_num] = frame
+                    last_frame = frame
+                while last_frame.frame_num < annotation.end_frame:
+                    last_frame = Annotation._add_reflected_frame(annotation=annotation, last_frame=last_frame)
 
             annotation.annotation_definition = annotation.frames[min(frames)].annotation_definition
 
         return annotation
+
+    @staticmethod
+    def _add_reflected_frame(annotation, last_frame):
+        last_frame = copy.copy(last_frame)
+        last_frame.fixed = False
+        last_frame.frame_num += 1
+        annotation.frames[last_frame.frame_num] = last_frame
+        return last_frame
 
     def to_json(self):
         """
@@ -1058,15 +1101,8 @@ class Annotation(entities.BaseEntity):
         else:
             _json['datasetId'] = self.dataset_id
 
-        # polyline to segment
-        if self.type == 'polyline':
-            _json['type'] = 'segment'
-        else:
-            _json['type'] = self.type
-        if self.type == 'polyline':
-            _json['coordinates'] = [self.coordinates]
-        else:
-            _json['coordinates'] = self.coordinates
+        _json['type'] = self.type
+        _json['coordinates'] = self.coordinates
 
         # add system metadata
         if 'system' not in _json['metadata']:
@@ -1078,8 +1114,6 @@ class Annotation(entities.BaseEntity):
         if self.status is not None:
             # if status is CLEAR need to set status to None so it will be deleted in backend
             _json['metadata']['system']['status'] = self.status if self.status != AnnotationStatus.CLEAR else None
-        if self.type in ['segment', 'polyline']:
-            _json['metadata']['system']['isOpen'] = self.is_open
 
         # add frame info
         if self.is_video:
@@ -1125,6 +1159,7 @@ class FrameAnnotation(entities.BaseEntity):
     # multi
     frame_num = attr.ib()
     fixed = attr.ib()
+    object_visible = attr.ib()
 
     ################################
     # parent annotation attributes #
@@ -1239,6 +1274,8 @@ class FrameAnnotation(entities.BaseEntity):
             annotation = entities.Polyline.from_json(_json)
         elif _json['type'] == 'box':
             annotation = entities.Box.from_json(_json)
+        elif _json['type'] == 'cube':
+            annotation = entities.Cube.from_json(_json)
         elif _json['type'] == 'point':
             annotation = entities.Point.from_json(_json)
         elif _json['type'] == 'binary':
@@ -1261,7 +1298,7 @@ class FrameAnnotation(entities.BaseEntity):
     # I/O #
     #######
     @classmethod
-    def new(cls, annotation, annotation_definition, frame_num, fixed):
+    def new(cls, annotation, annotation_definition, frame_num, fixed, object_visible=True):
         return cls(
             # annotations
             annotation=annotation,
@@ -1269,7 +1306,8 @@ class FrameAnnotation(entities.BaseEntity):
 
             # multi
             frame_num=frame_num,
-            fixed=fixed
+            fixed=fixed,
+            object_visible=object_visible
         )
 
     @classmethod
@@ -1287,7 +1325,8 @@ class FrameAnnotation(entities.BaseEntity):
 
             # multi
             frame_num=frame_num,
-            fixed=_json.get('fixed', False)
+            fixed=_json.get('fixed', False),
+            object_visible=_json.get('objectVisible', True)
         )
 
     def to_snapshot(self):
@@ -1296,5 +1335,6 @@ class FrameAnnotation(entities.BaseEntity):
                          'label': self.label,
                          'attributes': self.attributes,
                          'type': self.type,
+                         'objectVisible': self.object_visible,
                          'data': self.coordinates}
         return snapshot_dict

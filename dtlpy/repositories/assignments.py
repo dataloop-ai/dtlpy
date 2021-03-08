@@ -318,7 +318,8 @@ class Assignments:
             if filters is None:
                 if not isinstance(items, list):
                     items = [items]
-                filters = entities.Filters(field='id', values=[item.id for item in items], operator='in')
+                filters = entities.Filters(field='id', values=[item.id for item in items],
+                                           operator=entities.FiltersOperations.IN)
 
             filters._ref_assignment = True
             filters._ref_assignment_id = assignment_id
@@ -361,6 +362,6 @@ class Assignments:
 
         if filters is None:
             filters = entities.Filters()
-        filters.add(field='metadata.system.refs.id', values=[assignment_id], operator='in')
+        filters.add(field='metadata.system.refs.id', values=[assignment_id], operator=entities.FiltersOperations.IN)
 
         return dataset.items.list(filters=filters)

@@ -23,6 +23,7 @@ from . import repositories, exceptions, entities, examples
 from .__version__ import version as __version__
 from .entities import (
     Box,
+    Cube,
     Point,
     Note,
     Segmentation,
@@ -132,6 +133,7 @@ tasks = repositories.Tasks(client_api=client_api)
 annotations = repositories.Annotations(client_api=client_api)
 models = repositories.Models(client_api=client_api)
 snapshots = repositories.Snapshots(client_api=client_api)
+buckets = repositories.Buckets(client_api=client_api)
 ontologies = repositories.Ontologies(client_api=client_api)
 
 try:

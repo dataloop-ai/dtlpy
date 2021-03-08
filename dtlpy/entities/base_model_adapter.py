@@ -3,6 +3,7 @@ import shutil
 import logging
 import tqdm
 from collections import namedtuple
+from contextlib import contextmanager
 
 from .. import entities
 
@@ -16,7 +17,7 @@ class BaseModelAdapter():
     _defaults = {'label_map': None,  # {'label_name' : `int`, ...}
                  }
 
-    def __init__(self, model_entity):
+    def __init__(self, model_entity, log_Level='INFO'):
         if not isinstance(model_entity, entities.Model):
             raise TypeError("model_entity must be of type dl.Model")
 
@@ -28,7 +29,7 @@ class BaseModelAdapter():
         self.logger = logger
         self.__dict__.update(self._defaults)  # set up default values
 
-        self.__add_adapter_handler(level='INFO')
+        self.__add_adapter_handler(level=log_Level)
 
     # ===============================
     # NEED TO IMPLEMENT THESE METHODS
@@ -188,10 +189,15 @@ class BaseModelAdapter():
             self._create_partitions(**kwargs) # train_split=0.7, val_split=0.3, test_split=0.0)  # set the partitions
             # set the partition
 
+        os.makedirs(data_path, exist_ok=True)
+        if len(os.listdir(data_path)) > 0:
+            self.logger.warning("Data path directory ({}) is not empty..".format(data_path))
+
         # Download the partitions items
         for partition in partitions:
-            local_path = os.path.join(data_path, partition)
-            ret_list = self.snapshot.download_partition(partition=partition, local_path=local_path, filters=filters)
+            self.logger.debug("Downloading {} of {}".format(partition, self.snapshot.dataset.name))
+            ret_list = self.snapshot.download_partition(partition=partition, local_path=data_path, filters=filters)
+
             if partition == entities.SnapshotPartitionType.TEST:
                 self.num_test = len(ret_list)
             elif partition == entities.SnapshotPartitionType.VALIDATION:
@@ -200,7 +206,7 @@ class BaseModelAdapter():
                 self.num_train = len(ret_list)
 
         # Convert items; json to one annotation file
-        self.convert(local_path=local_path, **kwargs)
+        self.convert(local_path=data_path, **kwargs)
 
     # TODO: do we need predict by single partitons?  currently we cann't preform on PagedEntity which we get from get_partition
     # TODO: what to do with readonly dataset? unlock it?
@@ -226,6 +232,7 @@ class BaseModelAdapter():
         :param with_upload: `bool` uploads the predictions back to the given items
         :return: `List[Prediction]' `Prediction is set by model.output_type
         """
+        import itertools
         from PIL import Image
         import numpy as np
 
@@ -247,13 +254,16 @@ class BaseModelAdapter():
 
         if with_upload:
             # Make sure user created right prediction boxes
-            if self.model.output_type == 'box' and not all([isinstance(pred, self.BoxPrediction) for pred in all_predictions]):
+            if self.model_entity.output_type == 'box' and\
+                    not all([isinstance(pred, self.BoxPrediction) for pred in itertools.chain(*all_predictions)]):
                 raise RuntimeError("Expected all prediction to be of type BaseModelAdapter.BoxPrediction")
-            if self.model.output_type == 'class' and not all([isinstance(pred, self.ClassPrediction) for pred in all_predictions]):
+            if self.model_entity.output_type == 'class' and\
+                    not all([isinstance(pred, self.ClassPrediction) for pred in itertools.chain(*all_predictions)]):
                 raise RuntimeError("Expected all prediction to be of type BaseModelAdapter.ClassPrediction")
 
-            for idx, item in enumerate(items):
-                self._upload_predictions(item, all_predictions[idx])
+            with self._frozen_dataset(self.snapshot) as ds:
+                for idx, item in enumerate(items):
+                    self._upload_predictions(item, all_predictions[idx])
         return all_predictions
 
     def create_metrics(self, snapshot_id, partition='validation', predict=False, **kwargs):
@@ -409,9 +419,7 @@ class BaseModelAdapter():
         }
         return _sample
 
-
-
-    def _create_partitions(self, train_split=0.7, val_split=0.3, test_split=0.0):
+    def _create_partitions(self, train_split=0.7, val_split=0.3, test_split=0.0, **kwargs):
         """ Updates partitions on the current items by the splits ratios"""
         import time
         import numpy as np
@@ -435,18 +443,41 @@ class BaseModelAdapter():
         train_item_ids = all_item_ids[self.num_test + self.num_val:]
 
         # update items to their partition
-        self.snapshot.set_partition(partition=entities.SnapshotPartitionType.TEST,
-                                    filters=entities.Filters(field='id',
-                                                             values=test_item_ids,
-                                                             operator=entities.FiltersOperations.IN))
-        self.snapshot.set_partition(partition=entities.SnapshotPartitionType.VALIDATION,
-                                    filters=entities.Filters(field='id',
-                                                             values=val_item_ids,
-                                                             operator=entities.FiltersOperations.IN))
-        self.snapshot.set_partition(partition=entities.SnapshotPartitionType.TRAIN,
-                                    filters=entities.Filters(field='id',
-                                                             values=train_item_ids,
-                                                             operator=entities.FiltersOperations.IN))
+        with self._frozen_dataset(self.snapshot) as ds:
+            op = entities.FiltersOperations.IN
+            ds.set_partition(partition=entities.SnapshotPartitionType.TEST,
+                             filters=entities.Filters(field='id', values=test_item_ids, operator=op))
+            ds.set_partition(partition=entities.SnapshotPartitionType.VALIDATION,
+                             filters=entities.Filters(field='id', values=val_item_ids, operator=op))
+            ds.set_partition(partition=entities.SnapshotPartitionType.TRAIN,
+                             filters=entities.Filters(field='id', values=train_item_ids, operator=op))
+
+    # =======
+    # Utility
+    # =======
+
+    @contextmanager
+    def _frozen_dataset(self, obj):
+        try:
+            if isinstance(obj, entities.Snapshot):
+                dataset = obj.dataset
+            elif isinstance(obj, entities.Dataset):
+                dataset = obj
+            else:
+                raise NotImplementedError("could not get a dataset")
+            _readonly_state = dataset.readonly
+            dataset.set_readonly(False)
+            self.logger.debug("dataset {!r} - opned for edit".format(dataset.name))
+            yield dataset
+        finally:
+            dataset.set_readonly(_readonly_state)
+            self.logger.debug("free frozen context ended. dataset {!r}, readonly was set back to: {}".format(dataset.name, dataset.readonly))
+
+
+    def __set_adapter_handler(self, level):
+        for hdl in self.logger.handlers:
+            if hdl.name.startswith('adapter'):
+                hdl.setLevel(level=level)
 
     def __add_adapter_handler(self, level):
         fmt = '%(levelname).1s: %(name)-20s %(asctime)-s [%(filename)-s:%(lineno)-d]:: %(msg)s'
@@ -454,7 +485,10 @@ class BaseModelAdapter():
         hdl.setFormatter(logging.Formatter(fmt=fmt, datefmt='%X'))
         hdl.setLevel(level=level.upper())
         hdl.name = 'adapter_handler' # use the name to get the specific logger
-        logger.addHandler(hdlr=hdl)
+        if hdl.name in [h.name for h in self.logger.handlers]:
+            pass  # Handler already on logger
+        else:
+            self.logger.addHandler(hdlr=hdl)
 
     @ staticmethod
     def _np_resize_util(images, output_shape):

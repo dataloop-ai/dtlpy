@@ -1,5 +1,6 @@
 from .base_annotation_definition import BaseAnnotationDefinition
 from .box import Box
+from .cube import Cube
 from .note import Note
 from .classification import Classification
 from .comparison import Comparison

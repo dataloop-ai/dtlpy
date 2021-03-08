@@ -53,7 +53,6 @@ class Snapshot(entities.BaseEntity):
     bucket = attr.ib()
     name = attr.ib()
     description = attr.ib()
-    version = attr.ib()
     is_global = attr.ib()
     ontology_id = attr.ib(repr=False)
     labels = attr.ib()
@@ -144,7 +143,6 @@ class Snapshot(entities.BaseEntity):
             labels=ontology_spec.labels,
             createdAt=_json.get('createdAt', None),
             updatedAt=_json.get('updatedAt', None),
-            version=_json.get('version', None),
             creator=_json.get('creator', None),
             client_api=client_api,
             name=_json.get('name', None),
@@ -225,7 +223,7 @@ class Snapshot(entities.BaseEntity):
     @_repositories.default
     def set_repositories(self):
         reps = namedtuple('repositories',
-                          field_names=['projects', 'datasets', 'snapshots', 'models', 'ontologies'])
+                          field_names=['projects', 'datasets', 'snapshots', 'models', 'ontologies', 'buckets'])
 
         r = reps(projects=repositories.Projects(client_api=self._client_api),
                  datasets=repositories.Datasets(client_api=self._client_api,
@@ -237,7 +235,12 @@ class Snapshot(entities.BaseEntity):
                  models=repositories.Models(client_api=self._client_api, project=self._project),
                  ontologies=repositories.Ontologies(client_api=self._client_api,
                                                     project=self._project,
-                                                    dataset=self._dataset))
+                                                    dataset=self._dataset),
+                 buckets = repositories.Buckets(client_api=self._client_api,
+                                                project=self._project,
+                                                snapshot=self)
+                                                    )
+
         return r
 
     @property
@@ -254,6 +257,11 @@ class Snapshot(entities.BaseEntity):
     def snapshots(self):
         assert isinstance(self._repositories.snapshots, repositories.Snapshots)
         return self._repositories.snapshots
+
+    @property
+    def buckets(self):
+        assert isinstance(self._repositories.buckets, repositories.Buckets)
+        return self._repositories.buckets
 
     @property
     def models(self):

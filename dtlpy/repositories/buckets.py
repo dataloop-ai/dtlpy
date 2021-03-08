@@ -2,6 +2,7 @@ import logging
 import tqdm
 import os
 import io
+import uuid
 
 from .. import entities, services, repositories
 
@@ -15,23 +16,22 @@ class Buckets:
 
     def __init__(self,
                  client_api: services.ApiClient,
-                 project: entities.Project = None,
-                 snapshot: entities.Snapshot = None):
+                 project=None,
+                 snapshot=None):
         self._client_api = client_api
         self._project = project
         self._snapshot = snapshot
-
-        # repositories
-        if project is not None:
-            self._items = project.items
-        else:
-            self._items = repositories.Items(client_api=client_api)
+        self._items = None
 
     ################
     # repositories #
     ################
     @property
     def items(self):
+        if self.project is not None:
+            self._items = self.project.items
+        else:
+            self._items = repositories.Items(client_api=self._client_api)
         assert isinstance(self._items, repositories.Items)
         return self._items
 
@@ -52,8 +52,7 @@ class Buckets:
     # methods #
     ###########
 
-    def list_content(self,
-                     bucket: entities.Bucket):
+    def list_content(self, bucket: entities.Bucket):
         """
         List bucket content
         :return: list of items in bucket TBD
@@ -62,6 +61,12 @@ class Buckets:
             directory_item = self.items.get(item_id=bucket.directory_item_id)
             output = directory_item.dataset.items.list(filters=entities.Filters(field='dir',
                                                                                 values=directory_item.filename))
+        elif isinstance(bucket, entities.GCSBucket):
+            gcs_bucket = bucket._bucket
+            blobs = gcs_bucket.list_blobs(prefix=bucket.prefix)
+            output = list(blobs)
+        elif isinstance(bucket, entities.LocalBucket):
+            output = os.listdir(bucket.local_path)
         else:
             raise NotImplemented('missing implementation for "list" in bucket type: {!r}'.format(bucket.type))
         return output
@@ -107,8 +112,9 @@ class Buckets:
                                              overwrite=overwrite)
 
         elif isinstance(bucket, entities.GCSBucket):
+            gcs_bucket = bucket._bucket
             remote_prefix = bucket.prefix  # This should be all the bucket
-            blobs = bucket.list_blobs(prefix=remote_prefix)
+            blobs = gcs_bucket.list_blobs(prefix=remote_prefix)
             remote_prefix += '' if remote_prefix.endswith('/') else '/'
             prefix_len = len(remote_prefix)
 
@@ -152,20 +158,21 @@ class Buckets:
         if isinstance(bucket, entities.ItemBucket):
             directory_item = self.items.get(item_id=bucket.directory_item_id)
             item = directory_item.dataset.items.upload(local_path=local_path,
-                                                       remote_path=directory_item.dir,
+                                                       remote_path=directory_item.filename,
                                                        overwrite=overwrite)
 
         elif isinstance(bucket, entities.GCSBucket):
+            gcs_bucket = bucket._bucket
             # FIXME: this supports only upload of entire dir
             local_path += '' if local_path.endswith('/') else '/'
             local_prefix_len = len(local_path)
             for root, dir_names, file_names in os.walk(top=local_path, topdown=True):
                 for dir_name in dir_names:
                     # TODO: check if i need to create dir blobs
-                    blob = bucket.blob(os.path.join(bucket.prefix, local_path[local_prefix_len:], dir_name))
+                    blob = gcs_bucket.blob(os.path.join(bucket.prefix, local_path[local_prefix_len:], dir_name))
                     blob.upload_from_filename(os.path.join(root, dir_name))
                 for file_name in file_names:
-                    blob = bucket.blob(os.path.join(bucket.prefix, local_path[local_prefix_len:], file_name))
+                    blob = gcs_bucket.blob(os.path.join(bucket.prefix, local_path[local_prefix_len:], file_name))
                     blob.upload_from_filename(os.path.join(root, file_name))
         else:
             raise NotImplemented(
@@ -186,16 +193,52 @@ class Buckets:
                 'missing implementation for "buckets.delete" for bucket type: {!r}'.format(bucket.type))
         return path
 
-    def create(self, bucket_type=entities.BucketType.ITEM):
+    def create(self, bucket_type=entities.BucketType.ITEM,
+               # item bucket / local_bucket
+               local_path = None,
+               # gcs bucket
+               gcs_project_name: str = None,
+               gcs_bucket_name: str = None,
+               prefix: str = '/',
+               use_existing_gcs: bool = True,
+               ):
+        # TODO: add docstring
         if bucket_type == entities.BucketType.ITEM:
             artifacts = repositories.Artifacts(project=self.project,
-                                               client_api=self._client_api)
+                                               client_api=self._client_api,
+                                               dataset_name='Buckets')
             buffer = io.BytesIO()
             buffer.name = '.keep'
-            directory = artifacts.dataset.items.make_dir(
-                directory=artifacts._build_path_header(model_name=self.snapshot.model.name,
-                                                       snapshot_name=self.snapshot.name))
-            return entities.ItemBucket(directory_item_id=directory.id)
 
+            if self._snapshot is None:
+                model_name = None
+                snapshot_name = str(uuid.uuid1())
+            else:
+                model_name = self.snapshot.model.name
+                snapshot_name = self.snapshot.name
+            directory = artifacts.dataset.items.make_dir(
+                directory=artifacts._build_path_header(model_name=model_name,
+                                                       snapshot_name=snapshot_name))
+            # init an empty bucket
+            bucket = entities.ItemBucket(directory_item_id=directory.id, buckets=self)
+            bucket.upload(
+                local_path=local_path)
+            return bucket
+
+        elif bucket_type == entities.BucketType.LOCAL:
+            bucket= entities.LocalBucket(local_path=local_path, buckets=self)
+            return bucket
+
+        elif bucket_type == entities.BucketType.GCS:
+            if gcs_project_name is None or gcs_bucket_name is None:
+                raise RuntimeError("Can not create GCS Bucket without project and bucket name")
+            if use_existing_gcs:
+                bucket = entities.GCSBucket(gcs_project_name=gcs_project_name,
+                                            gcs_bucket_name=gcs_bucket_name,
+                                            prefix = prefix,
+                                            buckets=self)
+            else:
+                raise NotImplementedError('Create a new bucket in GCS platform is not yet supported. Please connect an esiting GCS bucket')
+            return bucket
         else:
             raise NotImplemented('missing implementation in "buckets.create" for bucket type: {!r}'.format(bucket_type))

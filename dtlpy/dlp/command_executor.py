@@ -8,7 +8,7 @@ import os
 
 from dtlpy import repositories
 
-from .. import exceptions
+from .. import exceptions, entities
 
 logger = logging.getLogger('dtlpy')
 
@@ -186,12 +186,13 @@ class CommandExecutor:
             # add filters
             if args.remote_path is not None:
                 if isinstance(args.remote_path, list):
-                    filters.add(field="filename", values=args.remote_path, operator="in")
+                    filters.add(field="filename", values=args.remote_path, operator=entities.FiltersOperations.IN)
                 else:
                     filters.add(field="filename", values=args.remote_path)
             if args.type is not None:
                 if isinstance(args.type, list):
-                    filters.add(field='metadata.system.mimetype', values=args.type, operator="in")
+                    filters.add(field='metadata.system.mimetype', values=args.type,
+                                operator=entities.FiltersOperations.IN)
                 else:
                     filters.add(field="metadata.system.mimetype", values=args.type)
 
@@ -248,7 +249,7 @@ class CommandExecutor:
                         if '*' in item:
                             filters.add(field="dir", values=item, operator='glob', method='or')
                             remote_path.pop(remote_path.index(item))
-                    filters.add(field="dir", values=remote_path, operator='in', method='or')
+                    filters.add(field="dir", values=remote_path, operator=entities.FiltersOperations.IN, method='or')
 
             if not args.without_binaries:
                 dataset.items.download(filters=filters,
