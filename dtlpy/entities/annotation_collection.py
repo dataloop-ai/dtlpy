@@ -212,6 +212,8 @@ class AnnotationCollection(entities.BaseEntity):
             for ann in self.annotations:
                 annotations.append(ann.to_json())
             _json['annotations'] = annotations
+            if self.item is not None:
+                _json['itemMetadata'] = self.item.metadata
             with open(filepath, 'w+') as f:
                 json.dump(_json, f, indent=2)
         elif annotation_format in [entities.ViewAnnotationOptions.MASK,

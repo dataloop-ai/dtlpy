@@ -23,7 +23,6 @@ class Package(entities.BaseEntity):
     createdAt = attr.ib()
     updatedAt = attr.ib(repr=False)
     name = attr.ib()
-    _codebase_id = attr.ib()
     codebase = attr.ib()
     _modules = attr.ib()
     ui_hooks = attr.ib()
@@ -49,8 +48,11 @@ class Package(entities.BaseEntity):
     def codebase_id(self):
         if self.codebase is not None and self.codebase.type == entities.PackageCodebaseType.ITEM:
             return self.codebase.item_id
-        else:
-            return self._codebase_id
+        return None
+
+    @codebase_id.setter
+    def codebase_id(self, item_id:  str):
+        self.codebase = entities.ItemCodebase(item_id=item_id)
 
     @modules.setter
     def modules(self, modules: list):
@@ -108,7 +110,6 @@ class Package(entities.BaseEntity):
 
         inst = cls(
             project_id=_json.get('projectId', None),
-            codebase_id=_json.get('codebaseId', None),
             codebase=codebase,
             createdAt=_json.get('createdAt', None),
             updatedAt=_json.get('updatedAt', None),
@@ -139,7 +140,6 @@ class Package(entities.BaseEntity):
                                                         attr.fields(Package)._codebases,
                                                         attr.fields(Package)._client_api,
                                                         attr.fields(Package)._revisions,
-                                                        attr.fields(Package)._codebase_id,
                                                         attr.fields(Package).project_id,
                                                         attr.fields(Package)._modules,
                                                         attr.fields(Package).is_global,
@@ -158,9 +158,6 @@ class Package(entities.BaseEntity):
             modules = [module.to_json() for module in modules]
 
         _json['projectId'] = self.project_id
-
-        if self._codebase_id is not None:
-            _json['codebaseId'] = self._codebase_id
 
         if self.is_global is not None:
             _json['global'] = self.is_global
@@ -358,34 +355,35 @@ class Package(entities.BaseEntity):
         return self.packages.delete(package=self)
 
     def push(self,
-             codebase_id: str = None,
              codebase: Union[entities.GitCodebase, entities.ItemCodebase] = None,
              src_path: str = None,
              package_name: str = None,
              modules: list = None,
              checkout: bool = False,
-             revision_increment: str = None
+             revision_increment: str = None,
+             service_update: bool = False
              ):
         """
          Push local package
 
         :param codebase: PackageCode object - defines how to store the package code
         :param checkout: save package to local checkout
-        :param codebase_id: ItemCodebase id - if codebase is stored as an item
         :param src_path: location of pacjage codebase folder to zip
         :param package_name: name of package
         :param modules: list of PackageModule
         :param revision_increment: optional - str - version bumping method - major/minor/patch - default = None
+        :param  service_update: optional - bool - update the service
         :return:
         """
         return self.project.packages.push(
             package_name=package_name if package_name is not None else self.name,
             modules=modules if modules is not None else self.modules,
             revision_increment=revision_increment,
-            codebase_id=codebase_id,
             codebase=codebase,
             src_path=src_path,
-            checkout=checkout
+            checkout=checkout,
+            service_update=service_update
+
         )
 
     def pull(self, version=None, local_path=None):

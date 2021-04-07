@@ -304,15 +304,15 @@ class Tasks:
 
         if query is None:
             if filters is None and items is None:
-                query = entities.Filters().prepare(query_only=True)
+                query = entities.Filters().prepare()
             elif filters is None:
                 if not isinstance(items, list):
                     items = [items]
                 query = entities.Filters(field='id',
                                          values=[item.id for item in items],
-                                         operator=entities.FiltersOperations.IN).prepare(query_only=True)
+                                         operator=entities.FiltersOperations.IN).prepare()
             else:
-                query = filters.prepare(query_only=True)
+                query = filters.prepare()
 
         if dataset is None:
             dataset = self._dataset
@@ -437,7 +437,7 @@ class Tasks:
                     items = [items]
                 filters = entities.Filters(field='id', values=[item.id for item in items],
                                            operator=entities.FiltersOperations.IN)
-            query = filters.prepare(query_only=True)
+            query = filters.prepare()
 
         if workload is None:
             if assignee_ids is None:

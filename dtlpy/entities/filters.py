@@ -205,7 +205,6 @@ class Filters:
                 self._unique_fields = ['type', 'hidden']
                 self.add(field='hidden', values=False, method=FiltersMethod.AND)
                 self.add(field='type', values='file', method=FiltersMethod.AND)
-                self.sort_by(field='type', value=FiltersOrderByDirection.ASCENDING)
                 self.sort_by(field='createdAt', value=FiltersOrderByDirection.DESCENDING)
             # add service defaults
             elif self.resource == FiltersResource.SERVICE:

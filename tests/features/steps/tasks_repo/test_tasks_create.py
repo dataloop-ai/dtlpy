@@ -35,7 +35,7 @@ def compare_items_list(items_a, items_b):
 def step_impl(context):
     for key, val in context.params.items():
         if key == 'filters':
-            assert json.loads(context.task.query) == val.prepare(query_only=True)
+            assert json.loads(context.task.query) == val.prepare()
         elif key == 'items':
             task_items = [item.id for item in context.task.get_items().items]
             assert compare_items_list(items_a=task_items, items_b=[item.id for item in val])

@@ -314,7 +314,7 @@ class Model(entities.BaseEntity):
 
         :param from_local: bool. use current directory to build
         :param local_path: local path of the model (if from_local=False - codebase will be downloaded)
-        :return:
+        :return: ModelAdpter (dl.BaseModelAdpater)
         """
         return self.models.build(model=self,
                                  local_path=local_path,

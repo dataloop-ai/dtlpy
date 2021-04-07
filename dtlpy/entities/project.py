@@ -46,7 +46,8 @@ class Project(entities.BaseEntity):
     def set_repositories(self):
         reps = namedtuple('repositories',
                           'projects triggers datasets items recipes packages codebases artifacts times_series services '
-                          'executions assignments tasks bots webhooks models analytics ontologies snapshots buckets')
+                          'executions assignments tasks bots webhooks models analytics ontologies snapshots buckets '
+                          'drivers')
         datasets = repositories.Datasets(client_api=self._client_api, project=self)
         artifacts = repositories.Artifacts(project=self, client_api=self._client_api)
         r = reps(projects=repositories.Projects(client_api=self._client_api),
@@ -69,8 +70,14 @@ class Project(entities.BaseEntity):
                  ontologies=repositories.Ontologies(client_api=self._client_api, project=self),
                  snapshots=repositories.Snapshots(client_api=self._client_api, project=self),
                  buckets=repositories.Buckets(client_api=self._client_api, project=self),
+                 drivers=repositories.Drivers(client_api=self._client_api, project=self),
                  )
         return r
+
+    @property
+    def drivers(self):
+        assert isinstance(self._repositories.drivers, repositories.Drivers)
+        return self._repositories.drivers
 
     @property
     def triggers(self):

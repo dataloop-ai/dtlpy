@@ -29,6 +29,14 @@ class AnnotationFormat:
 class COCOUtils:
 
     @staticmethod
+    def binary_mask_to_rle_encode(binary_mask):
+        import pycocotools.mask as coco_utils_mask
+        fortran_ground_truth_binary_mask = np.asfortranarray(binary_mask.astype(np.uint8))
+        encoded_ground_truth = coco_utils_mask.encode(fortran_ground_truth_binary_mask)
+        encoded_ground_truth['counts'] = encoded_ground_truth['counts'].decode()
+        return encoded_ground_truth
+
+    @staticmethod
     def binary_mask_to_rle(binary_mask, height, width):
         rle = {'counts': [], 'size': [height, width]}
         counts = rle.get('counts')
@@ -270,13 +278,33 @@ class Converter:
                                    ref=item.id)
 
     @staticmethod
-    def __gen_coco_categories(instance_map):
+    def __gen_coco_categories(instance_map, recipe):
         categories = list()
+        last_id = 0
         for label, label_id in instance_map.items():
             label_name, sup = label.split('.')[-1], '.'.join(label.split('.')[0:-1])
             category = {'id': label_id, 'name': label_name}
+            last_id = max(last_id, label_id)
             if sup:
                 category['supercategory'] = sup
+            categories.append(category)
+
+        # add keypoint category
+        collection_templates = list()
+        if 'system' in recipe.metadata and 'collectionTemplates' in recipe.metadata['system']:
+            collection_templates = recipe.metadata['system']['collectionTemplates']
+
+        for template in collection_templates:
+            last_id += 1
+            order_dict = {key: i for i, key in enumerate(template['order'])}
+            skeleton = list()
+            for pair in template['arcs']:
+                skeleton.append([order_dict[pair[0]], order_dict[pair[1]]])
+            category = {'id': last_id,
+                        'name': template['name'],
+                        'keypoints': template['order'],
+                         'skeleton': skeleton}
+            instance_map[template['name']] = last_id
             categories.append(category)
         return categories
 
@@ -285,7 +313,8 @@ class Converter:
         dataset.download_annotations(local_path=local_path)
         path_to_dataloop_annotations_dir = os.path.join(local_path, 'json')
         label_to_id = dataset.instance_map
-        categories = self.__gen_coco_categories(instance_map=label_to_id)
+        recipe = dataset.recipes.list()[0]
+        categories = self.__gen_coco_categories(instance_map=label_to_id, recipe=recipe)
         images = [None for _ in range(pages.items_count)]
         converted_annotations = [None for _ in range(pages.items_count)]
         item_id_counter = 0
@@ -306,6 +335,7 @@ class Converter:
                                      'converted_annotations': converted_annotations,
                                      'annotation_filter': annotation_filter,
                                      'label_to_id': label_to_id,
+                                     'categories': categories,
                                      'pbar': pbar
                                  })
                 item_id_counter += 1
@@ -356,8 +386,79 @@ class Converter:
                 pass
         return item
 
+    def __add_item_converted_annotation(self, item, annotation, label_to_id,item_id,
+                                        i_annotation, item_converted_annotations):
+        try:
+            ann = self.to_coco(annotation=annotation, item=item)
+            ann['category_id'] = label_to_id[annotation.label]
+            ann['image_id'] = item_id
+            ann['id'] = int('{}{}'.format(item_id, i_annotation))
+
+            item_converted_annotations.append(ann)
+        except Exception:
+            err = 'Error converting annotation: \n' \
+                  'Item: {}, annotation: {} - ' \
+                  'fail to convert some of the annotation\n{}'.format(item_id,
+                                                                      annotation.id,
+                                                                      traceback.format_exc())
+            item_converted_annotations.append(err)
+
+    def __coco_handle_pose_annotations(self, item, item_id, pose_annotations, point_annotations,
+                                       categories, label_to_id, item_converted_annotations):
+        # link points to pose and convert it
+        for pose in pose_annotations:
+            pose_idx = pose[1]
+            pose = pose[0]
+            pose_category = None
+            for category in categories:
+                if pose.label == category['name']:
+                    pose_category = category
+                    continue
+            if pose_category is None:
+                err = 'Error converting annotation: \n' \
+                      'Item: {}, annotation: {} - ' \
+                      'Pose annotation without known template\n{}'.format(item_id,
+                                                                          pose.id,
+                                                                          traceback.format_exc())
+                item_converted_annotations.append(err)
+                continue
+            if pose.id not in point_annotations or (pose.id in point_annotations and
+                                                    len(point_annotations[pose.id]) != len(pose_category['keypoints'])):
+                err = 'Error converting annotation: \n' \
+                      'Item: {}, annotation: {} - ' \
+                      'Pose annotation has {} children ' \
+                      'while it template has {} points\n{}'.format(item_id,
+                                                                   pose.id,
+                                                                   len(point_annotations[pose.id]),
+                                                                   len(pose_category['keypoints']),
+                                                                   traceback.format_exc())
+                item_converted_annotations.append(err)
+                continue
+            # verify points labels are unique
+            if len(point_annotations[pose.id]) != len(set([ann.label for ann in point_annotations[pose.id]])):
+                err = 'Error converting annotation: \n' \
+                      'Item: {}, annotation: {} - Pose annotation ' \
+                      'does not have unique children points\n{}'.format(item_id,
+                                                                        pose.id,
+                                                                        traceback.format_exc())
+                item_converted_annotations.append(err)
+                continue
+
+            ordered_points = list()
+            for pose_point in pose_category['keypoints']:
+                for point_annotation in point_annotations[pose.id]:
+                    if point_annotation.label == pose_point:
+                        ordered_points.append(point_annotation)
+                        break
+            pose.annotation_definition.points = ordered_points
+
+            self.__add_item_converted_annotation(item=item, annotation=pose,
+                                                 label_to_id=label_to_id,
+                                                 item_id=item_id, i_annotation=pose_idx,
+                                                 item_converted_annotations=item_converted_annotations)
+
     def __single_item_to_coco(self, item: entities.Item, images, path_to_dataloop_annotations_dir, item_id,
-                              converted_annotations, annotation_filter, label_to_id, reporter, pbar=None):
+                              converted_annotations, annotation_filter, label_to_id, reporter, categories, pbar=None):
         try:
             if item.type != 'dir':
                 item = Converter.__get_item_shape(item=item)
@@ -385,21 +486,30 @@ class Converter:
                             annotations.annotations.append(annotation)
 
                 item_converted_annotations = list()
-                for i_annotation, annotation in enumerate(annotations.annotations):
-                    try:
-                        ann = self.to_coco(annotation=annotation, item=item)
-                        ann['category_id'] = label_to_id[annotation.label]
-                        ann['image_id'] = item_id
-                        ann['id'] = int('{}{}'.format(item_id, i_annotation))
+                point_annotations = dict()
+                pose_annotations = list()
 
-                        item_converted_annotations.append(ann)
-                    except Exception:
-                        err = 'Error converting annotation: \n' \
-                              'Item: {}, annotation: {} - ' \
-                              'fail to convert some of the annotation\n{}'.format(item_id,
-                                                                                  annotation.id,
-                                                                                  traceback.format_exc())
-                        item_converted_annotations.append(err)
+                for i_annotation, annotation in enumerate(annotations.annotations):
+                    if annotation.type == 'point' and annotation.parent_id is not None:
+                        if annotation.parent_id not in point_annotations:
+                            point_annotations[annotation.parent_id] = list()
+                        point_annotations[annotation.parent_id].append(annotation)
+                        continue
+                    if annotation.type == 'pose':
+                        pose_annotations.append([annotation, i_annotation])
+                        continue
+                    self.__add_item_converted_annotation(item=item, annotation=annotation,
+                                                         label_to_id=label_to_id,
+                                                         item_id=item_id, i_annotation=i_annotation,
+                                                         item_converted_annotations=item_converted_annotations)
+
+                self.__coco_handle_pose_annotations(item=item, item_id=item_id,
+                                                    pose_annotations=pose_annotations,
+                                                    point_annotations=point_annotations,
+                                                    categories=categories,
+                                                    label_to_id=label_to_id,
+                                                    item_converted_annotations=item_converted_annotations)
+
                 success, errors = self._sort_annotations(annotations=item_converted_annotations)
                 converted_annotations[item_id] = success
                 if errors:
@@ -1208,19 +1318,34 @@ class Converter:
                     'Item must have height and width to convert {} annotation to coco'.format(annotation.type))
 
         # build annotation
-        if annotation.type in ['binary', 'box', 'segment']:
+        keypoints = None
+        if annotation.type in ['binary', 'box', 'segment', 'pose']:
             x = annotation.left
             y = annotation.top
             w = annotation.right - x
             h = annotation.bottom - y
             if annotation.type == 'binary':
-                segmentation = COCOUtils.binary_mask_to_rle(binary_mask=annotation.geo, height=height, width=width)
+                # segmentation = COCOUtils.binary_mask_to_rle(binary_mask=annotation.geo, height=height, width=width)
+                segmentation = COCOUtils.binary_mask_to_rle_encode(binary_mask=annotation.geo)
                 area = int(annotation.geo.sum())
                 iscrowd = 1
             elif annotation.type == 'segment':
                 segmentation, area = COCOUtils.polygon_to_rle(geo=annotation.geo, height=height, width=width)
+            elif annotation.type == 'pose':
+                keypoints = list()
+                for point in annotation.annotation_definition.points:
+                    keypoints.append(point.x)
+                    keypoints.append(point.y)
+                    if 'visible' in point.attributes and \
+                            ("not-visible" in point.attributes or 'not_visible' in point.attributes):
+                        keypoints.append(0)
+                    elif 'not-visible' in point.attributes or 'not_visible' in point.attributes:
+                        keypoints.append(1)
+                    elif 'visible' in point.attributes:
+                        keypoints.append(2)
+                    else:
+                        keypoints.append(0)
         else:
-            logger.error('Unable to convert annotation of type {} to coco'.format(annotation.type))
             raise Exception('Unable to convert annotation of type {} to coco'.format(annotation.type))
 
         ann = dict()
@@ -1228,7 +1353,8 @@ class Converter:
         ann["segmentation"] = segmentation
         ann["area"] = area
         ann["iscrowd"] = iscrowd
-
+        if keypoints is not None:
+            ann["keypoints"] = keypoints
         return ann
 
     @staticmethod

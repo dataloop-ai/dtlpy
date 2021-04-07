@@ -263,16 +263,22 @@ class Packages:
                 str(dir_version))
 
         if version is None or version == package.version:
-            codebase_id = package.codebase_id
+            package_revision = package
         else:
             versions = [revision for revision in package.revisions if revision['version'] == version]
             if len(versions) <= 0:
                 raise exceptions.PlatformException('404', 'Version not found: version={}'.format(version))
             elif len(versions) > 1:
                 raise exceptions.PlatformException('404', 'More than one version found: version={}'.format(version))
-            codebase_id = versions[0]['codebaseId']
-
-        self._project.codebases.unpack(codebase_id=codebase_id, local_path=local_path)
+            package_revision = entities.Package.from_json(
+                _json=versions[0],
+                project=package.project,
+                client_api=package._client_api
+            )
+        if package_revision.codebase.type == entities.PackageCodebaseType.ITEM:
+            self._project.codebases.unpack(codebase_id=package_revision.codebase.item_id, local_path=local_path)
+        else:
+            raise Exception('Pull can only be performed on packages with "Item" codebase.')
 
         return local_path
 
@@ -290,14 +296,14 @@ class Packages:
              project_id: str = None,
              package_name: str = None,
              src_path: str = None,
-             codebase_id: str = None,
              codebase: Union[entities.GitCodebase, entities.ItemCodebase, entities.FilesystemCodebase] = None,
              modules: List[entities.PackageModule] = None,
              is_global: bool = None,
              checkout: bool = False,
              revision_increment: str = None,
              version: str = None,
-             ignore_sanity_check: bool = False) -> entities.Package:
+             ignore_sanity_check: bool = False,
+             service_update: bool = False) -> entities.Package:
         """
         Push local package.
         Project will be taken in the following hierarchy:
@@ -309,12 +315,12 @@ class Packages:
         :param project_id: optional - project id to deploy to. default from context or checked-out
         :param package_name: package name
         :param checkout: checkout package to local dir
-        :param codebase_id: id of the codebase item
         :param src_path: path to package codebase
         :param modules: list of modules PackageModules of the package
         :param version: semver version f the package
         :param revision_increment: optional - str - version bumping method - major/minor/patch - default = None
         :param is_global:
+        :param  service_update: optional - bool - update the service
         :return:
         """
         # get project
@@ -337,10 +343,6 @@ class Packages:
                 message='Missing project from "packages.push" function. '
                         'Please provide project or id, use Packages from a '
                         'project.packages repository or checkout a project')
-
-        if codebase is None and codebase_id is not None:
-            codebase = entities.ItemCodebase(item_id=codebase_id,
-                                             client_api=self._client_api)
 
         # source path
         if src_path is None:
@@ -366,15 +368,16 @@ class Packages:
                 'Pushing a package without sanity check can cause errors when trying to deploy, '
                 'trigger and execute functions.\n'
                 'We highly recommend to not use the ignore_sanity_check flag')
+
         elif codebase is None:
             modules = self._sanity_before_push(src_path=src_path, modules=modules)
 
         self._name_validation(name=package_name)
 
-        # get or create codebase
-        codebase_item = None
+        delete_codebase = False
         if codebase is None:
             codebase = project_to_deploy.codebases.pack(directory=src_path, name=package_name)
+            delete_codebase = True
 
         try:
             # check if exist
@@ -385,9 +388,6 @@ class Packages:
             if packages.items_count > 0:
                 # package exists - need to update
                 package = packages.items[0]
-
-                if codebase.type == entities.PackageCodebaseType.ITEM:
-                    package._codebase_id = codebase.item_id
 
                 if modules is not None:
                     package.modules = modules
@@ -405,7 +405,6 @@ class Packages:
             else:
                 package = self._create(
                     project_to_deploy=project_to_deploy,
-                    codebase_id=codebase_id,
                     package_name=package_name,
                     modules=modules,
                     codebase=codebase,
@@ -415,8 +414,8 @@ class Packages:
             if checkout:
                 self.checkout(package=package)
         except Exception:
-            if codebase_item is not None:
-                codebase_item.delete()
+            if delete_codebase:
+                project_to_deploy.items.delete(item_id=codebase.item_id)
             raise
 
         logger.info("Package name: {!r}, id: {!r} has been added to project name: {!r}, id: {!r}".format(
@@ -424,11 +423,15 @@ class Packages:
             package.id,
             package.project.name,
             package.project.id))
+
+        if service_update:
+            service = package.services.get(service_name=package.name)
+            service.package_revision = package.version
+            service.update()
         return package
 
     def _create(self,
                 project_to_deploy: entities.Project = None,
-                codebase_id: str = None,
                 codebase: Union[entities.GitCodebase, entities.ItemCodebase, entities.FilesystemCodebase] = None,
                 is_global: bool = None,
                 package_name: str = entities.package_defaults.DEFAULT_PACKAGE_NAME,
@@ -438,7 +441,6 @@ class Packages:
         """
         Create a package in platform
 
-        :param codebase_id: optional - package codebase
         :param codebase:
         :param package_name: optional - default: 'default package'
         :param modules: optional - PackageModules Entity
@@ -456,9 +458,6 @@ class Packages:
                    'global': is_global,
                    'modules': modules
                    }
-
-        if codebase_id is not None:
-            payload['codebaseId'] = codebase_id
 
         if codebase is not None:
             payload['codebase'] = codebase.to_json()

@@ -357,17 +357,25 @@ class Datasets:
         else:
             raise exceptions.PlatformException(response)
 
-    def create(self, dataset_name, labels=None, driver=None, attributes=None, ontology_ids=None,
+    def create(self,
+               dataset_name,
+               labels=None,
+               attributes=None,
+               ontology_ids=None,
+               driver=None,
+               driver_id=None,
                checkout=False) -> entities.Dataset:
         """
         Create a new dataset
 
-        :param checkout:
-        :param ontology_ids: optional - dataset ontology
         :param dataset_name: name
-        :param attributes: dataset's ontology's attributes
         :param labels: dictionary of {tag: color} or list of label entities
-        :param driver: optional
+        :param attributes: dataset's ontology's attributes
+        :param ontology_ids: optional - dataset ontology
+        :param driver: optional - storage driver Driver object or driver name
+        :param driver_id: optional - driver id
+        :param checkout: bool. cache the dataset to work locally
+
         :return: Dataset object
         """
         # labels to list
@@ -379,8 +387,19 @@ class Datasets:
         # get creator from token
         payload = {'name': dataset_name,
                    'projects': [self.project.id]}
-        if driver is not None:
-            payload['driver'] = driver
+
+        if driver_id is None and driver is not None:
+            if isinstance(driver, entities.Driver):
+                driver_id = driver.id
+            elif isinstance(driver, str):
+                driver_id = self.project.drivers.get(driver_name=driver).id
+            else:
+                raise exceptions.PlatformException(
+                    error=400,
+                    message='Input arg "driver" must be Driver object or a string driver name. got type: {}'.format(type(driver)))
+        if driver_id is not None:
+            payload['driver'] = driver_id
+
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/datasets',
                                                          json_req=payload)

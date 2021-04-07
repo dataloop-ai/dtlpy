@@ -157,13 +157,13 @@ class Models:
         paged.get_page()
         return paged
 
-    def build(self, model: entities.Model, local_path=None, from_local=None, log_level='INFO'):
+    def build(self, model: entities.Model, local_path=None, from_local=None, log_level='INFO') -> entities.BaseModelAdapter:
         """
         :param model: Model entity
         :param from_local: bool. use current directory to build
         :param local_path: local path of the model (if from_local=False - codebase will be downloaded)
 
-        :return:
+        :return:dl.BaseModelAdpter
         """
 
         if model.codebase is None:
@@ -188,7 +188,7 @@ class Models:
         if not from_local:
             # Not local => download codebase
             if model.codebase.type == entities.PackageCodebaseType.ITEM:
-                codebase_id = model.codebase.codebase_id
+                codebase_id = model.codebase.item_id
                 project = self._project if self._project is not None else model.project
                 path = project.codebases.unpack(codebase_id=codebase_id, local_path=path)
             else:
@@ -200,8 +200,10 @@ class Models:
         spec = importlib.util.spec_from_file_location("ModelAdapter", entry_point)
         adapter_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(adapter_module)
-        model_adapter = adapter_module.ModelAdapter
-        return model_adapter(model_entity=model, log_level=log_level)
+        model_adapter_cls = adapter_module.ModelAdapter
+        model_adapter = model_adapter_cls(model_entity=model)
+        model_adapter.__set_adapter_handler__(level=log_level)
+        return model_adapter
 
     def push(
             self,

@@ -40,11 +40,17 @@ def step_impl(context):
             modules = context.dl.PackageModule(functions=func,
                                                name=context.dl.entities.package_defaults.DEFAULT_PACKAGE_MODULE_NAME)
 
+        codebase = None
+        if codebase_id is not None:
+            codebase = context.dl.entities.ItemCodebase(item_id=codebase_id)
+
         # module = context.dl.entities.DEFAULT_PACKAGE_MODULE
-        package = context.project.packages.push(codebase_id=codebase_id,
-                                                package_name=package_name,
-                                                modules=modules,
-                                                src_path=src_path)
+        package = context.project.packages.push(
+            codebase=codebase,
+            package_name=package_name,
+            modules=modules,
+            src_path=src_path
+        )
         context.to_delete_packages_ids.append(package.id)
     except context.dl.exceptions.BadRequest as e:
         assert 'Invalid package name:' in e.message or 'Name must be at most 35 characters' in e.message

@@ -5,8 +5,8 @@ import time
 @behave.when(u'I get by name version "{version}" of code base "{codebase_name}"')
 def step_impl(context, version, codebase_name):
     context.codebase_get = context.project.codebases.get(codebase_name=codebase_name,
-                                                           codebase_id=None,
-                                                           version=version)
+                                                         codebase_id=None,
+                                                         version=version)
 
 
 @behave.when(u'I get a code base by name "{codebase_name}"')
@@ -21,9 +21,11 @@ def step_impl(context):
 
 @behave.when(u'I get by id version "{version}" of code base "{codebase_name}"')
 def step_impl(context, version, codebase_name):
-    context.codebase_get = context.project.codebases.get(codebase_name=None,
-                                                           codebase_id=context.codebase.item_id,
-                                                           version=version)
+    context.codebase_get = context.project.codebases.get(
+        codebase_name=None,
+        codebase_id=context.codebase.item_id,
+        version=version
+    )
 
 
 @behave.then(u"I receive a list of Codebase objects")

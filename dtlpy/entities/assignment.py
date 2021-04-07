@@ -21,8 +21,13 @@ class Assignment(entities.BaseEntity):
     url = attr.ib(repr=False)
     task_id = attr.ib(repr=False)
     dataset_id = attr.ib(repr=False)
-
+    annotation_status = attr.ib(repr=False)
+    item_status = attr.ib(repr=False)
+    total_items = attr.ib()
+    for_review = attr.ib()
+    issues = attr.ib()
     # sdk
+
     _client_api = attr.ib(repr=False)
     _task = attr.ib(default=None, repr=False)
     _assignments = attr.ib(default=None, repr=False)
@@ -60,7 +65,12 @@ class Assignment(entities.BaseEntity):
             client_api=client_api,
             project=project,
             dataset=dataset,
-            task=task
+            task=task,
+            annotation_status=_json.get('annotationStatus', None),
+            item_status=_json.get('itemStatus', None),
+            total_items=_json.get('totalItems', None),
+            for_review=_json.get('forReview', None),
+            issues=_json.get('issues', None)
         )
 
         if dataset is not None:
@@ -126,7 +136,13 @@ class Assignment(entities.BaseEntity):
                                                               attr.fields(Assignment).project_id,
                                                               attr.fields(Assignment)._assignments,
                                                               attr.fields(Assignment)._dataset,
-                                                              attr.fields(Assignment)._task))
+                                                              attr.fields(Assignment)._task,
+                                                              attr.fields(Assignment).annotation_status,
+                                                              attr.fields(Assignment).item_status,
+                                                              attr.fields(Assignment).total_items,
+                                                              attr.fields(Assignment).for_review,
+                                                              attr.fields(Assignment).issues))
+
         _json['projectId'] = self.project_id
         return _json
 

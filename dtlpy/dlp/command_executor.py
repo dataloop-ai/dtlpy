@@ -449,8 +449,7 @@ class CommandExecutor:
         elif args.packages == "push":
             packages = self.utils.get_packages_repo(args=args)
 
-            package = packages.push(codebase_id=args.codebase_id,
-                                    src_path=args.src_path,
+            package = packages.push(src_path=args.src_path,
                                     package_name=args.package_name,
                                     checkout=True)
 

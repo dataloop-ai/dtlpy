@@ -48,10 +48,11 @@ class Zipping:
                         zip_file.write(filepath, arcname=os.path.relpath(filepath, directory))
                         if not ignore_max_file_size:
                             if np.sum([f.file_size for f in list(zip_file.NameToInfo.values())]) > MAX_ZIP_FILE:
+                                logger.error('Failed zipping in file: {}'.format(filepath))
                                 raise ValueError(
                                     'Zip file cant be over 100MB. '
                                     'Please verify that only code is being uploaded or '
-                                    'add files to .gitignore so they wont be zipped and uploaded as code')
+                                    'add files to .gitignore so they wont be zipped and uploaded as code.')
         finally:
             zip_file.close()
 

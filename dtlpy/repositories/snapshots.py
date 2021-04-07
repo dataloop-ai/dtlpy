@@ -184,8 +184,8 @@ class Snapshots:
             self,
             snapshot_name: str,
             dataset_id: str,
-            ontology_id: str = None,
             labels: list = None,
+            ontology_id: str = None,
             description: str = None,
             bucket: entities.Bucket = None,
             project_id=None,
@@ -199,8 +199,8 @@ class Snapshots:
 
         :param snapshot_name: name of the snapshot
         :param dataset_id: dataset id
-        :param ontology_id: ontology to connect to the snapshot
         :param labels: list of labels from ontology (must mach ontology id) can be a subset
+        :param ontology_id: ontology to connect to the snapshot
         :param description: description
         :param bucket: optional
         :param project_id: project that owns the snapshot
@@ -211,15 +211,20 @@ class Snapshots:
         :return: Snapshot Entity
         """
 
-        if ontology_id is None:
+        if labels is None and ontology_id is None:
             raise exceptions.PlatformException(error='400',
-                                               message='Must provide arguments ontology_id')
-
-        if labels is None:
+                                               message='Must provide either labels or ontology_id as arguments')
+        elif labels is not None:
+            import random
+            hex_chars = list('1234567890ABCDEF')
+            ontologies = repositories.Ontologies(client_api=self._client_api)
+            labels_dict = {k: '#' + ''.join([random.choice(hex_chars) for _ in range(6)]) for k in labels}
+            snapshot_ont = ontologies.create(labels_dict, title=self.name + '-snapshot-ontology')
+            ontology_spec = entities.OntologySpec(ontology_id=snapshot_ont.id, labels=labels)
+        else: # ontology_id is not None
             ontologies = repositories.Ontologies(client_api=self._client_api)
             labels = [label.tag for label in ontologies.get(ontology_id=ontology_id).labels]
-        ontology_spec = entities.OntologySpec(ontology_id=ontology_id,
-                                              labels=labels)
+            ontology_spec = entities.OntologySpec(ontology_id=ontology_id, labels=labels)
 
         # TODO: Check that given dataset is of type frozen
         # ds = self.datasets.get(dataset_id=dataset_id)

@@ -44,11 +44,18 @@ def step_impl(context, package_number):
         modules = context.dl.PackageModule(functions=func,
                                            name=context.dl.entities.package_defaults.DEFAULT_PACKAGE_MODULE_NAME)
 
+    codebase = None
+    if codebase_id is not None:
+        codebase = context.dl.entities.ItemCodebase(item_id=codebase_id)
+
     # module = context.dl.entities.DEFAULT_PACKAGE_MODULE
-    package = context.project.packages.push(codebase_id=codebase_id,
-                                            package_name=package_name,
-                                            modules=modules,
-                                            src_path=src_path)
+    package = context.project.packages.push(
+        codebase=codebase,
+        package_name=package_name,
+        modules=modules,
+        src_path=src_path
+    )
+
     context.to_delete_packages_ids.append(package.id)
     if package_number == 'first':
         context.first_package = package
@@ -98,8 +105,6 @@ def step_impl(context):
 def compare_codebase_id(first_package, second_package):
     if first_package.codebase.item_id is not None and second_package.codebase.item_id is not None:
         return first_package.codebase.item_id != second_package.codebase.item_id
-    elif first_package.codebase_id is not None and second_package.codebase_id is not None:
-        return first_package.codebase_id != second_package.codebase_id
     else:
         raise Exception('Packages does not have codebase id')
 
@@ -113,8 +118,6 @@ def step_impl(context):
 
     first_package_json.pop('codebase', None)
     second_package_json.pop('codebase', None)
-    first_package_json.pop('codebaseId', None)
-    second_package_json.pop('codebaseId', None)
 
     assert first_package_json.pop('updatedAt') != second_package_json.pop('updatedAt')
     assert int(first_package_json.pop('version').replace(".", "")) == \

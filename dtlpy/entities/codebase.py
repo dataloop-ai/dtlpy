@@ -160,8 +160,10 @@ class ItemCodebase(Codebase):
         )
 
     def unpack(self, local_path):
-        return self.codebases.unpack(codebase_id=self.item_id,
-                                     local_path=local_path)
+        return self.codebases.unpack(
+            codebase_id=self.item_id,
+            local_path=local_path
+        )
 
     @property
     def version(self):

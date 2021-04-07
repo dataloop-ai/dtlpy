@@ -83,11 +83,12 @@ class Ontologies:
     ###########
     # methods #
     ###########
-    def create(self, labels, project_ids=None, attributes=None) -> entities.Ontology:
+    def create(self, labels, title=None, project_ids=None, attributes=None) -> entities.Ontology:
         """
         Create a new ontology
 
         :param labels: recipe tags
+        :param title: ontology title, name
         :param project_ids: recipe project/s
         :param attributes: recipe attributes
         :return: Ontology object
@@ -102,6 +103,8 @@ class Ontologies:
         payload = {"roots": labels,
                    "projectIds": project_ids,
                    "attributes": attributes}
+        if title is not None:
+            payload['title'] = title
         success, response = self._client_api.gen_request(req_type="post",
                                                          path="/ontologies",
                                                          json_req=payload)

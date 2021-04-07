@@ -1,3 +1,4 @@
+import numpy as np
 import uuid
 
 from . import BaseAnnotationDefinition
@@ -25,11 +26,11 @@ class Pose(BaseAnnotationDefinition):
 
     @property
     def x(self):
-        return 0
+        return [point.x for point in self.points]
 
     @property
     def y(self):
-        return 0
+        return [point.y for point in self.points]
 
     @property
     def geo(self):
@@ -37,19 +38,27 @@ class Pose(BaseAnnotationDefinition):
 
     @property
     def left(self):
-        return 0
+        if not len(self.points):
+            return 0
+        return np.min(self.x)
 
     @property
     def top(self):
-        return 0
+        if not len(self.points):
+            return 0
+        return np.min(self.y)
 
     @property
     def right(self):
-        return 0
+        if not len(self.points):
+            return 0
+        return np.max(self.x)
 
     @property
     def bottom(self):
-        return 0
+        if not len(self.points):
+            return 0
+        return np.max(self.y)
 
     def show(self, image, thickness, with_text, height, width, annotation_format, color):
         """

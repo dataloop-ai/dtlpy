@@ -22,54 +22,34 @@ from .exceptions import PlatformException
 from . import repositories, exceptions, entities, examples
 from .__version__ import version as __version__
 from .entities import (
-    Box,
-    Cube,
-    Point,
-    Note,
-    Segmentation,
-    GitCodebase,
-    ItemCodebase,
-    FilesystemCodebase,
-    PackageCodebaseType,
-    OntologySpec,
-    Polygon,
-    Project, MemberRole,
-    Dataset,
-    Ellipse,
-    Classification,
-    Subtitle,
-    Polyline,
-    Pose,
-    Description,
-    Filters,
-    Webhook, HttpMethod,
-    Trigger,
-    AnnotationCollection,
-    Annotation, ViewAnnotationOptions, AnnotationStatus, AnnotationType,
-    Item, ItemStatus,
-    Codebase,
-    Execution, ExecutionStatus,
-    Recipe,
-    Ontology,
-    Label,
-    Similarity, SimilarityTypeEnum,
-    MultiView,
-    ItemLink, UrlLink, LinkTypeEnum,
-    KubernetesAutuscalerType, KubernetesRabbitmqAutoscaler, KubernetesAutoscaler, KubernetesRuntime, InstanceCatalog,
-    PackageModule,
-    PackageFunction,
-    FunctionIO,
-    Modality, ModalityTypeEnum, ModalityRefTypeEnum,
-    Model, ModelOutputType, ModelInputType,
-    Snapshot, SnapshotPartitionType,
-    BucketType, Bucket, ItemBucket, GCSBucket, LocalBucket,
-    BaseModelAdapter,
-    Workload, WorkloadUnit,
-    FiltersKnownFields, FiltersResource, FiltersOperations, FiltersMethod, FiltersOrderByDirection,
+    # main entities
+    Project, Dataset, Trigger, Item, Execution, AnnotationCollection, Annotation, Recipe,
+    Ontology, Label, Task, Assignment, Service, Package, Codebase, Model, Snapshot, PackageModule, PackageFunction,
+    # annotations
+    Box, Cube, Point, Note, Segmentation, Ellipse, Classification, Subtitle, Polyline, Pose, Description, Polygon,
+    # filters
+    Filters, FiltersKnownFields, FiltersResource, FiltersOperations, FiltersMethod, FiltersOrderByDirection,
     FiltersKnownFields as KnownFields,
+    # triggers
     TriggerResource, TriggerAction, TriggerExecutionMode, TriggerType,
+    # faas
+    FunctionIO, KubernetesAutuscalerType, KubernetesRabbitmqAutoscaler, KubernetesAutoscaler, KubernetesRuntime,
+    InstanceCatalog,
     PackageInputType, FunctionPostAction, FunctionPostActionType, FunctionDisplayScope, FunctionDisplayScopeResource,
-    Service, Package
+    # roberto
+    SnapshotPartitionType, BucketType, Bucket, ItemBucket, GCSBucket, LocalBucket, BaseModelAdapter, ModelOutputType,
+    ModelInputType,
+    #
+    GitCodebase, ItemCodebase, FilesystemCodebase, PackageCodebaseType,
+    OntologySpec,
+    MemberRole,
+    Webhook, HttpMethod,
+    ViewAnnotationOptions, AnnotationStatus, AnnotationType,
+    ItemStatus, ExecutionStatus,
+    Similarity, SimilarityTypeEnum, MultiView,
+    ItemLink, UrlLink, LinkTypeEnum,
+    Modality, ModalityTypeEnum, ModalityRefTypeEnum,
+    Workload, WorkloadUnit
 )
 from .utilities import Converter, BaseServiceRunner, Progress, AnnotationFormat
 from .repositories.packages import PackageCatalog
@@ -311,7 +291,7 @@ FILTERS_METHOD_OR = FiltersMethod.OR
 FILTERS_METHOD_AND = FiltersMethod.AND
 
 FILTERS_ORDERBY_DIRECTION_DESCENDING = FiltersOrderByDirection.DESCENDING
-FILTERS_ORDERBY_DIRECTION_ASCENDING = FiltersOrderByDirection.DESCENDING
+FILTERS_ORDERBY_DIRECTION_ASCENDING = FiltersOrderByDirection.ASCENDING
 
 TRIGGER_RESOURCE_ITEM = TriggerResource.ITEM
 TRIGGER_RESOURCE_DATASET = TriggerResource.DATASET

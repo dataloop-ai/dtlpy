@@ -29,7 +29,8 @@ class Ontology(entities.BaseEntity):
     id = attr.ib()
     creator = attr.ib()
     url = attr.ib(repr=False)
-    labels = attr.ib()
+    title = attr.ib()
+    labels = attr.ib(repr=False)
     metadata = attr.ib(repr=False)
     attributes = attr.ib()
 
@@ -151,6 +152,7 @@ class Ontology(entities.BaseEntity):
             creator=_json.get("creator", None),
             url=_json.get("url", None),
             id=_json["id"],
+            title=_json.get("title", None),
             attributes=attributes,
             client_api=client_api,
             project=project,

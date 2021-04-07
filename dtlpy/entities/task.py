@@ -28,6 +28,9 @@ class Task:
     recipe_id = attr.ib(repr=False)
     query = attr.ib(repr=False)
     assignmentIds = attr.ib(repr=False)
+    annotation_status = attr.ib(repr=False)
+    for_review = attr.ib()
+    issues = attr.ib()
 
     # sdk
     _client_api = attr.ib(repr=False)
@@ -67,7 +70,10 @@ class Task:
             assignmentIds=_json.get('assignmentIds', list()),
             dataset=dataset,
             project=project,
-            client_api=client_api
+            client_api=client_api,
+            annotation_status=_json.get('annotationStatus', None),
+            for_review=_json.get('forReview', None),
+            issues=_json.get('issues', None)
         )
 
     def to_json(self):
@@ -87,7 +93,10 @@ class Task:
                                                               attr.fields(Task)._tasks,
                                                               attr.fields(Task)._dataset,
                                                               attr.fields(Task)._current_assignments,
-                                                              attr.fields(Task)._assignments))
+                                                              attr.fields(Task)._assignments,
+                                                              attr.fields(Task).annotation_status,
+                                                              attr.fields(Task).for_review,
+                                                              attr.fields(Task).issues))
         _json['projectId'] = self.project_id
         _json['datasetId'] = self.dataset_id
         _json['recipeId'] = self.recipe_id

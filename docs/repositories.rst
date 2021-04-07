@@ -30,6 +30,14 @@ Assignments
 -----------
 Interface with :meth:`Assignments <dtlpy.repositories.assignments>`
 
+Recipe
+------
+Interface with :meth:`Recipes <dtlpy.repositories.recipes>`
+
+Ontology
+--------
+Interface with :meth:`Ontologies <dtlpy.repositories.ontologies>`
+
 Packages
 --------
 Interface with :meth:`Packages <dtlpy.repositories.packages>`

@@ -57,10 +57,12 @@ class BaseModelAdapter():
         """
         raise NotImplementedError("Please implement 'save' method in {}".format(self.__class__.__name__))
 
-    def train(self, local_path, dump_path, **kwargs):
+    def train(self, data_path, dump_path, **kwargs):
         """ Train the model according to data in local_path and save the snapshot to dump_path
 
             Virtual method - need to implement
+        :param data_path: `str` local File System path to where the data was donwnloded and converted at
+        :param dump_path: `str` local File System path where to dump trainins mid-resuls (checkpoints, logs...)
         """
         raise NotImplementedError("Please implement 'train' method in {}".format(self.__class__.__name__))
 
@@ -74,14 +76,14 @@ class BaseModelAdapter():
         """
         raise NotImplementedError("Please implement 'predict' method in {}".format(self.__class__.__name__))
 
-    def convert(self, local_path, **kwargs):
+    def convert(self, data_path, **kwargs):
         """ Convert Dataloop structure data to model structured
 
             Virtual method - need to implement
 
             e.g. take dlp dir structure and construct annotation file
 
-        :param local_path: `str` local File System directory path where we already downloaded the data from dataloop platform
+        :param data_path: `str` local File System directory path where we already downloaded the data from dataloop platform
         :return:
         """
         raise NotImplementedError("Please implement 'convert' method in {}".format(self.__class__.__name__))
@@ -184,10 +186,20 @@ class BaseModelAdapter():
 
         # Make sure snapshot.dataset has partitions
         has_partitions = self.snapshot.get_partitions(list(entities.SnapshotPartitionType)).items_count > 0
-        if not has_partitions:
-            # TODO: dynamically choose the splits
-            self._create_partitions(**kwargs) # train_split=0.7, val_split=0.3, test_split=0.0)  # set the partitions
-            # set the partition
+        if not has_partitions: # set the partitions
+            train_split = kwargs.get('train_split', None)
+            val_split = kwargs.get('val_split', None)
+            test_split = kwargs.get('test_split', 0.0)
+
+            # split smartly if not all splits are valid
+            if train_split is None and val_split is None:
+                train_split, val_split = 0.7*(1-test_split), 0.3*(1-test_split)
+            elif train_split is None:
+                train_split = 1-test_split-val_split
+            else:
+                val_split = 1-test_split-train_split
+
+            self._create_partitions(train_split=train_split, val_split=val_split, test_split=test_split)
 
         os.makedirs(data_path, exist_ok=True)
         if len(os.listdir(data_path)) > 0:
@@ -197,6 +209,7 @@ class BaseModelAdapter():
         for partition in partitions:
             self.logger.debug("Downloading {} of {}".format(partition, self.snapshot.dataset.name))
             ret_list = self.snapshot.download_partition(partition=partition, local_path=data_path, filters=filters)
+            self.logger.info("Donwloaded {} complete. {} total items".format(partition, len(ret_list)))
 
             if partition == entities.SnapshotPartitionType.TEST:
                 self.num_test = len(ret_list)
@@ -222,9 +235,9 @@ class BaseModelAdapter():
         snapshot = self._snapshot_getter_setter(snapshot_id=snapshot_id, replace=kwargs.get('replace', False))
         # items_list = [item for item in snapshot.get_partitions(partitions=partitions, filters=filters).all()] # TODO: test if pre-allocation is faster?
         items_list = snapshot.dataset.items.get_all_items(filters=filters)
-        return self.predict_items(items=items_list, with_upload=with_upload, **kwargs)
+        return self.predict_items(items=items_list, with_upload=with_upload, cleanup=True, **kwargs)
 
-    def predict_items(self, items: list, with_upload=True, batch_size=16, output_shape=None, **kwargs):
+    def predict_items(self, items: list, with_upload=True, cleanup=False, batch_size=16, output_shape=None, **kwargs):
         """
         Predicts all items given
 
@@ -236,6 +249,7 @@ class BaseModelAdapter():
         from PIL import Image
         import numpy as np
 
+        logger.debug("Predicting {} items, using batch size {}. Reshaping to: {}".format(len(items), batch_size, output_shape))
         all_predictions = []
         for b in tqdm.tqdm(range(0, len(items), batch_size), desc='predicting', unit='bt', leave=None):
             batch = []
@@ -261,9 +275,11 @@ class BaseModelAdapter():
                     not all([isinstance(pred, self.ClassPrediction) for pred in itertools.chain(*all_predictions)]):
                 raise RuntimeError("Expected all prediction to be of type BaseModelAdapter.ClassPrediction")
 
+            self.logger.info('Uploading  items annotation for snapshot {!r}. cleanup {}'.
+                             format(self.snapshot.name, cleanup))
             with self._frozen_dataset(self.snapshot) as ds:
                 for idx, item in enumerate(items):
-                    self._upload_predictions(item, all_predictions[idx])
+                    self._upload_predictions(item, all_predictions[idx], cleanup=cleanup)
         return all_predictions
 
     def create_metrics(self, snapshot_id, partition='validation', predict=False, **kwargs):
@@ -310,6 +326,122 @@ class BaseModelAdapter():
     # =============
     # INNER METHODS
     # =============
+    def _upload_predictions(self, item, predictions, cleanup=False):
+        """Utility function that upload prediction to dlp platform based on the model.outout_type"""
+        model_info_name = "{}-{}".format(self.model_name, self.snapshot.name)
+        if cleanup:
+            clean_filter = entities.Filters(field='type',
+                                            values=self.model_entity.output_type,
+                                            resource=entities.FiltersResource.ANNOTATION)
+            clean_filter.add(field = 'metadata.user.model.name', values=model_info_name)
+            item.annotations.delete(filters=clean_filter)
+
+        if self.model_entity.output_type == 'box':
+            builder = item.annotations.builder()
+            for pred in predictions:
+                builder.add(annotation_definition=entities.Box(
+                    top=float(pred.top), left=float(pred.left), bottom=float(pred.bottom),
+                    right=float(pred.right), label=str(pred.label)),
+                    model_info={'name': model_info_name,
+                                'confidence': float(pred.score)})
+
+            item.annotations.upload(annotations=builder)
+        elif self.model_entity.output_type == 'class':
+            builder = item.annotations.builder()
+            for pred in predictions:
+                builder.add(annotation_definition=entities.Classification(label=pred.label),
+                    model_info={'name': model_info_name,
+                                'confidence': float(pred.score)})
+            item.annotations.upload(annotations=builder)
+        else:
+            raise NotImplementedError('model output type: {} is not supported to upload to platform'.
+                                      format(self.model_entity.output_type))
+
+    def _box_compare(self, act: entities.Annotation, predictions):
+        """ Calculates best matched  prediciotn to a single gt. Returns namedTuple (score, prd_id)"""
+        # move our metircs method from fonda to dtlpy
+        bestMatch = namedtuple('best_match', field_names=['score', 'iou'])
+        best = bestMatch(0, None)
+        for prd in predictions:
+            score = act.x[0] - prd.x[1]
+            if score > best.score:
+                best = bestMatch(score, prd.id)
+        return bestMatch
+
+    def _class_compare(self, item, act, pred):
+        _sample = self._sample_metric_base
+        _sample.update({
+            'frozen_itemId': item.id,
+            'prediction_label': pred.label,
+            'acutal_label': act.label,
+            'prediction_id': pred.id,
+            'acutal_id': act.id,
+        })
+        self.snapshot.project.times_series.add_samples(_sample)
+
+    @property
+    def _sample_metric_base(self):
+        _sample = {
+            'snapshotId': self.id,
+            'output_type': self.model.output_type,
+            'frozen_datasetId': self.dataset.id,
+        }
+        return _sample
+
+    def _create_partitions(self, train_split=0.7, val_split=0.3, test_split=0.0):
+        """ Updates partitions on the current items by the splits ratios"""
+        import time
+        import numpy as np
+
+        if round(train_split + val_split + test_split) != 1:
+            raise RuntimeError(
+                'Splits should sum up to 1 (train {}; val {}; test{})'.format(train_split, val_split, test_split))
+
+        all_item_ids = [item.id for item in self.snapshot.dataset.items.get_all_items()]
+        num_items = len(all_item_ids)
+
+        np.random.seed(round(time.time()))
+        np.random.shuffle(all_item_ids)
+        self.num_test = round(num_items * test_split)
+        self.num_val = round(num_items * val_split)
+        self.num_train = num_items - self.num_val - self.num_test  # To avoid roundups
+
+        # split the list by number per partition
+        test_item_ids = all_item_ids[:self.num_test]
+        val_item_ids = all_item_ids[self.num_test:self.num_test + self.num_val]
+        train_item_ids = all_item_ids[self.num_test + self.num_val:]
+
+        # update items to their partition
+        with self._frozen_dataset(self.snapshot) as ds:
+            op = entities.FiltersOperations.IN
+            ds.set_partition(partition=entities.SnapshotPartitionType.TEST,
+                             filters=entities.Filters(field='id', values=test_item_ids, operator=op))
+            ds.set_partition(partition=entities.SnapshotPartitionType.VALIDATION,
+                             filters=entities.Filters(field='id', values=val_item_ids, operator=op))
+            ds.set_partition(partition=entities.SnapshotPartitionType.TRAIN,
+                             filters=entities.Filters(field='id', values=train_item_ids, operator=op))
+
+    # =======
+    # Utility
+    # =======
+
+    @contextmanager
+    def _frozen_dataset(self, obj):
+        try:
+            if isinstance(obj, entities.Snapshot):
+                dataset = obj.dataset
+            elif isinstance(obj, entities.Dataset):
+                dataset = obj
+            else:
+                raise NotImplementedError("could not get a dataset")
+            _readonly_state = dataset.readonly
+            dataset.set_readonly(False)
+            self.logger.debug("dataset {!r} - opned for edit".format(dataset.name))
+            yield dataset
+        finally:
+            dataset.set_readonly(_readonly_state)
+            self.logger.debug("free frozen context ended. dataset {!r}, readonly was set back to: {}".format(dataset.name, dataset.readonly))
+
     def _snapshot_getter_setter(self, snapshot_id=None, snapshot_name=None, replace=False):
         """
         Utility function that retuns the active snapshot
@@ -365,122 +497,13 @@ class BaseModelAdapter():
         #     except exceptions.NotFound as e:
         #         snapshot = self.model_entity.snapshots.get(snapshot_name=id_or_name)
 
-    def _upload_predictions(self, item, predictions):
-        """Utility function that upload prediction to dlp platform based on the model.outout_type"""
-        if self.model_entity.output_type == 'box':
-            builder = item.annotations.builder()
-            for pred in predictions:
-                builder.add(annotation_definition=entities.Box(
-                    top=float(pred.top), left=float(pred.left), bottom=float(pred.bottom),
-                    right=float(pred.right), label=str(pred.label)),
-                    model_info={'name': "{}-{}".format(self.model_name, self.snapshot.name),
-                                'confidence': float(pred.score)})
-
-            item.annotations.upload(annotations=builder)
-        elif self.model_entity.output_type == 'class':
-            builder = item.annotations.builder()
-            for pred in predictions:
-                builder.add(annotation_definition=entities.Classification(label=pred.label),
-                    model_info={'name': "{}-{}".format(self.model_name, self.snapshot.name),
-                                'confidence': float(pred.score)})
-            item.annotations.upload(annotations=builder)
-        else:
-            raise NotImplementedError('model output type: {} is not supported to upload to platform'.
-                                      format(self.model_entity.output_type))
-
-    def _box_compare(self, act: entities.Annotation, predictions):
-        """ Calculates best matched  prediciotn to a single gt. Returns namedTuple (score, prd_id)"""
-        # move our metircs method from fonda to dtlpy
-        bestMatch = namedtuple('best_match', field_names=['score', 'iou'])
-        best = bestMatch(0, None)
-        for prd in predictions:
-            score = act.x[0] - prd.x[1]
-            if score > best.score:
-                best = bestMatch(score, prd.id)
-        return bestMatch
-
-    def _class_compare(self, item, act, pred):
-        _sample = self._sample_metric_base
-        _sample.update({
-            'frozen_itemId': item.id,
-            'prediction_label': pred.label,
-            'acutal_label': act.label,
-            'prediction_id': pred.id,
-            'acutal_id': act.id,
-        })
-        self.snapshot.project.times_series.add_samples(_sample)
-
-    @property
-    def _sample_metric_base(self):
-        _sample = {
-            'snapshotId': self.id,
-            'output_type': self.model.output_type,
-            'frozen_datasetId': self.dataset.id,
-        }
-        return _sample
-
-    def _create_partitions(self, train_split=0.7, val_split=0.3, test_split=0.0, **kwargs):
-        """ Updates partitions on the current items by the splits ratios"""
-        import time
-        import numpy as np
-
-        if round(train_split + val_split + test_split) != 1:
-            raise RuntimeError(
-                'Splits should sum up to 1 (train {}; val {}; test{})'.format(train_split, val_split, test_split))
-
-        all_item_ids = [item.id for item in self.snapshot.dataset.items.get_all_items()]
-        num_items = len(all_item_ids)
-
-        np.random.seed(round(time.time()))
-        np.random.shuffle(all_item_ids)
-        self.num_test = round(num_items * test_split)
-        self.num_val = round(num_items * val_split)
-        self.num_train = num_items - self.num_val - self.num_test  # To avoid roundups
-
-        # split the list by number per partition
-        test_item_ids = all_item_ids[:self.num_test]
-        val_item_ids = all_item_ids[self.num_test:self.num_test + self.num_val]
-        train_item_ids = all_item_ids[self.num_test + self.num_val:]
-
-        # update items to their partition
-        with self._frozen_dataset(self.snapshot) as ds:
-            op = entities.FiltersOperations.IN
-            ds.set_partition(partition=entities.SnapshotPartitionType.TEST,
-                             filters=entities.Filters(field='id', values=test_item_ids, operator=op))
-            ds.set_partition(partition=entities.SnapshotPartitionType.VALIDATION,
-                             filters=entities.Filters(field='id', values=val_item_ids, operator=op))
-            ds.set_partition(partition=entities.SnapshotPartitionType.TRAIN,
-                             filters=entities.Filters(field='id', values=train_item_ids, operator=op))
-
-    # =======
-    # Utility
-    # =======
-
-    @contextmanager
-    def _frozen_dataset(self, obj):
-        try:
-            if isinstance(obj, entities.Snapshot):
-                dataset = obj.dataset
-            elif isinstance(obj, entities.Dataset):
-                dataset = obj
-            else:
-                raise NotImplementedError("could not get a dataset")
-            _readonly_state = dataset.readonly
-            dataset.set_readonly(False)
-            self.logger.debug("dataset {!r} - opned for edit".format(dataset.name))
-            yield dataset
-        finally:
-            dataset.set_readonly(_readonly_state)
-            self.logger.debug("free frozen context ended. dataset {!r}, readonly was set back to: {}".format(dataset.name, dataset.readonly))
-
-
-    def __set_adapter_handler(self, level):
+    def __set_adapter_handler__(self, level):
         for hdl in self.logger.handlers:
             if hdl.name.startswith('adapter'):
                 hdl.setLevel(level=level)
 
     def __add_adapter_handler(self, level):
-        fmt = '%(levelname).1s: %(name)-20s %(asctime)-s [%(filename)-s:%(lineno)-d]:: %(msg)s'
+        fmt = '%(levelname).1s: %(name)-20s %(asctime)-s [%(filename)-s:%(lineno)-d](%(funcName)-s):: %(msg)s'
         hdl = logging.StreamHandler()
         hdl.setFormatter(logging.Formatter(fmt=fmt, datefmt='%X'))
         hdl.setLevel(level=level.upper())

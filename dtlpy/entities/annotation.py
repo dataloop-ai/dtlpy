@@ -1290,6 +1290,8 @@ class FrameAnnotation(entities.BaseEntity):
             annotation = entities.Comparison.from_json(_json)
         elif _json['type'] == 'note':
             annotation = entities.Note.from_json(_json)
+        elif _json['type'] == 'pose':
+            annotation = entities.Pose.from_json(_json)
         else:
             annotation = entities.UndefinedAnnotationType.from_json(_json)
         return annotation

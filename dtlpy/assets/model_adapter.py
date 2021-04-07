@@ -42,10 +42,12 @@ class ModelAdapter(dl.BaseModelAdapter):
         """
         raise NotImplementedError("Please implement 'save' method in {}".format(self.__class__.__name__))
 
-    def train(self, local_path, dump_path, **kwargs):
+    def train(self, data_path, dump_path, **kwargs):
         """ Train the model according to data in local_path and save the snapshot to dump_path
 
             Virtual method - need to implement
+        :param data_path: `str` local File System path to where the data was donwnloded and converted at
+        :param dump_path: `str` local File System path where to dump trainins mid-resuls (checkpoints, logs...)
         """
         raise NotImplementedError("Please implement 'train' method in {}".format(self.__class__.__name__))
 
@@ -61,18 +63,19 @@ class ModelAdapter(dl.BaseModelAdapter):
         """
         raise NotImplementedError("Please implement 'predict' method in {}".format(self.__class__.__name__))
 
-    def convert(self, local_path, **kwargs):
+    def convert(self, data_path, **kwargs):
         """ Convert Dataloop structure data to model structured
 
             Virtual method - need to implement
 
             e.g. take dlp dir structure and construct annotation file
 
-        :param local_path: `str` local File System directory path where we already downloaded the data from dataloop platform
+        :param data_path: `str` local File System directory path where we already downloaded the data from dataloop platform
         :return:
         """
         raise NotImplementedError("Please implement 'convert' method in {}".format(self.__class__.__name__))
 
+    # NOT IN USE
     def convert_dlp(self, items: dl.entities.PagedEntities):
         """ This should implement similar to convert only to work on dlp items.  -> meaning create the converted version from items entities"""
         # TODO
