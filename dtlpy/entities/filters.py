@@ -31,6 +31,7 @@ class FiltersResource(str, Enum):
     RECIPE = 'recipe'
     DATASET = 'dataset'
     ONTOLOGY = 'ontology'
+    TASK = 'tasks'
 
 
 class FiltersOperations(str, Enum):
@@ -61,7 +62,7 @@ class Filters:
 
     def __init__(self, field=None, values=None, operator: FiltersOperations = None,
                  method: FiltersMethod = None, custom_filter=None,
-                 resource: FiltersResource = FiltersResource.ITEM, use_defaults=True):
+                 resource: FiltersResource = FiltersResource.ITEM, use_defaults=True, context=None):
         self.or_filter_list = list()
         self.and_filter_list = list()
         self._unique_fields = list()
@@ -84,6 +85,7 @@ class Filters:
 
         self._use_defaults = use_defaults
         self.__add_defaults()
+        self.context = context
 
         if field is not None:
             self.add(field=field, values=values, operator=operator, method=method)
@@ -334,7 +336,9 @@ class Filters:
                 raise PlatformException(error='400',
                                         message='Unknown operation: {}'.format(operation))
 
-        # return json
+        if self.context is not None:
+            _json['context'] = self.context
+
         return _json
 
     def sort_by(self, field, value: FiltersOrderByDirection = FiltersOrderByDirection.ASCENDING):

@@ -40,6 +40,7 @@ from .entities import (
     SnapshotPartitionType, BucketType, Bucket, ItemBucket, GCSBucket, LocalBucket, BaseModelAdapter, ModelOutputType,
     ModelInputType,
     #
+    Command, CommandsStatus,
     GitCodebase, ItemCodebase, FilesystemCodebase, PackageCodebaseType,
     OntologySpec,
     MemberRole,
@@ -49,7 +50,7 @@ from .entities import (
     Similarity, SimilarityTypeEnum, MultiView,
     ItemLink, UrlLink, LinkTypeEnum,
     Modality, ModalityTypeEnum, ModalityRefTypeEnum,
-    Workload, WorkloadUnit
+    Workload, WorkloadUnit, ItemAction
 )
 from .utilities import Converter, BaseServiceRunner, Progress, AnnotationFormat
 from .repositories.packages import PackageCatalog
@@ -105,6 +106,7 @@ datasets = repositories.Datasets(client_api=client_api, project=None)
 items = repositories.Items(client_api=client_api, datasets=datasets)
 packages = repositories.Packages(client_api=client_api)
 executions = repositories.Executions(client_api=client_api)
+commands = repositories.Commands(client_api=client_api)
 services = repositories.Services(client_api=client_api)
 webhooks = repositories.Webhooks(client_api=client_api)
 triggers = repositories.Triggers(client_api=client_api)
@@ -123,6 +125,7 @@ except Exception:
 
 verbose = client_api.verbose
 login = client_api.login
+logout = client_api.logout
 login_token = client_api.login_token
 login_secret = client_api.login_secret
 login_m2m = client_api.login_m2m
@@ -318,6 +321,8 @@ PACKAGE_INPUT_TYPE_PACKAGE = PackageInputType.PACKAGE
 PACKAGE_INPUT_TYPE_SERVICE = PackageInputType.SERVICE
 PACKAGE_INPUT_TYPE_PROJECT = PackageInputType.PROJECT
 PACKAGE_INPUT_TYPE_EXECUTION = PackageInputType.EXECUTION
+PACKAGE_INPUT_TYPE_TASK = PackageInputType.TASK
+PACKAGE_INPUT_TYPE_ASSIGNMENT = PackageInputType.ASSIGNMENT
 
 FUNCTION_POST_ACTION_TYPE_DOWNLOAD = FunctionPostActionType.DOWNLOAD
 FUNCTION_POST_ACTION_TYPE_DRAW_ANNOTATION = FunctionPostActionType.DRAW_ANNOTATION
@@ -327,6 +332,17 @@ FUNCTION_DISPLAY_SCOPE_RESOURCE_ANNOTATION = FunctionDisplayScopeResource.ANNOTA
 FUNCTION_DISPLAY_SCOPE_RESOURCE_ITEM = FunctionDisplayScopeResource.ITEM
 FUNCTION_DISPLAY_SCOPE_RESOURCE_DATASET = FunctionDisplayScopeResource.DATASET
 FUNCTION_DISPLAY_SCOPE_RESOURCE_DATASET_QUERY = FunctionDisplayScopeResource.DATASET_QUERY
+
+COMMANDS_STATUS_CREATED = CommandsStatus.CREATED
+COMMANDS_STATUS_MAKING_CHILDREN = CommandsStatus.MAKING_CHILDREN
+COMMANDS_STATUS_WAITING_CHILDREN = CommandsStatus.WAITING_CHILDREN
+COMMANDS_STATUS_IN_PROGRESS = CommandsStatus.IN_PROGRESS
+COMMANDS_STATUS_ABORTED = CommandsStatus.ABORTED
+COMMANDS_STATUS_CANCELED = CommandsStatus.CANCELED
+COMMANDS_STATUS_FINALIZING = CommandsStatus.FINALIZING
+COMMANDS_STATUS_SUCCESS = CommandsStatus.SUCCESS
+COMMANDS_STATUS_FAILED = CommandsStatus.FAILED
+COMMANDS_STATUS_TIMEOUT = CommandsStatus.TIMEOUT
 
 MEMBER_ROLE_OWNER = MemberRole.OWNER
 MEMBER_ROLE_DEVELOPER = MemberRole.DEVELOPER

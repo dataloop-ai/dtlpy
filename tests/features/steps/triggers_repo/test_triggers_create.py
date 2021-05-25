@@ -61,7 +61,7 @@ def step_impl(context, function_name):
 def step_impl(context, item_type):
     is_item = item_type == 'item'
     num_try = 60
-    interval = 5
+    interval = 10
     triggered = False
 
     for i in range(num_try):

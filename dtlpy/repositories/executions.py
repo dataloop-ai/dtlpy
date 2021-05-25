@@ -294,15 +294,14 @@ class Executions:
         jobs = [None for _ in range(len(response_items))]
         # return execution list
         for i_item, item in enumerate(response_items):
-            jobs[i_item] = pool.apply_async(entities.Execution._protected_from_json,
-                                            kwds={'client_api': self._client_api,
-                                                  '_json': item,
-                                                  'project': self._project,
-                                                  'service': self._service})
-        # wait for all jobs
-        _ = [j.wait() for j in jobs]
+            jobs[i_item] = pool.submit(entities.Execution._protected_from_json,
+                                       **{'client_api': self._client_api,
+                                          '_json': item,
+                                          'project': self._project,
+                                          'service': self._service})
+
         # get results
-        results = [j.get() for j in jobs]
+        results = [j.result() for j in jobs]
         # log errors
         _ = [logger.warning(r[1]) for r in results if r[0] is False]
         # return good jobs
@@ -349,14 +348,46 @@ class Executions:
         :return: int
         """
         # request
-        success, response = self._client_api.gen_request(req_type='post',
-                                                         path='/executions/{}/attempts'.format(execution.id))
+        success, response = self._client_api.gen_request(
+            req_type='post',
+            path='/executions/{}/attempts'.format(execution.id)
+        )
+
+        # exception handling
+        if not success:
+            raise exceptions.PlatformException(response)
 
         # exception handling
         if not success:
             raise exceptions.PlatformException(response)
         else:
             return response.json()
+
+    def rerun(self, execution: entities.Execution, sync: bool = False):
+        """
+        Increment attempts
+
+        :return: int
+        """
+
+        url_path = "/executions/{}/rerun".format(execution.id)
+        if sync:
+            url_path += '?sync=true'
+
+        # request
+        success, response = self._client_api.gen_request(req_type='post',
+                                                         path=url_path)
+
+        # exception handling
+        if not success:
+            raise exceptions.PlatformException(response)
+        else:
+            return entities.Execution.from_json(
+                client_api=self._client_api,
+                _json=response.json(),
+                project=self._project,
+                service=self._service
+            )
 
     def wait(self, execution_id):
         """

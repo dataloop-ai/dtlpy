@@ -1,5 +1,7 @@
 import logging
 import json
+from typing import Union
+
 from .. import exceptions, miscellaneous, entities, repositories, services
 
 logger = logging.getLogger(name=__name__)
@@ -70,23 +72,97 @@ class Tasks:
         assert isinstance(self._assignments, repositories.Assignments)
         return self._assignments
 
+    def _build_entities_from_response(self, response_items) -> miscellaneous.List[entities.Task]:
+        pool = self._client_api.thread_pools(pool_name='entity.create')
+        jobs = [None for _ in range(len(response_items))]
+
+        for i_task, task in enumerate(response_items):
+            jobs[i_task] = pool.submit(
+                entities.Task._protected_from_json,
+                **{
+                    'client_api': self._client_api,
+                    '_json': task,
+                    'project': self._project,
+                    'dataset': self._dataset
+                }
+            )
+
+        # get all results
+        results = [j.result() for j in jobs]
+        # log errors
+        _ = [logger.warning(r[1]) for r in results if r[0] is False]
+        # return good jobs
+        tasks = miscellaneous.List([r[1] for r in results if r[0] is True])
+        return tasks
+
+    def _list(self, filters: entities.Filters):
+        url = '{}/query'.format(URL_PATH)
+        query = filters.prepare()
+        query['context'] = dict(projectIds=[self._project_id])
+        success, response = self._client_api.gen_request(
+            req_type='post',
+            path=url,
+            json_req=filters.prepare()
+        )
+
+        if not success:
+            raise exceptions.PlatformException(response)
+        return response.json()
+
+    def query(self, filters=None, project_ids=None):
+        if project_ids is None:
+            if self._project_id is None:
+                project_ids = self._project_id
+            else:
+                raise exceptions.PlatformException('400', 'Please provide param project_ids')
+
+        if not isinstance(project_ids, list):
+            project_ids = [project_ids]
+
+        if filters is None:
+            filters = entities.Filters(resource=entities.FiltersResource.TASK)
+        else:
+            if not isinstance(filters, entities.Filters):
+                raise exceptions.PlatformException('400', 'Unknown filters type')
+            if filters.resource != entities.FiltersResource.TASK:
+                raise exceptions.PlatformException('400', 'Filter resource must be task')
+
+        if filters.context is None:
+            filters.context = {'projectIds': project_ids}
+
+        if self._project_id is not None:
+            filters.add(field='projectId', values=self._project_id)
+
+        paged = entities.PagedEntities(items_repository=self,
+                                       filters=filters,
+                                       page_offset=filters.page,
+                                       page_size=filters.page_size,
+                                       project_id=self._project_id,
+                                       client_api=self._client_api)
+        paged.get_page()
+        return paged
+
     ###########
     # methods #
     ###########
-    def list(self,
-             project_ids=None,
-             status=None,
-             task_name=None,
-             pages_size=None,
-             page_offset=None,
-             recipe=None,
-             creator=None,
-             assignments=None,
-             min_date=None,
-             max_date=None) -> miscellaneous.List[entities.Task]:
+    def list(
+            self,
+            project_ids=None,
+            status=None,
+            task_name=None,
+            pages_size=None,
+            page_offset=None,
+            recipe=None,
+            creator=None,
+            assignments=None,
+            min_date=None,
+            max_date=None,
+            filters=None
+    ) -> Union[miscellaneous.List[entities.Task], entities.PagedEntities]:
         """
         Get Annotation Task list
 
+        :param filters:
         :param task_name:
         :param project_ids: list of project ids
         :param assignments:
@@ -100,19 +176,24 @@ class Tasks:
         :return: List of Annotation Task objects
         """
 
+        if filters is not None:
+            return self.query(filters=filters, project_ids=project_ids)
+
         # url
         url = URL_PATH
-
         query = list()
-        if project_ids is not None:
-            if not isinstance(project_ids, list):
-                project_ids = [project_ids]
-        elif self._project_id is not None:
-            project_ids = [self._project_id]
+        if self._dataset is not None:
+            query.append('dataset={}'.format(self._dataset.id))
         else:
-            raise ('400', 'Must provide project')
-        project_ids = ','.join(project_ids)
-        query.append('projects={}'.format(project_ids))
+            if project_ids is not None:
+                if not isinstance(project_ids, list):
+                    project_ids = [project_ids]
+            elif self._project_id is not None:
+                project_ids = [self._project_id]
+            else:
+                raise ('400', 'Must provide project')
+            project_ids = ','.join(project_ids)
+            query.append('projects={}'.format(project_ids))
 
         if assignments is not None:
             if not isinstance(assignments, list):
@@ -125,6 +206,8 @@ class Tasks:
             query.append('name={}'.format(task_name))
         if pages_size is not None:
             query.append('pageSize={}'.format(pages_size))
+        if pages_size is None:
+            query.append('pageSize={}'.format(500))
         if page_offset is not None:
             query.append('pageOffset={}'.format(page_offset))
         if recipe is not None:
@@ -277,10 +360,13 @@ class Tasks:
                metadata=None,
                filters=None,
                items=None,
-               query=None) -> entities.Task:
+               query=None,
+               available_actions=None
+               ) -> entities.Task:
         """
         Create a new Annotation Task
 
+        :param available_actions:
         :param query:
         :param metadata:
         :param assignee_ids:
@@ -310,7 +396,8 @@ class Tasks:
                     items = [items]
                 query = entities.Filters(field='id',
                                          values=[item.id for item in items],
-                                         operator=entities.FiltersOperations.IN).prepare()
+                                         operator=entities.FiltersOperations.IN,
+                                         use_defaults=False).prepare()
             else:
                 query = filters.prepare()
 
@@ -332,11 +419,8 @@ class Tasks:
             else:
                 raise exceptions.PlatformException('400', 'Must provide a project id')
 
-        if workload is None:
-            if assignee_ids is None:
-                raise exceptions.PlatformException('400', 'Must provide either workload or assignee_ids')
-            else:
-                workload = entities.Workload.generate(assignee_ids=assignee_ids)
+        if workload is None and assignee_ids is not None:
+            workload = entities.Workload.generate(assignee_ids=assignee_ids)
 
         if assignments_ids is None:
             assignments_ids = list()
@@ -347,10 +431,15 @@ class Tasks:
                    'spec': {'type': task_type},
                    'datasetId': dataset.id,
                    'projectId': project_id,
-                   'workload': workload.to_json(),
                    'assignmentIds': assignments_ids,
                    'recipeId': recipe_id,
                    'dueDate': due_date}
+
+        if workload:
+            payload['workload'] = workload.to_json()
+
+        if available_actions is not None:
+            payload['availableActions'] = [action.to_json() for action in available_actions]
 
         if task_parent_id is not None:
             payload['spec']['parentTaskId'] = task_parent_id
@@ -384,8 +473,10 @@ class Tasks:
                 raise exceptions.PlatformException('400', 'Must provide either filters or items list')
 
             if filters is None:
-                filters = entities.Filters(field='id', values=[item.id for item in items],
-                                           operator=entities.FiltersOperations.IN)
+                filters = entities.Filters(field='id',
+                                           values=[item.id for item in items],
+                                           operator=entities.FiltersOperations.IN,
+                                           use_defaults=False)
 
             if op == 'delete':
                 if task is None:
@@ -435,23 +526,24 @@ class Tasks:
             if filters is None:
                 if not isinstance(items, list):
                     items = [items]
-                filters = entities.Filters(field='id', values=[item.id for item in items],
-                                           operator=entities.FiltersOperations.IN)
+                filters = entities.Filters(field='id',
+                                           values=[item.id for item in items],
+                                           operator=entities.FiltersOperations.IN,
+                                           use_defaults=False)
             query = filters.prepare()
 
-        if workload is None:
-            if assignee_ids is None:
-                workload = entities.Workload()
-            else:
-                workload = entities.Workload.generate(assignee_ids=assignee_ids)
+        if workload is None and assignee_ids is not None:
+            workload = entities.Workload.generate(assignee_ids=assignee_ids)
 
         if task_id is None:
             task_id = task.id
 
         payload = {
             "query": "{}".format(json.dumps(query).replace("'", '"')),
-            "workload": workload.to_json()
         }
+
+        if workload is not None:
+            payload["workload"] = workload.to_json()
 
         if limit is not None:
             payload['limit'] = limit
@@ -497,7 +589,7 @@ class Tasks:
             dataset = self._dataset
 
         if filters is None:
-            filters = entities.Filters()
+            filters = entities.Filters(use_defaults=False)
         filters.add(field='metadata.system.refs.id', values=[task_id], operator=entities.FiltersOperations.IN)
 
         return dataset.items.list(filters=filters)

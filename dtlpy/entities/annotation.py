@@ -64,6 +64,8 @@ class Annotation(entities.BaseEntity):
     type = attr.ib()
     dataset_url = attr.ib(repr=False)
 
+    # api
+    _platform_dict = attr.ib(repr=False)
     # meta
     metadata = attr.ib(repr=False)
     fps = attr.ib(repr=False)
@@ -86,37 +88,15 @@ class Annotation(entities.BaseEntity):
     start_time = attr.ib(default=0)
 
     # temp
-    platform_dict = attr.ib(default=None, repr=False)
     _dataset = attr.ib(repr=False, default=None)
     _datasets = attr.ib(repr=False, default=None)
     _annotations = attr.ib(repr=False, default=None)
     __client_api = attr.ib(default=None, repr=False)
     _items = attr.ib(repr=False, default=None)
 
-    ####################################
-    # annotation definition attributes #
-    ####################################
-    @property
-    def parent_id(self):
-        try:
-            parent_id = self.metadata['system']['parentId']
-        except KeyError:
-            parent_id = None
-        return parent_id
-
-    @parent_id.setter
-    def parent_id(self, parent_id):
-        if 'system' not in self.metadata:
-            self.metadata['system'] = dict()
-        self.metadata['system']['parentId'] = parent_id
-
-    @property
-    def coordinates(self):
-        color = None
-        if self.type in ['binary']:
-            color = self.color
-        coordinates = self.annotation_definition.to_coordinates(color=color)
-        return coordinates
+    ############
+    # Platform #
+    ############
 
     @property
     def _client_api(self) -> ApiClient:
@@ -168,6 +148,31 @@ class Annotation(entities.BaseEntity):
                 self._items = repositories.Items(client_api=self._client_api, dataset=self._dataset)
         assert isinstance(self._items, repositories.Items)
         return self._items
+
+    #########################
+    # Annotation Properties #
+    #########################
+    @property
+    def parent_id(self):
+        try:
+            parent_id = self.metadata['system']['parentId']
+        except KeyError:
+            parent_id = None
+        return parent_id
+
+    @parent_id.setter
+    def parent_id(self, parent_id):
+        if 'system' not in self.metadata:
+            self.metadata['system'] = dict()
+        self.metadata['system']['parentId'] = parent_id
+
+    @property
+    def coordinates(self):
+        color = None
+        if self.type in ['binary']:
+            color = self.color
+        coordinates = self.annotation_definition.to_coordinates(color=color)
+        return coordinates
 
     @property
     def x(self):
@@ -251,6 +256,30 @@ class Annotation(entities.BaseEntity):
         self.annotation_definition.left = left
 
     @property
+    def right(self):
+        return self.annotation_definition.right
+
+    @right.setter
+    def right(self, right):
+        self.annotation_definition.right = right
+
+    @property
+    def height(self):
+        return self.annotation_definition.height
+
+    @height.setter
+    def height(self, height):
+        self.annotation_definition.height = height
+
+    @property
+    def width(self):
+        return self.annotation_definition.width
+
+    @width.setter
+    def width(self, width):
+        self.annotation_definition.width = width
+
+    @property
     def description(self):
         description = None
         if 'system' in self.metadata:
@@ -261,14 +290,6 @@ class Annotation(entities.BaseEntity):
     def description(self, description):
         if 'system' in self.metadata:
             self.metadata['system']['description'] = description
-
-    @property
-    def right(self):
-        return self.annotation_definition.right
-
-    @right.setter
-    def right(self, right):
-        self.annotation_definition.right = right
 
     @property
     def last_frame(self):
@@ -475,7 +496,7 @@ class Annotation(entities.BaseEntity):
         """
         try:
             import cv2
-        except ImportError:
+        except (ImportError, ModuleNotFoundError):
             logger.error(
                 'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
             raise
@@ -483,12 +504,20 @@ class Annotation(entities.BaseEntity):
         # height/width
         if height is None:
             if self._item is None or self._item.height is None:
-                raise PlatformException('400', 'must provide item width and height')
-            height = self._item.height
+                if image is None:
+                    raise PlatformException(error='400', message='must provide item width and height')
+                else:
+                    height = image.shape[0]
+            else:
+                height = self._item.height
         if width is None:
             if self._item is None or self._item.width is None:
-                raise PlatformException('400', 'must provide item width and height')
-            width = self._item.width
+                if image is None:
+                    raise PlatformException(error='400', message='must provide item width and height')
+                else:
+                    width = image.shape[1]
+            else:
+                width = self._item.width
 
         if annotation_format == entities.ViewAnnotationOptions.MASK:
             # create an empty mask
@@ -557,7 +586,7 @@ class Annotation(entities.BaseEntity):
                     error='1001',
                     message='Try to show object_id but annotation has no value. annotation id: {}'.format(
                         self.id))
-            color = self.object_id
+            color = int(self.object_id)
         else:
             raise PlatformException('404',
                                     'unknown annotations format: {}. known formats: "{}"'.format(
@@ -893,7 +922,7 @@ class Annotation(entities.BaseEntity):
         status = None
         attributes = _json.get('attributes', list())
         metadata = _json.get('metadata', dict())
-        if 'system' in metadata:
+        if 'system' in metadata and metadata['system'] is not None:
             object_id = _json['metadata']['system'].get('objectId', object_id)
             status = _json['metadata']['system'].get('status', status)
 
@@ -943,7 +972,7 @@ class Annotation(entities.BaseEntity):
             # set video only attributes
             end_time = 0
             # get automated
-            if 'system' in metadata:
+            if 'system' in metadata and metadata['system'] is not None:
                 automated = metadata['system'].get('automated', automated)
             # set annotation definition
             def_dict = {'type': _json['type'],
@@ -962,7 +991,7 @@ class Annotation(entities.BaseEntity):
         # init annotation
         annotation = cls(
             # temp
-            platform_dict=_json,
+            platform_dict=copy.deepcopy(_json),
             # annotation definition
             annotation_definition=annotation_definition,
             # platform

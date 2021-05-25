@@ -107,15 +107,13 @@ class Webhooks:
         jobs = [None for _ in range(len(response_items))]
         # return execution list
         for i_item, item in enumerate(response_items):
-            jobs[i_item] = pool.apply_async(entities.Webhook.from_json,
-                                            kwds={'client_api': self._client_api,
-                                                  '_json': item,
-                                                  'project': self._project})
-        # wait for all jobs
-        _ = [j.wait() for j in jobs]
+            jobs[i_item] = pool.submit(entities.Webhook.from_json,
+                                       **{'client_api': self._client_api,
+                                          '_json': item,
+                                          'project': self._project})
 
         # get all results
-        items = miscellaneous.List([j.get() for j in jobs])
+        items = miscellaneous.List([j.result() for j in jobs])
         return items
 
     def _list(self, filters: entities.Filters):

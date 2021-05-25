@@ -102,3 +102,10 @@ Feature: Items repository upload service testing
         #todo
         # And video download from host equal video in "sample_video.mp4"
 
+    Scenario: Verify mimetype Upload item - video
+        When I upload a file in path "sample_video.mp4"
+        Then Item mimetype is the item type "mp4"
+
+    Scenario: Verify mimetype Upload item - image
+        When I upload a file in path "assets_split/items_upload/0000000162.jpg"
+        Then Item mimetype is the item type "jpeg"

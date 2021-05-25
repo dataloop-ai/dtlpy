@@ -7,7 +7,7 @@ import logging
 from PIL import Image
 import json
 from jinja2 import Environment, PackageLoader
-from multiprocessing.pool import ThreadPool
+from concurrent.futures import ThreadPoolExecutor
 import dtlpy as dl
 
 logger = logging.getLogger(name=__name__)
@@ -83,7 +83,7 @@ class BaseConverterFromPlatform:
             pages = dataset.items.list(filters=filters)
 
             # init workers and results lists
-            pool = ThreadPool(processes=32)
+            pool = ThreadPoolExecutor(max_workers=32)
             i_item = -1
             num_items = pages.items_count
             self.outputs = [None for _ in range(num_items)]
@@ -107,17 +107,15 @@ class BaseConverterFromPlatform:
                     with open(in_filepath, 'r', encoding="utf8") as f:
                         data = json.load(f)
 
-                    pool.apply_async(self.threading_wrapper, kwds={'func': self.convert_single_file,
-                                                                   'i_item': i_item,
-                                                                   # input for "func"
-                                                                   'output_directory': output_annotations_path,
-                                                                   'item': item,
-                                                                   'annotations': data['annotations'],
-                                                                   'params': self.params})
+                    pool.submit(self.threading_wrapper, **{'func': self.convert_single_file,
+                                                           'i_item': i_item,
+                                                           # input for "func"
+                                                           'output_directory': output_annotations_path,
+                                                           'item': item,
+                                                           'annotations': data['annotations'],
+                                                           'params': self.params})
             print('Done')
-            pool.close()
-            pool.join()
-            pool.terminate()
+            pool.shutdown()
             dummy = [logger.error(self.errors[i_job]) for i_job, suc in enumerate(self.results) if suc is False]
             return self.outputs
         except:

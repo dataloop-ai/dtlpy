@@ -3,7 +3,7 @@ def main(project_name, dataset_name):
     import random
     import string
     import dtlpy as dl
-    from multiprocessing.pool import ThreadPool
+    from concurrent.futures import ThreadPoolExecutor
 
     def upload_single(w_url, w_metadata):
         try:
@@ -26,14 +26,13 @@ def main(project_name, dataset_name):
     project = dl.projects.get(project_name=project_name)
     dataset = project.datasets.get(dataset_name=dataset_name)
 
-    pool = ThreadPool(processes=32)
+    pool = ThreadPoolExecutor(max_workers=32)
     jobs = list()
     for i_url, url in enumerate(secondary_urls):
-        jobs.append(pool.apply_async(upload_single, kwds={'w_url': url,
-                                                          'w_metadata': {'user': {'num': i_url}}}))
-    pool.close()
-    pool.join()
-    secondary_ids = [j.get() for j in jobs]
+        jobs.append(pool.submit(upload_single, **{'w_url': url,
+                                                  'w_metadata': {'user': {'num': i_url}}}))
+    pool.shutdown()
+    secondary_ids = [j.result() for j in jobs]
     modalities = list()
     for i_secondary_id, secondary_id in enumerate(secondary_ids):
         modalities.append(dl.Modality(modality_type=dl.ModalityTypeEnum.OVERLAY,

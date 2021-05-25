@@ -71,7 +71,7 @@ class Polygon(BaseAnnotationDefinition):
         """
         try:
             import cv2
-        except ImportError:
+        except (ImportError, ModuleNotFoundError):
             self.logger.error(
                 'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
             raise
@@ -118,7 +118,7 @@ class Polygon(BaseAnnotationDefinition):
         """
         try:
             import cv2
-        except ImportError:
+        except (ImportError, ModuleNotFoundError):
             raise ImportError('opencv not found. Must install to perform this function')
 
         # mask float

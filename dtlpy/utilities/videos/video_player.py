@@ -191,7 +191,7 @@ class VideoPlayer:
 
         try:
             import cv2
-        except ImportError:
+        except (ImportError, ModuleNotFoundError):
             logger.error(
                 'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
             raise
@@ -478,7 +478,7 @@ class VideoPlayer:
         """
         try:
             import cv2
-        except ImportError:
+        except (ImportError, ModuleNotFoundError):
             logger.error(
                 'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
             raise
@@ -546,7 +546,7 @@ class VideoCapture:
     def __init__(self, source=0):
         try:
             import cv2
-        except ImportError:
+        except (ImportError, ModuleNotFoundError):
             logger.error(
                 'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
             raise
@@ -569,7 +569,7 @@ class VideoCapture:
         """
         try:
             import cv2
-        except ImportError:
+        except (ImportError, ModuleNotFoundError):
             logger.error(
                 'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
             raise

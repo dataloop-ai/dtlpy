@@ -63,7 +63,7 @@ class Videos:
         else:
             try:
                 import cv2
-            except ImportError:
+            except (ImportError, ModuleNotFoundError):
                 logger.error(
                     'Import Error! Cant import cv2. '
                     'Annotations operations will be limited. import manually and fix errors')
@@ -171,7 +171,7 @@ class Videos:
         else:
             try:
                 import cv2
-            except ImportError:
+            except (ImportError, ModuleNotFoundError):
                 logger.error(
                     'Import Error! Cant import cv2. '
                     'Annotations operations will be limited. import manually and fix errors')

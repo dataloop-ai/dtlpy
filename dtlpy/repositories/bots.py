@@ -45,15 +45,14 @@ class Bots:
             jobs = [None for _ in range(len(bots_json))]
             # return triggers list
             for i_bot, bot in enumerate(bots_json):
-                jobs[i_bot] = pool.apply_async(entities.Bot._protected_from_json,
-                                               kwds={'project': self.project,
-                                                     'bots': self,
-                                                     'client_api': self._client_api,
-                                                     '_json': bot})
-            # wait for all jobs
-            _ = [j.wait() for j in jobs]
+                jobs[i_bot] = pool.submit(entities.Bot._protected_from_json,
+                                          **{'project': self.project,
+                                             'bots': self,
+                                             'client_api': self._client_api,
+                                             '_json': bot})
+
             # get all results
-            results = [j.get() for j in jobs]
+            results = [j.result() for j in jobs]
             # log errors
             _ = [logger.warning(r[1]) for r in results if r[0] is False]
             # return good jobs

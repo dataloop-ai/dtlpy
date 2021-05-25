@@ -232,3 +232,8 @@ def step_impl(context, local_path, remote_name):
         buffer = io.BytesIO(f.read())
 
     context.item = context.dataset.items.upload(local_path=buffer, remote_name=remote_name)
+
+
+@behave.then(u'Item mimetype is the item type "{item_type}"')
+def step_impl(context, item_type):
+    assert context.item.metadata['system']['mimetype'].split('/')[1] == item_type

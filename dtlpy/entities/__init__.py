@@ -43,8 +43,9 @@ from .time_series import TimeSeries
 from .service import Service, KubernetesAutuscalerType, KubernetesRabbitmqAutoscaler, KubernetesAutoscaler, \
     InstanceCatalog, KubernetesRuntime
 from .execution import Execution, ExecutionStatus
+from .command import Command, CommandsStatus
 from .assignment import Assignment, Workload, WorkloadUnit
-from .task import Task
+from .task import Task, ItemAction
 from .directory_tree import DirectoryTree
 from .similarity import Similarity, MultiView, SimilarityItem, MultiViewItem, SimilarityTypeEnum
 from .user import User

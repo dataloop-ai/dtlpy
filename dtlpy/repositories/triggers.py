@@ -159,6 +159,9 @@ class Triggers:
         else:
             actions = [entities.TriggerAction.CREATED]
 
+        if len(actions) == 0:
+            actions = [entities.TriggerAction.CREATED]
+
         if trigger_type == entities.TriggerType.EVENT:
             spec = {
                 'filter': filters,
@@ -312,15 +315,14 @@ class Triggers:
         jobs = [None for _ in range(len(response_items))]
         # return triggers list
         for i_trigger, trigger in enumerate(response_items):
-            jobs[i_trigger] = pool.apply_async(entities.BaseTrigger._protected_from_json,
-                                               kwds={'client_api': self._client_api,
-                                                     '_json': trigger,
-                                                     'project': self._project,
-                                                     'service': self._service})
-        # wait for all jobs
-        _ = [j.wait() for j in jobs]
+            jobs[i_trigger] = pool.submit(entities.BaseTrigger._protected_from_json,
+                                          **{'client_api': self._client_api,
+                                             '_json': trigger,
+                                             'project': self._project,
+                                             'service': self._service})
+
         # get all results
-        results = [j.get() for j in jobs]
+        results = [j.result() for j in jobs]
         # log errors
         _ = [logger.warning(r[1]) for r in results if r[0] is False]
         # return good jobs

@@ -78,6 +78,8 @@ from tests.features.steps.codebases_repo import test_codebases_list
 
 from tests.features.steps.codebase_entity import test_codebase_repo_methods
 
+from tests.features.steps.command_entity import test_command
+
 from tests.features.steps.utilities import platform_interface_steps
 
 from tests.features.steps.cli_testing import cli_projects

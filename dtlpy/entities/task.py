@@ -1,9 +1,48 @@
+import traceback
+
 import attr
 import logging
 
 from .. import repositories, entities, exceptions
 
 logger = logging.getLogger(name=__name__)
+
+
+class ItemAction:
+    def __init__(self, action, display_name=None, color='#FFFFFF', icon=None):
+        self.action = action
+        self.display_name = display_name
+        self.color = color
+        self.icon = icon
+
+    @classmethod
+    def from_json(cls, _json: dict):
+        kwarg = {
+            'action': _json.get('action')
+        }
+
+        if _json.get('displayName', False):
+            kwarg['display_name'] = _json['displayName']
+
+        if _json.get('color', False):
+            kwarg['color'] = _json['color']
+
+        if _json.get('icon', False):
+            kwarg['icon'] = _json['icon']
+
+        return cls(**kwarg)
+
+    def to_json(self) -> dict:
+        _json = {
+            'action': self.action,
+            'color': self.color,
+            'displayName': self.display_name if self.display_name is not None else self.action
+        }
+
+        if self.icon is not None:
+            _json['icon'] = self.icon
+
+        return _json
 
 
 @attr.s
@@ -31,6 +70,9 @@ class Task:
     annotation_status = attr.ib(repr=False)
     for_review = attr.ib()
     issues = attr.ib()
+    updated_at = attr.ib()
+    created_at = attr.ib()
+    available_actions = attr.ib()
 
     # sdk
     _client_api = attr.ib(repr=False)
@@ -39,6 +81,27 @@ class Task:
     _project = attr.ib(default=None, repr=False)
     _dataset = attr.ib(default=None, repr=False)
     _tasks = attr.ib(default=None, repr=False)
+
+    @staticmethod
+    def _protected_from_json(_json, client_api, project, dataset):
+        """
+        Same as from_json but with try-except to catch if error
+        :param _json:
+        :param client_api:
+        :return:
+        """
+        try:
+            task = Task.from_json(
+                _json=_json,
+                client_api=client_api,
+                project=project,
+                dataset=dataset
+            )
+            status = True
+        except Exception:
+            task = traceback.format_exc()
+            status = False
+        return status, task
 
     @classmethod
     def from_json(cls, _json, client_api, project=None, dataset=None):
@@ -51,6 +114,8 @@ class Task:
             if dataset.id != _json.get('datasetId', None):
                 logger.warning('Task has been fetched from a dataset that is not belong to it')
                 dataset = None
+
+        actions = [ItemAction.from_json(_json=action) for action in _json.get('availableActions', list())]
 
         return cls(
             name=_json.get('name', None),
@@ -73,7 +138,10 @@ class Task:
             client_api=client_api,
             annotation_status=_json.get('annotationStatus', None),
             for_review=_json.get('forReview', None),
-            issues=_json.get('issues', None)
+            issues=_json.get('issues', None),
+            updated_at=_json.get('updatedAt', None),
+            created_at=_json.get('createdAt', None),
+            available_actions=actions
         )
 
     def to_json(self):
@@ -88,6 +156,7 @@ class Task:
                                                               attr.fields(Task).dataset_id,
                                                               attr.fields(Task).recipe_id,
                                                               attr.fields(Task).task_owner,
+                                                              attr.fields(Task).available_actions,
                                                               attr.fields(Task).item_status,
                                                               attr.fields(Task).due_date,
                                                               attr.fields(Task)._tasks,
@@ -96,12 +165,19 @@ class Task:
                                                               attr.fields(Task)._assignments,
                                                               attr.fields(Task).annotation_status,
                                                               attr.fields(Task).for_review,
-                                                              attr.fields(Task).issues))
+                                                              attr.fields(Task).issues,
+                                                              attr.fields(Task).updated_at,
+                                                              attr.fields(Task).created_at
+                                                              ))
         _json['projectId'] = self.project_id
         _json['datasetId'] = self.dataset_id
         _json['recipeId'] = self.recipe_id
         _json['taskOwner'] = self.task_owner
         _json['dueDate'] = self.due_date
+
+        if self.available_actions is not None:
+            _json['availableActions'] = [action.to_json() for action in self.available_actions]
+
         return _json
 
     @property
@@ -109,7 +185,7 @@ class Task:
         if self._current_assignments is None:
             self._current_assignments = list()
             for assignment in self.assignmentIds:
-                self._current_assignments.append(self._assignments.get(assignment_id=assignment))
+                self._current_assignments.append(self.assignments.get(assignment_id=assignment))
         return self._current_assignments
 
     @property

@@ -37,3 +37,4 @@ from .snapshots import Snapshots
 from .analytics import Analytics
 from .buckets import Buckets
 from .drivers import Drivers
+from .commands import Commands

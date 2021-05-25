@@ -87,16 +87,15 @@ class Annotations:
         jobs = [None for _ in range(len(response_items))]
         # return triggers list
         for i_json, _json in enumerate(response_items):
-            jobs[i_json] = pool.apply_async(entities.Annotation._protected_from_json,
-                                            kwds={'client_api': self._client_api,
-                                                  '_json': _json,
-                                                  'item': self._item,
-                                                  'dataset': self._dataset,
-                                                  'annotations': self})
-        # wait for all jobs
-        _ = [j.wait() for j in jobs]
+            jobs[i_json] = pool.submit(entities.Annotation._protected_from_json,
+                                       **{'client_api': self._client_api,
+                                          '_json': _json,
+                                          'item': self._item,
+                                          'dataset': self._dataset,
+                                          'annotations': self})
+
         # get all results
-        results = [j.get() for j in jobs]
+        results = [j.result() for j in jobs]
         # log errors
         _ = [logger.warning(r[1]) for r in results if r[0] is False]
         # return good jobs
@@ -315,25 +314,31 @@ class Annotations:
         try:
             if isinstance(w_annotation, entities.Annotation):
                 annotation_id = w_annotation.id
-                annotation = w_annotation.to_json()
             else:
                 raise exceptions.PlatformException('400',
                                                    'unknown annotations type: {}'.format(type(w_annotation)))
 
-            url_path = '/annotations/{}'.format(annotation_id)
-            if system_metadata:
-                url_path += '?system=true'
-            suc, response = self._client_api.gen_request(req_type='put',
-                                                         path=url_path,
-                                                         json_req=annotation)
-            if suc:
-                result = entities.Annotation.from_json(_json=response.json(),
-                                                       annotations=self,
-                                                       dataset=self._dataset,
-                                                       item=self._item)
+            json_req = miscellaneous.DictDiffer.diff(origin=w_annotation._platform_dict,
+                                                     modified=w_annotation.to_json())
+            if not json_req:
+                status = True
+                result = w_annotation
             else:
-                raise exceptions.PlatformException(response)
-            status = True
+                url_path = '/annotations/{}'.format(annotation_id)
+                if system_metadata:
+                    url_path += '?system=true'
+                suc, response = self._client_api.gen_request(req_type='put',
+                                                             path=url_path,
+                                                             json_req=json_req)
+                if suc:
+                    result = entities.Annotation.from_json(_json=response.json(),
+                                                           annotations=self,
+                                                           dataset=self._dataset,
+                                                           item=self._item)
+                    w_annotation._platform_dict = result._platform_dict
+                else:
+                    raise exceptions.PlatformException(response)
+                status = True
         except Exception:
             status = False
             result = traceback.format_exc()
@@ -352,13 +357,12 @@ class Annotations:
             annotations = [annotations]
         jobs = [None for _ in range(len(annotations))]
         for i_ann, ann in enumerate(annotations):
-            jobs[i_ann] = pool.apply_async(func=self._update_single_annotation,
-                                           kwds={'w_annotation': ann,
-                                                 'system_metadata': system_metadata})
-        # wait for jobs to be finish
-        _ = [j.wait() for j in jobs]
+            jobs[i_ann] = pool.submit(self._update_single_annotation,
+                                      **{'w_annotation': ann,
+                                         'system_metadata': system_metadata})
+
         # get all results
-        results = [j.get() for j in jobs]
+        results = [j.result() for j in jobs]
         out_annotations = [r[1] for r in results if r[0] is True]
         out_errors = [r[1] for r in results if r[0] is False]
         if len(out_errors) == 0:
@@ -378,7 +382,7 @@ class Annotations:
         for idx, frame in enumerate(deepcopy(snapshots)):
             frame.pop("frame", None)
             if frame == last_frame:
-                del snapshots[idx-offset]
+                del snapshots[idx - offset]
                 offset += 1
             else:
                 last_frame = frame

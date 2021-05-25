@@ -140,12 +140,12 @@ class PagedEntities:
         pool = self._client_api.thread_pools('item.page')
         while True:
             if page_offset <= total_pages:
-                jobs.append(pool.apply_async(self.return_page, kwds={'page_offset': page_offset,
-                                                                     'page_size': page_size}))
+                jobs.append(pool.submit(self.return_page, **{'page_offset': page_offset,
+                                                             'page_size': page_size}))
                 page_offset += 1
             for i_job, job in enumerate(jobs):
-                if job.ready():
-                    for item in job.get():
+                if job.done():
+                    for item in job.result():
                         yield item
                     jobs.remove(job)
             if len(jobs) == 0:

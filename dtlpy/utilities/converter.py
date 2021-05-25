@@ -30,7 +30,10 @@ class COCOUtils:
 
     @staticmethod
     def binary_mask_to_rle_encode(binary_mask):
-        import pycocotools.mask as coco_utils_mask
+        try:
+            import pycocotools.mask as coco_utils_mask
+        except ModuleNotFoundError:
+            raise Exception('To use this functionality please install pycocotools:  "pip install pycocotools"')
         fortran_ground_truth_binary_mask = np.asfortranarray(binary_mask.astype(np.uint8))
         encoded_ground_truth = coco_utils_mask.encode(fortran_ground_truth_binary_mask)
         encoded_ground_truth['counts'] = encoded_ground_truth['counts'].decode()
@@ -1272,7 +1275,7 @@ class Converter:
 
             ann_def = entities.Box(top=top, left=left, bottom=bottom, right=right, label=label)
         else:
-            if int(iscrowd) == 1:
+            if iscrowd is not None and int(iscrowd) == 1:
                 ann_def = entities.Segmentation(label=label, geo=COCOUtils.rle_to_binary_mask(rle=segmentation))
             else:
                 if len(segmentation) == 1:

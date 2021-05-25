@@ -131,15 +131,14 @@ class Snapshots:
 
         # return triggers list
         for i_service, service in enumerate(response_items):
-            jobs[i_service] = pool.apply_async(entities.Snapshot._protected_from_json,
-                                               kwds={'client_api': self._client_api,
+            jobs[i_service] = pool.submit(entities.Snapshot._protected_from_json,
+                                               **{'client_api': self._client_api,
                                                      '_json': service,
                                                      'model': self._model,
                                                      'project': self._project})
-        # wait for all jobs
-        _ = [j.wait() for j in jobs]
+
         # get all results
-        results = [j.get() for j in jobs]
+        results = [j.result() for j in jobs]
         # log errors
         _ = [logger.warning(r[1]) for r in results if r[0] is False]
         # return good jobs

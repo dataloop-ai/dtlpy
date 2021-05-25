@@ -3,13 +3,13 @@ webvtt-py==0.4.3
 aiohttp>=3.6.2 , <4.0.0
 requests-toolbelt>=0.9.1
 requests>=2.21.0
-numpy>=1.16.2 , <1.19
+numpy<1.19.0 , >=1.16.2
 pandas>=0.24.2
 tabulate>=0.8.3
 tqdm>=4.32.2
-Pillow>=6.2.2
+Pillow>=7.2
 PyJWT>=1.7.1 , <2.0.0
-jinja2>=2.10.1
+jinja2>=2.11.3
 attrs<20.0.0
 attr>=0.3.1
 prompt_toolkit>=2.0.9

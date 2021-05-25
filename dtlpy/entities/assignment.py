@@ -166,14 +166,20 @@ class Assignment(entities.BaseEntity):
         Reassign an assignment
         :return: Assignment object
         """
-        return self.assignments.reassign(assignment=self, task=self._task, assignee_id=assignee_id)
+        return self.assignments.reassign(assignment=self,
+                                         task=self._task,
+                                         task_id=self.metadata['system'].get('taskId'),
+                                         assignee_id=assignee_id)
 
     def redistribute(self, workload):
         """
         Redistribute an assignment
         :return: Assignment object
         """
-        return self.assignments.redistribute(assignment=self, task=self._task, workload=workload)
+        return self.assignments.redistribute(assignment=self,
+                                             task=self._task,
+                                             task_id=self.metadata['system'].get('taskId'),
+                                             workload=workload)
 
 
 @attr.s
@@ -258,8 +264,8 @@ class Workload:
             assignee_ids = [assignee_ids]
 
         if loads is None:
-            load = 100 / len(assignee_ids)
-            loads = [load for _ in range(len(assignee_ids))]
+            div = len(assignee_ids)
+            loads = [100 // div + (1 if x < 100 % div else 0) for x in range(div)]
         else:
             if not isinstance(loads, list):
                 loads = [loads]

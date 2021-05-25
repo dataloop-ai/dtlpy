@@ -419,10 +419,14 @@ class KubernetesAutoscaler(entities.BaseEntity):
                  autoscaler_type: KubernetesAutuscalerType.RABBITMQ = AUTOSCALER_TYPE_DEFAULT,
                  min_replicas=MIN_REPLICA_DEFAULT,
                  max_replicas=MAX_REPLICA_DEFAULT,
+                 cooldown_period=None,
+                 polling_interval=None,
                  **kwargs):
         self.autoscaler_type = kwargs.get('type', autoscaler_type)
         self.min_replicas = kwargs.get('minReplicas', min_replicas)
         self.max_replicas = kwargs.get('maxReplicas', max_replicas)
+        self.cooldown_period = kwargs.get('cooldownPeriod', cooldown_period)
+        self.polling_interval = kwargs.get('pollingInterval', polling_interval)
 
     def to_json(self):
         _json = {
@@ -430,6 +434,13 @@ class KubernetesAutoscaler(entities.BaseEntity):
             'minReplicas': self.min_replicas,
             'maxReplicas': self.max_replicas
         }
+
+        if self.cooldown_period is not None:
+            _json['cooldownPeriod'] = self.cooldown_period
+
+        if self.polling_interval is not None:
+            _json['pollingInterval'] = self.polling_interval
+
         return _json
 
 

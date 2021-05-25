@@ -165,7 +165,7 @@ class AnnotationCollection(entities.BaseEntity):
         # height/weight
         try:
             import cv2
-        except ImportError:
+        except (ImportError, ModuleNotFoundError):
             logger.error(
                 'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
             raise
@@ -218,6 +218,7 @@ class AnnotationCollection(entities.BaseEntity):
                 json.dump(_json, f, indent=2)
         elif annotation_format in [entities.ViewAnnotationOptions.MASK,
                                    entities.ViewAnnotationOptions.INSTANCE,
+                                   entities.ViewAnnotationOptions.OBJECT_ID,
                                    entities.ViewAnnotationOptions.ANNOTATION_ON_IMAGE]:
             if not ex:
                 filepath = '{}/{}.png'.format(dir_name, os.path.splitext(self.item.name)[0])

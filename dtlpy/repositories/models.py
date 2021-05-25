@@ -112,14 +112,13 @@ class Models:
 
         # return triggers list
         for i_service, service in enumerate(response_items):
-            jobs[i_service] = pool.apply_async(entities.Model._protected_from_json,
-                                               kwds={'client_api': self._client_api,
-                                                     '_json': service,
-                                                     'project': self._project})
-        # wait for all jobs
-        _ = [j.wait() for j in jobs]
+            jobs[i_service] = pool.submit(entities.Model._protected_from_json,
+                                          **{'client_api': self._client_api,
+                                             '_json': service,
+                                             'project': self._project})
+
         # get all results
-        results = [j.get() for j in jobs]
+        results = [j.result() for j in jobs]
         # log errors
         _ = [logger.warning(r[1]) for r in results if r[0] is False]
         # return good jobs
@@ -157,7 +156,8 @@ class Models:
         paged.get_page()
         return paged
 
-    def build(self, model: entities.Model, local_path=None, from_local=None, log_level='INFO') -> entities.BaseModelAdapter:
+    def build(self, model: entities.Model, local_path=None, from_local=None,
+              log_level='INFO') -> entities.BaseModelAdapter:
         """
         :param model: Model entity
         :param from_local: bool. use current directory to build

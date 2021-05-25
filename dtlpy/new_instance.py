@@ -35,8 +35,7 @@ class Dtlpy:
 
     def __del__(self):
         for name, pool in self.client_api._thread_pools.items():
-            pool.close()
-            pool.terminate()
+            pool.shutdown()
 
     def token(self):
         """

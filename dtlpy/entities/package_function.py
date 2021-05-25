@@ -206,6 +206,8 @@ class PackageInputType(str, Enum):
     SERVICE = "Service"
     PROJECT = "Project"
     EXECUTION = "Execution"
+    TASK = "Task"
+    ASSIGNMENT = "Assignment"
 
 
 @attr.s

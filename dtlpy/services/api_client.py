@@ -19,7 +19,8 @@ import ssl
 import jwt
 import os
 import io
-from multiprocessing.pool import ThreadPool
+import concurrent
+from concurrent.futures import ThreadPoolExecutor
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 from functools import wraps
@@ -27,7 +28,7 @@ import numpy as np
 
 from .calls_counter import CallsCounter
 from .cookie import CookieIO
-from .logins import login, login_secret, login_m2m, gate_url_from_host
+from .logins import login, logout, login_secret, login_m2m, gate_url_from_host
 from .async_utils import AsyncResponse, AsyncUploadStream, AsyncResponseError, AsyncThreadEventLoop
 from .service_defaults import DEFAULT_ENVIRONMENTS, DEFAULT_ENVIRONMENT
 from .aihttp_retry import RetryClient
@@ -224,14 +225,14 @@ class ApiClient:
                                     'annotation.upload': num_processes,
                                     'annotation.download': num_processes,
                                     'annotation.update': num_processes,
-                                    'entity.create': num_processes}
+                                    'entity.create': num_processes,
+                                    'dataset.download': num_processes}
         # set logging level
         logging.getLogger('dtlpy').handlers[0].setLevel(logging._nameToLevel[self.verbose.logging_level.upper()])
 
     def __del__(self):
         for name, pool in self._thread_pools.items():
-            pool.close()
-            pool.terminate()
+            pool.shutdown()
         for name, thread in self._event_loops_dict.items():
             thread.stop()
 
@@ -249,14 +250,9 @@ class ApiClient:
             self._thread_pools_names[pool_name] = num_processes
 
         for pool in self._thread_pools:
-            # close the pool
-            self._thread_pools[pool].close()
-            # wait for all processes to finish
-            self._thread_pools[pool].join()
-            # terminate pool
-            self._thread_pools[pool].terminate()
+            self._thread_pools[pool].shutdown()
         for name, thread in self._event_loops_dict:
-            thread.stop()
+            thread.cancel()
         self._event_loops_dict = dict()
         self._thread_pools = dict()
 
@@ -286,15 +282,15 @@ class ApiClient:
                 list(self._thread_pools_names.keys())))
         num_processes = self._thread_pools_names[pool_name]
         if pool_name not in self._thread_pools:
-            self._thread_pools[pool_name] = ThreadPool(processes=num_processes)
+            self._thread_pools[pool_name] = ThreadPoolExecutor(max_workers=num_processes)
         pool = self._thread_pools[pool_name]
-        assert isinstance(pool, multiprocessing.pool.ThreadPool)
-        if pool._state != multiprocessing.pool.RUN:
-            # pool is closed, open a new one
-            self._stopped_pools.append(pool)
-            logger.debug('Global ThreadPool is not running. Creating a new one')
-            pool = ThreadPool(processes=num_processes)
-            self._thread_pools[pool_name] = pool
+        assert isinstance(pool, concurrent.futures.ThreadPoolExecutor)
+        # if pool._broken:
+        #     # pool is closed, open a new one
+        #     self._stopped_pools.append(pool)
+        #     logger.debug('Global ThreadPool is not running. Creating a new one')
+        #     pool = ThreadPoolExecutor(max_workers=num_processes)
+        #     self._thread_pools[pool_name] = pool
         return pool
 
     @property
@@ -1030,6 +1026,13 @@ class ApiClient:
                      auth0_url=auth0_url,
                      client_id=client_id)
 
+    def logout(self):
+        """
+        Logout.
+        :return:
+        """
+        return logout(api_client=self)
+
     def _renew_token_in_dual_agent(self):
         renewed = False
         try:
@@ -1121,8 +1124,10 @@ class ApiClient:
             head = 'https://dev-con.dataloop.ai'
         elif env == 'rc':
             head = 'https://rc-con.dataloop.ai'
-        elif env == 'local':
+        elif env in ['local', 'minikube_local_mac']:
             head = 'https://localhost:8443/'
+        elif env == 'new-dev':
+            head = 'https://custom0-gate.dataloop.ai'
         else:
             raise exceptions.PlatformException(error='400', message='Unknown environment: {}'.format(env))
 

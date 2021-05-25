@@ -219,7 +219,7 @@ class BaseModelAdapter():
                 self.num_train = len(ret_list)
 
         # Convert items; json to one annotation file
-        self.convert(local_path=data_path, **kwargs)
+        self.convert(data_path=data_path, **kwargs)
 
     # TODO: do we need predict by single partitons?  currently we cann't preform on PagedEntity which we get from get_partition
     # TODO: what to do with readonly dataset? unlock it?

@@ -6,7 +6,6 @@ import os
 import tqdm
 import logging
 from urllib.parse import urlencode
-from multiprocessing.pool import ThreadPool
 
 from .. import entities, repositories, miscellaneous, exceptions, services
 
@@ -136,15 +135,14 @@ class Datasets:
             jobs = [None for _ in range(len(datasets_json))]
             # return triggers list
             for i_dataset, dataset in enumerate(datasets_json):
-                jobs[i_dataset] = pool.apply_async(entities.Dataset._protected_from_json,
-                                                   kwds={'client_api': self._client_api,
-                                                         '_json': dataset,
-                                                         'datasets': self,
-                                                         'project': self.project})
-            # wait for all jobs
-            _ = [j.wait() for j in jobs]
+                jobs[i_dataset] = pool.submit(entities.Dataset._protected_from_json,
+                                              **{'client_api': self._client_api,
+                                                 '_json': dataset,
+                                                 'datasets': self,
+                                                 'project': self.project})
+
             # get all results
-            results = [j.get() for j in jobs]
+            results = [j.result() for j in jobs]
             # log errors
             _ = [logger.warning(r[1]) for r in results if r[0] is False]
             # return good jobs
@@ -186,7 +184,7 @@ class Datasets:
                 datasets = self.list(name=dataset_name)
                 if not datasets:
                     # empty list
-                    raise exceptions.PlatformException('404', 'Dataset not found. Name: {}'.format(dataset_name))
+                    raise exceptions.PlatformException('404', 'Dataset not found. Name: {!r}'.format(dataset_name))
                     # dataset = None
                 elif len(datasets) > 1:
                     raise exceptions.PlatformException('400', 'More than one dataset with same name.')
@@ -224,7 +222,7 @@ class Datasets:
                                                              path='/datasets/{}'.format(dataset.id))
             if not success:
                 raise exceptions.PlatformException(response)
-            logger.info('Dataset {} was deleted successfully'.format(dataset.name))
+            logger.info('Dataset {!r} was deleted successfully'.format(dataset.name))
             return True
         else:
             raise exceptions.PlatformException(
@@ -297,7 +295,7 @@ class Datasets:
         else:
             raise exceptions.PlatformException(
                 error='400',
-                message='"filters" must be a dl.Filters entity. got: {}'.format(type(filters)))
+                message='"filters" must be a dl.Filters entity. got: {!r}'.format(type(filters)))
 
         payload = {
             "name": clone_name,
@@ -312,11 +310,18 @@ class Datasets:
                                                          path='/datasets/{}/clone'.format(dataset_id),
                                                          json_req=payload)
 
-        if success:
-            # TODO - support command entity
-            return True
-        else:
+        if not success:
             raise exceptions.PlatformException(response)
+
+        command = entities.Command.from_json(_json=response.json(),
+                                             client_api=self._client_api)
+        command = command.wait()
+
+        if 'returnedModelId' not in command.spec:
+            raise exceptions.PlatformException(error='400',
+                                               message="returnedModelId key is missing in command response: {!r}"
+                                               .format(response))
+        return self.get(dataset_id=command.spec['returnedModelId'])
 
     def merge(self, merge_name, dataset_ids, project_ids, with_items_annotations=True, with_metadata=True,
               with_task_annotations_status=True):
@@ -396,7 +401,7 @@ class Datasets:
             else:
                 raise exceptions.PlatformException(
                     error=400,
-                    message='Input arg "driver" must be Driver object or a string driver name. got type: {}'.format(type(driver)))
+                    message='Input arg "driver" must be Driver object or a string driver name. got type: {!r}'.format(type(driver)))
         if driver_id is not None:
             payload['driver'] = driver_id
 
@@ -414,7 +419,7 @@ class Datasets:
             # dataset = self.update(dataset=dataset, system_metadata=True)
         else:
             raise exceptions.PlatformException(response)
-        logger.info('Dataset was created successfully. Dataset id: {}'.format(dataset.id))
+        logger.info('Dataset was created successfully. Dataset id: {!r}'.format(dataset.id))
         assert isinstance(dataset, entities.Dataset)
         if checkout:
             self.checkout(dataset=dataset)
@@ -465,7 +470,7 @@ class Datasets:
                                                                   thickness=i_thickness,
                                                                   with_text=i_with_text)
             except Exception:
-                logger.error('Failed to download annotation for item: {}'.format(item.name))
+                logger.error('Failed to download annotation for item: {!r}'.format(item.name))
 
             progress.update(1)
 
@@ -529,13 +534,14 @@ class Datasets:
                                             overwrite=overwrite,
                                             remote_path=remote_path)
 
-        pool = ThreadPool(processes=num_workers)
+        pool = dataset._client_api.thread_pools(pool_name='dataset.download')
+        jobs = [None for _ in range(pages.items_count)]
         progress = tqdm.tqdm(total=pages.items_count)
         for page in pages:
-            for item in page:
-                pool.apply_async(
-                    func=download_single,
-                    kwds={
+            for i_item, item in enumerate(page):
+                jobs[i_item] = pool.submit(
+                    download_single,
+                    **{
                         'i_item': item,
                         'i_img_filepath': None,
                         'i_local_path': local_path,
@@ -547,12 +553,9 @@ class Datasets:
                         'i_with_text': with_text
                     }
                 )
-
-        pool.close()
-        pool.join()
-        pool.terminate()
+        # get all results
+        results = [j.result() for j in jobs]
         progress.close()
-
         return local_path
 
     def set_readonly(self, state: bool, dataset: entities.Dataset):

@@ -388,8 +388,8 @@ class Item(entities.BaseEntity):
 
         return self.update(system_metadata=True)
 
-    def clone(self, dst_dataset_id, remote_filepath=None, metadata=None, with_annotations=True,
-              with_metadata=True, with_task_annotations_status=False):
+    def clone(self, dst_dataset_id=None, remote_filepath=None, metadata=None, with_annotations=True,
+              with_metadata=True, with_task_annotations_status=False, wait=True):
         """
         Clone item
         :param dst_dataset_id: destination dataset id
@@ -398,17 +398,22 @@ class Item(entities.BaseEntity):
         :param with_annotations: clone annotations
         :param with_metadata: clone metadata
         :param with_task_annotations_status: clone task annotations status
+        :param wait: wait the command to finish
+
         :return: Item
         """
         if remote_filepath is None:
             remote_filepath = self.filename
+        if dst_dataset_id is None:
+            dst_dataset_id = self.datasetId
         return self.items.clone(item_id=self.id,
                                 dst_dataset_id=dst_dataset_id,
                                 remote_filepath=remote_filepath,
                                 metadata=metadata,
                                 with_annotations=with_annotations,
                                 with_metadata=with_metadata,
-                                with_task_annotations_status=with_task_annotations_status)
+                                with_task_annotations_status=with_task_annotations_status,
+                                wait=wait)
 
     def open_in_web(self):
         self.items.open_in_web(item=self)

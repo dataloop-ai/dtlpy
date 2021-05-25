@@ -270,6 +270,14 @@ class Execution(entities.BaseEntity):
         """
         self.attempts = self.executions.increment(execution=self)
 
+    def rerun(self):
+        """
+        Re-run
+
+        :return:
+        """
+        return self.executions.rerun(execution=self)
+
     def terminate(self):
         """
         Terminate execution

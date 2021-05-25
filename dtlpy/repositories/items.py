@@ -87,14 +87,12 @@ class Items:
         jobs = [None for _ in range(len(response_items))]
         # return triggers list
         for i_item, item in enumerate(response_items):
-            jobs[i_item] = pool.apply_async(self.items_entity._protected_from_json,
-                                            kwds={'client_api': self._client_api,
-                                                  '_json': item,
-                                                  'dataset': self.dataset})
-        # wait for all jobs
-        _ = [j.wait() for j in jobs]
+            jobs[i_item] = pool.submit(self.items_entity._protected_from_json,
+                                       **{'client_api': self._client_api,
+                                          '_json': item,
+                                          'dataset': self.dataset})
         # get all results
-        results = [j.get() for j in jobs]
+        results = [j.result() for j in jobs]
         # log errors
         _ = [logger.warning(r[1]) for r in results if r[0] is False]
         # return good jobs
@@ -222,7 +220,7 @@ class Items:
         return item
 
     def clone(self, item_id, dst_dataset_id, remote_filepath=None, metadata=None, with_annotations=True,
-              with_metadata=True, with_task_annotations_status=False):
+              with_metadata=True, with_task_annotations_status=False, wait=True):
         """
         Clone item
         :param item_id: item to clone
@@ -232,6 +230,7 @@ class Items:
         :param with_annotations: clone annotations
         :param with_metadata: clone metadata
         :param with_task_annotations_status: clone task annotations status
+        :param wait: wait the command to finish
         :return: Item
         """
         if metadata is None:
@@ -248,11 +247,20 @@ class Items:
                                                          path="/items/{}/clone".format(item_id),
                                                          json_req=payload)
         # check response
-        if success:
-            cloned_item = self.items_entity.from_json(client_api=self._client_api,
-                                                      _json=response.json())
-        else:
+        if not success:
             raise exceptions.PlatformException(response)
+
+        command = entities.Command.from_json(_json=response.json(),
+                                             client_api=self._client_api)
+        if not wait:
+            return command
+        command = command.wait()
+
+        if 'returnedModelId' not in command.spec:
+            raise exceptions.PlatformException(error='400',
+                                               message="returnedModelId key is missing in command response: {}"
+                                               .format(response))
+        cloned_item = self.get(item_id=command.spec['returnedModelId'][0])
         return cloned_item
 
     def delete(self, filename=None, item_id=None, filters: entities.Filters = None):
@@ -508,20 +516,19 @@ class Items:
             if not isinstance(items, list):
                 items = [items]
             item_count = len(items)
-            items = [[dataset.items.get(item_id=item_id, fetched=False) for item_id in item_ids]]
+            items = [[dataset.items.get(item_id=item_id, fetch=False) for item_id in item_ids]]
 
         pool = self._client_api.thread_pools(pool_name='item.status_update')
         jobs = [None for _ in range(item_count)]
         # call multiprocess wrapper to run service on each item in list
         for page in items:
             for i_item, item in enumerate(page):
-                jobs[i_item] = pool.apply_async(func=item.update_status,
-                                                kwds={'status': status,
-                                                      'clear': clear})
-        # wait for jobs to be finish
-        _ = [j.wait() for j in jobs]
+                jobs[i_item] = pool.submit(item.update_status,
+                                           **{'status': status,
+                                              'clear': clear})
+
         # get all results
-        results = [j.get() for j in jobs]
+        results = [j.result() for j in jobs]
         out_success = [r for r in results if r is True]
         out_errors = [r for r in results if r is False]
         if len(out_errors) == 0:

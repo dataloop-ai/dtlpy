@@ -102,11 +102,10 @@ class Recipes:
             pool = self._client_api.thread_pools(pool_name='entity.create')
             jobs = [None for _ in range(len(recipes))]
             for i_recipe, recipe_id in enumerate(recipes):
-                jobs[i_recipe] = pool.apply_async(self._protected_get, kwds={'recipe_id': recipe_id})
-            # wait for all jobs
-            _ = [j.wait() for j in jobs]
+                jobs[i_recipe] = pool.submit(self._protected_get, **{'recipe_id': recipe_id})
+
             # get all results
-            results = [j.get() for j in jobs]
+            results = [j.result() for j in jobs]
             # log errors
             _ = [logger.warning(r[1]) for r in results if r[0] is False]
             # return good jobs
@@ -144,15 +143,14 @@ class Recipes:
         jobs = [None for _ in range(len(response_items))]
         # return triggers list
         for i_rec, rec in enumerate(response_items):
-            jobs[i_rec] = pool.apply_async(entities.Recipe._protected_from_json,
-                                           kwds={'client_api': self._client_api,
-                                                 '_json': rec,
-                                                 'project': self._project,
-                                                 'dataset': self._dataset})
-        # wait for all jobs
-        _ = [j.wait() for j in jobs]
+            jobs[i_rec] = pool.submit(entities.Recipe._protected_from_json,
+                                      **{'client_api': self._client_api,
+                                         '_json': rec,
+                                         'project': self._project,
+                                         'dataset': self._dataset})
+
         # get all results
-        results = [j.get() for j in jobs]
+        results = [j.result() for j in jobs]
         # log errors
         _ = [logger.warning(r[1]) for r in results if r[0] is False]
         # return good jobs

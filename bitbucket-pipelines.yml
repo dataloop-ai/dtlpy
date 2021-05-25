@@ -7,6 +7,10 @@ pipelines:
           image: gcr.io/google.com/cloudsdktool/cloud-sdk:latest
           name: Build SDK Container
           script:
+            # Get an oauth access token using the client credentials, parsing out the token with jq.
+            - apt-get update && apt-get install -y curl jq
+
+            # Make changes and commit back.
             - case "$BITBUCKET_TAG" in "") export BITBUCKET_TAG="build-$BITBUCKET_BUILD_NUMBER"; esac
             - apt-get -y update && apt-get install -y python3-pip
             - python3 setup.py bdist_wheel
@@ -16,12 +20,17 @@ pipelines:
             - gcloud auth activate-service-account --key-file=k.json
             - gsutil -m cp -R dist/**  gs://dtlpy/dev/
             - chmod +x ./build-docker.sh
+            - echo $BITBUCKET_TAG
             - ./build-docker.sh $BITBUCKET_TAG
             - git checkout -b "$BITBUCKET_TAG"
-            - git clone git@bitbucket.org:dataloop-ai/piper-agent-runner.git
+            - >
+              export access_token=$(curl -s -X POST -u "${CLIENT_ID}:${CLIENT_SECRET}" \
+                https://bitbucket.org/site/oauth2/access_token \
+                -d grant_type=client_credentials -d scopes="repository"| jq --raw-output '.access_token')
+            - git clone https://x-token-auth:${access_token}@bitbucket.org/dataloop-ai/piper-agent-runner.git
             - cd piper-agent-runner
             - git config user.email sdk@dataloop.ai
-            - git checkout master
+            - git checkout development
             - python3 bumpversion.py --hard $BITBUCKET_TAG.0
             - git push --follow-tags
             - cd ..

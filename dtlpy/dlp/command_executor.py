@@ -1,3 +1,4 @@
+import hashlib
 import subprocess
 import logging
 import getpass
@@ -5,6 +6,8 @@ import json
 import jwt
 import sys
 import os
+import shutil
+import collections.abc
 
 from dtlpy import repositories
 
@@ -34,7 +37,7 @@ class CommandExecutor:
         ###############
         # Catch typos #
         ###############
-        elif args.operation in ["project", 'dataset', 'item', 'service', 'package', 'video']:
+        elif args.operation in ["project", 'dataset', 'item', 'service', 'package', 'video', 'deploy', 'generate']:
             self.typos(args=args)
         #######################
         # Catch other options #
@@ -44,6 +47,10 @@ class CommandExecutor:
             print('See "dlp --help" for options')
         else:
             print('See "dlp --help" for options')
+
+    def logout(self, args):
+        self.dl.logout()
+        logger.info('logout successful')
 
     # noinspection PyUnusedLocal
     def login(self, args):
@@ -323,21 +330,10 @@ class CommandExecutor:
             print("[ERROR] token expired, please login.")
             return
 
-        if args.services == "generate":
-            self.dl.services.generate_services_json(path=args.local_path)
-            logger.info('Successfully generated service file')
-
         elif args.services == "delete":
             service = self.utils.get_services_repo(args=args).get(service_name=args.service_name)
             service.delete()
             logger.info('Service: "{}" deleted successfully'.format(service.name))
-
-        elif args.services == "deploy":
-            services = self.utils.get_services_repo(args=args)
-            service = services.deploy_from_local_folder(bot=args.bot,
-                                                        service_file=args.service_file,
-                                                        checkout=True)
-            logger.info("Successfully deployed the service: {}\nService id: {}".format(service.name, service.id))
 
         elif args.services == "ls":
             self.utils.get_services_repo(args=args).list().print()
@@ -396,6 +392,20 @@ class CommandExecutor:
         else:
             logger.info('Type "dlp packages --help" for options')
 
+    def deploy(self, args):
+        project = self.dl.projects.get(project_name=args.project_name)
+        json_filepath = args.json_file
+        deployed_services = self.dl.packages.deploy_from_file(project=project, json_filepath=json_filepath)
+        logger.info("Successfully deployed {} from file: {}\nServices: {}".format(len(deployed_services),
+                                                                                  json_filepath,
+                                                                                  [s.name for s in deployed_services]))
+
+    def generate(self, args):
+        package_type = args.package_type if args.package_type else self.dl.PackageCatalog.DEFAULT_PACKAGE_TYPE
+        self.dl.packages.generate(name=args.package_name, src_path=os.getcwd(), package_type=package_type)
+        self.utils.dl.client_api.state_io.put('package', {'name': args.package_name})
+        logger.info('Successfully generated package files')
+
     def triggers(self, args):
 
         if args.triggers == "create":
@@ -427,13 +437,6 @@ class CommandExecutor:
         if self.dl.token_expired():
             logger.error("token expired, please login.")
             return
-
-        if args.packages == "generate":
-            packages = self.utils.get_packages_repo(args=args)
-            package_type = args.package_type if args.package_type else self.dl.PackageCatalog.DEFAULT_PACKAGE_TYPE
-            packages.generate(name=args.package_name, src_path=os.getcwd(), package_type=package_type)
-            self.utils.dl.client_api.state_io.put('package', {'name': args.package_name})
-            logger.info('Successfully generated package files')
 
         elif args.packages == "delete":
             package = self.utils.get_packages_repo(args=args).get(package_name=args.package_name)
@@ -470,17 +473,6 @@ class CommandExecutor:
             finally:
                 if go_back:
                     os.chdir('..')
-
-        elif args.packages == "deploy":
-            services = self.utils.get_services_repo(args=args)
-            force = args.force is not None and args.force
-            service = services.deploy_from_local_folder(
-                bot=args.bot,
-                service_file=args.service_file,
-                checkout=True,
-                force=force
-            )
-            logger.info("Successfully deployed the service: {}\nService id: {}".format(service.name, service.id))
 
         else:
             logger.info('Type "dlp packages --help" for options')

@@ -216,13 +216,15 @@ class Downloader:
                             pbar.update()
                             if annotation_options and item.annotated:
                                 # download annotations only
-                                jobs[i_item] = pool.apply_async(
+                                jobs[i_item] = pool.submit(
                                     self._download_img_annotations,
-                                    kwds={
+                                    **{
                                         "item": item,
                                         "img_filepath": item_local_filepath,
                                         "overwrite": overwrite,
                                         "annotation_options": annotation_options,
+                                        "annotation_filter_type": annotation_filter_type,
+                                        "annotation_filter_label": annotation_filter_label,
                                         "local_path": local_path,
                                         "thickness": thickness,
                                         "with_text": with_text
@@ -235,9 +237,9 @@ class Downloader:
                         item_local_filepath = None
 
                     # download single item
-                    jobs[i_item] = pool.apply_async(
+                    jobs[i_item] = pool.submit(
                         self.__thread_download_wrapper,
-                        kwds={
+                        **{
                             "i_item": i_item,
                             "item": item,
                             "item_local_path": item_local_path,
@@ -258,7 +260,7 @@ class Downloader:
         except Exception:
             logger.exception('Error downloading:')
         finally:
-            _ = [j.wait() for j in jobs if isinstance(j, multiprocessing.pool.ApplyResult)]
+            _ = [j.result() for j in jobs if j is not None]
             pbar.close()
         # reporting
         n_download = reporter.status_count(status='download')
@@ -411,9 +413,9 @@ class Downloader:
                 # zip filepath
                 zip_filepath = os.path.join(local_path, "annotations_{}.zip".format(i_url))
                 # send url to pool
-                jobs.append(pool.apply_async(download_single_chunk, kwds={'w_url': url,
-                                                                          'w_filepath': zip_filepath}))
-            _ = [j.wait() for j in jobs]
+                jobs.append(pool.submit(download_single_chunk, **{'w_url': url,
+                                                                  'w_filepath': zip_filepath}))
+            _ = [j.result() for j in jobs]
         else:
             zip_filepath = os.path.join(local_path, "annotations_{}.zip".format(remote_path.split('/')[-1]))
             download_single_chunk(w_url=None,
@@ -430,6 +432,12 @@ class Downloader:
                                   annotation_filter_label,
                                   thickness=1,
                                   with_text=False):
+
+        # check if local_path is a file name
+        _, ext = os.path.splitext(local_path)
+        if ext:
+            # take the dir of the file for the annotations save
+            local_path = os.path.dirname(local_path)
 
         # fix local path
         if local_path.endswith("/items") or local_path.endswith("\\items"):
@@ -499,6 +507,7 @@ class Downloader:
             elif option in [entities.ViewAnnotationOptions.MASK,
                             entities.ViewAnnotationOptions.INSTANCE,
                             entities.ViewAnnotationOptions.ANNOTATION_ON_IMAGE,
+                            entities.ViewAnnotationOptions.OBJECT_ID,
                             entities.ViewAnnotationOptions.VTT]:
                 if option == entities.ViewAnnotationOptions.VTT:
                     annotation_filepath = temp_path + ".vtt"

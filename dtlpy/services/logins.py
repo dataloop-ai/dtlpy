@@ -55,7 +55,11 @@ def login_secret(api_client, email, password, client_id, client_secret=None, for
         env_params['gate_url'] = gate_url_from_host(environment=api_client.environment)
         api_client.environments[api_client.environment] = env_params
     token_url = env_params['gate_url'] + "/token?default"
-    resp = requests.request("POST", token_url, data=json.dumps(payload), headers=headers)
+    resp = requests.request("POST",
+                            token_url,
+                            data=json.dumps(payload),
+                            headers=headers,
+                            verify=env_params.get('verify_ssl', True))
     if not resp.ok:
         api_client.print_bad_response(resp)
         return False
@@ -75,11 +79,19 @@ def login_secret(api_client, email, password, client_id, client_secret=None, for
     return True
 
 
+def logout(api_client):
+    """
+    remove JWT from cookie
+    """
+    api_client.token = None
+    api_client.refresh_token = None
+    return True
+
+
 def login(api_client, auth0_url=None, audience=None, client_id=None):
     import webbrowser
     from http.server import BaseHTTPRequestHandler, HTTPServer
     from urllib.parse import urlparse, parse_qs
-
     logger.info('Logging in to Dataloop...')
 
     class LocalServer:

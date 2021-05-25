@@ -259,7 +259,7 @@ class TimesSeries:
         success, response = self._client_api.gen_request(req_type='delete',
                                                          path='/projects/{}/timeSeries/{}/samples/{}'.format(
                                                              self.project.id,
-                                                             series_id.id,
+                                                             series_id,
                                                              sample_id))
         if not success:
             raise exceptions.PlatformException(response)

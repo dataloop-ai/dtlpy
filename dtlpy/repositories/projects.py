@@ -48,7 +48,7 @@ class Projects:
             if project is not None:
                 project_id = project.id
             elif project_name is not None:
-                project_id = self.get(project_name=project_name)
+                project_id = self.get(project_name=project_name).id
             else:
                 raise exceptions.PlatformException('400', 'Please provide project, project name or project id')
         self._client_api._open_in_web(resource_type='project', project_id=project_id)
@@ -177,13 +177,12 @@ class Projects:
             jobs = [None for _ in range(len(projects_json))]
             # return triggers list
             for i_project, project in enumerate(projects_json):
-                jobs[i_project] = pool.apply_async(entities.Project._protected_from_json,
-                                                   kwds={'client_api': self._client_api,
-                                                         '_json': project})
-            # wait for all jobs
-            _ = [j.wait() for j in jobs]
+                jobs[i_project] = pool.submit(entities.Project._protected_from_json,
+                                              **{'client_api': self._client_api,
+                                                 '_json': project})
+
             # get all results
-            results = [j.get() for j in jobs]
+            results = [j.result() for j in jobs]
             # log errors
             _ = [logger.warning(r[1]) for r in results if r[0] is False]
             # return good jobs

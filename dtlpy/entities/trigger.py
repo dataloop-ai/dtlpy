@@ -13,6 +13,8 @@ class TriggerResource(str, Enum):
     ITEM = "Item"
     DATASET = "Dataset"
     ANNOTATION = "Annotation"
+    TASK = 'Task',
+    ASSIGNMENT = 'Assignment',
     ITEM_STATUS = "ItemStatus"
 
 
@@ -20,6 +22,7 @@ class TriggerAction(str, Enum):
     CREATED = "Created"
     UPDATED = "Updated"
     DELETED = "Deleted"
+    STATUS_CHANGED = 'statusChanged'
 
 
 class TriggerExecutionMode(str, Enum):

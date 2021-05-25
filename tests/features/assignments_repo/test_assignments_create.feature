@@ -18,9 +18,9 @@ Feature: Assignments repository create method testing
 
     Scenario: Create - maximum params - filters
         When I create Task
-            | task_name=min_params | due_date=auto |  assignee_ids=annotator1@dataloop.ai | filters={"annotated": true} |
+            | task_name=min_params2 | due_date=auto |  assignee_ids=annotator1@dataloop.ai | filters={"filter": {"$and": [{"hidden": false}, {"type": "file"}, {"annotated": true}]}} |
         When I create an Assignment from "task" entity
-            | assignee_id=annotator2@dataloop.ai | filters={"metadata":{"user.good": 3, "user.bad": 3}} | items=None |
+            | assignee_id=annotator2@dataloop.ai | filters={"filter": {"$and": [{"hidden": false}, {"type": "file"}, {"metadata":{"user.good": 3, "user.bad": 3}} ]}}| items=None |
         Then I receive an assignment entity
         And Assignment has the correct attributes
 

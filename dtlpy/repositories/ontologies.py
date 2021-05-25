@@ -123,16 +123,15 @@ class Ontologies:
         jobs = [None for _ in range(len(response_items))]
         # return triggers list
         for i_package, package in enumerate(response_items):
-            jobs[i_package] = pool.apply_async(entities.Ontology._protected_from_json,
-                                               kwds={'client_api': self._client_api,
-                                                     '_json': package,
-                                                     'project': self._project,
-                                                     'dataset': self._dataset,
-                                                     'recipe': self._recipe})
-        # wait for all jobs
-        _ = [j.wait() for j in jobs]
+            jobs[i_package] = pool.submit(entities.Ontology._protected_from_json,
+                                          **{'client_api': self._client_api,
+                                             '_json': package,
+                                             'project': self._project,
+                                             'dataset': self._dataset,
+                                             'recipe': self._recipe})
+
         # get all results
-        results = [j.get() for j in jobs]
+        results = [j.result() for j in jobs]
         # log errors
         _ = [logger.warning(r[1]) for r in results if r[0] is False]
         # return good jobs
@@ -189,11 +188,10 @@ class Ontologies:
             pool = self._client_api.thread_pools(pool_name='entity.create')
             jobs = [None for _ in range(len(ontologies))]
             for i_ontology, ontology_id in enumerate(ontologies):
-                jobs[i_ontology] = pool.apply_async(self._protected_get, kwds={'ontology_id': ontology_id})
-            # wait for all jobs
-            _ = [j.wait() for j in jobs]
+                jobs[i_ontology] = pool.submit(self._protected_get, **{'ontology_id': ontology_id})
+
             # get all results
-            results = [j.get() for j in jobs]
+            results = [j.result() for j in jobs]
             # log errors
             _ = [logger.warning(r[1]) for r in results if r[0] is False]
             # return good jobs

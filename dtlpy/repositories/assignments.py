@@ -110,6 +110,8 @@ class Assignments:
             query.append('annotator={}'.format(assignee_id))
         if pages_size is not None:
             query.append('pageSize={}'.format(pages_size))
+        if pages_size is None:
+            query.append('pageSize={}'.format(500))
         if page_offset is not None:
             query.append('pageOffset={}'.format(page_offset))
 
@@ -318,8 +320,10 @@ class Assignments:
             if filters is None:
                 if not isinstance(items, list):
                     items = [items]
-                filters = entities.Filters(field='id', values=[item.id for item in items],
-                                           operator=entities.FiltersOperations.IN)
+                filters = entities.Filters(field='id',
+                                           values=[item.id for item in items],
+                                           operator=entities.FiltersOperations.IN,
+                                           use_defaults=False)
 
             filters._ref_assignment = True
             filters._ref_assignment_id = assignment_id
@@ -361,7 +365,7 @@ class Assignments:
             dataset = self._dataset
 
         if filters is None:
-            filters = entities.Filters()
+            filters = entities.Filters(use_defaults=False)
         filters.add(field='metadata.system.refs.id', values=[assignment_id], operator=entities.FiltersOperations.IN)
 
         return dataset.items.list(filters=filters)

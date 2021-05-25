@@ -16,7 +16,7 @@ Feature: Tasks repository create method testing
 
     Scenario: Create - maximum params - filters
         When I create Task
-            | task_name=filters_task | due_date=auto | assignee_ids=auto | workload=None | dataset=auto | task_owner=auto | task_type=annotation | task_parent_id=None | project_id=auto | recipe_id=auto | assignments_ids=None | metadata={"key": "value"} | filters={"metadata":{"user.good": 3, "user.bad": 3}} | items=None |
+            | task_name=filters_task | due_date=auto | assignee_ids=auto | workload=None | dataset=auto | task_owner=auto | task_type=annotation | task_parent_id=None | project_id=auto | recipe_id=auto | assignments_ids=None | metadata={"key": "value"} | filters={"filter": {"$and": [{"hidden": false}, {"type": "file"}, {"metadata":{"user.good": 3, "user.bad": 3}} ]}} | items=None |
         Then I receive a task entity
         And Task has the correct attributes
 
