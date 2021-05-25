@@ -1124,10 +1124,8 @@ class ApiClient:
             head = 'https://dev-con.dataloop.ai'
         elif env == 'rc':
             head = 'https://rc-con.dataloop.ai'
-        elif env in ['local', 'minikube_local_mac']:
+        elif env == 'local':
             head = 'https://localhost:8443/'
-        elif env == 'new-dev':
-            head = 'https://custom0-gate.dataloop.ai'
         else:
             raise exceptions.PlatformException(error='400', message='Unknown environment: {}'.format(env))
 

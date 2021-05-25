@@ -30,7 +30,7 @@ pipelines:
             - git clone https://x-token-auth:${access_token}@bitbucket.org/dataloop-ai/piper-agent-runner.git
             - cd piper-agent-runner
             - git config user.email sdk@dataloop.ai
-            - git checkout development
+            - git checkout master
             - python3 bumpversion.py --hard $BITBUCKET_TAG.0
             - git push --follow-tags
             - cd ..

@@ -445,13 +445,7 @@ class Uploader:
                     except Exception:
                         logger.exception('Error uploading annotations to item id: {}'.format(item.id))
 
-                reporter.set_index(i_item=i_item,
-                                   status=action,
-                                   output=item,
-                                   success=True,
-                                   ref=item.id)
-                if pbar is not None:
-                    pbar.update()
+                reporter.set_index(i_item=i_item, status=action, output=item, success=True, ref=item.id)
             else:
                 if isinstance(element.buffer, str):
                     ref = element.buffer
@@ -459,10 +453,10 @@ class Uploader:
                     ref = element.buffer.name
                 else:
                     ref = 'Unknown'
-                reporter.set_index(i_item=i_item,
-                                   status='error',
-                                   success=False,
+                reporter.set_index(i_item=i_item, status='error', success=False,
                                    error="{}\n{}".format(err, trace), ref=ref)
+            if pbar is not None:
+                pbar.update()
 
     async def __async_upload_annotations(self, annotations_filepath, item):
         with open(annotations_filepath, 'r', encoding="utf8") as f:

@@ -94,9 +94,30 @@ class Annotation(entities.BaseEntity):
     __client_api = attr.ib(default=None, repr=False)
     _items = attr.ib(repr=False, default=None)
 
-    ############
-    # Platform #
-    ############
+    ####################################
+    # annotation definition attributes #
+    ####################################
+    @property
+    def parent_id(self):
+        try:
+            parent_id = self.metadata['system']['parentId']
+        except KeyError:
+            parent_id = None
+        return parent_id
+
+    @parent_id.setter
+    def parent_id(self, parent_id):
+        if 'system' not in self.metadata:
+            self.metadata['system'] = dict()
+        self.metadata['system']['parentId'] = parent_id
+
+    @property
+    def coordinates(self):
+        color = None
+        if self.type in ['binary']:
+            color = self.color
+        coordinates = self.annotation_definition.to_coordinates(color=color)
+        return coordinates
 
     @property
     def _client_api(self) -> ApiClient:
@@ -148,31 +169,6 @@ class Annotation(entities.BaseEntity):
                 self._items = repositories.Items(client_api=self._client_api, dataset=self._dataset)
         assert isinstance(self._items, repositories.Items)
         return self._items
-
-    #########################
-    # Annotation Properties #
-    #########################
-    @property
-    def parent_id(self):
-        try:
-            parent_id = self.metadata['system']['parentId']
-        except KeyError:
-            parent_id = None
-        return parent_id
-
-    @parent_id.setter
-    def parent_id(self, parent_id):
-        if 'system' not in self.metadata:
-            self.metadata['system'] = dict()
-        self.metadata['system']['parentId'] = parent_id
-
-    @property
-    def coordinates(self):
-        color = None
-        if self.type in ['binary']:
-            color = self.color
-        coordinates = self.annotation_definition.to_coordinates(color=color)
-        return coordinates
 
     @property
     def x(self):
@@ -256,30 +252,6 @@ class Annotation(entities.BaseEntity):
         self.annotation_definition.left = left
 
     @property
-    def right(self):
-        return self.annotation_definition.right
-
-    @right.setter
-    def right(self, right):
-        self.annotation_definition.right = right
-
-    @property
-    def height(self):
-        return self.annotation_definition.height
-
-    @height.setter
-    def height(self, height):
-        self.annotation_definition.height = height
-
-    @property
-    def width(self):
-        return self.annotation_definition.width
-
-    @width.setter
-    def width(self, width):
-        self.annotation_definition.width = width
-
-    @property
     def description(self):
         description = None
         if 'system' in self.metadata:
@@ -290,6 +262,14 @@ class Annotation(entities.BaseEntity):
     def description(self, description):
         if 'system' in self.metadata:
             self.metadata['system']['description'] = description
+
+    @property
+    def right(self):
+        return self.annotation_definition.right
+
+    @right.setter
+    def right(self, right):
+        self.annotation_definition.right = right
 
     @property
     def last_frame(self):

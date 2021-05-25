@@ -334,6 +334,22 @@ def get_parser():
 
     # ACTIONS #
 
+    # generate
+    a = subparser_parser.add_parser(
+        "generate", help="Generate service.json file"
+    )
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument("-l", "--local-path", dest="local_path", default=None,
+                          help="path to service.json file")
+
+    # deploy
+    a = subparser_parser.add_parser("deploy", help="Deploy service from local directory")
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument("-f", "--service-file", dest="service_file", default=None,
+                          help="Path to service file")
+    optional.add_argument("-b", "--bot", dest="bot", default=None,
+                          help="User bot")
+
     # execute
     a = subparser_parser.add_parser("execute", help="Create an execution")
     optional = a.add_argument_group("optional named arguments")
@@ -442,31 +458,6 @@ def get_parser():
                           help="Package name")
     optional.add_argument("-s", "--service-name", dest="service_name", default=None,
                           help="Service name")
-
-    ############
-    # Deploy   #
-    ############
-    # subparsers.add_parser("deploy", help="Login using web Auth0 interface")
-
-    a = subparsers.add_parser("deploy", help="deploy with json file")
-    required = a.add_argument_group("required named arguments")
-    required.add_argument("-f", dest="json_file", default=None,
-                          help="Path to json file")
-    required.add_argument("-p", dest="project_name", default=None,
-                          help="Project name")
-
-    ############
-    # Generate   #
-    ############
-    # subparsers.add_parser("deploy", help="Login using web Auth0 interface")
-
-    a = subparsers.add_parser("generate", help="generate a json file")
-    optional = a.add_argument_group("optional named arguments")
-    optional.add_argument("--option", dest="package_type", default=None,
-                          help="cataluge of examples")
-    optional.add_argument("-p", "--package-name", dest="package_name", default=None,
-                          help="Package name")
-
     ############
     # packages #
     ############
@@ -476,6 +467,31 @@ def get_parser():
     )
 
     # ACTIONS #
+
+    # deploy
+    a = subparser_parser.add_parser("deploy", help="Deploy service from local directory")
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument("-f", "--service-file", dest="service_file", default=None,
+                          help="Path to service file")
+    optional.add_argument("-b", "--bot", dest="bot", default=None,
+                          help="User bot")
+    optional.add_argument("-p", "--package-name", dest="package_name", default=None,
+                          help="Package name")
+    optional.add_argument("-pr", "--project-name", dest="project_name", default=None,
+                          help="Project name")
+    optional.add_argument("-force", dest="force", default=False,
+                          help="Immediately kill existing replicas")
+
+    # generate
+    a = subparser_parser.add_parser("generate", help="Create a boilerplate for a new package")
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument("-pr", "--project-name", dest="project_name", default=None,
+                          help="Project name")
+    optional.add_argument("-p", "--package-name", dest="package_name", default=None,
+                          help="Package name")
+    optional.add_argument("-t", "--package-type", dest="package_type", default=None,
+                          help="Type of package ")
+
     # ls
     a = subparser_parser.add_parser("ls", help="List packages")
     optional = a.add_argument_group("optional named arguments")

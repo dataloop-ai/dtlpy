@@ -25,37 +25,5 @@
         }
       ]
     }
-  ],
-  "services": [
-    {
-      "name": "default-service",
-      "packageRevision": "latest",
-      "runtime": {
-        "gpu": false,
-        "replicas": 1,
-        "concurrency": 10
-      },
-      "triggers": [
-        {
-          "name": "name",
-          "active": true,
-          "type": "Event",
-          "spec": {
-            "filter": {},
-            "resource": "Item",
-            "actions": [
-              "Created"
-            ],
-            "operation": {
-              "type": "function",
-              "functionName": "run"
-            },
-            "executionMode": "Once"
-          }
-        }
-      ],
-      "initParams": {},
-      "moduleName": "default_module"
-    }
   ]
 }
