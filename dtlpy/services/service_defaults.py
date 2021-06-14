@@ -22,6 +22,15 @@ DEFAULT_ENVIRONMENTS = {
          'token': None,
          'refresh_token': None,
          'verify_ssl': True},
+    'https://custom0-gate.dataloop.ai/api/v1': {
+        'gate_url': 'https://custom0-gate.dataloop.ai',
+        'auth0_url': 'https://dataloop-development.auth0.com',
+        'verify_ssl': True,
+        'client_id': 'NEED',
+        'audience': 'https://dataloop-development.auth0.com/api/v2/',
+        'token': '',
+        'refresh_token': '',
+        'alias': 'new-dev'},
     'https://gate.dataloop.ai/api/v1': {
         'alias': 'prod',
         'audience': 'https://dataloop-production.auth0.com/userinfo',
@@ -64,6 +73,15 @@ DEFAULT_ENVIRONMENTS = {
         'client_id': 'ewGhbg5brMHOoL2XZLHBzhEanapBIiVO',
         'auth0_url': 'https://dataloop-local.auth0.com',
         'gate_url': 'https://host.docker.internal:8443',
+        'token': None,
+        'refresh_token': None,
+        'verify_ssl': False},
+    'http://kong/api/v1': {
+        'alias': 'minikube',
+        'audience': 'https://dataloop-local.auth0.com/userinfo',
+        'client_id': 'ewGhbg5brMHOoL2XZLHBzhEanapBIiVO',
+        'auth0_url': 'https://dataloop-local.auth0.com',
+        'gate_url': 'http://kong',
         'token': None,
         'refresh_token': None,
         'verify_ssl': False}

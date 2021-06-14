@@ -94,30 +94,9 @@ class Annotation(entities.BaseEntity):
     __client_api = attr.ib(default=None, repr=False)
     _items = attr.ib(repr=False, default=None)
 
-    ####################################
-    # annotation definition attributes #
-    ####################################
-    @property
-    def parent_id(self):
-        try:
-            parent_id = self.metadata['system']['parentId']
-        except KeyError:
-            parent_id = None
-        return parent_id
-
-    @parent_id.setter
-    def parent_id(self, parent_id):
-        if 'system' not in self.metadata:
-            self.metadata['system'] = dict()
-        self.metadata['system']['parentId'] = parent_id
-
-    @property
-    def coordinates(self):
-        color = None
-        if self.type in ['binary']:
-            color = self.color
-        coordinates = self.annotation_definition.to_coordinates(color=color)
-        return coordinates
+    ############
+    # Platform #
+    ############
 
     @property
     def _client_api(self) -> ApiClient:
@@ -133,7 +112,12 @@ class Annotation(entities.BaseEntity):
     @property
     def dataset(self):
         if self._dataset is None:
-            self._dataset = self.datasets.get(dataset_id=self.dataset_id)
+            if self._item is not None:
+                # get from item
+                self._dataset = self._item.dataset
+            else:
+                # get directly
+                self._dataset = self.datasets.get(dataset_id=self.dataset_id)
         assert isinstance(self._dataset, entities.Dataset)
         return self._dataset
 
@@ -170,6 +154,31 @@ class Annotation(entities.BaseEntity):
         assert isinstance(self._items, repositories.Items)
         return self._items
 
+    #########################
+    # Annotation Properties #
+    #########################
+    @property
+    def parent_id(self):
+        try:
+            parent_id = self.metadata['system']['parentId']
+        except KeyError:
+            parent_id = None
+        return parent_id
+
+    @parent_id.setter
+    def parent_id(self, parent_id):
+        if 'system' not in self.metadata:
+            self.metadata['system'] = dict()
+        self.metadata['system']['parentId'] = parent_id
+
+    @property
+    def coordinates(self):
+        color = None
+        if self.type in ['binary']:
+            color = self.color
+        coordinates = self.annotation_definition.to_coordinates(color=color)
+        return coordinates
+
     @property
     def x(self):
         return self.annotation_definition.x
@@ -194,7 +203,7 @@ class Annotation(entities.BaseEntity):
 
     @property
     def angle(self):
-        if self.annotation_definition.type in ['ellipse', 'cube']:
+        if self.annotation_definition.type in ['ellipse', 'cube', 'box']:
             return self.annotation_definition.angle
         else:
             return None
@@ -252,6 +261,30 @@ class Annotation(entities.BaseEntity):
         self.annotation_definition.left = left
 
     @property
+    def right(self):
+        return self.annotation_definition.right
+
+    @right.setter
+    def right(self, right):
+        self.annotation_definition.right = right
+
+    @property
+    def height(self):
+        return self.annotation_definition.height
+
+    @height.setter
+    def height(self, height):
+        self.annotation_definition.height = height
+
+    @property
+    def width(self):
+        return self.annotation_definition.width
+
+    @width.setter
+    def width(self, width):
+        self.annotation_definition.width = width
+
+    @property
     def description(self):
         description = None
         if 'system' in self.metadata:
@@ -262,14 +295,6 @@ class Annotation(entities.BaseEntity):
     def description(self, description):
         if 'system' in self.metadata:
             self.metadata['system']['description'] = description
-
-    @property
-    def right(self):
-        return self.annotation_definition.right
-
-    @right.setter
-    def right(self, right):
-        self.annotation_definition.right = right
 
     @property
     def last_frame(self):
@@ -297,13 +322,8 @@ class Annotation(entities.BaseEntity):
 
     @property
     def color(self):
-        all_colors_lower = None
-        if self._dataset is not None:
-            all_colors_lower = {k.lower(): v for k, v in self._dataset.labels_flat_dict.items()}
-        else:
-            if self._item is not None and self._item._dataset is not None:
-                all_colors_lower = {k.lower(): v for k, v in self._item._dataset.labels_flat_dict.items()}
-
+        # if "dataset" is not in self - this will always get the dataset
+        all_colors_lower = {k.lower(): v for k, v in self.dataset.labels_flat_dict.items()}
         if all_colors_lower is not None and self.label.lower() in all_colors_lower:
             color = all_colors_lower[self.label.lower()].rgb
         else:
@@ -962,7 +982,8 @@ class Annotation(entities.BaseEntity):
             if _json['type'] == 'segment':
                 is_open = False
                 if 'system' in metadata:
-                    is_open = metadata['system'].get('isOpen', is_open)
+                    if metadata['system'] is not None:
+                        is_open = metadata['system'].get('isOpen', is_open)
                 def_dict['is_open'] = is_open
             annotation_definition = FrameAnnotation.json_to_annotation_definition(def_dict)
 

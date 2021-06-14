@@ -100,7 +100,10 @@ class Datasets:
         """
         if dataset is None:
             if dataset_id is not None or dataset_name is not None:
-                dataset = self.get(dataset_id=dataset_id, dataset_name=dataset_name)
+                try:
+                    dataset = self.project.datasets.get(dataset_name=dataset_name, dataset_id=dataset_id)
+                except exceptions.MissingEntity:
+                    dataset = self.get(dataset_id=dataset_id, dataset_name=dataset_name)
             elif identifier is not None:
                 dataset = self.__get_by_identifier(identifier=identifier)
             else:
@@ -401,7 +404,8 @@ class Datasets:
             else:
                 raise exceptions.PlatformException(
                     error=400,
-                    message='Input arg "driver" must be Driver object or a string driver name. got type: {!r}'.format(type(driver)))
+                    message='Input arg "driver" must be Driver object or a string driver name. got type: {!r}'.format(
+                        type(driver)))
         if driver_id is not None:
             payload['driver'] = driver_id
 
@@ -426,54 +430,55 @@ class Datasets:
         return dataset
 
     @staticmethod
+    def _convert_single(downloader, item, img_filepath, local_path, overwrite, annotation_options,
+                        annotation_filters, thickness, with_text, progress):
+        # this is to convert the downloaded json files to any other annotation type
+        try:
+            downloader._download_img_annotations(item=item,
+                                                 img_filepath=img_filepath,
+                                                 local_path=local_path,
+                                                 overwrite=overwrite,
+                                                 annotation_options=annotation_options,
+                                                 annotation_filters=annotation_filters,
+                                                 thickness=thickness,
+                                                 with_text=with_text)
+        except Exception:
+            logger.error('Failed to download annotation for item: {!r}'.format(item.name))
+        progress.update()
+
+    @staticmethod
     def download_annotations(dataset,
                              local_path=None,
-                             filters=None,
+                             filters: entities.Filters = None,
                              annotation_options: entities.ViewAnnotationOptions = None,
+                             annotation_filters: entities.Filters = None,
                              annotation_filter_type: entities.AnnotationType = None,
                              annotation_filter_label=None,
                              overwrite=False,
                              thickness=1,
                              with_text=False,
-                             num_workers=32,
                              remote_path=None):
         """
-        Download dataset by filters.
-        Filtering the dataset for items and save them local
-        Optional - also download annotation, mask, instance and image mask of the item
+        Download dataset's annotations by filters.
+        Filtering the dataset both for items and for annotations and download annotations
+        Optional - also download annotations as: mask, instance, image mask of the item
 
         :param dataset: dataset to download from
         :param local_path: local folder or filename to save to.
         :param filters: Filters entity or a dictionary containing filters parameters
         :param annotation_options: download annotations options: list(dl.ViewAnnotationOptions)
-        :param annotation_filter_type: list (dl.AnnotationType) of annotation types when downloading annotation,
-                                                                                        not relevant for JSON option
-        :param annotation_filter_label: list of labels types when downloading annotation, not relevant for JSON option
+        :param annotation_filters: Filters entity to filter annotations for download
+        :param annotation_filter_type: DEPRECATED - list (dl.AnnotationType) of annotation types when downloading annotation, not relevant for JSON option
+        :param annotation_filter_label: DEPRECATED - list of labels types when downloading annotation, not relevant for JSON option
         :param overwrite: optional - default = False
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :param with_text: optional - add text to annotations, default = False
-        :param remote_path optinal - remote path to download
-        :param num_workers number of threads
+        :param remote_path: DEPRECATED and ignored
         :return: `List` of local_path per each downloaded item
         """
-
-        def download_single(i_item, i_img_filepath, i_local_path, i_overwrite, i_annotation_options,
-                            i_annotation_filter_type, i_annotation_filter_label, i_thickness, i_with_text):
-            try:
-                repositories.Downloader._download_img_annotations(item=i_item,
-                                                                  img_filepath=i_img_filepath,
-                                                                  local_path=i_local_path,
-                                                                  overwrite=i_overwrite,
-                                                                  annotation_options=i_annotation_options,
-                                                                  annotation_filter_type=i_annotation_filter_type,
-                                                                  annotation_filter_label=i_annotation_filter_label,
-                                                                  thickness=i_thickness,
-                                                                  with_text=i_with_text)
-            except Exception:
-                logger.error('Failed to download annotation for item: {!r}'.format(item.name))
-
-            progress.update(1)
-
+        if remote_path is not None:
+            logger.warning(
+                '"remote_path" is ignored. Use "filters=dl.Filters(field="dir, values={!r}"'.format(remote_path))
         if local_path is None:
             if dataset.project is None:
                 # by dataset name
@@ -492,70 +497,79 @@ class Datasets:
                     dataset.name,
                 )
 
-        downloader = repositories.Downloader(items_repository=dataset.items)
+        if annotation_filters is not None and \
+                (annotation_filter_type is not None or annotation_filter_type is not None):
+            # if BOTH deprecated and new args have values
+            logger.warning(
+                'Cannot input "annotation_filters" with one of "annotation_filter_type" or "annotation_filter_type". Using ONLY "annotation_filters"')
+        elif annotation_filters is None and \
+                (annotation_filter_type is not None or annotation_filter_type is not None):
+            # if ONLY deprecated args have values
+            annotation_filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION)
+            if annotation_filter_type is not None:
+                if not isinstance(annotation_filter_type, list):
+                    annotation_filter_type = [annotation_filter_type]
+                logger.warning(
+                    'Deprecation Warning - input param "annotation_filter_type" will be deprecated starting from version "1.30.0". '
+                    'Use "annotation_filters=dl.Filters(field={!r}, values={!r}, operator=entities.FiltersOperations.IN)"'.format(
+                        'type',
+                        annotation_filter_type))
+                annotation_filters.add(field='type',
+                                       values=annotation_filter_type,
+                                       operator=entities.FiltersOperations.IN)
 
-        # check if need to only download zip
+            if annotation_filter_label is not None:
+                if not isinstance(annotation_filter_label, list):
+                    annotation_filter_label = [annotation_filter_label]
+                logger.warning(
+                    'Deprecation Warning - input param "annotation_filter_label" will be deprecated starting from '
+                    'version "1.30.0". Use "annotation_filters=dl.Filters(field={!r}, values={!r}, '
+                    'operator=entities.FiltersOperations.IN)"'.format('label',
+                                                                      annotation_filter_label))
+                annotation_filters.add(field='label',
+                                       values=annotation_filter_label,
+                                       operator=entities.FiltersOperations.IN)
+
         if filters is None:
             filters = entities.Filters()
-            if annotation_options is None:
-                downloader.download_annotations(dataset=dataset,
-                                                local_path=local_path,
-                                                overwrite=overwrite,
-                                                remote_path=remote_path)
-                return local_path
+        if annotation_filters is not None:
+            annotation_filters.resource = entities.FiltersResource.ANNOTATION
+            filters.join = annotation_filters.prepare(query_only=True)
 
-        filters.add(field='annotated', values=True)
-
-        if annotation_options is None:
-            annotation_options = [entities.ViewAnnotationOptions.JSON]
-        if not isinstance(annotation_options, list):
-            annotation_options = [annotation_options]
-
-        if annotation_filter_type is not None or annotation_filter_label is not None:
-            if filters is None:
-                filters = entities.Filters(resource=entities.FiltersResource.ITEM)
-            filters.add(field='annotated', values=True)
-
-        if annotation_filter_type is not None:
-            if not isinstance(annotation_filter_type, list):
-                annotation_filter_type = [annotation_filter_type]
-            filters.add_join(field='type', values=annotation_filter_type, operator=entities.FiltersOperations.IN)
-
-        if annotation_filter_label is not None:
-            if not isinstance(annotation_filter_label, list):
-                annotation_filter_label = [annotation_filter_label]
-            filters.add_join(field='label', values=annotation_filter_label, operator=entities.FiltersOperations.IN)
-
-        pages = dataset.items.list(filters=filters)
-
-        if pages.items_count > dataset.annotated / 10:
-            downloader.download_annotations(dataset=dataset,
-                                            local_path=local_path,
-                                            overwrite=overwrite,
-                                            remote_path=remote_path)
-
-        pool = dataset._client_api.thread_pools(pool_name='dataset.download')
-        jobs = [None for _ in range(pages.items_count)]
-        progress = tqdm.tqdm(total=pages.items_count)
-        for page in pages:
-            for i_item, item in enumerate(page):
-                jobs[i_item] = pool.submit(
-                    download_single,
-                    **{
-                        'i_item': item,
-                        'i_img_filepath': None,
-                        'i_local_path': local_path,
-                        'i_overwrite': overwrite,
-                        'i_annotation_options': annotation_options,
-                        'i_annotation_filter_type': annotation_filter_type,
-                        'i_annotation_filter_label': annotation_filter_label,
-                        'i_thickness': thickness,
-                        'i_with_text': with_text
-                    }
-                )
-        # get all results
-        results = [j.result() for j in jobs]
-        progress.close()
+        downloader = repositories.Downloader(items_repository=dataset.items)
+        downloader.download_annotations(dataset=dataset,
+                                        filters=filters,
+                                        annotation_filters=annotation_filters,
+                                        local_path=local_path,
+                                        overwrite=overwrite)
+        if annotation_options is not None:
+            pages = dataset.items.list(filters=filters)
+            if not isinstance(annotation_options, list):
+                annotation_options = [annotation_options]
+            # convert all annotations to annotation_options
+            pool = dataset._client_api.thread_pools(pool_name='dataset.download')
+            jobs = [None for _ in range(pages.items_count)]
+            progress = tqdm.tqdm(total=pages.items_count)
+            for page in pages:
+                for i_item, item in enumerate(page):
+                    jobs[i_item] = pool.submit(
+                        Datasets._convert_single,
+                        **{
+                            'downloader': downloader,
+                            'item': item,
+                            'img_filepath': None,
+                            'local_path': local_path,
+                            'overwrite': overwrite,
+                            'annotation_options': annotation_options,
+                            'annotation_filters': annotation_filters,
+                            'thickness': thickness,
+                            'with_text': with_text,
+                            'progress': progress
+                        }
+                    )
+            # get all results
+            _ = [j.result() for j in jobs]
+            progress.close()
         return local_path
 
     def set_readonly(self, state: bool, dataset: entities.Dataset):

@@ -22,6 +22,7 @@ class PlatformException(Exception):
             '404': NotFound,
             '408': RequestTimeout,
             '409': Conflict,
+            '424': FailedDependency,
             '500': InternalServerError,
             '600': TokenExpired,
             '1001': ShowAnnotationError,
@@ -70,6 +71,10 @@ class Forbidden(ExceptionMain):
 
 
 class Conflict(ExceptionMain):
+    pass
+
+
+class FailedDependency(ExceptionMain):
     pass
 
 

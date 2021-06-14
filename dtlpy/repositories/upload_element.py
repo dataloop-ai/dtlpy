@@ -78,6 +78,35 @@ class DirUploadElement(BaseUploadElement):
             self.annotations_filepath = annotations_filepath
 
 
+class ExternalItemUploadElement(BaseUploadElement):
+
+    def __init__(self, all_upload_elements: dict):
+        super().__init__(all_upload_elements)
+        # self.upload_item_element = self.upload_item_element.split('//')[1]
+        filepath = self.upload_item_element
+        # extract item's size
+        self.total_size += all_upload_elements['total_size']
+        # determine item's remote base name
+        if self.remote_name is None:
+            self.remote_name = os.path.basename(filepath)
+        # get annotations file
+        if self.upload_annotations_element is not None:
+            # change path to annotations
+            annotations_filepath = filepath.replace(self.upload_item_element, self.upload_annotations_element)
+            # remove image extension
+            annotations_filepath, _ = os.path.splitext(annotations_filepath)
+            # add json extension
+            annotations_filepath += ".json"
+        else:
+            annotations_filepath = None
+        # append to list
+        remote_filepath = self.remote_path + self.remote_name
+        self.type = 'external_file'
+        self.buffer = filepath
+        self.remote_filepath = remote_filepath
+        self.annotations_filepath = annotations_filepath
+
+
 class FileUploadElement(BaseUploadElement):
 
     def __init__(self, all_upload_elements: dict):

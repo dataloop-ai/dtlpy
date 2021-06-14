@@ -1,6 +1,8 @@
 import importlib.util
+import collections.abc
 import inspect
 import logging
+import hashlib
 import json
 import os
 from copy import deepcopy
@@ -648,83 +650,132 @@ class Packages:
                                        force=force
                                        )
 
-    @staticmethod
-    def generate(name=None, src_path=None, service_name=None, package_type=PackageCatalog.DEFAULT_PACKAGE_TYPE):
-        """
-        Generate new package environment
+    def deploy_from_file(self, project, json_filepath):
+        with open(json_filepath, 'r') as f:
+            data = json.load(f)
 
-        :return:
-        """
-        # name
-        if name is None:
-            name = 'default-package'
-        if service_name is None:
-            service_name = 'default-service'
-
-        # src path
-        if src_path is None:
-            src_path = os.getcwd()
-
-        package_asset = Packages._package_json_generator(package_name=name, package_catalog=package_type)
-
-        to_generate = [
-            {'src': assets.paths.ASSETS_GITIGNORE_FILEPATH, 'dst': os.path.join(src_path, '.gitignore'),
-             'type': 'copy'},
-            {'src': package_asset,
-             'dst': os.path.join(src_path, assets.paths.PACKAGE_FILENAME), 'type': 'json'},
-            {'src': Packages._service_json_generator(package_catalog=package_type,
-                                                     package_name=name,
-                                                     service_name=service_name),
-             'dst': os.path.join(src_path, assets.paths.SERVICE_FILENAME), 'type': 'json'}
-        ]
-
-        if package_type == PackageCatalog.DEFAULT_PACKAGE_TYPE:
-            to_generate.append({'src': assets.paths.ASSETS_MOCK_FILEPATH,
-                                'dst': os.path.join(src_path, assets.paths.MOCK_FILENAME), 'type': 'copy'})
+        package = project.packages.push(
+            package_name=data['name'],
+            modules=data['modules'],
+            src_path=os.path.split(json_filepath)[0]
+        )
+        deployed_services = list()
+        if 'services' in data:
+            for service_json in data['services']:
+                try:
+                    # update
+                    service_old = project.services.get(service_name=service_json['name'])
+                except exceptions.NotFound:
+                    # create
+                    service_old = package.services.deploy(service_name=service_json['name'],
+                                                          module_name=data['modules'][0]['name'])
+                triggers = service_json.pop('triggers', None)
+                artifacts = service_json.pop('artifacts', None)
+                to_update, service = self.__compare_and_update_service_configurations(service=service_old,
+                                                                                      service_json=service_json)
+                if to_update:
+                    service.package_revision = package.version
+                    service.update()
+                if triggers:
+                    self.__compare_and_update_trigger_configurations(service, triggers)
+                if artifacts:
+                    self.__compare_and_upload_artifacts(artifacts, package)
+                deployed_services.append(service)
         else:
-            module = entities.PackageModule.from_json(package_asset['modules'][0])
-            function_name = module.functions[0].name
+            logger.warning(msg='Package JSON do not have services.')
+        return deployed_services, package
 
-            to_generate.append({'src': Packages._mock_json_generator(module=module, function_name=function_name),
-                                'dst': os.path.join(src_path, assets.paths.MOCK_FILENAME), 'type': 'json'})
+    def __update_dict_recursive(self, d, u):
+        for k, v in u.items():
+            if isinstance(v, collections.abc.Mapping):
+                inner_dict = d.get(k, {})
+                if inner_dict is None:
+                    inner_dict = {}
+                d[k] = self.__update_dict_recursive(inner_dict, v)
+            else:
+                d[k] = v
+        return d
 
-        main_file_paths = Packages._entry_point_generator(package_catalog=package_type)
-        if len(main_file_paths) == 1:
-            to_generate.append({'src': main_file_paths[0],
-                                'dst': os.path.join(src_path, assets.paths.MAIN_FILENAME),
-                                'type': 'copy'})
-        else:
-            to_generate += [{'src': main_file_paths[0],
-                             'dst': os.path.join(src_path, assets.paths.MODULE_A_FILENAME),
-                             'type': 'copy'},
-                            {'src': main_file_paths[1],
-                             'dst': os.path.join(src_path, assets.paths.MODULE_B_FILENAME),
-                             'type': 'copy'}
-                            ]
+    def __compare_and_update_trigger_configurations(self, service, trigger_list):
+        service_triggers = service.triggers.list().all()
+        triggers_dict = dict()
+        for trigger in service_triggers:
+            triggers_dict[trigger.name] = trigger
 
-        for job in to_generate:
-            if not os.path.isfile(job['dst']):
-                if job['type'] == 'copy':
-                    copyfile(job['src'], job['dst'])
-                elif job['type'] == 'json':
-                    with open(job['dst'], 'w') as f:
-                        json.dump(job['src'], f, indent=2)
+        for trigger_spec in trigger_list:
+            trigger_name = trigger_spec['name']
+            if trigger_name not in triggers_dict:
+                # create
+                service.triggers.create(name=trigger_name,
+                                        trigger_type=trigger_spec.get('type'),
+                                        filters=trigger_spec.get('spec').get('filter'),
+                                        resource=trigger_spec.get('spec').get('resource'),
+                                        execution_mode=trigger_spec.get('spec').get('executionMode'),
+                                        actions=trigger_spec.get('spec').get('actions'),
+                                        function_name=trigger_spec.get('spec').get('operation').get('functionName'))
+            else:
+                existing_trigger = triggers_dict[trigger_name]
+                # check diff
+                _json = existing_trigger.to_json()
+                ####### pop unmatched fields
+                _ = _json['spec']['operation'].pop('serviceId')
+                #######
+                _new_json = _json.copy()
+                # update fields from infra configurations
+                self.__update_dict_recursive(_new_json, trigger_spec)
+                # check diffs
+                diffs = miscellaneous.DictDiffer.diff(_json, _new_json)
+                if diffs:
+                    updated_trigger = existing_trigger.from_json(_json=_new_json,
+                                                                 client_api=service._client_api,
+                                                                 service=service,
+                                                                 project=service._project)
+                    updated_trigger.update()
 
-        logger.info('Successfully generated package')
+    def __compare_and_update_service_configurations(self, service, service_json):
+        # take json configuration from service
+        _json = service.to_json()
+        _new_json = _json.copy()
+        # update fields from infra configurations
+        self.__update_dict_recursive(_new_json, service_json)
+        # check diffs
+        diffs = miscellaneous.DictDiffer.diff(_json, _new_json)
+        to_update = False
+        if diffs:
+            # build back service from json
+            to_update = True
+            service = service.from_json(_json=_new_json,
+                                        client_api=service._client_api,
+                                        package=service._package,
+                                        project=service._project)
+        return to_update, service
 
-    @staticmethod
-    def _mock_json_generator(module: entities.PackageModule, function_name):
-        _json = dict(function_name=function_name, module_name=module.name)
-        funcs = [func for func in module.functions if func.name == function_name]
-        if len(funcs) == 1:
-            func = funcs[0]
-        else:
-            raise exceptions.PlatformException('400', 'Other than 1 functions by the name of: {}'.format(function_name))
-        _json['config'] = {inpt.name: entities.Package._mockify_input(input_type=inpt.type)
-                           for inpt in module.init_inputs}
-        _json['inputs'] = [{'name': inpt.name, 'value': entities.Package._mockify_input(input_type=inpt.type)}
-                           for inpt in func.inputs]
-        return _json
+    def __compare_and_upload_artifacts(self, artifacts, package):
+        for artifact in artifacts:
+            # create/get .dataloop dir
+            cwd = os.getcwd()
+            dl_dir = os.path.join(cwd, '.dataloop')
+            if not os.path.isdir(dl_dir):
+                os.mkdir(dl_dir)
+
+            directory = os.path.abspath(artifact)
+            m = hashlib.md5()
+            with open(directory, 'rb') as f:
+                for chunk in iter(lambda: f.read(4096), b''):
+                    m.update(chunk)
+            zip_md = m.hexdigest()
+            artifacts_list = package.artifacts.list()
+            for art in artifacts_list:
+                if art.metadata['system']['md5'] == zip_md:
+                    return
+
+            artifact_item = package.artifacts.upload(filepath=directory,
+                                                     package_name=package.name,
+                                                     package=package,
+                                                     overwrite=True, )
+
+            artifact_item.metadata['system']['md5'] = zip_md
+            artifact_item.update(True)
 
     @staticmethod
     def _package_json_generator(package_catalog, package_name):
@@ -789,6 +840,7 @@ class Packages:
             second_func.name = 'second_method'
             modules = entities.PackageModule(functions=[func, second_func])
         elif package_catalog in [PackageCatalog.MULTI_MODULE, PackageCatalog.MULTI_MODULE_WITH_TRIGGER]:
+            func.inputs = [item_input]
             module_a = entities.PackageModule(functions=[func],
                                               name='first_module',
                                               entry_point='first_module_class.py')
@@ -814,48 +866,155 @@ class Packages:
         return _json
 
     @staticmethod
-    def _service_json_generator(package_catalog, package_name, service_name):
+    def build_dict(actions, name='default_module', filters=None, function='run',
+                   execution_mode='Once', type_t="Event"):
+        if not isinstance(actions, list):
+            actions = [actions]
+
+        if not filters:
+            filters = dict()
+
+        trigger_dict = {
+            "name": name,
+            "type": type_t,
+            "spec": {
+                "filter": filters,
+                "executionMode": execution_mode,
+                "resource": "Item",
+                "actions": actions,
+                "input": {},
+                "operation": {
+                    "type": "function",
+                    "functionName": function
+                }
+            }
+        }
+        return trigger_dict
+
+    @staticmethod
+    def _service_json_generator(package_catalog, service_name):
         triggers = list()
-        with open(assets.paths.ASSETS_SERVICE_FILEPATH, 'r') as f:
-            service_json = json.load(f)[0]
+        with open(assets.paths.ASSETS_PACKAGE_FILEPATH, 'r') as f:
+            service_json = json.load(f)["services"][0]
         if package_catalog == PackageCatalog.DEFAULT_PACKAGE_TYPE:
             triggers = service_json['triggers']
         elif 'triggers' in package_catalog:
-            trigger_a = dict(name='first_trigger', filter=dict(), actions=['Created'], function='first_method',
-                             executionMode='Once')
-            trigger_b = dict(name='second_trigger', filter=dict(), actions=['Created'], function='second_method',
-                             executionMode='Once')
+            trigger_a = Packages.build_dict(name='first_trigger',
+                                            filters=dict(),
+                                            actions=['Created'],
+                                            function='first_method',
+                                            execution_mode='Once')
+            trigger_b = Packages.build_dict(name='second_trigger',
+                                            filters=dict(),
+                                            actions=['Created'],
+                                            function='second_method',
+                                            execution_mode='Once')
             if 'item' in package_catalog:
-                trigger_a['resource'] = trigger_b['resource'] = 'Item'
+                trigger_a['spec']['resource'] = trigger_b['spec']['resource'] = 'Item'
             if 'dataset' in package_catalog:
-                trigger_a['resource'] = trigger_b['resource'] = 'Dataset'
+                trigger_a['spec']['resource'] = trigger_b['spec']['resource'] = 'Dataset'
             if 'annotation' in package_catalog:
-                trigger_a['resource'] = trigger_b['resource'] = 'Annotation'
+                trigger_a['spec']['resource'] = trigger_b['spec']['resource'] = 'Annotation'
             triggers += [trigger_a, trigger_b]
         elif 'trigger' in package_catalog:
-            trigger = dict(name='trigger_name',
-                           filter=dict(),
-                           actions=[],
-                           function=entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME,
-                           executionMode='Once')
+            trigger = Packages.build_dict(name='triggername',
+                                          filters=dict(),
+                                          actions=[],
+                                          function=entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME,
+                                          execution_mode='Once')
             if 'item' in package_catalog:
-                trigger['resource'] = 'Item'
+                trigger['spec']['resource'] = 'Item'
             if 'dataset' in package_catalog:
-                trigger['resource'] = 'Dataset'
+                trigger['spec']['resource'] = 'Dataset'
             if 'annotation' in package_catalog:
-                trigger['resource'] = 'Annotation'
+                trigger['spec']['resource'] = 'Annotation'
             triggers += [trigger]
 
         if service_name is not None:
             service_json['name'] = service_name
-        if package_name is not None:
-            service_json['packageName'] = package_name
         if 'multi_module' in package_catalog:
             service_json['moduleName'] = 'first_module'
 
         service_json['triggers'] = triggers
 
         return service_json
+
+    @staticmethod
+    def generate(name=None, src_path=None, service_name=None, package_type=PackageCatalog.DEFAULT_PACKAGE_TYPE):
+        """
+        Generate new package environment
+
+        :return:
+        """
+        # name
+        if name is None:
+            name = 'default-package'
+        if service_name is None:
+            service_name = 'default-service'
+
+        # src path
+        if src_path is None:
+            src_path = os.getcwd()
+
+        package_asset = Packages._package_json_generator(package_name=name,
+                                                         package_catalog=package_type)
+        services_asset = Packages._service_json_generator(package_catalog=package_type,
+                                                          service_name=service_name)
+        package_asset["services"] = [services_asset]
+        to_generate = [
+            {'src': assets.paths.ASSETS_GITIGNORE_FILEPATH, 'dst': os.path.join(src_path, '.gitignore'),
+             'type': 'copy'},
+            {'src': package_asset,
+             'dst': os.path.join(src_path, assets.paths.PACKAGE_FILENAME), 'type': 'json'}
+        ]
+
+        if package_type == PackageCatalog.DEFAULT_PACKAGE_TYPE:
+            to_generate.append({'src': assets.paths.ASSETS_MOCK_FILEPATH,
+                                'dst': os.path.join(src_path, assets.paths.MOCK_FILENAME), 'type': 'copy'})
+        else:
+            module = entities.PackageModule.from_json(package_asset['modules'][0])
+            function_name = module.functions[0].name
+
+            to_generate.append({'src': Packages._mock_json_generator(module=module, function_name=function_name),
+                                'dst': os.path.join(src_path, assets.paths.MOCK_FILENAME), 'type': 'json'})
+
+        main_file_paths = Packages._entry_point_generator(package_catalog=package_type)
+        if len(main_file_paths) == 1:
+            to_generate.append({'src': main_file_paths[0],
+                                'dst': os.path.join(src_path, assets.paths.MAIN_FILENAME),
+                                'type': 'copy'})
+        else:
+            to_generate += [{'src': main_file_paths[0],
+                             'dst': os.path.join(src_path, assets.paths.MODULE_A_FILENAME),
+                             'type': 'copy'},
+                            {'src': main_file_paths[1],
+                             'dst': os.path.join(src_path, assets.paths.MODULE_B_FILENAME),
+                             'type': 'copy'}
+                            ]
+
+        for job in to_generate:
+            if not os.path.isfile(job['dst']):
+                if job['type'] == 'copy':
+                    copyfile(job['src'], job['dst'])
+                elif job['type'] == 'json':
+                    with open(job['dst'], 'w') as f:
+                        json.dump(job['src'], f, indent=2)
+
+        logger.info('Successfully generated package')
+
+    @staticmethod
+    def _mock_json_generator(module: entities.PackageModule, function_name):
+        _json = dict(function_name=function_name, module_name=module.name)
+        funcs = [func for func in module.functions if func.name == function_name]
+        if len(funcs) == 1:
+            func = funcs[0]
+        else:
+            raise exceptions.PlatformException('400', 'Other than 1 functions by the name of: {}'.format(function_name))
+        _json['config'] = {inpt.name: entities.Package._mockify_input(input_type=inpt.type)
+                           for inpt in module.init_inputs}
+        _json['inputs'] = [{'name': inpt.name, 'value': entities.Package._mockify_input(input_type=inpt.type)}
+                           for inpt in func.inputs]
+        return _json
 
     @staticmethod
     def _entry_point_generator(package_catalog):
@@ -975,7 +1134,33 @@ class Packages:
         logger.info("Checked out to package {}".format(package.name))
 
     @staticmethod
+    def check_cls_arguments(cls, missing, function_name, function_inputs):
+        # input to function and inputs definitions match
+        func = getattr(cls, function_name)
+        func_inspect = inspect.getfullargspec(func)
+        if not isinstance(function_inputs, list):
+            function_inputs = [function_inputs]
+        defined_input_names = [inp.name for inp in function_inputs]
+
+        args_with_values = dict()
+        # go over the defaults and inputs from end to start to map between them
+        if func_inspect.defaults is not None:
+            for i_value in range(-1, -len(func_inspect.defaults) - 1, -1):
+                args_with_values[func_inspect.args[i_value]] = func_inspect.defaults[i_value]
+
+        for input_name in func_inspect.args:
+            if input_name in ['self', 'progress']:
+                continue
+            if input_name not in defined_input_names:
+                logger.warning('missing input name: "{}" in function definition: "{}"'.format(input_name,
+                                                                                              function_name))
+                if input_name not in args_with_values:
+                    missing.append('missing input name: "{}" in function definition: "{}"'.format(input_name,
+                                                                                                  function_name))
+
+    @staticmethod
     def _sanity_before_push(src_path, modules):
+
         if modules is None:
             modules = [DEFAULT_PACKAGE_MODULE]
 
@@ -1030,29 +1215,15 @@ class Packages:
                 if check_init:
                     check_init = False
                     # input to __init__ and inputs definitions match
-                    func = getattr(cls, "__init__")
-                    func_inspect = inspect.getfullargspec(func)
-                    defined_input_names = [inp.name for inp in module.init_inputs]
-                    for input_name in func_inspect.args:
-                        if input_name in ['self', 'progress']:
-                            continue
-                        if input_name not in defined_input_names:
-                            missing.append('missing input name: "{}" in function definition: "{}"'.format(input_name,
-                                                                                                          "__init__"))
+                    Packages.check_cls_arguments(cls=cls,
+                                                 missing=missing,
+                                                 function_name="__init__",
+                                                 function_inputs=module.init_inputs)
 
-                # input to function and inputs definitions match
-                func = getattr(cls, function.name)
-                func_inspect = inspect.getfullargspec(func)
-                inputs = function.inputs
-                if not isinstance(inputs, list):
-                    inputs = [inputs]
-                defined_input_names = [inp.name for inp in inputs]
-                for input_name in func_inspect.args:
-                    if input_name in ['self', 'progress']:
-                        continue
-                    if input_name not in defined_input_names:
-                        missing.append(
-                            'missing input name: "{}" in function definition: "{}"'.format(input_name, function.name))
+                Packages.check_cls_arguments(cls=cls,
+                                             missing=missing,
+                                             function_name=function.name,
+                                             function_inputs=function.inputs)
 
         if len(missing) != 0:
             raise ValueError('There are conflicts between modules and source code:'
@@ -1292,32 +1463,23 @@ class PackageIO:
             cwd = os.getcwd()
 
         self.package_file_path = os.path.join(cwd, assets.paths.PACKAGE_FILENAME)
-        self.service_file_path = os.path.join(cwd, assets.paths.SERVICE_FILENAME)
 
-    def read_json(self, resource='package'):
-        if resource == 'package':
-            file_path = self.package_file_path
-        else:
-            file_path = self.service_file_path
+    def read_json(self):
+        file_path = self.package_file_path
 
         with open(file_path, 'r') as fp:
             cfg = json.load(fp)
         return cfg
 
-    def get(self, key, resource='package'):
-        cfg = self.read_json(resource=resource)
+    def get(self, key):
+        cfg = self.read_json()
         return cfg[key]
 
-    def put(self, key, value, resource='package'):
+    def put(self, key, value):
         try:
-            cfg = self.read_json(resource=resource)
+            cfg = self.read_json()
             cfg[key] = value
-
-            if resource == 'package':
-                file_path = self.package_file_path
-            else:
-                file_path = self.service_file_path
-
+            file_path = self.package_file_path
             with open(file_path, 'w') as fp:
                 json.dump(cfg, fp, indent=2)
         except Exception:

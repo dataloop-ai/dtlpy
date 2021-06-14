@@ -26,7 +26,8 @@ from .entities import (
     Project, Dataset, Trigger, Item, Execution, AnnotationCollection, Annotation, Recipe,
     Ontology, Label, Task, Assignment, Service, Package, Codebase, Model, Snapshot, PackageModule, PackageFunction,
     # annotations
-    Box, Cube, Point, Note, Segmentation, Ellipse, Classification, Subtitle, Polyline, Pose, Description, Polygon,
+    Box, Cube, Point, Note, Segmentation, Ellipse, Classification, Subtitle, Polyline, Pose, Description,
+    Polygon,
     # filters
     Filters, FiltersKnownFields, FiltersResource, FiltersOperations, FiltersMethod, FiltersOrderByDirection,
     FiltersKnownFields as KnownFields,
@@ -50,7 +51,9 @@ from .entities import (
     Similarity, SimilarityTypeEnum, MultiView,
     ItemLink, UrlLink, LinkTypeEnum,
     Modality, ModalityTypeEnum, ModalityRefTypeEnum,
-    Workload, WorkloadUnit, ItemAction
+    Workload, WorkloadUnit, ItemAction,
+    PipelineExecution, PipelineExecutionNode, Pipeline, PipelineConnection, PipelineNode,
+    PipelineConnectionPort, PipelineNodeIO
 )
 from .utilities import Converter, BaseServiceRunner, Progress, AnnotationFormat
 from .repositories.packages import PackageCatalog
@@ -117,6 +120,8 @@ models = repositories.Models(client_api=client_api)
 snapshots = repositories.Snapshots(client_api=client_api)
 buckets = repositories.Buckets(client_api=client_api)
 ontologies = repositories.Ontologies(client_api=client_api)
+pipelines = repositories.Pipelines(client_api=client_api)
+pipeline_executions = repositories.PipelineExecutions(client_api=client_api)
 
 try:
     check_sdk.check(version=__version__, client_api=client_api)

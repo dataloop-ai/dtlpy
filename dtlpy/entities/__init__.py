@@ -31,7 +31,8 @@ from .filters import Filters, FiltersKnownFields, FiltersResource, FiltersOperat
     FiltersOrderByDirection
 from .recipe import Recipe
 from .ontology import Ontology
-from .annotation_definitions import Box, Cube, Point, Segmentation, Polygon, Ellipse, Classification, Subtitle, \
+from .annotation_definitions import Box, Cube, Point, Segmentation, Polygon, Ellipse, Classification, \
+    Subtitle, \
     Polyline, Comparison, UndefinedAnnotationType, Note, Description, Pose
 from .label import Label
 from .codebase import Codebase, PackageCodebaseType, ItemCodebase, GitCodebase, FilesystemCodebase, LocalCodebase
@@ -56,3 +57,5 @@ from .snapshot import Snapshot, OntologySpec, SnapshotPartitionType
 from .bucket import BucketType, Bucket, ItemBucket, GCSBucket, LocalBucket
 from .base_model_adapter import BaseModelAdapter
 from .driver import Driver
+from .pipeline import Pipeline, PipelineConnection, PipelineNode, PipelineConnectionPort, PipelineNodeIO
+from .pipeline_execution import PipelineExecution, PipelineExecutionNode

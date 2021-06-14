@@ -34,7 +34,7 @@ class CommandExecutor:
         ###############
         # Catch typos #
         ###############
-        elif args.operation in ["project", 'dataset', 'item', 'service', 'package', 'video']:
+        elif args.operation in ["project", 'dataset', 'item', 'service', 'package', 'video', 'deploy', 'generate']:
             self.typos(args=args)
         #######################
         # Catch other options #
@@ -224,20 +224,26 @@ class CommandExecutor:
 
         elif args.items == "download":
             logger.info("Downloading dataset...")
-
             project = self.dl.projects.get(project_name=args.project_name)
             dataset = project.datasets.get(dataset_name=args.dataset_name)
+
             annotation_options = None
             if args.annotation_options is not None:
                 annotation_options = [t.strip() for t in args.annotation_options.split(",")]
-            annotation_filter_type = None
-            if args.annotation_filter_type is not None:
-                annotation_filter_type = [t.strip() for t in args.annotation_filter_type.split(",")]
 
-            annotation_filter_label = None
-            if args.annotation_filter_label is not None:
-                annotation_filter_label = [t.strip() for t in args.annotation_filter_label.split(",")]
-
+            annotation_filters = None
+            if args.annotation_filter_type is not None or args.annotation_filter_label is not None:
+                annotation_filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION)
+                if args.annotation_filter_type is not None:
+                    annotation_filter_type = [t.strip() for t in args.annotation_filter_type.split(",")]
+                    annotation_filters.add(field='type',
+                                           values=annotation_filter_type,
+                                           operator=entities.FiltersOperations.IN)
+                if args.annotation_filter_label is not None:
+                    annotation_filter_label = [t.strip() for t in args.annotation_filter_label.split(",")]
+                    annotation_filters.add(field='label',
+                                           values=annotation_filter_label,
+                                           operator=entities.FiltersOperations.IN)
             # create remote path filters
             filters = self.dl.Filters()
             if args.remote_path is not None:
@@ -259,26 +265,19 @@ class CommandExecutor:
                 dataset.items.download(filters=filters,
                                        local_path=args.local_path,
                                        annotation_options=annotation_options,
-                                       annotation_filter_type=annotation_filter_type,
-                                       annotation_filter_label=annotation_filter_label,
+                                       annotation_filters=annotation_filters,
                                        overwrite=args.overwrite,
                                        with_text=args.with_text,
                                        thickness=int(args.thickness),
                                        to_items_folder=not args.not_items_folder)
             else:
-                if isinstance(args.remote_path, str):
-                    remote_path = args.remote_path
-                else:
-                    remote_path = None
                 dataset.download_annotations(filters=filters,
                                              local_path=args.local_path,
                                              annotation_options=annotation_options,
-                                             annotation_filter_type=annotation_filter_type,
-                                             annotation_filter_label=annotation_filter_label,
+                                             annotation_filters=annotation_filters,
                                              overwrite=args.overwrite,
                                              with_text=args.with_text,
-                                             thickness=int(args.thickness),
-                                             remote_path=remote_path)
+                                             thickness=int(args.thickness))
 
         else:
             print('Type "dlp items --help" for options')
@@ -327,21 +326,10 @@ class CommandExecutor:
             print("[ERROR] token expired, please login.")
             return
 
-        if args.services == "generate":
-            self.dl.services.generate_services_json(path=args.local_path)
-            logger.info('Successfully generated service file')
-
         elif args.services == "delete":
             service = self.utils.get_services_repo(args=args).get(service_name=args.service_name)
             service.delete()
             logger.info('Service: "{}" deleted successfully'.format(service.name))
-
-        elif args.services == "deploy":
-            services = self.utils.get_services_repo(args=args)
-            service = services.deploy_from_local_folder(bot=args.bot,
-                                                        service_file=args.service_file,
-                                                        checkout=True)
-            logger.info("Successfully deployed the service: {}\nService id: {}".format(service.name, service.id))
 
         elif args.services == "ls":
             self.utils.get_services_repo(args=args).list().print()
@@ -400,6 +388,20 @@ class CommandExecutor:
         else:
             logger.info('Type "dlp packages --help" for options')
 
+    def deploy(self, args):
+        project = self.dl.projects.get(project_name=args.project_name)
+        json_filepath = args.json_file
+        deployed_services, package = self.dl.packages.deploy_from_file(project=project, json_filepath=json_filepath)
+        logger.info("Successfully deployed {} from file: {}\nServices: {}".format(len(deployed_services),
+                                                                                  json_filepath,
+                                                                                  [s.name for s in deployed_services]))
+
+    def generate(self, args):
+        package_type = args.package_type if args.package_type else self.dl.PackageCatalog.DEFAULT_PACKAGE_TYPE
+        self.dl.packages.generate(name=args.package_name, src_path=os.getcwd(), package_type=package_type)
+        self.utils.dl.client_api.state_io.put('package', {'name': args.package_name})
+        logger.info('Successfully generated package files')
+
     def triggers(self, args):
 
         if args.triggers == "create":
@@ -431,13 +433,6 @@ class CommandExecutor:
         if self.dl.token_expired():
             logger.error("token expired, please login.")
             return
-
-        if args.packages == "generate":
-            packages = self.utils.get_packages_repo(args=args)
-            package_type = args.package_type if args.package_type else self.dl.PackageCatalog.DEFAULT_PACKAGE_TYPE
-            packages.generate(name=args.package_name, src_path=os.getcwd(), package_type=package_type)
-            self.utils.dl.client_api.state_io.put('package', {'name': args.package_name})
-            logger.info('Successfully generated package files')
 
         elif args.packages == "delete":
             package = self.utils.get_packages_repo(args=args).get(package_name=args.package_name)
@@ -474,17 +469,6 @@ class CommandExecutor:
             finally:
                 if go_back:
                     os.chdir('..')
-
-        elif args.packages == "deploy":
-            services = self.utils.get_services_repo(args=args)
-            force = args.force is not None and args.force
-            service = services.deploy_from_local_folder(
-                bot=args.bot,
-                service_file=args.service_file,
-                checkout=True,
-                force=force
-            )
-            logger.info("Successfully deployed the service: {}\nService id: {}".format(service.name, service.id))
 
         else:
             logger.info('Type "dlp packages --help" for options')

@@ -130,20 +130,23 @@ class Command(entities.BaseEntity):
 
         :return: Boolean
         """
-        return self.status == entities.CommandsStatus.CREATED or \
-               self.status == entities.CommandsStatus.MAKING_CHILDREN or \
-               self.status == entities.CommandsStatus.WAITING_CHILDREN or \
-               self.status == entities.CommandsStatus.FINALIZING or \
-               self.status == entities.CommandsStatus.IN_PROGRESS
+        return self.status in [entities.CommandsStatus.CREATED,
+                               entities.CommandsStatus.MAKING_CHILDREN,
+                               entities.CommandsStatus.WAITING_CHILDREN,
+                               entities.CommandsStatus.FINALIZING,
+                               entities.CommandsStatus.IN_PROGRESS]
 
-    def wait(self, timeout=60):
+    def wait(self, timeout=0, step=5):
         """
-        Get Command  object
+        Wait for Command to finish
 
-        :param timeout seconds
+        :param timeout: int, seconds to wait until TimeoutError is raised. if 0 - wait until done
+        :param step: int, seconds between polling
         :return: Command  object
         """
         if not self.in_progress():
             return self
 
-        return self.commands.wait(command_id=self.id, timeout=timeout)
+        return self.commands.wait(command_id=self.id,
+                                  timeout=timeout,
+                                  step=step)

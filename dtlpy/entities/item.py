@@ -123,8 +123,7 @@ class Item(entities.BaseEntity):
     @property
     def dataset(self):
         if self._dataset is None:
-            if self._dataset is None:
-                self._dataset = self.datasets.get(dataset_id=self.datasetId, fetch=None)
+            self._dataset = self.datasets.get(dataset_id=self.datasetId, fetch=None)
         assert isinstance(self._dataset, entities.Dataset)
         return self._dataset
 
@@ -312,7 +311,8 @@ class Item(entities.BaseEntity):
             overwrite=False,
             to_items_folder=True,
             thickness=1,
-            with_text=False
+            with_text=False,
+            annotation_filters=None
     ):
         """
         Download dataset by filters.
@@ -328,6 +328,7 @@ class Item(entities.BaseEntity):
         :param annotation_options: download annotations options: list(dl.ViewAnnotationOptions)
         :param with_text: optional - add text to annotations, default = False
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
+        :param annotation_filters: Filters entity to filter annotations for download
         :return: Output (list)
         """
         # if dir - concatenate local path and item name
@@ -349,6 +350,7 @@ class Item(entities.BaseEntity):
                                    annotation_options=annotation_options,
                                    overwrite=overwrite,
                                    to_items_folder=to_items_folder,
+                                   annotation_filters=annotation_filters,
                                    thickness=thickness,
                                    with_text=with_text)
 

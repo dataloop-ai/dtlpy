@@ -36,7 +36,6 @@ class Service(entities.BaseEntity):
     name = attr.ib()
     url = attr.ib()
     id = attr.ib()
-    mq = attr.ib(repr=False)
     active = attr.ib()
     driver_id = attr.ib(repr=False)
 
@@ -132,7 +131,6 @@ class Service(entities.BaseEntity):
             on_reset=_json.get('onReset', OnResetAction.FAILED),
             name=_json.get("name", None),
             url=_json.get("url", None),
-            mq=_json.get('mq', dict()),
             id=_json.get("id", None),
             versions=versions,
             client_api=client_api,

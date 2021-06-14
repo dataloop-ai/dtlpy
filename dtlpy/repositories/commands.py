@@ -1,5 +1,6 @@
 import logging
 import time
+import numpy as np
 
 from .. import exceptions, entities, services, miscellaneous
 
@@ -33,7 +34,7 @@ class Commands:
 
         commands = miscellaneous.List([entities.Command.from_json(_json=_json,
                                                                   client_api=self._client_api) for _json in
-                                      response.json()])
+                                       response.json()])
         return commands
 
     def get(self, command_id=None) -> entities.Command:
@@ -56,48 +57,38 @@ class Commands:
         return entities.Command.from_json(client_api=self._client_api,
                                           _json=response.json())
 
-    def wait(self, command_id, timeout=60):
+    def wait(self, command_id, timeout=0, step=5):
         """
-        Get Command  object
+        Wait for command to finish
 
-        :param timeout seconds
-        :param command_id:
+        :param timeout: int, seconds to wait until TimeoutError is raised. if 0 - wait until done
+        :param step: int, seconds between polling
+        :param command_id: Command id to wait to
         :return: Command  object
         """
-        wait_time = 0
-        sleep_between_retries = 5
-        now = int(time.time())
+        elapsed = 0
+        start = int(time.time())
+        if timeout is None or timeout <= 0:
+            timeout = np.inf
 
         command = None
-        while wait_time < timeout:
+        while elapsed < timeout:
             command = self.get(command_id=command_id)
-            if command.in_progress():
-                wait_time = int(time.time()) - now
-                logger.debug("Command {} wait {} seconds".format(command.id, wait_time))
-                if timeout - wait_time <= 0:
-                    break
-                elif timeout - wait_time <= sleep_between_retries:
-                    logger.debug("Going to sleep {}".format(timeout - wait_time))
-                    time.sleep(timeout - wait_time)
-                else:
-                    logger.debug("Going to sleep {}".format(sleep_between_retries))
-                    time.sleep(sleep_between_retries)
-                continue
-            else:
+            if not command.in_progress():
                 break
-
-        if wait_time >= timeout:
-            raise TimeoutError("command wait() got time out id: {}, status: {}, progress {}%".format(
+            elapsed = int(time.time()) - start
+            logger.debug("Command {!r} is running for {:.2f}[s]".format(command.id, elapsed))
+            sleep_time = np.minimum(timeout - elapsed, step)
+            logger.debug("Going to sleep {:.2f}[s]".format(sleep_time))
+            time.sleep(sleep_time)
+        if command is None:
+            raise ValueError('Nothing to wait for')
+        if elapsed >= timeout:
+            raise TimeoutError("command wait() got timeout. id: {!r}, status: {}, progress {}%".format(
                 command.id, command.status, command.progress))
         if command.status != entities.CommandsStatus.SUCCESS:
-            if command.error is not None:
-                raise exceptions.PlatformException(error='409',
-                                                   message="Dataset clone has been {} with error '{}'"
-                                                   .format(command.status, command.error))
-            else:
-                raise exceptions.PlatformException(error='409',
-                                                   message="Dataset clone has been {}"
-                                                   .format(command.status))
+            raise exceptions.PlatformException(error='424',
+                                               message="Command {}: '{}'".format(command.status, command.error))
         return command
 
     def abort(self, command_id):

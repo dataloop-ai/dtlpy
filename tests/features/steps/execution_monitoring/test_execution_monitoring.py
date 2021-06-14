@@ -7,24 +7,24 @@ import os
 @behave.when(u'I push and deploy package with param "{on_reset}" in "{package_directory_path}"')
 def step_impl(context, package_directory_path, on_reset):
     package_directory_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], package_directory_path)
-    service_json_path = os.path.join(package_directory_path, 'service.json')
+    package_json_path = os.path.join(package_directory_path, 'package.json')
 
-    with open(service_json_path, 'r') as f:
-        service_json = json.load(f)
+    with open(package_json_path, 'r') as f:
+        package_json = json.load(f)
 
     if on_reset == 'None':
-        service_json.pop('on_reset', None)
+        package_json['services'][0].pop('onReset', None)
     else:
-        service_json['on_reset'] = on_reset
+        package_json['services'][0]['onReset'] = on_reset
 
-    with open(service_json_path, 'w') as f:
-        json.dump(service_json, f)
+    with open(package_json_path, 'w') as f:
+        json.dump(package_json, f)
 
-    context.package = context.project.packages.push(src_path=package_directory_path)
+    services, context.package = context.project.packages.deploy_from_file(project=context.project,
+                                                                          json_filepath=package_json_path)
+
+    context.service = services[0]
     context.to_delete_packages_ids.append(context.package.id)
-    context.service = context.project.services.deploy_from_local_folder(bot=context.bot_user,
-                                                                        cwd=package_directory_path)
-
     context.to_delete_services_ids.append(context.service.id)
 
 
@@ -40,7 +40,7 @@ def step_impl(context):
 
 @behave.then(u'Execution was terminated')
 def step_impl(context):
-    num_tries = 10
+    num_tries = 15
     interval = 10
     terminated = False
 
@@ -59,7 +59,7 @@ def step_impl(context):
 @behave.then(u'Execution "{on_reset}" on timeout')
 def step_impl(context, on_reset):
     time.sleep(context.service.execution_timeout + context.service.drain_time + 5)
-    num_tries = 10
+    num_tries = 15
     interval = 3
 
     reset = False
@@ -67,8 +67,8 @@ def step_impl(context, on_reset):
         execution = context.service.executions.get(execution_id=context.execution.id)
         for stat in execution.status:
             if on_reset == 'rerun' \
-                    and stat['status'] == 'created' \
-                    and 'Return to queue due to runner timeout' in stat['message'] \
+                    and stat['status'] == 'rerun' \
+                    and 'Rerun due to runner timeout' in stat['message'] \
                     and execution.attempts > 1:
                 reset = True
             elif on_reset == 'failed' \
@@ -79,4 +79,4 @@ def step_impl(context, on_reset):
             break
         time.sleep(interval)
 
-    assert  reset
+    assert reset

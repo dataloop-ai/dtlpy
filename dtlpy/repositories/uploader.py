@@ -20,7 +20,7 @@ from PIL import Image
 
 from . import upload_element
 
-from .. import PlatformException, entities, repositories
+from .. import PlatformException, entities, repositories, exceptions
 from ..services import Reporter
 
 logger = logging.getLogger(name=__name__)
@@ -80,7 +80,7 @@ class Uploader:
                                                        remote_path=remote_path,
                                                        remote_name=remote_name,
                                                        file_types=file_types,
-                                                       item_metadata=item_metadata, )
+                                                       item_metadata=item_metadata)
         num_files = len(futures)
         while futures:
             futures.popleft().result()
@@ -231,6 +231,9 @@ class Uploader:
                 elif os.path.isfile(upload_item_element):
                     upload_elem = upload_element.FileUploadElement(all_upload_elements=all_upload_elements)
 
+                elif upload_item_element.startswith('external://'):
+                    upload_elem = upload_element.ExternalItemUploadElement(all_upload_elements=all_upload_elements)
+
                 elif self.is_url(upload_item_element):
                     upload_elem = upload_element.UrlUploadElement(all_upload_elements=all_upload_elements)
 
@@ -248,7 +251,6 @@ class Uploader:
 
             elif isinstance(upload_item_element, entities.MultiView):
                 upload_elem = upload_element.MultiViewUploadElement(all_upload_elements=all_upload_elements)
-
 
             elif isinstance(upload_item_element, bytes) or \
                     isinstance(upload_item_element, io.BytesIO) or \
@@ -305,6 +307,36 @@ class Uploader:
             upload_elem = upload_element.DataFrameUploadElement(all_upload_elements=all_upload_elements)
             futures.append(self.upload_single_element(upload_elem))
         return futures
+
+    async def __single_external_sync(self, element):
+        remote_path = element.remote_path
+        if len(remote_path) <= 1:
+            split_dir = os.path.dirname(element.buffer).split('//')
+            if len(split_dir) > 1:
+                remote_path = split_dir[1].split(':')[1] + '/'
+            else:
+                element.remote_name = element.remote_name.split(':')[1]
+
+        filename = remote_path + element.remote_name
+        file_args = element.buffer.split('//')[1].split(':')
+        storage_id = file_args[1]
+        size = int(file_args[0])
+        req_json = dict()
+        req_json['filename'] = filename
+        req_json['size'] = size
+        req_json['storageId'] = storage_id
+        success, response = self.items_repository._client_api.gen_request(req_type='post',
+                                                                          path='/datasets/{}/imports'.format(
+                                                                              self.items_repository.dataset.id),
+                                                                          json_req=[req_json])
+
+        if success:
+            items = entities.Item.from_json(client_api=self.items_repository._client_api, _json=response.json()[0],
+                                            project=self.items_repository._dataset._project,
+                                            dataset=self.items_repository.dataset)
+        else:
+            raise exceptions.PlatformException(response)
+        return items, response.headers.get('x-item-op', 'na')
 
     async def __single_async_upload(self,
                                     filepath,
@@ -412,13 +444,16 @@ class Uploader:
                     logger.debug("Upload item: {path}. Try {i}/{n}. Starting..".format(path=remote_name,
                                                                                        i=i_try + 1,
                                                                                        n=NUM_TRIES))
-                    item, action = await self.__single_async_upload(filepath=element.buffer,
-                                                                    mode=mode,
-                                                                    item_metadata=element.item_metadata,
-                                                                    remote_path=remote_folder,
-                                                                    uploaded_filename=remote_name,
-                                                                    last_try=(i_try + 1) == NUM_TRIES,
-                                                                    callback=None)
+                    if element.type == 'external_file':
+                        item, action = await self.__single_external_sync(element)
+                    else:
+                        item, action = await self.__single_async_upload(filepath=element.buffer,
+                                                                        mode=mode,
+                                                                        item_metadata=element.item_metadata,
+                                                                        remote_path=remote_folder,
+                                                                        uploaded_filename=remote_name,
+                                                                        last_try=(i_try + 1) == NUM_TRIES,
+                                                                        callback=None)
                     logger.debug("Upload item: {path}. Try {i}/{n}. Success. Item id: {id}".format(path=remote_name,
                                                                                                    i=i_try + 1,
                                                                                                    n=NUM_TRIES,
@@ -445,7 +480,13 @@ class Uploader:
                     except Exception:
                         logger.exception('Error uploading annotations to item id: {}'.format(item.id))
 
-                reporter.set_index(i_item=i_item, status=action, output=item, success=True, ref=item.id)
+                reporter.set_index(i_item=i_item,
+                                   status=action,
+                                   output=item,
+                                   success=True,
+                                   ref=item.id)
+                if pbar is not None:
+                    pbar.update()
             else:
                 if isinstance(element.buffer, str):
                     ref = element.buffer
@@ -453,10 +494,10 @@ class Uploader:
                     ref = element.buffer.name
                 else:
                     ref = 'Unknown'
-                reporter.set_index(i_item=i_item, status='error', success=False,
+                reporter.set_index(i_item=i_item,
+                                   status='error',
+                                   success=False,
                                    error="{}\n{}".format(err, trace), ref=ref)
-            if pbar is not None:
-                pbar.update()
 
     async def __async_upload_annotations(self, annotations_filepath, item):
         with open(annotations_filepath, 'r', encoding="utf8") as f:

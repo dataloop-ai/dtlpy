@@ -32,6 +32,9 @@ class FiltersResource(str, Enum):
     DATASET = 'dataset'
     ONTOLOGY = 'ontology'
     TASK = 'tasks'
+    PIPELINE = 'pipeline'
+    PIPELINE_EXECUTION = 'pipelineState'
+    COMPOSITION = 'composition'
 
 
 class FiltersOperations(str, Enum):
@@ -220,7 +223,7 @@ class Filters:
                 self._unique_fields = ['type']
                 self.add(field='type',
                          values=['box', 'class', 'comparison', 'ellipse', 'point', 'segment', 'polyline', 'binary',
-                                 'subtitle', 'cube'], operator=FiltersOperations.IN, method=FiltersMethod.AND)
+                                 'subtitle', 'cube', 'pose'], operator=FiltersOperations.IN, method=FiltersMethod.AND)
                 self.sort_by(field='label', value=FiltersOrderByDirection.ASCENDING)
                 self.sort_by(field='createdAt', value=FiltersOrderByDirection.DESCENDING)
 

@@ -306,7 +306,7 @@ class Converter:
             category = {'id': last_id,
                         'name': template['name'],
                         'keypoints': template['order'],
-                         'skeleton': skeleton}
+                        'skeleton': skeleton}
             instance_map[template['name']] = last_id
             categories.append(category)
         return categories
@@ -389,7 +389,7 @@ class Converter:
                 pass
         return item
 
-    def __add_item_converted_annotation(self, item, annotation, label_to_id,item_id,
+    def __add_item_converted_annotation(self, item, annotation, label_to_id, item_id,
                                         i_annotation, item_converted_annotations):
         try:
             ann = self.to_coco(annotation=annotation, item=item)
@@ -545,19 +545,19 @@ class Converter:
                 upload_labels[label['name']] = entities.Label(tag=tag)
             self.labels[tag] = label['id']
 
-        self.dataset.add_labels(list(upload_labels.values()))
+        return upload_labels
 
     def _upload_coco_dataset(self, local_items_path, local_annotations_path, only_bbox=False, remote_items=False):
         logger.info('loading annotations json...')
         with open(local_annotations_path, 'r', encoding="utf8") as f:
             coco_json = json.load(f)
 
+        labels_tags_tree = self._upload_coco_labels(coco_json=coco_json)
         try:
             logger.info('Uploading labels to dataset')
-            self._upload_coco_labels(coco_json=coco_json)
+            self.dataset.add_labels(list(labels_tags_tree.values()))
         except Exception:
             logger.warning('Failed to upload labels to dataset, please add manually')
-            self._get_labels()
 
         image_annotations = dict()
         image_name_id = dict()
@@ -1314,11 +1314,14 @@ class Converter:
         area = 0
         iscrowd = 0
         segmentation = [[]]
+        if annotation.type == 'segment':
+            if getattr(annotation, 'is_open', False) is True:
+                raise Exception('Unable to convert annotation of type "polyline" to coco')
 
         if annotation.type in ['binary', 'segment']:
             if height is None or width is None:
                 raise Exception(
-                    'Item must have height and width to convert {} annotation to coco'.format(annotation.type))
+                    'Item must have height and width to convert {!r} annotation to coco'.format(annotation.type))
 
         # build annotation
         keypoints = None
@@ -1332,7 +1335,7 @@ class Converter:
                 segmentation = COCOUtils.binary_mask_to_rle_encode(binary_mask=annotation.geo)
                 area = int(annotation.geo.sum())
                 iscrowd = 1
-            elif annotation.type == 'segment':
+            elif annotation.type in ['segment']:
                 segmentation, area = COCOUtils.polygon_to_rle(geo=annotation.geo, height=height, width=width)
             elif annotation.type == 'pose':
                 keypoints = list()

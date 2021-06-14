@@ -12,8 +12,7 @@
      Given Feature: I create a dataset by the name of "Dataset"
      When I checkout
        |project|
-     Given Feature: There is a package
-     Given Feature: There is a service
+     Given Feature: There is a package and service
      And Done setting
 
    Scenario: Projects

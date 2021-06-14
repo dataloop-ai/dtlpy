@@ -38,3 +38,5 @@ from .analytics import Analytics
 from .buckets import Buckets
 from .drivers import Drivers
 from .commands import Commands
+from .pipelines import Pipelines
+from .pipeline_executions import PipelineExecutions

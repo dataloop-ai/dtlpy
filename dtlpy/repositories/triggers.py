@@ -159,6 +159,9 @@ class Triggers:
         else:
             actions = [entities.TriggerAction.CREATED]
 
+        if len(actions) == 0:
+            actions = [entities.TriggerAction.CREATED]
+
         if trigger_type == entities.TriggerType.EVENT:
             spec = {
                 'filter': filters,

@@ -32,16 +32,6 @@ def step_impl(context, package_assets_path, package_directory_path):
     with open(package_mock_path, 'w') as f:
         json.dump(assets_mock, f, indent=2)
 
-    # service.json
-    assets_service_path = os.path.join(package_assets_path, 'service.json')
-    package_service_path = os.path.join(package_directory_path, 'service.json')
-
-    with open(assets_service_path, 'r') as f:
-        assets_service = json.load(f)
-
-    with open(package_service_path, 'w') as f:
-        json.dump(assets_service, f, indent=2)
-
     # package.json
     assets_service_path = os.path.join(package_assets_path, 'package.json')
     package_service_path = os.path.join(package_directory_path, 'package.json')
@@ -73,13 +63,12 @@ def step_impl(context, package_directory_path):
 
 @behave.when(u'I push and deploy package in "{package_directory_path}"')
 def step_impl(context, package_directory_path):
-    package_directory_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], package_directory_path)
-    context.package = context.project.packages.push(src_path=package_directory_path)
+    package_directory_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], package_directory_path, 'package.json')
+    services, context.package = context.project.packages.deploy_from_file(project=context.project,
+                                                                          json_filepath=package_directory_path)
     context.to_delete_packages_ids.append(context.package.id)
-    context.service = context.project.services.deploy_from_local_folder(bot=context.bot_user,
-                                                                        cwd=package_directory_path)
-
-    context.to_delete_services_ids.append(context.service.id)
+    for p_service in services:
+        context.to_delete_services_ids.append(p_service.id)
 
 
 @behave.when(u'I upload item in "{item_path}" to dataset')

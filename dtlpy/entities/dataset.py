@@ -422,13 +422,13 @@ class Dataset(entities.BaseEntity):
                              local_path=None,
                              filters=None,
                              annotation_options: ViewAnnotationOptions = None,
+                             annotation_filters=None,
                              annotation_filter_type: AnnotationType = None,
                              annotation_filter_label=None,
                              overwrite=False,
                              thickness=1,
                              with_text=False,
-                             remote_path=None,
-                             num_workers=32):
+                             remote_path=None):
         """
         Download dataset by filters.
         Filtering the dataset for items and save them local
@@ -437,28 +437,29 @@ class Dataset(entities.BaseEntity):
         :param local_path: local folder or filename to save to.
         :param filters: Filters entity or a dictionary containing filters parameters
         :param annotation_options: download annotations options: list(dl.ViewAnnotationOptions)
-        :param annotation_filter_type: list (dl.AnnotationType) of annotation types when downloading annotation,
-                                                                                        not relevant for JSON option
-        :param annotation_filter_label: list of labels types when downloading annotation, not relevant for JSON option
+        :param annotation_filters: Filters entity to filter annotations for download
+        :param annotation_filter_type: DEPRECATED - list (dl.AnnotationType) of annotation types when downloading annotation, not relevant for JSON option
+        :param annotation_filter_label: DEPRECATED - list of labels types when downloading annotation, not relevant for JSON option
         :param overwrite: optional - default = False
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :param with_text: optional - add text to annotations, default = False
-        :remote_path: optinal - remote path to download
+        :param remote_path: DEPRECATED and ignored. use filters
         :num_workers:
         :return: `List` of local_path per each downloaded item
         """
 
-        return self.datasets.download_annotations(dataset=self,
-                                                  local_path=local_path,
-                                                  overwrite=overwrite,
-                                                  filters=filters,
-                                                  annotation_options=annotation_options,
-                                                  annotation_filter_type=annotation_filter_type,
-                                                  annotation_filter_label=annotation_filter_label,
-                                                  thickness=thickness,
-                                                  with_text=with_text,
-                                                  remote_path=remote_path,
-                                                  num_workers=num_workers)
+        return self.datasets.download_annotations(
+            dataset=self,
+            local_path=local_path,
+            overwrite=overwrite,
+            filters=filters,
+            annotation_options=annotation_options,
+            annotation_filters=annotation_filters,
+            annotation_filter_type=annotation_filter_type,  # to deprecate - use "annotation_filters"
+            annotation_filter_label=annotation_filter_label,  # to deprecate - use "annotation_filters"
+            thickness=thickness,
+            with_text=with_text,
+            remote_path=remote_path)
 
     def checkout(self):
         """

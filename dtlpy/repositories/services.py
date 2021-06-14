@@ -1106,17 +1106,6 @@ class Services:
         print('File torn down successfully!')
         return True
 
-    @staticmethod
-    def generate_services_json(path=None):
-        if path is None:
-            path = os.getcwd()
-        path = os.path.join(path, assets.paths.SERVICE_FILENAME)
-        with open(assets.paths.ASSETS_SERVICE_FILEPATH, 'r') as f:
-            service_file = json.load(f)
-        with open(path, 'w') as f:
-            json.dump(service_file, f, indent=2)
-        return path
-
 
 class ServiceLog:
     """

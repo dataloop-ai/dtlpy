@@ -2,18 +2,14 @@ import behave
 import os
 
 
-@behave.given(u'Feature: There is a package')
+@behave.given(u'Feature: There is a package and service')
 def step_impl(context):
-    src_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], 'packages_checkout_create')
-    context.package = context.project.packages.push(src_path=src_path)
+    src_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], 'packages_checkout_create', 'package.json')
+    services, context.package = context.project.packages.deploy_from_file(project=context.project,
+                                                                          json_filepath=src_path)
+    context.service = services[0]
     context.to_delete_packages_ids.append(context.package.id)
     context.feature.package = context.package
-
-
-@behave.given(u'Feature: There is a service')
-def step_impl(context):
-    src_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], 'packages_checkout_create')
-    context.service = context.package.services.deploy_from_local_folder(cwd=src_path)
     context.to_delete_services_ids.append(context.service.id)
     context.feature.service = context.service
 

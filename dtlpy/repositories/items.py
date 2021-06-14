@@ -382,6 +382,7 @@ class Items:
             save_locally=True,
             to_array=False,
             annotation_options: entities.ViewAnnotationOptions = None,
+            annotation_filters: entities.Filters = None,
             annotation_filter_type: entities.AnnotationType = None,
             annotation_filter_label=None,
             overwrite=False,
@@ -403,9 +404,9 @@ class Items:
         :param save_locally: bool. save to disk or return a buffer
         :param to_array: returns Ndarray when True and local_path = False
         :param annotation_options: download annotations options:  list(dl.ViewAnnotationOptions)
-        :param annotation_filter_type: list (dl.AnnotationType)of annotation types when downloading annotation,
-                                                                                        not relevant for JSON option
-        :param annotation_filter_label: list of labels types when downloading annotation, not relevant for JSON option
+        :param annotation_filters: Filters entity to filter annotations for download
+        :param annotation_filter_type: DEPRECATED - list (dl.AnnotationType) of annotation types when downloading annotation, not relevant for JSON option
+        :param annotation_filter_label: DEPRECATED - list of labels types when downloading annotation, not relevant for JSON option
         :param overwrite: optional - default = False
         :param to_items_folder: Create 'items' folder and download items to it
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
@@ -423,8 +424,9 @@ class Items:
             save_locally=save_locally,
             to_array=to_array,
             annotation_options=annotation_options,
-            annotation_filter_type=annotation_filter_type,
-            annotation_filter_label=annotation_filter_label,
+            annotation_filters=annotation_filters,
+            annotation_filter_type=annotation_filter_type,  # to deprecate - use "annotation_filters"
+            annotation_filter_label=annotation_filter_label,  # to deprecate - use "annotation_filters"
             overwrite=overwrite,
             to_items_folder=to_items_folder,
             thickness=thickness,
