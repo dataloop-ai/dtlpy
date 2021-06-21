@@ -313,8 +313,10 @@ class Model(entities.BaseEntity):
         Push local model
 
         :param from_local: bool. use current directory to build
-        :param local_path: local path of the model (if from_local=False - codebase will be downloaded)
-        :return: ModelAdpter (dl.BaseModelAdpater)
+        :param local_path: local path where the model code should be.
+                           if model is downloaded - this will be the point it will be downloaded
+                           (if from_local=False - codebase will be downloaded)
+        :return: ModelAdapter (dl.BaseModelAdapter)
         """
         return self.models.build(model=self,
                                  local_path=local_path,

@@ -59,6 +59,7 @@ class BaseTrigger(entities.BaseEntity):
     function_name = attr.ib()
     service_id = attr.ib()
     webhook_id = attr.ib()
+    pipeline_id = attr.ib()
 
     ########
     # temp #
@@ -86,16 +87,23 @@ class BaseTrigger(entities.BaseEntity):
         if op_type == 'function':
             service_id = operation.get('serviceId', None)
             webhook_id = None
+            pipeline_id = None
         elif op_type == 'webhook':
             webhook_id = operation.get('webhookId', None)
             service_id = None
+            pipeline_id = None
         elif op_type == 'rabbitmq':
             webhook_id = None
             service_id = None
+            pipeline_id = None
+        elif op_type == 'pipeline':
+            webhook_id = None
+            service_id = None
+            pipeline_id = operation.get('pipeline', dict()).get('id', None)
         else:
             raise exceptions.PlatformException('400', 'unknown trigger operation type: {}'.format(op_type))
 
-        return service_id, webhook_id
+        return service_id, webhook_id, pipeline_id
 
     @staticmethod
     def _protected_from_json(_json, client_api, project, service=None):
@@ -197,6 +205,7 @@ class BaseTrigger(entities.BaseEntity):
                                                               attr.fields(BaseTrigger)._repositories,
                                                               attr.fields(BaseTrigger).service_id,
                                                               attr.fields(BaseTrigger).webhook_id,
+                                                              attr.fields(BaseTrigger).pipeline_id,
                                                               attr.fields(BaseTrigger).function_name,
                                                               attr.fields(BaseTrigger).is_global
                                                               ))
@@ -260,7 +269,7 @@ class Trigger(BaseTrigger):
         spec = _json.get('spec', dict())
         operation = spec.get('operation', dict())
 
-        service_id, webhook_id = cls._get_operation(operation=operation)
+        service_id, webhook_id, pipeline_id = cls._get_operation(operation=operation)
 
         return cls(
             execution_mode=spec.get('executionMode', None),
@@ -288,6 +297,7 @@ class Trigger(BaseTrigger):
             id=_json['id'],
             op_type=operation.get('type', None),
             spec=spec,
+            pipeline_id=pipeline_id
         )
 
 

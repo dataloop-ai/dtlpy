@@ -193,6 +193,7 @@ class Snapshot(entities.BaseEntity):
     def project(self):
         if self._project is None:
             self._project = self.projects.get(project_id=self.project_id, fetch=None)
+            self._repositories = self.set_repositories()  # update the repos with the new fetched entity
         assert isinstance(self._project, entities.Project)
         return self._project
 
@@ -200,13 +201,17 @@ class Snapshot(entities.BaseEntity):
     def model(self):
         if self._model is None:
             self._model = self.models.get(model_id=self.model_id)
+            self._repositories = self.set_repositories()  # update the repos with the new fetched entity
         assert isinstance(self._model, entities.Model)
         return self._model
 
     @property
     def dataset(self):
         if self._dataset is None:
+            if self.dataset_id is None:
+                raise RuntimeError("Snapshot {!r} has no dataset. Can be used only for inference".format(self.id))
             self._dataset = self.datasets.get(dataset_id=self.dataset_id, fetch=None)
+            self._repositories = self.set_repositories()  # update the repos with the new fetched entity
         assert isinstance(self._dataset, entities.Dataset)
         return self._dataset
 
@@ -236,10 +241,10 @@ class Snapshot(entities.BaseEntity):
                  ontologies=repositories.Ontologies(client_api=self._client_api,
                                                     project=self._project,
                                                     dataset=self._dataset),
-                 buckets = repositories.Buckets(client_api=self._client_api,
-                                                project=self._project,
-                                                snapshot=self)
-                                                    )
+                 buckets=repositories.Buckets(client_api=self._client_api,
+                                              project=self._project,
+                                              snapshot=self)
+                 )
 
         return r
 
@@ -304,7 +309,6 @@ class Snapshot(entities.BaseEntity):
         return self.snapshots.delete(snapshot=self)
 
     def download_from_bucket(self,
-                             remote_paths=None,
                              local_path=None,
                              overwrite=False,
                              ):
@@ -318,7 +322,6 @@ class Snapshot(entities.BaseEntity):
         :return:
         """
         return self.bucket.download(local_path=local_path,
-                                    remote_paths=remote_paths,
                                     overwrite=overwrite)
 
     def upload_to_bucket(self,

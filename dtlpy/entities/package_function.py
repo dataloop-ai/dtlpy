@@ -196,18 +196,40 @@ class PackageFunction(entities.BaseEntity):
 
 
 class PackageInputType(str, Enum):
-    ITEM = "Item"
-    DATASET = "Dataset"
-    ANNOTATION = "Annotation"
-    JSON = "Json"
-    MODEL = "Model"
-    SNAPSHOT = "Snapshot"
-    PACKAGE = "Package"
-    SERVICE = "Service"
-    PROJECT = "Project"
-    EXECUTION = "Execution"
-    TASK = "Task"
-    ASSIGNMENT = "Assignment"
+    DATASET = "Dataset",
+    ITEM = "Item",
+    ANNOTATION = "Annotation",
+    EXECUTION = "Execution",
+    TASK = "Task",
+    ASSIGNMENT = "Assignment",
+    SERVICE = "Service",
+    PACKAGE = "Package",
+    PROJECT = "Project",
+    JSON = "Json",
+    STRING = "String",
+    NUMBER = "Number",
+    INT = "Integer",
+    FLOAT = "Float",
+    BOOLEAN = "Boolean",
+    DATASETS = "Dataset[]",
+    ITEMS = "Item[]",
+    ANNOTATIONS = "Annotation[]",
+    EXECUTIONS = "Execution[]",
+    TASKS = "Task[]",
+    ASSIGNMENTS = "Assignment[]",
+    SERVICES = "Service[]",
+    PACKAGES = "Package[]",
+    PROJECTS = "Project[]",
+    JSONS = "Json[]",
+    STRINGS = "String[]",
+    NUMBERS = "Number[]",
+    INTS = "Integer[]",
+    FLOATS = "Float[]",
+    BOOLEANS = "Boolean[]",
+    MODEL = 'Model',
+    MODELS = 'Model[]',
+    SNAPSHOT = 'Snapshot',
+    SNAPSHOTS = 'Snapshot[]'
 
 
 @attr.s
@@ -256,22 +278,70 @@ class FunctionIO:
             is_json_serializable = False
         return is_json_serializable
 
-    # noinspection PyUnusedLocal
-    @value.validator
-    def check_value(self, attribute, value):
-        value_ok = True
-        expected_value = 'Expected value should be:'
-        if self.type == PackageInputType.JSON:
-            expected_value = '{} json serializable'.format(expected_value)
-            if not self.is_json_serializable(value):
-                value_ok = False
-        else:
-            expected_value = '{} string or dictionary'.format(expected_value)
-            if type(value) not in [dict, str]:
-                value_ok = False
-
-        if not value_ok and value is not None:
-            raise exceptions.PlatformException('400', 'Illegal value. {}'.format(expected_value))
+    # @staticmethod
+    # def _check_type(value, attribute, io_type):
+    #     if io_type in [
+    #         PackageInputType.PROJECT,
+    #         PackageInputType.DATASET,
+    #         PackageInputType.ITEM,
+    #         PackageInputType.ANNOTATION,
+    #         PackageInputType.PACKAGE,
+    #         PackageInputType.SERVICE,
+    #         PackageInputType.EXECUTION,
+    #         PackageInputType.TASK,
+    #         PackageInputType.ASSIGNMENT,
+    #         PackageInputType.PACKAGE,
+    #     ]:
+    #         return isinstance(value, dict) or isinstance(value, str), 'Invalid value for {} IO. ' \
+    #                                                                   'Expected string or dictionary'.format(attribute)
+    #     elif io_type in [
+    #         PackageInputType.PROJECTS,
+    #         PackageInputType.DATASETS,
+    #         PackageInputType.ITEMS,
+    #         PackageInputType.ANNOTATIONS,
+    #         PackageInputType.PACKAGES,
+    #         PackageInputType.SERVICES,
+    #         PackageInputType.EXECUTIONS,
+    #         PackageInputType.TASKS,
+    #         PackageInputType.ASSIGNMENTS,
+    #         PackageInputType.PACKAGES,
+    #         PackageInputType.STRINGS,
+    #         PackageInputType.INTS,
+    #         PackageInputType.BOOLEANS,
+    #         PackageInputType.JSONS
+    #     ]:
+    #         return isinstance(value, list), 'Invalid value for {} IO. ' \
+    #                                         'Expected list'.format(attribute)
+    #     elif io_type == PackageInputType.NUMBER:
+    #         return isinstance(value, (int, float)), 'Invalid value for {} IO. ' \
+    #                                  'Expected int or float'.format(attribute)
+    #     elif io_type == PackageInputType.INT:
+    #         return isinstance(value, int), 'Invalid value for {} IO. ' \
+    #                                  'Expected int'.format(attribute)
+    #     elif io_type == PackageInputType.FLOAT:
+    #         return isinstance(value, float), 'Invalid value for {} IO. ' \
+    #                                  'Expected float'.format(attribute)
+    #     elif io_type == PackageInputType.STRING:
+    #         return isinstance(value, str), 'Invalid value for {} IO. ' \
+    #                                  'Expected str'.format(attribute)
+    #     elif io_type == PackageInputType.BOOLEAN:
+    #         return isinstance(value, bool), 'Invalid value for {} IO. ' \
+    #                                  'Expected bool'.format(attribute)
+    #
+    # # noinspection PyUnusedLocal
+    # @value.validator
+    # def check_value(self, attribute, value):
+    #     value_ok = True
+    #     expected_value = 'Expected value should be:'
+    #     if self.type == PackageInputType.JSON:
+    #         expected_value = '{} json serializable'.format(expected_value)
+    #         if not self.is_json_serializable(value):
+    #             value_ok = False
+    #     else:
+    #         value_ok, expected_value = self._check_type(value=value, attribute=attribute, io_type=expected_value)
+    #
+    #     if not value_ok and value is not None:
+    #         raise exceptions.PlatformException('400', 'Illegal value. {}'.format(expected_value))
 
     def to_json(self, resource='package'):
         if resource == 'package':

@@ -238,8 +238,7 @@ class Downloader:
                                         "img_filepath": item_local_filepath,
                                         "overwrite": overwrite,
                                         "annotation_options": annotation_options,
-                                        "annotation_filter_type": annotation_filter_type,
-                                        "annotation_filter_label": annotation_filter_label,
+                                        "annotation_filters": annotation_filters,
                                         "local_path": local_path,
                                         "thickness": thickness,
                                         "with_text": with_text

@@ -72,6 +72,7 @@ class Bucket:
         """
         return self.buckets.list_content(self)
 
+
 class ItemBucket(Bucket):
     def __init__(self, directory_item_id: str, buckets=None):
         super().__init__(bucket_type=BucketType.ITEM, buckets=buckets)
@@ -106,7 +107,6 @@ class ItemBucket(Bucket):
                             overwrite=overwrite)
 
     def download(self,
-                 remote_paths=None,
                  local_path=None,
                  overwrite=False,
                  ):
@@ -118,9 +118,9 @@ class ItemBucket(Bucket):
         :param local_path: local binary file or folder to upload
         :return:
         """
+        # TODO: re-write the usage as we don`t use remote path in the repo...
         self.buckets.download(bucket=self,
                               local_path=local_path,
-                              remote_paths=remote_paths,
                               overwrite=overwrite)
 
 
@@ -162,31 +162,43 @@ class GCSBucket(Bucket):
     https://cloud.google.com/docs/authentication/getting-started
     """
 
-    def __init__(self, gcs_project_name: str, gcs_bucket_name: str, prefix: str = '/', buckets=None):
-        from google.cloud import storage
+    def __init__(self, gcs_project_name: str, gcs_bucket_name: str, gcs_prefix: str = '/', buckets=None):
+        try:
+            from google.cloud import storage
+        except (ModuleNotFoundError, ImportError) as err:
+            raise RuntimeError('dtlpy requires external package. Please install and re-run') from err
+
         super().__init__(bucket_type=BucketType.GCS, buckets=buckets)
         self._gcs_project_name = gcs_project_name
         self._gcs_bucket_name = gcs_bucket_name
-        self.prefix = prefix
+        self._gcs_prefix = gcs_prefix
 
         # Connect to GCS
         #   Requires application credentials
-        self._client = storage.Client(project=self._gcs_project_name)
-        self._bucket = self._client.get_bucket(self._gcs_bucket_name)
+        if self._gcs_bucket_name is None or self._gcs_project_name is None:
+            print('invalid bucket with no gcs names')
+            self._bucket = None
+        else:
+            self._client = storage.Client(project=self._gcs_project_name)
+            self._bucket = self._client.get_bucket(self._gcs_bucket_name)
 
     def to_json(self):
         _json = super().to_json()
-        _json['_gcs_project_name'] = self._gcs_project_name
-        _json['_gcs_bucket_name'] = self._gcs_bucket_name
+        _json['gcsProjectName'] = self._gcs_project_name
+        _json['gcsBucketName'] = self._gcs_bucket_name
+        _json['gcsPrefix'] = self._gcs_prefix
         return _json
 
     @classmethod
-    def from_json(cls, _json: dict,
-                  client_api: services.ApiClient,
-                  project: entities.Project):
+    def from_json(
+            cls,
+            _json: dict,
+            client_api: services.ApiClient,
+            project: entities.Project):
         return cls(
-            gcs_project_name=_json.get('_gcs_project_name'),
-            gcs_bucket_name=_json.get('_gcs_bucket_name'),
+            gcs_project_name=_json.get('gcsProjectName'),
+            gcs_bucket_name=_json.get('gcsBucketName'),
+            gcs_prefix=_json.get('gcsPrefix'),
         )
 
     def upload(self, local_path, overwrite=False):
@@ -205,7 +217,6 @@ class GCSBucket(Bucket):
                             overwrite=overwrite)
 
     def download(self,
-                 remote_paths=None,
                  local_path=None,
                  overwrite=False,
                  ):
@@ -219,6 +230,4 @@ class GCSBucket(Bucket):
         """
         self.buckets.download(bucket=self,
                               local_path=local_path,
-                              remote_paths=self.prefix,
                               overwrite=overwrite)
-

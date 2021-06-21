@@ -225,14 +225,8 @@ class Snapshots:
             labels = [label.tag for label in ontologies.get(ontology_id=ontology_id).labels]
             ontology_spec = entities.OntologySpec(ontology_id=ontology_id, labels=labels)
 
-        # TODO: Check that given dataset is of type frozen
-        # ds = self.datasets.get(dataset_id=dataset_id)
-        # if ds.type != 'frozen':
-        #     raise TypeError("Dataset {ds_id} is of type {ds_type} which does not support Snapshot creation".
-        #                     format(ds_id=dataset_id, ds_type=ds.type))
-
         if bucket is not None and bucket.type != entities.BucketType.ITEM:
-            logger.warning("It is suggesgeted to use ItemBucket which support all functionality")
+            logger.warning("It is suggested to use ItemBucket which support all functionality")
             # raise NotImplementedError('Cannot create to snapshot without an Item bucket')
 
         if bucket is not None and not isinstance(bucket, entities.Bucket):
@@ -295,9 +289,65 @@ class Snapshots:
                                                model=model)
 
         if snapshot.dataset.readonly is False:
-            logger.error("Snapshot does not suport `unlocked dataset`\n\t please change {!r} to readonly".format(snapshot.dataset.name))
+            logger.error("Snapshot does not support `unlocked dataset`\n\t please change {!r} to readonly".format(snapshot.dataset.name))
 
         return snapshot
+
+    def clone(self,
+              snapshot,
+              snapshot_name,
+              new_bucket: entities.Bucket = None,
+              new_dataset: entities.Dataset = None,
+              new_configuration: dict = None):
+        """
+        Clones and creates a new snapshot out of existing one
+        :param snapshot: existing snapshot to clone from
+        :param snapshot_name: `str` new snapshot name
+        :param new_bucket: `dl.Bucket` (optional) if passed replaces the current bucket
+        :param new_dataset: `dl.Dataset` (optional) if passed replaces the current dataset
+        :param new_configuration: `dict` (optional) if passed replaces the current configuration
+        :return: dl.Snapshot which is a clone version of the existing snapshot
+        """
+        existing_json = snapshot.to_json()
+        payload = {'name': snapshot_name}
+        # all_fields = ['modelId', 'projectId', 'datasetId', 'ontologySpec', 'bucket', 'configuration', 'tags', 'global', 'description']
+        fields_to_copy = ['modelId', 'projectId', 'ontologySpec', 'tags', 'description']
+
+        # update required fields or replace with new values
+        if new_bucket is not None:
+            payload['bucket'] = new_bucket.to_json()
+        else:
+            fields_to_copy.append('bucket')
+        if new_dataset is not None:
+            payload['datasetId'] = new_dataset.id if isinstance(new_dataset, entities.Dataset) else new_dataset
+        else:
+            fields_to_copy.append('datasetId')
+        if new_configuration is not None:
+            payload['configuration'] = new_configuration
+        else:
+            fields_to_copy.append('configuration')
+
+        payload['global'] = existing_json['is_global']
+        payload.update({field: existing_json[field] for field in fields_to_copy})
+
+        # request
+        success, response = self._client_api.gen_request(req_type='post',
+                                                         path='/snapshots',
+                                                         json_req=payload)
+
+        # exception handling
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        new_snapshot = entities.Snapshot.from_json(_json=response.json(),
+                                                   client_api=self._client_api,
+                                                   project=self._project,
+                                                   model=snapshot.model)
+
+        if new_snapshot.dataset.readonly is False:
+            logger.error("Snapshot does not support `unlocked dataset`\n\t please change {!r} to readonly".format(snapshot.dataset.name))
+
+        return new_snapshot
 
     def upload_to_bucket(self,
                          local_path: str,
@@ -340,7 +390,7 @@ class Snapshots:
             snapshot = self.get(snapshot_id=snapshot_id)
         elif snapshot_id is not None and snapshot.id != snapshot_id:
             raise exceptions.PlatformException(error="409",
-                                               message="snapshot id {!r} does not match given snapshot {}: {!r}".format(
+                                               message="snapshot_id {!r} does not match given snapshot {}: {!r}".format(
                                                    snapshot_id, snapshot.name, snapshot.id))
 
         if local_path is None:

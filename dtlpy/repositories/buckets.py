@@ -4,7 +4,7 @@ import os
 import io
 import uuid
 
-from .. import entities, services, repositories
+from .. import entities, services, repositories, exceptions, miscellaneous
 
 logger = logging.getLogger(name=__name__)
 
@@ -28,7 +28,7 @@ class Buckets:
     ################
     @property
     def items(self):
-        if self.project is not None:
+        if self._project is not None:
             self._items = self.project.items
         else:
             self._items = repositories.Items(client_api=self._client_api)
@@ -63,7 +63,7 @@ class Buckets:
                                                                                 values=directory_item.filename))
         elif isinstance(bucket, entities.GCSBucket):
             gcs_bucket = bucket._bucket
-            blobs = gcs_bucket.list_blobs(prefix=bucket.prefix)
+            blobs = gcs_bucket.list_blobs(prefix=bucket._gcs_prefix)
             output = list(blobs)
         elif isinstance(bucket, entities.LocalBucket):
             output = os.listdir(bucket.local_path)
@@ -93,7 +93,6 @@ class Buckets:
 
     def download(self,
                  bucket: entities.Bucket,
-                 remote_paths=None,
                  local_path=None,
                  overwrite=False,
                  ):
@@ -107,13 +106,22 @@ class Buckets:
         :return:
         """
         if isinstance(bucket, entities.ItemBucket):
-            local_path = self.items.download(items=bucket.directory_item_id,
-                                             local_path=local_path,
-                                             overwrite=overwrite)
+            bucket_dir_item = self.items.get(item_id=bucket.directory_item_id)
+            # fetch: False does not use an API call but created the dataset entity (with id)
+            dataset = bucket_dir_item.datasets.get(dataset_id=bucket_dir_item.datasetId, fetch=False)
+            bucket_filter = entities.Filters(field='dir', values=bucket_dir_item.filename)
+            local_path = dataset.items.download(
+                filters=bucket_filter,
+                local_path=local_path,
+                overwrite=overwrite,
+                to_items_folder=False,
+                without_relative_path=bucket_dir_item.filename
+            )
+            logger.info('Bucket artifacts was unpacked to: {}'.format(local_path))
 
         elif isinstance(bucket, entities.GCSBucket):
             gcs_bucket = bucket._bucket
-            remote_prefix = bucket.prefix  # This should be all the bucket
+            remote_prefix = bucket._gcs_prefix  # This should be all the bucket
             blobs = gcs_bucket.list_blobs(prefix=remote_prefix)
             remote_prefix += '' if remote_prefix.endswith('/') else '/'
             prefix_len = len(remote_prefix)
@@ -169,10 +177,10 @@ class Buckets:
             for root, dir_names, file_names in os.walk(top=local_path, topdown=True):
                 for dir_name in dir_names:
                     # TODO: check if i need to create dir blobs
-                    blob = gcs_bucket.blob(os.path.join(bucket.prefix, local_path[local_prefix_len:], dir_name))
+                    blob = gcs_bucket.blob(os.path.join(bucket._gcs_prefix, local_path[local_prefix_len:], dir_name))
                     blob.upload_from_filename(os.path.join(root, dir_name))
                 for file_name in file_names:
-                    blob = gcs_bucket.blob(os.path.join(bucket.prefix, local_path[local_prefix_len:], file_name))
+                    blob = gcs_bucket.blob(os.path.join(bucket._gcs_prefix, local_path[local_prefix_len:], file_name))
                     blob.upload_from_filename(os.path.join(root, file_name))
         else:
             raise NotImplemented(
@@ -195,16 +203,17 @@ class Buckets:
 
     def create(self, bucket_type=entities.BucketType.ITEM,
                # item bucket / local_bucket
-               local_path = None,
+               local_path=None,
                # gcs bucket
                gcs_project_name: str = None,
                gcs_bucket_name: str = None,
-               prefix: str = '/',
+               gcs_prefix: str = '/',
                use_existing_gcs: bool = True,
                ):
         # TODO: add docstring
         if bucket_type == entities.BucketType.ITEM:
             artifacts = repositories.Artifacts(project=self.project,
+                                               # FIXME: the repo inside the snapshot has not project due to cyclic issues
                                                client_api=self._client_api,
                                                dataset_name='Buckets')
             buffer = io.BytesIO()
@@ -226,7 +235,7 @@ class Buckets:
             return bucket
 
         elif bucket_type == entities.BucketType.LOCAL:
-            bucket= entities.LocalBucket(local_path=local_path, buckets=self)
+            bucket = entities.LocalBucket(local_path=local_path, buckets=self)
             return bucket
 
         elif bucket_type == entities.BucketType.GCS:
@@ -235,10 +244,11 @@ class Buckets:
             if use_existing_gcs:
                 bucket = entities.GCSBucket(gcs_project_name=gcs_project_name,
                                             gcs_bucket_name=gcs_bucket_name,
-                                            prefix = prefix,
+                                            gcs_prefix=gcs_prefix,
                                             buckets=self)
             else:
-                raise NotImplementedError('Create a new bucket in GCS platform is not yet supported. Please connect an esiting GCS bucket')
+                raise NotImplementedError(
+                    'Create a new bucket in GCS platform is not yet supported. Please connect an esiting GCS bucket')
             return bucket
         else:
             raise NotImplemented('missing implementation in "buckets.create" for bucket type: {!r}'.format(bucket_type))

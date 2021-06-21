@@ -38,7 +38,7 @@ from .entities import (
     InstanceCatalog,
     PackageInputType, FunctionPostAction, FunctionPostActionType, FunctionDisplayScope, FunctionDisplayScopeResource,
     # roberto
-    SnapshotPartitionType, BucketType, Bucket, ItemBucket, GCSBucket, LocalBucket, BaseModelAdapter, ModelOutputType,
+    SnapshotPartitionType, BucketType, Bucket, ItemBucket, GCSBucket, LocalBucket, ModelOutputType,
     ModelInputType,
     #
     Command, CommandsStatus,
@@ -55,6 +55,7 @@ from .entities import (
     PipelineExecution, PipelineExecutionNode, Pipeline, PipelineConnection, PipelineNode,
     PipelineConnectionPort, PipelineNodeIO
 )
+from .ml import BaseModelAdapter, SuperModelAdapter
 from .utilities import Converter, BaseServiceRunner, Progress, AnnotationFormat
 from .repositories.packages import PackageCatalog
 from .repositories import FUNCTION_END_LINE

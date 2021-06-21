@@ -1,10 +1,11 @@
 import importlib.util
 import logging
 import os
+import sys
 from shutil import copyfile
 from typing import Union, List
 
-from .. import entities, repositories, exceptions, miscellaneous, assets, services
+from .. import entities, repositories, exceptions, miscellaneous, assets, services, ml
 
 logger = logging.getLogger(name=__name__)
 
@@ -157,13 +158,13 @@ class Models:
         return paged
 
     def build(self, model: entities.Model, local_path=None, from_local=None,
-              log_level='INFO') -> entities.BaseModelAdapter:
+              log_level='INFO') -> ml.BaseModelAdapter:
         """
         :param model: Model entity
         :param from_local: bool. use current directory to build
         :param local_path: local path of the model (if from_local=False - codebase will be downloaded)
 
-        :return:dl.BaseModelAdpter
+        :return:dl.BaseModelAdapter
         """
 
         if model.codebase is None:
@@ -172,7 +173,7 @@ class Models:
                                                    model.name))
 
         if from_local is None:
-            from_local = model.codebase.type == entities.PackageCodebaseType.LOCAL
+            from_local = model.codebase.is_local
 
         if local_path is None:
             if model.codebase.type == entities.PackageCodebaseType.LOCAL:
@@ -187,10 +188,16 @@ class Models:
 
         if not from_local:
             # Not local => download codebase
-            if model.codebase.type == entities.PackageCodebaseType.ITEM:
+            if model.codebase.is_local:
+                raise RuntimeError("using local codebase: {}. Can not use from_local=False".
+                                   format(model.codebase.to_json()))
+            if isinstance(model.codebase, entities.ItemCodebase):
                 codebase_id = model.codebase.item_id
                 project = self._project if self._project is not None else model.project
                 path = project.codebases.unpack(codebase_id=codebase_id, local_path=path)
+            elif isinstance(model.codebase, entities.GitCodebase):
+                path = model.codebases.unpack(codebase=model.codebase, local_path=path)
+                sys.path.append(path)  # TODO: is it the best way to use the imports?
             else:
                 raise NotImplementedError(
                     'download not implemented for {} codebase yet. Build failed'.format(model.codebase.type))
@@ -238,8 +245,7 @@ class Models:
             codebase = model.codebases.pack(directory=src_path)
 
         model.codebase = codebase
-        model.update()
-        return model
+        return self.update(model)
 
     def create(self,
                # offline mode

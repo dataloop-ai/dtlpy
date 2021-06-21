@@ -55,7 +55,6 @@ from .webhook import Webhook, HttpMethod
 from .model import Model, ModelOutputType, ModelInputType
 from .snapshot import Snapshot, OntologySpec, SnapshotPartitionType
 from .bucket import BucketType, Bucket, ItemBucket, GCSBucket, LocalBucket
-from .base_model_adapter import BaseModelAdapter
 from .driver import Driver
 from .pipeline import Pipeline, PipelineConnection, PipelineNode, PipelineConnectionPort, PipelineNodeIO
 from .pipeline_execution import PipelineExecution, PipelineExecutionNode

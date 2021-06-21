@@ -54,11 +54,19 @@ class Codebase:
 
 
 class GitCodebase(Codebase):
-    def __init__(self, git_url: str, git_commit: str, git_tag: str = None):
+    def __init__(self, git_url: str, git_commit: str = None, git_tag: str = None):
         super().__init__(package_codebase_type=PackageCodebaseType.GIT)
-        self.git_url = git_url
+        self.git_url = git_url if git_url.endswith('.git') else git_url + '.git'
         self.git_commit = git_commit
         self.git_tag = git_tag
+        self._codebases = None
+
+    @property
+    def codebases(self):
+        if self._codebases is None:
+            self._codebases = repositories.Codebases(client_api=self._client_api)
+        assert isinstance(self._codebases, repositories.Codebases)
+        return self._codebases
 
     def to_json(self):
         _json = super().to_json()
@@ -73,6 +81,31 @@ class GitCodebase(Codebase):
             git_url=_json.get('gitUrl'),
             git_commit=_json.get('gitCommit'),
             git_tag=_json.get('gitTag', None)
+        )
+
+    @property
+    def git_user_name(self):
+        return self.git_url.split('/')[-2]
+
+    @property
+    def git_repo_name(self):
+        last = self.git_url.split('/')[-1]
+        return os.path.splitext(last)[0]
+
+    @staticmethod
+    def is_git_repo(path):
+        """
+        :param path: `str` TODO: Currently only for local folder
+        :return: `bool` testing if the path is valid git repo
+        """
+        return os.path.isdir(os.path.join(path, '.git'))
+
+    def unpack(self, local_path):
+        """Clones the git codebase"""
+
+        return self.codebases.clone_git(
+            codebase=self,
+            local_path=local_path
         )
 
 

@@ -141,3 +141,73 @@ class GitUtils:
             logging.warning('Error getting git log for git repository in: {}'.format(path))
 
         return log
+
+    @staticmethod
+    def git_clone(path, git_url, **kwargs):
+        """
+        Clone git repo to local path
+        :param path: `str` local path to clone to
+        :param git_url: `str` git url to clone from
+        :return `bool` for successful clone
+        """
+        if not os.path.isdir(path):
+            os.makedirs(path)
+        # TODO: use with git_command
+        prev_dir = os.getcwd()
+        try:
+            os.chdir(path)
+            tag = kwargs.get('tag')
+            branch = kwargs.get('branch')
+            if tag is not None:
+                branch_cmd = ['--branch', tag]
+            elif branch is not None:
+                branch_cmd = ['--branch', branch]
+            else:
+                branch_cmd = []
+
+            # 'gh repo clone <owner>/<repo_name>' # the new git cli
+            cmd = ['git', 'clone'] + branch_cmd + [git_url]
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            output, err = [std.decode() for std in p.communicate()]
+            exit_code = p.returncode
+            response = not exit_code
+            if exit_code:
+                logging.error('Error executing:  {ps1} $ {cmd}\n{err}'.format(ps1=path, cmd=' '.join(cmd), err=err))
+        except Exception:
+            response = False
+            logging.warning('Error cloning git to: {}'.format(path))
+        finally:
+            os.chdir(prev_dir)
+        return response
+
+    @staticmethod
+    def git_command(path, cmd, show=False):
+        """
+        Execute command for a local git repo in path
+        :param path: `str` local path for the git repo
+        :param cmd:  `str` or `list` of `str` specifying the command to run
+        :param show: `bool` if True, prints the stdout of the process (default=False)
+        :return:  `bool` if command was successful or not
+        """
+        prev_dir = os.getcwd()
+        if isinstance(cmd, str):
+            cmd = cmd.split()
+
+        try:
+            os.chdir(path)
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            output, err = p.communicate()
+            output, err = output.decode(), err.decode()
+            exit_code = p.returncode
+            response = not exit_code
+            # Print the process stdout / stderr
+            if show:
+                print(output)
+            if exit_code:
+                logging.error('Error executing:  {ps1} $ {cmd}\n{err}'.format(ps1=path, cmd=' '.join(cmd), err=err))
+        except Exception:
+            response = False
+            logging.warning('Error executing:  {ps1} $ {cmd}'.format(ps1=path, cmd=' '.join(cmd)))
+        finally:
+            os.chdir(prev_dir)
+        return response

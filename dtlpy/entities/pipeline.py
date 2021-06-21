@@ -9,12 +9,13 @@ logger = logging.getLogger(name=__name__)
 
 
 class PipelineNodeIO:
-    def __init__(self, port_id, input_type, name, color, display_name):
+    def __init__(self, port_id, input_type, name, color, display_name, port_percentage):
         self.port_id = port_id
         self.input_type = input_type
         self.name = name
         self.color = color
         self.display_name = display_name
+        self.port_percentage = port_percentage
 
     @staticmethod
     def from_json(_json: dict):
@@ -23,7 +24,8 @@ class PipelineNodeIO:
             input_type=_json.get('type', None),
             name=_json.get('name', None),
             color=_json.get('color', None),
-            display_name=_json.get('displayName', None)
+            display_name=_json.get('displayName', None),
+            port_percentage=_json.get('portPercentage', None)
         )
 
     def to_json(self):
@@ -32,7 +34,8 @@ class PipelineNodeIO:
             'type': self.input_type,
             'name': self.name,
             'color': self.color,
-            'displayName': self.display_name
+            'displayName': self.display_name,
+            'portPercentage': self.port_percentage
         }
         return _json
 

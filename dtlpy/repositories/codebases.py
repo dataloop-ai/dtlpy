@@ -11,7 +11,7 @@ logger = logging.getLogger(name=__name__)
 
 class Codebases:
     """
-    Codebases repository
+    Codebase repository
     """
 
     def __init__(self,
@@ -28,6 +28,7 @@ class Codebases:
         self._project = project
         self._dataset = dataset
         self._items_repository = None
+        self.git_utils = miscellaneous.GitUtils()
 
     @property
     def items_repository(self) -> repositories.Items:
@@ -106,7 +107,7 @@ class Codebases:
     def get(self, codebase_name=None, codebase_id=None, version=None):
         """
         Get a Codebase object
-        :param version: codebase version. default is latest. options: "all", "latests" or ver number - "10"
+        :param version: codebase version. default is latest. options: "all", "latest" or ver number - "10"
         :param codebase_id: optional - search by id
         :param codebase_name: optional - search by name
         :return: Codebase object
@@ -276,9 +277,10 @@ class Codebases:
                     os.remove(zip_filename)
         return codebase
 
-    def unpack_single(self,
-                      codebase,
-                      download_path, local_path):
+    def _unpack_single(self,
+                       codebase,
+                       download_path,
+                       local_path):
         # downloading with specific filename
         if isinstance(codebase, entities.ItemCodebase):
             artifact_filepath = self.items_repository.download(items=codebase.item_id,
@@ -292,6 +294,7 @@ class Codebases:
             miscellaneous.Zipping.unzip_directory(zip_filename=artifact_filepath,
                                                   to_directory=local_path)
             os.remove(artifact_filepath)
+            logger.info('Source code was unpacked to: {}'.format(artifact_filepath))
         elif isinstance(codebase, entities.Item):
             artifact_filepath = codebase.download(save_locally=True,
                                                   local_path=os.path.join(download_path,
@@ -303,46 +306,89 @@ class Codebases:
             miscellaneous.Zipping.unzip_directory(zip_filename=artifact_filepath,
                                                   to_directory=local_path)
             os.remove(artifact_filepath)
+            logger.info('Source code was unpacked to: {}'.format(artifact_filepath))
+        elif isinstance(codebase, entities.GitCodebase):
+            if codebase.is_git_repo(local_path) or \
+                    codebase.is_git_repo(os.path.join(local_path, codebase.git_repo_name)):
+                artifact_filepath = self.pull_git(codebase=codebase, local_path=local_path)
+            else:  # Clone the repo if not exist
+                artifact_filepath = self.clone_git(codebase=codebase, local_path=local_path)
         else:
-            raise ValueError('Not implemented: "unpack_single" for codebase type: {!r}'.format(codebase.type))
+            raise ValueError('Not implemented: "_unpack_single" for codebase type: {!r}'.format(codebase.type))
         return artifact_filepath
 
-    def unpack(self, codebase_name=None, codebase_id=None, local_path=None, version=None):
+    def clone_git(self, codebase, local_path):
+        if not isinstance(codebase, entities.GitCodebase):
+            raise RuntimeError('only support Git Codebase')
+        response = self.git_utils.git_clone(local_path, codebase.git_url)
+        if response:
+            logger.info('Source code was cloned from {}(Git) to: {}'.format(codebase.git_url, local_path))
+        else:
+            logger.critical("Clone codebase failed. Codebase {}. to: {}".format(codebase, os.getcwd()))
+        return os.path.join(local_path, codebase.git_repo_name)
+
+    def pull_git(self, codebase, local_path):
+        pull_cmd = 'git pull'
+        if not codebase.is_git_repo(local_path):
+            local_path = os.path.join(local_path, codebase.git_repo_name)
+        response = self.git_utils.git_command(path=local_path, cmd=pull_cmd)
+        if response:
+            logger.info('pull successful {}(Git) to: {}'.format(codebase.git_url, os.path.dirname(local_path)))
+        else:
+            logger.critical("Could not pull")
+        return local_path
+
+    def unpack(self,
+               codebase: entities.Codebase = None,
+               codebase_name=None,
+               codebase_id=None,
+               local_path=None,
+               version=None):
         """
         Unpack codebase locally. Download source code and unzip
+        :param codebase: `dl.Codebase` object
         :param codebase_name: search by name
         :param codebase_id: search by id
         :param local_path: local path to save codebase
         :param version: codebase version to unpack. default - latest
         :return: String (dirpath)
         """
-        codebase = self.get(codebase_name=codebase_name,
-                            codebase_id=codebase_id,
-                            version=version)
+        # get the codebase / multiple codebase
+        if codebase is None:
+            codebase = self.get(codebase_name=codebase_name,
+                                codebase_id=codebase_id,
+                                version=version)
+        elif codebase_name is not None or codebase_id is not None:
+            logger.warning("Using given codebase. Does not preforming search with name {!r} / id {!r}".
+                           format(codebase_name, codebase_id))
         download_path = local_path
         if isinstance(codebase, entities.PagedEntities):
             for page in codebase:
                 for item in page:
                     local_path = os.path.join(download_path, 'v.' + item.name.split('.')[0])
-                    self.unpack_single(codebase=item,
-                                       download_path=download_path,
-                                       local_path=local_path)
+                    self._unpack_single(codebase=item,
+                                        download_path=download_path,
+                                        local_path=local_path)
             return os.path.dirname(local_path)
         elif isinstance(codebase, list):
             for item in codebase:
                 local_path = os.path.join(download_path, 'v.' + item.item.name.split('.')[0])
-                self.unpack_single(codebase=item,
-                                   download_path=download_path,
-                                   local_path=local_path)
+                self._unpack_single(codebase=item,
+                                    download_path=download_path,
+                                    local_path=local_path)
             return os.path.dirname(local_path)
-        elif isinstance(codebase, entities.Codebase) or isinstance(codebase, entities.Item):
-            artifact_filepath = self.unpack_single(codebase=codebase,
-                                                   download_path=download_path,
-                                                   local_path=local_path)
-            logger.info('Source code was unpacked to: {}'.format(os.path.dirname(artifact_filepath)))
+        elif isinstance(codebase, (entities.Codebase, entities.Item)):
+            artifact_filepath = self._unpack_single(codebase=codebase,
+                                                    download_path=download_path,
+                                                    local_path=local_path)
+            if isinstance(codebase, (entities.ItemCodebase, entities.Item)):
+                dir_path = os.path.dirname(artifact_filepath)  # use the directory of the artifact
+            else:
+                dir_path = artifact_filepath
+            logger.info('Source code was unpacked to: {}'.format(dir_path))
         else:
             raise PlatformException(
                 error='404',
                 message='Codebase was not found! name:{name}, id:{id}'.format(name=codebase_name,
                                                                               id=codebase_id))
-        return os.path.dirname(artifact_filepath)
+        return dir_path
