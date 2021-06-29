@@ -22,8 +22,8 @@ DEFAULT_ENVIRONMENTS = {
          'token': None,
          'refresh_token': None,
          'verify_ssl': True},
-    'https://custom0-gate.dataloop.ai/api/v1': {
-        'gate_url': 'https://custom0-gate.dataloop.ai',
+    'https://custom1-gate.dataloop.ai/api/v1': {
+        'gate_url': 'https://custom1-gate.dataloop.ai',
         'auth0_url': 'https://dataloop-development.auth0.com',
         'verify_ssl': True,
         'client_id': 'NEED',

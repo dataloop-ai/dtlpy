@@ -243,6 +243,7 @@ class Snapshot(entities.BaseEntity):
                                                     dataset=self._dataset),
                  buckets=repositories.Buckets(client_api=self._client_api,
                                               project=self._project,
+                                              project_id=self.project_id,
                                               snapshot=self)
                  )
 
@@ -316,7 +317,6 @@ class Snapshot(entities.BaseEntity):
 
         Download binary file from bucket.
 
-        :param remote_paths: list of items to download
         :param overwrite: optional - default = False
         :param local_path: local binary file or folder to upload
         :return:
@@ -341,6 +341,25 @@ class Snapshot(entities.BaseEntity):
         """
         return self.bucket.upload(local_path=local_path,
                                   overwrite=overwrite)
+
+    def clone(self,
+              new_snapshot_name,
+              new_bucket=None,  #: entities.Bucket = None,
+              new_dataset: entities.Dataset = None,
+              new_configuration: dict = None):
+        """
+        Clones and creates a new snapshot out of existing one
+        :param new_snapshot_name: `str` new snapshot name
+        :param new_bucket: `dl.Bucket` (optional) if passed replaces the current bucket
+        :param new_dataset: `dl.Dataset` (optional) if passed replaces the current dataset
+        :param new_configuration: `dict` (optional) if passed replaces the current configuration
+        :return: dl.Snapshot which is a clone version of the existing snapshot
+        """
+        self.snapshots.clone(snapshot=self,
+                             snapshot_name=new_snapshot_name,
+                             new_bucket=new_bucket,
+                             new_dataset=new_dataset,
+                             new_configuration=new_configuration)
 
     def download_partition(self, partition, local_path=None, filters: entities.Filters = None):
         """
@@ -391,7 +410,7 @@ class Snapshot(entities.BaseEntity):
                 'frozen_datasetId': self.dataset.id,
                 'frozen_itemId': sample['item_id'],
                 'prediction_id': sample['prd_id'],
-                'acutal_id': sample['gt_id'],
+                'actual_id': sample['gt_id'],
                 'score': sample['score']  # for 'box' type it's iou
             }
             self.project.times_series.add_samples(_sample)

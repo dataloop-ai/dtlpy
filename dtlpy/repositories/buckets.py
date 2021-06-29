@@ -17,11 +17,18 @@ class Buckets:
     def __init__(self,
                  client_api: services.ApiClient,
                  project=None,
-                 snapshot=None):
+                 snapshot=None,
+                 project_id=None):
         self._client_api = client_api
         self._project = project
         self._snapshot = snapshot
         self._items = None
+        if project is not None:
+            if project_id is None:
+                project_id = project.id
+            elif project_id != project.id:
+                raise RuntimeError("mismatching project {!r} and project_id {!r}".format(project.id, project_id))
+        self._project_id = project_id
 
     ################
     # repositories #
@@ -165,9 +172,11 @@ class Buckets:
         """
         if isinstance(bucket, entities.ItemBucket):
             directory_item = self.items.get(item_id=bucket.directory_item_id)
-            item = directory_item.dataset.items.upload(local_path=local_path,
-                                                       remote_path=directory_item.filename,
-                                                       overwrite=overwrite)
+            # Upload  the artifacts files them selves rather than  the directory  # 2021-14-06
+            local_files = [os.path.join(local_path, ff) for ff in os.listdir(local_path)]
+            items = directory_item.dataset.items.upload(local_path=local_files,
+                                                        remote_path=directory_item.filename,
+                                                        overwrite=overwrite)
 
         elif isinstance(bucket, entities.GCSBucket):
             gcs_bucket = bucket._bucket
@@ -208,12 +217,33 @@ class Buckets:
                gcs_project_name: str = None,
                gcs_bucket_name: str = None,
                gcs_prefix: str = '/',
+               # item_bucket names
+               item_bucket_model_name:str = None,
+               item_bucket_snapshot_name:str = None,
                use_existing_gcs: bool = True,
                ):
-        # TODO: add docstring
+        """
+        Create a new bucket- directory contains the artifacts (weights and other configurations) of the model.
+        :param bucket_type: `dl.BucketType`: Local, Item, Gcs
+            Local Bucket: is simply a the path to where the bucket is stored locally . environment vars are valid
+            Item Bucket: is used when you want to store your binary files of the model on our Dataloop Platform,
+                they are saved i a different dataset in a defined path
+            Gcs Bucket: is used when you have a Google Cloud Storage bucket and you can connect to it,
+                save / download your models directly to the bucket
+        :param local_path:  `str` where were the weights are currently saved - what directory to upload to the bucket
+
+        :param gcs_project_name: `str` project name in your GCS (Google Cloud Storage) platform
+        :param gcs_bucket_name:  `str` bucket name in your GCS
+        :param gcs_prefix:  `str` prefix/ remote path of where your bucket is defined in GCS
+
+        :param item_bucket_model_name: `str` optional to override the repo settings
+        :param item_bucket_snapshot_name: `str` = optional to override the repo settings
+        :param use_existing_gcs:
+        :return: `dl.Bucket`
+        """
         if bucket_type == entities.BucketType.ITEM:
-            artifacts = repositories.Artifacts(project=self.project,
-                                               # FIXME: the repo inside the snapshot has not project due to cyclic issues
+            artifacts = repositories.Artifacts(project=self._project,
+                                               project_id=self._project_id,
                                                client_api=self._client_api,
                                                dataset_name='Buckets')
             buffer = io.BytesIO()
@@ -225,13 +255,20 @@ class Buckets:
             else:
                 model_name = self.snapshot.model.name
                 snapshot_name = self.snapshot.name
-            directory = artifacts.dataset.items.make_dir(
-                directory=artifacts._build_path_header(model_name=model_name,
-                                                       snapshot_name=snapshot_name))
+
+            # Override names if they were explicitly given
+            if item_bucket_model_name is not None:
+                model_name = item_bucket_model_name
+            if item_bucket_snapshot_name is not None:
+                snapshot_name = item_bucket_snapshot_name
+
+            remote_dir_path = artifacts._build_path_header(model_name=model_name,
+                                                           snapshot_name=snapshot_name)
+            directory = artifacts.dataset.items.make_dir(directory=remote_dir_path)
             # init an empty bucket
             bucket = entities.ItemBucket(directory_item_id=directory.id, buckets=self)
-            bucket.upload(
-                local_path=local_path)
+            self.upload(bucket, local_path=local_path, overwrite=True)
+            # bucket.upload(local_path=local_path)
             return bucket
 
         elif bucket_type == entities.BucketType.LOCAL:

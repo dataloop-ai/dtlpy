@@ -38,8 +38,8 @@ from .label import Label
 from .codebase import Codebase, PackageCodebaseType, ItemCodebase, GitCodebase, FilesystemCodebase, LocalCodebase
 from .package import Package
 from .package_module import PackageModule
-from .package_function import PackageFunction, FunctionIO, PackageInputType, FunctionPostAction, \
-    FunctionPostActionType, FunctionDisplayScope, FunctionDisplayScopeResource
+from .package_slot import PackageSlot, SlotPostAction, SlotPostActionType, SlotDisplayScope, SlotDisplayScopeResource
+from .package_function import PackageFunction, FunctionIO, PackageInputType
 from .time_series import TimeSeries
 from .service import Service, KubernetesAutuscalerType, KubernetesRabbitmqAutoscaler, KubernetesAutoscaler, \
     InstanceCatalog, KubernetesRuntime

@@ -88,10 +88,15 @@ class Webhooks:
             filters = entities.Filters(resource=entities.FiltersResource.WEBHOOK)
             if self._project is not None:
                 filters.add(field='projectId', values=self._project.id)
-
         # assert type filters
-        if not isinstance(filters, entities.Filters):
-            raise exceptions.PlatformException('400', 'Unknown filters type')
+        elif not isinstance(filters, entities.Filters):
+            raise exceptions.PlatformException(error='400',
+                                               message='Unknown filters type: {!r}'.format(type(filters)))
+
+        if filters.resource != entities.FiltersResource.WEBHOOK:
+            raise exceptions.PlatformException(
+                error='400',
+                message='Filters resource must to be FiltersResource.WEBHOOK. Got: {!r}'.format(filters.resource))
 
         paged = entities.PagedEntities(items_repository=self,
                                        filters=filters,

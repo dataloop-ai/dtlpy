@@ -230,6 +230,14 @@ class Services:
         # default filters
         if filters is None:
             filters = entities.Filters(resource=entities.FiltersResource.SERVICE)
+        # assert type filters
+        elif not isinstance(filters, entities.Filters):
+            raise exceptions.PlatformException(error='400',
+                                               message='Unknown filters type: {!r}'.format(type(filters)))
+        if filters.resource != entities.FiltersResource.SERVICE:
+            raise exceptions.PlatformException(
+                error='400',
+                message='Filters resource must to be FiltersResource.SERVICE. Got: {!r}'.format(filters.resource))
         if self._project is not None:
             filters.add(field='projectId', values=self._project.id)
         elif self._project_id is not None:

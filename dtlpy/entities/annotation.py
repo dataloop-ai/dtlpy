@@ -573,25 +573,26 @@ class Annotation(entities.BaseEntity):
                                         annotation_format, '", "'.join(list(entities.ViewAnnotationOptions))))
 
         # color
-        if annotation_format == entities.ViewAnnotationOptions.MASK:
-            color = self.color
-            if len(color) == 3:
-                color = color + (255,)
-        elif annotation_format == entities.ViewAnnotationOptions.INSTANCE:
-            # if label not in dataset label - put it as background
-            color = label_instance_dict.get(self.label, 1)
-        elif annotation_format == entities.ViewAnnotationOptions.OBJECT_ID:
-            if self.object_id is None:
-                raise PlatformException(
-                    error='1001',
-                    message='Try to show object_id but annotation has no value. annotation id: {}'.format(
-                        self.id))
-            color = int(self.object_id)
-        else:
-            raise PlatformException('404',
-                                    'unknown annotations format: {}. known formats: "{}"'.format(
-                                        annotation_format, '", "'.join(list(entities.ViewAnnotationOptions))))
-        # show annotation
+        if color is None:
+            if annotation_format == entities.ViewAnnotationOptions.MASK:
+                color = self.color
+                if len(color) == 3:
+                    color = color + (255,)
+            elif annotation_format == entities.ViewAnnotationOptions.INSTANCE:
+                # if label not in dataset label - put it as background
+                color = label_instance_dict.get(self.label, 1)
+            elif annotation_format == entities.ViewAnnotationOptions.OBJECT_ID:
+                if self.object_id is None:
+                    raise PlatformException(
+                        error='1001',
+                        message='Try to show object_id but annotation has no value. annotation id: {}'.format(
+                            self.id))
+                color = int(self.object_id)
+            else:
+                raise PlatformException('404',
+                                        'unknown annotations format: {}. known formats: "{}"'.format(
+                                            annotation_format, '", "'.join(list(entities.ViewAnnotationOptions))))
+            # show annotation
         if image is None:
             image = np.zeros((height, width, len(color)), dtype=np.uint8)
             if image.shape[2] == 1:

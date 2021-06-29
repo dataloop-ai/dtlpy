@@ -142,12 +142,16 @@ class Models:
         """
         if filters is None:
             filters = entities.Filters(resource=entities.FiltersResource.MODEL)
+        # assert type filters
+        elif not isinstance(filters, entities.Filters):
+            raise exceptions.PlatformException(error='400',
+                                               message='Unknown filters type: {!r}'.format(type(filters)))
+        if filters.resource != entities.FiltersResource.MODEL:
+            raise exceptions.PlatformException(
+                error='400',
+                message='Filters resource must to be FiltersResource.MODEL. Got: {!r}'.format(filters.resource))
         if self._project is not None:
             filters.add(field='projectId', values=self._project.id)
-
-        # assert type filters
-        if not isinstance(filters, entities.Filters):
-            raise exceptions.PlatformException('400', 'Unknown filters type')
 
         paged = entities.PagedEntities(items_repository=self,
                                        filters=filters,

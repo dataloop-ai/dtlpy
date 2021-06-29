@@ -211,10 +211,14 @@ class Packages:
         """
         if filters is None:
             filters = entities.Filters(resource=entities.FiltersResource.PACKAGE)
-
         # assert type filters
-        if not isinstance(filters, entities.Filters):
-            raise exceptions.PlatformException('400', 'Unknown filters type')
+        elif not isinstance(filters, entities.Filters):
+            raise exceptions.PlatformException(error='400',
+                                               message='Unknown filters type: {!r}'.format(type(filters)))
+        if filters.resource != entities.FiltersResource.PACKAGE:
+            raise exceptions.PlatformException(
+                error='400',
+                message='Filters resource must to be FiltersResource.PACKAGE. Got: {!r}'.format(filters.resource))
 
         if project_id is None and self._project is not None:
             project_id = self._project.id
@@ -292,6 +296,17 @@ class Packages:
         if not success:
             raise exceptions.PlatformException(response)
 
+    @staticmethod
+    def _validate_slots(slots, modules):
+        for slot in slots:
+            matched_module = [module for module in modules if slot.module_name == module.name]
+            if len(matched_module) != 1:
+                raise ValueError('Module {!r} in slots is not defined in modules.'.format(slot.module_name))
+            matched_func = [func for func in matched_module[0].functions if slot.function_name == func.name]
+            if len(matched_func) != 1:
+                raise ValueError('Function {!r} in slots is not defined in module {!r}.'.format(slot.function_name,
+                                                                                                slot.module_name))
+
     def push(self,
              project: entities.Project = None,
              project_id: str = None,
@@ -304,7 +319,8 @@ class Packages:
              revision_increment: str = None,
              version: str = None,
              ignore_sanity_check: bool = False,
-             service_update: bool = False) -> entities.Package:
+             service_update: bool = False,
+             slots: List[entities.PackageSlot] = None) -> entities.Package:
         """
         Push local package.
         Project will be taken in the following hierarchy:
@@ -322,6 +338,7 @@ class Packages:
         :param revision_increment: optional - str - version bumping method - major/minor/patch - default = None
         :param is_global:
         :param  service_update: optional - bool - update the service
+        :param  slots: optional - list of slots PackageSlot of the package
         :return:
         """
         # get project
@@ -364,6 +381,9 @@ class Packages:
         if modules is None and 'modules' in package_from_json:
             modules = package_from_json['modules']
 
+        if slots is None and 'slots' in package_from_json:
+            slots = package_from_json['slots']
+
         if ignore_sanity_check:
             logger.warning(
                 'Pushing a package without sanity check can cause errors when trying to deploy, '
@@ -374,6 +394,11 @@ class Packages:
             modules = self._sanity_before_push(src_path=src_path, modules=modules)
 
         self._name_validation(name=package_name)
+
+        if slots is not None:
+            if modules is None:
+                raise ValueError('Cannot add slots when modules is empty.')
+            self._validate_slots(slots, modules)
 
         delete_codebase = False
         if codebase is None:
@@ -393,6 +418,9 @@ class Packages:
                 if modules is not None:
                     package.modules = modules
 
+                if slots is not None:
+                    package.slots = slots
+
                 if is_global is not None:
                     package.is_global = is_global
 
@@ -408,6 +436,7 @@ class Packages:
                     project_to_deploy=project_to_deploy,
                     package_name=package_name,
                     modules=modules,
+                    slots=slots,
                     codebase=codebase,
                     is_global=is_global,
                     version=version
@@ -438,6 +467,7 @@ class Packages:
                 package_name: str = entities.package_defaults.DEFAULT_PACKAGE_NAME,
                 modules: List[entities.PackageModule] = None,
                 version: str = None,
+                slots: List[entities.PackageSlot] = None
                 ) -> entities.Package:
         """
         Create a package in platform
@@ -446,18 +476,23 @@ class Packages:
         :param package_name: optional - default: 'default package'
         :param modules: optional - PackageModules Entity
         :param version: semver version of the package
+        :param slots: optional - list of slots PackageSlot of the package
         :return: Package Entity
         """
         # if is dtlpy entity convert to dict
         if modules and isinstance(modules[0], entities.PackageModule):
             modules = [module.to_json() for module in modules]
 
+        if slots and isinstance(slots[0], entities.PackageSlot):
+            slots = [slot.to_json() for slot in slots]
+
         if is_global is None:
             is_global = False
 
         payload = {'name': package_name,
                    'global': is_global,
-                   'modules': modules
+                   'modules': modules,
+                   'slots': slots
                    }
 
         if codebase is not None:
@@ -702,27 +737,37 @@ class Packages:
         for trigger in service_triggers:
             triggers_dict[trigger.name] = trigger
 
-        for trigger_spec in trigger_list:
-            trigger_name = trigger_spec['name']
+        for trigger_json in trigger_list:
+            trigger_name = trigger_json['name']
+            trigger_spec = trigger_json['spec']
             if trigger_name not in triggers_dict:
                 # create
-                service.triggers.create(name=trigger_name,
-                                        trigger_type=trigger_spec.get('type'),
-                                        filters=trigger_spec.get('spec').get('filter'),
-                                        resource=trigger_spec.get('spec').get('resource'),
-                                        execution_mode=trigger_spec.get('spec').get('executionMode'),
-                                        actions=trigger_spec.get('spec').get('actions'),
-                                        function_name=trigger_spec.get('spec').get('operation').get('functionName'))
+                service.triggers.create(
+                    # general
+                    name=trigger_name,
+                    function_name=trigger_spec['operation']['functionName'],
+                    trigger_type=trigger_json['type'],
+                    # event
+                    scope=trigger_json.get('scope', None),
+                    is_global=trigger_json.get('global', None),
+                    filters=trigger_spec.get('filter', None),
+                    resource=trigger_spec.get('resource', None),
+                    execution_mode=trigger_spec.get('executionMode', None),
+                    actions=trigger_spec.get('actions', None),
+                    # cron
+                    start_at=trigger_spec.get('startAt', None),
+                    end_at=trigger_spec.get('endAt', None),
+                    cron=trigger_spec.get('cron', None),
+                )
             else:
                 existing_trigger = triggers_dict[trigger_name]
                 # check diff
                 _json = existing_trigger.to_json()
-                ####### pop unmatched fields
+                # pop unmatched fields
                 _ = _json['spec']['operation'].pop('serviceId')
-                #######
                 _new_json = _json.copy()
                 # update fields from infra configurations
-                self.__update_dict_recursive(_new_json, trigger_spec)
+                self.__update_dict_recursive(_new_json, trigger_json)
                 # check diffs
                 diffs = miscellaneous.DictDiffer.diff(_json, _new_json)
                 if diffs:
@@ -1191,8 +1236,8 @@ class Packages:
                 # class name in entry point
                 try:
                     spec = importlib.util.spec_from_file_location(class_name, entry_point_filepath)
-                    foo = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(foo)
+                    cls_def = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(cls_def)
                 except ImportError as e:
                     logger.warning(
                         'Cannot run sanity check to find conflicts between package module and source code'
@@ -1201,12 +1246,12 @@ class Packages:
                     )
                     return modules
 
-                if not hasattr(foo, class_name):
+                if not hasattr(cls_def, class_name):
                     missing.append('missing class: "{}" from file: "{}"'.format(class_name, entry_point_filepath))
                     continue
 
                 # function in class
-                cls = getattr(foo, class_name)
+                cls = getattr(cls_def, class_name)
                 if not hasattr(cls, function.name):
                     missing.append(
                         'missing function: "{}" from class: "{}"'.format(function.name, entry_point_filepath))
@@ -1290,9 +1335,9 @@ class LocalServiceRunner:
         """
         entry_point = os.path.join(self.cwd, self.entry_point)
         spec = importlib.util.spec_from_file_location(self.class_name, entry_point)
-        foo = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(foo)
-        service_runner = getattr(foo, self.class_name)
+        cls_def = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls_def)
+        service_runner = getattr(cls_def, self.class_name)
 
         if 'init_params' in self.mock_json:
             kwargs = self.mock_json.get('init_params')

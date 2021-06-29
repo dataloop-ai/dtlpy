@@ -155,10 +155,14 @@ class Pipelines:
         """
         if filters is None:
             filters = entities.Filters(resource=entities.FiltersResource.PIPELINE)
-
         # assert type filters
-        if not isinstance(filters, entities.Filters):
-            raise exceptions.PlatformException('400', 'Unknown filters type')
+        elif not isinstance(filters, entities.Filters):
+            raise exceptions.PlatformException(error='400',
+                                               message='Unknown filters type: {!r}'.format(type(filters)))
+        if filters.resource != entities.FiltersResource.PIPELINE:
+            raise exceptions.PlatformException(
+                error='400',
+                message='Filters resource must to be FiltersResource.PIPELINE. Got: {!r}'.format(filters.resource))
 
         if project_id is None and self._project is not None:
             project_id = self._project.id

@@ -191,8 +191,9 @@ class Model(entities.BaseEntity):
                  snapshots=repositories.Snapshots(client_api=self._client_api,
                                                   project=self._project,
                                                   model=self),
-                buckets=repositories.Buckets(client_api=self._client_api,
-                                             project=self._project)
+                 buckets=repositories.Buckets(client_api=self._client_api,
+                                              project=self._project,
+                                              project_id=self.project_id)
                  )
         return r
 

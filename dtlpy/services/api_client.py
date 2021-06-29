@@ -12,6 +12,7 @@ import aiohttp
 import logging
 import asyncio
 import certifi
+import base64
 import time
 import tqdm
 import json
@@ -947,12 +948,18 @@ class ApiClient:
         :param env:
         :return:
         """
+
         environments = self.environments
         if env.startswith('http'):
             if env not in environments.keys():
                 msg = 'Unknown environment. Please add environment to SDK ("add_environment" method)'
                 logger.error(msg)
                 raise ConnectionError(msg)
+        elif env == 'custom':
+            custom_env = os.environ.get('DTLPY_CUSTOM_ENV', None)
+            environment = json.loads(base64.b64decode(custom_env.encode()).decode())
+            env = environment.pop('url')
+            self.environments[env] = environment
         else:
             matched_env = [env_url for env_url, env_dict in environments.items() if env_dict['alias'] == env]
             if len(matched_env) != 1:

@@ -1,5 +1,6 @@
 import logging
 import os
+import warnings
 from typing import List
 
 from .. import entities, repositories, exceptions, miscellaneous, services
@@ -132,10 +133,10 @@ class Snapshots:
         # return triggers list
         for i_service, service in enumerate(response_items):
             jobs[i_service] = pool.submit(entities.Snapshot._protected_from_json,
-                                               **{'client_api': self._client_api,
-                                                     '_json': service,
-                                                     'model': self._model,
-                                                     'project': self._project})
+                                          **{'client_api': self._client_api,
+                                             '_json': service,
+                                             'model': self._model,
+                                             'project': self._project})
 
         # get all results
         results = [j.result() for j in jobs]
@@ -169,7 +170,13 @@ class Snapshots:
 
         # assert type filters
         if not isinstance(filters, entities.Filters):
-            raise exceptions.PlatformException('400', 'Unknown filters type')
+            raise exceptions.PlatformException(error='400',
+                                               message='Unknown filters type: {!r}'.format(type(filters)))
+
+        if filters.resource != entities.FiltersResource.SNAPSHOT:
+            raise exceptions.PlatformException(
+                error='400',
+                message='Filters resource must to be FiltersResource.SNAPSHOT. Got: {!r}'.format(filters.resource))
 
         paged = entities.PagedEntities(items_repository=self,
                                        filters=filters,
@@ -201,7 +208,7 @@ class Snapshots:
         :param labels: list of labels from ontology (must mach ontology id) can be a subset
         :param ontology_id: ontology to connect to the snapshot
         :param description: description
-        :param bucket: optional
+        :param bucket: optional dl.Bucket.  If None - creates a local bucket at the current working dir
         :param project_id: project that owns the snapshot
         :param is_global: bool
         :param tags: list of string tags
@@ -220,7 +227,7 @@ class Snapshots:
             labels_dict = {k: '#' + ''.join([random.choice(hex_chars) for _ in range(6)]) for k in labels}
             snapshot_ont = ontologies.create(labels_dict, title=self.name + '-snapshot-ontology')
             ontology_spec = entities.OntologySpec(ontology_id=snapshot_ont.id, labels=labels)
-        else: # ontology_id is not None
+        else:  # ontology_id is not None
             ontologies = repositories.Ontologies(client_api=self._client_api)
             labels = [label.tag for label in ontologies.get(ontology_id=ontology_id).labels]
             ontology_spec = entities.OntologySpec(ontology_id=ontology_id, labels=labels)
@@ -288,8 +295,14 @@ class Snapshots:
                                                project=self._project,
                                                model=model)
 
-        if snapshot.dataset.readonly is False:
-            logger.error("Snapshot does not support `unlocked dataset`\n\t please change {!r} to readonly".format(snapshot.dataset.name))
+        if dataset_id is None:
+            msg = "Snapshot {!r} was created without a dataset. This may cause unexpected errors.".format(snapshot.id)
+            warnings.warn(msg)
+            logger.error(msg)
+        else:
+            if snapshot.dataset.readonly is False:
+                logger.error("Snapshot does not support `unlocked dataset`\n\t please change {!r} to readonly".format(
+                    snapshot.dataset.name))
 
         return snapshot
 
@@ -298,7 +311,7 @@ class Snapshots:
               snapshot_name,
               new_bucket: entities.Bucket = None,
               new_dataset: entities.Dataset = None,
-              new_configuration: dict = None):
+              new_configuration: dict = None) -> entities.Snapshot:
         """
         Clones and creates a new snapshot out of existing one
         :param snapshot: existing snapshot to clone from
@@ -345,7 +358,8 @@ class Snapshots:
                                                    model=snapshot.model)
 
         if new_snapshot.dataset.readonly is False:
-            logger.error("Snapshot does not support `unlocked dataset`\n\t please change {!r} to readonly".format(snapshot.dataset.name))
+            logger.error("Snapshot does not support `unlocked dataset`\n\t please change {!r} to readonly".format(
+                snapshot.dataset.name))
 
         return new_snapshot
 

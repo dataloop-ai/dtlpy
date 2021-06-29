@@ -127,10 +127,14 @@ class Items:
         # default filters
         if filters is None:
             filters = entities.Filters()
-
         # assert type filters
-        if not isinstance(filters, entities.Filters):
-            raise exceptions.PlatformException('400', 'Unknown filters type')
+        elif not isinstance(filters, entities.Filters):
+            raise exceptions.PlatformException(error='400',
+                                               message='Unknown filters type: {!r}'.format(type(filters)))
+        if filters.resource != entities.FiltersResource.ITEM and filters.resource != entities.FiltersResource.ANNOTATION:
+            raise exceptions.PlatformException(
+                error='400',
+                message='Filters resource must to be FiltersResource.ITEM. Got: {!r}'.format(filters.resource))
 
         # page size
         if page_size is None:

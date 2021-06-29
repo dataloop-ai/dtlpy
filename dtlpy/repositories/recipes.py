@@ -113,7 +113,14 @@ class Recipes:
         elif self._project_id is not None:
             if filters is None:
                 filters = entities.Filters(resource=entities.FiltersResource.RECIPE)
-
+            # assert type filters
+            elif not isinstance(filters, entities.Filters):
+                raise exceptions.PlatformException(error='400',
+                                                   message='Unknown filters type: {!r}'.format(type(filters)))
+            if filters.resource != entities.FiltersResource.RECIPE:
+                raise exceptions.PlatformException(
+                    error='400',
+                    message='Filters resource must to be FiltersResource.RECIPE. Got: {!r}'.format(filters.resource))
             if not filters.has_field('projects'):
                 filters.add(field='projects', values=[self._project_id])
 

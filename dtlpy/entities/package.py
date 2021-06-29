@@ -25,6 +25,7 @@ class Package(entities.BaseEntity):
     name = attr.ib()
     codebase = attr.ib()
     _modules = attr.ib()
+    slots = attr.ib(type=list)
     ui_hooks = attr.ib()
     creator = attr.ib()
     is_global = attr.ib()
@@ -51,7 +52,7 @@ class Package(entities.BaseEntity):
         return None
 
     @codebase_id.setter
-    def codebase_id(self, item_id:  str):
+    def codebase_id(self, item_id: str):
         self.codebase = entities.ItemCodebase(item_id=item_id)
 
     @modules.setter
@@ -102,11 +103,12 @@ class Package(entities.BaseEntity):
                 project = None
 
         modules = [entities.PackageModule.from_json(_module) for _module in _json.get('modules', list())]
+        slots = [entities.PackageSlot.from_json(_slot) for _slot in _json.get('slots', list())]
         if 'codebase' in _json:
             codebase = entities.Codebase.from_json(_json=_json['codebase'],
                                                    client_api=client_api)
         else:
-            codebase= None
+            codebase = None
 
         inst = cls(
             project_id=_json.get('projectId', None),
@@ -118,6 +120,7 @@ class Package(entities.BaseEntity):
             is_global=_json.get('global', None),
             client_api=client_api,
             modules=modules,
+            slots=slots,
             ui_hooks=_json.get('uiHooks', None),
             name=_json.get('name', None),
             url=_json.get('url', None),
@@ -142,26 +145,27 @@ class Package(entities.BaseEntity):
                                                         attr.fields(Package)._revisions,
                                                         attr.fields(Package).project_id,
                                                         attr.fields(Package)._modules,
+                                                        attr.fields(Package).slots,
                                                         attr.fields(Package).is_global,
                                                         attr.fields(Package).ui_hooks,
                                                         attr.fields(Package).codebase,
                                                         ))
 
         modules = self.modules
-
         # check in inputs is a list
         if not isinstance(modules, list):
             modules = [modules]
-
         # if is dtlpy entity convert to dict
         if modules and isinstance(modules[0], entities.PackageModule):
             modules = [module.to_json() for module in modules]
+        _json['modules'] = modules
 
+        slot = [slot.to_json() for slot in self.slots]
+        if len(slot) > 0:
+            _json['slots'] = slot
         _json['projectId'] = self.project_id
-
         if self.is_global is not None:
             _json['global'] = self.is_global
-        _json['modules'] = modules
         if self.codebase is not None:
             _json['codebase'] = self.codebase.to_json()
         if self.ui_hooks is not None:

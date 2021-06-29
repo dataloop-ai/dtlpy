@@ -35,8 +35,8 @@ from .entities import (
     TriggerResource, TriggerAction, TriggerExecutionMode, TriggerType,
     # faas
     FunctionIO, KubernetesAutuscalerType, KubernetesRabbitmqAutoscaler, KubernetesAutoscaler, KubernetesRuntime,
-    InstanceCatalog,
-    PackageInputType, FunctionPostAction, FunctionPostActionType, FunctionDisplayScope, FunctionDisplayScopeResource,
+    InstanceCatalog, PackageInputType,
+    PackageSlot, SlotPostAction, SlotPostActionType, SlotDisplayScope, SlotDisplayScopeResource,
     # roberto
     SnapshotPartitionType, BucketType, Bucket, ItemBucket, GCSBucket, LocalBucket, ModelOutputType,
     ModelInputType,
@@ -330,14 +330,14 @@ PACKAGE_INPUT_TYPE_EXECUTION = PackageInputType.EXECUTION
 PACKAGE_INPUT_TYPE_TASK = PackageInputType.TASK
 PACKAGE_INPUT_TYPE_ASSIGNMENT = PackageInputType.ASSIGNMENT
 
-FUNCTION_POST_ACTION_TYPE_DOWNLOAD = FunctionPostActionType.DOWNLOAD
-FUNCTION_POST_ACTION_TYPE_DRAW_ANNOTATION = FunctionPostActionType.DRAW_ANNOTATION
-FUNCTION_POST_ACTION_TYPE_NO_ACTION = FunctionPostActionType.NO_ACTION
+FUNCTION_POST_ACTION_TYPE_DOWNLOAD = SlotPostActionType.DOWNLOAD
+FUNCTION_POST_ACTION_TYPE_DRAW_ANNOTATION = SlotPostActionType.DRAW_ANNOTATION
+FUNCTION_POST_ACTION_TYPE_NO_ACTION = SlotPostActionType.NO_ACTION
 
-FUNCTION_DISPLAY_SCOPE_RESOURCE_ANNOTATION = FunctionDisplayScopeResource.ANNOTATION
-FUNCTION_DISPLAY_SCOPE_RESOURCE_ITEM = FunctionDisplayScopeResource.ITEM
-FUNCTION_DISPLAY_SCOPE_RESOURCE_DATASET = FunctionDisplayScopeResource.DATASET
-FUNCTION_DISPLAY_SCOPE_RESOURCE_DATASET_QUERY = FunctionDisplayScopeResource.DATASET_QUERY
+FUNCTION_DISPLAY_SCOPE_RESOURCE_ANNOTATION = SlotDisplayScopeResource.ANNOTATION
+FUNCTION_DISPLAY_SCOPE_RESOURCE_ITEM = SlotDisplayScopeResource.ITEM
+FUNCTION_DISPLAY_SCOPE_RESOURCE_DATASET = SlotDisplayScopeResource.DATASET
+FUNCTION_DISPLAY_SCOPE_RESOURCE_DATASET_QUERY = SlotDisplayScopeResource.DATASET_QUERY
 
 COMMANDS_STATUS_CREATED = CommandsStatus.CREATED
 COMMANDS_STATUS_MAKING_CHILDREN = CommandsStatus.MAKING_CHILDREN

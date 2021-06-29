@@ -354,10 +354,15 @@ class Triggers:
                 filters.add(field='projectId', values=self._project.id)
             if self._service is not None:
                 filters.add(field='spec.operation.serviceId', values=self._service.id)
-
         # assert type filters
-        if not isinstance(filters, entities.Filters):
-            raise exceptions.PlatformException('400', 'Unknown filters type')
+        elif not isinstance(filters, entities.Filters):
+            raise exceptions.PlatformException(error='400',
+                                               message='Unknown filters type: {!r}'.format(type(filters)))
+
+        if filters.resource != entities.FiltersResource.TRIGGER:
+            raise exceptions.PlatformException(
+                error='400',
+                message='Filters resource must to be FiltersResource.TRIGGER. Got: {!r}'.format(filters.resource))
 
         paged = entities.PagedEntities(items_repository=self,
                                        filters=filters,
