@@ -33,10 +33,10 @@ class User(entities.BaseEntity):
     def _protected_from_json(_json, project, client_api, users=None):
         """
         Same as from_json but with try-except to catch if error
-        :param _json:
+        :param _json: platform json
+        :param project: project entity
+        :param client_api: ApiClient entity
         :param users: Users repository
-        :param project:
-        :param client_api:
         :return:
         """
         try:
@@ -63,9 +63,9 @@ class User(entities.BaseEntity):
         """
         Build a User entity object from a json
 
-        :param client_api:
         :param _json: _json response from host
         :param project: project entity
+        :param client_api: ApiClient entity
         :param users: Users repository
         :return: User object
         """

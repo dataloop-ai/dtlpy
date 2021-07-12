@@ -54,6 +54,10 @@ class BaseAnnotationDefinition:
 
     @staticmethod
     def add_text_to_image(image, annotation):
+        """
+        :param image:
+        :param annotation:
+        """
         try:
             import cv2
         except (ImportError, ModuleNotFoundError):

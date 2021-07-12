@@ -246,6 +246,10 @@ class DataFrameUploadElement(BaseUploadElement):
         self.remote_filepath = self.remote_path + self.remote_name
 
     def is_url(self, url):
+        """
+        check if the url is valid
+        :param url:
+        """
         try:
             return validators.url(url)
         except Exception:

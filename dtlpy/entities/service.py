@@ -62,10 +62,11 @@ class Service(entities.BaseEntity):
     def _protected_from_json(_json: dict, client_api: services.ApiClient, package=None, project=None, is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
-        :param _json:
-        :param client_api:
+        :param _json: platform json
+        :param client_api: ApiClient entity
         :param package:
-        :param project:
+        :param project: project entity
+        :param is_fetched: is Entity fetched from Platform
         :return:
         """
         try:
@@ -84,10 +85,10 @@ class Service(entities.BaseEntity):
     def from_json(cls, _json: dict, client_api: services.ApiClient, package=None, project=None, is_fetched=True):
         """
 
-        :param _json:
-        :param client_api:
+        :param _json: platform json
+        :param client_api: ApiClient entity
         :param package:
-        :param project:
+        :param project: project entity
         :param is_fetched: is Entity fetched from Platform
         :return:
         """
@@ -273,7 +274,7 @@ class Service(entities.BaseEntity):
     def update(self, force=False):
         """
         Update Service changes to platform
-
+        :param force:
         :return: Service entity
         """
         return self.services.update(service=self, force=force)
@@ -298,18 +299,18 @@ class Service(entities.BaseEntity):
             execution_id=None, function_name=None, replica_id=None, system=False, view=True, until_completed=True):
         """
         Get service logs
-
-        :param text:
-        :param view:
-        :param system:
-        :param end: iso format time
-        :param start: iso format time
-        :param checkpoint:
-        :param follow: filters
-        :param execution_id: follow
-        :param function_name: execution_id
-        :param replica_id: function_name
         :param size:
+        :param checkpoint:
+        :param start: iso format time
+        :param end: iso format time
+        :param follow: filters
+        :param text:
+        :param execution_id:
+        :param function_name:
+        :param replica_id:
+        :param system:
+        :param view:
+        :param until_completed:
         :return: Service entity
         """
         return self.services.log(service=self,
@@ -363,13 +364,13 @@ class Service(entities.BaseEntity):
         """
         Execute a function on an existing service
 
-        :param function_name: function name to run
-        :param project_id: resource's project
         :param execution_input: input dictionary or list of FunctionIO entities
-        :param dataset_id: optional - input to function
-        :param item_id: optional - input to function
-        :param annotation_id: optional - input to function
+        :param function_name: function name to run
         :param resource: input type.
+        :param item_id: optional - input to function
+        :param dataset_id: optional - input to function
+        :param annotation_id: optional - input to function
+        :param project_id: resource's project
         :param sync: wait for function to end
         :param stream_logs: prints logs of the new execution. only works with sync=True
         :param return_output: if True and sync is True - will return the output directly
@@ -449,9 +450,14 @@ class KubernetesRabbitmqAutoscaler(KubernetesAutoscaler):
                  min_replicas=KubernetesAutoscaler.MIN_REPLICA_DEFAULT,
                  max_replicas=KubernetesAutoscaler.MAX_REPLICA_DEFAULT,
                  queue_length=QUEUE_LENGTH_DEFAULT,
+                 cooldown_period=None,
+                 polling_interval=None,
                  **kwargs):
-        super().__init__(min_replicas=min_replicas, max_replicas=max_replicas,
-                         autoscaler_type=KubernetesAutuscalerType.RABBITMQ, **kwargs)
+        super().__init__(min_replicas=min_replicas,
+                         max_replicas=max_replicas,
+                         autoscaler_type=KubernetesAutuscalerType.RABBITMQ,
+                         cooldown_period=cooldown_period,
+                         polling_interval=polling_interval, **kwargs)
         self.queue_length = kwargs.get('queueLength', queue_length)
 
     def to_json(self):

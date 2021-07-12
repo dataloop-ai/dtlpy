@@ -46,6 +46,11 @@ class Webhooks:
                project: entities.Project = None) -> entities.Webhook:
         """
         Create web hook entity
+        :param name:
+        :param project_id:
+        :param http_method:
+        :param hook_url:
+        :param project:
         :return:
         """
         if project is None:
@@ -82,6 +87,7 @@ class Webhooks:
     def list(self, filters: entities.Filters = None) -> entities.PagedEntities:
         """
         List web hooks
+        :param filters:
         :return:
         """
         if filters is None:
@@ -147,9 +153,8 @@ class Webhooks:
     def get(self, webhook_id=None, webhook_name=None) -> entities.Webhook:
         """
         Get Web hook
-
-        :param webhook_name:
         :param webhook_id:
+        :param webhook_name:
         :return: Web hook execution object
         """
         if webhook_id is None and webhook_name is None:
@@ -191,9 +196,8 @@ class Webhooks:
     def delete(self, webhook_id=None, webhook_name=None):
         """
         Delete Trigger object
-
-        :param webhook_name:
         :param webhook_id:
+        :param webhook_name:
         :return: True
         """
         if webhook_id is None:

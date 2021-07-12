@@ -19,6 +19,9 @@ class Bucket:
             buckets = repositories.Buckets(client_api=client_api)
         self._buckets = buckets
 
+    def __str__(self):
+        return str(self.to_json())
+
     # @_repositories.default
     # def set_repositories(self):
     #     reps = namedtuple('repositories',
@@ -37,6 +40,12 @@ class Bucket:
     def from_json(_json: dict,
                   client_api: services.ApiClient,
                   project: entities.Project):
+        """
+        :param _json: platform json
+        :param client_api: ApiClient entity
+        :param project: project entity
+        :return: Bucket
+        """
         if _json['type'] == BucketType.ITEM:
             cls = ItemBucket.from_json(_json=_json,
                                        client_api=client_api,
@@ -87,6 +96,12 @@ class ItemBucket(Bucket):
     def from_json(cls, _json: dict,
                   client_api: services.ApiClient,
                   project: entities.Project):
+        """
+        :param _json: platform json
+        :param client_api: ApiClient entity
+        :param project: project entity
+        :return: ItemBucket
+        """
         return cls(
             directory_item_id=_json.get('itemId')
         )
@@ -98,8 +113,8 @@ class ItemBucket(Bucket):
         If bucket exists - overwriting binary
         Else and if create==True a new bucket will be created and uploaded
 
-        :param overwrite: optional - default = False
         :param local_path: local binary file or folder to upload
+        :param overwrite: optional - default = False
         :return:
         """
         self.buckets.upload(bucket=self,
@@ -114,8 +129,8 @@ class ItemBucket(Bucket):
 
         Download binary file from bucket.
 
-        :param overwrite: optional - default = False
         :param local_path: local binary file or folder to upload
+        :param overwrite: optional - default = False
         :return:
         """
         # TODO: re-write the usage as we don`t use remote path in the repo...
@@ -152,6 +167,12 @@ class LocalBucket(Bucket):
     def from_json(cls, _json: dict,
                   client_api: services.ApiClient,
                   project: entities.Project):
+        """
+        :param _json: platform json
+        :param client_api: ApiClient entity
+        :param project: project entity
+        :return: LocalBucket
+        """
         return cls(
             local_path=_json.get('localPath', None),
         )
@@ -195,6 +216,12 @@ class GCSBucket(Bucket):
             _json: dict,
             client_api: services.ApiClient,
             project: entities.Project):
+        """
+        :param _json: platform json
+        :param client_api: ApiClient entity
+        :param project: project entity
+        :return: GCSBucket
+        """
         return cls(
             gcs_project_name=_json.get('gcsProjectName'),
             gcs_bucket_name=_json.get('gcsBucketName'),
@@ -208,8 +235,8 @@ class GCSBucket(Bucket):
         If bucket exists - overwriting binary
         Else and if create==True a new bucket will be created and uploaded
 
-        :param overwrite: optional - default = False
         :param local_path: local binary file or folder to upload
+        :param overwrite: optional - default = False
         :return:
         """
         self.buckets.upload(bucket=self,
@@ -224,8 +251,8 @@ class GCSBucket(Bucket):
 
         Download binary file from bucket.
 
-        :param overwrite: optional - default = False
         :param local_path: local binary file or folder to upload
+        :param overwrite: optional - default = False
         :return:
         """
         self.buckets.download(bucket=self,

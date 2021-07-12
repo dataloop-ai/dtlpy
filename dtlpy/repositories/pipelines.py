@@ -151,6 +151,8 @@ class Pipelines:
     def list(self, filters: entities.Filters = None, project_id=None) -> entities.PagedEntities:
         """
         List project pipelines
+        :param filters:
+        :param project_id:
         :return:
         """
         if filters is None:
@@ -244,3 +246,34 @@ class Pipelines:
             client_api=self._client_api,
             project=self._project
         )
+
+    def create(self, pipeline_json) -> entities.Pipeline:
+        """
+        Create a new pipeline
+        :param pipeline_json: json contain the pipeline fields
+        :return: Pipeline object
+        """
+
+        success, response = self._client_api.gen_request(req_type='post',
+                                                         path='/pipelines',
+                                                         json_req=pipeline_json)
+        if success:
+            pipeline = entities.Pipeline.from_json(client_api=self._client_api,
+                                                   _json=response.json(),
+                                                   project=self.project)
+        else:
+            raise exceptions.PlatformException(response)
+        assert isinstance(pipeline, entities.Pipeline)
+        return pipeline
+
+    def install(self, pipeline: entities.Pipeline = None):
+        """
+        install a pipeline
+        :param pipeline:
+        :return: Composition object
+        """
+        success, response = self._client_api.gen_request(req_type='post',
+                                                         path='/compositions/{}/install'.format(pipeline.composition_id))
+
+        if not success:
+            raise exceptions.PlatformException(response)

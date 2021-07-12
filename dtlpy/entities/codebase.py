@@ -1,5 +1,6 @@
 import logging
 import os
+import warnings
 
 from .. import entities, repositories
 
@@ -20,12 +21,18 @@ class Codebase:
         self.type = package_codebase_type
         self._client_api = client_api
 
+    def __str__(self):
+        return str(self.to_json())
+
     def to_json(self):
         _json = {'type': self.type}
         return _json
 
     @staticmethod
     def from_json(_json: dict, client_api):
+        """
+        :param client_api: ApiClient entity
+        """
         if _json['type'] == PackageCodebaseType.GIT:
             cls = GitCodebase.from_json(_json=_json,
                                         client_api=client_api)
@@ -54,12 +61,25 @@ class Codebase:
 
 
 class GitCodebase(Codebase):
-    def __init__(self, git_url: str, git_commit: str = None, git_tag: str = None):
+    def __init__(self, git_url: str, git_tag: str):
         super().__init__(package_codebase_type=PackageCodebaseType.GIT)
         self.git_url = git_url if git_url.endswith('.git') else git_url + '.git'
-        self.git_commit = git_commit
         self.git_tag = git_tag
         self._codebases = None
+
+        # add .git prefix to the url
+        if git_url.endswith('.git'):
+            self.git_url = git_url
+        else:
+            self.git_url = git_url + '.git'
+
+        if git_tag is None:
+            msg = "Setting git_tag to None is not recommended." \
+                  " This means the codebase will use the head of master branch when cloned / pull"
+            warnings.warn(msg, UserWarning)
+            self.git_tag = 'master'
+        else:
+            self.git_tag = git_tag
 
     @property
     def codebases(self):
@@ -71,16 +91,18 @@ class GitCodebase(Codebase):
     def to_json(self):
         _json = super().to_json()
         _json['gitUrl'] = self.git_url
-        _json['gitCommit'] = self.git_commit
         _json['gitTag'] = self.git_tag
         return _json
 
     @classmethod
     def from_json(cls, _json: dict, client_api):
+        """
+        :param _json: platform json
+        :param client_api: ApiClient entity
+        """
         return cls(
             git_url=_json.get('gitUrl'),
-            git_commit=_json.get('gitCommit'),
-            git_tag=_json.get('gitTag', None)
+            git_tag=_json.get('gitTag')
         )
 
     @property
@@ -101,7 +123,10 @@ class GitCodebase(Codebase):
         return os.path.isdir(os.path.join(path, '.git'))
 
     def unpack(self, local_path):
-        """Clones the git codebase"""
+        """
+        Clones the git codebase
+        :param local_path:
+        """
 
         return self.codebases.clone_git(
             codebase=self,
@@ -130,6 +155,10 @@ class LocalCodebase(Codebase):
 
     @classmethod
     def from_json(cls, _json: dict, client_api):
+        """
+        :param _json: platform json
+        :param client_api: ApiClient entity
+        """
         return cls(
             local_path=_json.get('localPath', None),
         )
@@ -151,6 +180,10 @@ class FilesystemCodebase(Codebase):
 
     @classmethod
     def from_json(cls, _json: dict, client_api):
+        """
+        :param _json: platform json
+        :param client_api: ApiClient entity
+        """
         return cls(
             container_path=_json.get('containerPath', None),
             host_path=_json.get('hostPath', None)
@@ -187,12 +220,20 @@ class ItemCodebase(Codebase):
 
     @classmethod
     def from_json(cls, _json: dict, client_api):
+        """
+        :param _json: platform json
+        :param client_api: ApiClient entity
+        """
         return cls(
             item_id=_json['itemId'],
             client_api=client_api
         )
 
     def unpack(self, local_path):
+        """
+        Clones the git codebase
+        :param local_path:
+        """
         return self.codebases.unpack(
             codebase_id=self.item_id,
             local_path=local_path

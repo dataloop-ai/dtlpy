@@ -170,6 +170,7 @@ class ApiClient:
         self.renew_token_method = self.renew_token
         self.is_cli = False
         self.session = None
+        self.default_headers = dict()
         self._token = None
         self._environments = None
         self._environment = None
@@ -236,6 +237,18 @@ class ApiClient:
             pool.shutdown()
         for name, thread in self._event_loops_dict.items():
             thread.stop()
+
+    def _build_request_headers(self, headers=None):
+        if headers is None:
+            headers = dict()
+        if not isinstance(headers, dict):
+            raise exceptions.PlatformException(
+                error='400',
+                message="Input 'headers' must be a dictionary, got: {}".format(type(headers)))
+        headers.update(self.default_headers)
+        headers.update(self.auth)
+        headers.update({'User-Agent': requests_toolbelt.user_agent('dtlpy', __version__.version)})
+        return headers
 
     @property
     def num_processes(self):
@@ -470,19 +483,12 @@ class ApiClient:
         assert req_type in valid_request_type, '[ERROR] type: %s NOT in valid requests' % req_type
 
         # prepare request
-        headers_req = self.auth
-        headers_req['User-Agent'] = requests_toolbelt.user_agent('dtlpy', __version__.version)
-        if headers is not None:
-            if not isinstance(headers, dict):
-                raise exceptions.PlatformException(error='400', message="Input 'headers' must be a dictionary")
-            for k, v in headers.items():
-                headers_req[k] = v
         req = requests.Request(method=req_type,
                                url=self.environment + path,
                                json=json_req,
                                files=files,
                                data=data,
-                               headers=headers_req)
+                               headers=self._build_request_headers(headers=headers))
         # prepare to send
         prepared = req.prepare()
         # save curl for debug
@@ -561,8 +567,7 @@ class ApiClient:
         # prepare request
         if is_dataloop:
             full_url = self.environment + path
-            headers_req = self.auth
-            headers_req['User-Agent'] = requests_toolbelt.user_agent('dtlpy', __version__.version)
+            headers_req = self._build_request_headers(headers=headers)
         else:
             full_url = path
             headers = dict()
@@ -668,10 +673,8 @@ class ApiClient:
         return return_type, response
 
     async def upload_file_async(self, to_upload, item_type, item_size, remote_url, uploaded_filename,
-                                remote_path=None, callback=None, mode='skip', item_metadata=None):
-        headers = self.auth
-        headers['User-Agent'] = requests_toolbelt.user_agent('dtlpy', __version__.version)
-
+                                remote_path=None, callback=None, mode='skip', item_metadata=None, headers=None):
+        headers = self._build_request_headers(headers=headers)
         pbar = None
         if callback is None:
             if item_size > 10e6:

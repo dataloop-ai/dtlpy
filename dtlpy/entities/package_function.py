@@ -34,6 +34,8 @@ class PackageFunction(entities.BaseEntity):
     name = attr.ib()
     description = attr.ib(default='')
     inputs = attr.ib()
+    display_name = attr.ib(default=None)
+    display_icon = attr.ib(repr=False, default=None)
 
     @name.default
     def set_name(self):
@@ -51,6 +53,8 @@ class PackageFunction(entities.BaseEntity):
             name=_json.get("name", None),
             inputs=inputs,
             outputs=outputs,
+            display_name=_json.get('displayName', None),
+            display_icon=_json.get('displayIcon', None)
         )
 
     @outputs.default
@@ -68,6 +72,8 @@ class PackageFunction(entities.BaseEntity):
             self,
             filter=attr.filters.exclude(attr.fields(PackageFunction).inputs,
                                         attr.fields(PackageFunction).outputs,
+                                        attr.fields(PackageFunction).display_name,
+                                        attr.fields(PackageFunction).display_icon,
                                         ),
         )
         inputs = self.inputs
@@ -88,7 +94,9 @@ class PackageFunction(entities.BaseEntity):
 
         _json['input'] = inputs
         _json['output'] = outputs
-
+        if self.display_name is not None:
+            _json['displayName'] = self.display_name
+        _json['displayIcon'] = self.display_icon
         return _json
 
 
@@ -156,6 +164,9 @@ class FunctionIO:
             raise exceptions.PlatformException('400', 'Illegal value. {}'.format(expected_value))
 
     def to_json(self, resource='package'):
+        """
+        :param resource:
+        """
         if resource == 'package':
             _json = {
                 'name': self.name,

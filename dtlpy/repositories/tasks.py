@@ -110,6 +110,10 @@ class Tasks:
         return response.json()
 
     def query(self, filters=None, project_ids=None):
+        """
+        :param filters:
+        :param project_ids:
+        """
         if project_ids is None:
             if self._project_id is None:
                 project_ids = self._project_id
@@ -161,18 +165,17 @@ class Tasks:
     ) -> Union[miscellaneous.List[entities.Task], entities.PagedEntities]:
         """
         Get Annotation Task list
-
-        :param filters:
-        :param task_name:
         :param project_ids: list of project ids
-        :param assignments:
-        :param creator:
-        :param page_offset:
-        :param pages_size:
-        :param recipe:
         :param status:
-        :param max_date: double
+        :param task_name: task name
+        :param pages_size:
+        :param page_offset:
+        :param recipe:
+        :param creator:
+        :param assignments: assignments
         :param min_date:double
+        :param max_date: double
+        :param filters: dl.Filters entity to filters items
         :return: List of Annotation Task objects
         """
 
@@ -285,10 +288,9 @@ class Tasks:
     def delete(self, task: entities.Task = None, task_name=None, task_id=None):
         """
         Delete an Annotation Task
-        :param task_id:
-        :param task_name:
         :param task:
-
+        :param task_name:
+        :param task_id:
         :return: True
         """
         if task_id is None:
@@ -313,6 +315,8 @@ class Tasks:
     def update(self, task: entities.Task = None, system_metadata=False) -> entities.Task:
         """
         Update an Annotation Task
+        :param task: task entity
+        :param system_metadata: True, if you want to change metadata system
         :return: Annotation Task object
         """
         url = URL_PATH
@@ -331,6 +335,14 @@ class Tasks:
             raise exceptions.PlatformException(response)
 
     def create_qa_task(self, due_date, task, assignee_ids, filters=None, items=None, query=None) -> entities.Task:
+        """
+        :param due_date:
+        :param task:
+        :param assignee_ids:
+        :param filters:
+        :param items:
+        :param query:
+        """
         if filters is None and items is None and query is None:
             query = json.loads(task.query)
         return self.create(task_name='{}_qa'.format(task.name),
@@ -366,22 +378,22 @@ class Tasks:
         """
         Create a new Annotation Task
 
-        :param available_actions:
-        :param query:
-        :param metadata:
+        :param task_name:
+        :param due_date:
         :param assignee_ids:
         :param workload:
         :param dataset:
         :param task_owner:
-        :param items:
-        :param filters:
-        :param assignments_ids:
-        :param recipe_id:
-        :param due_date:
-        :param project_id:
-        :param task_name:
         :param task_type: "annotation" or "qa"
         :param task_parent_id: optional if type is qa - parent task id
+        :param project_id:
+        :param recipe_id:
+        :param assignments_ids:
+        :param metadata:
+        :param filters:
+        :param items:
+        :param available_actions:
+        :param query:
         :return: Annotation Task object
         """
 
@@ -505,15 +517,14 @@ class Tasks:
         """
         Add items to Task
 
-        :param query:
-        :param assignee_ids:
-        :param limit:
-        :param workload:
         :param task
-
-        :param filters:
         :param task_id:
+        :param filters:
         :param items:
+        :param assignee_ids:
+        :param query:
+        :param workload:
+        :param limit:
         :return:
         """
         if filters is None and items is None and query is None:
@@ -571,11 +582,10 @@ class Tasks:
                   dataset: entities.Dataset = None,
                   filters: entities.Filters = None) -> entities.PagedEntities:
         """
-
-        :param filters:
-        :param dataset:
         :param task_id:
         :param task_name:
+        :param dataset:
+        :param filters:
         :return:
         """
         if task_id is None and task_name is None:

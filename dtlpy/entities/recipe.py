@@ -44,7 +44,7 @@ class Recipe(entities.BaseEntity):
         :param _json: _json response from host
         :param dataset: recipe's dataset
         :param project: recipe's project
-        :param client_api: client_api
+        :param client_api: ApiClient entity
         :param is_fetched: is Entity fetched from Platform
         :return: Recipe object
         """
@@ -77,9 +77,11 @@ class Recipe(entities.BaseEntity):
     def _protected_from_json(_json, client_api, project=None, dataset=None, is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
-        :param _json:
-        :param client_api:
-        :param dataset:
+        :param _json: platform json
+        :param client_api: ApiClient entity
+        :param project: project entity
+        :param dataset:  dataset entity
+        :param is_fetched:  is Entity fetched from Platform
         :return:
         """
         try:
@@ -158,7 +160,7 @@ class Recipe(entities.BaseEntity):
         """
         Update Recipe
 
-        :param system_metadata: bool
+        :param system_metadata: bool - True, if you want to change metadata system
         :return: Recipe object
         """
         return self.recipes.update(recipe=self, system_metadata=system_metadata)

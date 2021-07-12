@@ -83,6 +83,11 @@ class Datasets:
             raise Exception("Dataset not found")
 
     def open_in_web(self, dataset_name=None, dataset_id=None, dataset=None):
+        """
+        :param dataset_name:
+        :param dataset_id:
+        :param dataset:
+        """
         if dataset is None:
             dataset = self.get(dataset_id=dataset_id, dataset_name=dataset_name)
         self._client_api._open_in_web(resource_type='dataset',
@@ -92,10 +97,10 @@ class Datasets:
     def checkout(self, identifier=None, dataset_name=None, dataset_id=None, dataset=None):
         """
         Check-out a project
-        :param dataset:
-        :param dataset_id:
-        :param dataset_name:
         :param identifier: project name or partial id
+        :param dataset_name:
+        :param dataset_id:
+        :param dataset:
         :return:
         """
         if dataset is None:
@@ -115,7 +120,8 @@ class Datasets:
     def list(self, name=None, creator=None) -> miscellaneous.List[entities.Dataset]:
         """
         List all datasets.
-
+        :param name:
+        :param creator:
         :return: List of datasets
         """
         url = '/datasets'
@@ -158,9 +164,9 @@ class Datasets:
         """
         Get dataset by name or id
 
-        :param checkout:
         :param dataset_name: optional - search by name
         :param dataset_id: optional - search by id
+        :param checkout:
         :param fetch: optional - fetch entity from platform, default taken from cookie
         :return: Dataset object
         """
@@ -216,7 +222,6 @@ class Datasets:
         :param dataset_id: optional - search by id
         :param sure: are you sure you want to delete?
         :param really: really really?
-
         :return: True
         """
         if sure and really:
@@ -235,9 +240,9 @@ class Datasets:
     def update(self, dataset: entities.Dataset, system_metadata=False, patch: dict = None) -> entities.Dataset:
         """
         Update dataset field
-        :param patch: Specific patch request
         :param dataset: Dataset entity
-        :param system_metadata: bool
+        :param system_metadata: bool - True, if you want to change metadata system
+        :param patch: Specific patch request
         :return: Dataset object
         """
         url_path = '/datasets/{}'.format(dataset.id)
@@ -259,6 +264,9 @@ class Datasets:
     def directory_tree(self, dataset: entities.Dataset = None, dataset_name=None, dataset_id=None):
         """
         Get dataset's directory tree
+        :param dataset:
+        :param dataset_name:
+        :param dataset_id:
         :return:
         """
         if dataset is None and dataset_name is None and dataset_id is None:
@@ -328,6 +336,17 @@ class Datasets:
 
     def merge(self, merge_name, dataset_ids, project_ids, with_items_annotations=True, with_metadata=True,
               with_task_annotations_status=True):
+        """
+        merge a dataset
+
+        :param merge_name: to clone dataset
+        :param dataset_ids: new dataset name
+        :param project_ids: Filters entity or a query dict
+        :param with_items_annotations:
+        :param with_metadata:
+        :param with_task_annotations_status:
+        :return:
+        """
         payload = {
             "name": merge_name,
             "datasetsIds": dataset_ids,

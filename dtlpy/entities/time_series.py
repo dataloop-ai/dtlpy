@@ -64,7 +64,7 @@ class TimeSeries(entities.BaseEntity):
     def samples(self, filters=None):
         """
         get the time table according to filters
-        :param filters:
+        :param filters: Filters entity or a dictionary containing filters parameters
         :return:
         """
         return self.project.times_series.get_samples(series_id=self.id, filters=filters)
@@ -80,7 +80,7 @@ class TimeSeries(entities.BaseEntity):
     def delete_samples(self, filters):
         """
         add data to time series table
-        :param filters:
+        :param filters: Filters entity or a dictionary containing filters parameters
         :return:
         """
         return self.project.times_series.delete_samples(series_id=self.id, filters=filters)

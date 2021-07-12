@@ -23,6 +23,8 @@ def before_all(context):
         context.to_delete_services_ids = list()
     if not hasattr(context, 'to_delete_projects_ids'):
         context.to_delete_projects_ids = list()
+    if not hasattr(context, 'to_delete_pipelines_ids'):
+        context.to_delete_pipelines_ids = list()
 
     if hasattr(context.feature, 'dataloop_feature_dl'):
         context.dl = context.feature.dataloop_feature_dl

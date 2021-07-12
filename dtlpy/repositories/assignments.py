@@ -75,13 +75,13 @@ class Assignments:
         """
         Get Assignments list
 
-        :param task_id:
-        :param page_offset:
-        :param pages_size:
-        :param assignee_id:
-        :param assignment_name:
-        :param status:
         :param project_ids: list of project ids
+        :param status:
+        :param assignment_name:
+        :param assignee_id:
+        :param pages_size:
+        :param page_offset:
+        :param task_id:
         :return: List of Assignment objects
         """
 
@@ -184,6 +184,11 @@ class Assignments:
     def reassign(self, assignee_id, assignment=None, assignment_id=None, task=None, task_id=None):
         """
         Reassign an assignment
+        :param assignee_id:
+        :param assignment:
+        :param assignment_id:
+        :param task:
+        :param task_id:
         :return: Assignment object
         """
         if assignment_id is None and assignment is None:
@@ -218,6 +223,11 @@ class Assignments:
     def redistribute(self, workload, assignment=None, assignment_id=None, task=None, task_id=None):
         """
         Redistribute an assignment
+        :param workload:
+        :param assignment:
+        :param assignment_id:
+        :param task:
+        :param task_id:
         :return: Assignment object
         """
         if assignment_id is None and assignment is None:
@@ -256,6 +266,8 @@ class Assignments:
     def update(self, assignment: entities.Assignment = None, system_metadata=False) -> entities.Assignment:
         """
         Update an assignment
+        :param assignment: assignment entity
+        :param system_metadata: bool - True, if you want to change metadata system
         :return: Assignment object
         """
         url = '/assignments/{}'.format(assignment.id)
@@ -276,10 +288,10 @@ class Assignments:
     def create(self, assignee_id, task=None, filters=None, items=None) -> entities.Assignment:
         """
         Create a new assignment
-        :param task:
-        :param items:
-        :param filters:
-        :param assignee_id:
+        :param assignee_id: the assignee for the assignment
+        :param task: task entity
+        :param filters: Filters entity or a dictionary containing filters parameters
+        :param items: list of items
         :return: Assignment object
         """
         return self._create_in_task(assignee_id=assignee_id, task=task, filters=filters, items=items)
@@ -337,12 +349,12 @@ class Assignments:
     def get_items(self, assignment: entities.Assignment = None,
                   assignment_id=None, assignment_name=None, dataset=None, filters=None) -> entities.PagedEntities:
         """
-
-        :param filters:
-        :param assignment:
-        :param dataset:
-        :param assignment_id:
-        :param assignment_name:
+        Get all the items in the assignment
+        :param assignment: assignment entity
+        :param assignment_id: assignment id
+        :param assignment_name: assignment name
+        :param dataset: dataset entity
+        :param filters: Filters entity or a dictionary containing filters parameters
         :return:
         """
         if assignment is None and assignment_id is None and assignment_name is None:

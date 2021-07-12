@@ -30,9 +30,9 @@ class Driver(entities.BaseEntity):
         """
         Build a Driver entity object from a json
 
-        :param is_fetched: is Entity fetched from Platform
         :param _json: _json response from host
-        :param client_api: client_api
+        :param client_api: ApiClient entity
+        :param is_fetched: is Entity fetched from Platform
         :return: Driver object
         """
         inst = cls(bucket_name=_json.get('bucketName', None),

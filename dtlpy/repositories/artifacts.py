@@ -108,6 +108,10 @@ class Artifacts:
              snapshot_name=None) -> miscellaneous.List[entities.Artifact]:
         """
         List of artifacts
+        :param execution_id:
+        :param package_name:
+        :param model_name:
+        :param snapshot_name:
         :return: list of artifacts
         """
         if self._model is not None:
@@ -140,12 +144,12 @@ class Artifacts:
 
         Get an artifact object by name, id or type
         If by name or type - need to input also execution/task id for the artifact folder
-        :param snapshot_name:
-        :param model_name:
-        :param package_name:
         :param artifact_id: optional - search by id
         :param artifact_name:
+        :param model_name:
+        :param snapshot_name:
         :param execution_id:
+        :param package_name:
         :return: Artifact object
         """
         if self._model is not None:
@@ -199,15 +203,15 @@ class Artifacts:
         Download artifact binary.
         Get artifact by name, id or type
 
-        :param snapshot_name:
-        :param model_name:
-        :param save_locally:
-        :param overwrite: optional - default = False
         :param artifact_id: optional - search by id
-        :param local_path: artifact will be saved to this filepath
         :param artifact_name:
         :param execution_id:
         :param package_name:
+        :param model_name:
+        :param snapshot_name:
+        :param local_path: artifact will be saved to this filepath
+        :param overwrite: optional - default = False
+        :param save_locally:
         :return: Artifact object
         """
         if self._model is not None:
@@ -264,14 +268,14 @@ class Artifacts:
         If artifact exists - overwriting binary
         Else and if create==True a new artifact will be created and uploaded
 
-        :param overwrite: optional - default = False
         :param filepath: local binary file
-        :param model_name:
-        :param snapshot_name:
         :param package_name:
         :param package:
         :param execution_id:
         :param execution:
+        :param model_name:
+        :param snapshot_name:
+        :param overwrite: optional - default = False
         :return: Artifact Object
         """
         if self._model is not None:

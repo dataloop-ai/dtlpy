@@ -268,6 +268,10 @@ class DlpCompleter(Completer):
             logging.root.manager.disable = prev_state
 
     def need_param(self, cmd, word_before_cursor):
+        """
+        :param cmd:
+        :param word_before_cursor:
+        """
         need_param = False
 
         try:
@@ -287,6 +291,10 @@ class DlpCompleter(Completer):
 
     @staticmethod
     def get_param(cmd, word_before_cursor):
+        """
+        :param cmd:
+        :param word_before_cursor:
+        """
         if word_before_cursor == '' or len(cmd) < 2:
             param = cmd[-1]
         else:

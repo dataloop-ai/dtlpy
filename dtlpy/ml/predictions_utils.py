@@ -178,17 +178,28 @@ def measure_annotations(
     final = dict()
     # polygon
     if polygon_scores:
+        test_iou_scores = [match.annotation_score for match in polygon_scores.values() if match.annotation_score > 0]
+        matched_polygon = int(np.sum([1 for score in test_iou_scores if score > 0]))  # len(test_iou_scores)
+        total_polygon = len(r_polygons) + len(t_polygons)
+        extra_polygon = len(t_polygons) - matched_polygon
+        missing_polygon = len(r_polygons) - matched_polygon
+        assert total_polygon == extra_polygon + 2 * matched_polygon + missing_polygon
+        # add missing to score
+        test_iou_scores += [0 for i in range(missing_polygon)]
+        test_iou_scores += [0 for i in range(extra_polygon)]
         final.update(
-            {'polygon_annotations': r_polygons,
-             'polygon_ious': polygon_scores,
-             'polygon_mean_iou': np.mean([match.annotation_score for match in polygon_scores.values()]),
+            {'polygon_ious': polygon_scores,
+             'polygon_annotations': r_polygons,
+             'polygon_mean_iou': np.mean(test_iou_scores),
              'polygon_attributes_scores': np.mean([match.attributes_score for match in polygon_scores.values()]),
              'polygon_ref_number': len(r_polygons),
              'polygon_test_number': len(t_polygons),
-             }
-        )
+             'polygon_missing': missing_polygon,
+             'polygon_total': total_polygon,
+             'polygon_matched': matched_polygon,
+             'polygon_extra': extra_polygon,
+             })
     # box
-
     if box_scores:
         test_iou_scores = [match.annotation_score for match in box_scores.values() if match.annotation_score > 0]
         matched_box = int(np.sum([1 for score in test_iou_scores if score > 0]))  # len(test_iou_scores)
@@ -213,13 +224,27 @@ def measure_annotations(
              })
     # point
     if point_scores:
+        test_iou_scores = [match.annotation_score for match in point_scores.values() if match.annotation_score > 0]
+        matched_point = int(np.sum([1 for score in test_iou_scores if score > 0]))  # len(test_iou_scores)
+        total_point = len(r_points) + len(t_points)
+        extra_point = len(t_points) - matched_point
+        missing_point = len(r_points) - matched_point
+        assert total_point == extra_point + 2 * matched_point + missing_point
+        # add missing to score
+        test_iou_scores += [0 for i in range(missing_point)]
+        test_iou_scores += [0 for i in range(extra_point)]
         final.update(
-            {
-                'point_scores': point_scores,
-                'point_ref_number': len(r_points),
-                'point_test_number': len(t_points),
-            }
-        )
+            {'point_ious': point_scores,
+             'point_annotations': r_points,
+             'point_mean_iou': np.mean(test_iou_scores),
+             'point_attributes_scores': np.mean([match.attributes_score for match in point_scores.values()]),
+             'point_ref_number': len(r_points),
+             'point_test_number': len(t_points),
+             'point_missing': missing_point,
+             'point_total': total_point,
+             'point_matched': matched_point,
+             'point_extra': extra_point,
+             })
     # semantic
     if semantic_scores:
         test_iou_scores = [match.annotation_score for match in semantic_scores.values() if match.annotation_score > 0]
@@ -277,6 +302,7 @@ def measure_item(ref_item: entities.Item,
                       'filename': ref_item.filename,
                       'ref_item_duration[s]': ref_item_duration_s,
                       'test_item_duration[s]': test_item_duration_s,
+                      'diff_duration[s]': test_item_duration_s - ref_item_duration_s,
                       # round to sec
                       'ref_item_duration': str(datetime.timedelta(seconds=np.round(ref_item_duration_s))),
                       'test_item_duration': str(datetime.timedelta(seconds=np.round(test_item_duration_s))),
@@ -316,27 +342,22 @@ def measure_items(ref_items, ref_project, ref_dataset, ref_name,
     items_summary = {filename: job.get() for filename, job in jobs.items() if job.get() is not None}
     pool.terminate()
     pbar.close()
-    if dump_path is not None:
-        save_to_file(dump_path=dump_path,
-                     items_summary=items_summary,
-                     ref_name=ref_name,
-                     test_name=test_name)
 
-
-def save_to_file(items_summary, dump_path, ref_name, test_name):
+    #
     summary = list()
-    has_box = np.any(['box_test_number' in s for s in list(items_summary.values())])
-    has_point = np.any(['point_test_number' in s for s in list(items_summary.values())])
-    has_polygon = np.any(['polygon_test_number' in s for s in list(items_summary.values())])
-    has_semantic = np.any(['semantic_test_number' in s for s in list(items_summary.values())])
     ref_column_name = 'Ref-{!r}'.format(ref_name)
     test_column_name = 'Test-{!r}'.format(test_name)
     for filename, scores in items_summary.items():
+        has_box = 'box_test_number' in scores
+        has_point = 'point_test_number' in scores
+        has_polygon = 'polygon_test_number' in scores
+        has_semantic = 'semantic_test_number' in scores
         line = {'filename': scores['filename'],
                 ref_column_name: scores['ref_url'],
                 test_column_name: scores['test_url'],
-                'ref_duration': scores['ref_item_duration'],
-                'test_duration': scores['test_item_duration'],
+                'ref_duration[s]': scores['ref_item_duration[s]'],
+                'test_duration[s]': scores['test_item_duration[s]'],
+                'diff_duration[s]': scores['diff_duration[s]'],
                 }
         if has_box:
             line['box_score'] = scores['box_mean_iou']
@@ -359,19 +380,27 @@ def save_to_file(items_summary, dump_path, ref_name, test_name):
             line['semantic_ref_number'] = scores['semantic_ref_number']
             line['semantic_test_number'] = scores['semantic_test_number']
         summary.append(line)
-    columns = ['filename', ref_column_name, test_column_name, 'ref_duration', 'test_duration']
-    if has_semantic:
-        columns += ['semantic_score', 'semantic_ref_number', 'semantic_test_number']
-    if has_polygon:
-        columns += ['polygon_score', 'polygon_ref_number', 'polygon_test_number']
-    if has_box:
-        columns += ['box_score', 'box_attributes_score', 'box_ref_number', 'box_test_number']
-    if has_point:
-        columns += ['point_score', 'point_ref_number', 'point_test_number']
-    df = pd.DataFrame(summary,
-                      columns=columns)
+    # columns = ['filename', ref_column_name, test_column_name, 'ref_duration', 'test_duration',
+    #            'semantic_score', 'semantic_ref_number', 'semantic_test_number',
+    #            'polygon_score', 'polygon_ref_number', 'polygon_test_number',
+    #            'box_score', 'box_attributes_score', 'box_ref_number', 'box_test_number',
+    #            'point_score', 'point_ref_number', 'point_test_number']
+    df = pd.DataFrame(summary)  # ,                      columns=columns)
+    # Drop column only if all the values are None
+    df = df.dropna(how='all', axis=1)
+    ####
+    if dump_path is not None:
+        save_to_file(dump_path=dump_path,
+                     df=df,
+                     ref_name=ref_name,
+                     test_name=test_name)
+    return df
 
+
+def save_to_file(df, dump_path, ref_name, test_name):
     # df = df.sort_values(by='box_score')
+    ref_column_name = 'Ref-{!r}'.format(ref_name)
+    test_column_name = 'Test-{!r}'.format(test_name)
 
     def make_clickable(val):
         return '<a href="{}">{}</a>'.format(val, 'item')
@@ -384,5 +413,3 @@ def save_to_file(items_summary, dump_path, ref_name, test_name):
     with open(html_filepath, 'w') as f:
         f.write(s)
     df.to_csv(csv_filepath)
-
-    return items_summary

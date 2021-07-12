@@ -48,9 +48,9 @@ class Models:
         """
         Get model object
 
-        :param checkout:
-        :param model_id:
         :param model_name:
+        :param model_id:
+        :param checkout: bool
         :param fetch: optional - fetch entity from platform, default taken from cookie
         :return: model object
         """
@@ -138,6 +138,7 @@ class Models:
     def list(self, filters: entities.Filters = None) -> entities.PagedEntities:
         """
         List project models
+        :param filters: Filters entity or a dictionary containing filters parameters
         :return:
         """
         if filters is None:
@@ -165,9 +166,9 @@ class Models:
               log_level='INFO') -> ml.BaseModelAdapter:
         """
         :param model: Model entity
-        :param from_local: bool. use current directory to build
         :param local_path: local path of the model (if from_local=False - codebase will be downloaded)
-
+        :param from_local: bool. use current directory to build
+        :param log_level: log level
         :return:dl.BaseModelAdapter
         """
 
@@ -438,9 +439,8 @@ class Models:
     def checkout(self, model: entities.Model = None, model_id=None, model_name=None):
         """
         Checkout as model
-
-        :param model_id:
         :param model:
+        :param model_id:
         :param model_name:
         :return:
         """

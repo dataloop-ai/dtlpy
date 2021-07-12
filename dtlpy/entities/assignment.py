@@ -147,13 +147,16 @@ class Assignment(entities.BaseEntity):
         return _json
 
     def update(self, system_metadata=False):
+        """
+        :param system_metadata: bool - True, if you want to change metadata system
+        :return:
+        """
         return self.assignments.update(assignment=self, system_metadata=system_metadata)
 
     def get_items(self, dataset=None, filters=None):
         """
-
-        :param dataset:
-        :param filters:
+        :param dataset: dataset entity
+        :param filters: Filters entity or a dictionary containing filters parameters
         :return:
         """
         if dataset is None:
@@ -164,6 +167,7 @@ class Assignment(entities.BaseEntity):
     def reassign(self, assignee_id):
         """
         Reassign an assignment
+        :param assignee_id:
         :return: Assignment object
         """
         return self.assignments.reassign(assignment=self,
@@ -174,6 +178,7 @@ class Assignment(entities.BaseEntity):
     def redistribute(self, workload):
         """
         Redistribute an assignment
+        :param workload:
         :return: Assignment object
         """
         return self.assignments.redistribute(assignment=self,
@@ -260,6 +265,11 @@ class Workload:
 
     @classmethod
     def generate(cls, assignee_ids, loads=None):
+        """
+        generate the loads for the given assignee
+        :param assignee_ids:
+        :param loads:
+        """
         if not isinstance(assignee_ids, list):
             assignee_ids = [assignee_ids]
 
@@ -283,6 +293,10 @@ class Workload:
         return [workload_unit.to_json() for workload_unit in self.workload]
 
     def add(self, assignee_id):
+        """
+        add a assignee
+        :param assignee_id:
+        """
         self.workload.append(WorkloadUnit(assignee_id=assignee_id))
         if not self._loads_are_correct(loads=[w_l.load for w_l in self.workload]):
             self._redistribute()

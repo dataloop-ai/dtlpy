@@ -25,6 +25,7 @@ class ModelOutputType(str, Enum):
     POLYGON = entities.Polygon.type
     SEGMENTATION = entities.Segmentation.type
     SUBTITLE = entities.Subtitle.type
+    TEXT = entities.Text.type
 
 
 @attr.s
@@ -73,8 +74,8 @@ class Model(entities.BaseEntity):
         """
         Same as from_json but with try-except to catch if error
         :param _json: platform representation of model
-        :param client_api:
-        :param project:
+        :param client_api: ApiClient entity
+        :param project: project entity
         :param is_fetched: is Entity fetched from Platform
         :return:
         """
@@ -95,8 +96,8 @@ class Model(entities.BaseEntity):
         Turn platform representation of model into a model entity
 
         :param _json: platform representation of model
-        :param client_api:
-        :param project:
+        :param client_api: ApiClient entity
+        :param project: project entity
         :param is_fetched: is Entity fetched from Platform
         :return: Model entity
         """
@@ -313,10 +314,11 @@ class Model(entities.BaseEntity):
         """
         Push local model
 
-        :param from_local: bool. use current directory to build
         :param local_path: local path where the model code should be.
                            if model is downloaded - this will be the point it will be downloaded
                            (if from_local=False - codebase will be downloaded)
+        :param from_local: bool. use current directory to build
+        :param log_level: log level
         :return: ModelAdapter (dl.BaseModelAdapter)
         """
         return self.models.build(model=self,

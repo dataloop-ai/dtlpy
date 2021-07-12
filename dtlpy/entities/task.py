@@ -86,8 +86,10 @@ class Task:
     def _protected_from_json(_json, client_api, project, dataset):
         """
         Same as from_json but with try-except to catch if error
-        :param _json:
-        :param client_api:
+        :param _json: platform json
+        :param client_api: ApiClient entity
+        :param project: project entity
+        :param dataset: dataset entity
         :return:
         """
         try:
@@ -240,18 +242,25 @@ class Task:
         return self.tasks.delete(task_id=self.id)
 
     def update(self, system_metadata=False):
+        """
+        :param system_metadata: True, if you want to change metadata system
+        """
         return self.tasks.update(task=self, system_metadata=system_metadata)
 
     def create_qa_task(self, due_date, assignee_ids):
+        """
+        :param due_date:
+        :param assignee_ids:
+        """
         return self.tasks.create_qa_task(task=self, due_date=due_date, assignee_ids=assignee_ids)
 
     def create_assignment(self, assignment_name, assignee_id, items=None, filters=None):
         """
 
-        :param assignment_name:
-        :param assignee_id:
-        :param items:
-        :param filters:
+        :param assignment_name: assignment name
+        :param assignee_id: list of assignee for the assignment
+        :param items: items list for the assignment
+        :param filters: Filters entity or a dictionary containing filters parameters
         :return:
         """
         assignment = self.assignments.create(assignee_id=assignee_id,
@@ -267,12 +276,11 @@ class Task:
 
     def add_items(self, filters=None, items=None, assignee_ids=None, workload=None, limit=0):
         """
-
+        :param filters: Filters entity or a dictionary containing filters parameters
+        :param items: items list for the assignment
+        :param assignee_ids: list of assignee for the assignment
+        :param workload: the load of work
         :param limit:
-        :param workload:
-        :param assignee_ids:
-        :param filters:
-        :param items:
         :return:
         """
         return self.tasks.add_items(task=self,
@@ -284,7 +292,7 @@ class Task:
 
     def get_items(self, filters=None):
         """
-
+        :param filters:
         :return:
         """
         return self.tasks.get_items(task_id=self.id, dataset=self.dataset, filters=filters)

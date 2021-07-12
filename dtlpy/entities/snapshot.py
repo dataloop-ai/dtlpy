@@ -316,9 +316,8 @@ class Snapshot(entities.BaseEntity):
         """
 
         Download binary file from bucket.
-
-        :param overwrite: optional - default = False
         :param local_path: local binary file or folder to upload
+        :param overwrite: optional - default = False
         :return:
         """
         return self.bucket.download(local_path=local_path,
@@ -334,9 +333,8 @@ class Snapshot(entities.BaseEntity):
         Upload binary file to bucket. get by name, id or type.
         If bucket exists - overwriting binary
         Else and if create==True a new bucket will be created and uploaded
-
-        :param overwrite: optional - default = False
         :param local_path: local binary file or folder to upload
+        :param overwrite: optional - default = False
         :return:
         """
         return self.bucket.upload(local_path=local_path,

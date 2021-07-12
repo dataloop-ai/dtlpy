@@ -58,9 +58,9 @@ class Item(entities.BaseEntity):
     def _protected_from_json(_json, client_api, dataset=None):
         """
         Same as from_json but with try-except to catch if error
-        :param _json:
-        :param client_api:
-        :param dataset:
+        :param _json: platform json
+        :param client_api: ApiClient entity
+        :param dataset: dataset entity
         :return:
         """
         try:
@@ -77,10 +77,10 @@ class Item(entities.BaseEntity):
     def from_json(cls, _json, client_api, dataset=None, project=None, is_fetched=True):
         """
         Build an item entity object from a json
-        :param project:
+        :param project: project entity
         :param _json: _json response from host
         :param dataset: dataset in which the annotation's item is located
-        :param client_api: client_api
+        :param client_api: ApiClient entity
         :param is_fetched: is Entity fetched from Platform
         :return: Item object
         """
@@ -320,14 +320,14 @@ class Item(entities.BaseEntity):
         Optional - also download annotation, mask, instance and image mask of the item
 
         :param local_path: local folder or filename to save to disk or returns BytelsIO
-        :param to_items_folder: Create 'items' folder and download items to it
-        :param overwrite: optional - default = False
         :param file_types: a list of file type to download. e.g ['video/webm', 'video/mp4', 'image/jpeg', 'image/png']
         :param save_locally: bool. save to disk or return a buffer
         :param to_array: returns Ndarray when True and local_path = False
         :param annotation_options: download annotations options: list(dl.ViewAnnotationOptions)
-        :param with_text: optional - add text to annotations, default = False
+        :param overwrite: optional - default = False
+        :param to_items_folder: Create 'items' folder and download items to it
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
+        :param with_text: optional - add text to annotations, default = False
         :param annotation_filters: Filters entity to filter annotations for download
         :return: Output (list)
         """
@@ -364,7 +364,7 @@ class Item(entities.BaseEntity):
     def update(self, system_metadata=False):
         """
         Update items metadata
-        :param system_metadata: bool
+        :param system_metadata: bool - True, if you want to change metadata system
         :return: Item object
         """
         return self.items.update(item=self, system_metadata=system_metadata)
@@ -421,6 +421,12 @@ class Item(entities.BaseEntity):
         self.items.open_in_web(item=self)
 
     def update_status(self, status: ItemStatus, clear=False):
+        """
+        update item status
+        :param status: "completed" ,"approved" ,"discarded"
+        :param clear: bool -
+        :return :True/False
+        """
         if status not in list(ItemStatus):
             raise exceptions.PlatformException(
                 error='400',
@@ -529,6 +535,13 @@ class Modalities:
     def create(self, name, ref,
                ref_type: ModalityRefTypeEnum = ModalityRefTypeEnum.ID,
                modality_type: ModalityTypeEnum = ModalityTypeEnum.OVERLAY):
+        """
+        create Modalities entity
+        :param name:
+        :param ref:
+        :param ref_type: url, id
+        :param modality_type: overlay
+        """
         if self.modalities is None:
             self.item.metadata['modalities'] = list()
 
@@ -544,6 +557,9 @@ class Modalities:
         return Modality(_json=_json)
 
     def delete(self, name):
+        """
+        :param name:
+        """
         if self.modalities is not None:
             for modality in self.item.metadata['modalities']:
                 if name == modality['name']:

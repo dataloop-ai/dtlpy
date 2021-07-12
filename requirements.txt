@@ -17,3 +17,4 @@ fuzzyfinder>=2.1.0
 dictdiffer>=0.8.0
 validators>=0.13.0
 pathspec
+filelock==3.0.12

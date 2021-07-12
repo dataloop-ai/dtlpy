@@ -22,6 +22,9 @@ class Projects:
         return project
 
     def __get_by_id(self, project_id: str) -> entities.Project:
+        """
+        :param project_id:
+        """
         success, response = self._client_api.gen_request(req_type='get',
                                                          path='/projects/{}'.format(project_id))
         if success:
@@ -34,6 +37,9 @@ class Projects:
         return project
 
     def __get_by_identifier(self, identifier=None) -> entities.Project:
+        """
+        :param identifier:
+        """
         projects = self.list()
         projects_by_name = [project for project in projects if identifier in project.id or identifier in project.name]
         if len(projects_by_name) == 1:
@@ -44,6 +50,11 @@ class Projects:
             raise Exception("Project not found")
 
     def open_in_web(self, project_name: str = None, project_id: str = None, project: entities.Project = None):
+        """
+        :param project_name:
+        :param project_id:
+        :param project:
+        """
         if project_id is None:
             if project is not None:
                 project_id = project.id
@@ -60,10 +71,10 @@ class Projects:
                  project: entities.Project = None):
         """
         Check-out a project
-        :param project:
-        :param project_id:
-        :param project_name:
         :param identifier: project name or partial id
+        :param project_name:
+        :param project_id:
+        :param project:
         :return:
         """
         if project is None:
@@ -102,6 +113,11 @@ class Projects:
         return True
 
     def add_member(self, email: str, project_id: str, role: entities.MemberRole = entities.MemberRole.DEVELOPER):
+        """
+        :param email:
+        :param project_id:
+        :param role: "owner" ,"engineer" ,"annotator" ,"annotationManager"
+        """
         url_path = '/projects/{}/members/{}'.format(project_id, email)
         payload = dict(role=role)
 
@@ -118,6 +134,11 @@ class Projects:
         return response.json()
 
     def update_member(self, email: str, project_id: str, role: entities.MemberRole = entities.MemberRole.DEVELOPER):
+        """
+        :param email:
+        :param project_id:
+        :param role: "owner" ,"engineer" ,"annotator" ,"annotationManager"
+        """
         url_path = '/projects/{}/members/{}'.format(project_id, email)
         payload = dict(role=role)
 
@@ -134,6 +155,10 @@ class Projects:
         return response.json()
 
     def remove_member(self, email: str, project_id: str):
+        """
+        :param email:
+        :param project_id:
+        """
         url_path = '/projects/{}/members/{}'.format(project_id, email)
         success, response = self._client_api.gen_request(req_type='delete',
                                                          path=url_path)
@@ -143,6 +168,10 @@ class Projects:
         return response.json()
 
     def list_members(self, project: entities.Project, role: entities.MemberRole = None):
+        """
+        :param project:
+        :param role: "owner" ,"engineer" ,"annotator" ,"annotationManager"
+        """
         url_path = '/projects/{}/members'.format(project.id)
 
         if role is not None and role not in list(entities.MemberRole):
@@ -199,9 +228,9 @@ class Projects:
             fetch: bool = None) -> entities.Project:
         """
         Get a Project object
-        :param checkout:
         :param project_name: optional - search by name
         :param project_id: optional - search by id
+        :param checkout:
         :param fetch: optional - fetch entity from platform, default taken from cookie
         :return: Project object
 
@@ -288,6 +317,8 @@ class Projects:
                system_metadata: bool = False) -> entities.Project:
         """
         Update a project
+        :param project:
+        :param system_metadata: True, if you want to change metadata system
         :return: Project object
         """
         url_path = '/projects/{}'.format(project.id)
@@ -306,8 +337,8 @@ class Projects:
                checkout: bool = False) -> entities.Project:
         """
         Create a new project
-        :param checkout:
         :param project_name:
+        :param checkout:
         :return: Project object
         """
         payload = {'name': project_name}

@@ -166,6 +166,7 @@ class Ontologies:
     def __list(self, filters: entities.Filters) -> entities.PagedEntities:
         """
         List project ontologies
+        :param filters: Filters entity or a dictionary containing filters parameters
         :return:
         """
         paged = entities.PagedEntities(items_repository=self,
@@ -179,7 +180,7 @@ class Ontologies:
     def list(self, project_ids=None) -> miscellaneous.List[entities.Ontology]:
         """
         List ontologies for recipe
-
+        :param project_ids:
         :return:
         """
         if self._recipe is not None:
@@ -260,7 +261,7 @@ class Ontologies:
         Update Ontology metadata
 
        :param ontology: Ontology object
-       :param system_metadata: bool
+       :param system_metadata: bool - True, if you want to change metadata system
        :return: Ontology object
        """
         url_path = "/ontologies/%s" % ontology.id

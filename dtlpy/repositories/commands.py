@@ -61,9 +61,9 @@ class Commands:
         """
         Wait for command to finish
 
+        :param command_id: Command id to wait to
         :param timeout: int, seconds to wait until TimeoutError is raised. if 0 - wait until done
         :param step: int, seconds between polling
-        :param command_id: Command id to wait to
         :return: Command  object
         """
         elapsed = 0

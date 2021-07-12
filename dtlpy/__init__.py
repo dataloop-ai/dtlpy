@@ -27,7 +27,7 @@ from .entities import (
     Ontology, Label, Task, Assignment, Service, Package, Codebase, Model, Snapshot, PackageModule, PackageFunction,
     # annotations
     Box, Cube, Point, Note, Segmentation, Ellipse, Classification, Subtitle, Polyline, Pose, Description,
-    Polygon,
+    Polygon, Text,
     # filters
     Filters, FiltersKnownFields, FiltersResource, FiltersOperations, FiltersMethod, FiltersOrderByDirection,
     FiltersKnownFields as KnownFields,
@@ -228,6 +228,7 @@ ANNOTATION_TYPE_POLYLINE = AnnotationType.POLYLINE
 ANNOTATION_TYPE_POSE = AnnotationType.POSE
 ANNOTATION_TYPE_SEGMENTATION = AnnotationType.SEGMENTATION
 ANNOTATION_TYPE_SUBTITLE = AnnotationType.SUBTITLE
+ANNOTATION_TYPE_TEXT = AnnotationType.TEXT
 
 ITEM_STATUS_COMPLETED = ItemStatus.COMPLETED
 ITEM_STATUS_APPROVED = ItemStatus.APPROVED

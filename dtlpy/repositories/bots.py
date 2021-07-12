@@ -66,8 +66,8 @@ class Bots:
         """
         Get a Bot object
         :param bot_email: get bot by email
-        :param bot_name: get bot by name
         :param bot_id: get bot by id
+        :param bot_name: get bot by name
         :return: Bot object
 
         """
@@ -141,6 +141,7 @@ class Bots:
     def create(self, name):
         """
         Create a new Bot
+        :param name:
         :return: Bot object
         """
         success, response = self._client_api.gen_request(req_type='post',

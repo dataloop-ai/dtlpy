@@ -15,9 +15,11 @@ class Artifact(entities.Item):
     def _protected_from_json(_json, client_api, dataset=None, project=None, is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
-        :param _json:
-        :param client_api:
-        :param dataset:
+        :param _json: platform json
+        :param client_api: ApiClient entity
+        :param dataset: dataset entity
+        :param project: project entity
+        :param is_fetched: is Entity fetched from Platform
         :return:
         """
         try:
@@ -36,10 +38,10 @@ class Artifact(entities.Item):
     def from_json(cls, _json, client_api, dataset=None, project=None, is_fetched=True):
         """
         Build an Artifact entity object from a json
-        :param project:
         :param _json: _json response from host
+        :param client_api: ApiClient entity
         :param dataset: Artifact's dataset
-        :param client_api: client_api
+        :param project: project entity
         :param is_fetched: is Entity fetched from Platform
         :return: Artifact object
         """

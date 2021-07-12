@@ -63,6 +63,9 @@ class Triggers:
         self._project = project
 
     def name_validation(self, name: str):
+        """
+        :param name:
+        """
         url = '/piper-misc/naming/triggers/{}'.format(name)
 
         # request
@@ -98,18 +101,18 @@ class Triggers:
         Inputs for all types:
 
         :param service_id: Id of services to be triggered
-        :param project_id: project id where trigger will work
-        :param webhook_id: id for webhook to be called
         :param trigger_type: can be cron or event. use enum dl.TriggerType for the full list
         :param name: name of the trigger
+        :param webhook_id: id for webhook to be called
         :param function_name: the fucntion name to be called when triggered. must be defined in the package
+        :param project_id: project id where trigger will work
         :param active: optional - True/False, default = True
 
         Inputs for event trigger:
         :param filters: optional - Item/Annotation metadata filters, default = none
-        :param execution_mode: how many time trigger should be activate. default is "Once". enum dl.TriggerExecutionMode
         :param resource: optional - Dataset/Item/Annotation/ItemStatus, default = Item
         :param actions: optional - Created/Updated/Deleted, default = create
+        :param execution_mode: how many time trigger should be activate. default is "Once". enum dl.TriggerExecutionMode
 
         Inputs for cron trigger:
         :param start_at: iso format date string to start activating the cron trigger
@@ -219,9 +222,8 @@ class Triggers:
     def get(self, trigger_id=None, trigger_name=None) -> entities.BaseTrigger:
         """
         Get Trigger object
-
-        :param trigger_name:
         :param trigger_id:
+        :param trigger_name:
         :return: Trigger object
         """
         # request
@@ -267,8 +269,8 @@ class Triggers:
         """
         Delete Trigger object
 
-        :param trigger_name:
         :param trigger_id:
+        :param trigger_name:
         :return: True
         """
         if trigger_id is None:
@@ -346,6 +348,7 @@ class Triggers:
     def list(self, filters: entities.Filters = None) -> entities.PagedEntities:
         """
         List project packages
+        :param filters:
         :return:
         """
         if filters is None:

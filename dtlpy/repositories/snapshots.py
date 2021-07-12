@@ -54,7 +54,7 @@ class Snapshots:
         if self._model is None:
             raise exceptions.PlatformException(
                 error='2001',
-                message='Cannot perform action WITHOUT Model entity in {} repository.'.format(self.__class__.__name__) + \
+                message='Cannot perform action WITHOUT Model entity in {} repository.'.format(self.__class__.__name__) +
                         ' Please use model.snapshots or set a model')
         assert isinstance(self._model, entities.Model)
         return self._model
@@ -65,9 +65,8 @@ class Snapshots:
     def get(self, snapshot_name=None, snapshot_id=None) -> entities.Snapshot:
         """
         Get snapshot object
-
-        :param snapshot_id:
         :param snapshot_name:
+        :param snapshot_id:
         :return: snapshot object
         """
 
@@ -158,6 +157,7 @@ class Snapshots:
     def list(self, filters: entities.Filters = None) -> entities.PagedEntities:
         """
         List project snapshots
+        :param filters:
         :return:
         """
         # default filters
@@ -225,7 +225,7 @@ class Snapshots:
             hex_chars = list('1234567890ABCDEF')
             ontologies = repositories.Ontologies(client_api=self._client_api)
             labels_dict = {k: '#' + ''.join([random.choice(hex_chars) for _ in range(6)]) for k in labels}
-            snapshot_ont = ontologies.create(labels_dict, title=self.name + '-snapshot-ontology')
+            snapshot_ont = ontologies.create(labels_dict, title=snapshot_name + '-snapshot-ontology')
             ontology_spec = entities.OntologySpec(ontology_id=snapshot_ont.id, labels=labels)
         else:  # ontology_id is not None
             ontologies = repositories.Ontologies(client_api=self._client_api)
@@ -321,6 +321,7 @@ class Snapshots:
         :param new_configuration: `dict` (optional) if passed replaces the current configuration
         :return: dl.Snapshot which is a clone version of the existing snapshot
         """
+        # FIXME: replace the clone with a Backend clone
         existing_json = snapshot.to_json()
         payload = {'name': snapshot_name}
         # all_fields = ['modelId', 'projectId', 'datasetId', 'ontologySpec', 'bucket', 'configuration', 'tags', 'global', 'description']
@@ -328,6 +329,24 @@ class Snapshots:
 
         # update required fields or replace with new values
         if new_bucket is not None:
+
+            # output = directory_item.dataset.items.list(filters=entities.Filters(field='dir',
+            #                                                                     values=directory_item.filename))
+            payload['bucket'] = new_bucket.to_json()
+        elif isinstance(snapshot.bucket, entities.ItemBucket):
+            bucket_dir_item = self.project.items.get(item_id=snapshot.bucket.directory_item_id)
+            bucket_dir_path = bucket_dir_item.filename
+            # TODO: how to clone directory to the same dataset
+            logger.info("Copying bucket_item")
+            p_bar_last = self._client_api.verbose.disable_progress_bar
+            self._client_api.verbose._disable_progress_bar = True
+            snapshot.bucket.download(local_path='/tmp/old_bucket')
+            new_bucket = snapshot.buckets.create(
+                bucket_type=entities.BucketType.ITEM,
+                local_path='/tmp/old_bucket',
+                item_bucket_snapshot_name=snapshot_name)
+            logger.info("bucket copied. new bucket dir_item_id {}".format(new_bucket.directory_item_id))
+            self._client_api.verbose._disable_progress_bar = p_bar_last
             payload['bucket'] = new_bucket.to_json()
         else:
             fields_to_copy.append('bucket')
@@ -387,7 +406,7 @@ class Snapshots:
 
         return output
 
-    def download_from_bucket(self, snapshot_id=None, snapshot=None, local_path=None, remote_paths=None):
+    def download_from_bucket(self, snapshot_id=None, snapshot=None, local_path=None):
         """
         Download files from a remote bucket
 
@@ -414,7 +433,7 @@ class Snapshots:
             raise ValueError('Missing Bucket on snapshot. id: {}'.format(snapshot.id))
 
         if snapshot.bucket.type in [entities.BucketType.ITEM, entities.BucketType.GCS]:
-            output = snapshot.bucket.download()
+            output = snapshot.bucket.download(local_path=local_path)
         else:
             raise ValueError('Cannot download bucket of type: {}'.format(snapshot.bucket.type))
         return output

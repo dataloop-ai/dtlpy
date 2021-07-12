@@ -57,7 +57,7 @@ class PipelineNode:
         outputs = [PipelineNodeIO.from_json(_json=i_output) for i_output in _json.get('outputs', list())]
         return PipelineNode(
             name=_json.get('name', None),
-            node_id=_json.get('nodeId', None),
+            node_id=_json.get('id', None),
             outputs=outputs,
             inputs=inputs,
             metadata=_json.get('metadata', None),
@@ -69,7 +69,7 @@ class PipelineNode:
     def to_json(self):
         _json = {
             'name': self.name,
-            'nodeId': self.node_id,
+            'id': self.node_id,
             'outputs': [_io.to_json() for _io in self.outputs],
             'inputs': [_io.to_json() for _io in self.inputs],
             'metadata': self.metadata,
@@ -142,6 +142,10 @@ class Pipeline(entities.BaseEntity):
     start_nodes = attr.ib()
     project_id = attr.ib()
     composition_id = attr.ib()
+    url = attr.ib()
+    preview = attr.ib()
+    description = attr.ib()
+    revisions = attr.ib()
 
     # sdk
     _project = attr.ib(repr=False)
@@ -152,8 +156,9 @@ class Pipeline(entities.BaseEntity):
     def _protected_from_json(_json, client_api, project, is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
-        :param _json:
-        :param client_api:
+        :param _json: platform json
+        :param client_api: ApiClient entity
+        :param is_fetched: is Entity fetched from Platform
         :return:
         """
         try:
@@ -175,8 +180,8 @@ class Pipeline(entities.BaseEntity):
         Turn platform representation of pipeline into a pipeline entity
 
         :param _json: platform representation of package
-        :param client_api:
-        :param project:
+        :param client_api: ApiClient entity
+        :param project: project entity
         :param is_fetched: is Entity fetched from Platform
         :return: Package entity
         """
@@ -200,7 +205,11 @@ class Pipeline(entities.BaseEntity):
             id=_json.get('id', None),
             nodes=nodes,
             connections=connections,
-            start_nodes=_json.get('startNodes', None)
+            start_nodes=_json.get('startNodes', None),
+            url=_json.get('url', None),
+            preview=_json.get('preview', None),
+            description=_json.get('description', None),
+            revisions=_json.get('revisions', None),
         )
         inst.is_fetched = is_fetched
         return inst
@@ -224,16 +233,24 @@ class Pipeline(entities.BaseEntity):
                                                         attr.fields(Pipeline).start_nodes,
                                                         attr.fields(Pipeline).project_id,
                                                         attr.fields(Pipeline).composition_id,
+                                                        attr.fields(Pipeline).url,
+                                                        attr.fields(Pipeline).preview,
+                                                        attr.fields(Pipeline).description,
+                                                        attr.fields(Pipeline).revisions,
                                                         ))
 
         _json['projectId'] = self.project_id
         _json['createdAt'] = self.created_at
         _json['updatedAt'] = self.updated_at
-        _json['compositionId'] = self.project_id
+        _json['compositionId'] = self.composition_id
         _json['startNodes'] = self.start_nodes
-        _json['orgId'] = self.project_id
+        _json['orgId'] = self.org_id
         _json['nodes'] = [node.to_json() for node in self.nodes]
         _json['connections'] = [con.to_json() for con in self.connections]
+        _json['url'] = self.url
+        _json['preview'] = self.preview
+        _json['description'] = self.description
+        _json['revisions'] = self.revisions
 
         return _json
 
@@ -301,3 +318,11 @@ class Pipeline(entities.BaseEntity):
 
     def open_in_web(self):
         self.pipelines.open_in_web(pipeline=self)
+
+    def install(self):
+        """
+        install pipeline
+
+        :return: Composition entity
+        """
+        return self.pipelines.install(pipeline=self)

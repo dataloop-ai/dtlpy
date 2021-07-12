@@ -8,6 +8,7 @@ import json
 import logging
 import random
 from .service_defaults import DATALOOP_PATH
+from filelock import FileLock
 
 logger = logging.getLogger(name=__name__)
 
@@ -102,9 +103,11 @@ class CookieIO:
         # read and write
         cfg = self.read_json(create=True)
         cfg[key] = value
-        with open(self.COOKIE, 'w') as fp:
-            json.dump(cfg, fp, indent=2)
+        with FileLock(self.COOKIE + ".lock"):
+            with open(self.COOKIE, 'w') as fp:
+                json.dump(cfg, fp, indent=2)
 
     def reset(self):
-        with open(self.COOKIE, 'w') as fp:
-            json.dump({}, fp, indent=2)
+        with FileLock(self.COOKIE + ".lock"):
+            with open(self.COOKIE, 'w') as fp:
+                json.dump({}, fp, indent=2)

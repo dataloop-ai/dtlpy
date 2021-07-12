@@ -126,10 +126,10 @@ class Filters:
     def add(self, field, values, operator: FiltersOperations = None, method: FiltersMethod = None):
         """
         Add filter
-        :param method: Optional - or/and
         :param field: Metadata field / attribute
         :param values: field values
         :param operator: optional - in, gt, lt, eq, ne
+        :param method: Optional - or/and
         :return:
         """
         if method is None:
@@ -153,6 +153,9 @@ class Filters:
         )
 
     def generate_url_query_params(self, url):
+        """
+        :param url"
+        """
         url = '{}?'.format(url)
         for f in self.and_filter_list:
             if isinstance(f.values, list):
@@ -162,6 +165,9 @@ class Filters:
         return '{}&pageOffset={}&pageSize={}'.format(url, self.page, self.page_size)
 
     def has_field(self, field):
+        """
+        :param field:
+        """
         for single_filter in self.or_filter_list:
             if single_filter.field == field:
                 return True
@@ -173,6 +179,9 @@ class Filters:
         return False
 
     def pop(self, field):
+        """
+        :param field:
+        """
         for single_filter in self.or_filter_list:
             if single_filter.field == field:
                 self.or_filter_list.remove(single_filter)
@@ -182,6 +191,9 @@ class Filters:
                 self.and_filter_list.remove(single_filter)
 
     def pop_join(self, field):
+        """
+        :param field:
+        """
         if self.resource == FiltersResource.ANNOTATION:
             raise PlatformException('400', 'Cannot join to annotations filters')
         if self.join is not None:
@@ -190,6 +202,12 @@ class Filters:
                     self.join['filter']['$and'].remove(single_filter)
 
     def add_join(self, field, values, operator: FiltersOperations = None):
+        """
+        join a query to the filter
+        :param field:
+        :param values:
+        :param operator: optional - in, gt, lt, eq, ne
+        """
         if self.resource != FiltersResource.ITEM:
             raise PlatformException('400', 'Cannot join to {} filters'.format(self.resource))
 
@@ -223,7 +241,7 @@ class Filters:
                 self._unique_fields = ['type']
                 self.add(field='type',
                          values=['box', 'class', 'comparison', 'ellipse', 'point', 'segment', 'polyline', 'binary',
-                                 'subtitle', 'cube', 'pose'], operator=FiltersOperations.IN, method=FiltersMethod.AND)
+                                 'subtitle', 'cube', 'pose', 'text_mark'], operator=FiltersOperations.IN, method=FiltersMethod.AND)
                 self.sort_by(field='label', value=FiltersOrderByDirection.ASCENDING)
                 self.sort_by(field='createdAt', value=FiltersOrderByDirection.DESCENDING)
 
@@ -283,6 +301,11 @@ class Filters:
     def prepare(self, operation=None, update=None, query_only=False, system_update=None, system_metadata=False):
         """
         To dictionary for platform call
+        :param operation:
+        :param update:
+        :param query_only:
+        :param system_update:
+        :param system_metadata: True, if you want to change metadata system
         :return: dict
         """
         ########
@@ -345,6 +368,10 @@ class Filters:
         return _json
 
     def sort_by(self, field, value: FiltersOrderByDirection = FiltersOrderByDirection.ASCENDING):
+        """
+        :param field:
+        :param value: FiltersOrderByDirection.ASCENDING, FiltersOrderByDirection.DESCENDING
+        """
         if value not in [FiltersOrderByDirection.ASCENDING, FiltersOrderByDirection.DESCENDING]:
             raise PlatformException(error='400', message='Sort can be by ascending or descending order only')
         self.sort[field] = value
@@ -366,6 +393,9 @@ class SingleFilter:
         return value
 
     def prepare(self, recursive=False):
+        """
+        :param recursive:
+        """
         _json = dict()
         values = self.values
 

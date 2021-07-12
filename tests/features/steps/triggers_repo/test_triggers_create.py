@@ -1,3 +1,5 @@
+import datetime
+
 import behave
 import time
 import os
@@ -44,6 +46,52 @@ def step_impl(context):
     params = {k: v for k, v in params_temp.items() if v is not None}
 
     context.trigger = context.service.triggers.create(**params)
+
+
+@behave.when(u"I create a cron trigger")
+def step_impl(context):
+    function_name = None
+    name = None
+
+    params = context.table.headings
+    for param in params:
+        param = param.split("=")
+        if param[0] == "name":
+            if param[1] != "None":
+                name = '{}-{}'.format(param[1], random.randrange(1000, 10000))
+        elif param[0] == "function_name":
+            if param[1] != "None":
+                function_name = param[1]
+
+    context.trigger = context.service.triggers.create(function_name=function_name,
+                                                      trigger_type="Cron",
+                                                      name=name,
+                                                      start_at=datetime.datetime.now().isoformat(),
+                                                      end_at=datetime.datetime(2024, 8, 23).isoformat(),
+                                                      cron="0 5 * * *")
+
+
+@behave.given(u"I create a cron trigger")
+def step_impl(context):
+    function_name = None
+    name = None
+
+    params = context.table.headings
+    for param in params:
+        param = param.split("=")
+        if param[0] == "name":
+            if param[1] != "None":
+                name = '{}-{}'.format(param[1], random.randrange(1000, 10000))
+        elif param[0] == "function_name":
+            if param[1] != "None":
+                function_name = param[1]
+
+    context.trigger = context.service.triggers.create(function_name=function_name,
+                                                      trigger_type="Cron",
+                                                      name=name,
+                                                      start_at=datetime.datetime.now().isoformat(),
+                                                      end_at=datetime.datetime(2024, 8, 23).isoformat(),
+                                                      cron="0 5 * * *")
 
 
 @behave.then(u'I receive a Trigger entity')

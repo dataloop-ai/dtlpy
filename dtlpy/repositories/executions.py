@@ -148,13 +148,13 @@ class Executions:
         Execute a function on an existing service
 
         :param service_id: service id to execute on
-        :param function_name: function name to run
-        :param project_id: resource's project
         :param execution_input: input dictionary or list of FunctionIO entities
-        :param dataset_id: optional - input to function
-        :param item_id: optional - input to function
-        :param annotation_id: optional - input to function
+        :param function_name: function name to run
         :param resource: input type.
+        :param item_id: optional - input to function
+        :param dataset_id: optional - input to function
+        :param annotation_id: optional - input to function
+        :param project_id: resource's project
         :param sync: wait for function to end
         :param stream_logs: prints logs of the new execution. only works with sync=True
         :param return_output: if True and sync is True - will return the output directly
@@ -251,6 +251,7 @@ class Executions:
     def _list(self, filters: entities.Filters):
         """
         List service executions
+        :param filters: dl.Filters entity to filters items
         :return:
         """
         url = '/query/faas'
@@ -267,6 +268,7 @@ class Executions:
     def list(self, filters: entities.Filters = None) -> entities.PagedEntities:
         """
         List service executions
+        :param filters: dl.Filters entity to filters items
         :return:
         """
         # default filtersf
@@ -339,7 +341,11 @@ class Executions:
 
     def logs(self, execution_id, follow=True, until_completed=True):
         """
-
+        executions logs
+        :param execution_id:
+        :param follow:
+        :param until_completed:
+        :return: executions logs
         """
         return self.service.log(execution_id=execution_id,
                                 follow=follow,
@@ -349,7 +355,7 @@ class Executions:
     def increment(self, execution: entities.Execution):
         """
         Increment attempts
-
+        :param execution:
         :return: int
         """
         # request
@@ -371,7 +377,8 @@ class Executions:
     def rerun(self, execution: entities.Execution, sync: bool = False):
         """
         Increment attempts
-
+        :param execution:
+        :param sync:
         :return: int
         """
 
@@ -423,7 +430,7 @@ class Executions:
     def terminate(self, execution: entities.Execution):
         """
         Terminate Execution
-
+        :param execution:
         :return:
         """
         # request
@@ -490,8 +497,8 @@ class Executions:
         :param status: ExecutionStatus
         :param percent_complete:
         :param message:
-        :param service_version:
         :param output:
+        :param service_version:
         :return:
         """
         # create payload

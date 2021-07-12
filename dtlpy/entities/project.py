@@ -121,6 +121,11 @@ class Project(entities.BaseEntity):
         return self._repositories.datasets
 
     @property
+    def pipelines(self):
+        assert isinstance(self._repositories.pipelines, repositories.Pipelines)
+        return self._repositories.pipelines
+
+    @property
     def packages(self):
         assert isinstance(self._repositories.packages, repositories.Packages)
         return self._repositories.packages
@@ -190,8 +195,8 @@ class Project(entities.BaseEntity):
     def _protected_from_json(_json, client_api):
         """
         Same as from_json but with try-except to catch if error
-        :param _json:
-        :param client_api:
+        :param _json: platform json
+        :param client_api: ApiClient entity
         :return:
         """
         try:
@@ -210,7 +215,7 @@ class Project(entities.BaseEntity):
 
         :param is_fetched: is Entity fetched from Platform
         :param _json: _json response from host
-        :param client_api: client_api
+        :param client_api: ApiClient entity
         :return: Project object
         """
         inst = cls(feature_constraints=_json.get('featureConstraints', None),

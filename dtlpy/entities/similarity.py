@@ -23,7 +23,7 @@ class CollectionItem:
     Base CollectionItem
     """
 
-    def __init__(self, type: CollectionTypes, ref):
+    def __init__(self, type: SimilarityTypeEnum, ref):
         assert isinstance(ref, str)
         self.ref = ref
         self.type = type
@@ -129,6 +129,8 @@ class Collection:
     def add(self, ref, type: SimilarityTypeEnum = SimilarityTypeEnum.ID):
         """
         Add item to collection
+        :param ref:
+        :param type: url, id
         """
         item = {
             'ref': ref,
@@ -138,6 +140,9 @@ class Collection:
         self._items.append(item)
 
     def pop(self, ref):
+        """
+        :param ref:
+        """
         for item in self._items:
             if item['ref'] == ref:
                 self._items.remove(item)
@@ -167,7 +172,11 @@ class Similarity(Collection):
         """
         Target item for similarity
         """
-        return SimilarityItem(ref=self.ref, type=self.type, target=True)
+        # check if the ref contain only numbers and letters
+        if self.ref.isalnum():
+            return SimilarityItem(ref=self.ref, type=SimilarityTypeEnum.ID, target=True)
+        else:
+            return SimilarityItem(ref=self.ref, type=SimilarityTypeEnum.URL, target=True)
 
     @classmethod
     def from_json(cls, _json):
@@ -199,8 +208,8 @@ class Similarity(Collection):
         """
         _json = super().to_json()
         _json['metadata']['target'] = {
-            "type": self.type,
-            "ref": self.ref
+            "type": self.target.type,
+            "ref": self.target.ref
         }
         _json['items'] = self._fixed_items()
 

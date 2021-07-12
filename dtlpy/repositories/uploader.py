@@ -36,7 +36,7 @@ class Uploader:
         self.mode = 'skip'
         self.num_files = 0
         self.i_item = 0
-        self.pbar = tqdm.tqdm(total=0, disable=False)
+        self.pbar = tqdm.tqdm(total=0, disable=self.items_repository._client_api.verbose.disable_progress_bar)
         self.reporter = Reporter(num_workers=0, resource=Reporter.ITEMS_UPLOAD,
                                  print_error_logs=items_repository._client_api.verbose.print_error_logs)
 
@@ -57,12 +57,12 @@ class Uploader:
         Local filesystem will remain.
         If "*" at the end of local_path (e.g. "/images/*") items will be uploaded without head directory
 
-        :param overwrite: optional - default = False
         :param local_path: local file or folder to upload
         :param local_annotations_path: path to dataloop format annotations json files.
         :param remote_path: remote path to save.
         :param remote_name: remote base name to save.
         :param file_types: list of file type to upload. e.g ['.jpg', '.png']. default is all
+        :param overwrite: optional - default = False
         :param item_metadata: upload the items with the metadata dictionary
         :return: Output (list)
         """
@@ -275,6 +275,10 @@ class Uploader:
         return futures
 
     def upload_single_element(self, elem):
+        """
+        upload a signal element
+        :param elem: UploadElement
+        """
         self.num_files += 1
         self.i_item += 1
         self.pbar.total += 1
@@ -354,6 +358,9 @@ class Uploader:
         :param remote_path: remote directory of filepath to upload
         :param uploaded_filename: optional - remote filename
         :param last_try: print log error only if last try
+        :param mode: 'skip'  'overwrite'
+        :param item_metadata: item metadata
+        :param callback:
         :return: Item object
         """
 
@@ -559,7 +566,12 @@ class Uploader:
 
     @staticmethod
     def link(ref, type, mimetype=None, dataset_id=None):
-
+        """
+        :param ref:
+        :param type:
+        :param mimetype:
+        :param dataset_id:
+        """
         link_info = {'type': type,
                      'ref': ref}
 

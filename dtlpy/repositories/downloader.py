@@ -348,11 +348,11 @@ class Downloader:
         """
         Download annotations json for entire dataset
 
+        :param dataset: Dataset entity
+        :param local_path:
         :param filters: dl.Filters entity to filters items
         :param annotation_filters: dl.Filters entity to filters items' annotations
-        :param dataset: Dataset entity
         :param overwrite: optional - overwrite annotations if exist, default = false
-        :param local_path:
         :return:
         """
         local_path = os.path.join(local_path, "json")
@@ -564,8 +564,8 @@ class Downloader:
         :param save_locally: bool. save to file or return buffer
         :param local_path: item local folder to save to.
         :param to_array: returns Ndarray when True and local_path = False
-        :local_filepath: item local filepath
-        :overwrite: overwrite the file is existing
+        :param local_filepath: item local filepath
+        :param overwrite: overwrite the file is existing
         :param annotation_options: download annotations options: list(dl.ViewAnnotationOptions)
         :param annotation_filters: Filters entity to filter item's annotation
         :param chunk_size: size of chunks to download - optional. default = 8192
@@ -691,7 +691,9 @@ class Downloader:
 
     @staticmethod
     def get_url_stream(url):
-
+        """
+        :param url:
+        """
         # This will download the binaries from the URL user provided
         prepared_request = requests.Request(method='GET', url=url).prepare()
         with requests.Session() as s:

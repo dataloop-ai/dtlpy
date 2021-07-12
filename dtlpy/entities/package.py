@@ -71,8 +71,8 @@ class Package(entities.BaseEntity):
     def _protected_from_json(_json, client_api, project, is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
-        :param _json:
-        :param client_api:
+        :param _json:  platform json
+        :param client_api: ApiClient entity
         :return:
         """
         try:
@@ -92,8 +92,8 @@ class Package(entities.BaseEntity):
         Turn platform representation of package into a package entity
 
         :param _json: platform representation of package
-        :param client_api:
-        :param project:
+        :param client_api: ApiClient entity
+        :param project: project entity
         :param is_fetched: is Entity fetched from Platform
         :return: Package entity
         """

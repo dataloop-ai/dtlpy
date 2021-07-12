@@ -70,6 +70,9 @@ class PackageModule(entities.BaseEntity):
         )
 
     def add_function(self, function):
+        """
+        :param function:
+        """
         if not isinstance(self.functions, list):
             self.functions = [self.functions]
         if isinstance(function, entities.PackageFunction):

@@ -12,4 +12,5 @@ def step_impl(context, count):
     if int(count) > 0:
         for page in context.trigger_list:
             for trigger in page:
-                assert isinstance(trigger, context.dl.entities.Trigger)
+                assert isinstance(trigger, context.dl.entities.Trigger) or \
+                       isinstance(trigger, context.dl.entities.trigger.CronTrigger)

@@ -109,9 +109,10 @@ class BaseTrigger(entities.BaseEntity):
     def _protected_from_json(_json, client_api, project, service=None):
         """
         Same as from_json but with try-except to catch if error
-        :param _json:
-        :param client_api:
-        :param project:
+        :param _json: platform json
+        :param client_api: ApiClient entity
+        :param project: project entity
+        :param service: service entity
         :return:
         """
         try:
@@ -127,6 +128,13 @@ class BaseTrigger(entities.BaseEntity):
 
     @classmethod
     def from_json(cls, _json, client_api, project, service=None):
+        """
+        :param _json: platform json
+        :param client_api: ApiClient entity
+        :param project: project entity
+        :param service: service entity
+        :return:
+        """
         if project is not None:
             if project.id != _json.get('projectId', None):
                 logger.warning('Trigger has been fetched from a project that is not belong to it')
@@ -266,6 +274,13 @@ class Trigger(BaseTrigger):
 
     @classmethod
     def from_json(cls, _json, client_api, project, service=None):
+        """
+        :param _json: platform json
+        :param client_api: ApiClient entity
+        :param project: project entity
+        :param service: service entity
+        :return:
+        """
         spec = _json.get('spec', dict())
         operation = spec.get('operation', dict())
 
@@ -329,6 +344,13 @@ class CronTrigger(BaseTrigger):
 
     @classmethod
     def from_json(cls, _json, client_api, project, service=None):
+        """
+        :param _json: platform json
+        :param client_api: ApiClient entity
+        :param project: project entity
+        :param service: service entity
+        :return:
+        """
         spec = _json.get('spec', dict())
         operation = spec.get('operation', dict())
 
@@ -337,7 +359,7 @@ class CronTrigger(BaseTrigger):
             if project_id != project.id:
                 project = None
 
-        service_id, webhook_id = cls._get_operation(operation=operation)
+        service_id, webhook_id, pipeline_id = cls._get_operation(operation=operation)
         return cls(
             updatedAt=_json.get('updatedAt', None),
             createdAt=_json.get('createdAt', None),
@@ -363,4 +385,5 @@ class CronTrigger(BaseTrigger):
             id=_json['id'],
             op_type=operation.get('type', None),
             spec=spec,
+            pipeline_id=pipeline_id
         )

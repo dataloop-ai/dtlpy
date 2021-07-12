@@ -94,8 +94,8 @@ class Execution(entities.BaseEntity):
     def _protected_from_json(_json, client_api, project=None, service=None, is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
-        :param _json:
-        :param client_api:
+        :param _json: platform json
+        :param client_api: ApiClient entity
         :return:
         """
         try:
@@ -112,6 +112,13 @@ class Execution(entities.BaseEntity):
 
     @classmethod
     def from_json(cls, _json, client_api, project=None, service=None, is_fetched=True):
+        """
+        :param _json: platform json
+        :param client_api: ApiClient entity
+        :param project: project entity
+        :param service:
+        :param is_fetched: is Entity fetched from Platform
+        """
         if project is not None:
             if project.id != _json.get('projectId', None):
                 logger.warning('Execution has been fetched from a project that is not belong to it')
@@ -230,11 +237,11 @@ class Execution(entities.BaseEntity):
         """
         Update Execution Progress
 
-        :param service_version:
         :param status: ExecutionStatus
         :param percent_complete:
         :param message:
         :param output:
+        :param service_version:
         :return:
         """
         return self.executions.progress_update(
@@ -255,6 +262,7 @@ class Execution(entities.BaseEntity):
 
     def logs(self, follow=False):
         """
+        :param follow:
         Print logs for execution
         """
         self.services.log(execution_id=self.id,

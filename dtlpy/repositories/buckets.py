@@ -62,6 +62,7 @@ class Buckets:
     def list_content(self, bucket: entities.Bucket):
         """
         List bucket content
+        :param bucket:
         :return: list of items in bucket TBD
         """
         if isinstance(bucket, entities.ItemBucket):
@@ -86,8 +87,8 @@ class Buckets:
         Get a filename from bucket
         If by name or type - need to input also execution/task id for the bucket folder
 
-        :param bucket: Bucket entity
         :param filename: Bucket entity
+        :param bucket: Bucket entity
         """
         if isinstance(bucket, entities.ItemBucket):
             directory_item = self.items.get(item_id=bucket.directory_item_id)
@@ -108,8 +109,8 @@ class Buckets:
         Download binary file from bucket.
 
         :param bucket: bucket entity
-        :param overwrite: optional - default = False
         :param local_path: local binary file or folder to upload
+        :param overwrite: optional - default = False
         :return:
         """
         if isinstance(bucket, entities.ItemBucket):
@@ -117,6 +118,7 @@ class Buckets:
             # fetch: False does not use an API call but created the dataset entity (with id)
             dataset = bucket_dir_item.datasets.get(dataset_id=bucket_dir_item.datasetId, fetch=False)
             bucket_filter = entities.Filters(field='dir', values=bucket_dir_item.filename)
+            # self._client_api.verbose.disable_progress_bar(True)
             local_path = dataset.items.download(
                 filters=bucket_filter,
                 local_path=local_path,
@@ -124,7 +126,11 @@ class Buckets:
                 to_items_folder=False,
                 without_relative_path=bucket_dir_item.filename
             )
-            logger.info('Bucket artifacts was unpacked to: {}'.format(local_path))
+            # self._client_api.verbose.disable_progress_bar(False)
+            if len(local_path) == 0:
+                logger.warning("Bucket {} was empty".format(bucket))
+            else:
+                logger.info('Bucket artifacts was unpacked to: {}'.format(local_path))
 
         elif isinstance(bucket, entities.GCSBucket):
             gcs_bucket = bucket._bucket
@@ -133,7 +139,9 @@ class Buckets:
             remote_prefix += '' if remote_prefix.endswith('/') else '/'
             prefix_len = len(remote_prefix)
 
-            for blob in tqdm.tqdm(blobs, leave=None):
+            logger.info("Downloading {} items, Note GCS is a background process".format(len(blobs)))
+            # for blob in tqdm.tqdm(blobs, leave=None):
+            for blob in blobs:
                 rel_fname = blob.name[prefix_len:]  # To create tree structure from the prefix only
 
                 if blob.name.endswith('/'):  # This is a dir
@@ -166,8 +174,8 @@ class Buckets:
         Else and if create==True a new bucket will be created and uploaded
 
         :param bucket: bucket entity
-        :param overwrite: optional - default = False
         :param local_path: local binary file or folder to upload
+        :param overwrite: optional - default = False
         :return:
         """
         if isinstance(bucket, entities.ItemBucket):

@@ -98,31 +98,25 @@ class AnnotationCollection(entities.BaseEntity):
                     metadata['system'] = dict()
                 metadata['system']['description'] = single_definition.description
 
-            if object_id is None:
-                # add new annotation to list
-                annotation = entities.Annotation.new(item=self.item,
-                                                     annotation_definition=single_definition,
-                                                     frame_num=frame_num,
-                                                     start_time=start_time,
-                                                     automated=automated,
-                                                     metadata=metadata,
-                                                     parent_id=parent_id)
-                self.annotations.append(annotation)
-                matched_ind = len(self.annotations) - 1
-            else:
+            annotation = entities.Annotation.new(item=self.item,
+                                                 annotation_definition=single_definition,
+                                                 frame_num=frame_num,
+                                                 automated=automated,
+                                                 metadata=metadata,
+                                                 object_id=object_id,
+                                                 parent_id=parent_id)
+            #  add frame if exists
+            if frame_num is not None or start_time is not None:
+                if object_id is None:
+                    raise ValueError('Video Annotation must have object_id. '
+                                     'for more information visit: https://dataloop.ai/docs/sdk-create-video-annotation#create-video-annotation')
+
                 # find matching element_id
                 matched_ind = [i_annotation
                                for i_annotation, annotation in enumerate(self.annotations)
                                if annotation.object_id == object_id]
                 if len(matched_ind) == 0:
                     # no matching object id found - create new one
-                    annotation = entities.Annotation.new(item=self.item,
-                                                         annotation_definition=single_definition,
-                                                         frame_num=frame_num,
-                                                         automated=automated,
-                                                         metadata=metadata,
-                                                         object_id=object_id,
-                                                         parent_id=parent_id)
                     self.annotations.append(annotation)
                     matched_ind = len(self.annotations) - 1
                 elif len(matched_ind) == 1:
@@ -132,8 +126,6 @@ class AnnotationCollection(entities.BaseEntity):
                                             message='more than one annotation with same object id: {}'.format(
                                                 object_id))
 
-            #  add frame if exists
-            if frame_num is not None or start_time is not None:
                 self.annotations[matched_ind].add_frames(annotation_definition=single_definition,
                                                          frame_num=frame_num,
                                                          end_frame_num=end_frame_num,
@@ -141,6 +133,9 @@ class AnnotationCollection(entities.BaseEntity):
                                                          end_time=end_time,
                                                          fixed=fixed,
                                                          object_visible=object_visible)
+            else:
+                # add new annotation to list
+                self.annotations.append(annotation)
 
     ############
     # Plotting #
@@ -192,11 +187,11 @@ class AnnotationCollection(entities.BaseEntity):
 
         :param filepath: path to save annotation
         :param img_filepath: img file path - needed for img_mask
-        :param annotation_format:
-        :param height:
-        :param width:
-        :param thickness:
-        :param with_text:
+        :param annotation_format: how to show thw annotations. options: list(dl.ViewAnnotationOptions)
+        :param height: height
+        :param width: width
+        :param thickness: thickness
+        :param with_text: add a text to the image
         :return:
         """
         dir_name, ex = os.path.splitext(filepath)
@@ -280,13 +275,15 @@ class AnnotationCollection(entities.BaseEntity):
         return self.item.annotations.upload(self.annotations)
 
     @staticmethod
-    def _json_to_annotation(item: entities.Item, w_json: dict, is_video=None, fps=25, item_metadata=None):
+    def _json_to_annotation(item: entities.Item, w_json: dict, is_video=None, fps=25, item_metadata=None,
+                            client_api=None):
         try:
             annotation = entities.Annotation.from_json(_json=w_json,
                                                        fps=fps,
                                                        item_metadata=item_metadata,
                                                        is_video=is_video,
-                                                       item=item)
+                                                       item=item,
+                                                       client_api=client_api)
             status = True
         except Exception:
             annotation = traceback.format_exc()
@@ -294,7 +291,7 @@ class AnnotationCollection(entities.BaseEntity):
         return status, annotation
 
     @classmethod
-    def from_json(cls, _json: list, item=None, is_video=None, fps=25, height=None, width=None):
+    def from_json(cls, _json: list, item=None, is_video=None, fps=25, height=None, width=None, client_api=None):
         if item is None:
             if isinstance(_json, dict):
                 metadata = _json.get('metadata', dict())
@@ -339,7 +336,8 @@ class AnnotationCollection(entities.BaseEntity):
                                                       fps=fps,
                                                       item_metadata=item_metadata,
                                                       is_video=is_video,
-                                                      w_json=single_json)
+                                                      w_json=single_json,
+                                                      client_api=client_api)
         # log errors
         _ = [logger.warning(j[1]) for j in results if j[0] is False]
 
@@ -355,6 +353,10 @@ class AnnotationCollection(entities.BaseEntity):
         return cls(annotations=annotations, item=item)
 
     def from_vtt_file(self, filepath):
+        """
+            convert annotation from vtt format
+            :param filepath: path to the file
+        """
         for caption in webvtt.read(filepath):
             h, m, s = caption.start.split(':')
             start_time = datetime.timedelta(hours=float(h), minutes=float(m), seconds=float(s)).total_seconds()
@@ -375,6 +377,11 @@ class AnnotationCollection(entities.BaseEntity):
             self.annotations.append(annotation)
 
     def from_instance_mask(self, mask, instance_map=None):
+        """
+            convert annotation from instance mask format
+            :param mask: the mask annotation
+            :param instance_map: labels
+        """
         if instance_map is None:
             instance_map = self.item.dataset.instance_map
         # go over all instance ids
@@ -404,12 +411,20 @@ class AnnotationCollection(entities.BaseEntity):
         return _json
 
     def print(self, to_return=False, columns=None):
+        """
+        :param to_return:
+        :param columns:
+        """
         return miscellaneous.List(self.annotations).print(to_return=to_return, columns=columns)
 
     #########################
     # For video annotations #
     #########################
     def get_frame(self, frame_num):
+        """
+        :param frame_num:
+        :return: AnnotationCollection
+        """
         frame_collection = AnnotationCollection(item=self.item)
         for annotation in self.annotations:
             if frame_num in annotation.frames:

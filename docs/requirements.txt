@@ -22,3 +22,4 @@ sphinx-rtd-theme==0.4.3
 nbsphinx==0.4.2
 webvtt-py==0.4.3
 flask
+filelock==3.0.12

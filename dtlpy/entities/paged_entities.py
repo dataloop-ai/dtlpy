@@ -38,6 +38,9 @@ class PagedEntities:
     items = attr.ib(default=miscellaneous.List(), repr=False)
 
     def process_result(self, result):
+        """
+        :param result: json object
+        """
         if 'page_offset' in result:
             self.page_offset = result['page_offset']
         if 'page_size' in result:
@@ -84,6 +87,10 @@ class PagedEntities:
             self.page_offset -= 1
 
     def return_page(self, page_offset=None, page_size=None):
+        """
+        :param page_offset:
+        :param page_size:
+        """
         if page_size is None:
             page_size = self.page_size
         if page_offset is None:
@@ -100,6 +107,10 @@ class PagedEntities:
             raise ValueError('Cant return page. Filters is empty')
 
     def get_page(self, page_offset=None, page_size=None):
+        """
+        :param page_offset:
+        :param page_size:
+        """
         items = self.return_page(page_offset=page_offset,
                                  page_size=page_size)
         self.items = items

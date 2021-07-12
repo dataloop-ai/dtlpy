@@ -59,6 +59,11 @@ def after_tag(context, tag):
             use_fixture(delete_packages, context)
         except Exception:
             logging.exception('Failed to delete package')
+    elif tag == 'pipelines.delete':
+        try:
+            use_fixture(delete_pipeline, context)
+        except Exception:
+            logging.exception('Failed to delete package')
     elif tag == 'bot.create':
         try:
             use_fixture(delete_bots, context)
@@ -125,6 +130,24 @@ def delete_packages(context):
         except:
             all_deleted = False
             logging.exception('Failed deleting package: ')
+    assert all_deleted
+
+
+@fixture
+def delete_pipeline(context):
+    if not hasattr(context, 'to_delete_pipelines_ids'):
+        return
+
+    all_deleted = True
+    while context.to_delete_pipelines_ids:
+        pipeline_id = context.to_delete_pipelines_ids.pop(0)
+        try:
+            context.dl.pipelines.delete(pipeline_id=pipeline_id)
+        except context.dl.exceptions.NotFound:
+            pass
+        except:
+            all_deleted = False
+            logging.exception('Failed deleting pipeline: ')
     assert all_deleted
 
 

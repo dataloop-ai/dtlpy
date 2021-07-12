@@ -87,9 +87,9 @@ class Services:
     def checkout(self, service: entities.Service = None, service_name=None, service_id=None):
         """
         Check-out a service
-        :param service_id:
-        :param service_name:
         :param service: Service entity
+        :param service_name:
+        :param service_id:
         :return:
         """
         if service is None:
@@ -128,6 +128,7 @@ class Services:
         :param checkout:
         :param service_name: optional - search by name
         :param service_id: optional - search by id
+        :param checkout:
         :param fetch: optional - fetch entity from platform, default taken from cookie
         :return: Service object
         """
@@ -225,6 +226,7 @@ class Services:
     def list(self, filters: entities.Filters = None) -> entities.PagedEntities:
         """
         List project services
+        :param filters:
         :return:
         """
         # default filters
@@ -372,6 +374,9 @@ class Services:
         return init_input
 
     def name_validation(self, name: str):
+        """
+        :param name:
+        """
         url = '/piper-misc/naming/services/{}'.format(name)
 
         # request
@@ -386,18 +391,25 @@ class Services:
                 max_attempts=None, **kwargs) -> entities.Service:
         """
         Create service entity
-        :param verify:
-        :param agent_versions:
-        :param sdk_version:
-        :param project_id:
-        :param pod_type:
-        :param runtime:
-        :param init_input:
-        :param driver_id:
+        :param service_name:
+        :param package:
+        :param module_name:
         :param bot: bot user that weill run the package
         :param revision: optional - int - package revision - default=latest
-        :param package:
-        :param service_name:
+        :param init_input:
+        :param runtime:
+        :param pod_type:
+        :param project_id:
+        :param sdk_version:
+        :param agent_versions:
+        :param verify:
+        :param driver_id:
+        :param run_execution_as_process:
+        :param execution_timeout:
+        :param drain_time:
+        :param on_reset:
+        :param max_attempts:
+        :param kwargs:
         :return:
         """
         is_global = kwargs.get('is_global', None)
@@ -507,9 +519,8 @@ class Services:
     def delete(self, service_name=None, service_id=None):
         """
         Delete Service object
-
-        :param service_id: by id
         :param service_name: by name
+        :param service_id: by id
         :return: True
         """
         # get bby name
@@ -531,8 +542,8 @@ class Services:
     def update(self, service: entities.Service, force=False) -> entities.Service:
         """
         Update Service changes to platform
-        :param force: optional - terminate old replicas immediately
         :param service: Service entity
+        :param force: optional - terminate old replicas immediately
         :return: Service entity
         """
         assert isinstance(service, entities.Service)
@@ -568,18 +579,19 @@ class Services:
         """
         Get service logs
 
-        :param text:
-        :param view:
-        :param system:
-        :param end: iso format time
-        :param start: iso format time
-        :param checkpoint:
-        :param follow: filters
-        :param execution_id: follow
-        :param function_name: execution_id
-        :param replica_id: function_name
+        :param service:
         :param size:
-        :param service: Service entity
+        :param checkpoint:
+        :param start: iso format time
+        :param end: iso format time
+        :param follow: filters
+        :param text:
+        :param execution_id:
+        :param function_name:
+        :param replica_id:
+        :param system:
+        :param view:
+        :param until_completed:
         :return: Service entity
         """
         assert isinstance(service, entities.Service)
@@ -659,6 +671,22 @@ class Services:
                 annotation_id=None,
                 project_id=None,
                 ) -> entities.Execution:
+        """
+        service execute
+        :param service:
+        :param service_id:
+        :param service_name:
+        :param sync:
+        :param function_name:
+        :param stream_logs:
+        :param execution_input:
+        :param resource:
+        :param item_id:
+        :param dataset_id:
+        :param annotation_id:
+        :param project_id:
+        :return entities.Execution:
+        """
         if service is None:
             service = self.get(service_id=service_id, service_name=service_name)
         execution = repositories.Executions(service=service,
@@ -701,27 +729,28 @@ class Services:
         """
         Deploy service
 
-        :param max_attempts: Maximum execution retries in-case of a service reset
-        :param on_reset:
-        :param drain_time:
-        :param execution_timeout:
-        :param run_execution_as_process:
-        :param func:
-        :param project_id:
-        :param module_name:
-        :param checkout:
-        :param verify:
-        :param pod_type:
         :param service_name: name
         :param package: package entity
-        :param force: optional - terminate old replicas immediately
         :param bot: bot email
         :param revision: version
         :param init_input: config to run at startup
         :param runtime: runtime resources
-        :param driver_id:
-        :param agent_versions: - dictionary - - optional -versions of sdk, agent runner and agent proxy
+        :param pod_type:
         :param sdk_version:  - optional - string - sdk version
+        :param agent_versions: - dictionary - - optional -versions of sdk, agent runner and agent proxy
+        :param verify:
+        :param checkout:
+        :param module_name:
+        :param project_id:
+        :param driver_id:
+        :param func:
+        :param run_execution_as_process:
+        :param execution_timeout:
+        :param drain_time:
+        :param max_attempts: Maximum execution retries in-case of a service reset
+        :param on_reset:
+        :param force: optional - terminate old replicas immediately
+        :param kwargs:
         :return:
         """
         if service_name is None:
@@ -820,13 +849,11 @@ class Services:
         method = inspect.signature(func)
         params = list(method.parameters)
         inpts = list()
+        inputs_types = [input_type.lower() for input_type in dir(entities.PackageInputType) if
+                        not input_type.startswith('_') and input_type != 'JSON']
         for arg in params:
-            if arg == 'item':
-                inpt_type = entities.PackageInputType.ITEM
-            elif arg == 'dataset':
-                inpt_type = entities.PackageInputType.DATASET
-            elif arg == 'annotation':
-                inpt_type = entities.PackageInputType.ANNOTATION
+            if arg in inputs_types:
+                inpt_type = arg.capitalize()
             else:
                 inpt_type = entities.PackageInputType.JSON
             inpts.append(entities.FunctionIO(type=inpt_type, name=arg))
@@ -863,13 +890,12 @@ class Services:
                                  force=False) -> entities.Service:
         """
         Deploy from local folder
-        :param checkout:
-        :param bot:
-        :param force: optional - terminate old replicas immediately
-        :return:
-
         :param cwd: optional - package working directory. Default=cwd
         :param service_file: optional - service file. Default=None
+        :param bot:
+        :param checkout:
+        :param force: optional - terminate old replicas immediately
+        :return:
         """
         # get cwd and service.json path
         if cwd is None:
@@ -960,10 +986,10 @@ class Services:
     def deploy_pipeline(self, service_json_path=None, project=None, bot=None, force=False):
         """
         Deploy pipeline
-
-        :param bot:
-        :param project:
         :param service_json_path:
+        :param project:
+        :param bot:
+        :param force:
         :return: True
         """
         # project
@@ -1072,9 +1098,8 @@ class Services:
     def tear_down(self, service_json_path=None, project=None):
         """
         Tear down a pipeline
-
-        :param project:
         :param service_json_path:
+        :param project:
         :return:
         """
         # project
@@ -1159,6 +1184,9 @@ class ServiceLog:
         self.stop = log.stop
 
     def view(self, until_completed):
+        """
+        :param until_completed:
+        """
         try:
             for log in self:
                 print(log)

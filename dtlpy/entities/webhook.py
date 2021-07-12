@@ -41,6 +41,12 @@ class Webhook(entities.BaseEntity):
 
     @classmethod
     def from_json(cls, _json: dict, client_api: services.ApiClient, project=None):
+        """
+        :param _json: platform json
+        :param client_api: ApiClient entity
+        :param project: project entity
+        :return:
+        """
         if project is not None:
             if project.id != _json.get('project', None):
                 logger.warning('Webhook has been fetched from a project that is not in it projects list')

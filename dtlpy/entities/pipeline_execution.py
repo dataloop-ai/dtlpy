@@ -73,8 +73,10 @@ class PipelineExecution(entities.BaseEntity):
     def _protected_from_json(_json, client_api, pipeline, is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
-        :param _json:
-        :param client_api:
+        :param _json: platform json
+        :param client_api: ApiClient entity
+        :param pipeline: Pipeline entity
+        :param is_fetched: is Entity fetched from Platform
         :return:
         """
         try:
@@ -96,8 +98,8 @@ class PipelineExecution(entities.BaseEntity):
         Turn platform representation of pipeline_execution into a pipeline_execution entity
 
         :param _json: platform representation of package
-        :param client_api:
-        :param pipeline:
+        :param client_api: ApiClient entity
+        :param pipeline: Pipeline entity
         :param is_fetched: is Entity fetched from Platform
         :return: Package entity
         """

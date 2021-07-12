@@ -108,8 +108,8 @@ class Ontology(entities.BaseEntity):
     def _protected_from_json(_json, client_api, recipe, dataset, project, is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
-        :param _json:
-        :param client_api:
+        :param _json: platform json
+        :param client_api: ApiClient entity
         :return:
         """
         try:
@@ -130,12 +130,12 @@ class Ontology(entities.BaseEntity):
         """
         Build an Ontology entity object from a json
 
-        :param is_fetched:
-        :param project:
-        :param dataset:
+        :param is_fetched: is Entity fetched from Platform
+        :param project: project entity
+        :param dataset: dataset entity
         :param _json: _json response from host
         :param recipe: ontology's recipe
-        :param client_api: client_api
+        :param client_api: ApiClient entity
         :return: Ontology object
         """
         if "attributes" in _json:
@@ -192,7 +192,7 @@ class Ontology(entities.BaseEntity):
         """
         Update items metadata
 
-        :param system_metadata: bool
+        :param system_metadata: bool - True, if you want to change metadata system
         :return: Ontology object
         """
         return self.ontologies.update(self, system_metadata=system_metadata)
@@ -310,13 +310,13 @@ class Ontology(entities.BaseEntity):
         """
         Add a single label to ontology
 
-        :param add:
-        :param label:
         :param label_name: label name
         :param color: optional - if not given a random color will be selected
         :param children: optional - children
         :param attributes: optional - attributes
         :param display_label: optional - display_label
+        :param label:
+        :param add:
         :param update_ontology: update the ontology, default = False for backward compatible
         :param mode add, update or upsert, relevant on update_ontology=True only
         :return: Label entity
@@ -457,13 +457,13 @@ class Ontology(entities.BaseEntity):
         """
         Add a single label to ontology
 
-        :param add:
-        :param label:
         :param label_name: label name
         :param color: optional - if not given a random color will be selected
         :param children: optional - children
         :param attributes: optional - attributes
         :param display_label: optional - display_label
+        :param label:
+        :param add:
         :param update_ontology: update the ontology, default = False for backward compatible
         :return: Label entity
         """
@@ -486,13 +486,13 @@ class Ontology(entities.BaseEntity):
         """
         Update a single label to ontology
 
-        :param add:
-        :param label:
         :param label_name: label name
         :param color: optional - if not given a random color will be selected
         :param children: optional - children
         :param attributes: optional - attributes
         :param display_label: optional - display_label
+        :param label:
+        :param add:
         :param upsert if True will add in case it does not existing
         :param update_ontology: update the ontology, default = False for backward compatible
         :return: Label entity

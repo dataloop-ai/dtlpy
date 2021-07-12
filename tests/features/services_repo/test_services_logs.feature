@@ -13,4 +13,6 @@ Feature: Services repository logs testing
         When I create a service
             |service_name=services-log|package=services-log|revision=None|config=None|runtime=None|
         Then I receive a Service entity
+        And I upload an item by the name of "test_item.jpg"
+        And I run a service execute for the item
         And Log "THIS LOG LINE SHOULD BE IN LOGS" is in service.log()

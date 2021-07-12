@@ -61,8 +61,9 @@ class Command(entities.BaseEntity):
     def _protected_from_json(_json, client_api, is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
-        :param _json:
-        :param client_api:
+        :param _json: platform json
+        :param client_api: ApiClient entity
+        :param is_fetched: is Entity fetched from Platform
         :return:
         """
         try:
@@ -80,9 +81,9 @@ class Command(entities.BaseEntity):
         """
         Build a Command entity object from a json
 
-        :param is_fetched: is Entity fetched from Platform
         :param _json: _json response from host
-        :param client_api: client_api
+        :param client_api: ApiClient entity
+        :param is_fetched: is Entity fetched from Platform
         :return: Command object
         """
         inst = cls(

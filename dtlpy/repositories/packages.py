@@ -83,6 +83,11 @@ class Packages:
     # methods #
     ###########
     def open_in_web(self, package=None, package_id=None, package_name=None):
+        """
+        :param package:
+        :param package_id:
+        :param package_name:
+        """
         if package is None:
             package = self.get(package_name=package_name, package_id=package_id)
         self._client_api._open_in_web(resource_type='package', project_id=package.project_id, package_id=package.id)
@@ -111,10 +116,9 @@ class Packages:
     def get(self, package_name=None, package_id=None, checkout=False, fetch=None) -> entities.Package:
         """
         Get Package object
-
-        :param checkout:
-        :param package_id:
         :param package_name:
+        :param package_id:
+        :param checkout: bool
         :param fetch: optional - fetch entity from platform, default taken from cookie
         :return: Package object
         """
@@ -207,6 +211,8 @@ class Packages:
     def list(self, filters: entities.Filters = None, project_id=None) -> entities.PagedEntities:
         """
         List project packages
+        :param filters:
+        :param project_id:
         :return:
         """
         if filters is None:
@@ -237,10 +243,10 @@ class Packages:
 
     def pull(self, package: entities.Package, version=None, local_path=None, project_id=None):
         """
-        :param project_id:
-        :param version:
         :param package:
+        :param version:
         :param local_path:
+        :param project_id:
         :return:
         """
         if isinstance(version, int):
@@ -326,17 +332,17 @@ class Packages:
         Project will be taken in the following hierarchy:
         project(input) -> project_id(input) -> self.project(context) -> checked out
 
-        :param codebase:
-        :param ignore_sanity_check:
         :param project: optional - project entity to deploy to. default from context or checked-out
         :param project_id: optional - project id to deploy to. default from context or checked-out
         :param package_name: package name
-        :param checkout: checkout package to local dir
         :param src_path: path to package codebase
+        :param codebase:
         :param modules: list of modules PackageModules of the package
-        :param version: semver version f the package
-        :param revision_increment: optional - str - version bumping method - major/minor/patch - default = None
         :param is_global:
+        :param checkout: checkout package to local dir
+        :param revision_increment: optional - str - version bumping method - major/minor/patch - default = None
+        :param version: semver version f the package
+        :param ignore_sanity_check:
         :param  service_update: optional - bool - update the service
         :param  slots: optional - list of slots PackageSlot of the package
         :return:
@@ -472,7 +478,9 @@ class Packages:
         """
         Create a package in platform
 
+        :param project_to_deploy:
         :param codebase:
+        :param is_global:
         :param package_name: optional - default: 'default package'
         :param modules: optional - PackageModules Entity
         :param version: semver version of the package
@@ -576,9 +584,8 @@ class Packages:
     def update(self, package: entities.Package, revision_increment: str = None) -> entities.Package:
         """
         Update Package changes to platform
-
-        :param revision_increment: optional - str - version bumping method - major/minor/patch - default = None
         :param package:
+        :param revision_increment: optional - str - version bumping method - major/minor/patch - default = None
         :return: Package entity
         """
 
@@ -634,28 +641,27 @@ class Packages:
                **kwargs) -> entities.Service:
         """
         Deploy package
-
-        :param max_attempts: Maximum execution retries in-case of a service reset
-        :param project_id:
-        :param module_name:
-        :param checkout:
-        :param pod_type:
-        :param bot:
-        :param drain_time:
-        :param execution_timeout:
-        :param run_execution_as_process:
-        :param on_reset:
-        :param init_input:
-        :param force: optional - terminate old replicas immediately
-        :param verify:
-        :param agent_versions: - dictionary - - optional -versions of sdk, agent runner and agent proxy
-        :param sdk_version:  - optional - string - sdk version
-        :param runtime:
-        :param revision:
-        :param service_name:
-        :param package:
         :param package_id:
         :param package_name:
+        :param package:
+        :param service_name:
+        :param project_id:
+        :param revision:
+        :param init_input:
+        :param runtime:
+        :param sdk_version:  - optional - string - sdk version
+        :param agent_versions: - dictionary - - optional -versions of sdk, agent runner and agent proxy
+        :param bot:
+        :param pod_type:
+        :param verify:
+        :param checkout:
+        :param module_name:
+        :param run_execution_as_process:
+        :param execution_timeout:
+        :param drain_time:
+        :param on_reset:
+        :param max_attempts: Maximum execution retries in-case of a service reset
+        :param force: optional - terminate old replicas immediately
         :return:
         """
 
@@ -686,6 +692,10 @@ class Packages:
                                        )
 
     def deploy_from_file(self, project, json_filepath):
+        """
+        :param project:
+        :param json_filepath:
+        """
         with open(json_filepath, 'r') as f:
             data = json.load(f)
 
@@ -732,6 +742,10 @@ class Packages:
         return d
 
     def __compare_and_update_trigger_configurations(self, service, trigger_list):
+        """
+        :param service:
+        :param trigger_list:
+        """
         service_triggers = service.triggers.list().all()
         triggers_dict = dict()
         for trigger in service_triggers:
@@ -778,6 +792,10 @@ class Packages:
                     updated_trigger.update()
 
     def __compare_and_update_service_configurations(self, service, service_json):
+        """
+        :param service:
+        :param service_json:
+        """
         # take json configuration from service
         _json = service.to_json()
         _new_json = _json.copy()
@@ -796,6 +814,10 @@ class Packages:
         return to_update, service
 
     def __compare_and_upload_artifacts(self, artifacts, package):
+        """
+        :param artifacts:
+        :param package:
+        """
         for artifact in artifacts:
             # create/get .dataloop dir
             cwd = os.getcwd()
@@ -824,6 +846,10 @@ class Packages:
 
     @staticmethod
     def _package_json_generator(package_catalog, package_name):
+        """
+        :param package_catalog:
+        :param package_name:
+        """
         if package_catalog == PackageCatalog.DEFAULT_PACKAGE_TYPE:
             with open(assets.paths.ASSETS_PACKAGE_FILEPATH, 'r') as f:
                 package_asset = json.load(f)
@@ -911,8 +937,17 @@ class Packages:
         return _json
 
     @staticmethod
-    def build_dict(actions, name='default_module', filters=None, function='run',
-                   execution_mode='Once', type_t="Event"):
+    def build_trigger_dict(actions, name='default_module', filters=None, function='run',
+                           execution_mode='Once', type_t="Event"):
+        """
+        build trigger dict
+        :param actions:
+        :param name:
+        :param filters:
+        :param function:
+        :param execution_mode:
+        :param type_t:
+        """
         if not isinstance(actions, list):
             actions = [actions]
 
@@ -938,22 +973,26 @@ class Packages:
 
     @staticmethod
     def _service_json_generator(package_catalog, service_name):
+        """
+        :param package_catalog:
+        :param service_name:
+        """
         triggers = list()
         with open(assets.paths.ASSETS_PACKAGE_FILEPATH, 'r') as f:
             service_json = json.load(f)["services"][0]
         if package_catalog == PackageCatalog.DEFAULT_PACKAGE_TYPE:
             triggers = service_json['triggers']
         elif 'triggers' in package_catalog:
-            trigger_a = Packages.build_dict(name='first_trigger',
-                                            filters=dict(),
-                                            actions=['Created'],
-                                            function='first_method',
-                                            execution_mode='Once')
-            trigger_b = Packages.build_dict(name='second_trigger',
-                                            filters=dict(),
-                                            actions=['Created'],
-                                            function='second_method',
-                                            execution_mode='Once')
+            trigger_a = Packages.build_trigger_dict(name='first_trigger',
+                                                    filters=dict(),
+                                                    actions=['Created'],
+                                                    function='first_method',
+                                                    execution_mode='Once')
+            trigger_b = Packages.build_trigger_dict(name='second_trigger',
+                                                    filters=dict(),
+                                                    actions=['Created'],
+                                                    function='second_method',
+                                                    execution_mode='Once')
             if 'item' in package_catalog:
                 trigger_a['spec']['resource'] = trigger_b['spec']['resource'] = 'Item'
             if 'dataset' in package_catalog:
@@ -962,11 +1001,11 @@ class Packages:
                 trigger_a['spec']['resource'] = trigger_b['spec']['resource'] = 'Annotation'
             triggers += [trigger_a, trigger_b]
         elif 'trigger' in package_catalog:
-            trigger = Packages.build_dict(name='triggername',
-                                          filters=dict(),
-                                          actions=[],
-                                          function=entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME,
-                                          execution_mode='Once')
+            trigger = Packages.build_trigger_dict(name='triggername',
+                                                  filters=dict(),
+                                                  actions=[],
+                                                  function=entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME,
+                                                  execution_mode='Once')
             if 'item' in package_catalog:
                 trigger['spec']['resource'] = 'Item'
             if 'dataset' in package_catalog:
@@ -988,7 +1027,10 @@ class Packages:
     def generate(name=None, src_path=None, service_name=None, package_type=PackageCatalog.DEFAULT_PACKAGE_TYPE):
         """
         Generate new package environment
-
+        :param name:
+        :param src_path:
+        :param service_name:
+        :param package_type:
         :return:
         """
         # name
@@ -1049,6 +1091,10 @@ class Packages:
 
     @staticmethod
     def _mock_json_generator(module: entities.PackageModule, function_name):
+        """
+        :param module:
+        :param function_name:
+        """
         _json = dict(function_name=function_name, module_name=module.name)
         funcs = [func for func in module.functions if func.name == function_name]
         if len(funcs) == 1:
@@ -1063,6 +1109,9 @@ class Packages:
 
     @staticmethod
     def _entry_point_generator(package_catalog):
+        """
+        :param package_catalog:
+        """
         if package_catalog == PackageCatalog.DEFAULT_PACKAGE_TYPE:
             paths_to_service_runner = assets.paths.ASSETS_MAIN_FILEPATH
         elif package_catalog in [PackageCatalog.SINGLE_FUNCTION_ITEM, PackageCatalog.SINGLE_FUNCTION_ITEM_WITH_TRIGGER]:
@@ -1128,6 +1177,13 @@ class Packages:
                            entry_point=entities.package_defaults.DEFAULT_PACKAGE_ENTRY_POINT):
         """
         Test local package
+        :param cwd:
+        :param concurrency:
+        :param package:
+        :param module_name:
+        :param function_name:
+        :param class_name:
+        :param entry_point:
         :return:
         """
         if cwd is None:
@@ -1167,9 +1223,8 @@ class Packages:
     def checkout(self, package=None, package_id=None, package_name=None):
         """
         Checkout as package
-
-        :param package_id:
         :param package:
+        :param package_id:
         :param package_name:
         :return:
         """
@@ -1180,6 +1235,12 @@ class Packages:
 
     @staticmethod
     def check_cls_arguments(cls, missing, function_name, function_inputs):
+        """
+        :param cls:
+        :param missing:
+        :param function_name:
+        :param function_inputs:
+        """
         # input to function and inputs definitions match
         func = getattr(cls, function_name)
         func_inspect = inspect.getfullargspec(func)
@@ -1205,7 +1266,10 @@ class Packages:
 
     @staticmethod
     def _sanity_before_push(src_path, modules):
-
+        """
+        :param src_path:
+        :param modules:
+        """
         if modules is None:
             modules = [DEFAULT_PACKAGE_MODULE]
 
@@ -1349,6 +1413,9 @@ class LocalServiceRunner:
         return service_runner(**kwargs)
 
     def run_local_project(self, project=None):
+        """
+        :param project:
+        """
         package_runner = self.get_mainpy_run_service()
 
         modules = self.package_io.get('modules') if self.package is None else [
@@ -1422,8 +1489,8 @@ class LocalServiceRunner:
     def get_dataset(self, resource_id, project=None) -> entities.Dataset:
         """
         Get dataset
-        :param project:
         :param resource_id:
+        :param project: project entity
         :return: Dataset entity
         """
         dataset_id = resource_id.get('dataset_id', None) if isinstance(resource_id, dict) else resource_id
@@ -1438,11 +1505,24 @@ class LocalServiceRunner:
 
         return datasets.get(dataset_id=dataset_id)
 
+    def get_project(self, resource_id) -> entities.Project:
+        """
+        Get project
+        :param resource_id:
+        :return: Project entity
+        """
+        project_id = resource_id.get('project_id', None) if isinstance(resource_id, dict) else resource_id
+
+        if not isinstance(project_id, str):
+            project_id = self._client_api.state_io.get('project').get('id', None)
+
+        return repositories.Projects(client_api=self._client_api).get(project_id=project_id)
+
     def get_item(self, resource_id, project=None) -> entities.Item:
         """
         Get item
-        :param project:
         :param resource_id:
+        :param project: project entity
         :return: Item entity
         """
         if project is not None:
@@ -1455,8 +1535,8 @@ class LocalServiceRunner:
     def get_annotation(self, resource_id, project=None) -> entities.Annotation:
         """
         Get annotation
-        :param project:
         :param resource_id:
+        :param project: project entity
         :return: Annotation entity
         """
         item = self.get_item(project=project, resource_id=resource_id)
@@ -1468,8 +1548,8 @@ class LocalServiceRunner:
         Get field in mock json
         :param field_name:
         :param field_type:
-        :param project:
         :param mock_json:
+        :param project:
         :param mock_inputs:
         :return:
         """
@@ -1494,6 +1574,9 @@ class LocalServiceRunner:
         elif field_type == 'Annotation':
             return self.get_annotation(project=project, resource_id=resource_id)
 
+        elif field_type == 'Project':
+            return self.get_project(resource_id=resource_id)
+
         elif field_type == 'Json':
             return mock_input['value']
 
@@ -1517,10 +1600,17 @@ class PackageIO:
         return cfg
 
     def get(self, key):
+        """
+        :param key:
+        """
         cfg = self.read_json()
         return cfg[key]
 
     def put(self, key, value):
+        """
+        :param key:
+        :param value:
+        """
         try:
             cfg = self.read_json()
             cfg[key] = value

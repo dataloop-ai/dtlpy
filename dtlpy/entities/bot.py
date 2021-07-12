@@ -18,8 +18,10 @@ class Bot(entities.User):
     def _protected_from_json(_json, project, client_api, bots=None):
         """
         Same as from_json but with try-except to catch if error
-        :param _json:
-        :param project:
+        :param _json: platform json
+        :param project: project entity
+        :param client_api: ApiClient entity
+        :param bots:
         :return:
         """
         try:
@@ -38,9 +40,9 @@ class Bot(entities.User):
         """
         Build a Bot entity object from a json
 
-        :param client_api:
         :param _json: _json response from host
         :param project: project entity
+        :param client_api: ApiClient entity
         :param bots: Bots repository
         :return: User object
         """

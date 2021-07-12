@@ -59,11 +59,11 @@ class Dataset(entities.BaseEntity):
                              is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
-         :param is_fetched: is Entity fetched from Platform
-        :param _json: _json response from host
         :param project: dataset's project
+        :param _json: _json response from host
+        :param client_api: ApiClient entity
         :param datasets: Datasets repository
-        :param client_api: client_api
+        :param is_fetched: is Entity fetched from Platform
         :return: Dataset object
         """
         try:
@@ -88,11 +88,11 @@ class Dataset(entities.BaseEntity):
         """
         Build a Dataset entity object from a json
 
-        :param is_fetched: is Entity fetched from Platform
-        :param _json: _json response from host
         :param project: dataset's project
+        :param _json: _json response from host
+        :param client_api: ApiClient entity
         :param datasets: Datasets repository
-        :param client_api: client_api
+        :param is_fetched: is Entity fetched from Platform
         :return: Dataset object
         """
         projects = _json.get('projects', None)
@@ -518,8 +518,8 @@ class Dataset(entities.BaseEntity):
         Add labels to dataset
 
         :param label_list:
-        :param recipe_id: optional
         :param ontology_id: optional
+        :param recipe_id: optional
         :return: label entities
         """
         # get recipe
@@ -581,8 +581,8 @@ class Dataset(entities.BaseEntity):
         Add labels to dataset
 
         :param label_list:
-        :param recipe_id: optional
         :param ontology_id: optional
+        :param recipe_id: optional
         :param upsert if True will add in case it does not existing
         :return: label entities
         """

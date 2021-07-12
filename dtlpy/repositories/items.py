@@ -68,7 +68,7 @@ class Items:
     def get_all_items(self, filters: entities.Filters = None) -> [entities.Item]:
         """
         Get all items in dataset
-
+        :param filters: dl.Filters entity to filters items
         :return: list of all items
         """
         if filters is None:
@@ -120,8 +120,8 @@ class Items:
         List items
 
         :param filters: Filters entity or a dictionary containing filters parameters
-        :param page_offset:
-        :param page_size:
+        :param page_offset: start page
+        :param page_size: page size
         :return: Pages object
         """
         # default filters
@@ -171,7 +171,7 @@ class Items:
         :param filepath: optional - search by remote path
         :param item_id: optional - search by id
         :param fetch: optional - fetch entity from platform, default taken from cookie
-        :parm is_dir: True if you want to get an item from dir type
+        :param is_dir: True if you want to get an item from dir type
         :return: Item object
         """
         if fetch is None:
@@ -271,9 +271,9 @@ class Items:
         """
         Delete item from platform
 
-        :param filters: optional - delete items by filter
         :param filename: optional - search item by remote path
         :param item_id: optional - search item by id
+        :param filters: optional - delete items by filter
         :return: True
         """
         if item_id is not None:
@@ -317,12 +317,11 @@ class Items:
                system_metadata=False):
         """
         Update items metadata
-
-        :param system_update_values: values in system metadata to be updated
-        :param update_values: optional field to be updated and new values
-        :param filters: optional update filtered items by given filter
         :param item: Item object
-        :param system_metadata: bool
+        :param filters: optional update filtered items by given filter
+        :param update_values: optional field to be updated and new values
+        :param system_update_values: values in system metadata to be updated
+        :param system_metadata: bool - True, if you want to change metadata system
         :return: Item object
         """
         ref = filters is not None and (filters._ref_task or filters._ref_assignment)
@@ -456,14 +455,14 @@ class Items:
         Local filesystem will remain.
         If "*" at the end of local_path (e.g. "/images/*") items will be uploaded without head directory
 
-        :param item_metadata:
-        :param overwrite: optional - default = False
         :param local_path: list of local file, local folder, BufferIO, numpy.ndarray or url to upload
         :param local_annotations_path: path to dataloop format annotations json files.
         :param remote_path: remote path to save.
         :param remote_name: remote base name to save.
                             when upload numpy.ndarray as local path, remote_name with .jpg or .png ext is mandatory
         :param file_types: list of file type to upload. e.g ['.jpg', '.png']. default is all
+        :param item_metadata:
+        :param overwrite: optional - default = False
         :return: Output (list/single item)
         """
         # fix remote path
@@ -487,6 +486,11 @@ class Items:
         )
 
     def open_in_web(self, filepath=None, item_id=None, item=None):
+        """
+        :param filepath: item file path
+        :param item_id: item id
+        :param item: item entity
+        """
         if item is None:
             item = self.get(filepath=filepath,
                             item_id=item_id)
@@ -498,7 +502,14 @@ class Items:
 
     def update_status(self, status: entities.ItemStatus, items=None, item_ids=None,
                       filters=None, dataset=None, clear=False):
-
+        """
+        :param status: ItemStatus.COMPLETED, ItemStatus.APPROVED, ItemStatus.DISCARDED
+        :param items:
+        :param item_ids:
+        :param filters:
+        :param dataset:
+        :param clear:
+        """
         if items is None and item_ids is None and filters is None:
             raise exceptions.PlatformException('400', 'Must provide either items, item_ids or filters')
 

@@ -124,6 +124,7 @@ class PipelineExecutions:
     def list(self, filters: entities.Filters = None) -> entities.PagedEntities:
         """
         List project pipeline executions
+        :param filters:
         :return:
         """
         if filters is None:

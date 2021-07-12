@@ -122,8 +122,8 @@ class Annotations:
         List Annotation
 
         :param filters: Filters entity or a dictionary containing filters parameters
-        :param page_offset:
-        :param page_size:
+        :param page_offset: starting page
+        :param page_size: size of page
         :return: Pages object
         """
         if self._dataset_id is not None:
@@ -185,10 +185,10 @@ class Annotations:
         Show annotations
 
         :param image: empty or image to draw on
-        :param height: height
-        :param width: width
         :param thickness: line thickness
         :param with_text: add label to annotation
+        :param height: height
+        :param width: width
         :param annotation_format: options: list(dl.ViewAnnotationOptions)
         :return: ndarray of the annotations
         """
@@ -204,6 +204,7 @@ class Annotations:
 
     def download(self, filepath,
                  annotation_format: entities.ViewAnnotationOptions = entities.ViewAnnotationOptions.MASK,
+                 img_filepath=None,
                  height=None, width=None,
                  thickness=1, with_text=False):
         """
@@ -211,6 +212,7 @@ class Annotations:
 
         :param filepath: Target download directory
         :param annotation_format: optional - list(dl.ViewAnnotationOptions)
+        :param img_filepath: img file path - needed for img_mask
         :param height: optional - image height
         :param width: optional - image width
         :param thickness: optional - annotation format, default =1
@@ -231,6 +233,7 @@ class Annotations:
             width = self.item.width
 
         return annotations.download(filepath=filepath,
+                                    img_filepath=img_filepath,
                                     width=width,
                                     height=height,
                                     thickness=thickness,
@@ -348,8 +351,8 @@ class Annotations:
         """
             Update an existing annotation.
 
-        :param annotations:
-        :param system_metadata:
+        :param annotations: annotations object
+        :param system_metadata: bool - True, if you want to change metadata system
         :return: True
         """
         pool = self._client_api.thread_pools(pool_name='annotation.update')
@@ -461,7 +464,7 @@ class Annotations:
         Set status on annotation
         :param annotation: optional - Annotation entity
         :param annotation_id: optional - annotation id to set status
-        :param status: can be "issue", "approved", "review"
+        :param status: can be AnnotationStatus.ISSUE, AnnotationStatus.APPROVED, AnnotationStatus.REVIEW, AnnotationStatus.CLEAR
         """
         if annotation is None:
             if annotation_id is None:

@@ -58,6 +58,11 @@ def step_impl(context):
     assert isinstance(context.trigger_get, context.dl.entities.Trigger)
 
 
+@behave.then(u"I receive a Cron Trigger object")
+def step_impl(context):
+    assert isinstance(context.trigger_get, context.dl.entities.trigger.CronTrigger)
+
+
 @behave.then(u"Trigger received equals to trigger created")
 def step_impl(context):
     assert context.trigger_get.to_json() == context.trigger.to_json()

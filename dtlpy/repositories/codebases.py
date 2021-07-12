@@ -107,9 +107,9 @@ class Codebases:
     def get(self, codebase_name=None, codebase_id=None, version=None):
         """
         Get a Codebase object
-        :param version: codebase version. default is latest. options: "all", "latest" or ver number - "10"
-        :param codebase_id: optional - search by id
         :param codebase_name: optional - search by name
+        :param codebase_id: optional - search by id
+        :param version: codebase version. default is latest. options: "all", "latest" or ver number - "10"
         :return: Codebase object
         """
         if codebase_id is not None:
@@ -174,6 +174,10 @@ class Codebases:
 
     @staticmethod
     def get_current_version(all_versions_pages, zip_md):
+        """
+        :param all_versions_pages:
+        :param zip_md:
+        """
         latest_version = 0
         same_version_found = None
         # go over all existing versions
@@ -281,6 +285,11 @@ class Codebases:
                        codebase,
                        download_path,
                        local_path):
+        """
+        :param codebase:
+        :param download_path:
+        :param local_path:
+        """
         # downloading with specific filename
         if isinstance(codebase, entities.ItemCodebase):
             artifact_filepath = self.items_repository.download(items=codebase.item_id,
@@ -318,9 +327,13 @@ class Codebases:
         return artifact_filepath
 
     def clone_git(self, codebase, local_path):
+        """
+        :param codebase:
+        :param local_path:
+        """
         if not isinstance(codebase, entities.GitCodebase):
             raise RuntimeError('only support Git Codebase')
-        response = self.git_utils.git_clone(local_path, codebase.git_url)
+        response = self.git_utils.git_clone(local_path, codebase.git_url, tag=codebase.git_tag)
         if response:
             logger.info('Source code was cloned from {}(Git) to: {}'.format(codebase.git_url, local_path))
         else:
@@ -328,6 +341,10 @@ class Codebases:
         return os.path.join(local_path, codebase.git_repo_name)
 
     def pull_git(self, codebase, local_path):
+        """
+        :param codebase:
+        :param local_path:
+        """
         pull_cmd = 'git pull'
         if not codebase.is_git_repo(local_path):
             local_path = os.path.join(local_path, codebase.git_repo_name)

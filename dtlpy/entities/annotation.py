@@ -32,6 +32,7 @@ class AnnotationType(str, Enum):
     POSE = "pose"
     SEGMENTATION = "binary"
     SUBTITLE = "subtitle"
+    TEXT = "text_mark"
 
 
 class ViewAnnotationOptions(str, Enum):
@@ -406,6 +407,7 @@ class Annotation(entities.BaseEntity):
     ##################
     def update_status(self, status: AnnotationStatus = AnnotationStatus.ISSUE):
         """
+        :param status: can be AnnotationStatus.ISSUE, AnnotationStatus.APPROVED, AnnotationStatus.REVIEW, AnnotationStatus.CLEAR
         Open an issue on the annotation
         """
         return self.annotations.update_status(annotation=self, status=status)
@@ -420,7 +422,7 @@ class Annotation(entities.BaseEntity):
     def update(self, system_metadata=False):
         """
         Update an existing annotation in host.
-        :param system_metadata:
+        :param system_metadata: True, if you want to change metadata system
         :return: Annotation object
         """
         return self.annotations.update(annotations=self,
@@ -486,12 +488,13 @@ class Annotation(entities.BaseEntity):
         Show annotations
 
         :param image: empty or image to draw on
-        :param height: height
-        :param width: width
         :param thickness: line thickness
         :param with_text: add label to annotation
+        :param height: height
+        :param width: width
         :param annotation_format: list(dl.ViewAnnotationOptions)
-        :param color: optional
+        :param color: optional - color tuple
+        :param label_instance_dict: the instance labels
         :return: ndarray of the annotations
         """
         try:
@@ -623,9 +626,6 @@ class Annotation(entities.BaseEntity):
         """
         Create a new annotation object annotations
 
-        :param start_time:
-        :param item_width: annotation item's width
-        :param item_height: annotation item's height
         :param item: item to annotate
         :param annotation_definition: annotation type object
         :param object_id: object_id
@@ -633,6 +633,9 @@ class Annotation(entities.BaseEntity):
         :param metadata: metadata
         :param frame_num: optional - first frame number if video annotation
         :param parent_id: add parent annotation ID
+        :param start_time: optional - start time if video annotation
+        :param item_height: annotation item's height
+        :param item_width: annotation item's width
         :return: annotation object
         """
         if frame_num is None:
@@ -728,6 +731,18 @@ class Annotation(entities.BaseEntity):
                    frame_num=None, end_frame_num=None,
                    start_time=None, end_time=None,
                    fixed=True, object_visible=True):
+        """
+        Add a frames state to annotation
+
+        :param annotation_definition: annotation type object - must be same type as annotation
+        :param frame_num: first frame number
+        :param end_frame_num: last frame number
+        :param start_time: starting time for video
+        :param end_time: ending time for video
+        :param fixed: is fixed
+        :param object_visible: does the annotated object is visible
+        :return: annotation object
+        """
         # handle fps
         if self.fps is None:
             if self._item is not None:
@@ -837,14 +852,15 @@ class Annotation(entities.BaseEntity):
                              dataset=None):
         """
         Same as from_json but with try-except to catch if error
-        :param client_api:
+        :param _json: platform json
+        :param item: item
+        :param client_api: ApiClient entity
         :param annotations:
         :param is_video:
         :param fps:
         :param item_metadata:
-        :param _json: platform json
         :param dataset
-        :param item: item
+
         :return: annotation object
         """
         try:
@@ -874,14 +890,14 @@ class Annotation(entities.BaseEntity):
                   dataset=None):
         """
         Create an annotation object from platform json
-        :param client_api:
+        :param _json: platform json
+        :param item: item
+        :param client_api: ApiClient entity
         :param annotations:
         :param is_video:
         :param fps:
         :param item_metadata:
         :param dataset
-        :param _json: platform json
-        :param item: item
         :return: annotation object
         """
         if item_metadata is None:
@@ -1332,6 +1348,15 @@ class FrameAnnotation(entities.BaseEntity):
     #######
     @classmethod
     def new(cls, annotation, annotation_definition, frame_num, fixed, object_visible=True):
+        """
+        new frame state to annotation
+        :param annotation: annotation
+        :param annotation_definition: annotation type object - must be same type as annotation
+        :param frame_num: frame number
+        :param fixed: is fixed
+        :param object_visible: does the annotated object is visible
+        :return: FrameAnnotation object
+        """
         return cls(
             # annotations
             annotation=annotation,
@@ -1345,6 +1370,13 @@ class FrameAnnotation(entities.BaseEntity):
 
     @classmethod
     def from_snapshot(cls, annotation, _json, fps):
+        """
+        new frame state to annotation
+        :param annotation: annotation
+        :param _json: annotation type object - must be same type as annotation
+        :param fps: frame number
+        :return: FrameAnnotation object
+        """
         # get annotation class
         _json['type'] = annotation.type
         annotation_definition = cls.json_to_annotation_definition(_json=_json)

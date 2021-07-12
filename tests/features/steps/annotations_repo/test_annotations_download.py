@@ -2,30 +2,39 @@ import behave
 import os
 
 
-@behave.when(u'I download items annotations with mask to "{path}"')
-def step_impl(context, path):
+@behave.when(u'I download items annotations with "{ann_type}" to "{path}"')
+def step_impl(context, ann_type, path):
     if context.item.height is None:
         context.item.height = 768
     if context.item.width is None:
         context.item.width = 1536
     path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], path)
-    context.item.annotations.download(
-        filepath=path,
-        annotation_format='mask',
-        thickness=1
-    )
+    if ann_type == 'img_mask':
+        img_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'],
+                                "assets_split/annotations_download/0000000162.jpg")
+        context.item.annotations.download(
+            filepath=path,
+            img_filepath=img_path,
+            annotation_format=ann_type,
+            thickness=1
+        )
+    else:
+        context.item.annotations.download(
+            filepath=path,
+            annotation_format=ann_type,
+            thickness=1)
 
 
-@behave.when(u'I download items annotations with instance to "{path}"')
-def step_impl(context, path):
+@behave.when(u'I download items annotations from item with "{ann_type}" to "{path}"')
+def step_impl(context, ann_type, path):
     if context.item.height is None:
         context.item.height = 768
     if context.item.width is None:
         context.item.width = 1536
     path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], path)
-    context.item.annotations.download(
-        filepath=path,
-        annotation_format='instance',
+    context.item.download(
+        local_path=path,
+        annotation_options=ann_type,
         thickness=1
     )
 
@@ -49,9 +58,13 @@ def step_impl(context, folder_path):
 def step_impl(context, file_type, folder_path):
     folder_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], folder_path)
     items = os.listdir(folder_path)
-    file = file_type + '.png'
+    if file_type == 'json':
+        file = file_type + '.json'
+    elif file_type == 'vtt':
+        file = file_type + '.vtt'
+    else:
+        file = file_type + '.png'
     assert file in items
-
 
 # @behave.then(u'"{file_type}" is correctly downloaded (compared with "{file_to_compare}")')
 # def step_impl(context, file_type, file_to_compare):

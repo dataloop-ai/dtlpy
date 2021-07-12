@@ -13,3 +13,4 @@ from .subtitle import Subtitle
 from .description import Description
 from .undefined_annotation import UndefinedAnnotationType
 from .pose import Pose
+from .text import Text

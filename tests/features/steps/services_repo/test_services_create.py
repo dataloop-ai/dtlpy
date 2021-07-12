@@ -1,6 +1,10 @@
+import os
+
 import behave
 import json
 import time
+
+from dtlpy import FunctionIO, PackageInputType
 
 
 @behave.when(u"I create a service")
@@ -45,6 +49,20 @@ def step_impl(context):
         context.second_service = context.service
     else:
         context.first_service = context.service
+
+
+@behave.then(u'I upload an item by the name of "{item_name}"')
+def step_impl(context, item_name):
+    local_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], '0000000162.jpg')
+    context.item = context.dataset.items.upload(local_path=local_path)
+
+
+@behave.then(u"I run a service execute for the item")
+def step_impl(context):
+    context.ex = context.service.execute(
+        execution_input=FunctionIO(name='item', value=context.item.id, type=PackageInputType.ITEM),
+        function_name='run',
+        project_id=context.package.project_id)
 
 
 @behave.then(u"I receive a Service entity")

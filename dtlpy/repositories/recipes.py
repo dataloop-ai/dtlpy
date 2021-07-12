@@ -50,6 +50,11 @@ class Recipes:
         Create New Recipe
 
         if ontology_ids is None an ontology will be created first
+        :param project_ids:
+        :param ontology_ids:
+        :param labels:
+        :param recipe_name:
+        :param attributes:
         """
         if labels is None:
             labels = list()
@@ -92,6 +97,7 @@ class Recipes:
     def list(self, filters: entities.Filters = None) -> miscellaneous.List[entities.Recipe]:
         """
         List recipes for dataset
+        :param filters:
         """
         if self._dataset is not None:
             try:
@@ -217,7 +223,7 @@ class Recipes:
         Update items metadata
 
         :param recipe: Recipe object
-        :param system_metadata: bool
+        :param system_metadata: bool - True, if you want to change metadata system
         :return: Recipe object
         """
         url_path = '/recipes/%s' % recipe.id

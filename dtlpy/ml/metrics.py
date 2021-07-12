@@ -1,13 +1,27 @@
 # Migrated from external repo at 2021-06-09 by shefi
 import numpy as np
 import pandas as pd
-import warnings
 import logging
 import json
 
+from .. import entities
+
 logger = logging.getLogger(__name__)
 
-from .. import entities
+
+class Matching:
+    def __init__(self, annotation_id):
+        self.annotation_id = annotation_id
+        self.annotation_score = 0
+        self.attributes_score = 0
+        self.match_annotation_id = None
+        # Replace the old annotation score
+        self.geometry_score = 0
+        self.label_score = 0
+
+    def __repr__(self):
+        return 'annotation: {:.2f}, attributes: {:.2f}, geomtry: {:.2f}, label: {:.2f}'.format(
+            self.annotation_score, self.attributes_score, self.geometry_score, self.label_score)
 
 
 def calculate_iou_box(pts1, pts2):
@@ -21,14 +35,41 @@ def calculate_iou_box(pts1, pts2):
         from shapely.geometry import Polygon
     except (ImportError, ModuleNotFoundError) as err:
         raise RuntimeError('dtlpy depends on external package. Please install ') from err
-    poly_1 = Polygon([[pts1[0][0], pts1[0][1]],
-                      [pts1[0][0], pts1[1][1]],
-                      [pts1[1][0], pts1[1][1]],
-                      [pts1[1][0], pts1[0][1]]])
-    poly_2 = Polygon([[pts2[0][0], pts2[0][1]],
-                      [pts2[0][0], pts2[1][1]],
-                      [pts2[1][0], pts2[1][1]],
-                      [pts2[1][0], pts2[0][1]]])
+    if len(pts1) == 2:
+        # regular box annotation (2 pts)
+        pt1_left_top = [pts1[0][0], pts1[0][1]]
+        pt1_right_top = [pts1[0][0], pts1[1][1]]
+        pt1_right_bottom = [pts1[1][0], pts1[1][1]]
+        pt1_left_bottom = [pts1[1][0], pts1[0][1]]
+    else:
+        # rotated box annotation (4 pts)
+        pt1_left_top = pts1[0]
+        pt1_right_top = pts1[1]
+        pt1_left_bottom = pts1[2]
+        pt1_right_bottom = pts1[3]
+
+    poly_1 = Polygon([pt1_left_top,
+                      pt1_right_top,
+                      pt1_right_bottom,
+                      pt1_left_bottom])
+
+    if len(pts2) == 2:
+        # regular box annotation (2 pts)
+        pt2_left_top = [pts2[0][0], pts2[0][1]]
+        pt2_right_top = [pts2[0][0], pts2[1][1]]
+        pt2_right_bottom = [pts2[1][0], pts2[1][1]]
+        pt2_left_bottom = [pts2[1][0], pts2[0][1]]
+    else:
+        # rotated box annotation (4 pts)
+        pt2_left_top = pts2[0]
+        pt2_right_top = pts2[1]
+        pt2_left_bottom = pts2[2]
+        pt2_right_bottom = pts2[3]
+
+    poly_2 = Polygon([pt2_left_top,
+                      pt2_right_top,
+                      pt2_right_bottom,
+                      pt2_left_bottom])
     iou = poly_1.intersection(poly_2).area / poly_1.union(poly_2).area
     return iou
 
@@ -44,19 +85,12 @@ def calculate_iou_polygon(pts1, pts2):
     return iou
 
 
-class Matching:
-    def __init__(self, annotation_id):
-        self.annotation_id = annotation_id
-        self.annotation_score = 0
-        self.attributes_score = 0
-        self.match_annotation_id = None
-        # Replace the old annotation score
-        self.geometry_score = 0
-        self.label_score = 0
-
-
 def match_box(ref_annotations, test_annotations, match_thr=0.5, geometry_only=False):
     """
+    Return matching scores between two sets of annotations
+    :param ref_annotations: list of reference annotation (GT)
+    :param test_annotations: list of test annotations
+    :param match_thr: float - matching annotation iou threshold
     :param geometry_only: `bool` if True ignores the label name
     Returns `dict` of annotation_id: `Matching`
     """
@@ -113,94 +147,143 @@ def match_labels(ref_label, test_label):
     return int(ref_label in test_label or test_label in ref_label)
 
 
-def match_semantic(ref_annotations, test_annotations):
-    annotations_scores = {annotation.id: Matching(annotation.id) for annotation in ref_annotations}
-    test_annotations_inds = list(range(len(test_annotations)))
-    for r_annotation in ref_annotations:
-        ious = [-1] * len(test_annotations_inds)
-        ious_ids = [-1] * len(test_annotations_inds)
-        for i_ann, t_annotation in enumerate([test_annotations[ind] for ind in test_annotations_inds]):
-            if t_annotation.label != r_annotation.label:
-                continue
-            mixed_fill = r_annotation.show(thickness=-1, annotation_format='instance', color=(1,)) + \
+def match_semantic(ref_annotations, test_annotations, match_thr=0.5, geometry_only=False):
+    """
+    Return matching scores between two sets of annotations
+
+    :param ref_annotations: list of reference annotation (GT)
+    :param test_annotations: list of test annotations
+    :param match_thr: float - matching annotation iou threshold
+    :param geometry_only: `bool` if True ignores the label name
+    Returns `dict` of annotation_id: `Matching`
+    """
+    test_annotations_scores = {annotation.id: Matching(annotation.id) for annotation in test_annotations}
+    ref_annotations_dict = {ref.id: ref for ref in ref_annotations}
+    for t_annotation in test_annotations:
+        ious_dict = {ref_id: -1 for ref_id in ref_annotations_dict.keys()}
+        # Calculate the IoU (and annotation.id) for valid matches - same label
+        for ref_ann_id, r_annotation in ref_annotations_dict.items():
+            if not geometry_only:
+                if t_annotation.label != r_annotation.label:
+                    # TODO: split to geometry score and label score
+                    continue
+            joint_mask = r_annotation.show(thickness=-1, annotation_format='instance', color=(1,)) + \
                          t_annotation.show(thickness=-1, annotation_format='instance', color=(1,))
-            ious[i_ann] = np.sum(np.sum(mixed_fill == 2) / np.sum(mixed_fill > 0))
-            ious_ids[i_ann] = t_annotation.id
-        if ious and np.max(ious) > 0.5:
-            # add only if match - later we'll add the rest
-            annotations_scores[r_annotation.id].match_annotation_id = ious_ids[np.argmax(ious)]
-            annotations_scores[r_annotation.id].annotation_score = np.max(ious)
-            annotations_scores[r_annotation.id].attributes_score = match_attributes(ref_attrs=r_annotation.attributes,
-                                                                                    test_attrs=test_annotations[
-                                                                                        test_annotations_inds[np.argmax(
-                                                                                            ious)]].attributes)
-            test_annotations_inds.pop(np.argmax(ious))
-    return annotations_scores
-
-
-def match_polygon(ref_annotations, test_annotations):
-    annotations_scores = {annotation.id: Matching(annotation.id) for annotation in ref_annotations}
-    test_annotations_inds = list(range(len(test_annotations)))
-    for r_annotation in ref_annotations:
-        ious = [-1] * len(test_annotations_inds)
-        ious_ids = [-1] * len(test_annotations_inds)
-
-        for i_ann, t_annotation in enumerate([test_annotations[ind] for ind in test_annotations_inds]):
-            if t_annotation.label != r_annotation.label:
-                continue
-            mixed_fill = r_annotation.show(thickness=-1, annotation_format='instance', color=(1,)) + \
-                         t_annotation.show(thickness=-1, annotation_format='instance', color=(1,))
-            ious[i_ann] = np.sum(np.sum(mixed_fill == 2) / np.sum(mixed_fill > 0))
-
-        if ious:  # and np.max(ious) > 0.5:
-            # add only if match - later we'll add the rest
-            annotations_scores[r_annotation.id].match_annotation_id = ious_ids[np.argmax(ious)]
-            annotations_scores[r_annotation.id].annotation_score = np.max(ious)
-            annotations_scores[r_annotation.id].attributes_score = match_attributes(ref_attrs=r_annotation.attributes,
-                                                                                    test_attrs=test_annotations[
-                                                                                        test_annotations_inds[np.argmax(
-                                                                                            ious)]].attributes)
-
-            test_annotations_inds.pop(np.argmax(ious))
-    return annotations_scores
-
-
-def match_point(ref_annotations, test_annotations):
-    warnings.warn("Under construction")
-    return
-    # TODO: Test ref / Test
-    annotations_scores = {annotation.id: Matching(annotation.id) for annotation in test_annotations}
-
-    # # Calculate using linear algebra
-    # dist_mat = np.asarray([[np.linalg.norm(np.array((a.x, a.y)) - np.array((b.x,  b.y)))
-    #                         for a in ref_annotations]
-    #                        for b in test_annotations])
-    # min_distances = np.min(dist_mat, axis=0)
-    # annotations_scores = {annotation.id: min_dist for annotation, min_dist in zip(ref_annotations, min_distances)}
-
-    for r_annotation in ref_annotations:
-        if r_annotation.type != 'point':
+            mask_iou = np.sum(np.sum(joint_mask == 2) / np.sum(joint_mask > 0))
+            ious_dict[ref_ann_id] = mask_iou
+        if len(ious_dict) == 0:
             continue
-        distances = list()
-        for t_annotation in test_annotations:
-            if t_annotation.type != 'point':
-                continue
-            if t_annotation.label != r_annotation.label:
-                continue
-            distances.append(np.sqrt(np.power(r_annotation.x - t_annotation.y, 2) +
-                                     np.power(r_annotation.y - t_annotation.y, 2)))
-        if distances:
-            # annotations_scores[r_annotation] = np.min(distances)
-            match_ind = np.argmin(distances)
-            match_ann = ref_annotations[match_ind]
-
-            annotations_scores[t_annotation.id].match_annotation_id = match_ann.id
-            annotations_scores[t_annotation.id].annotation_score = np.min(distances)
-            annotations_scores[t_annotation.id].attributes_score = match_attributes(
+        best_match_id = max(ious_dict, key=ious_dict.get)
+        best_match_iou = ious_dict[best_match_id]
+        if best_match_iou > match_thr:
+            # add only if match - later we'll add the rest
+            test_annotations_scores[t_annotation.id].match_annotation_id = best_match_id
+            test_annotations_scores[t_annotation.id].annotation_score = best_match_iou
+            test_annotations_scores[t_annotation.id].attributes_score = match_attributes(
                 test_attrs=t_annotation.attributes,
-                ref_attrs=match_ann.attributes)
+                ref_attrs=ref_annotations_dict[best_match_id].attributes
+            )
+            test_annotations_scores[t_annotation.id].geometry_score = best_match_iou
+            test_annotations_scores[t_annotation.id].label_score = match_labels(
+                ref_label=ref_annotations_dict[best_match_id].label,
+                test_label=t_annotation.label
+            )
+            # pop the matched annotation - so it wont be used any more
+            _ = ref_annotations_dict.pop(best_match_id)
+    return test_annotations_scores
 
-    return annotations_scores
+
+def match_polygon(ref_annotations, test_annotations, match_thr=0.5, geometry_only=False):
+    """
+        Return matching scores between two sets of annotations
+        :param ref_annotations: list of reference annotation (GT)
+        :param test_annotations: list of test annotations
+        :param match_thr: float - matching annotation iou threshold
+        :param geometry_only: `bool` if True ignores the label name
+        Returns `dict` of annotation_id: `Matching`
+    """
+    test_annotations_scores = {annotation.id: Matching(annotation.id) for annotation in test_annotations}
+    ref_annotations_dict = {ref.id: ref for ref in ref_annotations}
+    for t_annotation in test_annotations:
+        ious_dict = {ref_id: -1 for ref_id in ref_annotations_dict.keys()}
+        # Calculate the IoU (and annotation.id) for valid matches - same label
+        for ref_ann_id, r_annotation in ref_annotations_dict.items():
+            if not geometry_only:
+                if t_annotation.label != r_annotation.label:
+                    # TODO: split to geometry score and label score
+                    continue
+            ious_dict[ref_ann_id] = calculate_iou_polygon(pts1=r_annotation.geo, pts2=t_annotation.geo)
+        if len(ious_dict) == 0:
+            continue
+        best_match_id = max(ious_dict, key=ious_dict.get)
+        best_match_iou = ious_dict[best_match_id]
+        if best_match_iou > match_thr:
+            # add only if match - later we'll add the rest
+            test_annotations_scores[t_annotation.id].match_annotation_id = best_match_id
+            test_annotations_scores[t_annotation.id].annotation_score = best_match_iou
+            test_annotations_scores[t_annotation.id].attributes_score = match_attributes(
+                test_attrs=t_annotation.attributes,
+                ref_attrs=ref_annotations_dict[best_match_id].attributes
+            )
+            test_annotations_scores[t_annotation.id].geometry_score = best_match_iou
+            test_annotations_scores[t_annotation.id].label_score = match_labels(
+                ref_label=ref_annotations_dict[best_match_id].label,
+                test_label=t_annotation.label
+            )
+
+            # pop the matched annotation - so it wont be used any more
+            _ = ref_annotations_dict.pop(best_match_id)
+    return test_annotations_scores
+
+
+def match_point(ref_annotations, test_annotations, match_thr=100, geometry_only=False):
+    """
+    Return matching scores between two sets of annotations
+    :param ref_annotations: list of reference annotation (GT)
+    :param test_annotations: list of test annotations
+    :param match_thr: float - matching annotation iou threshold
+    :param geometry_only: `bool` if True ignores the label name
+    Returns `dict` of annotation_id: `Matching`
+
+    """
+    test_annotations_scores = {annotation.id: Matching(annotation.id) for annotation in test_annotations}
+    ref_annotations_dict = {ref.id: ref for ref in ref_annotations}
+    for t_annotation in test_annotations:
+        ious_dict = {ref_id: -1 for ref_id in ref_annotations_dict.keys()}
+        # Calculate the IoU (and annotation.id) for valid matches - same label
+        for ref_ann_id, r_annotation in ref_annotations_dict.items():
+            if not geometry_only:
+                if t_annotation.label != r_annotation.label:
+                    # TODO: split to geometry score and label score
+                    continue
+            point_dist = np.linalg.norm(np.array((r_annotation.x, r_annotation.y)) -
+                                        np.array((t_annotation.x, t_annotation.y)))
+            if point_dist > match_thr:
+                continue
+            # to create a score between [0, 1] - 1 is the exact match
+            noramlized_dist = np.abs(point_dist - match_thr) / match_thr
+            ious_dict[ref_ann_id] = noramlized_dist
+        if len(ious_dict) == 0:
+            continue
+        best_match_id = max(ious_dict, key=ious_dict.get)
+        best_match_iou = ious_dict[best_match_id]
+        if best_match_iou < match_thr:
+            # add only if match - later we'll add the rest
+            test_annotations_scores[t_annotation.id].match_annotation_id = best_match_id
+            test_annotations_scores[t_annotation.id].annotation_score = best_match_iou
+            test_annotations_scores[t_annotation.id].attributes_score = match_attributes(
+                test_attrs=t_annotation.attributes,
+                ref_attrs=ref_annotations_dict[best_match_id].attributes
+            )
+            test_annotations_scores[t_annotation.id].geometry_score = best_match_iou
+            test_annotations_scores[t_annotation.id].label_score = match_labels(
+                ref_label=ref_annotations_dict[best_match_id].label,
+                test_label=t_annotation.label
+            )
+
+            # pop the matched annotation - so it wont be used any more
+            _ = ref_annotations_dict.pop(best_match_id)
+    return test_annotations_scores
 
 
 def item_annotation_duration(item: entities.Item,
