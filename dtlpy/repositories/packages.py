@@ -82,15 +82,24 @@ class Packages:
     ###########
     # methods #
     ###########
+    @property
+    def platform_url(self):
+        return self._client_api._get_resource_url("projects/{}/packages".format(self.project.id))
+
     def open_in_web(self, package=None, package_id=None, package_name=None):
         """
         :param package:
         :param package_id:
         :param package_name:
         """
-        if package is None:
-            package = self.get(package_name=package_name, package_id=package_id)
-        self._client_api._open_in_web(resource_type='package', project_id=package.project_id, package_id=package.id)
+        if package_name is not None:
+            package = self.get(package_name=package_name)
+        if package is not None:
+            package.open_in_web()
+        elif package_id is not None:
+            self._client_api._open_in_web(url=self.platform_url + '/' + str(package_id) + '/main')
+        else:
+            self._client_api._open_in_web(url=self.platform_url)
 
     def revisions(self, package: entities.Package = None, package_id=None):
         """

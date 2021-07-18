@@ -183,6 +183,10 @@ class Task:
         return _json
 
     @property
+    def platform_url(self):
+        return self._client_api._get_resource_url("projects/{}/tasks/{}".format(self.project.id, self.id))
+
+    @property
     def current_assignments(self):
         if self._current_assignments is None:
             self._current_assignments = list()
@@ -233,6 +237,14 @@ class Task:
         if self._dataset is None:
             self._dataset = repositories.Datasets(client_api=self._client_api, project=self._project).get(
                 dataset_id=self.dataset_id)
+
+    def open_in_web(self):
+        """
+        Open the task in web platform
+
+        :return:
+        """
+        self._client_api._open_in_web(url=self.platform_url)
 
     def delete(self):
         """

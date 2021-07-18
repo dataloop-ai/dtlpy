@@ -7,6 +7,6 @@ Feature: Pipeline update testing
 
      @pipelines.delete
      Scenario: Update pipeline
-         When I create a pipeline with name "test_pipeline_update"
+         When I create a pipeline with name "testpipelineupdate"
          And I update pipeline description
          Then Pipeline received equals Pipeline changed except for "description"

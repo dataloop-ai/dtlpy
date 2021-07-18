@@ -147,8 +147,9 @@ class Item(entities.BaseEntity):
     @_repositories.default
     def set_repositories(self):
         reps = namedtuple('repositories',
-                          field_names=['annotations', 'datasets', 'items', 'codebases', 'artifacts', 'modalities'])
-        reps.__new__.__defaults__ = (None, None, None, None, None, None)
+                          field_names=['annotations', 'datasets', 'items', 'codebases', 'artifacts', 'modalities',
+                                       'features'])
+        reps.__new__.__defaults__ = (None, None, None, None, None, None, None)
 
         if self._dataset is None:
             items = repositories.Items(client_api=self._client_api,
@@ -156,9 +157,12 @@ class Item(entities.BaseEntity):
                                        dataset_id=self.datasetId,
                                        datasets=repositories.Datasets(client_api=self._client_api, project=None))
             datasets = items.datasets
+            features = repositories.Features(client_api=self._client_api,
+                                             project=self._project)
         else:
             items = self.dataset.items
             datasets = self.dataset.datasets
+            features = self.dataset.features
 
         r = reps(annotations=repositories.Annotations(client_api=self._client_api,
                                                       dataset_id=self.datasetId,
@@ -168,7 +172,8 @@ class Item(entities.BaseEntity):
                  datasets=datasets,
                  codebases=None,
                  artifacts=None,
-                 modalities=Modalities(item=self))
+                 modalities=Modalities(item=self),
+                 features=features)
         return r
 
     @property
@@ -190,6 +195,11 @@ class Item(entities.BaseEntity):
     def items(self):
         assert isinstance(self._repositories.items, repositories.Items)
         return self._repositories.items
+
+    @property
+    def features(self):
+        assert isinstance(self._repositories.features, repositories.Features)
+        return self._repositories.features
 
     ##############
     # Properties #
@@ -242,6 +252,11 @@ class Item(entities.BaseEntity):
         return description
 
     @property
+    def platform_url(self):
+        return self._client_api._get_resource_url(
+            "projects/{}/datasets/{}/items/{}".format(self.project.id, self._dataset.id, self.id))
+
+    @property
     def snapshot_partition(self):
         return self.metadata['system'].get('snapshotPartition', None)
 
@@ -261,11 +276,9 @@ class Item(entities.BaseEntity):
         try:
             self.metadata['system']['snapshotPartition'] = partition
             self.update(system_metadata=True)
-            return True
         except Exception:
             logger.error('Error updating snapshot partition. Please use platform')
             logger.debug(traceback.format_exc())
-            return False
 
     @description.setter
     def description(self, text: str):
@@ -418,7 +431,12 @@ class Item(entities.BaseEntity):
                                 wait=wait)
 
     def open_in_web(self):
-        self.items.open_in_web(item=self)
+        """
+        Open the items in web platform
+
+        :return:
+        """
+        self._client_api._open_in_web(url=self.platform_url)
 
     def update_status(self, status: ItemStatus, clear=False):
         """

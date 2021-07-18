@@ -181,6 +181,29 @@ class Assignments:
         assert isinstance(assignment, entities.Assignment)
         return assignment
 
+    @property
+    def platform_url(self):
+        if self.task.id is None or self.project_id is None:
+            raise ValueError("must have project and task")
+
+        return self._client_api._get_resource_url(
+            "projects/{}/tasks/{}/assignments".format(self.project_id, self.task.id))
+
+    def open_in_web(self, assignment_name=None, assignment_id=None, assignment=None):
+        """
+        :param assignment_name:
+        :param assignment_id:
+        :param assignment:
+        """
+        if assignment_name is not None:
+            assignment = self.get(assignment_name=assignment_name)
+        if assignment is not None:
+            assignment.open_in_web()
+        elif assignment_id is not None:
+            self._client_api._open_in_web(url=self.platform_url + '/' + str(assignment_id))
+        else:
+            self._client_api._open_in_web(url=self.platform_url)
+
     def reassign(self, assignee_id, assignment=None, assignment_id=None, task=None, task_id=None):
         """
         Reassign an assignment

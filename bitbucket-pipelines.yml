@@ -34,6 +34,18 @@ pipelines:
             - python3 bumpversion.py --hard $BITBUCKET_TAG.0
             - git push --follow-tags
             - cd ..
+      - step:
+          name: Update dataloop-infra
+          image: node:12.13.1
+          script:
+            - case "$BITBUCKET_TAG" in "") export BITBUCKET_TAG="build-$BITBUCKET_BUILD_NUMBER"; esac
+            - if [[ $BITBUCKET_TAG == *"rc"* || $BITBUCKET_TAG == *"prod"* ]]; then exit 0; fi
+            - git config --global user.email "devops@dataloop.ai"
+            - git config --global user.name "sdk-docs-pipeline"
+            - git clone --branch dev git@bitbucket.org:dataloop-ai/dataloop-infra.git && sed -i "s/^SDK_DOCS.*$/SDK_DOCS=$BITBUCKET_TAG/" dataloop-infra/.versions && cat dataloop-infra/.versions
+            - cd dataloop-infra && git commit -am "SDK_DOCS=$BITBUCKET_TAG"
+            - git tag -a $BITBUCKET_TAG -m "SDK_DOCS=$BITBUCKET_TAG" && git push --follow-tags
+            - "curl -XPOST -H \"Content-type: application/json\" --data '{\"text\":\"[DEV] Updated dataloop infra repository SDK_DOCS='$BITBUCKET_TAG' - dataloop infra pipeline is now running\"}' $SLACK_PIPELINE_NOTIFICATION_URL"
     "run-test-python-3.5.4":
       - step:
           image: python:3.5.4

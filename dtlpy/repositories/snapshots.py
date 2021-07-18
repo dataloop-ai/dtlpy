@@ -438,6 +438,22 @@ class Snapshots:
             raise ValueError('Cannot download bucket of type: {}'.format(snapshot.bucket.type))
         return output
 
+    @property
+    def platform_url(self):
+        return self._client_api._get_resource_url("projects/{}/snapshots".format(self.project.id))
+
+    def open_in_web(self, snapshot=None, snapshot_id=None):
+        """
+        :param snapshot:
+        :param snapshot_id:
+        """
+        if snapshot is not None:
+            snapshot.open_in_web()
+        elif snapshot_id is not None:
+            self._client_api._open_in_web(url=self.platform_url + '/' + str(snapshot_id) + '/main')
+        else:
+            self._client_api._open_in_web(url=self.platform_url)
+
     def delete(self, snapshot: entities.Snapshot = None, snapshot_name=None, snapshot_id=None):
         """
         Delete Snapshot object

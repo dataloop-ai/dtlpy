@@ -86,6 +86,10 @@ class Assignment(entities.BaseEntity):
         return assignment
 
     @property
+    def platform_url(self):
+        return self._client_api._get_resource_url("projects/{}/assignments/{}".format(self.project_id, self.id))
+
+    @property
     def assignments(self):
         if self._assignments is None:
             self._assignments = repositories.Assignments(client_api=self._client_api,
@@ -152,6 +156,14 @@ class Assignment(entities.BaseEntity):
         :return:
         """
         return self.assignments.update(assignment=self, system_metadata=system_metadata)
+
+    def open_in_web(self):
+        """
+        Open the assignment in web platform
+
+        :return:
+        """
+        self._client_api._open_in_web(url=self.platform_url)
 
     def get_items(self, dataset=None, filters=None):
         """

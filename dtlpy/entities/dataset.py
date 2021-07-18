@@ -159,6 +159,10 @@ class Dataset(entities.BaseEntity):
     def readonly(self):
         return self._readonly
 
+    @property
+    def platform_url(self):
+        return self._client_api._get_resource_url("projects/{}/datasets/{}".format(self.project.id, self.id))
+
     @readonly.setter
     def readonly(self, state):
         raise exceptions.PlatformException(
@@ -212,11 +216,13 @@ class Dataset(entities.BaseEntity):
     def set_repositories(self):
         reps = namedtuple('repositories',
                           field_names=['items', 'recipes', 'datasets', 'assignments', 'tasks', 'annotations',
-                                       'ontologies'])
+                                       'ontologies', 'features'])
         if self._project is None:
             datasets = repositories.Datasets(client_api=self._client_api, project=self._project)
+            features = repositories.Features(client_api=self._client_api, project=self._project)
         else:
             datasets = self._project.datasets
+            features = self._project.features
 
         r = reps(items=repositories.Items(client_api=self._client_api, dataset=self, datasets=datasets),
                  recipes=repositories.Recipes(client_api=self._client_api, dataset=self),
@@ -224,7 +230,8 @@ class Dataset(entities.BaseEntity):
                  tasks=repositories.Tasks(client_api=self._client_api, project=self._project, dataset=self),
                  annotations=repositories.Annotations(client_api=self._client_api, dataset=self),
                  datasets=datasets,
-                 ontologies=repositories.Ontologies(client_api=self._client_api, dataset=self))
+                 ontologies=repositories.Ontologies(client_api=self._client_api, dataset=self),
+                 features=features)
         return r
 
     @property
@@ -261,6 +268,11 @@ class Dataset(entities.BaseEntity):
     def annotations(self):
         assert isinstance(self._repositories.annotations, repositories.Annotations)
         return self._repositories.annotations
+
+    @property
+    def features(self):
+        assert isinstance(self._repositories.features, repositories.Features)
+        return self._repositories.features
 
     @property
     def project(self):
@@ -475,7 +487,7 @@ class Dataset(entities.BaseEntity):
 
         :return:
         """
-        self.datasets.open_in_web(dataset=self)
+        self._client_api._open_in_web(url=self.platform_url)
 
     def add_label(self, label_name, color=None, children=None, attributes=None, display_label=None, label=None,
                   recipe_id=None, ontology_id=None):

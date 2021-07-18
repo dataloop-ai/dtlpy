@@ -47,7 +47,7 @@ class Project(entities.BaseEntity):
         reps = namedtuple('repositories',
                           'projects triggers datasets items recipes packages codebases artifacts times_series services '
                           'executions assignments tasks bots webhooks models analytics ontologies snapshots buckets '
-                          'drivers pipelines')
+                          'drivers pipelines feature_sets features')
         datasets = repositories.Datasets(client_api=self._client_api, project=self)
         artifacts = repositories.Artifacts(project=self, client_api=self._client_api)
         r = reps(projects=repositories.Projects(client_api=self._client_api),
@@ -71,7 +71,9 @@ class Project(entities.BaseEntity):
                  snapshots=repositories.Snapshots(client_api=self._client_api, project=self),
                  buckets=repositories.Buckets(client_api=self._client_api, project=self),
                  drivers=repositories.Drivers(client_api=self._client_api, project=self),
-                 pipelines=repositories.Pipelines(client_api=self._client_api, project=self)
+                 pipelines=repositories.Pipelines(client_api=self._client_api, project=self),
+                 feature_sets=repositories.FeatureSets(client_api=self._client_api, project=self),
+                 features=repositories.Features(client_api=self._client_api, project=self),
                  )
         return r
 
@@ -79,6 +81,10 @@ class Project(entities.BaseEntity):
     def drivers(self):
         assert isinstance(self._repositories.drivers, repositories.Drivers)
         return self._repositories.drivers
+
+    @property
+    def platform_url(self):
+        return self._client_api._get_resource_url("projects/{}".format(self.id))
 
     @property
     def triggers(self):
@@ -186,6 +192,16 @@ class Project(entities.BaseEntity):
         return self._repositories.analytics
 
     @property
+    def feature_sets(self):
+        assert isinstance(self._repositories.feature_sets, repositories.FeatureSets)
+        return self._repositories.feature_sets
+
+    @property
+    def features(self):
+        assert isinstance(self._repositories.features, repositories.Features)
+        return self._repositories.features
+
+    @property
     def contributors(self):
         return miscellaneous.List([entities.User.from_json(_json=_json,
                                                            client_api=self._client_api,
@@ -283,7 +299,7 @@ class Project(entities.BaseEntity):
 
         :return:
         """
-        self.projects.open_in_web(project=self)
+        self._client_api._open_in_web(url=self.platform_url)
 
     def add_member(self, email, role: MemberRole = MemberRole.DEVELOPER):
         return self.projects.add_member(email=email, role=role, project_id=self.id)

@@ -16,7 +16,7 @@ class DataloopLogger(handlers.BaseRotatingHandler):
         Delete logs older than a threshold default is week)
     """
 
-    def __init__(self, filename, mode='a', maxBytes=0, encoding=None, delay=False):
+    def __init__(self, filename, mode='a', maxBytes=0, encoding='utf-8', delay=False):
         if maxBytes > 0:
             mode = 'a'
         super().__init__(filename=filename, mode=mode, encoding=encoding, delay=delay)

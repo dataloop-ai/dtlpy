@@ -36,10 +36,24 @@ class Pipelines:
     ###########
     # methods #
     ###########
+    @property
+    def platform_url(self):
+        return self._client_api._get_resource_url("projects/{}/pipelines".format(self.project.id))
+
     def open_in_web(self, pipeline=None, pipeline_id=None, pipeline_name=None):
-        if pipeline is None:
-            pipeline = self.get(pipeline_name=pipeline_name, pipeline_id=pipeline_id)
-        self._client_api._open_in_web(resource_type='pipeline', project_id=pipeline.project_id, pipeline_id=pipeline.id)
+        """
+        :param pipeline:
+        :param pipeline_id:
+        :param pipeline_name:
+        """
+        if pipeline_name is not None:
+            pipeline = self.get(pipeline_name=pipeline_name)
+        if pipeline is not None:
+            pipeline.open_in_web()
+        elif pipeline_id is not None:
+            self._client_api._open_in_web(url=self.platform_url + '/' + str(pipeline_id))
+        else:
+            self._client_api._open_in_web(url=self.platform_url)
 
     def get(self, pipeline_name=None, pipeline_id=None, fetch=None) -> entities.Pipeline:
         """

@@ -151,6 +151,10 @@ class Service(entities.BaseEntity):
         return self._revisions
 
     @property
+    def platform_url(self):
+        return self._client_api._get_resource_url("projects/{}/services/{}/main".format(self.project.id, self.id))
+
+    @property
     def project(self):
         if self._project is None:
             self._project = repositories.Projects(client_api=self._client_api).get(project_id=self.project_id,
@@ -328,7 +332,12 @@ class Service(entities.BaseEntity):
                                  until_completed=until_completed)
 
     def open_in_web(self):
-        self.services.open_in_web(service=self)
+        """
+        Open the service in web platform
+
+        :return:
+        """
+        self._client_api._open_in_web(url=self.platform_url)
 
     def checkout(self):
         """

@@ -5,16 +5,16 @@ Feature: Pipeline repository get service testing
         And There is a project by the name of "test_pipeline_delete"
         And Directory "pipeline_delete" is empty
 
-    Scenario: Delete project by name
-        When I create a pipeline with name "pipeline_delete"
-        When I delete a pipeline by the name of "pipeline_delete"
-        Then There are no pipeline by the name of "pipeline_delete"
+    Scenario: Delete pipeline by name
+        When I create a pipeline with name "pipelinedelete"
+        When I delete a pipeline by the name of "pipelinedelete"
+        Then There are no pipeline by the name of "pipelinedelete"
 
-    Scenario: Delete project by id
-        When I create a pipeline with name "pipeline_delete_id"
+    Scenario: Delete pipeline by id
+        When I create a pipeline with name "pipelinedeleteid"
         When I delete a pipeline by the id
-        Then There are no pipeline by the name of "pipeline_delete_id"
+        Then There are no pipeline by the name of "pipelinedeleteid"
 
-    Scenario: Delete a non-existing project
-        When I try to delete a pipeline by the name of "Some pipeline Name"
+    Scenario: Delete a non-existing pipeline
+        When I try to delete a pipeline by the name of "SomepipelineName"
         Then "NotFound" exception should be raised

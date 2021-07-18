@@ -285,6 +285,25 @@ class Tasks:
         assert isinstance(task, entities.Task)
         return task
 
+    @property
+    def platform_url(self):
+        return self._client_api._get_resource_url("projects/{}/tasks".format(self.project.id))
+
+    def open_in_web(self, task_name=None, task_id=None, task=None):
+        """
+        :param task_name:
+        :param task_id:
+        :param task:
+        """
+        if task_name is not None:
+            task = self.get(task_name=task_name)
+        if task is not None:
+            task.open_in_web()
+        elif task_id is not None:
+            self._client_api._open_in_web(url=self.platform_url + '/' + str(task_id))
+        else:
+            self._client_api._open_in_web(url=self.platform_url)
+
     def delete(self, task: entities.Task = None, task_name=None, task_id=None):
         """
         Delete an Annotation Task

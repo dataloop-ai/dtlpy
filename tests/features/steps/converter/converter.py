@@ -168,9 +168,9 @@ def compare_yolo(src_path, dest_path):
                 elif ext == '.names':
                     dest_file = os.path.join(dest_path, [f for f in os.listdir(dest_path) if f.endswith('.names')][0])
                     with open(src_file, 'r') as fp:
-                        src_labels = [label.strip() for label in fp.readlines()]
+                        src_labels = set([label.strip() for label in fp.readlines()])
                     with open(dest_file, 'r') as fp:
-                        dest_labels = [label.strip() for label in fp.readlines()]
+                        dest_labels = set([label.strip() for label in fp.readlines()])
                     assert len(dest_labels) == len(src_labels)
                     logging.error('Source Labels: {}\n Dest Labels: {}'.format(src_labels, dest_labels))
                     assert dest_labels == src_labels

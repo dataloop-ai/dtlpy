@@ -161,14 +161,23 @@ class BaseTrigger(entities.BaseEntity):
     @_repositories.default
     def set_repositories(self):
         reps = namedtuple('repositories',
-                          field_names=['services'])
+                          field_names=['services', 'triggers'])
+
         if self._project is None:
             services_repo = repositories.Services(client_api=self._client_api, project=self._project)
         else:
             services_repo = self._project.services
 
-        r = reps(services=services_repo)
+        triggers = repositories.Triggers(client_api=self._client_api,
+                                         project=self._project)
+
+        r = reps(services=services_repo, triggers=triggers)
         return r
+
+    @property
+    def triggers(self):
+        assert isinstance(self._repositories.triggers, repositories.Triggers)
+        return self._repositories.triggers
 
     @property
     def services(self):

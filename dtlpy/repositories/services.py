@@ -69,11 +69,24 @@ class Services:
             raise ValueError('Must input a valid Project entity')
         self._project = project
 
+    @property
+    def platform_url(self):
+        return self._client_api._get_resource_url("projects/{}/services".format(self.project.id))
+
     def open_in_web(self, service=None, service_id=None, service_name=None):
-        if service is None:
-            service = self.get(service_id=service_id, service_name=service_name)
-        self._client_api._open_in_web(resource_type='service', project_id=service.project_id,
-                                      package_id=service.package_id, service_id=service.id)
+        """
+        :param service_name:
+        :param service_id:
+        :param service:
+        """
+        if service_name is not None:
+            service = self.get(service_name=service_name)
+        if service is not None:
+            service.open_in_web()
+        elif service_id is not None:
+            self._client_api._open_in_web(url=self.platform_url + '/' + str(service_id) + '/main')
+        else:
+            self._client_api._open_in_web(url=self.platform_url)
 
     def __get_from_cache(self) -> entities.Service:
         service = self._client_api.state_io.get('service')

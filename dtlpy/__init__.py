@@ -44,7 +44,7 @@ from .entities import (
     Command, CommandsStatus,
     GitCodebase, ItemCodebase, FilesystemCodebase, PackageCodebaseType,
     OntologySpec,
-    MemberRole,
+    MemberRole, MemberOrgRole,
     Webhook, HttpMethod,
     ViewAnnotationOptions, AnnotationStatus, AnnotationType,
     ItemStatus, ExecutionStatus,
@@ -53,7 +53,7 @@ from .entities import (
     Modality, ModalityTypeEnum, ModalityRefTypeEnum,
     Workload, WorkloadUnit, ItemAction,
     PipelineExecution, PipelineExecutionNode, Pipeline, PipelineConnection, PipelineNode,
-    PipelineConnectionPort, PipelineNodeIO
+    PipelineConnectionPort, PipelineNodeIO, Organization, OrganizationsPlans
 )
 from .ml import BaseModelAdapter, SuperModelAdapter
 from .utilities import Converter, BaseServiceRunner, Progress, AnnotationFormat
@@ -123,6 +123,9 @@ buckets = repositories.Buckets(client_api=client_api)
 ontologies = repositories.Ontologies(client_api=client_api)
 pipelines = repositories.Pipelines(client_api=client_api)
 pipeline_executions = repositories.PipelineExecutions(client_api=client_api)
+feature_sets = repositories.FeatureSets(client_api=client_api)
+features = repositories.Features(client_api=client_api)
+organizations = repositories.Organizations(client_api=client_api)
 
 try:
     check_sdk.check(version=__version__, client_api=client_api)
@@ -215,6 +218,9 @@ ANNOTATION_STATUS_ISSUE = AnnotationStatus.ISSUE
 ANNOTATION_STATUS_REVIEW = AnnotationStatus.REVIEW
 ANNOTATION_STATUS_APPROVED = AnnotationStatus.APPROVED
 ANNOTATION_STATUS_CLEAR = AnnotationStatus.CLEAR
+
+ORGANIZATION_PLAN_FREEMIUM = OrganizationsPlans.FREEMIUM
+ORGANIZATION_PLAN_PREMIUM = OrganizationsPlans.PREMIUM
 
 # class
 ANNOTATION_TYPE_BOX = AnnotationType.BOX
@@ -355,3 +361,7 @@ MEMBER_ROLE_OWNER = MemberRole.OWNER
 MEMBER_ROLE_DEVELOPER = MemberRole.DEVELOPER
 MEMBER_ROLE_ANNOTATOR = MemberRole.ANNOTATOR
 MEMBER_ROLE_ANNOTATION_MANAGER = MemberRole.ANNOTATION_MANAGER
+
+MEMBER_ORG_ROLE_OWNER = MemberOrgRole.OWNER
+MEMBER_ORG_ROLE_ADMIN = MemberOrgRole.ADMIN
+MEMBER_ORG_ROLE_MEMBER = MemberOrgRole.MEMBER

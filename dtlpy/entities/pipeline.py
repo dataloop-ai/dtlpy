@@ -259,6 +259,10 @@ class Pipeline(entities.BaseEntity):
     #########
 
     @property
+    def platform_url(self):
+        return self._client_api._get_resource_url("projects/{}/pipelines/{}".format(self.project_id, self.id))
+
+    @property
     def project(self):
         if self._project is None:
             self._project = self.projects.get(project_id=self.project_id, fetch=None)
@@ -317,7 +321,12 @@ class Pipeline(entities.BaseEntity):
         return self.pipelines.delete(pipeline=self)
 
     def open_in_web(self):
-        self.pipelines.open_in_web(pipeline=self)
+        """
+        Open the pipeline in web platform
+
+        :return:
+        """
+        self._client_api._open_in_web(url=self.platform_url)
 
     def install(self):
         """

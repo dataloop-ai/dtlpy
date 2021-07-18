@@ -27,6 +27,14 @@ class Recipes:
     # entities #
     ############
     @property
+    def platform_url(self):
+        if self._project_id is None:
+            project_id = self.dataset.project.id
+        else:
+            project_id = self._project_id
+        return self._client_api._get_resource_url("projects/{}/recipes".format(project_id))
+
+    @property
     def dataset(self) -> entities.Dataset:
         if self._dataset is None:
             raise exceptions.PlatformException(
@@ -203,6 +211,18 @@ class Recipes:
             raise exceptions.PlatformException(response)
 
         return recipe
+
+    def open_in_web(self, recipe=None, recipe_id=None):
+        """
+        :param recipe:
+        :param recipe_id:
+        """
+        if recipe is not None:
+            recipe.open_in_web()
+        elif recipe_id is not None:
+            self._client_api._open_in_web(url=self.platform_url + '/' + str(recipe_id))
+        else:
+            self._client_api._open_in_web(url=self.platform_url)
 
     def delete(self, recipe_id):
         """

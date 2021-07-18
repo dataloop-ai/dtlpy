@@ -317,17 +317,12 @@ class Uploader:
         if len(remote_path) <= 1:
             split_dir = os.path.dirname(element.buffer).split('//')
             if len(split_dir) > 1:
-                remote_path = split_dir[1].split(':')[1] + '/'
-            else:
-                element.remote_name = element.remote_name.split(':')[1]
+                remote_path = split_dir[1] + '/'
 
         filename = remote_path + element.remote_name
-        file_args = element.buffer.split('//')[1].split(':')
-        storage_id = file_args[1]
-        size = int(file_args[0])
+        storage_id = element.buffer.split('//')[1]
         req_json = dict()
         req_json['filename'] = filename
-        req_json['size'] = size
         req_json['storageId'] = storage_id
         success, response = self.items_repository._client_api.gen_request(req_type='post',
                                                                           path='/datasets/{}/imports'.format(

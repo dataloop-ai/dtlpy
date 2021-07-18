@@ -46,6 +46,10 @@ class Package(entities.BaseEntity):
         return self._modules
 
     @property
+    def platform_url(self):
+        return self._client_api._get_resource_url("projects/{}/packages/{}/main".format(self.project.id, self.id))
+
+    @property
     def codebase_id(self):
         if self.codebase is not None and self.codebase.type == entities.PackageCodebaseType.ITEM:
             return self.codebase.item_id
@@ -403,7 +407,12 @@ class Package(entities.BaseEntity):
                                   local_path=local_path)
 
     def open_in_web(self):
-        self.packages.open_in_web(package=self)
+        """
+        Open the package in web platform
+
+        :return:
+        """
+        self._client_api._open_in_web(url=self.platform_url)
 
     def test(self,
              cwd=None,

@@ -15,7 +15,6 @@ def step_impl(context, test_pipeline):
 @behave.when(u'I get pipeline by the name of "{test_pipeline}"')
 def step_impl(context, test_pipeline):
     context.pipeline_get = context.project.pipelines.get(pipeline_name=test_pipeline)
-    # context.pipeline = context.project.pipelines.get(pipeline_name=test_pipeline)
 
 
 @behave.then(u'I get a pipeline entity')

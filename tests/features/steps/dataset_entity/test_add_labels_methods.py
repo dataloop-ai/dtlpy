@@ -65,11 +65,9 @@ def step_impl(context):
     try:
         context.dataset.add_labels(label_list=context.nested_labels)
     except dl.exceptions.InternalServerError:
-        # to verify that Label can't be added twice
-        # dtlpy.exceptions.InternalServerError: ('500', 'There is already a label with identifier "aaa"')
-        assert True
-        return
-    assert False
+        assert False
+    assert True
+
 
 @behave.then(u'Label has been added')
 def step_impl(context):
@@ -126,9 +124,9 @@ def step_impl(context):
 @behave.when(u'I add labels of string type')
 def step_impl(context):
     context.nested_labels = [
-            {'label_name': 'X.Y.Z',
-             'children': [{'label_name': 'ab'},
-                          {'label_name': 'bb'}]}]
+        {'label_name': 'X.Y.Z',
+         'children': [{'label_name': 'ab'},
+                      {'label_name': 'bb'}]}]
 
     context.dataset.add_labels(label_list=["X.Y.Z.ab", "X.Y.Z.bb"])
 
@@ -136,9 +134,9 @@ def step_impl(context):
 @behave.when(u'I add labels of string type using ontology.add_labels when update_ontology is false')
 def step_impl(context):
     context.nested_labels = [
-            {'label_name': 'X.Y.Z',
-             'children': [{'label_name': 'ab'},
-                          {'label_name': 'bb'}]}]
+        {'label_name': 'X.Y.Z',
+         'children': [{'label_name': 'ab'},
+                      {'label_name': 'bb'}]}]
 
     recipe = context.dataset.recipes.list()[0]
     ontology = recipe.ontologies.list()[0]
@@ -150,7 +148,7 @@ def step_impl(context):
 @behave.when(u'I add single nested label using ontology.add_label when update_ontology is true')
 def step_impl(context):
     context.nested_labels = [
-            {'label_name': 'X.Y.Z'}]
+        {'label_name': 'X.Y.Z'}]
 
     recipe = context.dataset.recipes.list()[0]
     ontology = recipe.ontologies.list()[0]
@@ -162,7 +160,7 @@ def step_impl(context):
 @behave.when(u'I add single not nested label using ontology.add_label when update_ontology is false')
 def step_impl(context):
     context.nested_labels = [
-            {'label_name': 'X'}]
+        {'label_name': 'X'}]
 
     recipe = context.dataset.recipes.list()[0]
     ontology = recipe.ontologies.list()[0]
@@ -187,24 +185,24 @@ def step_impl(context):
 
 @behave.when(u'I add labels of ontology.label type')
 def step_impl(context):
-    context.nested_labels =[
-            {'label_name': 'a',
-             'color': '#227301',
-             'children': [{'label_name': 'aa',
-                           'color': '#227302',
-                           'children': [{'label_name': 'aaa',
-                                         'color': '#227303',
-                                         },
-                                        {'label_name': 'aab',
-                                         'color': '#227304'}]},
-                          {'label_name': 'ab',
-                           'color': '#227305'}]},
-            {'label_name': 'b',
-             'color': '#227306',
-             'children': [{'label_name': 'ba',
-                           'color': '#227307'},
-                          {'label_name': 'bb',
-                           'color': '#227308'}]}]
+    context.nested_labels = [
+        {'label_name': 'a',
+         'color': '#227301',
+         'children': [{'label_name': 'aa',
+                       'color': '#227302',
+                       'children': [{'label_name': 'aaa',
+                                     'color': '#227303',
+                                     },
+                                    {'label_name': 'aab',
+                                     'color': '#227304'}]},
+                      {'label_name': 'ab',
+                       'color': '#227305'}]},
+        {'label_name': 'b',
+         'color': '#227306',
+         'children': [{'label_name': 'ba',
+                       'color': '#227307'},
+                      {'label_name': 'bb',
+                       'color': '#227308'}]}]
 
     recipe = context.dataset.recipes.list()[0]
     ontology = recipe.ontologies.list()[0]
@@ -236,6 +234,7 @@ def step_impl(context):
                       {'label_name': 'bb',
                        'color': '#298565'}]}]
     context.dataset.add_labels(label_list=context.nested_labels)
+
 
 @behave.then(u'I update many labels')
 def step_impl(context):

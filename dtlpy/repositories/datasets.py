@@ -82,17 +82,24 @@ class Datasets:
         else:
             raise Exception("Dataset not found")
 
+    @property
+    def platform_url(self):
+        return self._client_api._get_resource_url("projects/{}/datasets".format(self.project.id))
+
     def open_in_web(self, dataset_name=None, dataset_id=None, dataset=None):
         """
         :param dataset_name:
         :param dataset_id:
         :param dataset:
         """
-        if dataset is None:
-            dataset = self.get(dataset_id=dataset_id, dataset_name=dataset_name)
-        self._client_api._open_in_web(resource_type='dataset',
-                                      project_id=dataset.project.id,  # need to get the project otherwise will fail
-                                      dataset_id=dataset.id)
+        if dataset_name is not None:
+            dataset = self.get(dataset_name=dataset_name)
+        if dataset is not None:
+            dataset.open_in_web()
+        elif dataset_id is not None:
+            self._client_api._open_in_web(url=self.platform_url + '/' + str(dataset_id))
+        else:
+            self._client_api._open_in_web(url=self.platform_url)
 
     def checkout(self, identifier=None, dataset_name=None, dataset_id=None, dataset=None):
         """

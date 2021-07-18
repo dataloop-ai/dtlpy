@@ -485,20 +485,25 @@ class Items:
             item_metadata=item_metadata
         )
 
+    @property
+    def platform_url(self):
+        return self._client_api._get_resource_url(
+            "projects/{}/datasets/{}/items".format(self.dataset.project.id, self.dataset.id))
+
     def open_in_web(self, filepath=None, item_id=None, item=None):
         """
         :param filepath: item file path
         :param item_id: item id
         :param item: item entity
         """
-        if item is None:
-            item = self.get(filepath=filepath,
-                            item_id=item_id)
-
-        self._client_api._open_in_web(resource_type='item',
-                                      project_id=item.dataset.project.id,
-                                      dataset_id=item.datasetId,
-                                      item_id=item.id)
+        if filepath is not None:
+            item = self.get(filepath=filepath)
+        if item is not None:
+            item.open_in_web()
+        elif item_id is not None:
+            self._client_api._open_in_web(url=self.platform_url + '/' + str(item_id))
+        else:
+            self._client_api._open_in_web(url=self.platform_url)
 
     def update_status(self, status: entities.ItemStatus, items=None, item_ids=None,
                       filters=None, dataset=None, clear=False):

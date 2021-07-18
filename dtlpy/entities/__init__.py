@@ -58,3 +58,6 @@ from .bucket import BucketType, Bucket, ItemBucket, GCSBucket, LocalBucket
 from .driver import Driver
 from .pipeline import Pipeline, PipelineConnection, PipelineNode, PipelineConnectionPort, PipelineNodeIO
 from .pipeline_execution import PipelineExecution, PipelineExecutionNode
+from .feature import Feature
+from .feature_set import FeatureSet
+from .organization import Organization, OrganizationsPlans, MemberOrgRole

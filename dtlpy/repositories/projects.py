@@ -49,20 +49,24 @@ class Projects:
         else:
             raise Exception("Project not found")
 
+    @property
+    def platform_url(self):
+        return self._client_api._get_resource_url("projects")
+
     def open_in_web(self, project_name: str = None, project_id: str = None, project: entities.Project = None):
         """
         :param project_name:
         :param project_id:
         :param project:
         """
-        if project_id is None:
-            if project is not None:
-                project_id = project.id
-            elif project_name is not None:
-                project_id = self.get(project_name=project_name).id
-            else:
-                raise exceptions.PlatformException('400', 'Please provide project, project name or project id')
-        self._client_api._open_in_web(resource_type='project', project_id=project_id)
+        if project_name is not None:
+            project = self.get(project_name=project_name)
+        if project is not None:
+            project.open_in_web()
+        elif project_id is not None:
+            self._client_api._open_in_web(url=self.platform_url + '/' + str(project_id))
+        else:
+            self._client_api._open_in_web(url=self.platform_url)
 
     def checkout(self,
                  identifier: str = None,

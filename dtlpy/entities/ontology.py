@@ -238,7 +238,7 @@ class Ontology(entities.BaseEntity):
             raise exceptions.PlatformException(response)
         return response
 
-    def _base_labels_handler(self, labels, update_ontology=True, mode=LabelHandlerMode.ADD):
+    def _base_labels_handler(self, labels, update_ontology=True, mode=LabelHandlerMode.UPSERT):
         """
         Add a single label to ontology using add label endpoint , nested label is also supported
 
@@ -268,7 +268,7 @@ class Ontology(entities.BaseEntity):
                 # label entity
                 label_node = {"tag": label.tag}
                 if label.color is not None:
-                    label_node["color"] = label.color
+                    label_node["color"] = label.hex
                 if label.attributes is not None:
                     label_node["attributes"] = label.attributes
                 if label.display_label is not None:
@@ -278,8 +278,8 @@ class Ontology(entities.BaseEntity):
                 children = label.children
                 self._add_children(label.tag, children, labels_node, mode=mode)
             else:
-                raise PlatformException("400",
-                                        "Invalid parameters - Label can be list of str, Labels or dict")
+                raise PlatformException(error="400",
+                                        message="Invalid parameters - Label can be list of str, Labels or dict")
 
         if not update_ontology or not len(labels_node):
             return labels_node
@@ -288,9 +288,7 @@ class Ontology(entities.BaseEntity):
             "labelsNode": labels_node
         }
 
-        if mode == LabelHandlerMode.ADD:
-            response = self._labels_handler_add_mode(json_req)
-        elif mode == LabelHandlerMode.UPDATE:
+        if mode == LabelHandlerMode.UPDATE:
             response = self._labels_handler_update_mode(json_req)
         else:
             response = self._labels_handler_update_mode(json_req, upsert=True, log_error=False)
@@ -306,7 +304,7 @@ class Ontology(entities.BaseEntity):
         return added_label
 
     def _label_handler(self, label_name, color=None, children=None, attributes=None, display_label=None, label=None,
-                       add=True, update_ontology=False, mode=LabelHandlerMode.ADD):
+                       add=True, update_ontology=False, mode=LabelHandlerMode.UPSERT):
         """
         Add a single label to ontology
 
@@ -324,15 +322,18 @@ class Ontology(entities.BaseEntity):
 
         if update_ontology:
             if isinstance(label, entities.Label) or isinstance(label, str):
-                return self._base_labels_handler(labels=label, update_ontology=update_ontology, mode=mode)
+                return self._base_labels_handler(labels=label,
+                                                 update_ontology=update_ontology,
+                                                 mode=mode)
             else:
-                return self._base_labels_handler({
-                    "tag": label_name,
-                    "displayLabel": display_label,
-                    "color": color,
-                    "attributes": attributes,
-                    "children": children
-                }, update_ontology=update_ontology, mode=mode)
+                return self._base_labels_handler(labels={"tag": label_name,
+                                                         "displayLabel": display_label,
+                                                         "color": color,
+                                                         "attributes": attributes,
+                                                         "children": children
+                                                         },
+                                                 update_ontology=update_ontology,
+                                                 mode=mode)
 
         if not isinstance(label, entities.Label):
             if "." in label_name:
@@ -389,7 +390,7 @@ class Ontology(entities.BaseEntity):
                 self.update()
         return added_label
 
-    def _labels_handler(self, label_list, update_ontology=False, mode=LabelHandlerMode.ADD):
+    def _labels_handler(self, label_list, update_ontology=False, mode=LabelHandlerMode.UPSERT):
         """
         Adds a list of labels to ontology
 
@@ -479,7 +480,7 @@ class Ontology(entities.BaseEntity):
         :param update_ontology: update the ontology, default = False for backward compatible
         :return: List of label entities added
         """
-        self._labels_handler(label_list=label_list, update_ontology=update_ontology, mode=LabelHandlerMode.ADD)
+        self._labels_handler(label_list=label_list, update_ontology=update_ontology, mode=LabelHandlerMode.UPSERT)
 
     def update_label(self, label_name, color=None, children=None, attributes=None, display_label=None, label=None,
                      add=True, upsert=False, update_ontology=False):

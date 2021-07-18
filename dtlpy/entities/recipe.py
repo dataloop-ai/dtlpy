@@ -148,6 +148,18 @@ class Recipe(entities.BaseEntity):
         _json['projectIds'] = self.project_ids
         return _json
 
+    @property
+    def platform_url(self):
+        return self._client_api._get_resource_url("projects/{}/recipes/{}".format(self.project_ids[0], self.id))
+
+    def open_in_web(self):
+        """
+        Open the recipes in web platform
+
+        :return:
+        """
+        self._client_api._open_in_web(url=self.platform_url)
+
     def delete(self):
         """
         Delete recipe from platform

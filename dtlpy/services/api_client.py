@@ -1119,55 +1119,24 @@ class ApiClient:
     def set_api_counter(self, filepath):
         self.calls_counter = CallsCounter(filepath=filepath)
 
-    def _get_resource_url(self,
-                          resource_type,
-                          project_id=None,
-                          dataset_id=None,
-                          item_id=None,
-                          package_id=None,
-                          service_id=None):
+    def _get_resource_url(self, url):
 
         env = self._environments[self._environment]['alias']
         if env == 'prod':
-            head = 'https://console.dataloop.ai'
+            head = 'https://console.dataloop.ai/'
         elif env == 'dev':
-            head = 'https://dev-con.dataloop.ai'
+            head = 'https://dev-con.dataloop.ai/'
         elif env == 'rc':
-            head = 'https://rc-con.dataloop.ai'
+            head = 'https://rc-con.dataloop.ai/'
         elif env in ['local', 'minikube_local_mac']:
             head = 'https://localhost:8443/'
         elif env == 'new-dev':
-            head = 'https://custom0-gate.dataloop.ai'
+            head = 'https://custom0-gate.dataloop.ai/'
         else:
             raise exceptions.PlatformException(error='400', message='Unknown environment: {}'.format(env))
 
-        if resource_type == 'project':
-            url = head + '/projects/{}'.format(project_id)
-        elif resource_type == 'dataset':
-            url = head + '/projects/{}/datasets/{}'.format(project_id, dataset_id)
-        elif resource_type == 'item':
-            url = head + '/projects/{}/datasets/{}/items/{}'.format(project_id, dataset_id, item_id)
-        elif resource_type == 'package':
-            url = head + '/projects/{}/packages/{}'.format(project_id, package_id)
-        elif resource_type == 'service':
-            url = head + '/projects/{}/packages/{}/services/{}'.format(project_id, package_id, service_id)
-        else:
-            raise exceptions.PlatformException(error='400', message='Unknown resource_type: {}'.format(resource_type))
-        return url
+        return head + url
 
-    def _open_in_web(self,
-                     resource_type,
-                     project_id=None,
-                     dataset_id=None,
-                     item_id=None,
-                     package_id=None,
-                     service_id=None):
-
+    def _open_in_web(self, url):
         import webbrowser
-        url = self._get_resource_url(resource_type=resource_type,
-                                     project_id=project_id,
-                                     dataset_id=dataset_id,
-                                     item_id=item_id,
-                                     package_id=package_id,
-                                     service_id=service_id)
         webbrowser.open(url=url, new=2, autoraise=True)

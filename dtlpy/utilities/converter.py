@@ -782,10 +782,14 @@ class Converter:
         i_item = kwargs.get('i_item', None)
         pbar = kwargs.get('pbar', None)
         metadata = kwargs.get('metadata', None)
-
+        report_ref = item_path
         try:
-            item = item_path if isinstance(item_path, entities.Item) else self.dataset.items.upload(
-                local_path=item_path, item_metadata=metadata)
+            if isinstance(item_path, entities.Item):
+                item = item_path
+                report_ref = item.filename
+            else:
+                item = self.dataset.items.upload(local_path=item_path, item_metadata=metadata)
+                report_ref = item.filename
             if from_format == AnnotationFormat.YOLO:
                 item = Converter.__get_item_shape(item=item, local_path=item_path)
             success, errors = self.convert_file(to_format=AnnotationFormat.DATALOOP,
@@ -800,17 +804,26 @@ class Converter:
                 raise Exception("Failed to convert item's annotations: {}\n{}".format(item_path, errors))
             if errors:
                 if reporter is not None and i_item is not None:
-                    reporter.set_index(i_item=i_item, ref=item_path, status='warning', success=False,
+                    reporter.set_index(i_item=i_item,
+                                       ref=report_ref,
+                                       status='warning',
+                                       success=False,
                                        error='partial annotations upload: \n{}'.format(errors))
             else:
                 if reporter is not None and i_item is not None:
-                    reporter.set_index(i_item=i_item, status='success', success=True, ref=item_path)
+                    reporter.set_index(i_item=i_item,
+                                       status='success',
+                                       success=True,
+                                       ref=report_ref)
             if reporter is not None:
                 self.__update_progress(total=reporter.num_workers, of_total=i_item)
         except Exception:
             if reporter is not None and i_item is not None:
-                reporter.set_index(i_item=i_item, status='failed', success=False, error=traceback.format_exc(),
-                                   ref=item_path)
+                reporter.set_index(i_item=i_item,
+                                   status='failed',
+                                   success=False,
+                                   error=traceback.format_exc(),
+                                   ref=report_ref)
 
     def upload_local_dataset(self,
                              from_format,
@@ -943,8 +956,9 @@ class Converter:
                             item_id = annotations.get('_id', annotations.get('id', None))
                         annotations = annotations["annotations"]
                 elif from_format.lower() == AnnotationFormat.YOLO:
-                    annotations = [[float(param.replace('\n', '')) for param in ann.split(' ')] for ann in
-                                   f.readlines()]
+                    annotations = [[float(param.replace('\n', ''))
+                                    for param in line.strip().split(' ')]
+                                   for line in f.readlines()]
                 elif file_path.endswith(".xml"):
                     annotations = Et.parse(f)
                     annotations = [e for e in annotations.iter('object')]

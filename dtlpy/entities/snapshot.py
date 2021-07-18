@@ -250,6 +250,10 @@ class Snapshot(entities.BaseEntity):
         return r
 
     @property
+    def platform_url(self):
+        return self._client_api._get_resource_url("projects/{}/snapshots/{}/main".format(self.project_id, self.id))
+
+    @property
     def projects(self):
         assert isinstance(self._repositories.projects, repositories.Projects)
         return self._repositories.projects
@@ -300,6 +304,14 @@ class Snapshot(entities.BaseEntity):
         :return: Snapshot entity
         """
         return self.snapshots.update(snapshot=self)
+
+    def open_in_web(self):
+        """
+        Open the snapshot in web platform
+
+        :return:
+        """
+        self._client_api._open_in_web(url=self.platform_url)
 
     def delete(self):
         """
