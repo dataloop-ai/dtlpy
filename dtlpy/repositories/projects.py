@@ -12,8 +12,9 @@ class Projects:
     Projects repository
     """
 
-    def __init__(self, client_api: services.ApiClient):
+    def __init__(self, client_api: services.ApiClient, org=None):
         self._client_api = client_api
+        self._org = org
 
     def __get_from_cache(self) -> entities.Project:
         project = self._client_api.state_io.get('project')
@@ -201,8 +202,12 @@ class Projects:
         Get users project's list.
         :return: List of Project objects
         """
+        if self._org is None:
+            url_path = '/projects'
+        else:
+            url_path = '/orgs/{}/projects'.format(self._org.id)
         success, response = self._client_api.gen_request(req_type='get',
-                                                         path='/projects')
+                                                         path=url_path)
 
         if success:
             pool = self._client_api.thread_pools(pool_name='entity.create')
