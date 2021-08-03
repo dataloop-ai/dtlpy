@@ -59,19 +59,27 @@ class COCOUtils:
     def rle_to_binary_mask(rle):
         rows, cols = rle['size']
         rle_numbers = rle['counts']
+        if isinstance(rle_numbers, list):
+            if len(rle_numbers) % 2 != 0:
+                rle_numbers.append(0)
 
-        if len(rle_numbers) % 2 != 0:
-            rle_numbers.append(0)
+            rle_pairs = np.array(rle_numbers).reshape(-1, 2)
+            img = np.zeros(rows * cols, dtype=np.uint8)
+            index = 0
+            for i, length in rle_pairs:
+                index += i
+                img[index:index + length] = 1
+                index += length
+            img = img.reshape(cols, rows)
+            return img.T
+        else:
+            try:
+                import pycocotools.mask as coco_utils_mask
+            except ModuleNotFoundError:
+                raise Exception('To use this functionality please install pycocotools:  "pip install pycocotools"')
+            img = coco_utils_mask.decode(rle)
+            return img
 
-        rle_pairs = np.array(rle_numbers).reshape(-1, 2)
-        img = np.zeros(rows * cols, dtype=np.uint8)
-        index = 0
-        for i, length in rle_pairs:
-            index += i
-            img[index:index + length] = 1
-            index += length
-        img = img.reshape(cols, rows)
-        return img.T
 
     @staticmethod
     def rle_to_binary_polygon(segmentation):
@@ -252,7 +260,7 @@ class Converter:
                     with open(file_path, 'w') as f:
                         json.dump(annotations.to_json(), f, indent=2)
 
-                success, errors = self.convert_file(
+                annotations_list, errors = self.convert_file(
                     item=item,
                     to_format=to_format,
                     from_format=from_format,
@@ -263,9 +271,7 @@ class Converter:
                     pbar=pbar
                 )
 
-                if not success:
-                    raise Exception('Failed to convert item annotations: \n{}'.format(errors))
-                elif errors:
+                if errors:
                     raise Exception('Partial conversion: \n{}'.format(errors))
 
                 if reporter is not None and i_item is not None:
@@ -792,16 +798,14 @@ class Converter:
                 report_ref = item.filename
             if from_format == AnnotationFormat.YOLO:
                 item = Converter.__get_item_shape(item=item, local_path=item_path)
-            success, errors = self.convert_file(to_format=AnnotationFormat.DATALOOP,
-                                                from_format=from_format,
-                                                item=item,
-                                                file_path=ann_path,
-                                                save_locally=False,
-                                                conversion_func=conversion_func,
-                                                upload=True,
-                                                pbar=pbar)
-            if not success:
-                raise Exception("Failed to convert item's annotations: {}\n{}".format(item_path, errors))
+            annotations_list, errors = self.convert_file(to_format=AnnotationFormat.DATALOOP,
+                                                         from_format=from_format,
+                                                         item=item,
+                                                         file_path=ann_path,
+                                                         save_locally=False,
+                                                         conversion_func=conversion_func,
+                                                         upload=True,
+                                                         pbar=pbar)
             if errors:
                 if reporter is not None and i_item is not None:
                     reporter.set_index(i_item=i_item,
@@ -923,7 +927,7 @@ class Converter:
     def _convert_and_report(self, to_format, from_format, file_path, save_locally, save_to, conversion_func, reporter,
                             i_item):
         try:
-            success, errors = self.convert_file(
+            annotations_list, errors = self.convert_file(
                 to_format=to_format,
                 from_format=from_format,
                 file_path=file_path,
@@ -999,23 +1003,23 @@ class Converter:
             item=item
         )
 
-        success, errors = self._sort_annotations(annotations=converted_annotations)
+        annotations_list, errors = self._sort_annotations(annotations=converted_annotations)
 
-        if success:
+        if annotations_list:
             if save_locally:
                 if item_id is not None:
                     item = self.dataset.items.get(item_id=item_id)
                 filename = os.path.split(file_path)[-1]
                 filename_no_ext = os.path.splitext(filename)[0]
                 save_to = os.path.join(save_to, filename_no_ext)
-                self.save_to_file(save_to=save_to, to_format=to_format, annotations=success, item=item)
+                self.save_to_file(save_to=save_to, to_format=to_format, annotations=annotations_list, item=item)
             elif upload and to_format == AnnotationFormat.DATALOOP:
-                item.annotations.upload(annotations=success)
+                item.annotations.upload(annotations=annotations_list)
 
         if pbar is not None:
             pbar.update()
 
-        return success, errors
+        return annotations_list, errors
 
     @staticmethod
     def _sort_annotations(annotations):
@@ -1295,7 +1299,7 @@ class Converter:
                 if len(segmentation) == 1:
                     segmentation = segmentation[0]
                     if segmentation:
-                        ann_def = entities.Polygon(label=label, is_open=False,
+                        ann_def = entities.Polygon(label=label,
                                                    geo=COCOUtils.rle_to_binary_polygon(segmentation=segmentation))
                     else:
                         bbox = annotation.get('bbox', None)
@@ -1328,9 +1332,8 @@ class Converter:
         area = 0
         iscrowd = 0
         segmentation = [[]]
-        if annotation.type == 'segment':
-            if getattr(annotation, 'is_open', False) is True:
-                raise Exception('Unable to convert annotation of type "polyline" to coco')
+        if annotation.type == 'polyline':
+            raise Exception('Unable to convert annotation of type "polyline" to coco')
 
         if annotation.type in ['binary', 'segment']:
             if height is None or width is None:

@@ -73,6 +73,7 @@ class Task:
     updated_at = attr.ib()
     created_at = attr.ib()
     available_actions = attr.ib()
+    total_items = attr.ib()
 
     # sdk
     _client_api = attr.ib(repr=False)
@@ -143,7 +144,8 @@ class Task:
             issues=_json.get('issues', None),
             updated_at=_json.get('updatedAt', None),
             created_at=_json.get('createdAt', None),
-            available_actions=actions
+            available_actions=actions,
+            total_items=_json.get('totalItems', None),
         )
 
     def to_json(self):
@@ -169,13 +171,15 @@ class Task:
                                                               attr.fields(Task).for_review,
                                                               attr.fields(Task).issues,
                                                               attr.fields(Task).updated_at,
-                                                              attr.fields(Task).created_at
+                                                              attr.fields(Task).created_at,
+                                                              attr.fields(Task).total_items,
                                                               ))
         _json['projectId'] = self.project_id
         _json['datasetId'] = self.dataset_id
         _json['recipeId'] = self.recipe_id
         _json['taskOwner'] = self.task_owner
         _json['dueDate'] = self.due_date
+        _json['totalItems'] = self.total_items
 
         if self.available_actions is not None:
             _json['availableActions'] = [action.to_json() for action in self.available_actions]

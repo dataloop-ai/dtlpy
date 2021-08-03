@@ -44,7 +44,7 @@ from .entities import (
     Command, CommandsStatus,
     GitCodebase, ItemCodebase, FilesystemCodebase, PackageCodebaseType,
     OntologySpec,
-    MemberRole, MemberOrgRole,
+    MemberRole, FeatureEntityType, MemberOrgRole,
     Webhook, HttpMethod,
     ViewAnnotationOptions, AnnotationStatus, AnnotationType,
     ItemStatus, ExecutionStatus,
@@ -121,6 +121,7 @@ models = repositories.Models(client_api=client_api)
 snapshots = repositories.Snapshots(client_api=client_api)
 buckets = repositories.Buckets(client_api=client_api)
 ontologies = repositories.Ontologies(client_api=client_api)
+recipes = repositories.Recipes(client_api=client_api)
 pipelines = repositories.Pipelines(client_api=client_api)
 pipeline_executions = repositories.PipelineExecutions(client_api=client_api)
 feature_sets = repositories.FeatureSets(client_api=client_api)

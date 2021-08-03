@@ -85,6 +85,38 @@ def calculate_iou_polygon(pts1, pts2):
     return iou
 
 
+def match_class(ref_annotations, test_annotations):
+    """
+    Return matching scores between two sets of annotations
+    :param ref_annotations: list of reference annotation (GT)
+    :param test_annotations: list of test annotations
+    Returns `dict` of annotation_id: `Matching`
+    """
+    # init all to zeros
+    test_annotations_scores = {annotation.id: Matching(annotation.id) for annotation in test_annotations}
+    ref_annotations_dict = {ref.id: ref for ref in ref_annotations}
+    for t_annotation in test_annotations:
+        # Calculate the IoU (and annotation.id) for valid matches - same label
+        for ref_ann_id, r_annotation in ref_annotations_dict.items():
+            if r_annotation.label == t_annotation.label:
+                # add only if match - later we'll add the rest
+                test_annotations_scores[t_annotation.id].match_annotation_id = r_annotation.id
+                test_annotations_scores[t_annotation.id].annotation_score = 1
+                test_annotations_scores[t_annotation.id].geometry_score = 1
+                test_annotations_scores[t_annotation.id].attributes_score = match_attributes(
+                    ref_attrs=r_annotation.attributes,
+                    test_attrs=t_annotation.attributes
+                )
+                test_annotations_scores[t_annotation.id].label_score = match_labels(
+                    ref_label=r_annotation.label,
+                    test_label=t_annotation.label
+                )
+                # pop the matched annotation - so it wont be used any more
+                _ = ref_annotations_dict.pop(r_annotation.id)
+                break
+    return test_annotations_scores
+
+
 def match_box(ref_annotations, test_annotations, match_thr=0.5, geometry_only=False):
     """
     Return matching scores between two sets of annotations
@@ -313,10 +345,10 @@ def item_annotation_duration(item: entities.Item,
     logger.debug("query for analytics: {}".format(json.dumps(query)))
     df = pd.DataFrame(raw)
 
-    try:
+    if 'duration' in df.columns:
         anns_duration_sec = df.loc[:, 'duration'].sum() / 1000
-    except AttributeError as err:
-        logger.warning("No annotations was found in analytics for item {}".format(item.id))
+    else:
+        logger.warning("No annotations were found in analytics for item {!r}".format(item.id))
         anns_duration_sec = 0
 
     return anns_duration_sec

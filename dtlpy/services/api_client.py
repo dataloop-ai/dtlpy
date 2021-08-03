@@ -460,7 +460,8 @@ class ApiClient:
         """
         user_email = 'null'
         if self.token is not None:
-            payload = jwt.decode(self.token, algorithms=['HS256'], verify=False)
+            payload = jwt.decode(self.token, algorithms=['HS256'],
+                                 verify=False, options={'verify_signature': False})
             user_email = payload['email']
         information = {'environment': self.environment,
                        'user_email': user_email}
@@ -713,6 +714,13 @@ class ApiClient:
                                         data=form,
                                         verify_ssl=self.verify,
                                         ssl=ssl_context) as resp:
+                    self.last_request = resp.request_info
+                    command = "curl -X {method} -H {headers} -d '{uri}'"
+                    headers = ['"{0}: {1}"'.format(k, v) for k, v in resp.request_info.headers.items()]
+                    headers = " -H ".join(headers)
+                    self.last_curl = command.format(method=resp.request_info.method,
+                                                    headers=headers,
+                                                    uri=resp.request_info.url)
                     text = await resp.text()
                     try:
                         _json = await resp.json()
@@ -810,7 +818,8 @@ class ApiClient:
             if self.token is None or self.token == '':
                 expired = True
             else:
-                payload = jwt.decode(self.token, algorithms=['HS256'], verify=False)
+                payload = jwt.decode(self.token, algorithms=['HS256'],
+                                     options={'verify_signature': False}, verify=False)
                 d = datetime.datetime.utcnow()
                 epoch = datetime.datetime(1970, 1, 1)
                 now = (d - epoch).total_seconds()

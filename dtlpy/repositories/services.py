@@ -425,6 +425,16 @@ class Services:
         :param kwargs:
         :return:
         """
+        if package is None:
+            if self._package is None:
+                raise exceptions.PlatformException('400', 'Please provide param package')
+            package = self._package
+
+        if package is not None and package.service_config is not None:
+            module_name, agent_versions, runtime, pod_type = self.set_service_config(module_name,
+                                                                                     agent_versions,
+                                                                                     runtime, pod_type,
+                                                                                     package.service_config)
         is_global = kwargs.get('is_global', None)
         jwt_forward = kwargs.get('jwt_forward', None)
         if is_global is not None or jwt_forward is not None:
@@ -447,11 +457,6 @@ class Services:
                 project_id = self._project_id
             elif self._project is not None:
                 project_id = self._project.id
-
-        if package is None:
-            if self._package is None:
-                raise exceptions.PlatformException('400', 'Please provide param package')
-            package = self._package
 
         if module_name is None:
             module_name = entities.package_defaults.DEFAULT_PACKAGE_MODULE_NAME
@@ -716,6 +721,26 @@ class Services:
                                                                           stream_logs=stream_logs)
         return execution
 
+    def set_service_config(self, module_name, agent_versions, runtime, pod_type, service_config):
+        """
+        set service defaults
+        :param module_name:
+        :param runtime:
+        :param pod_type:
+        :param agent_versions:
+        :param service_config:
+        :return:
+        """
+        if module_name is None:
+            module_name = service_config.get('moduleName', None)
+        if agent_versions is None:
+            agent_versions = service_config.get('versions', None)
+        if runtime is None:
+            runtime = service_config.get('runtime', None)
+        if pod_type is None:
+            pod_type = service_config.get('podType', None)
+        return module_name, agent_versions, runtime, pod_type
+
     def deploy(self,
                service_name: str = None,
                package: entities.Package = None,
@@ -766,13 +791,19 @@ class Services:
         :param kwargs:
         :return:
         """
+        package = package if package is not None else self._package
         if service_name is None:
-            package = package if package is not None else self._package
-            if package is not None:
-                service_name = package.name
+            get_name = False
+            if package.service_config is not None and 'name' in package.service_config:
+                service_name = package.service_config['name']
+                get_name = True
             else:
-                service_name = 'default-service'
-            logger.warning('service_name not provided, using: {} by default'.format(service_name))
+                if package is not None:
+                    service_name = package.name
+                else:
+                    service_name = 'default-service'
+            if not get_name:
+                logger.warning('service_name not provided, using: {} by default'.format(service_name))
 
         if isinstance(revision, int):
             logger.warning('Deprecation Warning - Package/service versions have been refactored'
@@ -829,6 +860,7 @@ class Services:
         else:
             service = self._create(service_name=service_name,
                                    package=package,
+                                   project_id=project_id,
                                    bot=bot,
                                    revision=revision,
                                    init_input=init_input,

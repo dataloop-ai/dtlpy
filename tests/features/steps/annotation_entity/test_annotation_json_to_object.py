@@ -9,12 +9,17 @@ import time
 def step_impl(context, entity):
     if entity != 'Annotations':
         entity = entity.lower()
-        url_path = "/{}s/{}".format(entity, getattr(context, entity).id)
+        if entity == 'feature_set':
+            url_path = '/features/sets/{}'.format(getattr(context, entity).id)
+        elif entity == 'feature':
+            url_path = '/features/vectors/{}'.format(getattr(context, entity).id)
+        else:
+            url_path = "/{}s/{}".format(entity, getattr(context, entity).id)
         success, response = getattr(context, entity)._client_api.gen_request(
             req_type="get",
             path=url_path
         )
-        
+
         entity_to_json = getattr(context, entity).to_json()
         response = response.json()
 

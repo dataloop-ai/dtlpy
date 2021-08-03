@@ -24,7 +24,8 @@ logging.basicConfig(level='DEBUG')
 
 dl.setenv(get_env_from_git_branch())
 # check token
-payload = jwt.decode(dl.token(), algorithms=['HS256'], verify=False)
+payload = jwt.decode(dl.token(), algorithms=['HS256'], verify=False,
+                     options={'verify_signature': False})
 if payload['email'] not in ['oa-test-4@dataloop.ai', 'oa-test-1@dataloop.ai', 'oa-test-2@dataloop.ai',
                             'oa-test-3@dataloop.ai']:
     assert False, 'Cannot run test on user: "{}". only test users'.format(payload['email'])

@@ -35,7 +35,7 @@ class FiltersResource(str, Enum):
     PIPELINE = 'pipeline'
     PIPELINE_EXECUTION = 'pipelineState'
     COMPOSITION = 'composition'
-    FEATURE = 'features'
+    FEATURE = 'feature_vectors'
     FEATURE_SET = 'feature_sets'
     ORGANIZATIONS = 'organizations'
 

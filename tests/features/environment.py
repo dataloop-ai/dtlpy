@@ -64,6 +64,16 @@ def after_tag(context, tag):
             use_fixture(delete_pipeline, context)
         except Exception:
             logging.exception('Failed to delete package')
+    elif tag == 'feature_set.delete':
+        try:
+            use_fixture(delete_feature_set, context)
+        except Exception:
+            logging.exception('Failed to delete feature set')
+    elif tag == 'feature.delete':
+        try:
+            use_fixture(delete_feature, context)
+        except Exception:
+            logging.exception('Failed to delete feature set')
     elif tag == 'bot.create':
         try:
             use_fixture(delete_bots, context)
@@ -130,6 +140,42 @@ def delete_packages(context):
         except:
             all_deleted = False
             logging.exception('Failed deleting package: ')
+    assert all_deleted
+
+
+@fixture
+def delete_feature_set(context):
+    if not hasattr(context, 'to_delete_feature_set_ids'):
+        return
+
+    all_deleted = True
+    while context.to_delete_feature_set_ids:
+        feature_set = context.to_delete_feature_set_ids.pop(0)
+        try:
+            context.dl.feature_sets.delete(feature_set_id=feature_set)
+        except context.dl.exceptions.NotFound:
+            pass
+        except:
+            all_deleted = False
+            logging.exception('Failed deleting feature_set: ')
+    assert all_deleted
+
+
+@fixture
+def delete_feature(context):
+    if not hasattr(context, 'to_delete_feature_ids'):
+        return
+
+    all_deleted = True
+    while context.to_delete_feature_ids:
+        feature = context.to_delete_feature_ids.pop(0)
+        try:
+            context.dl.feature.delete(feature_id=feature)
+        except context.dl.exceptions.NotFound:
+            pass
+        except:
+            all_deleted = False
+            logging.exception('Failed deleting feature: ')
     assert all_deleted
 
 

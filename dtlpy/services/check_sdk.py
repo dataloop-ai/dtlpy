@@ -21,7 +21,8 @@ def check_in_thread(version, client_api):
 
         # try read token for email
         try:
-            payload = jwt.decode(client_api.token, algorithms=['HS256'], verify=False)
+            payload = jwt.decode(client_api.token, algorithms=['HS256'],
+                                 verify=False, options={'verify_signature': False})
             user_email = payload['email']
         except Exception:
             user_email = 'na'

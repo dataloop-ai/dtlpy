@@ -30,7 +30,8 @@ class Execution(entities.BaseEntity):
     input = attr.ib()
     output = attr.ib(repr=False)
     feedbackQueue = attr.ib(repr=False)
-    status = attr.ib(repr=False)
+    _status = attr.ib(repr=False)
+    status_log = attr.ib(repr=False)
     syncReplyTo = attr.ib(repr=False)
     latest_status = attr.ib()
     function_name = attr.ib()
@@ -79,6 +80,13 @@ class Execution(entities.BaseEntity):
         r = reps(executions=executions_repo,
                  services=services_repo)
         return r
+
+    @property
+    def status(self):
+        logger.warning(
+            'Deprecation Warning - param "status" will be deprecated from version "1.36.0'
+            'Use "status_log"')
+        return self._status
 
     @property
     def services(self):
@@ -144,6 +152,7 @@ class Execution(entities.BaseEntity):
             max_attempts=_json.get('maxAttempts', None),
             output=_json.get('output', None),
             status=_json.get('status', None),
+            status_log=_json.get('statusLog', None),
             duration=_json.get('duration', None),
             function_name=_json.get('functionName', entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME),
             input=_json.get('input', None),
@@ -183,7 +192,9 @@ class Execution(entities.BaseEntity):
                 attr.fields(Execution).latest_status,
                 attr.fields(Execution).service_version,
                 attr.fields(Execution).package_id,
-                attr.fields(Execution).package_name
+                attr.fields(Execution).package_name,
+                attr.fields(Execution).status_log,
+                attr.fields(Execution)._status,
             )
         )
         # rename
@@ -198,6 +209,8 @@ class Execution(entities.BaseEntity):
         _json['serviceVersion'] = self.service_version
         _json['packageId'] = self.package_id
         _json['packageName'] = self.package_name
+        _json['statusLog'] = self.status_log
+        _json['status'] = self._status
 
         return _json
 

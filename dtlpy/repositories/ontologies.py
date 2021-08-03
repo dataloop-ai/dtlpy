@@ -236,7 +236,9 @@ class Ontologies:
         if success:
             ontology = entities.Ontology.from_json(_json=response.json(),
                                                    client_api=self._client_api,
-                                                   recipe=self._recipe)
+                                                   recipe=self._recipe,
+                                                   dataset=self._dataset,
+                                                   project=self._project)
         else:
             raise exceptions.PlatformException(response)
         return ontology

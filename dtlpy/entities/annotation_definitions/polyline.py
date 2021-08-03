@@ -11,7 +11,6 @@ class Polyline(BaseAnnotationDefinition):
     def __init__(self, geo, label, attributes=None, description=None):
         super().__init__(description=description)
         self.type = "polyline"
-        self.is_open = True
         self.geo = geo
         self.label = label
         if attributes is None:
@@ -70,7 +69,7 @@ class Polyline(BaseAnnotationDefinition):
 
         # polyline cant have thickness -1
         if thickness is None or thickness == -1:
-            thickness = 1
+            thickness = 2
 
         # draw annotation
         image = cv2.polylines(

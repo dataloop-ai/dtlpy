@@ -194,7 +194,7 @@ class Box(BaseAnnotationDefinition):
         :return: Box annotations list  to each separated  segmentation
         """
         polygons = Polygon.from_segmentation(mask=mask, label=label, attributes=attributes,
-                                             max_instances=None, is_open=False)
+                                             max_instances=None)
 
         if not isinstance(polygons, list):
             polygons = [polygons]

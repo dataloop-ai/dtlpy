@@ -5,7 +5,7 @@ import dtlpy as dl
 
 def mask_from_circle(h, w, center, radius):
     x, y = np.ogrid[:h, :w]
-    dist_from_center = np.sqrt((x - center[0])**2 + (y-center[1])**2)
+    dist_from_center = np.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
 
     mask = dist_from_center <= radius
     return mask
@@ -17,7 +17,7 @@ def step_impl(context):
     builder.add(
         annotation_definition=context.dl.Segmentation.from_polygon(
             geo=np.array([[100, 200], [150, 200], [300, 100], [200, 400]]),
-            is_open=False, label='person',
+            label='person',
             shape=(context.item.height, context.item.width)))
     annotations = builder.upload()
     context.annotation = annotations[0]
@@ -27,8 +27,8 @@ def step_impl(context):
 def step_impl(context):
     builder = context.item.annotations.builder()
 
-    mask1 = mask_from_circle(context.item.height, context.item.width, center=(200,200), radius=100)
-    mask2 = mask_from_circle(context.item.height, context.item.width, center=(400,400), radius=100)
+    mask1 = mask_from_circle(context.item.height, context.item.width, center=(200, 200), radius=100)
+    mask2 = mask_from_circle(context.item.height, context.item.width, center=(400, 400), radius=100)
     mask = np.ma.mask_or(mask1, mask2)
 
     builder.add(annotation_definition=context.dl.Segmentation(mask, label='person'))

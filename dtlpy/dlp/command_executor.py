@@ -89,7 +89,8 @@ class CommandExecutor:
         url = 'dtlpy'
         if args.url is None:
             try:
-                payload = jwt.decode(self.dl.client_api.token, algorithms=['HS256'], verify=False)
+                payload = jwt.decode(self.dl.client_api.token, algorithms=['HS256'],
+                                     verify=False, options={'verify_signature': False})
                 if 'admin' in payload['https://dataloop.ai/authorization']['roles']:
                     url = "https://storage.googleapis.com/dtlpy/dev/dtlpy-latest-py3-none-any.whl"
             except Exception:

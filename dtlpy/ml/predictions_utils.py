@@ -111,8 +111,8 @@ def measure_item_box_predictions(item: entities.Item, model: entities.Model = No
     missing_box = len(r_boxes) - matched_box
     assert total_box == extra_box + 2 * matched_box + missing_box
     # add missing to score
-    test_iou_scores += [0 for i in range(missing_box)]
-    test_iou_scores += [0 for i in range(extra_box)]
+    test_iou_scores += [0 for _ in range(missing_box)]
+    test_iou_scores += [0 for _ in range(extra_box)]
 
     boxes_report = {'box_ious': box_scores,
                     'box_annotations': r_boxes,
@@ -143,23 +143,63 @@ def measure_annotations(
     """
 
     # Assign list per type of annotation
-    t_boxes = [ann for ann in test_annotations if ann.type == 'box']
-    t_polygons = [ann for ann in test_annotations if ann.type == 'segment']
-    t_points = [ann for ann in test_annotations if ann.type == 'point']
-    t_semantics = [ann for ann in test_annotations if ann.type == 'binary']
-    un_supported = [ann for ann in test_annotations if ann.type not in (['box', 'segment', 'point', 'binary', 'class'])]
-    if len(un_supported):
-        logger.warning("test annotations have unsupported types {}:\n{}".
-                       format([ann.type for ann in un_supported], un_supported))
+    t_classes = list()
+    t_boxes = list()
+    t_polygons = list()
+    t_points = list()
+    t_semantics = list()
+    t_un_supported = list()
+    #
+    r_classes = list()
+    r_boxes = list()
+    r_polygons = list()
+    r_points = list()
+    r_semantics = list()
+    r_un_supported = list()
 
-    r_boxes = [ann for ann in ref_annotations if ann.type == 'box']
-    r_polygons = [ann for ann in ref_annotations if ann.type == 'segment']
-    r_points = [ann for ann in ref_annotations if ann.type == 'point']
-    r_semantics = [ann for ann in ref_annotations if ann.type == 'binary']
-    un_supported = [ann for ann in ref_annotations if ann.type not in (['box', 'segment', 'point', 'binary', 'class'])]
-    if len(un_supported):
+    # create lists for test annotations
+    for ann in test_annotations:
+        if ann.metadata.get('system', dict()).get('system', False):
+            continue
+        if ann.type == 'class':
+            t_classes.append(ann)
+        elif ann.type == 'box':
+            t_boxes.append(ann)
+        elif ann.type == 'segment':
+            t_polygons.append(ann)
+        elif ann.type == 'point':
+            t_points.append(ann)
+        elif ann.type == 'binary':
+            t_semantics.append(ann)
+        else:
+            t_un_supported.append(ann)
+    if len(t_un_supported):
         logger.warning("test annotations have unsupported types {}:\n{}".
-                       format([ann.type for ann in un_supported], un_supported))
+                       format([ann.type for ann in t_un_supported], t_un_supported))
+
+    # create lists for ref annotations
+    for ann in ref_annotations:
+        if ann.metadata.get('system', dict()).get('system', False):
+            continue
+        if ann.type == 'class':
+            r_classes.append(ann)
+        elif ann.type == 'box':
+            r_boxes.append(ann)
+        elif ann.type == 'segment':
+            r_polygons.append(ann)
+        elif ann.type == 'point':
+            r_points.append(ann)
+        elif ann.type == 'binary':
+            r_semantics.append(ann)
+        else:
+            r_un_supported.append(ann)
+    if len(r_un_supported):
+        logger.warning("ref annotations have unsupported types {}:\n{}".
+                       format([ann.type for ann in t_un_supported], t_un_supported))
+
+    # match classes
+    class_scores = metrics.match_class(ref_annotations=r_classes,
+                                       test_annotations=t_classes)
 
     # match box
     box_scores = metrics.match_box(ref_annotations=r_boxes,
@@ -176,6 +216,29 @@ def measure_annotations(
                                              test_annotations=t_semantics)
 
     final = dict()
+    # classification
+    if class_scores:
+        test_iou_scores = [match.annotation_score for match in class_scores.values() if match.annotation_score > 0]
+        matched_class = int(np.sum([1 for score in test_iou_scores if score > 0]))  # len(test_iou_scores)
+        total_class = len(r_classes) + len(t_classes)
+        extra_class = len(t_classes) - matched_class
+        missing_class = len(r_classes) - matched_class
+        assert total_class == extra_class + 2 * matched_class + missing_class
+        # add missing to score
+        test_iou_scores += [0 for _ in range(missing_class)]
+        test_iou_scores += [0 for _ in range(extra_class)]
+        final.update(
+            {'class_ious': class_scores,
+             'class_annotations': r_classes,
+             'class_mean_iou': np.mean(test_iou_scores),
+             'class_attributes_scores': np.mean([match.attributes_score for match in class_scores.values()]),
+             'class_ref_number': len(r_classes),
+             'class_test_number': len(t_classes),
+             'class_missing': missing_class,
+             'class_total': total_class,
+             'class_matched': matched_class,
+             'class_extra': extra_class,
+             })
     # polygon
     if polygon_scores:
         test_iou_scores = [match.annotation_score for match in polygon_scores.values() if match.annotation_score > 0]
@@ -185,8 +248,8 @@ def measure_annotations(
         missing_polygon = len(r_polygons) - matched_polygon
         assert total_polygon == extra_polygon + 2 * matched_polygon + missing_polygon
         # add missing to score
-        test_iou_scores += [0 for i in range(missing_polygon)]
-        test_iou_scores += [0 for i in range(extra_polygon)]
+        test_iou_scores += [0 for _ in range(missing_polygon)]
+        test_iou_scores += [0 for _ in range(extra_polygon)]
         final.update(
             {'polygon_ious': polygon_scores,
              'polygon_annotations': r_polygons,
@@ -208,8 +271,8 @@ def measure_annotations(
         missing_box = len(r_boxes) - matched_box
         assert total_box == extra_box + 2 * matched_box + missing_box
         # add missing to score
-        test_iou_scores += [0 for i in range(missing_box)]
-        test_iou_scores += [0 for i in range(extra_box)]
+        test_iou_scores += [0 for _ in range(missing_box)]
+        test_iou_scores += [0 for _ in range(extra_box)]
         final.update(
             {'box_ious': box_scores,
              'box_annotations': r_boxes,
@@ -231,8 +294,8 @@ def measure_annotations(
         missing_point = len(r_points) - matched_point
         assert total_point == extra_point + 2 * matched_point + missing_point
         # add missing to score
-        test_iou_scores += [0 for i in range(missing_point)]
-        test_iou_scores += [0 for i in range(extra_point)]
+        test_iou_scores += [0 for _ in range(missing_point)]
+        test_iou_scores += [0 for _ in range(extra_point)]
         final.update(
             {'point_ious': point_scores,
              'point_annotations': r_points,
@@ -254,8 +317,8 @@ def measure_annotations(
         missing_semantic = len(r_semantics) - matched_semantic
         assert total_semantic == extra_semantic + 2 * matched_semantic + missing_semantic
         # add missing to score
-        test_iou_scores += [0 for i in range(missing_semantic)]
-        test_iou_scores += [0 for i in range(extra_semantic)]
+        test_iou_scores += [0 for _ in range(missing_semantic)]
+        test_iou_scores += [0 for _ in range(extra_semantic)]
         final.update(
             {'semantic_ious': semantic_scores,
              'semantic_annotations': r_semantics,
@@ -286,26 +349,32 @@ def measure_item(ref_item: entities.Item,
         # get times
         try:
             ref_item_duration_s = metrics.item_annotation_duration(item=ref_item, project=ref_project)
-            test_item_duration_s = metrics.item_annotation_duration(item=test_item, project=test_project)
+            ref_item_duration = str(datetime.timedelta(seconds=int(np.round(ref_item_duration_s))))
+
         except:
-            logger.exception('failed getting analytics for item. setting duration to -1')
+            logger.exception(
+                'failed getting analytics for item. setting duration to -1. item id: {!r}'.format(ref_item.id))
             ref_item_duration_s = -1
+            ref_item_duration = ''
+
+        try:
+            test_item_duration_s = metrics.item_annotation_duration(item=test_item, project=test_project)
+            test_item_duration = str(datetime.timedelta(seconds=int(np.round(test_item_duration_s))))
+        except:
+            logger.exception(
+                'failed getting analytics for item. setting duration to -1. item id: {!r}'.format(test_item.id))
             test_item_duration_s = -1
-        final.update({'ref_url': ref_item._client_api._get_resource_url(resource_type='item',
-                                                                        project_id=ref_project.id,
-                                                                        dataset_id=ref_dataset.id,
-                                                                        item_id=ref_item.id),
-                      'test_url': test_item._client_api._get_resource_url(resource_type='item',
-                                                                          project_id=test_project.id,
-                                                                          dataset_id=test_dataset.id,
-                                                                          item_id=test_item.id),
+            test_item_duration = ''
+
+        final.update({'ref_url': ref_item.platform_url,
+                      'test_url': test_item.platform_url,
                       'filename': ref_item.filename,
                       'ref_item_duration[s]': ref_item_duration_s,
                       'test_item_duration[s]': test_item_duration_s,
                       'diff_duration[s]': test_item_duration_s - ref_item_duration_s,
                       # round to sec
-                      'ref_item_duration': str(datetime.timedelta(seconds=np.round(ref_item_duration_s))),
-                      'test_item_duration': str(datetime.timedelta(seconds=np.round(test_item_duration_s))),
+                      'ref_item_duration': ref_item_duration,
+                      'test_item_duration': test_item_duration,
                       })
 
         return final
@@ -352,6 +421,7 @@ def measure_items(ref_items, ref_project, ref_dataset, ref_name,
         has_point = 'point_test_number' in scores
         has_polygon = 'polygon_test_number' in scores
         has_semantic = 'semantic_test_number' in scores
+        has_class = 'class_test_number' in scores
         line = {'filename': scores['filename'],
                 ref_column_name: scores['ref_url'],
                 test_column_name: scores['test_url'],
@@ -359,6 +429,11 @@ def measure_items(ref_items, ref_project, ref_dataset, ref_name,
                 'test_duration[s]': scores['test_item_duration[s]'],
                 'diff_duration[s]': scores['diff_duration[s]'],
                 }
+        if has_class:
+            line['class_score'] = scores['class_mean_iou']
+            line['class_attributes_score'] = np.mean(scores['class_attributes_scores'])
+            line['class_ref_number'] = scores['class_ref_number']
+            line['class_test_number'] = scores['class_test_number']
         if has_box:
             line['box_score'] = scores['box_mean_iou']
             line['box_attributes_score'] = np.mean(scores['box_attributes_scores'])

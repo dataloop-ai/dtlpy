@@ -490,7 +490,7 @@ class Dataset(entities.BaseEntity):
         self._client_api._open_in_web(url=self.platform_url)
 
     def add_label(self, label_name, color=None, children=None, attributes=None, display_label=None, label=None,
-                  recipe_id=None, ontology_id=None):
+                  recipe_id=None, ontology_id=None, icon_path=None):
         """
         Add single label to dataset
 
@@ -502,6 +502,7 @@ class Dataset(entities.BaseEntity):
         :param label:
         :param recipe_id: optional
         :param ontology_id: optional
+        :param icon_path: path to image to be display on label
         :return: label entity
         """
         # get recipe
@@ -513,6 +514,7 @@ class Dataset(entities.BaseEntity):
         if ontology_id is None:
             ontology_id = recipe.ontologyIds[0]
         ontology = recipe.ontologies.get(ontology_id=ontology_id)
+        # ontology._dataset = self
 
         # add label
         added_label = ontology.add_label(label_name=label_name,
@@ -521,7 +523,8 @@ class Dataset(entities.BaseEntity):
                                          attributes=attributes,
                                          display_label=display_label,
                                          label=label,
-                                         update_ontology=True)
+                                         update_ontology=True,
+                                         icon_path=icon_path)
 
         return added_label
 
@@ -550,7 +553,7 @@ class Dataset(entities.BaseEntity):
         return added_labels
 
     def update_label(self, label_name, color=None, children=None, attributes=None, display_label=None, label=None,
-                     recipe_id=None, ontology_id=None, upsert=False):
+                     recipe_id=None, ontology_id=None, upsert=False, icon_path=None):
         """
         Add single label to dataset
 
@@ -563,6 +566,7 @@ class Dataset(entities.BaseEntity):
         :param recipe_id: optional
         :param ontology_id: optional
         :param upsert if True will add in case it does not existing
+        :param icon_path: path to image to be display on label
         :return: label entity
         """
         # get recipe
@@ -584,7 +588,8 @@ class Dataset(entities.BaseEntity):
                                             display_label=display_label,
                                             label=label,
                                             update_ontology=True,
-                                            upsert=upsert)
+                                            upsert=upsert,
+                                            icon_path=icon_path)
 
         return added_label
 

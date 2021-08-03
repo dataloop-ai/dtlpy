@@ -104,7 +104,7 @@ class Segmentation(BaseAnnotationDefinition):
         :return: Box annotations list  to each separated  segmentation
         """
         polygons = Polygon.from_segmentation(mask=self.geo, label=self.label,
-                                             attributes=self.attributes, max_instances=None, is_open=False)
+                                             attributes=self.attributes, max_instances=None)
 
         if not isinstance(polygons, list):
             polygons = [polygons]
@@ -119,10 +119,9 @@ class Segmentation(BaseAnnotationDefinition):
         return boxes
 
     @classmethod
-    def from_polygon(cls, geo, label, shape, is_open=False, attributes=None):
+    def from_polygon(cls, geo, label, shape, attributes=None):
         """
 
-        :param is_open:
         :param geo: list of x,y coordinates of the polygon ([[x,y],[x,y]...]
         :param label: annotation's label
         :param shape: image shape (h,w)
@@ -134,7 +133,7 @@ class Segmentation(BaseAnnotationDefinition):
         except (ImportError, ModuleNotFoundError):
             raise ImportError('opencv not found. Must install to perform this function')
 
-        thickness = 1 if is_open else -1
+        thickness = -1
 
         # plot polygon on a blank mask with thickness -1 to fill the polyline
         mask = np.zeros(shape=shape, dtype=np.uint8)

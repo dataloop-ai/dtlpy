@@ -221,16 +221,18 @@ class Annotations:
         """
         # get item's annotations
         annotations = self.list()
-
-        # height/weight
-        if height is None:
-            if self.item.height is None:
-                raise exceptions.PlatformException('400', 'Height must be provided')
-            height = self.item.height
-        if width is None:
-            if self.item.width is None:
-                raise exceptions.PlatformException('400', 'Width must be provided')
-            width = self.item.width
+        if 'text' in self.item.metadata.get('system').get('mimetype', ''):
+            annotation_format = entities.ViewAnnotationOptions.JSON
+        else:
+            # height/weight
+            if height is None:
+                if self.item.height is None:
+                    raise exceptions.PlatformException('400', 'Height must be provided')
+                height = self.item.height
+            if width is None:
+                if self.item.width is None:
+                    raise exceptions.PlatformException('400', 'Width must be provided')
+                width = self.item.width
 
         return annotations.download(filepath=filepath,
                                     img_filepath=img_filepath,
@@ -242,7 +244,8 @@ class Annotations:
 
     def _delete_single_annotation(self, w_annotation_id):
         try:
-            creator = jwt.decode(self._client_api.token, algorithms=['HS256'], verify=False)['email']
+            creator = jwt.decode(self._client_api.token, algorithms=['HS256'],
+                                 verify=False, options={'verify_signature': False})['email']
             payload = {'username': creator}
             success, response = self._client_api.gen_request(req_type='delete',
                                                              path='/annotations/{}'.format(w_annotation_id),

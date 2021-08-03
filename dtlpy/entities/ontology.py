@@ -48,14 +48,15 @@ class Ontology(entities.BaseEntity):
     @_repositories.default
     def set_repositories(self):
         reps = namedtuple('repositories',
-                          field_names=['ontologies'])
+                          field_names=['ontologies', 'datasets', 'projects'])
 
         if self._recipe is None:
             ontologies = repositories.Ontologies(client_api=self._client_api, recipe=self._recipe)
         else:
             ontologies = self.recipe.ontologies
 
-        r = reps(ontologies=ontologies)
+        r = reps(ontologies=ontologies, datasets=repositories.Datasets(client_api=self._client_api),
+                 projects=repositories.Projects(client_api=self._client_api))
         return r
 
     @property
@@ -66,12 +67,22 @@ class Ontology(entities.BaseEntity):
 
     @property
     def dataset(self):
+        if self._dataset is None:
+            if self.recipe is not None:
+                self._dataset = self.recipe.dataset
         if self._dataset is not None:
             assert isinstance(self._dataset, entities.Dataset)
         return self._dataset
 
     @property
     def project(self):
+        if self._project is None:
+            if 'system' in self.metadata:
+                project_id = self.metadata['system'].get('projectIds', None)
+                if project_id is not None:
+                    self._project = self.projects.get(project_id=project_id[0])
+            elif self.dataset is not None:
+                self._project = self.dataset.project
         if self._project is not None:
             assert isinstance(self._project, entities.Project)
         return self._project
@@ -81,6 +92,12 @@ class Ontology(entities.BaseEntity):
         if self._repositories.ontologies is not None:
             assert isinstance(self._repositories.ontologies, repositories.Ontologies)
         return self._repositories.ontologies
+
+    @property
+    def projects(self):
+        if self._repositories.projects is not None:
+            assert isinstance(self._repositories.projects, repositories.Projects)
+        return self._repositories.projects
 
     @property
     def labels_flat_dict(self):
@@ -273,7 +290,8 @@ class Ontology(entities.BaseEntity):
                     label_node["attributes"] = label.attributes
                 if label.display_label is not None:
                     label_node["displayLabel"] = label.display_label
-
+                if label.display_data is not None:
+                    label_node["displayData"] = label.display_data
                 labels_node.append(label_node)
                 children = label.children
                 self._add_children(label.tag, children, labels_node, mode=mode)
@@ -303,8 +321,18 @@ class Ontology(entities.BaseEntity):
         self.labels = added_label
         return added_label
 
+    def _add_image_label(self, icon_path):
+        display_data = dict()
+        dataset = self.dataset.project.datasets.get(dataset_name='Binaries')
+        platform_path = "/.dataloop/ontologies/{}/labelDisplayImages/".format(self.id)
+        item = dataset.items.upload(local_path=icon_path, remote_path=platform_path)
+        display_data['displayImage'] = dict()
+        display_data['displayImage']['itemId'] = item.id
+        display_data['displayImage']['datasetId'] = item.datasetId
+        return display_data
+
     def _label_handler(self, label_name, color=None, children=None, attributes=None, display_label=None, label=None,
-                       add=True, update_ontology=False, mode=LabelHandlerMode.UPSERT):
+                       add=True, icon_path=None, update_ontology=False, mode=LabelHandlerMode.UPSERT):
         """
         Add a single label to ontology
 
@@ -315,22 +343,27 @@ class Ontology(entities.BaseEntity):
         :param display_label: optional - display_label
         :param label:
         :param add:
+        :param icon_path: path to image to be display on label
         :param update_ontology: update the ontology, default = False for backward compatible
         :param mode add, update or upsert, relevant on update_ontology=True only
         :return: Label entity
         """
 
-        if update_ontology:
+        if update_ontology and icon_path is None:
             if isinstance(label, entities.Label) or isinstance(label, str):
                 return self._base_labels_handler(labels=label,
                                                  update_ontology=update_ontology,
                                                  mode=mode)
             else:
+                display_data = dict()
+                if icon_path is not None:
+                    display_data = self._add_image_label(icon_path=icon_path)
                 return self._base_labels_handler(labels={"tag": label_name,
                                                          "displayLabel": display_label,
                                                          "color": color,
                                                          "attributes": attributes,
-                                                         "children": children
+                                                         "children": children,
+                                                         "displayData": display_data
                                                          },
                                                  update_ontology=update_ontology,
                                                  mode=mode)
@@ -370,12 +403,18 @@ class Ontology(entities.BaseEntity):
                     for word in label_name.split("_"):
                         display_label += word[0].upper() + word[1:] + " "
                     display_label = display_label[0:-1]
+
+            display_data = dict()
+            if icon_path is not None:
+                display_data = self._add_image_label(icon_path=icon_path)
+
             root = {
                 "value": {
                     "tag": label_name,
                     "displayLabel": display_label,
                     "color": color,
                     "attributes": attributes,
+                    "displayData": display_data
                 },
                 "children": list(),
             }
@@ -383,12 +422,33 @@ class Ontology(entities.BaseEntity):
             added_label.children = added_children
         else:
             added_label = label
-
-        if add:
+        if add and self._validate_label(added_label=added_label, mode=mode, color=color,
+                                        children=children, attributes=attributes,
+                                        display_label=display_label, display_data=icon_path):
             self.labels.append(added_label)
-            if update_ontology:
-                self.update()
+        self.update()
         return added_label
+
+    def _validate_label(self, added_label, mode=LabelHandlerMode.UPSERT, color=None, children=None, attributes=None,
+                        display_label=None, display_data=None):
+        """
+        check if the label is exist
+        """
+        for i in range(len(self.labels)):
+            if self.labels[i].tag == added_label.tag:
+                if mode == LabelHandlerMode.UPDATE:
+                    if color:
+                        self.labels[i].color = added_label.color
+                    if children:
+                        self.labels[i].children = added_label.children
+                    if attributes:
+                        self.labels[i].attributes = added_label.attributes
+                    if display_label:
+                        self.labels[i].display_label = added_label.display_label
+                    if display_data:
+                        self.labels[i].display_data = added_label.display_data
+                return False
+        return True
 
     def _labels_handler(self, label_list, update_ontology=False, mode=LabelHandlerMode.UPSERT):
         """
@@ -454,7 +514,7 @@ class Ontology(entities.BaseEntity):
                     labels.pop(i_label)
 
     def add_label(self, label_name, color=None, children=None, attributes=None, display_label=None, label=None,
-                  add=True, update_ontology=False):
+                  add=True, icon_path=None, update_ontology=False):
         """
         Add a single label to ontology
 
@@ -465,11 +525,13 @@ class Ontology(entities.BaseEntity):
         :param display_label: optional - display_label
         :param label:
         :param add:
+        :param icon_path: path to image to be display on label
         :param update_ontology: update the ontology, default = False for backward compatible
         :return: Label entity
         """
         return self._label_handler(label_name=label_name, color=color, children=children, attributes=attributes,
-                                   display_label=display_label, label=label, add=add, update_ontology=update_ontology)
+                                   display_label=display_label, label=label, add=add, icon_path=icon_path,
+                                   update_ontology=update_ontology)
 
     def add_labels(self, label_list, update_ontology=False):
         """
@@ -483,7 +545,7 @@ class Ontology(entities.BaseEntity):
         self._labels_handler(label_list=label_list, update_ontology=update_ontology, mode=LabelHandlerMode.UPSERT)
 
     def update_label(self, label_name, color=None, children=None, attributes=None, display_label=None, label=None,
-                     add=True, upsert=False, update_ontology=False):
+                     add=True, icon_path=None, upsert=False, update_ontology=False):
         """
         Update a single label to ontology
 
@@ -494,6 +556,7 @@ class Ontology(entities.BaseEntity):
         :param display_label: optional - display_label
         :param label:
         :param add:
+        :param icon_path: path to image to be display on label
         :param upsert if True will add in case it does not existing
         :param update_ontology: update the ontology, default = False for backward compatible
         :return: Label entity
@@ -505,7 +568,7 @@ class Ontology(entities.BaseEntity):
 
         return self._label_handler(label_name=label_name, color=color, children=children,
                                    attributes=attributes, display_label=display_label, label=label,
-                                   add=add, update_ontology=update_ontology, mode=mode)
+                                   add=add, icon_path=icon_path, update_ontology=update_ontology, mode=mode)
 
     def update_labels(self, label_list, upsert=False, update_ontology=False):
         """

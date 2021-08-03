@@ -59,5 +59,5 @@ from .driver import Driver
 from .pipeline import Pipeline, PipelineConnection, PipelineNode, PipelineConnectionPort, PipelineNodeIO
 from .pipeline_execution import PipelineExecution, PipelineExecutionNode
 from .feature import Feature
-from .feature_set import FeatureSet
+from .feature_set import FeatureSet, FeatureEntityType
 from .organization import Organization, OrganizationsPlans, MemberOrgRole

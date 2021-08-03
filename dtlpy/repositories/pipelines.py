@@ -249,7 +249,6 @@ class Pipelines:
             path='/pipelines/{}'.format(pipeline.id),
             json_req=payload
         )
-
         # exception handling
         if not success:
             raise exceptions.PlatformException(response)
@@ -287,7 +286,8 @@ class Pipelines:
         :return: Composition object
         """
         success, response = self._client_api.gen_request(req_type='post',
-                                                         path='/compositions/{}/install'.format(pipeline.composition_id))
+                                                         path='/compositions/{}/install'.format(
+                                                             pipeline.composition_id))
 
         if not success:
             raise exceptions.PlatformException(response)

@@ -29,7 +29,7 @@ class Package(entities.BaseEntity):
     ui_hooks = attr.ib()
     creator = attr.ib()
     is_global = attr.ib()
-
+    service_config = attr.ib()
     # name change
     project_id = attr.ib()
 
@@ -129,7 +129,8 @@ class Package(entities.BaseEntity):
             name=_json.get('name', None),
             url=_json.get('url', None),
             project=project,
-            id=_json.get('id', None)
+            id=_json.get('id', None),
+            service_config=_json.get('serviceConfig', None)
         )
         inst.is_fetched = is_fetched
         return inst
@@ -153,6 +154,7 @@ class Package(entities.BaseEntity):
                                                         attr.fields(Package).is_global,
                                                         attr.fields(Package).ui_hooks,
                                                         attr.fields(Package).codebase,
+                                                        attr.fields(Package).service_config,
                                                         ))
 
         modules = self.modules
@@ -174,6 +176,8 @@ class Package(entities.BaseEntity):
             _json['codebase'] = self.codebase.to_json()
         if self.ui_hooks is not None:
             _json['uiHooks'] = self.ui_hooks
+        if self.service_config is not None:
+            _json['serviceConfig '] = self.service_config
 
         return _json
 
@@ -369,7 +373,8 @@ class Package(entities.BaseEntity):
              modules: list = None,
              checkout: bool = False,
              revision_increment: str = None,
-             service_update: bool = False
+             service_update: bool = False,
+             service_config: dict = None,
              ):
         """
          Push local package
@@ -381,6 +386,7 @@ class Package(entities.BaseEntity):
         :param modules: list of PackageModule
         :param revision_increment: optional - str - version bumping method - major/minor/patch - default = None
         :param  service_update: optional - bool - update the service
+        :param  service_config : optional - json of service - a service that have config from the main service if wanted
         :return:
         """
         return self.project.packages.push(
@@ -390,7 +396,8 @@ class Package(entities.BaseEntity):
             codebase=codebase,
             src_path=src_path,
             checkout=checkout,
-            service_update=service_update
+            service_update=service_update,
+            service_config=service_config
 
         )
 

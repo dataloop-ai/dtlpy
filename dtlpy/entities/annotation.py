@@ -379,29 +379,6 @@ class Annotation(entities.BaseEntity):
         else:
             return True
 
-    ################
-    # polygon only #
-    ################
-    @property
-    def is_open(self):
-        logger.warning(
-            'Deprecation Warning - is_open will be deprecated starting from version "1.27.0". '
-            'use Polygon for close and Polyline for open')
-        is_open = None
-        if self.type in ['segment', 'polyline']:
-            is_open = self.annotation_definition.is_open
-        return is_open
-
-    @is_open.setter
-    def is_open(self, is_open):
-        logger.warning(
-            'Deprecation Warning - is_open will be deprecated starting from version "1.27.0". '
-            'use Polygon for close and Polyline for open')
-        if self.type in ['segment']:
-            self.annotation_definition.is_open = is_open
-        else:
-            logger.warning('type {} annotation does not have attribute is_open'.format(self.type))
-
     ##################
     # entity methods #
     ##################
@@ -996,12 +973,6 @@ class Annotation(entities.BaseEntity):
                         'coordinates': coordinates,
                         'label': _json['label'],
                         'attributes': attributes}
-            if _json['type'] == 'segment':
-                is_open = False
-                if 'system' in metadata:
-                    if metadata['system'] is not None:
-                        is_open = metadata['system'].get('isOpen', is_open)
-                def_dict['is_open'] = is_open
             annotation_definition = FrameAnnotation.json_to_annotation_definition(def_dict)
 
         frames = dict()

@@ -335,6 +335,7 @@ class Packages:
              version: str = None,
              ignore_sanity_check: bool = False,
              service_update: bool = False,
+             service_config: dict = None,
              slots: List[entities.PackageSlot] = None) -> entities.Package:
         """
         Push local package.
@@ -353,6 +354,7 @@ class Packages:
         :param version: semver version f the package
         :param ignore_sanity_check:
         :param  service_update: optional - bool - update the service
+        :param  service_config : json of service - a service that have config from the main service if wanted
         :param  slots: optional - list of slots PackageSlot of the package
         :return:
         """
@@ -454,7 +456,8 @@ class Packages:
                     slots=slots,
                     codebase=codebase,
                     is_global=is_global,
-                    version=version
+                    version=version,
+                    service_config=service_config
                 )
             if checkout:
                 self.checkout(package=package)
@@ -482,6 +485,7 @@ class Packages:
                 package_name: str = entities.package_defaults.DEFAULT_PACKAGE_NAME,
                 modules: List[entities.PackageModule] = None,
                 version: str = None,
+                service_config: dict = None,
                 slots: List[entities.PackageSlot] = None
                 ) -> entities.Package:
         """
@@ -493,6 +497,7 @@ class Packages:
         :param package_name: optional - default: 'default package'
         :param modules: optional - PackageModules Entity
         :param version: semver version of the package
+        :param  service_config : json of service - a service that have config from the main service if wanted
         :param slots: optional - list of slots PackageSlot of the package
         :return: Package Entity
         """
@@ -509,7 +514,8 @@ class Packages:
         payload = {'name': package_name,
                    'global': is_global,
                    'modules': modules,
-                   'slots': slots
+                   'slots': slots,
+                   'serviceConfig': service_config
                    }
 
         if codebase is not None:

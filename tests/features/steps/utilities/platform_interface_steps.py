@@ -25,6 +25,10 @@ def before_all(context):
         context.to_delete_projects_ids = list()
     if not hasattr(context, 'to_delete_pipelines_ids'):
         context.to_delete_pipelines_ids = list()
+    if not hasattr(context, 'to_delete_feature_set_ids'):
+        context.to_delete_feature_set_ids = list()
+    if not hasattr(context, 'to_delete_feature_ids'):
+        context.to_delete_feature_ids = list()
 
     if hasattr(context.feature, 'dataloop_feature_dl'):
         context.dl = context.feature.dataloop_feature_dl
@@ -51,12 +55,14 @@ def before_all(context):
         payload = None
         for i in range(10):
             try:
-                payload = jwt.decode(context.dl.token(), algorithms=['HS256'], verify=False)
+                payload = jwt.decode(context.dl.token(), algorithms=['HS256'],
+                                     verify=False, options={'verify_signature': False})
                 break
             except jwt.exceptions.DecodeError:
                 time.sleep(np.random.rand())
                 pass
-        if payload['email'] not in ['oa-test-4@dataloop.ai', 'oa-test-1@dataloop.ai', 'oa-test-2@dataloop.ai', 'oa-test-3@dataloop.ai']:
+        if payload['email'] not in ['oa-test-4@dataloop.ai', 'oa-test-1@dataloop.ai', 'oa-test-2@dataloop.ai',
+                                    'oa-test-3@dataloop.ai']:
             assert False, 'Cannot run test on user: "{}". only test users'.format(payload['email'])
 
         # save to feature level

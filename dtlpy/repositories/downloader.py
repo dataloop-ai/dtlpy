@@ -109,10 +109,10 @@ class Downloader:
         # Annotations filtering #
         #########################
         if annotation_filter_type is not None or \
-                annotation_filter_type is not None:
+                annotation_filter_label is not None:
             if annotation_filters is not None:
                 logger.warning(
-                    'Cannot input "annotation_filters" with one of "annotation_filter_type" or "annotation_filter_type". Using ONLY "annotation_filters"')
+                    'Cannot input "annotation_filters" with one of "annotation_filter_type" or "annotation_filter_label". Using ONLY "annotation_filters"')
             else:
                 if annotation_filters is None:
                     annotation_filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION)
@@ -139,7 +139,7 @@ class Downloader:
                         annotation_filters.add(field='label',
                                                values=annotation_filter_label,
                                                operator=entities.FiltersOperations.IN)
-            #####################
+        #####################
         # items to download #
         #####################
         if items is not None:

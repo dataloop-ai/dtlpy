@@ -170,7 +170,8 @@ if __name__ == '__main__':
     dl.verbose.print_all_responses = True
 
     # check token
-    payload = jwt.decode(dl.token(), algorithms=['HS256'], verify=False)
+    payload = jwt.decode(dl.token(), algorithms=['HS256'], verify=False,
+                         options={'verify_signature': False})
     if payload['email'] not in ['oa-test-1@dataloop.ai',
                                 'oa-test-4@dataloop.ai',
                                 'oa-test-2@dataloop.ai',

@@ -515,6 +515,7 @@ class ModalityTypeEnum(str, Enum):
     State enum
     """
     OVERLAY = "overlay"
+    REPLACE = "replace"
 
 
 class ModalityRefTypeEnum(str, Enum):
@@ -526,51 +527,73 @@ class ModalityRefTypeEnum(str, Enum):
 
 
 class Modality:
-    def __init__(self, _json=None, modality_type=None, ref=None, ref_type=ModalityRefTypeEnum.ID, name=None):
+    def __init__(self, _json=None, modality_type=None, ref=None, ref_type=ModalityRefTypeEnum.ID,
+                 name=None, timestamp=None):
+        """
+        :param _json: json represent of all modality params
+        :param modality_type: ModalityTypeEnum.OVERLAY,ModalityTypeEnum.REPLACE
+        :param ref: id or url of the item reference
+        :param ref_type: ModalityRefTypeEnum.ID, ModalityRefTypeEnum.URL
+        :param name:
+        :param timestamp: ISOString, epoch of UTC
+        """
         if _json is None:
             _json = dict()
         self.type = _json.get('type', modality_type)
         self.ref_type = _json.get('refType', ref_type)
         self.ref = _json.get('ref', ref)
         self.name = _json.get('name', name)
+        self.timestamp = _json.get('timestamp', timestamp)
 
     def to_json(self):
-        return {"type": self.type,
-                "ref": self.ref,
-                "refType": self.ref_type,
-                "name": self.name}
+        _json = {"type": self.type,
+                 "ref": self.ref,
+                 "refType": self.ref_type}
+        if self.name is not None:
+            _json['name'] = self.name
+        if self.timestamp is not None:
+            _json['timestamp'] = self.timestamp
+        return _json
 
 
 class Modalities:
     def __init__(self, item):
         assert isinstance(item, Item)
         self.item = item
+        if 'system' not in self.item.metadata:
+            self.item.metadata['system'] = dict()
 
     @property
     def modalities(self):
-        return self.item.metadata.get('modalities', None)
+        mod = None
+        if 'system' in self.item.metadata:
+            mod = self.item.metadata['system'].get('modalities', None)
+        return mod
 
     def create(self, name, ref,
                ref_type: ModalityRefTypeEnum = ModalityRefTypeEnum.ID,
-               modality_type: ModalityTypeEnum = ModalityTypeEnum.OVERLAY):
+               modality_type: ModalityTypeEnum = ModalityTypeEnum.OVERLAY,
+               timestamp=None):
         """
         create Modalities entity
         :param name:
-        :param ref:
-        :param ref_type: url, id
-        :param modality_type: overlay
+        :param ref: id or url of the item reference
+        :param ref_type: ModalityRefTypeEnum.ID, ModalityRefTypeEnum.URL
+        :param modality_type: ModalityTypeEnum.OVERLAY,ModalityTypeEnum.REPLACE
+        :param timestamp: ISOString, epoch of UTC
         """
         if self.modalities is None:
-            self.item.metadata['modalities'] = list()
+            self.item.metadata['system']['modalities'] = list()
 
-        _json = {
-            "type": modality_type,
-            "refType": ref_type,
-            "ref": ref,
-            "name": name
-        }
+        _json = {"type": modality_type,
+                 "ref": ref,
+                 "refType": ref_type}
+        if name is not None:
+            _json['name'] = name
+        if timestamp is not None:
+            _json['timestamp'] = timestamp
 
-        self.item.metadata['modalities'].append(_json)
+        self.item.metadata['system']['modalities'].append(_json)
 
         return Modality(_json=_json)
 
@@ -579,9 +602,9 @@ class Modalities:
         :param name:
         """
         if self.modalities is not None:
-            for modality in self.item.metadata['modalities']:
+            for modality in self.item.metadata['system']['modalities']:
                 if name == modality['name']:
-                    self.item.metadata['modalities'].remove(modality)
+                    self.item.metadata['system']['modalities'].remove(modality)
                     return Modality(_json=modality)
         return None
 
@@ -589,6 +612,6 @@ class Modalities:
         modalities = list()
         if self.modalities is not None:
             modalities = list()
-            for modality in self.item.metadata['modalities']:
+            for modality in self.item.metadata['system']['modalities']:
                 modalities.append(Modality(_json=modality))
         return modalities

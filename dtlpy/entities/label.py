@@ -10,6 +10,7 @@ logger = logging.getLogger(name=__name__)
 @attr.s
 class Label:
     tag = attr.ib()
+    display_data = attr.ib()
     color = attr.ib()
     display_label = attr.ib()
     attributes = attr.ib()
@@ -35,6 +36,11 @@ class Label:
         display_label = self.tag
         return display_label
 
+    @display_data.default
+    def set_display_data(self):
+        display_data = dict()
+        return display_data
+
     @classmethod
     def from_root(cls, root):
         """
@@ -58,8 +64,11 @@ class Label:
         display_label = root.get("displayLabel", None)
         if display_label is None:
             display_label = root.get("display_label", None)
+
+        display_data = root.get("displayData", dict())
         return cls(
             tag=label_name,
+            display_data=display_data,
             color=root.get("color", None),
             display_label=display_label,
             attributes=root.get("attributes", None),
@@ -74,8 +83,10 @@ class Label:
         """
         value = attr.asdict(self, filter=attr.filters.exclude(attr.fields(Label).children,
                                                               attr.fields(Label).color,
-                                                              attr.fields(Label).display_label))
+                                                              attr.fields(Label).display_label,
+                                                              attr.fields(Label).display_data))
         value['displayLabel'] = self.display_label
+        value['displayData'] = self.display_data
         value['color'] = self.hex
         children = [child.to_root() for child in self.children]
         _json = {

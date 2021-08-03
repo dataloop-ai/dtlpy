@@ -32,7 +32,8 @@ def login_secret(api_client, email, password, client_id, client_secret=None, for
     # check if already logged in with SAME email
     if api_client.token is not None or api_client.token == '':
         try:
-            payload = jwt.decode(api_client.token, algorithms=['HS256'], verify=False)
+            payload = jwt.decode(api_client.token, algorithms=['HS256'],
+                                 options={'verify_signature': False}, verify=False)
             if 'email' in payload and \
                     payload['email'] == email and \
                     not api_client.token_expired() and \
@@ -70,7 +71,8 @@ def login_secret(api_client, email, password, client_id, client_secret=None, for
             api_client.refresh_token = response_dict['refresh_token']
 
         # set new client id for refresh
-        payload = jwt.decode(api_client.token, algorithms=['HS256'], verify=False)
+        payload = jwt.decode(api_client.token, algorithms=['HS256'],
+                             options={'verify_signature': False}, verify=False)
         if 'email' in payload:
             logger.info('[Done] Login Secret. User: {}'.format(payload['email']))
         else:
@@ -172,7 +174,8 @@ def login(api_client, auth0_url=None, audience=None, client_id=None):
         success, tokens = server.process_request()
 
         if success:
-            decoded_jwt = jwt.decode(tokens['id'], verify=False)
+            decoded_jwt = jwt.decode(tokens['id'], verify=False,
+                                     options={'verify_signature': False})
 
             if 'email' in decoded_jwt:
                 logger.info('Logged in: {}'.format(decoded_jwt['email']))

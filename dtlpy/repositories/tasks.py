@@ -115,7 +115,7 @@ class Tasks:
         :param project_ids:
         """
         if project_ids is None:
-            if self._project_id is None:
+            if self._project_id is not None:
                 project_ids = self._project_id
             else:
                 raise exceptions.PlatformException('400', 'Please provide param project_ids')

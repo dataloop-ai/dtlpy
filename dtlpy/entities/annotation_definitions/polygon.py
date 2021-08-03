@@ -12,19 +12,13 @@ class Polygon(BaseAnnotationDefinition):
     """
     type = "segment"
 
-    def __init__(self, geo, label, is_open=False, attributes=None, description=None):
+    def __init__(self, geo, label, attributes=None, description=None):
         super().__init__(description=description)
         self.geo = geo
         self.label = label
-        self.is_open = is_open
         if attributes is None:
             attributes = list()
         self.attributes = attributes
-
-        if self.is_open:
-            logger.warning(
-                'Deprecation Warning - is_open will be deprecated starting from version "1.27.0". '
-                'use Polygon for close and Polyline for open')
 
     @property
     def x(self):
@@ -78,32 +72,19 @@ class Polygon(BaseAnnotationDefinition):
 
         if thickness is None:
             thickness = 2
-        elif thickness == -1 and self.is_open:
-            thickness = 2
-            self.logger.warning('Cannot fill out open polygon, setting default thickness to 2')
-        # draw annotation
-        if self.is_open:
-            image = cv2.polylines(
-                img=image,
-                pts=[np.round(self.geo).astype(int)],
-                color=color,
-                isClosed=False,
-                thickness=thickness,
-            )
-        else:
-            image = cv2.drawContours(
-                image=image,
-                contours=[np.round(self.geo).astype(int)],
-                contourIdx=-1,
-                color=color,
-                thickness=thickness,
-            )
+        image = cv2.drawContours(
+            image=image,
+            contours=[np.round(self.geo).astype(int)],
+            contourIdx=-1,
+            color=color,
+            thickness=thickness,
+        )
         if with_text:
             image = self.add_text_to_image(image=image, annotation=self)
         return image
 
     @classmethod
-    def from_segmentation(cls, mask, label, attributes=None, epsilon=None, max_instances=1, min_area=0, is_open=False):
+    def from_segmentation(cls, mask, label, attributes=None, epsilon=None, max_instances=1, min_area=0):
         """
         Convert binary mask to Polygon
         :param mask: binary mask (0,1)
@@ -113,7 +94,6 @@ class Polygon(BaseAnnotationDefinition):
     .   between the original curve and its approximation. if 0 all points are returns
         :param max_instances: number of max instances to return. if None all wil be returned
         :param min_area: remove polygons with area lower thn this threshold (pixels)
-        :param is_open: open or close the polygon
         :return: Polygon annotation
         """
         try:
@@ -150,14 +130,13 @@ class Polygon(BaseAnnotationDefinition):
             for curve in filtered_contours:
                 if epsilon is None:
                     epsilon = 0.0005 * cv2.arcLength(curve=curve,
-                                                     closed=not is_open)
+                                                     closed=True)
                 new_pts_list.append(np.squeeze(cv2.approxPolyDP(curve=curve,
                                                                 epsilon=epsilon,
-                                                                closed=not is_open)))
+                                                                closed=True)))
         polygons = [cls(geo=new_pts,
                         label=label,
                         attributes=attributes,
-                        is_open=is_open
                         ) for new_pts in new_pts_list]
 
         if len(polygons) == 1:
@@ -175,11 +154,9 @@ class Polygon(BaseAnnotationDefinition):
                 'can not find "coordinates" or "data" in annotation. id: %s'
                 % _json["id"]
             )
-        is_open = _json.get('is_open', False)
         attributes = _json.get("attributes", list())
         return cls(
             geo=geo,
             label=_json["label"],
             attributes=attributes,
-            is_open=is_open
         )

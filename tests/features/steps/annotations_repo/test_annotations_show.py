@@ -27,7 +27,10 @@ def step_impl(context, should_be_path):
 @behave.when(u'Every annotation has an object id')
 def step_impl(context):
     context.annotaitons = context.item.annotations.list()
-    types = ['ellipse', 'segment', 'box', 'point']
+    types = ['ellipse', 'segment', 'box', 'point', 'polyline']
     for ann in context.annotaitons:
-        ann.object_id = types.index(ann.type) + 1
+        if ann.type == 'polyline':
+            ann.object_id = 2
+        else:
+            ann.object_id = types.index(ann.type) + 1
     context.annotaitons = context.annotaitons.update()
