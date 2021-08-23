@@ -84,10 +84,14 @@ class Item(entities.BaseEntity):
         :param is_fetched: is Entity fetched from Platform
         :return: Item object
         """
+        dataset_id = None
         if dataset is not None:
-            if dataset.id != _json.get('datasetId', None):
+            dataset_id = _json.get('datasetId', None)
+            if dataset.id != dataset_id and dataset_id is not None:
                 logger.warning('Item has been fetched from a dataset that is not belong to it')
                 dataset = None
+            else:
+                dataset_id = dataset.id
 
         metadata = _json.get('metadata', dict())
         inst = cls(
@@ -99,7 +103,7 @@ class Item(entities.BaseEntity):
             # params
             annotations_link=_json.get('annotations', None),
             thumbnail=_json.get('thumbnail', None),
-            datasetId=_json.get('datasetId', None),
+            datasetId=_json.get('datasetId', dataset_id),
             annotated=_json.get('annotated', None),
             dataset_url=_json.get('dataset', None),
             createdAt=_json.get('createdAt', None),
@@ -404,7 +408,7 @@ class Item(entities.BaseEntity):
         return self.update(system_metadata=True)
 
     def clone(self, dst_dataset_id=None, remote_filepath=None, metadata=None, with_annotations=True,
-              with_metadata=True, with_task_annotations_status=False, wait=True):
+              with_metadata=True, with_task_annotations_status=False, allow_many=False, wait=True):
         """
         Clone item
         :param dst_dataset_id: destination dataset id
@@ -413,6 +417,7 @@ class Item(entities.BaseEntity):
         :param with_annotations: clone annotations
         :param with_metadata: clone metadata
         :param with_task_annotations_status: clone task annotations status
+        :param allow_many: `bool` if True use multiple clones in single dataset is allowed, (default=False)
         :param wait: wait the command to finish
 
         :return: Item
@@ -428,6 +433,7 @@ class Item(entities.BaseEntity):
                                 with_annotations=with_annotations,
                                 with_metadata=with_metadata,
                                 with_task_annotations_status=with_task_annotations_status,
+                                allow_many=allow_many,
                                 wait=wait)
 
     def open_in_web(self):

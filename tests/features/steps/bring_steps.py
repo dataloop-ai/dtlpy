@@ -156,5 +156,5 @@ from tests.features.steps.model_entity import test_model_update
 
 from tests.features.steps.snapshots_repo import test_snapshots_create
 
-from tests.features.steps.pipeline_entity import pipeline_get, pipeline_delete, pipeline_update
+from tests.features.steps.pipeline_entity import pipeline_get, pipeline_delete, pipeline_update, pipeline_flow
 from tests.features.steps.features_vectors import test_features_create, test_features_delete

@@ -1,4 +1,6 @@
 import logging
+import time
+
 import tqdm
 import os
 import io
@@ -156,6 +158,9 @@ class Buckets:
                         os.makedirs(base_dir, exist_ok=True)
                     local_file_path = os.path.join(local_path, rel_fname)
                     blob.download_to_filename(local_file_path)
+            if blob.size - os.stat(local_path).st_size > 15:
+                # FIXME Mitigate the case that not all content was downloaded yet...
+                time.sleep(10)
         else:
             raise NotImplemented(
                 'missing implementation for "buckets.download" for bucket type: {!r}'.format(bucket.type))

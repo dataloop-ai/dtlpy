@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import traceback
 import logging
@@ -88,12 +89,15 @@ class Annotation(entities.BaseEntity):
     start_frame = attr.ib(default=0)
     start_time = attr.ib(default=0)
 
-    # temp
+    # sdk
     _dataset = attr.ib(repr=False, default=None)
     _datasets = attr.ib(repr=False, default=None)
     _annotations = attr.ib(repr=False, default=None)
     __client_api = attr.ib(default=None, repr=False)
     _items = attr.ib(repr=False, default=None)
+
+    # temp
+    _recipe_2_attributes = attr.ib(repr=False, default=None)
 
     ############
     # Platform #
@@ -312,13 +316,21 @@ class Annotation(entities.BaseEntity):
         self.annotation_definition.label = label
 
     @property
+    def _use_attributes_2(self):
+        return os.environ.get("USE_ATTRIBUTE_2", 'false') == 'true'
+
+    @property
     def attributes(self):
-        return self.annotation_definition.attributes
+        return self._recipe_2_attributes if self._use_attributes_2 else self.annotation_definition.attributes
 
     @attributes.setter
     def attributes(self, attributes):
-        if not isinstance(attributes, list):
+        if not isinstance(attributes, list) and not isinstance(attributes, dict):
             attributes = [attributes]
+
+        if self._use_attributes_2:
+            self._recipe_2_attributes = attributes
+
         self.annotation_definition.attributes = attributes
 
     @property
@@ -461,6 +473,76 @@ class Annotation(entities.BaseEntity):
     def show(self, image=None, thickness=None, with_text=False, height=None, width=None,
              annotation_format: ViewAnnotationOptions = ViewAnnotationOptions.MASK,
              color=None, label_instance_dict=None):
+        """
+        Show annotations
+
+        :param image: empty or image to draw on
+        :param thickness: line thickness
+        :param with_text: add label to annotation
+        :param height: height
+        :param width: width
+        :param annotation_format: list(dl.ViewAnnotationOptions)
+        :param color: optional - color tuple
+        :param label_instance_dict: the instance labels
+        :return: list or single ndarray of the annotations
+        """
+        try:
+            import cv2
+        except (ImportError, ModuleNotFoundError):
+            logger.error(
+                'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
+            raise
+        s_frame = self.metadata.get('system').get('frame', 0)
+        e_frame = self.metadata.get('system').get('endFrame', 0)
+        if e_frame > 1:
+            if image is None:
+                image = [None] * (e_frame - s_frame)
+            frames = list()
+            i_frame = 0
+            for frame in image:
+                if s_frame <= i_frame <= e_frame:
+                    annotation = self
+                    if self.metadata['system'].get('snapshots_', []):
+                        snapshots = self.metadata['system'].get('snapshots_', [])
+                        item = self.item
+                        ann_json = self.to_json()
+                        if i_frame > s_frame + len(snapshots) - 1:
+                            ann_json['coordinates'] = snapshots[-1]['data']
+                        elif i_frame > s_frame:
+                            ann_json['coordinates'] = snapshots[i_frame - s_frame - 1]['data']
+                        annotation = self.from_json(ann_json)
+                        annotation._item = item
+                    try:
+                        frame = annotation._show_single_frame(image=frame,
+                                                              color=self.color,
+                                                              annotation_format=annotation_format,
+                                                              thickness=thickness,
+                                                              with_text=with_text,
+                                                              height=height,
+                                                              width=width,
+                                                              label_instance_dict=label_instance_dict)
+                    except Exception as e:
+                        raise ValueError(e)
+                    text = '%s-%s' % (self.label, ','.join(self.attributes))
+                    frame = cv2.putText(frame,
+                                        text=text,
+                                        org=tuple([int(np.round(self.left)), int(np.round(self.top))]),
+                                        color=self.color,
+                                        fontFace=cv2.FONT_HERSHEY_DUPLEX,
+                                        fontScale=1,
+                                        thickness=thickness)
+                frames.append(frame)
+                i_frame += 1
+            return frames
+        else:
+            return self._show_single_frame(image=image, thickness=thickness, with_text=with_text, height=height,
+                                           width=width,
+                                           annotation_format=annotation_format,
+                                           color=color, label_instance_dict=label_instance_dict)
+
+    def _show_single_frame(self, image=None, thickness=None, with_text=False, height=None, width=None,
+                           annotation_format: ViewAnnotationOptions = ViewAnnotationOptions.MASK,
+                           color=None, label_instance_dict=None):
         """
         Show annotations
 
@@ -730,6 +812,8 @@ class Annotation(entities.BaseEntity):
 
         if frame_num is None:
             frame_num = int(np.round(start_time * self.fps))
+            self.start_time = start_time
+        self.start_frame = frame_num
 
         if end_frame_num is None:
             if end_time is not None:
@@ -885,7 +969,7 @@ class Annotation(entities.BaseEntity):
                 is_video = False
             else:
                 # get item type
-                if 'video' in item.mimetype:
+                if item.mimetype is not None and 'video' in item.mimetype:
                     is_video = True
 
         item_url = _json.get('item', item.url if item is not None else None)
@@ -911,16 +995,18 @@ class Annotation(entities.BaseEntity):
         else:
             raise PlatformException('400', 'missing id in annotation json')
 
+        metadata = _json.get('metadata', dict())
+        named_attributes = metadata.get('system', dict()).get('attributes', None)
+
         # get metadata, status, attributes and object id
         object_id = None
         status = None
-        attributes = _json.get('attributes', list())
-        metadata = _json.get('metadata', dict())
+        attributes = _json.get('attributes', None)
         if 'system' in metadata and metadata['system'] is not None:
             object_id = _json['metadata']['system'].get('objectId', object_id)
             status = _json['metadata']['system'].get('status', status)
 
-        first_frame_attributes = list()
+        first_frame_attributes = None
         first_frame_coordinates = list()
         first_frame_number = 0
         first_frame_start_time = 0
@@ -1013,7 +1099,8 @@ class Annotation(entities.BaseEntity):
             end_time=end_time,
             start_frame=start_frame,
             annotations=annotations,
-            start_time=start_time
+            start_time=start_time,
+            recipe_2_attributes=named_attributes
         )
         annotation.__client_api = client_api
 
@@ -1034,10 +1121,13 @@ class Annotation(entities.BaseEntity):
                         'fixed': True,
                         'label': _json['label'],
                         'type': annotation.type,
+                        'namedAttributes': named_attributes
                     }
-                    frame = FrameAnnotation.from_snapshot(_json=snapshot,
-                                                          annotation=annotation,
-                                                          fps=fps)
+                    frame = FrameAnnotation.from_snapshot(
+                        _json=snapshot,
+                        annotation=annotation,
+                        fps=fps
+                    )
                     annotation.frames[frame.frame_num] = frame
             else:
                 # set first frame
@@ -1049,20 +1139,25 @@ class Annotation(entities.BaseEntity):
                     'frame': first_frame_number,
                     'label': _json['label'],
                     'type': annotation.type,
+                    'namedAttributes': named_attributes
                 }
 
                 # add first frame
-                frame = FrameAnnotation.from_snapshot(_json=snapshot,
-                                                      annotation=annotation,
-                                                      fps=fps)
+                frame = FrameAnnotation.from_snapshot(
+                    _json=snapshot,
+                    annotation=annotation,
+                    fps=fps
+                )
                 annotation.frames[frame.frame_num] = frame
                 annotation.annotation_definition = frame.annotation_definition
                 # put snapshots if there are any
                 last_frame = frame
                 for snapshot in _json['metadata']['system']['snapshots_']:
-                    frame = FrameAnnotation.from_snapshot(_json=snapshot,
-                                                          annotation=annotation,
-                                                          fps=fps)
+                    frame = FrameAnnotation.from_snapshot(
+                        _json=snapshot,
+                        annotation=annotation,
+                        fps=fps
+                    )
                     while last_frame.frame_num < frame.frame_num - 1:
                         last_frame = Annotation._add_reflected_frame(annotation=annotation, last_frame=last_frame)
 
@@ -1123,7 +1218,7 @@ class Annotation(entities.BaseEntity):
         _json['coordinates'] = self.coordinates
 
         # add system metadata
-        if 'system' not in _json['metadata']:
+        if _json['metadata'].get('system', None) is None:
             _json['metadata']['system'] = dict()
         if self.automated is not None:
             _json['metadata']['system']['automated'] = self.automated
@@ -1132,6 +1227,9 @@ class Annotation(entities.BaseEntity):
         if self.status is not None:
             # if status is CLEAR need to set status to None so it will be deleted in backend
             _json['metadata']['system']['status'] = self.status if self.status != AnnotationStatus.CLEAR else None
+
+        if self._recipe_2_attributes:
+            _json['metadata']['system']['attributes'] = self._recipe_2_attributes
 
         # add frame info
         if self.is_video:
@@ -1153,12 +1251,6 @@ class Annotation(entities.BaseEntity):
             # add snapshots only if classification
             if self.type not in ['class', 'subtitle']:
                 _json['metadata']['system']['snapshots_'] = snapshots
-        else:
-            # remove metadata if empty
-            if len(_json['metadata']['system']) == 0:
-                _json['metadata'].pop('system')
-                if len(_json['metadata']) == 0:
-                    _json.pop('metadata')
 
         return _json
 
@@ -1178,6 +1270,9 @@ class FrameAnnotation(entities.BaseEntity):
     frame_num = attr.ib()
     fixed = attr.ib()
     object_visible = attr.ib()
+
+    # temp
+    _recipe_2_attributes = attr.ib(repr=False, default=None)
 
     ################################
     # parent annotation attributes #
@@ -1205,7 +1300,7 @@ class FrameAnnotation(entities.BaseEntity):
 
     @property
     def attributes(self):
-        return self.annotation_definition.attributes
+        return self._recipe_2_attributes if self.annotation._use_attributes_2 else self.annotation_definition.attributes
 
     @property
     def geo(self):
@@ -1268,7 +1363,7 @@ class FrameAnnotation(entities.BaseEntity):
 
     @property
     def angle(self):
-        if self.annotation_definition.type == 'ellipse':
+        if self.annotation_definition.type in ['ellipse', 'box']:
             return self.annotation_definition.angle
         else:
             return None
@@ -1362,15 +1457,25 @@ class FrameAnnotation(entities.BaseEntity):
             # multi
             frame_num=frame_num,
             fixed=_json.get('fixed', False),
-            object_visible=_json.get('objectVisible', True)
+            object_visible=_json.get('objectVisible', True),
+
+            # temp
+            recipe_2_attributes=_json.get('namedAttributes', None)
         )
 
     def to_snapshot(self):
-        snapshot_dict = {'frame': self.frame_num,
-                         'fixed': self.fixed,
-                         'label': self.label,
-                         'attributes': self.attributes,
-                         'type': self.type,
-                         'objectVisible': self.object_visible,
-                         'data': self.coordinates}
+
+        snapshot_dict = {
+            'frame': self.frame_num,
+            'fixed': self.fixed,
+            'label': self.label,
+            'attributes': self.attributes,
+            'type': self.type,
+            'objectVisible': self.object_visible,
+            'data': self.coordinates
+        }
+
+        if self._recipe_2_attributes:
+            snapshot_dict['namedAttributes'] = self._recipe_2_attributes
+
         return snapshot_dict

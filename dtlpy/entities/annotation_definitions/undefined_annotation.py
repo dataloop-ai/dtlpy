@@ -7,14 +7,11 @@ class UndefinedAnnotationType(BaseAnnotationDefinition):
     """
 
     def __init__(self, type, label, coordinates, attributes=None, description=None):
-        super().__init__(description=description)
+        super().__init__(description=description, attributes=attributes)
         self.type = type
 
         self.label = label
         self.coordinates = coordinates
-        if attributes is None:
-            attributes = list()
-        self.attributes = attributes
 
     @property
     def geo(self):
@@ -68,11 +65,9 @@ class UndefinedAnnotationType(BaseAnnotationDefinition):
         else:
             coordinates = dict()
 
-        attributes = _json.get("attributes", list())
-
         return cls(
             coordinates=coordinates,
             label=_json.get("label", None),
             type=_json.get('type', None),
-            attributes=attributes
+            attributes=_json.get("attributes", None)
         )

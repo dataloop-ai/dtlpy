@@ -76,12 +76,37 @@ def calculate_iou_box(pts1, pts2):
 
 def calculate_iou_polygon(pts1, pts2):
     try:
-        from shapely.geometry import Polygon
+        # from shapely.geometry import Polygon
+        import cv2
     except (ImportError, ModuleNotFoundError) as err:
         raise RuntimeError('dtlpy depends on external package. Please install ') from err
-    poly_1 = Polygon(pts1)
-    poly_2 = Polygon(pts2)
-    iou = poly_1.intersection(poly_2).area / poly_1.union(poly_2).area
+    # # using shapley
+    # poly_1 = Polygon(pts1)
+    # poly_2 = Polygon(pts2)
+    # iou = poly_1.intersection(poly_2).area / poly_1.union(poly_2).area
+
+    # # using opencv
+    width = int(np.ceil(np.max(np.concatenate((pts1[:, 0], pts2[:, 0]))))) + 10
+    height = int(np.ceil(np.max(np.concatenate((pts1[:, 1], pts2[:, 1]))))) + 10
+    mask1 = np.zeros((height, width))
+    mask2 = np.zeros((height, width))
+    mask1 = cv2.drawContours(
+        image=mask1,
+        contours=[pts1.round().astype(int)],
+        contourIdx=-1,
+        color=1,
+        thickness=-1,
+    )
+    mask2 = cv2.drawContours(
+        image=mask2,
+        contours=[pts2.round().astype(int)],
+        contourIdx=-1,
+        color=1,
+        thickness=-1,
+    )
+    iou = np.sum((mask1 + mask2) == 2) / np.sum((mask1 + mask2) > 0)
+    if np.sum((mask1 + mask2) > 2):
+        assert False
     return iou
 
 
@@ -137,7 +162,13 @@ def match_box(ref_annotations, test_annotations, match_thr=0.5, geometry_only=Fa
                 if t_annotation.label != r_annotation.label:
                     # TODO: split to geometry score and label score
                     continue
-            ious_dict[ref_ann_id] = calculate_iou_box(pts1=r_annotation.geo, pts2=t_annotation.geo)
+            try:
+                ious_dict[ref_ann_id] = calculate_iou_box(pts1=r_annotation.geo, pts2=t_annotation.geo)
+            except:
+                logger.debug('failed calculating. ref annotation: {!r}, test annotation: {!r}'.format(
+                    r_annotation.id, t_annotation.id
+                ))
+                raise
         if len(ious_dict) == 0:
             continue
         best_match_id = max(ious_dict, key=ious_dict.get)
@@ -244,7 +275,13 @@ def match_polygon(ref_annotations, test_annotations, match_thr=0.5, geometry_onl
                 if t_annotation.label != r_annotation.label:
                     # TODO: split to geometry score and label score
                     continue
-            ious_dict[ref_ann_id] = calculate_iou_polygon(pts1=r_annotation.geo, pts2=t_annotation.geo)
+            try:
+                ious_dict[ref_ann_id] = calculate_iou_polygon(pts1=r_annotation.geo, pts2=t_annotation.geo)
+            except:
+                logger.debug('failed calculating. ref annotation: {!r}, test annotation: {!r}'.format(
+                    r_annotation.id, t_annotation.id
+                ))
+                raise
         if len(ious_dict) == 0:
             continue
         best_match_id = max(ious_dict, key=ious_dict.get)
@@ -348,7 +385,6 @@ def item_annotation_duration(item: entities.Item,
     if 'duration' in df.columns:
         anns_duration_sec = df.loc[:, 'duration'].sum() / 1000
     else:
-        logger.warning("No annotations were found in analytics for item {!r}".format(item.id))
         anns_duration_sec = 0
 
     return anns_duration_sec

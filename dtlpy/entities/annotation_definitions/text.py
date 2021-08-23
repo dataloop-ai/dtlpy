@@ -18,21 +18,18 @@ class Text(BaseAnnotationDefinition):
         :param label: annotation label
         :param top: top box pixel
         :param left: left box pixel
-        :param attributes: a list of attributes for the annotation
+        :param attributes: annotation attributes
         :param description:
 
         :return:
         """
-        super().__init__(description=description)
+        super().__init__(description=description, attributes=attributes)
         self.text_type = text_type
         self.start = start
         self.end = end
         self.top = top
         self.left = left
         self.label = label
-        if attributes is None:
-            attributes = list()
-        self.attributes = attributes
 
     @property
     def x(self):
@@ -74,7 +71,6 @@ class Text(BaseAnnotationDefinition):
 
     @classmethod
     def from_json(cls, _json):
-        attributes = _json.get("attributes", list())
         coordinates = _json["coordinates"]
 
         return cls(
@@ -84,5 +80,5 @@ class Text(BaseAnnotationDefinition):
             top=coordinates.get("top", None),
             left=coordinates.get("left", None),
             label=_json["label"],
-            attributes=attributes,
+            attributes=_json.get("attributes", None),
         )

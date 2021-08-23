@@ -8,12 +8,9 @@ class Subtitle(BaseAnnotationDefinition):
     type = "subtitle"
 
     def __init__(self, text, label, attributes=None, description=None):
-        super().__init__(description=description)
+        super().__init__(description=description, attributes=attributes)
         self.text = text
         self.label = label
-        if attributes is None:
-            attributes = list()
-        self.attributes = attributes
 
     def to_coordinates(self, color):
         return {"text": self.text}
@@ -24,7 +21,6 @@ class Subtitle(BaseAnnotationDefinition):
 
     @classmethod
     def from_json(cls, _json):
-        attributes = _json.get("attributes", list())
         if "coordinates" in _json:
             text = cls.from_coordinates(coordinates=_json["coordinates"])
         elif "data" in _json:
@@ -34,5 +30,5 @@ class Subtitle(BaseAnnotationDefinition):
         return cls(
             text=text,
             label=_json["label"],
-            attributes=attributes
+            attributes=_json.get("attributes", None)
         )

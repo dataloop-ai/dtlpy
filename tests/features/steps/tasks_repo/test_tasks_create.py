@@ -33,6 +33,7 @@ def compare_items_list(items_a, items_b):
 
 @behave.then(u'Task has the correct attributes')
 def step_impl(context):
+    context.task = context.task.tasks.get(task_id=context.task.id)
     for key, val in context.params.items():
         if key == 'filters':
             assert json.loads(context.task.query) == val.prepare()

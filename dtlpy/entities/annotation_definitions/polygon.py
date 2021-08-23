@@ -13,12 +13,9 @@ class Polygon(BaseAnnotationDefinition):
     type = "segment"
 
     def __init__(self, geo, label, attributes=None, description=None):
-        super().__init__(description=description)
+        super().__init__(description=description, attributes=attributes)
         self.geo = geo
         self.label = label
-        if attributes is None:
-            attributes = list()
-        self.attributes = attributes
 
     @property
     def x(self):
@@ -154,9 +151,8 @@ class Polygon(BaseAnnotationDefinition):
                 'can not find "coordinates" or "data" in annotation. id: %s'
                 % _json["id"]
             )
-        attributes = _json.get("attributes", list())
         return cls(
             geo=geo,
             label=_json["label"],
-            attributes=attributes,
+            attributes=_json.get("attributes", None),
         )

@@ -8,11 +8,8 @@ class Classification(BaseAnnotationDefinition):
     type = "class"
 
     def __init__(self, label, attributes=None, description=None):
-        super().__init__(description=description)
+        super().__init__(description=description, attributes=attributes)
         self.label = label
-        if attributes is None:
-            attributes = list()
-        self.attributes = attributes
 
     @property
     def x(self):
@@ -63,8 +60,7 @@ class Classification(BaseAnnotationDefinition):
 
     @classmethod
     def from_json(cls, _json):
-        attributes = _json.get("attributes", list())
         return cls(
             label=_json["label"],
-            attributes=attributes,
+            attributes=_json.get("attributes", None),
         )

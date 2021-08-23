@@ -13,6 +13,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with DTLPY.  If not, see <http://www.gnu.org/licenses/>.
+import json
 import logging
 import sys
 import os
@@ -180,6 +181,10 @@ def checkout_state():
     """
     state = client_api.state_io.read_json()
     return state
+
+
+def use_attributes_2(state: bool = True):
+    os.environ["USE_ATTRIBUTE_2"] = json.dumps(state)
 
 
 class LoggingLevel:

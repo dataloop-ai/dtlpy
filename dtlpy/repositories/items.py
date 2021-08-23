@@ -224,7 +224,7 @@ class Items:
         return item
 
     def clone(self, item_id, dst_dataset_id, remote_filepath=None, metadata=None, with_annotations=True,
-              with_metadata=True, with_task_annotations_status=False, wait=True):
+              with_metadata=True, with_task_annotations_status=False, allow_many=False, wait=True):
         """
         Clone item
         :param item_id: item to clone
@@ -234,6 +234,7 @@ class Items:
         :param with_annotations: clone annotations
         :param with_metadata: clone metadata
         :param with_task_annotations_status: clone task annotations status
+        :param allow_many: `bool` if True use multiple clones in single dataset is allowed, (default=False)
         :param wait: wait the command to finish
         :return: Item
         """
@@ -245,7 +246,8 @@ class Items:
                    "cloneDatasetParams": {
                        "withItemsAnnotations": with_annotations,
                        "withMetadata": with_metadata,
-                       "withTaskAnnotationsStatus": with_task_annotations_status}
+                       "withTaskAnnotationsStatus": with_task_annotations_status},
+                   "allowMany": allow_many
                    }
         success, response = self._client_api.gen_request(req_type="post",
                                                          path="/items/{}/clone".format(item_id),
@@ -535,9 +537,9 @@ class Items:
                 item_count = len(items)
                 items = [items]
         else:
-            if not isinstance(items, list):
-                items = [items]
-            item_count = len(items)
+            if not isinstance(item_ids, list):
+                item_ids = [item_ids]
+            item_count = len(item_ids)
             items = [[dataset.items.get(item_id=item_id, fetch=False) for item_id in item_ids]]
 
         pool = self._client_api.thread_pools(pool_name='item.status_update')

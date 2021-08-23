@@ -10,16 +10,13 @@ class Pose(BaseAnnotationDefinition):
     """
 
     def __init__(self, label, template_id, instance_id=None, attributes=None, points=None, description=None):
-        super().__init__(description=description)
+        super().__init__(description=description, attributes=attributes)
         self.type = "pose"
         self.label = label
         self.template_id = template_id
         if instance_id is None:
             instance_id = str(uuid.uuid1())
         self.instance_id = instance_id
-        if attributes is None:
-            attributes = list()
-        self.attributes = attributes
         if points is None:
             points = list()
         self.points = points
@@ -86,10 +83,9 @@ class Pose(BaseAnnotationDefinition):
 
     @classmethod
     def from_json(cls, _json):
-        attributes = _json.get("attributes", list())
         return cls(
             label=_json["label"],
-            attributes=attributes,
+            attributes=_json.get("attributes", None),
             template_id=cls.from_coordinates(_json["coordinates"])['templateId'],
             instance_id=cls.from_coordinates(_json["coordinates"])['instanceId']
         )

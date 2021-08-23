@@ -10,10 +10,30 @@ class Note(Box):
         Note annotation object
     """
 
-    def __init__(self, left, top, right, bottom, label, attributes=None, messages=None, status='issue',
-                 assignee=None, create_time=None, creator=None, description=None):
-        super(Note, self).__init__(left=left, top=top, right=right, bottom=bottom,
-                                   label=label, attributes=attributes, description=description)
+    def __init__(
+            self,
+            left,
+            top,
+            right,
+            bottom,
+            label,
+            attributes=None,
+            messages=None,
+            status='issue',
+            assignee=None,
+            create_time=None,
+            creator=None,
+            description=None
+    ):
+        super(Note, self).__init__(
+            left=left,
+            top=top,
+            right=right,
+            bottom=bottom,
+            label=label,
+            attributes=attributes,
+            description=description
+        )
         self.type = "note"
         self.messages = messages if messages is not None else list()
         self.status = status
@@ -61,8 +81,6 @@ class Note(Box):
         top = np.min(geo[:, 1])
         right = np.max(geo[:, 0])
         bottom = np.max(geo[:, 1])
-
-        attributes = _json.get("attributes", list())
         messages = [Message.from_json(msg) for msg in note_data.get('messages', list())]
 
         return cls(
@@ -71,7 +89,7 @@ class Note(Box):
             right=right,
             bottom=bottom,
             label=_json["label"],
-            attributes=attributes,
+            attributes=_json.get("attributes", None),
             messages=messages,
             status=note_data.get('status', 'open'),
             creator=note_data.get('creator', 'me'),

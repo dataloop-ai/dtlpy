@@ -15,6 +15,12 @@ logger = logging.getLogger(name=__name__)
 # Utility functions to use in the model adapters
 #   these wrapper function should ease to make sure all predictions are built with proper metadata structure
 
+def mean_or_nan(arr):
+    if isinstance(arr, list) and len(arr) == 0:
+        return np.nan
+    else:
+        return np.mean(arr)
+
 
 def create_collection():
     collection = entities.AnnotationCollection(item=None)
@@ -22,7 +28,10 @@ def create_collection():
 
 
 def model_info_name(model: entities.Model, snapshot: entities.Snapshot):
-    return "{}-{}".format(model.name, snapshot.name)
+    if snapshot in None:
+        return "{}-no-snapshot".format(model.name)
+    else:
+        return "{}-{}".format(model.name, snapshot.name)
 
 
 def add_box_prediction(left, top, right, bottom, label, score,
@@ -116,8 +125,8 @@ def measure_item_box_predictions(item: entities.Item, model: entities.Model = No
 
     boxes_report = {'box_ious': box_scores,
                     'box_annotations': r_boxes,
-                    'box_mean_iou': np.mean(test_iou_scores),
-                    'box_attributes_scores': np.mean([match.attributes_score for match in box_scores.values()]),
+                    'box_mean_iou': mean_or_nan(test_iou_scores),
+                    'box_attributes_scores': mean_or_nan([match.attributes_score for match in box_scores.values()]),
                     'box_ref_number': len(r_boxes),
                     'box_test_number': len(t_boxes),
                     'box_missing': missing_box,
@@ -174,8 +183,8 @@ def measure_annotations(
         else:
             t_un_supported.append(ann)
     if len(t_un_supported):
-        logger.warning("test annotations have unsupported types {}:\n{}".
-                       format([ann.type for ann in t_un_supported], t_un_supported))
+        logger.debug("test annotations have unsupported types {}:\n{}".
+                     format([ann.type for ann in t_un_supported], t_un_supported))
 
     # create lists for ref annotations
     for ann in ref_annotations:
@@ -194,8 +203,8 @@ def measure_annotations(
         else:
             r_un_supported.append(ann)
     if len(r_un_supported):
-        logger.warning("ref annotations have unsupported types {}:\n{}".
-                       format([ann.type for ann in t_un_supported], t_un_supported))
+        logger.debug("ref annotations have unsupported types {}:\n{}".
+                     format([ann.type for ann in t_un_supported], t_un_supported))
 
     # match classes
     class_scores = metrics.match_class(ref_annotations=r_classes,
@@ -216,8 +225,9 @@ def measure_annotations(
                                              test_annotations=t_semantics)
 
     final = dict()
+    scores = list()
     # classification
-    if class_scores:
+    if (len(r_classes) + len(t_classes)) > 0:
         test_iou_scores = [match.annotation_score for match in class_scores.values() if match.annotation_score > 0]
         matched_class = int(np.sum([1 for score in test_iou_scores if score > 0]))  # len(test_iou_scores)
         total_class = len(r_classes) + len(t_classes)
@@ -225,13 +235,14 @@ def measure_annotations(
         missing_class = len(r_classes) - matched_class
         assert total_class == extra_class + 2 * matched_class + missing_class
         # add missing to score
-        test_iou_scores += [0 for _ in range(missing_class)]
-        test_iou_scores += [0 for _ in range(extra_class)]
+        test_iou_scores.extend([0 for _ in range(missing_class)])
+        test_iou_scores.extend([0 for _ in range(extra_class)])
+        scores.extend(test_iou_scores)
         final.update(
             {'class_ious': class_scores,
              'class_annotations': r_classes,
-             'class_mean_iou': np.mean(test_iou_scores),
-             'class_attributes_scores': np.mean([match.attributes_score for match in class_scores.values()]),
+             'class_mean_iou': mean_or_nan(test_iou_scores),
+             'class_attributes_scores': mean_or_nan([match.attributes_score for match in class_scores.values()]),
              'class_ref_number': len(r_classes),
              'class_test_number': len(t_classes),
              'class_missing': missing_class,
@@ -240,7 +251,7 @@ def measure_annotations(
              'class_extra': extra_class,
              })
     # polygon
-    if polygon_scores:
+    if (len(r_polygons) + len(t_polygons)) > 0:
         test_iou_scores = [match.annotation_score for match in polygon_scores.values() if match.annotation_score > 0]
         matched_polygon = int(np.sum([1 for score in test_iou_scores if score > 0]))  # len(test_iou_scores)
         total_polygon = len(r_polygons) + len(t_polygons)
@@ -248,13 +259,14 @@ def measure_annotations(
         missing_polygon = len(r_polygons) - matched_polygon
         assert total_polygon == extra_polygon + 2 * matched_polygon + missing_polygon
         # add missing to score
-        test_iou_scores += [0 for _ in range(missing_polygon)]
-        test_iou_scores += [0 for _ in range(extra_polygon)]
+        test_iou_scores.extend([0 for _ in range(missing_polygon)])
+        test_iou_scores.extend([0 for _ in range(extra_polygon)])
+        scores.extend(test_iou_scores)
         final.update(
             {'polygon_ious': polygon_scores,
              'polygon_annotations': r_polygons,
-             'polygon_mean_iou': np.mean(test_iou_scores),
-             'polygon_attributes_scores': np.mean([match.attributes_score for match in polygon_scores.values()]),
+             'polygon_mean_iou': mean_or_nan(test_iou_scores),
+             'polygon_attributes_scores': mean_or_nan([match.attributes_score for match in polygon_scores.values()]),
              'polygon_ref_number': len(r_polygons),
              'polygon_test_number': len(t_polygons),
              'polygon_missing': missing_polygon,
@@ -263,7 +275,7 @@ def measure_annotations(
              'polygon_extra': extra_polygon,
              })
     # box
-    if box_scores:
+    if (len(r_boxes) + len(t_boxes)) > 0:
         test_iou_scores = [match.annotation_score for match in box_scores.values() if match.annotation_score > 0]
         matched_box = int(np.sum([1 for score in test_iou_scores if score > 0]))  # len(test_iou_scores)
         total_box = len(r_boxes) + len(t_boxes)
@@ -271,13 +283,14 @@ def measure_annotations(
         missing_box = len(r_boxes) - matched_box
         assert total_box == extra_box + 2 * matched_box + missing_box
         # add missing to score
-        test_iou_scores += [0 for _ in range(missing_box)]
-        test_iou_scores += [0 for _ in range(extra_box)]
+        test_iou_scores.extend([0 for _ in range(missing_box)])
+        test_iou_scores.extend([0 for _ in range(extra_box)])
+        scores.extend(test_iou_scores)
         final.update(
             {'box_ious': box_scores,
              'box_annotations': r_boxes,
-             'box_mean_iou': np.mean(test_iou_scores),
-             'box_attributes_scores': np.mean([match.attributes_score for match in box_scores.values()]),
+             'box_mean_iou': mean_or_nan(test_iou_scores),
+             'box_attributes_scores': mean_or_nan([match.attributes_score for match in box_scores.values()]),
              'box_ref_number': len(r_boxes),
              'box_test_number': len(t_boxes),
              'box_missing': missing_box,
@@ -286,7 +299,7 @@ def measure_annotations(
              'box_extra': extra_box,
              })
     # point
-    if point_scores:
+    if (len(r_points) + len(t_points)) > 0:
         test_iou_scores = [match.annotation_score for match in point_scores.values() if match.annotation_score > 0]
         matched_point = int(np.sum([1 for score in test_iou_scores if score > 0]))  # len(test_iou_scores)
         total_point = len(r_points) + len(t_points)
@@ -294,13 +307,14 @@ def measure_annotations(
         missing_point = len(r_points) - matched_point
         assert total_point == extra_point + 2 * matched_point + missing_point
         # add missing to score
-        test_iou_scores += [0 for _ in range(missing_point)]
-        test_iou_scores += [0 for _ in range(extra_point)]
+        test_iou_scores.extend([0 for _ in range(missing_point)])
+        test_iou_scores.extend([0 for _ in range(extra_point)])
+        scores.extend(test_iou_scores)
         final.update(
             {'point_ious': point_scores,
              'point_annotations': r_points,
-             'point_mean_iou': np.mean(test_iou_scores),
-             'point_attributes_scores': np.mean([match.attributes_score for match in point_scores.values()]),
+             'point_mean_iou': mean_or_nan(test_iou_scores),
+             'point_attributes_scores': mean_or_nan([match.attributes_score for match in point_scores.values()]),
              'point_ref_number': len(r_points),
              'point_test_number': len(t_points),
              'point_missing': missing_point,
@@ -309,7 +323,7 @@ def measure_annotations(
              'point_extra': extra_point,
              })
     # semantic
-    if semantic_scores:
+    if (len(r_semantics) + len(t_semantics)) > 0:
         test_iou_scores = [match.annotation_score for match in semantic_scores.values() if match.annotation_score > 0]
         matched_semantic = int(np.sum([1 for score in test_iou_scores if score > 0]))  # len(test_iou_scores)
         total_semantic = len(r_semantics) + len(t_semantics)
@@ -317,13 +331,14 @@ def measure_annotations(
         missing_semantic = len(r_semantics) - matched_semantic
         assert total_semantic == extra_semantic + 2 * matched_semantic + missing_semantic
         # add missing to score
-        test_iou_scores += [0 for _ in range(missing_semantic)]
-        test_iou_scores += [0 for _ in range(extra_semantic)]
+        test_iou_scores.extend([0 for _ in range(missing_semantic)])
+        test_iou_scores.extend([0 for _ in range(extra_semantic)])
+        scores.extend(test_iou_scores)
         final.update(
             {'semantic_ious': semantic_scores,
              'semantic_annotations': r_semantics,
-             'semantic_mean_iou': np.mean(test_iou_scores),
-             'semantic_attributes_scores': np.mean([match.attributes_score for match in semantic_scores.values()]),
+             'semantic_mean_iou': mean_or_nan(test_iou_scores),
+             'semantic_attributes_scores': mean_or_nan([match.attributes_score for match in semantic_scores.values()]),
              'semantic_ref_number': len(r_semantics),
              'semantic_test_number': len(t_semantics),
              'semantic_missing': missing_semantic,
@@ -331,6 +346,7 @@ def measure_annotations(
              'semantic_matched': matched_semantic,
              'semantic_extra': extra_semantic,
              })
+    final['total_mean_score'] = mean_or_nan(scores)
     return final
 
 
@@ -350,10 +366,7 @@ def measure_item(ref_item: entities.Item,
         try:
             ref_item_duration_s = metrics.item_annotation_duration(item=ref_item, project=ref_project)
             ref_item_duration = str(datetime.timedelta(seconds=int(np.round(ref_item_duration_s))))
-
         except:
-            logger.exception(
-                'failed getting analytics for item. setting duration to -1. item id: {!r}'.format(ref_item.id))
             ref_item_duration_s = -1
             ref_item_duration = ''
 
@@ -361,8 +374,6 @@ def measure_item(ref_item: entities.Item,
             test_item_duration_s = metrics.item_annotation_duration(item=test_item, project=test_project)
             test_item_duration = str(datetime.timedelta(seconds=int(np.round(test_item_duration_s))))
         except:
-            logger.exception(
-                'failed getting analytics for item. setting duration to -1. item id: {!r}'.format(test_item.id))
             test_item_duration_s = -1
             test_item_duration = ''
 
@@ -377,10 +388,10 @@ def measure_item(ref_item: entities.Item,
                       'test_item_duration': test_item_duration,
                       })
 
-        return final
-
+        return True, final
     except Exception:
-        print(traceback.format_exc())
+        fail_msg = 'failed measuring. ref_item: {!r}, test_item: {!r}'.format(ref_item.id, test_item.id)
+        return False, '{}\n{}'.format(fail_msg, traceback.format_exc())
     finally:
         if pbar is not None:
             pbar.update()
@@ -408,7 +419,14 @@ def measure_items(ref_items, ref_project, ref_dataset, ref_name,
     pool.close()
     pool.join()
     _ = [job.wait() for job in jobs.values()]
-    items_summary = {filename: job.get() for filename, job in jobs.items() if job.get() is not None}
+    raw_items_summary = dict()
+    failed_items_errors = dict()
+    for filename, job in jobs.items():
+        success, result = job.get()
+        if success:
+            raw_items_summary[filename] = result
+        else:
+            failed_items_errors[filename] = result
     pool.terminate()
     pbar.close()
 
@@ -416,7 +434,7 @@ def measure_items(ref_items, ref_project, ref_dataset, ref_name,
     summary = list()
     ref_column_name = 'Ref-{!r}'.format(ref_name)
     test_column_name = 'Test-{!r}'.format(test_name)
-    for filename, scores in items_summary.items():
+    for filename, scores in raw_items_summary.items():
         has_box = 'box_test_number' in scores
         has_point = 'point_test_number' in scores
         has_polygon = 'polygon_test_number' in scores
@@ -425,33 +443,34 @@ def measure_items(ref_items, ref_project, ref_dataset, ref_name,
         line = {'filename': scores['filename'],
                 ref_column_name: scores['ref_url'],
                 test_column_name: scores['test_url'],
+                'total_score': scores['total_mean_score'],
                 'ref_duration[s]': scores['ref_item_duration[s]'],
                 'test_duration[s]': scores['test_item_duration[s]'],
                 'diff_duration[s]': scores['diff_duration[s]'],
                 }
         if has_class:
             line['class_score'] = scores['class_mean_iou']
-            line['class_attributes_score'] = np.mean(scores['class_attributes_scores'])
+            line['class_attributes_score'] = mean_or_nan(scores['class_attributes_scores'])
             line['class_ref_number'] = scores['class_ref_number']
             line['class_test_number'] = scores['class_test_number']
         if has_box:
             line['box_score'] = scores['box_mean_iou']
-            line['box_attributes_score'] = np.mean(scores['box_attributes_scores'])
+            line['box_attributes_score'] = mean_or_nan(scores['box_attributes_scores'])
             line['box_ref_number'] = scores['box_ref_number']
             line['box_test_number'] = scores['box_test_number']
         if has_point:
             line['point_score'] = scores['point_mean_iou']
-            line['point_attributes_score'] = np.mean(scores['point_attributes_scores'])
+            line['point_attributes_score'] = mean_or_nan(scores['point_attributes_scores'])
             line['point_ref_number'] = scores['point_ref_number']
             line['point_test_number'] = scores['point_test_number']
         if has_polygon:
             line['polygon_score'] = scores['polygon_mean_iou']
-            line['polygon_attributes_score'] = np.mean(scores['polygon_attributes_scores'])
+            line['polygon_attributes_score'] = mean_or_nan(scores['polygon_attributes_scores'])
             line['polygon_ref_number'] = scores['polygon_ref_number']
             line['polygon_test_number'] = scores['polygon_test_number']
         if has_semantic:
             line['semantic_score'] = scores['semantic_mean_iou']
-            line['semantic_attributes_score'] = np.mean(scores['semantic_attributes_scores'])
+            line['semantic_attributes_score'] = mean_or_nan(scores['semantic_attributes_scores'])
             line['semantic_ref_number'] = scores['semantic_ref_number']
             line['semantic_test_number'] = scores['semantic_test_number']
         summary.append(line)
@@ -469,7 +488,7 @@ def measure_items(ref_items, ref_project, ref_dataset, ref_name,
                      df=df,
                      ref_name=ref_name,
                      test_name=test_name)
-    return df
+    return df, raw_items_summary, failed_items_errors
 
 
 def save_to_file(df, dump_path, ref_name, test_name):

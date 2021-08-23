@@ -94,7 +94,7 @@ class ModelAdapter(dl.BaseModelAdapter):
         :param local_path:  `str` directory path in local FileSystem to download the snapshot to
         :param snapshot_id:  `str` snapshot id
         """
-        super(ModelAdapter, self).load_from_snapshot(local_path=local_path, snapshot_id=snapshot_id, **kwargs)
+        return super(ModelAdapter, self).load_from_snapshot(local_path=local_path, snapshot_id=snapshot_id, **kwargs)
 
     def save_to_snapshot(self, local_path, snapshot_name=None, description=None, cleanup=False, **kwargs):
         """ Saves configuration and weights to new snapshot bucket
@@ -106,9 +106,9 @@ class ModelAdapter(dl.BaseModelAdapter):
         :param cleanup: `bool` if True (default) remove the data from local FileSystem after upload
         :return:
         """
-        super(ModelAdapter, self).save_to_snapshot(local_path=local_path, snapshot_name=snapshot_name,
-                                                   description=description, cleanup=cleanup,
-                                                   **kwargs)
+        return super(ModelAdapter, self).save_to_snapshot(local_path=local_path, snapshot_name=snapshot_name,
+                                                          description=description, cleanup=cleanup,
+                                                          **kwargs)
 
     def prepare_trainset(self, data_path, partitions=None, filters=None, **kwargs):
         """
@@ -119,9 +119,9 @@ class ModelAdapter(dl.BaseModelAdapter):
         :param partitions: `dl.SnapshotPartitionType` or list of partitions, defaults for all partitions
         :param filters: `dl.Filter` in order to select only part of the data
         """
-        super(ModelAdapter, self).prepare_trainset(data_path=data_path, partitions=partitions,
-                                                   filters=filters,
-                                                   **kwargs)
+        return super(ModelAdapter, self).prepare_trainset(data_path=data_path, partitions=partitions,
+                                                          filters=filters,
+                                                          **kwargs)
 
     def predict_items(self, items: list, with_upload=True, cleanup=False, batch_size=16, output_shape=None, **kwargs):
         """
@@ -134,6 +134,6 @@ class ModelAdapter(dl.BaseModelAdapter):
         :param output_shape: `tuple` (width, height) of resize needed per image
         :return: `List[Prediction]' `Prediction is set by model.output_type
         """
-        super(ModelAdapter, self).predict_items(items=items, with_upload=with_upload,
-                                                cleanup=cleanup, batch_size=batch_size, output_shape=output_shape,
-                                                **kwargs)
+        return super(ModelAdapter, self).predict_items(items=items, with_upload=with_upload,
+                                                       cleanup=cleanup, batch_size=batch_size, output_shape=output_shape,
+                                                       **kwargs)

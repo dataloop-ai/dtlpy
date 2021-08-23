@@ -16,12 +16,9 @@ class Segmentation(BaseAnnotationDefinition):
     type = "binary"
 
     def __init__(self, geo, label, attributes=None, description=None):
-        super().__init__(description=description)
+        super().__init__(description=description, attributes=attributes)
         self.geo = geo
         self.label = label
-        if attributes is None:
-            attributes = list()
-        self.attributes = attributes
 
     @property
     def x(self):
@@ -168,9 +165,8 @@ class Segmentation(BaseAnnotationDefinition):
             mask = cls.from_coordinates(_json["data"])
         else:
             raise ValueError('can not find "coordinates" or "data" in annotation. id: {}'.format(_json["id"]))
-        attributes = _json.get("attributes", list())
         return cls(
             geo=(mask[:, :, 3] > 127).astype(float),
             label=_json["label"],
-            attributes=attributes,
+            attributes=_json.get("attributes", None),
         )

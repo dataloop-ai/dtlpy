@@ -5,12 +5,16 @@ logger = logging.getLogger(name=__name__)
 
 
 class BaseAnnotationDefinition:
-    def __init__(self, description=None):
+    def __init__(self, description=None, attributes=None):
         self.description = description
         self._top = 0
         self._left = 0
         self._bottom = 0
         self._right = 0
+
+        if attributes is None:
+            attributes = list()
+        self.attributes = attributes
 
     @property
     def top(self):

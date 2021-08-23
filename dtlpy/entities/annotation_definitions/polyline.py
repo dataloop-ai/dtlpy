@@ -9,13 +9,10 @@ class Polyline(BaseAnnotationDefinition):
     """
 
     def __init__(self, geo, label, attributes=None, description=None):
-        super().__init__(description=description)
+        super().__init__(description=description, attributes=attributes)
         self.type = "polyline"
         self.geo = geo
         self.label = label
-        if attributes is None:
-            attributes = list()
-        self.attributes = attributes
 
     @property
     def x(self):
@@ -91,9 +88,8 @@ class Polyline(BaseAnnotationDefinition):
             geo = cls.from_coordinates(coordinates=_json["data"])
         else:
             raise ValueError('can not find "coordinates" or "data" in annotation. id: {}'.format(_json["id"]))
-        attributes = _json.get("attributes", list())
         return cls(
             geo=geo,
             label=_json["label"],
-            attributes=attributes,
+            attributes=_json.get("attributes", None),
         )

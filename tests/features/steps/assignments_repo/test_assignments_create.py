@@ -26,8 +26,9 @@ def step_impl(context):
 
 def compare_items_list(items_a, items_b):
     equals = len(items_b) == len(items_a)
+    items_c = [item if isinstance(item, str) else item.id for item in items_b]
     for item in items_a:
-        equals = equals and item in items_b
+        equals = equals and item in items_c
     return equals
 
 

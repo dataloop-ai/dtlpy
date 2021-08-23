@@ -146,6 +146,7 @@ class Pipeline(entities.BaseEntity):
     preview = attr.ib()
     description = attr.ib()
     revisions = attr.ib()
+    info = attr.ib()
 
     # sdk
     _project = attr.ib(repr=False)
@@ -210,6 +211,7 @@ class Pipeline(entities.BaseEntity):
             preview=_json.get('preview', None),
             description=_json.get('description', None),
             revisions=_json.get('revisions', None),
+            info=_json.get('info', None)
         )
         inst.is_fetched = is_fetched
         return inst
@@ -237,6 +239,7 @@ class Pipeline(entities.BaseEntity):
                                                         attr.fields(Pipeline).preview,
                                                         attr.fields(Pipeline).description,
                                                         attr.fields(Pipeline).revisions,
+                                                        attr.fields(Pipeline).info
                                                         ))
 
         _json['projectId'] = self.project_id
@@ -251,6 +254,7 @@ class Pipeline(entities.BaseEntity):
         _json['preview'] = self.preview
         _json['description'] = self.description
         _json['revisions'] = self.revisions
+        _json['info'] = self.info
 
         return _json
 

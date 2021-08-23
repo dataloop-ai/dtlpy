@@ -266,7 +266,6 @@ class Pipelines:
         :param pipeline_json: json contain the pipeline fields
         :return: Pipeline object
         """
-
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/pipelines',
                                                          json_req=pipeline_json)
@@ -285,6 +284,7 @@ class Pipelines:
         :param pipeline:
         :return: Composition object
         """
+
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/compositions/{}/install'.format(
                                                              pipeline.composition_id))

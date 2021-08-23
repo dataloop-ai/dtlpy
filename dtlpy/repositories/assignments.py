@@ -204,7 +204,7 @@ class Assignments:
         else:
             self._client_api._open_in_web(url=self.platform_url)
 
-    def reassign(self, assignee_id, assignment=None, assignment_id=None, task=None, task_id=None):
+    def reassign(self, assignee_id, assignment=None, assignment_id=None, task=None, task_id=None, wait=True):
         """
         Reassign an assignment
         :param assignee_id:
@@ -212,6 +212,7 @@ class Assignments:
         :param assignment_id:
         :param task:
         :param task_id:
+        :param wait: wait the command to finish
         :return: Assignment object
         """
         if assignment_id is None and assignment is None:
@@ -228,22 +229,28 @@ class Assignments:
 
         payload = {
             'taskId': task_id,
-            'annotator': assignee_id
+            'annotator': assignee_id,
+            'asynced': wait
         }
 
         success, response = self._client_api.gen_request(req_type='post',
                                                          path=url,
                                                          json_req=payload)
         if success:
-            if task is None:
-                task = self._task
-            return entities.Assignment.from_json(_json=response.json(),
-                                                 client_api=self._client_api, project=self._project,
-                                                 dataset=self._dataset, task=task)
+            command = entities.Command.from_json(_json=response.json(),
+                                                 client_api=self._client_api)
+            if not wait:
+                return command
+            command = command.wait(timeout=0)
+            if 'toAssignment' not in command.spec:
+                raise exceptions.PlatformException(error='400',
+                                                   message="'toAssignment' key is missing in command response: {}"
+                                                   .format(response))
+            return self.get(assignment_id=command.spec['toAssignment'])
         else:
             raise exceptions.PlatformException(response)
 
-    def redistribute(self, workload, assignment=None, assignment_id=None, task=None, task_id=None):
+    def redistribute(self, workload, assignment=None, assignment_id=None, task=None, task_id=None, wait=True):
         """
         Redistribute an assignment
         :param workload:
@@ -251,6 +258,7 @@ class Assignments:
         :param assignment_id:
         :param task:
         :param task_id:
+        :param wait: wait the command to finish
         :return: Assignment object
         """
         if assignment_id is None and assignment is None:
@@ -267,21 +275,42 @@ class Assignments:
 
         payload = {
             'taskId': task_id,
-            'workload': workload.to_json()
+            'workload': workload.to_json(),
+            'asynced': wait
         }
+
+        if self._task is None:
+            self._task = self.get(assignment_id=assignment_id).task
+        if task is None:
+            task = self._task
 
         success, response = self._client_api.gen_request(req_type='post',
                                                          path=url,
                                                          json_req=payload)
         if success:
-            if task is None:
-                task = self._task
+            command = entities.Command.from_json(_json=response.json(),
+                                                 client_api=self._client_api)
+            if not wait:
+                return command
+            command = command.wait(timeout=0)
+            if 'workload' not in command.spec:
+                raise exceptions.PlatformException(error='400',
+                                                   message="workload key is missing in command response: {}"
+                                                   .format(response))
+
+            task_assignments = task.assignments.list()
+            workers = list()
+            for worker in workload:
+                workers.append(worker.assignee_id)
+
             redistributed_assignments = list()
-            for redistributed_assignment in response.json():
-                redistributed_assignments.append(entities.Assignment.from_json(_json=redistributed_assignment,
-                                                                               client_api=self._client_api,
-                                                                               project=self._project,
-                                                                               dataset=self._dataset, task=task))
+            for ass in task_assignments:
+                if ass.annotator in workers:
+                    redistributed_assignments.append(ass)
+                    workers.remove(ass.annotator)
+                    if not workers:
+                        break
+
             return miscellaneous.List(redistributed_assignments)
         else:
             raise exceptions.PlatformException(response)

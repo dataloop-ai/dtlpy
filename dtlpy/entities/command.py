@@ -150,4 +150,5 @@ class Command(entities.BaseEntity):
 
         return self.commands.wait(command_id=self.id,
                                   timeout=timeout,
-                                  step=step)
+                                  step=step,
+                                  url=self.url)

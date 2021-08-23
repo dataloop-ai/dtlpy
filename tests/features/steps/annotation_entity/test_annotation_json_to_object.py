@@ -33,6 +33,10 @@ def step_impl(context, entity):
             if 'runtime' in response:
                 if 'autoscaler' not in response['runtime']:
                     response['runtime']['autoscaler'] = None
+        if entity == 'pipeline':
+            entity_to_json.pop('info')
+            response.pop('info')
+
         if entity_to_json != response:
             logging.error('FAILED: response json is:\n{}\n\nto_json is:\n{}'.format(json.dumps(response,
                                                                                                indent=2),

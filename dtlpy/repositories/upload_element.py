@@ -13,7 +13,6 @@ class BaseUploadElement:
         self.upload_annotations_element = all_upload_elements['upload_annotations_element']
         self.item_metadata = all_upload_elements['item_metadata']
         self.with_head_folder = all_upload_elements['with_head_folder']
-        self.file_types = all_upload_elements['file_types']
         self.type = None
         self.buffer = None
         self.remote_filepath = None
@@ -50,32 +49,30 @@ class DirUploadElement(BaseUploadElement):
     def __init__(self, all_upload_elements: dict):
         super().__init__(all_upload_elements)
 
-        _, ext = os.path.splitext(self.filename)
-        if self.file_types is None or ext in self.file_types:
-            filepath = os.path.join(self.root, self.filename)  # get full image filepath
-            # extract item's size
-            self.total_size += os.path.getsize(filepath)
-            # get annotations file
-            if self.upload_annotations_element is not None:
-                # change path to annotations
-                annotations_filepath = filepath.replace(self.upload_item_element,
-                                                        self.upload_annotations_element)
-                # remove image extension
-                annotations_filepath, _ = os.path.splitext(annotations_filepath)
-                # add json extension
-                annotations_filepath += ".json"
-            else:
-                annotations_filepath = None
-            if self.with_head_folder:
-                remote_filepath = self.remote_path + os.path.relpath(filepath, os.path.dirname(
-                    self.upload_item_element))
-            else:
-                remote_filepath = self.remote_path + os.path.relpath(filepath, self.upload_item_element)
+        filepath = os.path.join(self.root, self.filename)  # get full image filepath
+        # extract item's size
+        self.total_size += os.path.getsize(filepath)
+        # get annotations file
+        if self.upload_annotations_element is not None:
+            # change path to annotations
+            annotations_filepath = filepath.replace(self.upload_item_element,
+                                                    self.upload_annotations_element)
+            # remove image extension
+            annotations_filepath, _ = os.path.splitext(annotations_filepath)
+            # add json extension
+            annotations_filepath += ".json"
+        else:
+            annotations_filepath = None
+        if self.with_head_folder:
+            remote_filepath = self.remote_path + os.path.relpath(filepath, os.path.dirname(
+                self.upload_item_element))
+        else:
+            remote_filepath = self.remote_path + os.path.relpath(filepath, self.upload_item_element)
 
-            self.type = 'file'
-            self.buffer = filepath
-            self.remote_filepath = remote_filepath.replace("\\", "/")
-            self.annotations_filepath = annotations_filepath
+        self.type = 'file'
+        self.buffer = filepath
+        self.remote_filepath = remote_filepath.replace("\\", "/")
+        self.annotations_filepath = annotations_filepath
 
 
 class ExternalItemUploadElement(BaseUploadElement):
@@ -221,36 +218,3 @@ class UrlUploadElement(BaseUploadElement):
         self.buffer = self.upload_item_element
         self.remote_filepath = remote_filepath
         self.annotations_filepath = self.upload_annotations_element
-
-
-class DataFrameUploadElement(BaseUploadElement):
-
-    def __init__(self, all_upload_elements: dict):
-        super().__init__(all_upload_elements)
-
-        if not self.remote_path.endswith('/'):
-            self.remote_path += '/'
-
-        if os.path.isfile(self.upload_item_element):
-            element_type = 'file'
-            if self.remote_name is None:
-                self.remote_name = os.path.basename(self.upload_item_element)
-        elif self.is_url(self.upload_item_element):
-            element_type = 'url'
-            if self.remote_name is None:
-                self.remote_name = str(self.upload_item_element.split('/')[-1])
-        else:
-            raise PlatformException("404", "Unknown local path: {}".format(self.upload_item_element))
-        self.type = element_type
-        self.buffer = self.upload_item_element
-        self.remote_filepath = self.remote_path + self.remote_name
-
-    def is_url(self, url):
-        """
-        check if the url is valid
-        :param url:
-        """
-        try:
-            return validators.url(url)
-        except Exception:
-            return False

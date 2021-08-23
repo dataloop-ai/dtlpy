@@ -13,7 +13,7 @@ class Cube(BaseAnnotationDefinition):
     def __init__(self, label, front_tl, front_tr, front_br, front_bl,
                  back_tl, back_tr, back_br, back_bl, angle=None,
                  attributes=None, description=None):
-        super().__init__(description=description)
+        super().__init__(description=description, attributes=attributes)
         self.front_bl = front_bl
         self.front_br = front_br
         self.front_tr = front_tr
@@ -25,9 +25,6 @@ class Cube(BaseAnnotationDefinition):
 
         self._angle = angle
         self.label = label
-        if attributes is None:
-            attributes = list()
-        self.attributes = attributes
 
         self.keys = ["front_tl", "front_tr", "front_br", "front_bl",
                      "back_tl", "back_tr", "back_br", "back_bl"]
@@ -143,7 +140,6 @@ class Cube(BaseAnnotationDefinition):
         else:
             raise ValueError('can not find "coordinates" or "data" in annotation. id: {}'.format(_json["id"]))
 
-        attributes = _json.get("attributes", list())
         return cls(
             front_bl=np.asarray([_json[key]["front_bl"]['x'], _json[key]["front_bl"]['y']]),
             front_br=np.asarray([_json[key]["front_br"]['x'], _json[key]["front_br"]['y']]),
@@ -155,7 +151,7 @@ class Cube(BaseAnnotationDefinition):
             back_tr=np.asarray([_json[key]["back_tr"]['x'], _json[key]["back_tr"]['y']]),
             label=_json["label"],
             angle=_json[key]["angle"],
-            attributes=attributes
+            attributes=_json.get("attributes", None)
         )
 
     @staticmethod

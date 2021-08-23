@@ -3,6 +3,7 @@ import shutil
 import datetime
 import logging
 import tqdm
+import time
 from collections import namedtuple
 from contextlib import contextmanager
 import warnings
@@ -114,7 +115,10 @@ class BaseModelAdapter:
         # Download
         if snapshot.bucket.is_remote:
             self.logger.debug("Found a remote bucket - downloading to: {!r}".format(local_path))
-            snapshot.download_from_bucket(local_path=local_path)  # Partially supported (for itemBucket and GcsBucket)
+            snapshot.download_from_bucket(local_path=local_path)
+            if isinstance(snapshot.bucket, entities.GCSBucket):
+                # FIXME GCS bucket currently download in the background
+                time.sleep(5)
             config.update({'bucket_path': local_path})
         else:
             self.logger.debug("Local bucket - making sure bucket.local path and argument local path - match")

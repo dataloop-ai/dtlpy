@@ -177,6 +177,45 @@ class AnnotationCollection(entities.BaseEntity):
 
         return image
 
+    def _video_maker(self, input_filepath, output_filepath, thickness=1):
+        """
+        create a video from frames
+        :param input_filepath:
+        :param output_filepath:
+        :param thickness:
+        """
+        try:
+            import cv2
+        except (ImportError, ModuleNotFoundError):
+            logger.error(
+                'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
+            raise
+        # read input video
+        try:
+            reader = cv2.VideoCapture(input_filepath)
+            width = int(reader.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(reader.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            fps = reader.get(cv2.CAP_PROP_FPS)
+            writer = cv2.VideoWriter(output_filepath, cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height))
+            frames = list()
+            while reader.isOpened():
+                ret, frame = reader.read()
+                if not ret:
+                    break
+                frames.append(frame)
+            for annotation in self.annotations:
+                frames = annotation.show(image=frames, color=annotation.color,
+                                         annotation_format=entities.ViewAnnotationOptions.ANNOTATION_ON_IMAGE,
+                                         thickness=thickness,
+                                         height=height,
+                                         width=width)
+            for ann_frame in frames:
+                writer.write(ann_frame.astype(np.uint8))
+            reader.release()
+            writer.release()
+        except Exception as e:
+            raise ValueError(e)
+
     def download(self, filepath, img_filepath=None,
                  annotation_format: entities.ViewAnnotationOptions = entities.ViewAnnotationOptions.MASK,
                  height=None,
@@ -195,7 +234,6 @@ class AnnotationCollection(entities.BaseEntity):
         :return:
         """
         dir_name, ex = os.path.splitext(filepath)
-
         if annotation_format == entities.ViewAnnotationOptions.JSON:
             if not ex:
                 filepath = '{}/{}.json'.format(dir_name, os.path.splitext(self.item.name)[0])
@@ -219,6 +257,11 @@ class AnnotationCollection(entities.BaseEntity):
                 filepath = '{}/{}.png'.format(dir_name, os.path.splitext(self.item.name)[0])
             image = None
             if annotation_format == entities.ViewAnnotationOptions.ANNOTATION_ON_IMAGE:
+                if 'video' in self.item.mimetype:
+                    self._video_maker(input_filepath=img_filepath, output_filepath=filepath,
+                                      thickness=thickness,
+                                      )
+                    return filepath
                 annotation_format = entities.ViewAnnotationOptions.MASK
                 image = np.asarray(Image.open(img_filepath))
             mask = self.show(image=image,
@@ -362,8 +405,10 @@ class AnnotationCollection(entities.BaseEntity):
             start_time = datetime.timedelta(hours=float(h), minutes=float(m), seconds=float(s)).total_seconds()
             h, m, s = caption.end.split(':')
             end_time = datetime.timedelta(hours=float(h), minutes=float(m), seconds=float(s)).total_seconds()
-
-            start_frame = round(start_time * self.item.fps)
+            if self.item.fps is not None:
+                start_frame = round(start_time * self.item.fps)
+            else:
+                raise ValueError('Item do not have fps, please wait for video-preprocess to complete')
             annotation_definition = entities.Subtitle(text=caption.text, label='Text')
             annotation = entities.Annotation.new(
                 annotation_definition=annotation_definition,

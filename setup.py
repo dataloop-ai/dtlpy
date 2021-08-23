@@ -26,7 +26,7 @@ with open('requirements.txt') as f:
     requirements = f.read()
 
 setup(name='dtlpy',
-      version='1.32.12',
+      version='1.33.19',
       description='SDK and CLI for Dataloop platform',
       author='Or Shabtay',
       author_email='or@dataloop.ai',

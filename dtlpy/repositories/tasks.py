@@ -392,7 +392,8 @@ class Tasks:
                filters=None,
                items=None,
                query=None,
-               available_actions=None
+               available_actions=None,
+               wait=True
                ) -> entities.Task:
         """
         Create a new Annotation Task
@@ -411,8 +412,9 @@ class Tasks:
         :param metadata:
         :param filters:
         :param items:
-        :param available_actions:
         :param query:
+        :param available_actions:
+        :param wait: wait the command to finish
         :return: Annotation Task object
         """
 
@@ -464,7 +466,8 @@ class Tasks:
                    'projectId': project_id,
                    'assignmentIds': assignments_ids,
                    'recipeId': recipe_id,
-                   'dueDate': due_date}
+                   'dueDate': due_date,
+                   'asynced': wait}
 
         if workload:
             payload['workload'] = workload.to_json()
@@ -482,10 +485,16 @@ class Tasks:
                                                          path=URL_PATH,
                                                          json_req=payload)
         if success:
-            task = entities.Task.from_json(client_api=self._client_api,
-                                           _json=response.json(),
-                                           project=self._project,
-                                           dataset=self._dataset)
+            command = entities.Command.from_json(_json=response.json(),
+                                                 client_api=self._client_api)
+            if not wait:
+                return command
+            command = command.wait(timeout=0)
+            if 'createTaskPayload' not in command.spec:
+                raise exceptions.PlatformException(error='400',
+                                                   message="createTaskPayload key is missing in command response: {}"
+                                                   .format(response))
+            task = self.get(task_id=command.spec['createdTaskId'])
         else:
             raise exceptions.PlatformException(response)
 
@@ -532,7 +541,8 @@ class Tasks:
                   assignee_ids=None,
                   query=None,
                   workload=None,
-                  limit=None) -> entities.Task:
+                  limit=None,
+                  wait=True) -> entities.Task:
         """
         Add items to Task
 
@@ -544,6 +554,7 @@ class Tasks:
         :param query:
         :param workload:
         :param limit:
+        :param wait: wait the command to finish
         :return:
         """
         if filters is None and items is None and query is None:
@@ -578,6 +589,8 @@ class Tasks:
         if limit is not None:
             payload['limit'] = limit
 
+        payload['asynced'] = wait
+
         url = '{}/{}/addToTask'.format(URL_PATH, task_id)
 
         success, response = self._client_api.gen_request(req_type='post',
@@ -585,10 +598,17 @@ class Tasks:
                                                          json_req=payload)
 
         if success:
-            task = entities.Task.from_json(client_api=self._client_api,
-                                           _json=response.json(),
-                                           project=self._project,
-                                           dataset=self._dataset)
+            command = entities.Command.from_json(_json=response.json(),
+                                                 client_api=self._client_api)
+            if not wait:
+                return command
+            command = command.wait(timeout=0)
+            if task is None:
+                task = self.get(task_id=task_id)
+            if 'addToTaskPayload' not in command.spec:
+                raise exceptions.PlatformException(error='400',
+                                                   message="addToTaskPayload key is missing in command response: {}"
+                                                   .format(response))
         else:
             raise exceptions.PlatformException(response)
 

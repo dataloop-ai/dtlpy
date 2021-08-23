@@ -38,16 +38,31 @@ pipelines:
           name: Update dataloop-infra
           image: node:12.13.1
           script:
-            - echo $BITBUCKET_BRANCH
-            - if [[ $BITBUCKET_BRANCH != "dev" && $BITBUCKET_BRANCH != "development" ]]; then exit 0 ; fi
+            - apt-get update && apt-get install -y curl jq
+            - echo $BITBUCKET_TAG 
+            - case $BITBUCKET_TAG in 
+              *-rc*) 
+                  INFRA_BRANCH="rc" &&     
+                  SLACK_URL=$RC_SERVICES_BUILDS_SLACK_NOTIFICATION_URL ;;
+              *-dev*)
+                  INFRA_BRANCH="dev" &&
+                  SLACK_URL=$DEV_SERVICES_BUILDS_SLACK_NOTIFICATION_URL	;;	
+              *)
+                  exit 0 ;;  
+              esac
+            - echo $INFRA_BRANCH && echo $SLACK_URL
             - case "$BITBUCKET_TAG" in "") export BITBUCKET_TAG="build-$BITBUCKET_BUILD_NUMBER"; esac
-            - if [[ $BITBUCKET_TAG == *"rc"* || $BITBUCKET_TAG == *"prod"* ]]; then exit 0; fi
             - git config --global user.email "devops@dataloop.ai"
             - git config --global user.name "sdk-docs-pipeline"
-            - git clone --branch dev git@bitbucket.org:dataloop-ai/dataloop-infra.git && sed -i "s/^SDK_DOCS.*$/SDK_DOCS=$BITBUCKET_TAG/" dataloop-infra/.versions && cat dataloop-infra/.versions
+            - git clone --branch $INFRA_BRANCH git@bitbucket.org:dataloop-ai/dataloop-infra.git && sed -i "s/^SDK_DOCS.*$/SDK_DOCS=$BITBUCKET_TAG/" dataloop-infra/.versions  && cat dataloop-infra/.versions
             - cd dataloop-infra && git commit -am "SDK_DOCS=$BITBUCKET_TAG"
-            - git tag -a $BITBUCKET_TAG -m "SDK_DOCS=$BITBUCKET_TAG" && git push --follow-tags
-            - "curl -XPOST -H \"Content-type: application/json\" --data '{\"text\":\"[DEV] Updated dataloop infra repository SDK_DOCS='$BITBUCKET_TAG' - dataloop infra pipeline is now running\"}' $DEV_SERVICES_BUILDS_SLACK_NOTIFICATION_URL"
+            - >
+              export access_token=$(curl -s -X POST -u "${AUTH0_CONSUMERS_DTLPY_PIPELINE_CLIENT_ID}:${AUTH0_CONSUMERS_DTLPY_PIPELINE_CLIENT_SECRET}" \
+                https://bitbucket.org/site/oauth2/access_token \
+                -d grant_type=client_credentials -d scopes="repository"| jq --raw-output '.access_token')
+
+            - git tag -a $BITBUCKET_TAG -m "SDK_DOCS=$BITBUCKET_TAG" && git push https://x-token-auth:${access_token}@bitbucket.org/dataloop-ai/dataloop-infra.git --follow-tags
+            - "curl -XPOST -H \"Content-type: application/json\" --data '{\"text\":\"['$INFRA_BRANCH'] Updated dataloop infra repository SDK_DOCS='$BITBUCKET_TAG' - dataloop infra pipeline is now running\"}' $SLACK_URL"
     "run-test-python-3.5.4":
       - step:
           image: python:3.5.4

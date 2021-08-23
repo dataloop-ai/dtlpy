@@ -10,16 +10,13 @@ class Ellipse(BaseAnnotationDefinition):
     type = "ellipse"
 
     def __init__(self, x, y, rx, ry, angle, label, attributes=None, description=None):
-        super().__init__(description=description)
+        super().__init__(description=description, attributes=attributes)
         self.label = label
         self.angle = angle
         self.x = x
         self.y = y
         self.rx = rx
         self.ry = ry
-        if attributes is None:
-            attributes = list()
-        self.attributes = attributes
 
     @property
     def geo(self):
@@ -115,7 +112,6 @@ class Ellipse(BaseAnnotationDefinition):
         else:
             raise ValueError('can not find "coordinates" or "data" in annotation. id: {}'.format(_json["id"]))
 
-        attributes = _json.get("attributes", list())
         return cls(
             angle=angle,
             x=x,
@@ -123,5 +119,5 @@ class Ellipse(BaseAnnotationDefinition):
             rx=rx,
             ry=ry,
             label=_json["label"],
-            attributes=attributes,
+            attributes=_json.get("attributes", None),
         )

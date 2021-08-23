@@ -11,7 +11,6 @@ class Description(BaseAnnotationDefinition):
         self.type = "item_description"
         self.text = text
         self.label = "item.description"
-        self.attributes = {}
 
     def to_coordinates(self, color):
         return {"text": self.text}
@@ -22,7 +21,6 @@ class Description(BaseAnnotationDefinition):
 
     @classmethod
     def from_json(cls, _json):
-        attributes = _json.get("attributes", list())
         if "coordinates" in _json:
             text = cls.from_coordinates(coordinates=_json["coordinates"])
         elif "data" in _json:

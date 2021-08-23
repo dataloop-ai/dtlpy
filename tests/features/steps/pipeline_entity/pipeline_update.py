@@ -5,7 +5,6 @@ from behave import when, then
 def step_impl(context):
     context.pipeline.description = "up"
     context.update_pipeline = context.pipeline.update()
-    print()
 
 
 @then(u'Pipeline received equals Pipeline changed except for "description"')

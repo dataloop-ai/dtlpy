@@ -468,7 +468,11 @@ class Downloader:
                 if option == entities.ViewAnnotationOptions.VTT:
                     annotation_filepath = temp_path + ".vtt"
                 else:
-                    annotation_filepath = temp_path + ".png"
+                    if 'video' in item.mimetype:
+                        annotation_filepath = temp_path + ".mp4"
+                    else:
+                        annotation_filepath = temp_path + ".png"
+
                 if not os.path.isfile(annotation_filepath) or overwrite:
                     # if not exists OR (exists AND overwrite)
                     if not os.path.exists(os.path.dirname(annotation_filepath)):

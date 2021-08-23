@@ -8,12 +8,9 @@ class Comparison(BaseAnnotationDefinition):
     type = "comparison"
 
     def __init__(self, coordinates, label, attributes=None, description=None):
-        super().__init__(description=description)
+        super().__init__(description=description, attributes=attributes)
         self.label = label
         self.coordinates = coordinates
-        if attributes is None:
-            attributes = list()
-        self.attributes = attributes
 
     @property
     def geo(self):
@@ -67,10 +64,8 @@ class Comparison(BaseAnnotationDefinition):
         else:
             coordinates = dict()
 
-        attributes = _json.get("attributes", list())
-
         return cls(
             coordinates=coordinates,
             label=_json.get("label", None),
-            attributes=attributes
+            attributes=_json.get("attributes", None)
         )

@@ -23,6 +23,9 @@ class Snapshots:
         self._model = model
         self._project_id = project_id
 
+        if self._project is not None:
+            self._project_id = self._project.id
+
     ############
     # entities #
     ############
@@ -225,7 +228,9 @@ class Snapshots:
             hex_chars = list('1234567890ABCDEF')
             ontologies = repositories.Ontologies(client_api=self._client_api)
             labels_dict = {k: '#' + ''.join([random.choice(hex_chars) for _ in range(6)]) for k in labels}
-            snapshot_ont = ontologies.create(labels_dict, title=snapshot_name + '-snapshot-ontology')
+            snapshot_ont = ontologies.create(labels_dict,
+                                             title=snapshot_name + '-snapshot-ontology',
+                                             project_ids=[self._project_id])
             ontology_spec = entities.OntologySpec(ontology_id=snapshot_ont.id, labels=labels)
         else:  # ontology_id is not None
             ontologies = repositories.Ontologies(client_api=self._client_api)

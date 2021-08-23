@@ -104,7 +104,7 @@ class Triggers:
         :param trigger_type: can be cron or event. use enum dl.TriggerType for the full list
         :param name: name of the trigger
         :param webhook_id: id for webhook to be called
-        :param function_name: the fucntion name to be called when triggered. must be defined in the package
+        :param function_name: the function name to be called when triggered. must be defined in the package
         :param project_id: project id where trigger will work
         :param active: optional - True/False, default = True
 

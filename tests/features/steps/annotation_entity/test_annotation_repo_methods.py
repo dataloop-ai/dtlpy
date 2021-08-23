@@ -152,4 +152,3 @@ def step_impl(context):
     assert annotation.to_json()['metadata'] == context.annotation.to_json()['metadata']
     assert annotation.type == context.annotation.type
     assert annotation.label == context.annotation.label
-    print()

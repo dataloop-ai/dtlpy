@@ -61,7 +61,9 @@ def before_all(context):
             except jwt.exceptions.DecodeError:
                 time.sleep(np.random.rand())
                 pass
-        if payload['email'] not in ['oa-test-4@dataloop.ai', 'oa-test-1@dataloop.ai', 'oa-test-2@dataloop.ai',
+
+        allow_locally_with_user = os.environ.get('ALLOW_RUN_TESTS_LOCALLY_WITH_USER', 'false') == 'true'
+        if not allow_locally_with_user and payload['email'] not in ['oa-test-4@dataloop.ai', 'oa-test-1@dataloop.ai', 'oa-test-2@dataloop.ai',
                                     'oa-test-3@dataloop.ai']:
             assert False, 'Cannot run test on user: "{}". only test users'.format(payload['email'])
 

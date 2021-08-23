@@ -125,7 +125,7 @@ class Assignment(entities.BaseEntity):
     @property
     def task(self):
         if self._task is None:
-            self._task = self._project.tasks.get(task_id=self.task_id)
+            self._task = self.project.tasks.get(task_id=self.task_id)
         assert isinstance(self._task, entities.Task)
         return self._task
 

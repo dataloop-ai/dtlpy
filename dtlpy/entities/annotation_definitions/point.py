@@ -10,13 +10,10 @@ class Point(BaseAnnotationDefinition):
     type = "point"
 
     def __init__(self, x, y, label, attributes=None, description=None):
-        super().__init__(description=description)
+        super().__init__(description=description, attributes=attributes)
         self.y = y
         self.x = x
         self.label = label
-        if attributes is None:
-            attributes = list()
-        self.attributes = attributes
 
     @property
     def geo(self):
@@ -94,11 +91,9 @@ class Point(BaseAnnotationDefinition):
         else:
             raise ValueError('can not find "coordinates" or "data" in annotation. id: {}'.format(_json["id"]))
 
-        attributes = _json.get("attributes", list())
-
         return cls(
             x=x,
             y=y,
             label=_json["label"],
-            attributes=attributes,
+            attributes=_json.get("attributes", None),
         )

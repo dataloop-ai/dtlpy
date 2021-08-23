@@ -172,7 +172,8 @@ class Uploader:
 
         futures = deque()
         total_size = 0
-        for upload_item_element, remote_name, upload_annotations_element in zip(local_path_list, remote_name_list,
+        for upload_item_element, remote_name, upload_annotations_element in zip(local_path_list,
+                                                                                remote_name_list,
                                                                                 local_annotations_path_list):
             if isinstance(upload_item_element, np.ndarray):
                 # convert numpy.ndarray to io.BytesI
@@ -204,7 +205,6 @@ class Uploader:
                 'remote_path': remote_path,
                 'upload_annotations_element': upload_annotations_element,
                 'item_metadata': item_metadata,
-                'file_types': file_types,
                 'annotations_filepath': None,
                 'with_head_folder': None,
                 'filename': None,
@@ -223,8 +223,10 @@ class Uploader:
                             all_upload_elements['with_head_folder'] = with_head_folder
                             all_upload_elements['filename'] = filename
                             all_upload_elements['root'] = root
-                            upload_elem = upload_element.DirUploadElement(all_upload_elements=all_upload_elements)
-                            futures.append(self.upload_single_element(upload_elem))
+                            _, ext = os.path.splitext(filename)
+                            if file_types is None or ext in file_types:
+                                upload_elem = upload_element.DirUploadElement(all_upload_elements=all_upload_elements)
+                                futures.append(self.upload_single_element(upload_elem))
                     continue
 
                 # add single file
@@ -295,21 +297,16 @@ class Uploader:
     def _build_elements_from_df(self, df: pandas.DataFrame):
         futures = deque()
         for index, row in df.iterrows():
-            all_upload_elements = {
-                'upload_item_element': row.get('local_path'),
-                'total_size': None,
-                'remote_name': row.get('remote_name', None),
-                'remote_path': row.get('remote_path', '/'),
-                'upload_annotations_element': None,
-                'item_metadata': row.get('item_metadata', None),
-                'file_types': None,
-                'annotations_filepath': row.get('local_annotations_path', None),
-                'with_head_folder': None,
-                'filename': None,
-                'root': None
-            }
-            upload_elem = upload_element.DataFrameUploadElement(all_upload_elements=all_upload_elements)
-            futures.append(self.upload_single_element(upload_elem))
+            # DEFAULTS
+            elem = {'local_annotations_path': None,
+                    'remote_path': None,
+                    'remote_name': None,
+                    'file_types': None,
+                    'item_metadata': None}
+            elem.update(row)
+            future = self._build_elements_from_inputs(**elem)
+            # append deque using +
+            futures += future
         return futures
 
     async def __single_external_sync(self, element):

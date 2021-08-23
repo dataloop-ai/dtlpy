@@ -27,7 +27,8 @@ class DictDiffer:
 
             if is_list:
                 for i in modified_field_pointer:
-                    field_pointer.append(i)
+                    if i not in field_pointer:
+                        field_pointer.append(i)
                 continue
             else:
                 if diff[TYPE] == 'add':
