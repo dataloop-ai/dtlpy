@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 from . import BaseAnnotationDefinition
 from .polygon import Polygon
@@ -19,9 +21,7 @@ class Box(BaseAnnotationDefinition):
         """
         Can create a box using 2 point using:
          "top", "left", "bottom", "right" (to form a box [(left, top), (right, bottom)])
-        To create a rotated box need to input all 4 points using:
-         "top_left", "bottom_left", "bottom_right", "top_right" (each variable is in the form of [x,y])
-         Must input all 4 variable of each option
+        And for create a rotated box need to add the angle of the rotation
 
         :param left: left x coordinate of the box
         :param top: top Y coordinate of the box
@@ -30,6 +30,7 @@ class Box(BaseAnnotationDefinition):
         :param label: annotation label
         :param attributes: a list of attributes for the annotation
         :param description:
+        :param angle: the angle of the rotation in degrees
 
         :return:
         """
@@ -65,6 +66,28 @@ class Box(BaseAnnotationDefinition):
             [self.right, self.bottom]
         ]
 
+    def _rotate_points(self, points):
+        angle = np.radians(self.angle)
+        rotation_matrix = np.asarray([[np.cos(angle), -np.sin(angle)],
+                                      [np.sin(angle), np.cos(angle)]])
+        pts2 = np.asarray([rotation_matrix.dot(pt)[:2] for pt in points])
+        return pts2
+
+    def _translate(self, points, translate_x, translate_y=None):
+        translation_matrix = np.asarray([[1, 0, translate_x],
+                                         [0, 1, translate_y],
+                                         [0, 0, 1]])
+        pts2 = np.asarray([translation_matrix.dot(list(pt) + [1])[:2] for pt in points])
+        return pts2
+
+    def _rotate_around_point(self):
+        points = copy.deepcopy(self.four_points)
+        center = [((self.left + self.right) / 2), ((self.top + self.bottom) / 2)]
+        centerized = self._translate(points, -center[0], -center[1])
+        rotated = self._rotate_points(centerized)
+        moved = self._translate(rotated, center[0], center[1])
+        return moved
+
     @property
     def four_points(self):
         return [self.top_left, self.bottom_left, self.bottom_right, self.top_right]
@@ -92,9 +115,13 @@ class Box(BaseAnnotationDefinition):
             thickness = 2
 
         # draw annotation
+        if self.is_rotated:
+            points = self._rotate_around_point()
+        else:
+            points = self.four_points
         image = cv2.drawContours(
             image=image,
-            contours=[np.round(self.four_points).astype(int)],
+            contours=[np.round(points).astype(int)],
             contourIdx=-1,
             color=color,
             thickness=thickness,
@@ -131,7 +158,7 @@ class Box(BaseAnnotationDefinition):
         bottom = np.max(geo[:, 1])
 
         angel = coordinates[2] if len(coordinates) > 2 and (
-                    isinstance(coordinates[2], float) or isinstance(coordinates[2], int)) else None
+                isinstance(coordinates[2], float) or isinstance(coordinates[2], int)) else None
 
         return cls(
             left=left,

@@ -41,7 +41,7 @@ class PipelineNodeIO:
 
 
 class PipelineNode:
-    def __init__(self, name, node_id, outputs, inputs, metadata, node_type, namespace, project_id):
+    def __init__(self, name, node_id, outputs, inputs, metadata, node_type, namespace, project_id, config=None):
         self.name = name
         self.node_id = node_id
         self.outputs = outputs
@@ -50,6 +50,7 @@ class PipelineNode:
         self.node_type = node_type
         self.namespace = namespace
         self.project_id = project_id
+        self.config = config
 
     @staticmethod
     def from_json(_json: dict):
@@ -63,7 +64,8 @@ class PipelineNode:
             metadata=_json.get('metadata', None),
             node_type=_json.get('type', None),
             namespace=_json.get('namespace', None),
-            project_id=_json.get('projectId', None)
+            project_id=_json.get('projectId', None),
+            config=_json.get('config', None)
         )
 
     def to_json(self):
@@ -77,6 +79,8 @@ class PipelineNode:
             'namespace': self.namespace,
             'projectId': self.project_id,
         }
+        if self.config is not None:
+            _json['config'] = self.config
         return _json
 
 

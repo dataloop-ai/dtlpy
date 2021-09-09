@@ -29,6 +29,7 @@ class Package(entities.BaseEntity):
     ui_hooks = attr.ib()
     creator = attr.ib()
     is_global = attr.ib()
+    type = attr.ib()
     service_config = attr.ib()
     # name change
     project_id = attr.ib()
@@ -130,7 +131,8 @@ class Package(entities.BaseEntity):
             url=_json.get('url', None),
             project=project,
             id=_json.get('id', None),
-            service_config=_json.get('serviceConfig', None)
+            service_config=_json.get('serviceConfig', None),
+            type=_json.get('type', None)
         )
         inst.is_fetched = is_fetched
         return inst

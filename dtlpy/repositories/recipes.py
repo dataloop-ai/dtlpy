@@ -86,7 +86,11 @@ class Recipes:
             recipe_name = self._dataset.name + " Default Recipe" if self._dataset is not None else "Default Recipe"
         payload = {'title': recipe_name,
                    'projectIds': project_ids,
-                   'ontologyIds': ontology_ids}
+                   'ontologyIds': ontology_ids,
+                   'uiSettings': {
+                       "allowObjectIdAutoAssign": True,
+                       "studioV2App": True
+                   }}
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/recipes',
                                                          json_req=payload)

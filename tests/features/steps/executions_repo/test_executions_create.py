@@ -127,7 +127,9 @@ def step_impl(context, resource_type):
         if execution.latest_status['status'] == 'success':
             success = True
             break
-
+        if execution.latest_status['status'] == 'failed':
+            success = False
+            break
     assert success
 
 

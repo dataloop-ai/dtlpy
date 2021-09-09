@@ -84,7 +84,11 @@ class AnnotationCollection(entities.BaseEntity):
             if 'user' not in metadata:
                 metadata['user'] = dict()
             metadata['user']['model'] = {'name': model_info['name'],
-                                         'confidence': float(model_info['confidence'])}
+                                         'confidence': float(model_info['confidence']),
+                                         'model_id': model_info.get('model_id'),
+                                         'snapshot_id': model_info.get('snapshot_id'),
+                                         }
+            metadata['user']['annotation_type'] = 'prediction'
 
         # to support list of definitions with same parameters
         if not isinstance(annotation_definition, list):
@@ -334,7 +338,8 @@ class AnnotationCollection(entities.BaseEntity):
         return status, annotation
 
     @classmethod
-    def from_json(cls, _json: list, item=None, is_video=None, fps=25, height=None, width=None, client_api=None):
+    def from_json(cls, _json: list, item=None, is_video=None, fps=25, height=None, width=None,
+                  client_api=None, is_audio=None):
         if item is None:
             if isinstance(_json, dict):
                 metadata = _json.get('metadata', dict())
@@ -342,10 +347,12 @@ class AnnotationCollection(entities.BaseEntity):
                 if is_video is None:
                     if 'mimetype' in system_metadata:
                         is_video = 'video' in system_metadata['mimetype']
+                        is_audio = 'audio' in system_metadata['mimetype']
                     elif 'filename' in _json:
                         ext = os.path.splitext(_json['filename'])[-1]
                         try:
                             is_video = 'video' in mimetypes.types_map[ext.lower()]
+                            is_audio = 'is_audio' in mimetypes.types_map[ext.lower()]
                         except Exception:
                             logger.info("Unknown annotation's item type. Default item type is set to: image")
                     else:
@@ -355,6 +362,10 @@ class AnnotationCollection(entities.BaseEntity):
                     ffmpeg_info = system_metadata.get('ffmpeg', dict())
                     height = ffmpeg_info.get('height', None)
                     width = ffmpeg_info.get('width', None)
+                elif is_audio:
+                    fps = system_metadata.get('fps', 1000)
+                    height = system_metadata.get('height', None)
+                    width = system_metadata.get('width', None)
                 else:
                     fps = 0
                     height = system_metadata.get('height', None)

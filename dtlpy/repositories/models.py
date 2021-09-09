@@ -318,7 +318,7 @@ class Models:
             payload['tags'] = tags
 
         if is_global is not None:
-            payload['is_global'] = is_global
+            payload['global'] = is_global
 
         if codebase is None:
             if src_path is None:

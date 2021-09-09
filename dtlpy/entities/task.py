@@ -290,13 +290,14 @@ class Task:
         self.add_items(filters=filters, items=items)
         return assignment
 
-    def add_items(self, filters=None, items=None, assignee_ids=None, workload=None, limit=0):
+    def add_items(self, filters=None, items=None, assignee_ids=None, workload=None, limit=0, wait=True):
         """
         :param filters: Filters entity or a dictionary containing filters parameters
         :param items: items list for the assignment
         :param assignee_ids: list of assignee for the assignment
         :param workload: the load of work
         :param limit:
+        :param wait: wait the command to finish
         :return:
         """
         return self.tasks.add_items(task=self,
@@ -304,7 +305,8 @@ class Task:
                                     items=items,
                                     assignee_ids=assignee_ids,
                                     workload=workload,
-                                    limit=limit)
+                                    limit=limit,
+                                    wait=wait)
 
     def get_items(self, filters=None):
         """

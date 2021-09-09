@@ -39,6 +39,7 @@ class Item(entities.BaseEntity):
     id = attr.ib()
     hidden = attr.ib(repr=False)
     dir = attr.ib(repr=False)
+    spec = attr.ib()
 
     # name change
     annotations_count = attr.ib()
@@ -116,7 +117,9 @@ class Item(entities.BaseEntity):
             name=_json.get('name', None),
             type=_json.get('type', None),
             url=_json.get('url', None),
-            id=_json.get('id', None))
+            id=_json.get('id', None),
+            spec=_json.get('spec', None)
+        )
         inst.is_fetched = is_fetched
         return inst
 
@@ -310,11 +313,14 @@ class Item(entities.BaseEntity):
                                                         attr.fields(Item)._platform_dict,
                                                         attr.fields(Item).annotations_count,
                                                         attr.fields(Item).dataset_url,
-                                                        attr.fields(Item).annotations_link))
+                                                        attr.fields(Item).annotations_link,
+                                                        attr.fields(Item).spec))
 
         _json.update({'annotations': self.annotations_link,
                       'annotationsCount': self.annotations_count,
                       'dataset': self.dataset_url})
+        if self.spec is not None:
+            _json['spec'] = self.spec
         return _json
 
     def download(

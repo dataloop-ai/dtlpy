@@ -1,6 +1,7 @@
 import logging
 import time
 import numpy as np
+import tqdm
 
 from .. import exceptions, entities, services, miscellaneous
 
@@ -77,8 +78,10 @@ class Commands:
             timeout = np.inf
 
         command = None
+        pbar = tqdm.tqdm(total=100, disable=self._client_api.verbose.disable_progress_bar)
         while elapsed < timeout:
             command = self.get(command_id=command_id, url=url)
+            pbar.update(command.progress - pbar.n)
             if not command.in_progress():
                 break
             elapsed = int(time.time()) - start
@@ -86,6 +89,7 @@ class Commands:
             sleep_time = np.minimum(timeout - elapsed, step)
             logger.debug("Going to sleep {:.2f}[s]".format(sleep_time))
             time.sleep(sleep_time)
+        pbar.close()
         if command is None:
             raise ValueError('Nothing to wait for')
         if elapsed >= timeout:

@@ -68,6 +68,7 @@ class Artifact(entities.Item):
             type=_json.get('type', None),
             dir=_json.get('dir', None),
             url=_json.get('url', None),
-            id=_json['id'])
+            id=_json['id'],
+            spec=_json.get('spec', None))
         inst.is_fetched = is_fetched
         return inst

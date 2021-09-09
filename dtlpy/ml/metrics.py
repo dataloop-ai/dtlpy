@@ -44,9 +44,9 @@ def calculate_iou_box(pts1, pts2):
     else:
         # rotated box annotation (4 pts)
         pt1_left_top = pts1[0]
-        pt1_right_top = pts1[1]
-        pt1_left_bottom = pts1[2]
-        pt1_right_bottom = pts1[3]
+        pt1_right_top = pts1[3]
+        pt1_left_bottom = pts1[1]
+        pt1_right_bottom = pts1[2]
 
     poly_1 = Polygon([pt1_left_top,
                       pt1_right_top,
@@ -62,9 +62,9 @@ def calculate_iou_box(pts1, pts2):
     else:
         # rotated box annotation (4 pts)
         pt2_left_top = pts2[0]
-        pt2_right_top = pts2[1]
-        pt2_left_bottom = pts2[2]
-        pt2_right_bottom = pts2[3]
+        pt2_right_top = pts2[3]
+        pt2_left_bottom = pts2[1]
+        pt2_right_bottom = pts2[2]
 
     poly_2 = Polygon([pt2_left_top,
                       pt2_right_top,

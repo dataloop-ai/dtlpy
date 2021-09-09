@@ -176,27 +176,31 @@ class Assignment(entities.BaseEntity):
 
         return self.assignments.get_items(dataset=dataset, assignment=self, filters=filters)
 
-    def reassign(self, assignee_id):
+    def reassign(self, assignee_id, wait=True):
         """
         Reassign an assignment
         :param assignee_id:
+        :param wait: wait the command to finish
         :return: Assignment object
         """
         return self.assignments.reassign(assignment=self,
                                          task=self._task,
                                          task_id=self.metadata['system'].get('taskId'),
-                                         assignee_id=assignee_id)
+                                         assignee_id=assignee_id,
+                                         wait=wait)
 
-    def redistribute(self, workload):
+    def redistribute(self, workload, wait=True):
         """
         Redistribute an assignment
         :param workload:
+        :param wait: wait the command to finish
         :return: Assignment object
         """
         return self.assignments.redistribute(assignment=self,
                                              task=self._task,
                                              task_id=self.metadata['system'].get('taskId'),
-                                             workload=workload)
+                                             workload=workload,
+                                             wait=wait)
 
 
 @attr.s
@@ -250,7 +254,7 @@ class Workload:
     @classmethod
     def from_json(cls, _json):
         return cls(
-            workload=[workload_unit.from_json() for workload_unit in _json]
+            workload=[WorkloadUnit.from_json(workload_unit) for workload_unit in _json]
         )
 
     @staticmethod

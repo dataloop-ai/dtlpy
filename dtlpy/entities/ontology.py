@@ -323,7 +323,7 @@ class Ontology(entities.BaseEntity):
 
     def _add_image_label(self, icon_path):
         display_data = dict()
-        dataset = self.dataset.project.datasets.get(dataset_name='Binaries')
+        dataset = self.project.datasets.get(dataset_name='Binaries')
         platform_path = "/.dataloop/ontologies/{}/labelDisplayImages/".format(self.id)
         item = dataset.items.upload(local_path=icon_path, remote_path=platform_path)
         display_data['displayImage'] = dict()
@@ -426,7 +426,7 @@ class Ontology(entities.BaseEntity):
                                         children=children, attributes=attributes,
                                         display_label=display_label, display_data=icon_path):
             self.labels.append(added_label)
-        self.update()
+        self._base_labels_handler(labels=added_label, update_ontology=True, mode=mode)
         return added_label
 
     def _validate_label(self, added_label, mode=LabelHandlerMode.UPSERT, color=None, children=None, attributes=None,

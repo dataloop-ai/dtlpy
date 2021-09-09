@@ -492,8 +492,14 @@ class Annotation(entities.BaseEntity):
             logger.error(
                 'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
             raise
-        s_frame = self.metadata.get('system').get('frame', 0)
-        e_frame = self.metadata.get('system').get('endFrame', 0)
+        if self.metadata:
+            s_frame = self.metadata.get('system').get('frame', 0)
+            e_frame = self.metadata.get('system').get('endFrame', 0)
+        elif isinstance(image, list):
+            e_frame = len(image) - 1
+            s_frame = 0
+        else:
+            e_frame = 0
         if e_frame > 1:
             if image is None:
                 image = [None] * (e_frame - s_frame)
@@ -700,6 +706,12 @@ class Annotation(entities.BaseEntity):
         if frame_num is None:
             frame_num = 0
 
+        if object_id is not None:
+            if isinstance(object_id, int):
+                object_id = '{}'.format(object_id)
+            elif not isinstance(object_id, str) or not object_id.isnumeric():
+                raise ValueError('Object id must be an int or a string containing only numbers.')
+
         # init annotations
         if metadata is None:
             metadata = dict()
@@ -720,10 +732,12 @@ class Annotation(entities.BaseEntity):
         frames = dict()
 
         # handle fps
-        if item is not None and item.fps is not None:
-            fps = item.fps
-        else:
-            fps = None
+        fps = None
+        if item is not None:
+            if item.fps is not None:
+                fps = item.fps
+            elif item.mimetype is not None and 'audio' in item.mimetype:
+                fps = 1000
 
         # get type
         ann_type = None
@@ -948,7 +962,8 @@ class Annotation(entities.BaseEntity):
                   is_video=None,
                   fps=None,
                   item_metadata=None,
-                  dataset=None):
+                  dataset=None,
+                  is_audio=None):
         """
         Create an annotation object from platform json
         :param _json: platform json
@@ -959,6 +974,7 @@ class Annotation(entities.BaseEntity):
         :param fps:
         :param item_metadata:
         :param dataset
+        :param is_audio:
         :return: annotation object
         """
         if item_metadata is None:
@@ -971,6 +987,14 @@ class Annotation(entities.BaseEntity):
                 # get item type
                 if item.mimetype is not None and 'video' in item.mimetype:
                     is_video = True
+
+        if is_audio is None:
+            if item is None:
+                is_audio = False
+            else:
+                # get item type
+                if 'audio' in item.mimetype:
+                    is_audio = True
 
         item_url = _json.get('item', item.url if item is not None else None)
         item_id = _json.get('itemId', item.id if item is not None else None)
@@ -1018,12 +1042,15 @@ class Annotation(entities.BaseEntity):
         ############
         # if video #
         ############
-        if is_video:
+        if is_video or is_audio:
             # get fps
             if item is not None and item.fps is not None:
                 fps = item.fps
             if fps is None:
-                fps = item_metadata.get('fps', 25)
+                if is_video:
+                    fps = item_metadata.get('fps', 25)
+                else:
+                    item_metadata.get('fps', 1000)
 
             # get video-only attributes
             end_time = 1.5
@@ -1046,7 +1073,7 @@ class Annotation(entities.BaseEntity):
         ################
         # if not video #
         ################
-        else:
+        if not is_video or is_audio:
             # get coordinates
             coordinates = _json.get('coordinates', list())
             # set video only attributes
