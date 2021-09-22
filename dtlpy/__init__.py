@@ -18,16 +18,17 @@ import logging
 import sys
 import os
 
-from .services import DataloopLogger, ApiClient, check_sdk, Reporter, VerboseLoggingLevel
+from . import services as dtlpy_services
+from .services import DataloopLogger, ApiClient, check_sdk, Reporter, VerboseLoggingLevel, service_defaults
 from .exceptions import PlatformException
 from . import repositories, exceptions, entities, examples
 from .__version__ import version as __version__
 from .entities import (
     # main entities
-    Project, Dataset, Trigger, Item, Execution, AnnotationCollection, Annotation, Recipe,
+    Project, Dataset, ExpirationOptions, Trigger, Item, Execution, AnnotationCollection, Annotation, Recipe,
     Ontology, Label, Task, Assignment, Service, Package, Codebase, Model, Snapshot, PackageModule, PackageFunction,
     # annotations
-    Box, Cube, Point, Note, Segmentation, Ellipse, Classification, Subtitle, Polyline, Pose, Description,
+    Box, Cube, Cube3d, Point, Note, Segmentation, Ellipse, Classification, Subtitle, Polyline, Pose, Description,
     Polygon, Text,
     # filters
     Filters, FiltersKnownFields, FiltersResource, FiltersOperations, FiltersMethod, FiltersOrderByDirection,
@@ -144,6 +145,10 @@ add_environment = client_api.add_environment
 setenv = client_api.setenv
 token_expired = client_api.token_expired
 info = client_api.info
+
+
+def get_secret(secret):
+    return os.environ.get(secret, None)
 
 
 def token():

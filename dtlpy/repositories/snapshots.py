@@ -1,6 +1,8 @@
+import datetime
 import logging
+import tempfile
+import shutil
 import os
-import warnings
 from typing import List
 
 from .. import entities, repositories, exceptions, miscellaneous, services
@@ -202,6 +204,7 @@ class Snapshots:
             tags: List[str] = None,
             model: entities.Model = None,
             configuration: dict = None,
+            status: str = None,
     ) -> entities.Snapshot:
         """
             Create a Snapshot entity
@@ -217,6 +220,7 @@ class Snapshots:
         :param tags: list of string tags
         :param model: optional - Model object
         :param configuration: optional - snapshot configuration - dict
+        :param status: `str` of the optional values of
         :return: Snapshot Entity
         """
 
@@ -224,14 +228,7 @@ class Snapshots:
             raise exceptions.PlatformException(error='400',
                                                message='Must provide either labels or ontology_id as arguments')
         elif labels is not None:
-            import random
-            hex_chars = list('1234567890ABCDEF')
-            ontologies = repositories.Ontologies(client_api=self._client_api)
-            labels_dict = {k: '#' + ''.join([random.choice(hex_chars) for _ in range(6)]) for k in labels}
-            snapshot_ont = ontologies.create(labels_dict,
-                                             title=snapshot_name + '-snapshot-ontology',
-                                             project_ids=[self._project_id])
-            ontology_spec = entities.OntologySpec(ontology_id=snapshot_ont.id, labels=labels)
+            ontology_spec = entities.OntologySpec(ontology_id='null', labels=labels)
         else:  # ontology_id is not None
             ontologies = repositories.Ontologies(client_api=self._client_api)
             labels = [label.tag for label in ontologies.get(ontology_id=ontology_id).labels]
@@ -286,6 +283,9 @@ class Snapshots:
         if description is not None:
             payload['description'] = description
 
+        if status is not None:
+            payload['status'] = status
+
         # request
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/snapshots',
@@ -301,89 +301,87 @@ class Snapshots:
                                                model=model)
 
         if dataset_id is None:
-            msg = "Snapshot {!r} was created without a dataset. This may cause unexpected errors.".format(snapshot.id)
-            warnings.warn(msg)
-            logger.error(msg)
+            logger.warning(
+                "Snapshot {!r} was created without a dataset. This may cause unexpected errors.".format(snapshot.id))
         else:
             if snapshot.dataset.readonly is False:
-                logger.error("Snapshot does not support `unlocked dataset`\n\t please change {!r} to readonly".format(
+                logger.error("Snapshot does not support 'unlocked dataset'. Please change {!r} to readonly".format(
                     snapshot.dataset.name))
 
         return snapshot
 
     def clone(self,
-              snapshot,
-              snapshot_name,
-              new_bucket: entities.Bucket = None,
-              new_dataset: entities.Dataset = None,
-              new_configuration: dict = None) -> entities.Snapshot:
+              from_snapshot: entities.Snapshot,
+              snapshot_name: str,
+              bucket: entities.Bucket = None,
+              dataset_id: entities.Dataset = None,
+              configuration: dict = None,
+              status='created',
+              project_id: str = None,
+              ) -> entities.Snapshot:
         """
-        Clones and creates a new snapshot out of existing one
-        :param snapshot: existing snapshot to clone from
+            Clones and creates a new snapshot out of existing one
+
+        :param from_snapshot: existing snapshot to clone from
         :param snapshot_name: `str` new snapshot name
-        :param new_bucket: `dl.Bucket` (optional) if passed replaces the current bucket
-        :param new_dataset: `dl.Dataset` (optional) if passed replaces the current dataset
-        :param new_configuration: `dict` (optional) if passed replaces the current configuration
+        :param bucket: `dl.Bucket` (optional) if passed replaces the current bucket
+        :param dataset_id: dataset_id for the cloned snapshot
+        :param configuration: `dict` (optional) if passed replaces the current configuration
+        :param status: `str` (optional) set the new status
+        :param project_id: `str` specify the project id to create the new snapshot on (if other the the source snapshot)
+
         :return: dl.Snapshot which is a clone version of the existing snapshot
         """
         # FIXME: replace the clone with a Backend clone
-        existing_json = snapshot.to_json()
-        payload = {'name': snapshot_name}
-        # all_fields = ['modelId', 'projectId', 'datasetId', 'ontologySpec', 'bucket', 'configuration', 'tags', 'global', 'description']
-        fields_to_copy = ['modelId', 'projectId', 'ontologySpec', 'tags', 'description']
+        from_json = from_snapshot.to_json()
+        from_json['status'] = status
+        from_json['name'] = snapshot_name
+        if project_id is not None:
+            from_json['projectId']: project_id
+        if dataset_id is not None:
+            from_json['datasetId'] = dataset_id
+        if configuration is not None:
+            from_json['configuration'].update(configuration)
 
         # update required fields or replace with new values
-        if new_bucket is not None:
-
-            # output = directory_item.dataset.items.list(filters=entities.Filters(field='dir',
-            #                                                                     values=directory_item.filename))
-            payload['bucket'] = new_bucket.to_json()
-        elif isinstance(snapshot.bucket, entities.ItemBucket):
-            bucket_dir_item = self.project.items.get(item_id=snapshot.bucket.directory_item_id)
-            bucket_dir_path = bucket_dir_item.filename
-            # TODO: how to clone directory to the same dataset
-            logger.info("Copying bucket_item")
-            p_bar_last = self._client_api.verbose.disable_progress_bar
-            self._client_api.verbose._disable_progress_bar = True
-            snapshot.bucket.download(local_path='/tmp/old_bucket')
-            new_bucket = snapshot.buckets.create(
-                bucket_type=entities.BucketType.ITEM,
-                local_path='/tmp/old_bucket',
-                item_bucket_snapshot_name=snapshot_name)
-            logger.info("bucket copied. new bucket dir_item_id {}".format(new_bucket.directory_item_id))
-            self._client_api.verbose._disable_progress_bar = p_bar_last
-            payload['bucket'] = new_bucket.to_json()
-        else:
-            fields_to_copy.append('bucket')
-        if new_dataset is not None:
-            payload['datasetId'] = new_dataset.id if isinstance(new_dataset, entities.Dataset) else new_dataset
-        else:
-            fields_to_copy.append('datasetId')
-        if new_configuration is not None:
-            payload['configuration'] = new_configuration
-        else:
-            fields_to_copy.append('configuration')
-
-        payload['global'] = existing_json['is_global']
-        payload.update({field: existing_json[field] for field in fields_to_copy})
-
+        if bucket is None:
+            # creating new bucket for the clone
+            if isinstance(from_snapshot.bucket, entities.LocalBucket):
+                orig_dir = os.path.dirname(from_snapshot.bucket.local_path)
+                clone_bucket_path = os.path.join(orig_dir, datetime.datetime.now().strftime('%Y%m%d-%H%M%S'))
+                bucket = from_snapshot.buckets.create(bucket_type=entities.BucketType.LOCAL,
+                                                      local_path=clone_bucket_path,
+                                                      item_bucket_snapshot_name=snapshot_name)
+            elif isinstance(from_snapshot.bucket, entities.ItemBucket):
+                logger.info("Copying bucket_item")
+                bucket = from_snapshot.buckets.create(bucket_type=entities.BucketType.ITEM,
+                                                      model_name=from_snapshot.model.name,
+                                                      snapshot_name=snapshot_name)
         # request
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/snapshots',
-                                                         json_req=payload)
-
+                                                         json_req=from_json)
         # exception handling
         if not success:
             raise exceptions.PlatformException(response)
-
         new_snapshot = entities.Snapshot.from_json(_json=response.json(),
                                                    client_api=self._client_api,
                                                    project=self._project,
-                                                   model=snapshot.model)
+                                                   model=from_snapshot.model)
+        # cloning the bucket
+        if bucket is not None:
+            logger.info("Cloning bucket...")
+            from_snapshot.buckets.clone(src_bucket=from_snapshot.bucket,
+                                        dst_bucket=bucket)
+            logger.info("Cloning bucket... Done")
+            new_snapshot.bucket = bucket
+            new_snapshot.update()
+        else:
+            logger.warning('Not cloning the bucket!')
 
         if new_snapshot.dataset.readonly is False:
-            logger.error("Snapshot does not support `unlocked dataset`\n\t please change {!r} to readonly".format(
-                snapshot.dataset.name))
+            logger.error("Snapshot does not support 'unlocked dataset'. Please change {!r} to readonly".format(
+                new_snapshot.dataset.name))
 
         return new_snapshot
 
@@ -418,7 +416,6 @@ class Snapshots:
         :param snapshot_id: `str` specific snapshot id
         :param snapshot: `dl.Snapshot` specific snapshot
         :param local_path: `str` directory path to load the bucket content to
-        :param remote_paths: `List[`str`]` specific files to download
         :return: list of something - TBD
         """
         if snapshot is None:

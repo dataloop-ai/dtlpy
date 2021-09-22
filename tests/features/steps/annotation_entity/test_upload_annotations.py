@@ -3,6 +3,7 @@ import os
 import json
 from PIL import Image
 import numpy as np
+import dtlpy as dl
 
 
 @given(u'Dataset ontology has attributes "{first_attribute}" and "{second_attribute}"')
@@ -85,7 +86,10 @@ def step_impl(context, should_be_path, drawn_image_path):
 @when(u'I draw to image in "{im_path}" all annotations with param "{annotation_format}"')
 def step_impl(context, annotation_format, im_path):
     im_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], im_path)
-    annotations_get = context.item.annotations.list()
+    filters = dl.Filters(resource=dl.FiltersResource.ANNOTATION)
+    filters.sort_by(field='label', value=dl.FiltersOrderByDirection.ASCENDING)
+    filters.sort_by(field='createdAt', value=dl.FiltersOrderByDirection.DESCENDING)
+    annotations_get = context.item.annotations.list(filters=filters)
     context.item = context.dataset.items.get(item_id=context.item.id)
     
     # make sure we have height and width 

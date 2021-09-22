@@ -22,7 +22,7 @@ from .trigger import Trigger, TriggerResource, TriggerAction, TriggerExecutionMo
     TriggerType
 from .project import Project, MemberRole
 from .artifact import Artifact
-from .dataset import Dataset
+from .dataset import Dataset, ExpirationOptions
 from .codebase import Codebase
 from .annotation import Annotation, FrameAnnotation, ViewAnnotationOptions, AnnotationStatus, AnnotationType
 from .annotation_collection import AnnotationCollection
@@ -31,7 +31,7 @@ from .filters import Filters, FiltersKnownFields, FiltersResource, FiltersOperat
     FiltersOrderByDirection
 from .recipe import Recipe
 from .ontology import Ontology
-from .annotation_definitions import Box, Cube, Point, Segmentation, Polygon, Ellipse, Classification, \
+from .annotation_definitions import Box, Cube, Cube3d, Point, Segmentation, Polygon, Ellipse, Classification, \
     Subtitle, Text, \
     Polyline, Comparison, UndefinedAnnotationType, Note, Description, Pose
 from .label import Label

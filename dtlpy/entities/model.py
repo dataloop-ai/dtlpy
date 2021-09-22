@@ -50,6 +50,7 @@ class Model(entities.BaseEntity):
     project_id = attr.ib()
     org_id = attr.ib()
     entry_point = attr.ib()
+    class_name = attr.ib()
     input_type = attr.ib()
     output_type = attr.ib()
 
@@ -121,6 +122,7 @@ class Model(entities.BaseEntity):
             description=_json.get('description', None),
             creator=_json.get('creator', None),
             entry_point=_json.get('entryPoint', None),
+            class_name=_json.get('className', 'ModelAdapter'),
             client_api=client_api,
             name=_json.get('name', None),
             url=_json.get('url', None),
@@ -155,6 +157,7 @@ class Model(entities.BaseEntity):
                                                         attr.fields(Model)._client_api,
                                                         attr.fields(Model).codebase,
                                                         attr.fields(Model).entry_point,
+                                                        attr.fields(Model).class_name,
                                                         attr.fields(Model).project_id,
                                                         ))
 
@@ -164,6 +167,7 @@ class Model(entities.BaseEntity):
         _json['outputType'] = self.output_type
         _json['projectId'] = self.project_id
         _json['entryPoint'] = self.entry_point
+        _json['className'] = self.class_name
         _json['codebase'] = self.codebase.to_json()
 
         return _json

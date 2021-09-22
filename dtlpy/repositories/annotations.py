@@ -316,6 +316,33 @@ class Annotations:
 
         return items_repo.delete(filters=filters)
 
+    def _update_snapshots(self, origin, modified):
+        """
+        function that update the snapshots if a change is happen
+        return list of the new snapshots with the flag to update
+        """
+        update = False
+        origin_snapshots = list()
+        origin_metadata = origin['metadata'].get('system', None)
+        if origin_metadata:
+            origin_snapshots = origin_metadata.get('snapshots_', None)
+            if origin_snapshots:
+                modified_snapshots = modified['metadata'].get('system', dict()).get('snapshots_', None)
+                # if the number of the snapshots change
+                if len(origin_snapshots) != len(modified_snapshots):
+                    origin_snapshots = modified_snapshots
+                    update = True
+
+                i = 0
+                # if some snapshot change
+                while i < len(origin_snapshots) and not update:
+                    if origin_snapshots[i] != modified_snapshots[i]:
+                        origin_snapshots = modified_snapshots
+                        update = True
+                        break
+                    i += 1
+        return update, origin_snapshots
+
     def _update_single_annotation(self, w_annotation, system_metadata):
         try:
             if isinstance(w_annotation, entities.Annotation):
@@ -324,9 +351,30 @@ class Annotations:
                 raise exceptions.PlatformException('400',
                                                    'unknown annotations type: {}'.format(type(w_annotation)))
 
-            json_req = miscellaneous.DictDiffer.diff(origin=w_annotation._platform_dict,
-                                                     modified=w_annotation.to_json())
-            if not json_req:
+            origin = w_annotation._platform_dict
+            modified = w_annotation.to_json()
+            # check snapshots
+            update, updated_snapshots = self._update_snapshots(origin=origin,
+                                                               modified=modified)
+
+            # pop the snapshots to make the diff work with out them
+            origin.get('metadata', dict()).get('system', dict()).pop('snapshots_', None)
+            modified.get('metadata', dict()).get('system', dict()).pop('snapshots_', None)
+
+            # check diffs in the json
+            json_req = miscellaneous.DictDiffer.diff(origin=origin,
+                                                     modified=modified)
+
+            # add the new snapshots if exist
+            if updated_snapshots and update:
+                if 'metadata' not in json_req:
+                    json_req['metadata'] = dict()
+                if 'system' not in json_req['metadata']:
+                    json_req['metadata']['system'] = dict()
+                json_req['metadata']['system']['snapshots_'] = updated_snapshots
+
+            # no changes happen
+            if not json_req and not updated_snapshots:
                 status = True
                 result = w_annotation
             else:

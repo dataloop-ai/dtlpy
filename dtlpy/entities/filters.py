@@ -231,7 +231,6 @@ class Filters:
                 self._unique_fields = ['type', 'hidden']
                 self.add(field='hidden', values=False, method=FiltersMethod.AND)
                 self.add(field='type', values='file', method=FiltersMethod.AND)
-                self.sort_by(field='createdAt', value=FiltersOrderByDirection.DESCENDING)
             # add service defaults
             elif self.resource == FiltersResource.SERVICE:
                 self._unique_fields = ['global']
@@ -245,8 +244,6 @@ class Filters:
                 self.add(field='type',
                          values=['box', 'class', 'comparison', 'ellipse', 'point', 'segment', 'polyline', 'binary',
                                  'subtitle', 'cube', 'pose', 'text_mark'], operator=FiltersOperations.IN, method=FiltersMethod.AND)
-                self.sort_by(field='label', value=FiltersOrderByDirection.ASCENDING)
-                self.sort_by(field='createdAt', value=FiltersOrderByDirection.DESCENDING)
 
     def __generate_query(self):
         filters_dict = dict()

@@ -10,6 +10,31 @@ from .annotation import ViewAnnotationOptions, AnnotationType
 logger = logging.getLogger(name=__name__)
 
 
+class ExpirationOptions:
+    """
+    ExpirationOptions object
+    """
+
+    def __init__(self, item_max_days: int = None):
+        """
+        :param item_max_days: int. items in dataset will be auto delete after this number id days
+        """
+        self.item_max_days = item_max_days
+
+    def to_json(self):
+        _json = dict()
+        if self.item_max_days is not None:
+            _json["itemMaxDays"] = self.item_max_days
+        return _json
+
+    @classmethod
+    def from_json(cls, _json):
+        item_max_days = _json.get('itemMaxDays', None)
+        if item_max_days:
+            return cls(item_max_days=item_max_days)
+        return None
+
+
 @attr.s
 class Dataset(entities.BaseEntity):
     """
@@ -26,6 +51,7 @@ class Dataset(entities.BaseEntity):
     metadata = attr.ib(repr=False)
     directoryTree = attr.ib(repr=False)
     export = attr.ib(repr=False)
+    expiration_options = attr.ib()
 
     # name change when to_json
     created_at = attr.ib()
@@ -101,6 +127,9 @@ class Dataset(entities.BaseEntity):
                 logger.warning('Dataset has been fetched from a project that is not in it projects list')
                 project = None
 
+        expiration_options = _json.get('expirationOptions', None)
+        if expiration_options:
+            expiration_options = ExpirationOptions.from_json(expiration_options)
         inst = cls(metadata=_json.get('metadata', None),
                    directoryTree=_json.get('directoryTree', None),
                    readable_type=_json.get('readableType', None),
@@ -119,7 +148,8 @@ class Dataset(entities.BaseEntity):
                    id=_json.get('id', None),
                    datasets=datasets,
                    client_api=client_api,
-                   project=project)
+                   project=project,
+                   expiration_options=expiration_options)
         inst.is_fetched = is_fetched
         return inst
 
@@ -141,12 +171,15 @@ class Dataset(entities.BaseEntity):
                                                               attr.fields(Dataset).access_level,
                                                               attr.fields(Dataset).readable_type,
                                                               attr.fields(Dataset).created_at,
-                                                              attr.fields(Dataset).items_url))
+                                                              attr.fields(Dataset).items_url,
+                                                              attr.fields(Dataset).expiration_options))
         _json.update({'items': self.items_url})
         _json['readableType'] = self.readable_type
         _json['createdAt'] = self.created_at
         _json['accessLevel'] = self.access_level
         _json['readonly'] = self._readonly
+        if self.expiration_options and self.expiration_options.to_json():
+            _json['expirationOptions'] = self.expiration_options.to_json()
         return _json
 
     @property
@@ -422,13 +455,13 @@ class Dataset(entities.BaseEntity):
                                    with_items_annotations=with_items_annotations,
                                    with_task_annotations_status=with_task_annotations_status)
 
-    def sync(self):
+    def sync(self, wait=True):
         """
         Sync dataset with external storage
-
+        :param wait: wait the command to finish
         :return:
         """
-        return self.datasets.sync(dataset_id=self.id)
+        return self.datasets.sync(dataset_id=self.id, wait=wait)
 
     def download_annotations(self,
                              local_path=None,

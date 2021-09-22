@@ -164,6 +164,7 @@ class Snapshot(entities.BaseEntity):
                             filter=attr.filters.exclude(attr.fields(Snapshot)._project,
                                                         attr.fields(Snapshot)._model,
                                                         attr.fields(Snapshot)._dataset,
+                                                        attr.fields(Snapshot)._ontology,
                                                         attr.fields(Snapshot)._repositories,
                                                         attr.fields(Snapshot)._client_api,
                                                         attr.fields(Snapshot).model_id,
@@ -353,23 +354,29 @@ class Snapshot(entities.BaseEntity):
                                   overwrite=overwrite)
 
     def clone(self,
-              new_snapshot_name,
-              new_bucket=None,  #: entities.Bucket = None,
-              new_dataset: entities.Dataset = None,
-              new_configuration: dict = None):
+              snapshot_name,
+              bucket=None,  #: entities.Bucket = None,
+              dataset_id: str = None,
+              configuration: dict = None,
+              project_id: str = None,
+              ):
         """
-        Clones and creates a new snapshot out of existing one
-        :param new_snapshot_name: `str` new snapshot name
-        :param new_bucket: `dl.Bucket` (optional) if passed replaces the current bucket
-        :param new_dataset: `dl.Dataset` (optional) if passed replaces the current dataset
-        :param new_configuration: `dict` (optional) if passed replaces the current configuration
+            Clones and creates a new snapshot out of existing one
+
+        :param snapshot_name: `str` new snapshot name
+        :param bucket: optional - `dl.Bucket` if passed replaces the current bucket
+        :param dataset_id: optional - dataset_id for the cloned snapshot
+        :param configuration: optional - `dict` if passed replaces the current configuration
+        :param project_id: `str` specify the project id to create the new snapshot on (if other the the source snapshot)
+
         :return: dl.Snapshot which is a clone version of the existing snapshot
         """
-        self.snapshots.clone(snapshot=self,
-                             snapshot_name=new_snapshot_name,
-                             new_bucket=new_bucket,
-                             new_dataset=new_dataset,
-                             new_configuration=new_configuration)
+        return self.snapshots.clone(from_snapshot=self,
+                                    snapshot_name=snapshot_name,
+                                    project_id=project_id,
+                                    bucket=bucket,
+                                    dataset_id=dataset_id,
+                                    configuration=configuration)
 
     def download_partition(self, partition, local_path=None, filters: entities.Filters = None):
         """

@@ -1,12 +1,12 @@
+import tempfile
 import logging
-import time
-
-import tqdm
+import shutil
+import uuid
 import os
 import io
-import uuid
+import distutils.dir_util
 
-from .. import entities, services, repositories, exceptions, miscellaneous
+from .. import entities, services, repositories
 
 logger = logging.getLogger(name=__name__)
 
@@ -60,7 +60,6 @@ class Buckets:
     ###########
     # methods #
     ###########
-
     def list_content(self, bucket: entities.Bucket):
         """
         List bucket content
@@ -74,7 +73,7 @@ class Buckets:
         elif isinstance(bucket, entities.GCSBucket):
             gcs_bucket = bucket._bucket
             blobs = gcs_bucket.list_blobs(prefix=bucket._gcs_prefix)
-            output = list(blobs)
+            output = [b.name for b in blobs if not b.name.endswith('/')]
         elif isinstance(bucket, entities.LocalBucket):
             output = os.listdir(bucket.local_path)
         else:
@@ -135,32 +134,16 @@ class Buckets:
                 logger.info('Bucket artifacts was unpacked to: {}'.format(local_path))
 
         elif isinstance(bucket, entities.GCSBucket):
-            gcs_bucket = bucket._bucket
-            remote_prefix = bucket._gcs_prefix  # This should be all the bucket
-            blobs = gcs_bucket.list_blobs(prefix=remote_prefix)
-            remote_prefix += '' if remote_prefix.endswith('/') else '/'
-            prefix_len = len(remote_prefix)
-
-            logger.info("Downloading {} items, Note GCS is a background process".format(len(blobs)))
-            # for blob in tqdm.tqdm(blobs, leave=None):
+            blobs = list(bucket._bucket.list_blobs(prefix=bucket._gcs_prefix))
             for blob in blobs:
-                rel_fname = blob.name[prefix_len:]  # To create tree structure from the prefix only
-
-                if blob.name.endswith('/'):  # This is a dir
-                    if blob.name == remote_prefix:
-                        continue
-                    else:
-                        os.makedirs(os.path.join(local_path, rel_fname), exist_ok=True)
-                else:  # blob is a file
-                    base_dir = os.path.join(local_path, *os.path.split(rel_fname)[:-1])
-                    # make sure dir exist even if there is no blob for it
-                    if not os.path.isdir(base_dir):
-                        os.makedirs(base_dir, exist_ok=True)
-                    local_file_path = os.path.join(local_path, rel_fname)
-                    blob.download_to_filename(local_file_path)
-            if blob.size - os.stat(local_path).st_size > 15:
-                # FIXME Mitigate the case that not all content was downloaded yet...
-                time.sleep(10)
+                if blob.name.endswith("/"):
+                    # ignore folders
+                    continue
+                filename = os.path.join(local_path, blob.name.replace(bucket._gcs_prefix, ''))
+                if not os.path.isdir(os.path.dirname(filename)):
+                    os.makedirs(os.path.dirname(filename))
+                blob.download_to_filename(filename=filename,
+                                          client=bucket._client)
         else:
             raise NotImplemented(
                 'missing implementation for "buckets.download" for bucket type: {!r}'.format(bucket.type))
@@ -177,6 +160,7 @@ class Buckets:
         Upload binary file to bucket. get by name, id or type.
         If bucket exists - overwriting binary
         Else and if create==True a new bucket will be created and uploaded
+        For LocalBucket - this "upload" will copy the content of "local_path" to the bucket.path
 
         :param bucket: bucket entity
         :param local_path: local binary file or folder to upload
@@ -204,6 +188,8 @@ class Buckets:
                 for file_name in file_names:
                     blob = gcs_bucket.blob(os.path.join(bucket._gcs_prefix, local_path[local_prefix_len:], file_name))
                     blob.upload_from_filename(os.path.join(root, file_name))
+        elif isinstance(bucket, entities.LocalBucket):
+            _ = distutils.dir_util.copy_tree(local_path, bucket.local_path)
         else:
             raise NotImplemented(
                 'missing implementation for "buckets.upload" for bucket type: {!r}'.format(bucket.type))
@@ -230,10 +216,11 @@ class Buckets:
                gcs_project_name: str = None,
                gcs_bucket_name: str = None,
                gcs_prefix: str = '/',
-               # item_bucket names
-               item_bucket_model_name:str = None,
-               item_bucket_snapshot_name:str = None,
                use_existing_gcs: bool = True,
+               # item_bucket names
+               model_name: str = None,
+               snapshot_name: str = None,
+
                ):
         """
         Create a new bucket- directory contains the artifacts (weights and other configurations) of the model.
@@ -249,39 +236,35 @@ class Buckets:
         :param gcs_bucket_name:  `str` bucket name in your GCS
         :param gcs_prefix:  `str` prefix/ remote path of where your bucket is defined in GCS
 
-        :param item_bucket_model_name: `str` optional to override the repo settings
-        :param item_bucket_snapshot_name: `str` = optional to override the repo settings
+        :param model_name: `str` optional to override the repo settings
+        :param snapshot_name: `str` = optional to override the repo settings
         :param use_existing_gcs:
         :return: `dl.Bucket`
         """
         if bucket_type == entities.BucketType.ITEM:
             artifacts = repositories.Artifacts(project=self._project,
                                                project_id=self._project_id,
-                                               client_api=self._client_api,
-                                               dataset_name='Buckets')
+                                               client_api=self._client_api)
             buffer = io.BytesIO()
             buffer.name = '.keep'
-
-            if self._snapshot is None:
-                model_name = None
+            if model_name is None:
+                model_name = str(uuid.uuid1())
+                if self._snapshot is not None and self._snapshot._model is not None:
+                    model_name = self.snapshot.model.name
+            if snapshot_name is None:
                 snapshot_name = str(uuid.uuid1())
-            else:
-                model_name = self.snapshot.model.name
-                snapshot_name = self.snapshot.name
-
-            # Override names if they were explicitly given
-            if item_bucket_model_name is not None:
-                model_name = item_bucket_model_name
-            if item_bucket_snapshot_name is not None:
-                snapshot_name = item_bucket_snapshot_name
+                if self._snapshot is not None:
+                    snapshot_name = self.snapshot.name
 
             remote_dir_path = artifacts._build_path_header(model_name=model_name,
                                                            snapshot_name=snapshot_name)
             directory = artifacts.dataset.items.make_dir(directory=remote_dir_path)
             # init an empty bucket
             bucket = entities.ItemBucket(directory_item_id=directory.id, buckets=self)
-            self.upload(bucket, local_path=local_path, overwrite=True)
-            # bucket.upload(local_path=local_path)
+            if local_path is not None:
+                self.upload(bucket,
+                            local_path=local_path,
+                            overwrite=True)
             return bucket
 
         elif bucket_type == entities.BucketType.LOCAL:
@@ -302,3 +285,35 @@ class Buckets:
             return bucket
         else:
             raise NotImplemented('missing implementation in "buckets.create" for bucket type: {!r}'.format(bucket_type))
+
+    def clone(self, src_bucket: entities.Bucket, dst_bucket: entities.Bucket):
+        temp_dir = tempfile.mkdtemp()
+        src_bucket.download(local_path=temp_dir)
+        dst_bucket.upload(local_path=temp_dir)
+        shutil.rmtree(temp_dir)
+
+    def empty_bucket(self, bucket, sure: bool = False):
+        """
+            delete the entire bucket's content
+        param sure: bool. must be True to perform the action
+        """
+
+        if not sure:
+            raise ValueError('Trying the delete ALL bucket\'s files! If you are sure use param: sure=True')
+
+        if isinstance(bucket, entities.ItemBucket):
+            # delete entire folder content with DQL
+            directory_item = self.items.get(item_id=bucket.directory_item_id)
+            filters = entities.Filters(field='dir', values=directory_item.filename)
+            directory_item.dataset.items.delete(filters=filters)
+        elif isinstance(bucket, entities.GCSBucket):
+            raise NotImplemented(
+                'missing implementation for "buckets.empty_bucket" for bucket type: {!r}'.format(bucket.type))
+        elif isinstance(bucket, entities.LocalBucket):
+            # remove directory and create an empty one
+            shutil.rmtree(bucket.local_path)
+            os.makedirs(bucket.local_path)
+        else:
+            raise NotImplemented(
+                'missing implementation for "buckets.empty_bucket" for bucket type: {!r}'.format(bucket.type))
+        return True

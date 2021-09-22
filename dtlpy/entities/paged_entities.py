@@ -169,4 +169,4 @@ class PagedEntities:
         self.items.print(columns=columns)
 
     def to_df(self, columns=None):
-        self.items.to_df(columns=columns)
+        return self.items.to_df(columns=columns)

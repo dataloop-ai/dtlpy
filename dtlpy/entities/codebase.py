@@ -74,12 +74,9 @@ class GitCodebase(Codebase):
             self.git_url = git_url + '.git'
 
         if git_tag is None:
-            msg = "Setting git_tag to None is not recommended." \
-                  " This means the codebase will use the head of master branch when cloned / pull"
-            warnings.warn(msg, UserWarning)
-            self.git_tag = 'master'
-        else:
-            self.git_tag = git_tag
+            logger.warning("git_tag was set None. Using default 'main'!")
+            git_tag = 'main'
+        self.git_tag = git_tag
 
     @property
     def codebases(self):

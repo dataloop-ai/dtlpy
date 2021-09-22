@@ -23,3 +23,4 @@ nbsphinx==0.4.2
 webvtt-py==0.4.3
 flask
 filelock==3.0.12
+#scipy==1.7.1

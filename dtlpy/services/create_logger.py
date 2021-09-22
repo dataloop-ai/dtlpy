@@ -98,7 +98,7 @@ class DataloopLogger(handlers.BaseRotatingHandler):
     def get_log_path():
         log_path = os.path.join(DATALOOP_PATH, 'logs')
         if not os.path.isdir(log_path):
-            os.makedirs(log_path)
+            os.makedirs(log_path, exist_ok=True)
         return log_path
 
     @staticmethod

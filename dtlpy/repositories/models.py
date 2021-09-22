@@ -10,6 +10,7 @@ from .. import entities, repositories, exceptions, miscellaneous, assets, servic
 logger = logging.getLogger(name=__name__)
 
 DEFAULT_ENTRY_POINT = 'model_adapter.py'
+DEFAULT_CLASS_NAME = 'ModelAdapter'
 
 
 class Models:
@@ -181,15 +182,10 @@ class Models:
             from_local = model.codebase.is_local
 
         if local_path is None:
-            if model.codebase.type == entities.PackageCodebaseType.LOCAL:
-                path = model.codebase.local_path
-            elif model.codebase.type == entities.PackageCodebaseType.ITEM:
-                path = os.path.join(services.service_defaults.DATALOOP_PATH, "models", model.name)
+            if model.codebase.is_local:
+                local_path = model.codebase.local_path
             else:
-                logger.warning("No default path for codebase type {}. Will use cwd()".format(model.codebase.type))
-                path = os.getcwd()  # e.g. git codebase w/o specifying local_path will try using cwd
-        else:
-            path = local_path
+                local_path = os.path.join(services.service_defaults.DATALOOP_PATH, "models")
 
         if not from_local:
             # Not local => download codebase
@@ -199,22 +195,30 @@ class Models:
             if isinstance(model.codebase, entities.ItemCodebase):
                 codebase_id = model.codebase.item_id
                 project = self._project if self._project is not None else model.project
-                path = project.codebases.unpack(codebase_id=codebase_id, local_path=path)
+                local_path = project.codebases.unpack(codebase_id=codebase_id,
+                                                      local_path=local_path)
             elif isinstance(model.codebase, entities.GitCodebase):
-                path = model.codebases.unpack(codebase=model.codebase, local_path=path)
-                sys.path.append(path)  # TODO: is it the best way to use the imports?
+                local_path = model.codebases.unpack(codebase=model.codebase,
+                                                    local_path=local_path)
             else:
                 raise NotImplementedError(
                     'download not implemented for {} codebase yet. Build failed'.format(model.codebase.type))
 
+        sys.path.append(local_path)  # TODO: is it the best way to use the imports?
         # load module from path
-        entry_point = os.path.join(path, model.entry_point)
-        spec = importlib.util.spec_from_file_location("ModelAdapter", entry_point)
+        entry_point = os.path.join(local_path, model.entry_point)
+        class_name = model.class_name
+        if not os.path.isfile(entry_point):
+            raise ValueError('Model entry point file is missing: {}'.format(entry_point))
+        spec = importlib.util.spec_from_file_location(class_name, entry_point)
+        if spec is None:
+            raise ValueError('Cant load class ModelAdapter from entry point: {}'.format(entry_point))
         adapter_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(adapter_module)
-        model_adapter_cls = adapter_module.ModelAdapter
+        model_adapter_cls = getattr(adapter_module, class_name)
         model_adapter = model_adapter_cls(model_entity=model)
         model_adapter.__set_adapter_handler__(level=log_level)
+        logger.info('Model adapter loaded successfully!')
         return model_adapter
 
     def push(
@@ -222,6 +226,7 @@ class Models:
             model: entities.Model,
             src_path: str = None,
             entry_point: str = DEFAULT_ENTRY_POINT,
+            class_name: str = DEFAULT_CLASS_NAME,
             codebase: entities.ItemCodebase = None,
     ):
         """
@@ -229,7 +234,8 @@ class Models:
 
         :param model: Model entity
         :param src_path: codebase location (path to directory of the code). if None pwd will be taken
-        :param entry_point: relative path to the module where `ModelAdapter` class is defined
+        :param entry_point: relative path to the module where model adapter class is defined
+        :param class_name: name of the adapter class in entry point. default: ModelAdapter
         :param codebase: `dl.Codebase' object - representing the model code  if None new will be created from src_path
         :return:
         """
@@ -243,6 +249,7 @@ class Models:
             if src_path is None:
                 src_path = os.getcwd()
                 logger.warning('No src_path is given, getting model information from cwd: {}'.format(src_path))
+            # sanity checks
             if not os.path.isfile(os.path.join(src_path, entry_point)):
                 raise exceptions.PlatformException(
                     error='400',
@@ -267,7 +274,8 @@ class Models:
                                entities.FilesystemCodebase,
                                entities.LocalCodebase] = None,
                src_path: str = None,
-               entry_point: str = None,
+               entry_point: str = DEFAULT_ENTRY_POINT,
+               class_name: str = DEFAULT_CLASS_NAME,
                ) -> entities.Model:
         """
         Create and return a Model entity in platform
@@ -286,7 +294,8 @@ class Models:
         For online mode
         :param codebase: optional - model codebase
         :param src_path: codebase location. if None no codebase will be pushed
-        :param entry_point: location on the ModelAdapter class
+        :param entry_point: location of the model adapter class
+        :param class_name: Name of the model adapter class, default is ModelAdapter
 
         :return: Model Entity
         """
@@ -326,7 +335,8 @@ class Models:
             codebase = entities.LocalCodebase(local_path=src_path)
 
         payload['codebase'] = codebase.to_json()
-        payload['entryPoint'] = entry_point if entry_point is not None else DEFAULT_ENTRY_POINT
+        payload['entryPoint'] = entry_point
+        payload['className'] = class_name
 
         # request
         success, response = self._client_api.gen_request(req_type='post',
@@ -399,7 +409,9 @@ class Models:
                                         project=self._project)
 
     @staticmethod
-    def generate(src_path=None, entry_point=None, overwrite=False):
+    def generate(src_path=None,
+                 entry_point=DEFAULT_ENTRY_POINT,
+                 overwrite=False):
         """
         Generate new model adapter file
         :param src_path: `str` path where to create te model_adapter file (if None uses current working dir)
@@ -408,10 +420,6 @@ class Models:
 
         :return: path where the adapter was created
         """
-
-        if entry_point is None:
-            entry_point = assets.paths.MODEL_ADAPTER
-
         # src path
         if src_path is None:
             src_path = os.getcwd()

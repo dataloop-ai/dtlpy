@@ -1,5 +1,9 @@
 import os
+import logging
+
 from .. import entities, services, repositories
+
+logger = logging.getLogger(name=__name__)
 
 
 class BucketType:
@@ -81,30 +85,12 @@ class Bucket:
         """
         return self.buckets.list_content(self)
 
-
-class ItemBucket(Bucket):
-    def __init__(self, directory_item_id: str, buckets=None):
-        super().__init__(bucket_type=BucketType.ITEM, buckets=buckets)
-        self.directory_item_id = directory_item_id
-
-    def to_json(self):
-        _json = super().to_json()
-        _json['itemId'] = self.directory_item_id
-        return _json
-
-    @classmethod
-    def from_json(cls, _json: dict,
-                  client_api: services.ApiClient,
-                  project: entities.Project):
+    def empty_bucket(self, sure: bool = False):
         """
-        :param _json: platform json
-        :param client_api: ApiClient entity
-        :param project: project entity
-        :return: ItemBucket
+            delete the entire bucket's content
+        param sure: bool. must be True to perform the action
         """
-        return cls(
-            directory_item_id=_json.get('itemId')
-        )
+        self.buckets.empty_bucket(bucket=self, sure=sure)
 
     def upload(self, local_path, overwrite=False):
         """
@@ -133,10 +119,34 @@ class ItemBucket(Bucket):
         :param overwrite: optional - default = False
         :return:
         """
-        # TODO: re-write the usage as we don`t use remote path in the repo...
         self.buckets.download(bucket=self,
                               local_path=local_path,
                               overwrite=overwrite)
+
+
+class ItemBucket(Bucket):
+    def __init__(self, directory_item_id: str, buckets=None):
+        super().__init__(bucket_type=BucketType.ITEM, buckets=buckets)
+        self.directory_item_id = directory_item_id
+
+    def to_json(self):
+        _json = super().to_json()
+        _json['itemId'] = self.directory_item_id
+        return _json
+
+    @classmethod
+    def from_json(cls, _json: dict,
+                  client_api: services.ApiClient,
+                  project: entities.Project):
+        """
+        :param _json: platform json
+        :param client_api: ApiClient entity
+        :param project: project entity
+        :return: ItemBucket
+        """
+        return cls(
+            directory_item_id=_json.get('itemId')
+        )
 
 
 class LocalBucket(Bucket):
@@ -173,9 +183,7 @@ class LocalBucket(Bucket):
         :param project: project entity
         :return: LocalBucket
         """
-        return cls(
-            local_path=_json.get('localPath', None),
-        )
+        return cls(local_path=_json.get('localPath', None), )
 
 
 class GCSBucket(Bucket):
@@ -183,7 +191,7 @@ class GCSBucket(Bucket):
     https://cloud.google.com/docs/authentication/getting-started
     """
 
-    def __init__(self, gcs_project_name: str, gcs_bucket_name: str, gcs_prefix: str = '/', buckets=None):
+    def __init__(self, gcs_project_name: str, gcs_bucket_name: str, gcs_prefix: str = '', buckets=None):
         try:
             from google.cloud import storage
         except (ModuleNotFoundError, ImportError) as err:
@@ -192,6 +200,9 @@ class GCSBucket(Bucket):
         super().__init__(bucket_type=BucketType.GCS, buckets=buckets)
         self._gcs_project_name = gcs_project_name
         self._gcs_bucket_name = gcs_bucket_name
+        if len(gcs_prefix) > 0 and not gcs_prefix.endswith('/'):
+            # prefix should end with a backslash (directory)
+            gcs_prefix += '/'
         self._gcs_prefix = gcs_prefix
 
         # Connect to GCS
@@ -200,8 +211,8 @@ class GCSBucket(Bucket):
             print('invalid bucket with no gcs names')
             self._bucket = None
         else:
-            self._client = storage.Client(project=self._gcs_project_name)
-            self._bucket = self._client.get_bucket(self._gcs_bucket_name)
+            self._client = storage.Client.create_anonymous_client()
+            self._bucket = self._client.bucket(self._gcs_bucket_name)
 
     def to_json(self):
         _json = super().to_json()
@@ -227,34 +238,3 @@ class GCSBucket(Bucket):
             gcs_bucket_name=_json.get('gcsBucketName'),
             gcs_prefix=_json.get('gcsPrefix'),
         )
-
-    def upload(self, local_path, overwrite=False):
-        """
-
-        Upload binary file to bucket. get by name, id or type.
-        If bucket exists - overwriting binary
-        Else and if create==True a new bucket will be created and uploaded
-
-        :param local_path: local binary file or folder to upload
-        :param overwrite: optional - default = False
-        :return:
-        """
-        self.buckets.upload(bucket=self,
-                            local_path=local_path,
-                            overwrite=overwrite)
-
-    def download(self,
-                 local_path=None,
-                 overwrite=False,
-                 ):
-        """
-
-        Download binary file from bucket.
-
-        :param local_path: local binary file or folder to upload
-        :param overwrite: optional - default = False
-        :return:
-        """
-        self.buckets.download(bucket=self,
-                              local_path=local_path,
-                              overwrite=overwrite)

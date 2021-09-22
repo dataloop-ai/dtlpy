@@ -12,18 +12,21 @@ class DictDiffer:
 
     @staticmethod
     def diff(origin, modified):
-
         diffs = dict()
+
         dict_diff = list(dictdiffer.diff(origin, modified))
         for i_diff, diff in enumerate(dict_diff):
             modified_field_pointer = modified
-            field_pointer, modified_field_pointer, is_list = DictDiffer.get_field_path(
-                diffs=diffs,
-                path=diff[FIELD],
-                diff_type=diff[TYPE],
-                values=diff[LIST],
-                modified_field_pointer=modified_field_pointer
-            )
+            if len(diff[FIELD]) > 0:
+                field_pointer, modified_field_pointer, is_list = DictDiffer.get_field_path(
+                    diffs=diffs,
+                    path=diff[FIELD],
+                    diff_type=diff[TYPE],
+                    values=diff[LIST],
+                    modified_field_pointer=modified_field_pointer
+                )
+            else:
+                field_pointer, modified_field_pointer, is_list = origin, modified, False
 
             if is_list:
                 for i in modified_field_pointer:
@@ -63,7 +66,6 @@ class DictDiffer:
             path = path.split('.')
 
         next_is_list = False
-
         if len(path) > 1 or diff_type != 'change':
             for i_level, level in enumerate(path):
                 next_is_list = DictDiffer.next_is_list(i_level=i_level, path=path, values=values)

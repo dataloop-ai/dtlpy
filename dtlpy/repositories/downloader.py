@@ -13,8 +13,7 @@ from PIL import Image
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
-from .. import entities, miscellaneous, PlatformException, services, exceptions
-from ..services import Reporter
+from .. import entities, miscellaneous, PlatformException, dtlpy_services, exceptions
 
 logger = logging.getLogger(name=__name__)
 
@@ -64,7 +63,7 @@ class Downloader:
         :param to_items_folder: Create 'items' folder and download items to it
         :param with_text: optional - add text to annotations, default = False
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
-        :param without_relative_path: string - remote path - download items without the relative path from platform
+        :param without_relative_path: bool - download items without the relative path from platform
         :param avoid_unnecessary_annotation_download: DEPRECATED only items and annotations in filters are downloaded
 
         :return: Output (list)
@@ -203,9 +202,9 @@ class Downloader:
         # create result lists
         client_api = self.items_repository._client_api
 
-        reporter = Reporter(num_workers=num_items,
-                            resource=Reporter.ITEMS_DOWNLOAD,
-                            print_error_logs=client_api.verbose.print_error_logs)
+        reporter = dtlpy_services.Reporter(num_workers=num_items,
+                                           resource=dtlpy_services.Reporter.ITEMS_DOWNLOAD,
+                                           print_error_logs=client_api.verbose.print_error_logs)
         jobs = [None for _ in range(num_items)]
         # pool
         pool = client_api.thread_pools(pool_name='item.download')
@@ -378,17 +377,22 @@ class Downloader:
                                                  client_api=dataset._client_api)
             command = command.wait(timeout=0)
             if 'outputItemId' not in command.spec:
-                raise exceptions.PlatformException(error='400',
-                                                   message="outputItemId key is missing in command response: {}"
-                                                   .format(response))
+                raise exceptions.PlatformException(
+                    error='400',
+                    message="outputItemId key is missing in command response: {}".format(response))
             annotation_zip_item = dataset.items.get(item_id=command.spec['outputItemId'])
             zip_filepath = annotation_zip_item.download(local_path=local_path)
             # unzipping annotations to directory
+            if isinstance(zip_filepath, list) or not os.path.isfile(zip_filepath):
+                raise exceptions.PlatformException(
+                    error='404',
+                    message='error downloading annotation zip file. see above for more information. item id: {!r}'.format(
+                        annotation_zip_item.id))
             miscellaneous.Zipping.unzip_directory(zip_filename=zip_filepath,
                                                   to_directory=local_path)
         finally:
             # cleanup
-            if zip_filepath is not None and os.path.isfile(zip_filepath):
+            if isinstance(zip_filepath, str) and os.path.isfile(zip_filepath):
                 os.remove(zip_filepath)
 
     @staticmethod
@@ -507,7 +511,7 @@ class Downloader:
             if to_items_folder:
                 local_path = os.path.join(local_path, "items")
             if without_relative_path is not None:
-                local_filepath = os.path.join(local_path, os.path.relpath(item.filename, without_relative_path))
+                local_filepath = os.path.join(local_path, item.name)
             else:
                 local_filepath = os.path.join(local_path, item.filename[1:])
         return local_path, local_filepath
@@ -670,21 +674,21 @@ class Downloader:
         # create default local path
         if self.items_repository._dataset is None:
             local_path = os.path.join(
-                services.service_defaults.DATALOOP_PATH,
+                dtlpy_services.service_defaults.DATALOOP_PATH,
                 "items",
             )
         else:
             if self.items_repository.dataset._project is None:
                 # by dataset name
                 local_path = os.path.join(
-                    services.service_defaults.DATALOOP_PATH,
+                    dtlpy_services.service_defaults.DATALOOP_PATH,
                     "datasets",
                     "{}_{}".format(self.items_repository.dataset.name, self.items_repository.dataset.id),
                 )
             else:
                 # by dataset and project name
                 local_path = os.path.join(
-                    services.service_defaults.DATALOOP_PATH,
+                    dtlpy_services.service_defaults.DATALOOP_PATH,
                     "projects",
                     self.items_repository.dataset.project.name,
                     "datasets",

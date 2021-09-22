@@ -152,10 +152,7 @@ class GitUtils:
         """
         if not os.path.isdir(path):
             os.makedirs(path)
-        # TODO: use with git_command
-        prev_dir = os.getcwd()
         try:
-            os.chdir(path)
             tag = kwargs.get('tag')
             branch = kwargs.get('branch')
             if tag is not None:
@@ -165,8 +162,7 @@ class GitUtils:
             else:
                 branch_cmd = []
 
-            # 'gh repo clone <owner>/<repo_name>' # the new git cli
-            cmd = ['git', 'clone'] + branch_cmd + [git_url]
+            cmd = ['git', 'clone'] + branch_cmd + [git_url, path]
             p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             output, err = [std.decode() for std in p.communicate()]
             exit_code = p.returncode
@@ -176,8 +172,6 @@ class GitUtils:
         except Exception:
             response = False
             logging.warning('Error cloning git to: {}'.format(path))
-        finally:
-            os.chdir(prev_dir)
         return response
 
     @staticmethod

@@ -8,7 +8,7 @@ import json
 from PIL import Image
 from enum import Enum
 
-from .. import entities, PlatformException, repositories, ApiClient
+from .. import entities, PlatformException, repositories, ApiClient, exceptions
 
 logger = logging.getLogger(name=__name__)
 
@@ -23,6 +23,7 @@ class AnnotationStatus(str, Enum):
 class AnnotationType(str, Enum):
     BOX = "box"
     CUBE = "cube"
+    CUBE3D = "cube_3d"
     CLASSIFICATION = "class"
     COMPARISON = "comparison"
     ELLIPSE = "ellipse"
@@ -336,7 +337,11 @@ class Annotation(entities.BaseEntity):
     @property
     def color(self):
         # if "dataset" is not in self - this will always get the dataset
-        all_colors_lower = {k.lower(): v for k, v in self.dataset.labels_flat_dict.items()}
+        try:
+            all_colors_lower = {k.lower(): v for k, v in self.dataset.labels_flat_dict.items()}
+        except exceptions.BadRequest:
+            all_colors_lower = None
+            logger.warning('Cant get dataset for annotation color. using default.')
         if all_colors_lower is not None and self.label.lower() in all_colors_lower:
             color = all_colors_lower[self.label.lower()].rgb
         else:
@@ -475,7 +480,7 @@ class Annotation(entities.BaseEntity):
              color=None, label_instance_dict=None):
         """
         Show annotations
-
+        mark the annotation of the image array and return it
         :param image: empty or image to draw on
         :param thickness: line thickness
         :param with_text: add label to annotation
@@ -492,23 +497,35 @@ class Annotation(entities.BaseEntity):
             logger.error(
                 'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
             raise
+        # s_frame and n_frame display the start and end frames, get them from the metadata
         if self.metadata:
-            s_frame = self.metadata.get('system').get('frame', 0)
-            e_frame = self.metadata.get('system').get('endFrame', 0)
+            s_frame = self.metadata.get('system', dict()).get('frame', 0)
+            e_frame = self.metadata.get('system', dict()).get('endFrame', 0)
         elif isinstance(image, list):
             e_frame = len(image) - 1
             s_frame = 0
         else:
             e_frame = 0
+            s_frame = 0
+        # in case the end frame is > 0 then it a video, otherwise is image
         if e_frame > 1:
+            is_video = True
+        else:
+            is_video = False
+
+        if is_video:
+            # is the image empty make a zeros one
             if image is None:
                 image = [None] * (e_frame - s_frame)
             frames = list()
             i_frame = 0
+
             for frame in image:
+                # go over all the frames if it in the annotation frames mark it else move it with no changes
                 if s_frame <= i_frame <= e_frame:
                     annotation = self
                     if self.metadata['system'].get('snapshots_', []):
+                        # if we have a snapshot make an annotation with the coordinates of the snapshots
                         snapshots = self.metadata['system'].get('snapshots_', [])
                         item = self.item
                         ann_json = self.to_json()
@@ -541,17 +558,21 @@ class Annotation(entities.BaseEntity):
                 i_frame += 1
             return frames
         else:
-            return self._show_single_frame(image=image, thickness=thickness, with_text=with_text, height=height,
+            return self._show_single_frame(image=image,
+                                           thickness=thickness,
+                                           with_text=with_text,
+                                           height=height,
                                            width=width,
                                            annotation_format=annotation_format,
-                                           color=color, label_instance_dict=label_instance_dict)
+                                           color=color,
+                                           label_instance_dict=label_instance_dict)
 
     def _show_single_frame(self, image=None, thickness=None, with_text=False, height=None, width=None,
                            annotation_format: ViewAnnotationOptions = ViewAnnotationOptions.MASK,
                            color=None, label_instance_dict=None):
         """
         Show annotations
-
+        mark the annotation of the single frame array and return it
         :param image: empty or image to draw on
         :param thickness: line thickness
         :param with_text: add label to annotation
@@ -570,6 +591,10 @@ class Annotation(entities.BaseEntity):
             raise
 
         # height/width
+        if self.annotation_definition.type == 'cube_3d':
+            logger.warning('the show for 3d_cube is not supported.')
+            return image
+
         if height is None:
             if self._item is None or self._item.height is None:
                 if image is None:
@@ -600,9 +625,9 @@ class Annotation(entities.BaseEntity):
                 elif image.shape[2] == 4:
                     pass
                 else:
-                    raise PlatformException(error='1001',
-                                            message='Unknown image shape. expected depth: gray or RGB or RGBA. got: {}'.format(
-                                                image.shape))
+                    raise PlatformException(
+                        error='1001',
+                        message='Unknown image shape. expected depth: gray or RGB or RGBA. got: {}'.format(image.shape))
         elif annotation_format == entities.ViewAnnotationOptions.ANNOTATION_ON_IMAGE:
             if image is None:
                 raise PlatformException(error='1001',
@@ -993,7 +1018,7 @@ class Annotation(entities.BaseEntity):
                 is_audio = False
             else:
                 # get item type
-                if 'audio' in item.mimetype:
+                if item.mimetype is not None and 'audio' in item.mimetype:
                     is_audio = True
 
         item_url = _json.get('item', item.url if item is not None else None)
@@ -1200,6 +1225,7 @@ class Annotation(entities.BaseEntity):
     @staticmethod
     def _add_reflected_frame(annotation, last_frame):
         last_frame = copy.copy(last_frame)
+        last_frame._interpolation = True
         last_frame.fixed = False
         last_frame.frame_num += 1
         annotation.frames[last_frame.frame_num] = last_frame
@@ -1242,7 +1268,8 @@ class Annotation(entities.BaseEntity):
             _json['datasetId'] = self.dataset_id
 
         _json['type'] = self.type
-        _json['coordinates'] = self.coordinates
+        if self.type != 'class':
+            _json['coordinates'] = self.coordinates
 
         # add system metadata
         if _json['metadata'].get('system', None) is None:
@@ -1267,7 +1294,9 @@ class Annotation(entities.BaseEntity):
                 if frame_num == first_frame_num:
                     # ignore first frame in snapshots
                     continue
-                snapshots.append(self.frames[frame_num].to_snapshot())
+                if not self.frames[frame_num]._interpolation or self.frames[frame_num].fixed:
+                    snapshots.append(self.frames[frame_num].to_snapshot())
+                    self.frames[frame_num]._interpolation = False
             # add metadata to json
             _json['metadata']['system']['frame'] = self.current_frame
             _json['metadata']['system']['startTime'] = self.start_time
@@ -1300,6 +1329,7 @@ class FrameAnnotation(entities.BaseEntity):
 
     # temp
     _recipe_2_attributes = attr.ib(repr=False, default=None)
+    _interpolation = attr.ib(repr=False, default=False)
 
     ################################
     # parent annotation attributes #
@@ -1416,6 +1446,8 @@ class FrameAnnotation(entities.BaseEntity):
             annotation = entities.Box.from_json(_json)
         elif _json['type'] == 'cube':
             annotation = entities.Cube.from_json(_json)
+        elif _json['type'] == 'cube_3d':
+            annotation = entities.Cube3d.from_json(_json)
         elif _json['type'] == 'point':
             annotation = entities.Point.from_json(_json)
         elif _json['type'] == 'binary':

@@ -333,11 +333,13 @@ class Codebases:
         """
         if not isinstance(codebase, entities.GitCodebase):
             raise RuntimeError('only support Git Codebase')
-        response = self.git_utils.git_clone(local_path, codebase.git_url, tag=codebase.git_tag)
+        response = self.git_utils.git_clone(path=local_path,
+                                            git_url=codebase.git_url,
+                                            tag=codebase.git_tag)
         if response:
             logger.info('Source code was cloned from {}(Git) to: {}'.format(codebase.git_url, local_path))
         else:
-            logger.critical("Clone codebase failed. Codebase {}. to: {}".format(codebase, os.getcwd()))
+            raise RuntimeError('Failed cloning. See above for full log. codebase: {}'.format(codebase))
         return os.path.join(local_path, codebase.git_repo_name)
 
     def pull_git(self, codebase, local_path):

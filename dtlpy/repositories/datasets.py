@@ -342,7 +342,7 @@ class Datasets:
         return self.get(dataset_id=command.spec['returnedModelId'])
 
     def merge(self, merge_name, dataset_ids, project_ids, with_items_annotations=True, with_metadata=True,
-              with_task_annotations_status=True):
+              with_task_annotations_status=True, wait=True):
         """
         merge a dataset
 
@@ -352,6 +352,7 @@ class Datasets:
         :param with_items_annotations:
         :param with_metadata:
         :param with_task_annotations_status:
+        :param wait: wait the command to finish
         :return:
         """
         payload = {
@@ -362,23 +363,33 @@ class Datasets:
                 "withItemsAnnotations": with_items_annotations,
                 "withMetadata": with_metadata,
                 "withTaskAnnotationsStatus": with_task_annotations_status
-            }
+            },
+            'asynced': wait
         }
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/datasets/merge',
                                                          json_req=payload)
 
         if success:
-            # TODO - support command entity
+            command = entities.Command.from_json(_json=response.json(),
+                                                 client_api=self._client_api)
+            if not wait:
+                return command
+            command = command.wait(timeout=0)
+            if 'mergeDatasetsConfiguration' not in command.spec:
+                raise exceptions.PlatformException(error='400',
+                                                   message="mergeDatasetsConfiguration key is missing in command response: {}"
+                                                   .format(response))
             return True
         else:
             raise exceptions.PlatformException(response)
 
-    def sync(self, dataset_id):
+    def sync(self, dataset_id, wait=True):
         """
         Sync dataset with external storage
 
         :param dataset_id: to sync dataset
+        :param wait: wait the command to finish
         :return:
         """
 
@@ -386,7 +397,15 @@ class Datasets:
                                                          path='/datasets/{}/sync'.format(dataset_id))
 
         if success:
-            # TODO - support command entity
+            command = entities.Command.from_json(_json=response.json(),
+                                                 client_api=self._client_api)
+            if not wait:
+                return command
+            command = command.wait(timeout=0)
+            if 'datasetId' not in command.spec:
+                raise exceptions.PlatformException(error='400',
+                                                   message="datasetId key is missing in command response: {}"
+                                                   .format(response))
             return True
         else:
             raise exceptions.PlatformException(response)
@@ -398,7 +417,8 @@ class Datasets:
                ontology_ids=None,
                driver=None,
                driver_id=None,
-               checkout=False) -> entities.Dataset:
+               checkout=False,
+               expiration_options: entities.ExpirationOptions = None) -> entities.Dataset:
         """
         Create a new dataset
 
@@ -409,6 +429,7 @@ class Datasets:
         :param driver: optional - storage driver Driver object or driver name
         :param driver_id: optional - driver id
         :param checkout: bool. cache the dataset to work locally
+        :param expiration_options: dl.ExpirationOptions object that contain definitions for dataset like MaxItemDays
 
         :return: Dataset object
         """
@@ -434,6 +455,9 @@ class Datasets:
                         type(driver)))
         if driver_id is not None:
             payload['driver'] = driver_id
+
+        if expiration_options:
+            payload['expirationOptions'] = expiration_options.to_json()
 
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/datasets',

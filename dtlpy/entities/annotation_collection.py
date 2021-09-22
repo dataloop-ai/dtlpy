@@ -20,7 +20,7 @@ class AnnotationCollection(entities.BaseEntity):
     """
         Collection of Annotation entity
     """
-    item = attr.ib()
+    item = attr.ib(default=None)
     annotations = attr.ib()  # type: miscellaneous.List[entities.Annotation]
     _dataset = attr.ib(repr=False, default=None)
     _colors = attr.ib(repr=False, default=None)
@@ -114,7 +114,11 @@ class AnnotationCollection(entities.BaseEntity):
                 if object_id is None:
                     raise ValueError('Video Annotation must have object_id. '
                                      'for more information visit: https://dataloop.ai/docs/sdk-create-video-annotation#create-video-annotation')
-
+                else:
+                    if isinstance(object_id, int):
+                        object_id = '{}'.format(object_id)
+                    elif not isinstance(object_id, str) or not object_id.isnumeric():
+                        raise ValueError('Object id must be an int or a string containing only numbers.')
                 # find matching element_id
                 matched_ind = [i_annotation
                                for i_annotation, annotation in enumerate(self.annotations)
@@ -146,7 +150,7 @@ class AnnotationCollection(entities.BaseEntity):
     ############
     def show(self, image=None, thickness=None, with_text=False, height=None, width=None,
              annotation_format: entities.ViewAnnotationOptions = entities.ViewAnnotationOptions.MASK,
-             label_instance_dict=None):
+             label_instance_dict=None, color=None):
         """
             Show annotations according to annotation_format
 
@@ -157,6 +161,7 @@ class AnnotationCollection(entities.BaseEntity):
         :param with_text: add label to annotation
         :param annotation_format: how to show thw annotations. options: list(dl.ViewAnnotationOptions)
         :param label_instance_dict: instance label map {'Label': 1, 'More': 2}
+        :param color: optional - color tuple
         :return: ndarray of the annotations
         """
         # if 'video' in self.item.mimetype and (annotation_format != 'json' or annotation_format != ['json']):
@@ -177,7 +182,8 @@ class AnnotationCollection(entities.BaseEntity):
                                     width=width,
                                     label_instance_dict=label_instance_dict,
                                     annotation_format=annotation_format,
-                                    image=image)
+                                    image=image,
+                                    color=color)
 
         return image
 
@@ -250,7 +256,7 @@ class AnnotationCollection(entities.BaseEntity):
                 annotations.append(ann.to_json())
             _json['annotations'] = annotations
             if self.item is not None:
-                _json['itemMetadata'] = self.item.metadata
+                _json['metadata'] = self.item.metadata
             with open(filepath, 'w+') as f:
                 json.dump(_json, f, indent=2)
         elif annotation_format in [entities.ViewAnnotationOptions.MASK,
@@ -405,6 +411,12 @@ class AnnotationCollection(entities.BaseEntity):
             annotations.sort(key=lambda x: x.label)
 
         return cls(annotations=annotations, item=item)
+
+    @classmethod
+    def from_json_file(cls, filepath):
+        with open(filepath, 'r') as f:
+            data = json.load(f)
+        return cls.from_json(data)
 
     def from_vtt_file(self, filepath):
         """

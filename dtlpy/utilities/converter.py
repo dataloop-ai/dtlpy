@@ -2,9 +2,8 @@ from jinja2 import Environment, PackageLoader
 from multiprocessing.pool import ThreadPool
 from multiprocessing import Lock
 from .base_package_runner import Progress
-from .. import exceptions, entities
+from .. import exceptions, entities, dtlpy_services
 import xml.etree.ElementTree as Et
-from ..services import Reporter
 from itertools import groupby
 from PIL import Image
 import numpy as np
@@ -79,7 +78,6 @@ class COCOUtils:
                 raise Exception('To use this functionality please install pycocotools:  "pip install pycocotools"')
             img = coco_utils_mask.decode(rle)
             return img
-
 
     @staticmethod
     def rle_to_binary_polygon(segmentation):
@@ -190,9 +188,9 @@ class Converter:
                     fp.write("{}\n".format(label))
 
         pbar = tqdm.tqdm(total=pages.items_count)
-        reporter = Reporter(num_workers=pages.items_count,
-                            resource=Reporter.CONVERTER,
-                            print_error_logs=self.dataset._client_api.verbose.print_error_logs)
+        reporter = dtlpy_services.Reporter(num_workers=pages.items_count,
+                                           resource=dtlpy_services.Reporter.CONVERTER,
+                                           print_error_logs=self.dataset._client_api.verbose.print_error_logs)
         for page in pages:
             for item in page:
                 # create input annotations json
@@ -329,9 +327,9 @@ class Converter:
         item_id_counter = 0
         pool = ThreadPool(processes=11)
         pbar = tqdm.tqdm(total=pages.items_count)
-        reporter = Reporter(num_workers=pages.items_count,
-                            resource=Reporter.CONVERTER,
-                            print_error_logs=dataset._client_api.verbose.print_error_logs)
+        reporter = dtlpy_services.Reporter(num_workers=pages.items_count,
+                                           resource=dtlpy_services.Reporter.CONVERTER,
+                                           print_error_logs=dataset._client_api.verbose.print_error_logs)
         for page in pages:
             for item in page:
                 pool.apply_async(func=self.__single_item_to_coco,
@@ -649,9 +647,9 @@ class Converter:
     def _upload_annotations(self, local_annotations_path, from_format, **kwargs):
         self._only_bbox = kwargs.get('only_bbox', False)
         file_count = self.remote_items.items_count
-        reporter = Reporter(num_workers=file_count,
-                            resource=Reporter.CONVERTER,
-                            print_error_logs=self.dataset._client_api.verbose.print_error_logs)
+        reporter = dtlpy_services.Reporter(num_workers=file_count,
+                                           resource=dtlpy_services.Reporter.CONVERTER,
+                                           print_error_logs=self.dataset._client_api.verbose.print_error_logs)
         pbar = tqdm.tqdm(total=file_count)
         pool = ThreadPool(processes=6)
         i_item = 0
@@ -718,9 +716,9 @@ class Converter:
         file_count = sum(len([file for file in files if not file.endswith('.xml')]) for _, _, files in
                          os.walk(local_items_path))
 
-        reporter = Reporter(num_workers=file_count,
-                            resource=Reporter.CONVERTER,
-                            print_error_logs=self.dataset._client_api.verbose.print_error_logs)
+        reporter = dtlpy_services.Reporter(num_workers=file_count,
+                                           resource=dtlpy_services.Reporter.CONVERTER,
+                                           print_error_logs=self.dataset._client_api.verbose.print_error_logs)
         pbar = tqdm.tqdm(total=file_count)
 
         pool = ThreadPool(processes=6)
@@ -883,9 +881,9 @@ class Converter:
         :return:
         """
         file_count = sum(len(files) for _, _, files in os.walk(local_path))
-        reporter = Reporter(num_workers=file_count,
-                            resource=Reporter.CONVERTER,
-                            print_error_logs=self.dataset._client_api.verbose.print_error_logs)
+        reporter = dtlpy_services.Reporter(num_workers=file_count,
+                                           resource=dtlpy_services.Reporter.CONVERTER,
+                                           print_error_logs=self.dataset._client_api.verbose.print_error_logs)
         self.dataset = dataset
 
         pool = ThreadPool(processes=6)
@@ -1253,8 +1251,12 @@ class Converter:
         if item is None or item.width is None or item.height is None:
             raise Exception("Cannot get item's width and height")
 
-        dw = 1.0 / item.width
-        dh = 1.0 / item.height
+        width, height = (item.width, item.height)
+        if item.system.get('exif', {}).get('Orientation', 0) in [5, 6, 7, 8]:
+            width, height = (item.height, item.width)
+
+        dw = 1.0 / width
+        dh = 1.0 / height
         x = (annotation.left + annotation.right) / 2.0
         y = (annotation.top + annotation.bottom) / 2.0
         w = annotation.right - annotation.left

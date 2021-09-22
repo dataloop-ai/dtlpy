@@ -323,7 +323,12 @@ class Ontology(entities.BaseEntity):
 
     def _add_image_label(self, icon_path):
         display_data = dict()
-        dataset = self.project.datasets.get(dataset_name='Binaries')
+        if self.project is not None:
+            dataset = self.project.datasets.get(dataset_name='Binaries')
+        elif self.dataset is not None:
+            dataset = self.dataset.project.datasets.get(dataset_name='Binaries')
+        else:
+            raise ValueError('must have project or dataset to create with icon path')
         platform_path = "/.dataloop/ontologies/{}/labelDisplayImages/".format(self.id)
         item = dataset.items.upload(local_path=icon_path, remote_path=platform_path)
         display_data['displayImage'] = dict()
@@ -349,7 +354,7 @@ class Ontology(entities.BaseEntity):
         :return: Label entity
         """
 
-        if update_ontology and icon_path is None:
+        if update_ontology:
             if isinstance(label, entities.Label) or isinstance(label, str):
                 return self._base_labels_handler(labels=label,
                                                  update_ontology=update_ontology,

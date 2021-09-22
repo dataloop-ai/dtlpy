@@ -416,7 +416,7 @@ class Items:
         :param to_items_folder: Create 'items' folder and download items to it
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :param with_text: optional - add text to annotations, default = False
-        :param without_relative_path: string - remote path - download items without the relative path from platform
+        :param without_relative_path: bool - download items without the relative path from platform
         :param avoid_unnecessary_annotation_download: default - False
         :return: `List` of local_path per each downloaded item
         """

@@ -1,42 +1,69 @@
-import os
-import shutil
+import itertools
 import datetime
 import logging
+import shutil
 import tqdm
 import time
+import os
+from PIL import Image
+import numpy as np
 from collections import namedtuple
-from contextlib import contextmanager
-import warnings
 
-from .. import entities, exceptions
+from .. import entities, exceptions, dtlpy_services
 
 logger = logging.getLogger(__name__)
 
 
 class BaseModelAdapter:
-    BoxPrediction = namedtuple('box_prediction', field_names=['top', 'left', 'bottom', 'right', 'label', 'score'])
-    ClassPrediction = namedtuple('classification_prediction', field_names=['label', 'score'])
-
-    _defaults = {'label_map': None,  # {'label_name' : `int`, ...}
-                 }
+    configuration = {'label_map': None,  # {'label_name' : `int`, ...}
+                     }
 
     def __init__(self, model_entity, log_Level='INFO'):
         if not isinstance(model_entity, entities.Model):
             raise TypeError("model_entity must be of type dl.Model")
 
         self.model_name = model_entity.name
-        self.model_entity = model_entity  # TODO: change to dlp_model
+        # entities
+        self._model_entity = model_entity  # TODO: change to dlp_model
+        self._snapshot = None
         self.model = None
-        self.snapshot = None
         self.bucket_path = None
         self.logger = logger
-        self.__dict__.update(self._defaults)  # set up default values
-
         self.__add_adapter_handler(level=log_Level)
 
-    # ===============================
-    # NEED TO IMPLEMENT THESE METHODS
-    # ===============================
+    ############
+    # Entities #
+    ############
+    @property
+    def snapshot(self):
+        if self._snapshot is None:
+            raise ValueError('Missing snapshot on adapter. please set: "adapter.snapshot=snapshot"')
+        assert isinstance(self._snapshot, entities.Snapshot)
+        return self._snapshot
+
+    @snapshot.setter
+    def snapshot(self, snapshot):
+        assert isinstance(snapshot, entities.Snapshot)
+        if self._snapshot is not None:
+            if self._snapshot.id != snapshot.id:
+                logger.warning('Replacing snapshot from {!r} to {!r}'.format(self._snapshot.name, snapshot.name))
+        self._snapshot = snapshot
+
+    @property
+    def model_entity(self):
+        if self._model_entity is None:
+            raise ValueError('Missing Model entity on adapter. please set: "adapter.model_entity=dl.Model"')
+        assert isinstance(self._model_entity, entities.Model)
+        return self._model_entity
+
+    @model_entity.setter
+    def model_entity(self, val):
+        assert isinstance(val, entities.Snapshot)
+        self._model_entity = val
+
+    ###################################
+    # NEED TO IMPLEMENT THESE METHODS #
+    ###################################
 
     def load(self, local_path, **kwargs):
         """ Loads model and populates self.model with a `runnable` model
@@ -60,12 +87,13 @@ class BaseModelAdapter:
         """
         raise NotImplementedError("Please implement 'save' method in {}".format(self.__class__.__name__))
 
-    def train(self, data_path, dump_path, **kwargs):
-        """ Train the model according to data in local_path and save the snapshot to dump_path
+    def train(self, data_path, output_path, **kwargs):
+        """ Train the model according to data in data_paths and save the train outputs to output_path,
+            this include the weights and any other artifacts created during train
+        Virtual method - need to implement
 
-            Virtual method - need to implement
         :param data_path: `str` local File System path to where the data was downloaded and converted at
-        :param dump_path: `str` local File System path where to dump training mid-results (checkpoints, logs...)
+        :param output_path: `str` local File System path where to dump training mid-results (checkpoints, logs...)
         """
         raise NotImplementedError("Please implement 'train' method in {}".format(self.__class__.__name__))
 
@@ -79,7 +107,7 @@ class BaseModelAdapter:
         """
         raise NotImplementedError("Please implement 'predict' method in {}".format(self.__class__.__name__))
 
-    def convert(self, data_path, **kwargs):
+    def convert_from_dtlpy(self, data_path, **kwargs):
         """ Convert Dataloop structure data to model structured
 
             Virtual method - need to implement
@@ -91,114 +119,28 @@ class BaseModelAdapter:
         """
         raise NotImplementedError("Please implement 'convert' method in {}".format(self.__class__.__name__))
 
-    def convert_dlp(self, items: entities.PagedEntities):
-        """ This should implement similar to convert only to work on dlp items.
-                -> meaning create the converted version from items entities
+    #################
+    # DTLPY METHODS #
+    #################
+
+    def prepare_training(self,
+                         # paths
+                         root_path=None,
+                         data_path=None,
+                         output_path=None,
+                         #
+                         partitions=None,
+                         filters=None,
+                         **kwargs):
         """
-        # TODO
-        pass
-
-    # =============
-    # DTLPY METHODS
-    # =============
-
-    def load_from_snapshot(self, local_path, snapshot_id, **kwargs):
-        """ Loads a model from given `snapshot`.
-            Reads configurations and instantiate self.snapshot
-            Downloads the snapshot bucket (if available)
-
-        :param local_path:  `str` directory path in local FileSystem to download the snapshot to
-        :param snapshot_id:  `str` snapshot id
-        """
-        snapshot = self._snapshot_getter_setter(snapshot_id=snapshot_id)
-        config = snapshot.configuration
-        # Download
-        if snapshot.bucket.is_remote:
-            self.logger.debug("Found a remote bucket - downloading to: {!r}".format(local_path))
-            snapshot.download_from_bucket(local_path=local_path)
-            if isinstance(snapshot.bucket, entities.GCSBucket):
-                # FIXME GCS bucket currently download in the background
-                time.sleep(5)
-            config.update({'bucket_path': local_path})
-        else:
-            self.logger.debug("Local bucket - making sure bucket.local path and argument local path - match")
-            config.update({'bucket_path': snapshot.bucket.local_path})
-            os.makedirs(snapshot.bucket.local_path, exist_ok=True)
-            if os.path.realpath(local_path) != os.path.realpath(snapshot.bucket.local_path):
-                raise OSError('given local_path {!r} is different from the localBucket path: {!r}'.
-                              format(local_path, snapshot.bucket.local_path))
-            # local_path = bucket.local_path
-
-        # update adapter instance
-        self.__dict__.update(config)  # update attributes with user overrides
-        self.load(local_path, **kwargs)
-
-    def save_to_snapshot(self, local_path, snapshot_name=None, description=None, cleanup=False, **kwargs):
-        """
-            saves the model state to a new bucket and configuration
-
-            Saves configuration and weights to new snapshot bucket
-            loads only applies for remote buckets
-
-        :param local_path: `str` directory path in local FileSystem to save the current model bucket (weights)
-        :param snapshot_name: `str` name for the new snapshot
-        :param description:  `str` description for the new snapshot
-        :param cleanup: `bool` if True (default) remove the data from local FileSystem after upload
-        :return:
-        """
-        self.save(local_path=local_path, **kwargs)
-        replaced = False  # did we replaced self.snapshot
-
-        if self.snapshot is None:
-            logger.warning("No active snapshot creating a new snapshot {!r} with a local bucket".format(snapshot_name))
-            new_local_bucket = self.model_entity.buckets.create(bucket_type=entities.BucketType.ITEM,
-                                                                local_path=local_path)
-            self.snapshot = self.model_entity.snapshots.create(snapshot_name=snapshot_name,
-                                                               bucket=new_local_bucket,
-                                                               description=description)
-            replaced = True
-        else:
-            new_bucket = self.snapshot.buckets.create(bucket_type=self.snapshot.bucket.type,
-                                                      # TODO: for GCS bucket there are more configurations
-                                                      local_path=local_path,
-                                                      # TODO: use item_bucket options if they are given
-                                                      # item_bucket_snapshot_name=snapshot_name
-                                                      )
-            if snapshot_name is None or snapshot_name == self.snapshot.name:
-                # ==> use existing snapshot (replace the bucket)
-                self.snapshot.bucket = new_bucket
-                replaced = False
-            else:  # snapshot_name != self.snapshot.name
-                #   ==> Create a new snapshot
-                logger.warning("Replacing snapshot {!r} by new created snapshot {!r}".
-                               format(self.snapshot.name, snapshot_name))
-
-                new_snapshot = self.snapshot.clone(snapshot_name=snapshot_name, new_bucket=new_bucket)
-                self.snapshot = new_snapshot
-                replaced = True
-            if description is not None:
-                self.snapshot.description = description
-
-        # update existing configuration
-        new_config = {key: getattr(self, key) for key in self._defaults.keys()}
-        self.snapshot.configuration.update(new_config)
-        self.snapshot.configuration.update({'trainedAt': datetime.datetime.utcnow().isoformat(timespec='minutes')})
-        self.snapshot.status = 'trained'
-        self.snapshot = self.snapshot.update()
-
-        if replaced:
-            logger.warning("Adapter snapshot was replaced by another snapshot. ({!r})".format(self.snapshot.id))
-
-        if cleanup:
-            shutil.rmtree(path=local_path, ignore_errors=True)
-            logger.info("Clean-up. deleting {}".format(local_path))
-
-    def prepare_trainset(self, data_path, partitions=None, filters=None, **kwargs):
-        """
-        Prepares train set for train.
+        Prepares dataset locally before training.
         download the specific partition selected to data_path and preforms `self.convert` to the data_path dir
 
-        :param data_path: `str` directory path to use as the root to the data from Dataloop platform
+        :param snapshot: dl.Snapshot to prepare for training
+        :param root_path: `str` root directory for training. default is "tmp"
+        :param data_path: `str` dataset directory. default <root_path>/"data"
+        :param output_path: `str` save everything to this folder. default <root_path>/"output"
+
         :param partitions: `dl.SnapshotPartitionType` or list of partitions, defaults for all partitions
         :param filters: `dl.Filter` in order to select only part of the data
         """
@@ -207,66 +149,97 @@ class BaseModelAdapter:
         if isinstance(partitions, str):
             partitions = [partitions]
 
+        # define paths
+        if root_path is None:
+            now = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
+            root_path = os.path.join(os.path.expanduser('~'),
+                                     '.dataloop',
+                                     'training',
+                                     "{}_{}".format(self.snapshot.id, now))
+        if data_path is None:
+            dataloop_path = os.path.join(os.path.expanduser('~'), '.dataloop')
+            data_path = os.path.join(dataloop_path, 'datasets', self.snapshot.dataset.id)
+            os.makedirs(data_path, exist_ok=True)
+        if output_path is None:
+            output_path = os.path.join(root_path, 'output')
+            os.makedirs(output_path, exist_ok=True)
+
         # Make sure snapshot.dataset has partitions
         has_partitions = self.snapshot.get_partitions(list(entities.SnapshotPartitionType)).items_count > 0
         if not has_partitions:  # set the partitions
-            train_split = kwargs.get('train_split', None)
-            val_split = kwargs.get('val_split', None)
-            test_split = kwargs.get('test_split', 0.0)
+            raise ValueError('must create train and test partitions')
 
-            # split smartly if not all splits are valid
-            if train_split is None and val_split is None:
-                train_split, val_split = 0.7 * (1 - test_split), 0.3 * (1 - test_split)
-            elif train_split is None:
-                train_split = 1 - test_split - val_split
-            else:
-                val_split = 1 - test_split - train_split
-
-            self._create_partitions(train_split=train_split, val_split=val_split, test_split=test_split)
-
-        os.makedirs(data_path, exist_ok=True)
         if len(os.listdir(data_path)) > 0:
-            self.logger.warning("Data path directory ({}) is not empty..".format(data_path))
+            logger.warning("Data path directory ({}) is not empty..".format(data_path))
 
         # Download the partitions items
         for partition in partitions:
-            self.logger.debug("Downloading {!r} SnapshotPartition (DataPartition) of {}".format(partition,
-                                                                                                self.snapshot.dataset.name))
-            ret_list = self.snapshot.download_partition(partition=partition, local_path=data_path, filters=filters)
-            self.logger.info(
-                "Downloaded {!r} SnapshotPartition complete. {} total items".format(partition, len(ret_list)))
+            logger.debug("Downloading {!r} SnapshotPartition (DataPartition) of {}".format(partition,
+                                                                                           self.snapshot.dataset.name))
+            ret_list = self.snapshot.download_partition(partition=partition,
+                                                        local_path=os.path.join(data_path, partition),
+                                                        filters=filters)
+            logger.info("Downloaded {!r} SnapshotPartition complete. {} total items".format(partition,
+                                                                                            len(ret_list)))
+            self.convert_from_dtlpy(data_path=data_path, **kwargs)
+        return root_path, data_path, output_path
 
-            if partition == entities.SnapshotPartitionType.TEST:
-                self.num_test = len(ret_list)
-            elif partition == entities.SnapshotPartitionType.VALIDATION:
-                self.num_val = len(ret_list)
-            elif partition == entities.SnapshotPartitionType.TRAIN:
-                self.num_train = len(ret_list)
+    def load_from_snapshot(self, snapshot, local_path=None, **kwargs):
+        """ Loads a model from given `snapshot`.
+            Reads configurations and instantiate self.snapshot
+            Downloads the snapshot bucket (if available)
 
-        # Convert items; json to one annotation file
-        self.convert(data_path=data_path, **kwargs)
-
-    # TODO: do we need predict by single partitions?
-    #   currently we can't preform on PagedEntity which we get from get_partition
-    # TODO: what to do with readonly dataset? unlock it?
-    def predict_from_snapshot(self, filters=None, snapshot_id=None, with_upload=True, **kwargs):
+        :param snapshot:  `str` dl.Snapshot entity
+        :param local_path:  `str` directory path in local FileSystem to download the snapshot to
         """
-        Predicts all items in snapshot using filers
+        overwrite = kwargs.get('overwrite', False)
+        self.snapshot = snapshot
+        if local_path is None:
+            local_path = os.path.join(dtlpy_services.service_defaults.DATALOOP_PATH, "snapshots", self.snapshot.name)
+        # update adapter instance
+        self.configuration.update(snapshot.configuration)
+        # Download
+        if self.snapshot.bucket.is_remote:
+            self.logger.debug("Found a remote bucket - downloading to: {!r}".format(local_path))
+            self.snapshot.download_from_bucket(local_path=local_path,
+                                               overwrite=overwrite)
+            self.configuration.update({'bucket_path': local_path})
+        else:
+            self.logger.debug("Local bucket - making sure bucket.local path and argument local path - match")
+            self.configuration.update({'bucket_path': self.snapshot.bucket.local_path})
+            os.makedirs(self.snapshot.bucket.local_path, exist_ok=True)
+            if os.path.realpath(local_path) != os.path.realpath(self.snapshot.bucket.local_path):
+                raise OSError('given local_path {!r} is different from the localBucket path: {!r}'.
+                              format(local_path, self.snapshot.bucket.local_path))
+            # local_path = bucket.local_path
+        self.load(local_path, **kwargs)
 
-        :param filters: `dl.Filters` to narrow the search
-        :param snapshot_id: `str` optional, if not given, uses self.snapshot
-        :param with_upload: `bool` uploads the predictions back to the given items
-        :return: `List[Prediction]' `Prediction is set by model.output_type
+    def save_to_snapshot(self, local_path, cleanup=False, replace=True, **kwargs):
         """
-        snapshot = self._snapshot_getter_setter(snapshot_id=snapshot_id, replace=kwargs.get('replace', False))
-        # items_list = [item for item in snapshot.get_partitions(partitions=partitions, filters=filters).all()] # TODO: test if pre-allocation is faster?
+            saves the model state to a new bucket and configuration
 
-        # un-freeze the dataset when preforming on snapshot operations
-        with self._frozen_dataset(self.snapshot) as ds:
-            items_list = ds.items.get_all_items(filters=filters)
-            predictions = self.predict_items(items=items_list, with_upload=with_upload, cleanup=True, **kwargs)
+            Saves configuration and weights to new snapshot bucket
+            loads only applies for remote buckets
 
-        return predictions
+        :param local_path: `str` directory path in local FileSystem to save the current model bucket (weights)
+        :param replace: `bool` will clean the bucket's content before uploading new files
+        :param cleanup: `bool` if True (default) remove the data from local FileSystem after upload
+        :return:
+        """
+        self.save(local_path=local_path, **kwargs)
+
+        if self.snapshot is None:
+            raise ValueError('missing snapshot entity on the adapter. '
+                             'please set one before saving: "adapter.snapshot=snapshot"')
+
+        if replace:
+            self.snapshot.bucket.empty_bucket(sure=replace)
+        self.snapshot.bucket.upload(local_path=local_path, overwrite=True)
+        if cleanup:
+            shutil.rmtree(path=local_path, ignore_errors=True)
+            logger.info("Clean-up. deleting {}".format(local_path))
+        self.snapshot.status = 'trained'
+        self.snapshot.update()
 
     def predict_items(self, items: list, with_upload=True, cleanup=False, batch_size=16, output_shape=None, **kwargs):
         """
@@ -281,15 +254,11 @@ class BaseModelAdapter:
                                                  and has prediction fields (model_info)
         """
         # TODO: do we want to add score filtering here?
-        import itertools
-        from PIL import Image
-        import numpy as np
-
         logger.debug(
             "Predicting {} items, using batch size {}. Reshaping to: {}".format(len(items), batch_size, output_shape))
-        all_predictions = []
+        all_predictions = list()
         for b in tqdm.tqdm(range(0, len(items), batch_size), desc='predicting', unit='bt', leave=None):
-            batch = []
+            batch = list()
             # TODO: add parallelism with multi threading
             # TODO: add resize when adding to batch
             for item in items[b: b + batch_size]:
@@ -305,27 +274,12 @@ class BaseModelAdapter:
 
         if with_upload:
             try:
-                # test if we use the newer AnnotaionCollection by the first item predictions
-                if isinstance(all_predictions[0], entities.AnnotationCollection):
-                    # Make sure user created right prediction types
-                    if not all(
-                            [pred.type == self.model_entity.output_type for pred in itertools.chain(*all_predictions)]):
-                        raise RuntimeError("Predictions annotation are not of model output type")
-                    for idx, item in enumerate(items):
-                        self._upload_predictions_collection(item, all_predictions[idx], cleanup=cleanup)
-                else:
-                    warnings.warn("Deprecated function. You should create predictions as a dl.AnnotationsCollection")
-                    # Make sure user created right prediction types
-                    if self.model_entity.output_type == 'box' and \
-                            not all(
-                                [isinstance(pred, self.BoxPrediction) for pred in itertools.chain(*all_predictions)]):
-                        raise RuntimeError("Expected all prediction to be of type BaseModelAdapter.BoxPrediction")
-                    if self.model_entity.output_type == 'class' and \
-                            not all(
-                                [isinstance(pred, self.ClassPrediction) for pred in itertools.chain(*all_predictions)]):
-                        raise RuntimeError("Expected all prediction to be of type BaseModelAdapter.ClassPrediction")
-                    for idx, item in enumerate(items):
-                        self._upload_predictions(item, all_predictions[idx], cleanup=cleanup)
+                # Make sure user created right prediction types
+                if not all(
+                        [pred.type == self.model_entity.output_type for pred in itertools.chain(*all_predictions)]):
+                    raise RuntimeError("Predictions annotation are not of model output type")
+                for idx, item in enumerate(items):
+                    self._upload_predictions_collection(item, all_predictions[idx], cleanup=cleanup)
 
             except exceptions.InternalServerError as err:
                 self.logger.error("Failed to upload annotations items. Error: {}".format(err))
@@ -334,16 +288,15 @@ class BaseModelAdapter:
                              format(self.snapshot.name, cleanup))
         return all_predictions
 
-    def create_metrics(self, snapshot_id, partition='validation', predict=False, **kwargs):
+    def create_metrics(self, snapshot, partition='validation', predict=False, **kwargs):
         """ create predictions and calculates performance metrics
 
-        :param snapshot_id: `str` snapshot id to use
+        :param snapshot: `dl.Snapshot` entity
         :param partition:  `str` snapshot_partition to preform metrics on
         :param predict: `bool` if given the function also preforms the predictions
         """
 
-        import itertools
-        snapshot = self._snapshot_getter_setter(snapshot_id=snapshot_id)
+        self.snapshot = snapshot
         dataset = snapshot.dataset
         prd_filters = entities.Filters(field='annotationType',
                                        values='prediction',
@@ -367,7 +320,7 @@ class BaseModelAdapter:
                     # Consider uploading IoU per each annotation
                     best_match = self._box_compare(act=gt, predictions=prediction_annotations)
                 elif self.model_entity.output_type == 'class':
-                    self._class_compare(self, item, act=gt, pred=prediction_annotations)
+                    self._class_compare(item, act=gt, pred=prediction_annotations)
                 else:
                     # other methods are not supported
                     raise NotImplementedError(
@@ -378,39 +331,6 @@ class BaseModelAdapter:
     # =============
     # INNER METHODS
     # =============
-    def _upload_predictions(self, item, predictions, cleanup=False):
-        """
-        Utility function that upload prediction to dlp platform based on the model.output_type
-        :param cleanup: `bool` if set removes existing predictions with the same model-snapshot name
-        """
-        model_info_name = "{}-{}".format(self.model_name, self.snapshot.name)
-        if cleanup:
-            clean_filter = entities.Filters(field='type',
-                                            values=self.model_entity.output_type,
-                                            resource=entities.FiltersResource.ANNOTATION)
-            clean_filter.add(field='metadata.user.model.name', values=model_info_name)
-            item.annotations.delete(filters=clean_filter)
-
-        if self.model_entity.output_type == 'box':
-            builder = item.annotations.builder()
-            for pred in predictions:
-                builder.add(annotation_definition=entities.Box(
-                    top=float(pred.top), left=float(pred.left), bottom=float(pred.bottom),
-                    right=float(pred.right), label=str(pred.label)),
-                    model_info={'name': model_info_name,
-                                'confidence': float(pred.score)})
-
-            item.annotations.upload(annotations=builder)
-        elif self.model_entity.output_type == 'class':
-            builder = item.annotations.builder()
-            for pred in predictions:
-                builder.add(annotation_definition=entities.Classification(label=pred.label),
-                            model_info={'name': model_info_name,
-                                        'confidence': float(pred.score)})
-            item.annotations.upload(annotations=builder)
-        else:
-            raise NotImplementedError('model output type: {} is not supported to upload to platform'.
-                                      format(self.model_entity.output_type))
 
     def _upload_predictions_collection(self, item: entities.Item, predictions, cleanup=False):
         """
@@ -433,7 +353,7 @@ class BaseModelAdapter:
 
     def _box_compare(self, act: entities.Annotation, predictions):
         """ Calculates best matched  prediction to a single gt. Returns namedTuple (score, prd_id)"""
-        # move our metircs method from fonda to dtlpy
+        # move our metrics method from fonda to dtlpy
         bestMatch = namedtuple('best_match', field_names=['score', 'iou'])
         best = bestMatch(0, None)
         for prd in predictions:
@@ -456,128 +376,15 @@ class BaseModelAdapter:
     @property
     def _sample_metric_base(self):
         _sample = {
-            'snapshotId': self.id,
+            'snapshotId': self.snapshot.id,
             'output_type': self.model.output_type,
-            'frozen_datasetId': self.dataset.id,
+            'frozen_datasetId': self.snapshot.dataset_id,
         }
         return _sample
 
-    def _create_partitions(self, train_split=0.7, val_split=0.3, test_split=0.0):
-        """ Updates partitions on the current items by the splits ratios"""
-        import time
-        import numpy as np
-
-        self.logger.info("Creating data partition for {!r} snapshot: splits: [Train-Val-Test {:1.2f}-{:1.2f}-{:1.2f}]".
-                         format(self.snapshot.name, train_split, val_split, test_split))
-        if round(train_split + val_split + test_split) != 1:
-            raise RuntimeError(
-                'Splits should sum up to 1 (train {}; val {}; test{})'.format(train_split, val_split, test_split))
-
-        all_item_ids = [item.id for item in self.snapshot.dataset.items.get_all_items()]
-        num_items = len(all_item_ids)
-
-        np.random.seed(round(time.time()))
-        np.random.shuffle(all_item_ids)
-        self.num_test = round(num_items * test_split)
-        self.num_val = round(num_items * val_split)
-        self.num_train = num_items - self.num_val - self.num_test  # To avoid roundups
-
-        # split the list by number per partition
-        test_item_ids = all_item_ids[:self.num_test]
-        val_item_ids = all_item_ids[self.num_test:self.num_test + self.num_val]
-        train_item_ids = all_item_ids[self.num_test + self.num_val:]
-
-        # update items to their partition
-        with self._frozen_dataset(self.snapshot) as ds:
-            op = entities.FiltersOperations.IN
-            ds.set_partition(partition=entities.SnapshotPartitionType.TEST,
-                             filters=entities.Filters(field='id', values=test_item_ids, operator=op))
-            ds.set_partition(partition=entities.SnapshotPartitionType.VALIDATION,
-                             filters=entities.Filters(field='id', values=val_item_ids, operator=op))
-            ds.set_partition(partition=entities.SnapshotPartitionType.TRAIN,
-                             filters=entities.Filters(field='id', values=train_item_ids, operator=op))
-
-        self.logger.info("Data Partition Ended. Dataset {!r} has: {} training, {} validation and {} test items".
-                         format(self.snapshot.dataset.name, self.num_train, self.num_val, self.num_test))
-
-    # =======
-    # Utility
-    # =======
-
-    @contextmanager
-    def _frozen_dataset(self, obj):
-        try:
-            if isinstance(obj, entities.Snapshot):
-                dataset = obj.dataset
-            elif isinstance(obj, entities.Dataset):
-                dataset = obj
-            else:
-                raise NotImplementedError("could not get a dataset")
-            _readonly_state = dataset.readonly
-            dataset.set_readonly(False)
-            self.logger.debug("dataset {!r} - opned for edit".format(dataset.name))
-            yield dataset
-        finally:
-            dataset.set_readonly(_readonly_state)
-            self.logger.debug(
-                "free frozen context ended. dataset {!r}, readonly was set back to: {}".format(dataset.name,
-                                                                                               dataset.readonly))
-
-    def _snapshot_getter_setter(self, snapshot_id=None, snapshot_name=None, replace=False):
-        """
-        Utility function that retuns the active snapshot
-        if self.snapshot is None or if `replace` is set - the function alson assigns a new snapshot
-
-        :param snapshot_id: `str` optional snapshot_id to use
-        :param snapshot_name: `str` optional snapshot_name to use
-        NOTE: only one of id / name may be given
-        :param replace: `bool` what to do in case the id_name is different from the current self.snapshot
-                default (False) ignores the id/name and retuns the current snapshot
-        :return:
-        """
-
-        if snapshot_name is not None and snapshot_id is not None:
-            raise NotImplementedError('cannot work with both id and name args')
-
-        if snapshot_id is not None:
-            snapshot = self.model_entity.snapshots.get(snapshot_id=snapshot_id)
-            if self.snapshot is None:
-                self.snapshot = snapshot
-                return snapshot
-            else:
-                if snapshot.id == self.snapshot.id:
-                    return snapshot
-                elif replace:
-                    logger.warning("Replacing snapshot")
-                    self.snapshot = snapshot
-                    return snapshot
-                else:
-                    return self.snapshot
-
-        elif snapshot_name is not None:
-            snapshot = self.model_entity.snapshots.get(snapshot_name=snapshot_name)
-            if self.snapshot is None:
-                self.snapshot = snapshot
-                return snapshot
-            else:
-                if snapshot.id == self.snapshot.id:
-                    return snapshot
-                elif replace:
-                    logger.warning("Replacing snapshot")
-                    self.snapshot = snapshot
-                    return snapshot
-                else:
-                    return self.snapshot
-        else:
-            # No new arg. use current snapshot
-            return self.snapshot
-
-        # if id_or_name:
-        #     try:
-        #         snapshot = self.model_entity.snapshots.get(snapshot_id=id_or_name)
-        #     except exceptions.NotFound as e:
-        #         snapshot = self.model_entity.snapshots.get(snapshot_name=id_or_name)
-
+    ###########
+    # Utility #
+    ###########
     def __set_adapter_handler__(self, level):
         for hdl in self.logger.handlers:
             if hdl.name.startswith('adapter'):
@@ -594,25 +401,9 @@ class BaseModelAdapter:
         else:
             self.logger.addHandler(hdlr=hdl)
 
-    @staticmethod
-    def _np_resize_util(images, output_shape):
-        try:
-            import numpy as np
-            from skimage.transform import resize
-        except (ImportError, ModuleNotFoundError) as err:
-            raise RuntimeError('dtlpy depends on external package. Please install ') from err
-        if isinstance(images, np.ndarray) and len(images.shape) < 4:
-            # Single image
-            return resize(images, output_shape=output_shape)
-        batch_reshape = []
-        for img in images:
-            batch_reshape.append(resize(img, output_shape=output_shape))
-        # construct as batch and return
-        return np.array(batch_reshape)
-
-    # ==========================
-    # Callback Factory functions
-    # ==========================
+    ##############################
+    # Callback Factory functions #
+    ##############################
     @property
     def dataloop_keras_callback(self):
         """
