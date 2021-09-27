@@ -3,6 +3,7 @@ import math
 import copy
 import attr
 from .. import services, miscellaneous
+import tqdm
 
 logger = logging.getLogger(name=__name__)
 
@@ -65,16 +66,20 @@ class PagedEntities:
         return self.items_count
 
     def __iter__(self):
+        pbar = tqdm.tqdm(total=self.total_pages_count, disable=self._client_api.verbose.disable_progress_bar)
         if self.page_offset != 0:
             # reset the count for page 0
             self.page_offset = 0
             self.get_page()
         while True:
             yield self.items
+            pbar.update()
+
             if self.has_next_page:
                 self.page_offset += 1
                 self.get_page()
             else:
+                pbar.close()
                 break
 
     def __reversed__(self):
@@ -146,6 +151,7 @@ class PagedEntities:
     def all(self):
         page_offset = 0
         page_size = 100
+        pbar = tqdm.tqdm(total=self.items_count, disable=self._client_api.verbose.disable_progress_bar)
         total_pages = math.ceil(self.items_count / page_size)
         jobs = list()
         pool = self._client_api.thread_pools('item.page')
@@ -157,9 +163,11 @@ class PagedEntities:
             for i_job, job in enumerate(jobs):
                 if job.done():
                     for item in job.result():
+                        pbar.update()
                         yield item
                     jobs.remove(job)
             if len(jobs) == 0:
+                pbar.close()
                 break
 
     ########

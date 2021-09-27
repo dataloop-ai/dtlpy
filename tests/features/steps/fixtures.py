@@ -91,7 +91,7 @@ def get_value(params, context):
             val = context.second_project.id
     elif key == 'recipe_id':
         if val == 'second':
-            val = context.second_project.datasets.list()[0].get_recipe_ids()[0]
+            val = context.second_project.datasets.list()[1].get_recipe_ids()[0]
 
     return val
 

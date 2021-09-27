@@ -22,9 +22,13 @@ def step_impl(context, param, value):
         project_ids.append(context.second_project.id)
         kwargs['project_ids'] = project_ids
         if value == 'current_project':
-            recipe = context.project.datasets.list()[0].get_recipe_ids()[0]
+            for dataset in context.project.datasets.list():
+                if dataset.name != 'Binaries':
+                    recipe = dataset.get_recipe_ids()[0]
         elif value == 'second_project':
-            recipe = context.second_project.datasets.list()[0].get_recipe_ids()[0]
+            for dataset in context.second_project.datasets.list():
+                if dataset.name != 'Binaries':
+                    recipe = dataset.get_recipe_ids()[0]
         else:
             raise Exception('Unknown type of recipe value')
         kwargs['recipe'] = recipe

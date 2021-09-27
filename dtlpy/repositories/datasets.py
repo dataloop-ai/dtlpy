@@ -433,15 +433,23 @@ class Datasets:
 
         :return: Dataset object
         """
+        create_default_recipe = True
+        if labels is not None or attributes is not None or ontology_ids is not None:
+            create_default_recipe = False
+
         # labels to list
         if labels is not None:
+            if not isinstance(labels, list):
+                labels = [labels]
             if not all(isinstance(label, entities.Label) for label in labels):
                 labels = entities.Dataset.serialize_labels(labels)
         else:
             labels = list()
+
         # get creator from token
         payload = {'name': dataset_name,
-                   'projects': [self.project.id]}
+                   'projects': [self.project.id],
+                   'createDefaultRecipe': create_default_recipe}
 
         if driver_id is None and driver is not None:
             if isinstance(driver, entities.Driver):
@@ -468,7 +476,9 @@ class Datasets:
                                                  datasets=self,
                                                  project=self.project)
             # create ontology and recipe
-            dataset = dataset.recipes.create(ontology_ids=ontology_ids, labels=labels, attributes=attributes).dataset
+            if not create_default_recipe:
+                dataset = dataset.recipes.create(ontology_ids=ontology_ids, labels=labels,
+                                                 attributes=attributes).dataset
             # # patch recipe to dataset
             # dataset = self.update(dataset=dataset, system_metadata=True)
         else:

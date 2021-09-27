@@ -176,12 +176,13 @@ class BaseModelAdapter:
         for partition in partitions:
             logger.debug("Downloading {!r} SnapshotPartition (DataPartition) of {}".format(partition,
                                                                                            self.snapshot.dataset.name))
+            data_partiion_base_path = os.path.join(data_path, partition)
             ret_list = self.snapshot.download_partition(partition=partition,
-                                                        local_path=os.path.join(data_path, partition),
+                                                        local_path=data_partiion_base_path,
                                                         filters=filters)
             logger.info("Downloaded {!r} SnapshotPartition complete. {} total items".format(partition,
                                                                                             len(ret_list)))
-            self.convert_from_dtlpy(data_path=data_path, **kwargs)
+            self.convert_from_dtlpy(data_path=data_partiion_base_path, **kwargs)
         return root_path, data_path, output_path
 
     def load_from_snapshot(self, snapshot, local_path=None, **kwargs):
@@ -286,6 +287,12 @@ class BaseModelAdapter:
 
             self.logger.info('Uploading  items annotation for snapshot {!r}. cleanup {}'.
                              format(self.snapshot.name, cleanup))
+        else:
+            # fix the collection to have to correct item in the annotations
+            for item, ann_coll in zip(items, all_predictions):
+                for ann in ann_coll:
+                    ann._item = item
+                ann_coll.item = item
         return all_predictions
 
     def create_metrics(self, snapshot, partition='validation', predict=False, **kwargs):

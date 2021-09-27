@@ -28,7 +28,7 @@ def create_collection():
 
 
 def model_info_name(model: entities.Model, snapshot: entities.Snapshot):
-    if snapshot in None:
+    if snapshot is None:
         return "{}-no-snapshot".format(model.name)
     else:
         return "{}-{}".format(model.name, snapshot.name)
