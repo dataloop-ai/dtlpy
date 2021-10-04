@@ -337,7 +337,7 @@ class Snapshots:
         from_json['status'] = status
         from_json['name'] = snapshot_name
         if project_id is not None:
-            from_json['projectId']: project_id
+            from_json['projectId'] = project_id
         if dataset_id is not None:
             from_json['datasetId'] = dataset_id
         if configuration is not None:

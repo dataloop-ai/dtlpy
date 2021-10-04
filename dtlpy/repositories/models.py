@@ -170,6 +170,7 @@ class Models:
         :param local_path: local path of the model (if from_local=False - codebase will be downloaded)
         :param from_local: bool. use current directory to build
         :param log_level: log level
+
         :return:dl.BaseModelAdapter
         """
 
@@ -236,7 +237,8 @@ class Models:
         :param src_path: codebase location (path to directory of the code). if None pwd will be taken
         :param entry_point: relative path to the module where model adapter class is defined
         :param class_name: name of the adapter class in entry point. default: ModelAdapter
-        :param codebase: `dl.Codebase' object - representing the model code  if None new will be created from src_path
+        :param codebase: `dl.Codebase` object - representing the model code  if None new will be created from src_path
+
         :return:
         """
 

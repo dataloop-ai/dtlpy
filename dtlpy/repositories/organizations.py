@@ -103,8 +103,10 @@ class Organizations:
         :param organization:
         :param organization_id:
         :param organization_name:
-        :return groups list:
+        :return organization integrations:
         """
+        logger.warning('Deprecation Warning - get_integrations will not use from 1.40.0'
+                       'Next time use a org.integrations.get() or project.integrations.get()')
         if organization is None and organization_id is None and organization_name is None:
             raise exceptions.PlatformException(
                 error='400',
@@ -401,17 +403,19 @@ class Organizations:
                          organization: entities.Organization = None):
         """
         Add integrations to the Organization
+        Options for each type should be a dict with the following:
+        s3 - {key: "", secret: ""}
+        gcs - {key: "", secret: "", content: ""},
+        azureblob - {key: "", secret: "", clientId: "", tenantId: ""}
+
         :param integrations_type: "s3" , "gcs", "azureblob"
         :param name: integrations name
-        :param options: s3 - {key: "", secret: ""},
-                        gcs - {key: "", secret: "", content: ""},
-                        azureblob - {key: "", secret: "", clientId: "", tenantId: ""}
-        :param organization_id:
-        :param organization_name:
-        :param organization:
+        :param options: dict options for each type
+
         :return: True
         """
-
+        logger.warning('Deprecation Warning - get_integrations will not use from 1.40.0'
+                       'Next time use a org.integrations.create() or project.integrations.create()')
         if organization is None and organization_id is None and organization_name is None:
             raise exceptions.PlatformException(
                 error='400',
@@ -446,6 +450,8 @@ class Organizations:
         :param really: really really?
         :return: True
         """
+        logger.warning('Deprecation Warning - get_integrations will not use from 1.40.0'
+                       'Next time use a org.integrations.delete() or project.integrations.delete()')
         if sure and really:
             if organization is None and organization_id is None and organization_name is None:
                 raise exceptions.PlatformException(
@@ -478,6 +484,8 @@ class Organizations:
         :param organization_name:
         :param organization:
         """
+        logger.warning('Deprecation Warning - get_integrations will not use from 1.40.0'
+                       'Next time use a org.integrations.update() or project.integrations.update()')
         if organization is None and organization_id is None and organization_name is None:
             raise exceptions.PlatformException(
                 error='400',

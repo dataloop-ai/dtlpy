@@ -61,3 +61,5 @@ from .pipeline_execution import PipelineExecution, PipelineExecutionNode
 from .feature import Feature
 from .feature_set import FeatureSet, FeatureEntityType
 from .organization import Organization, OrganizationsPlans, MemberOrgRole
+from .integration import Integration
+from .driver import Driver, ExternalStorage

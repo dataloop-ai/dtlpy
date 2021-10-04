@@ -1,3 +1,4 @@
+import sys
 from collections import deque
 import validators
 import traceback
@@ -20,6 +21,7 @@ from PIL import Image
 from . import upload_element
 
 from .. import PlatformException, entities, repositories, exceptions, dtlpy_services
+from ..services import Reporter
 
 logger = logging.getLogger(name=__name__)
 
@@ -27,18 +29,18 @@ NUM_TRIES = 5  # try to upload 3 time before fail on item
 
 
 class Uploader:
-    def __init__(self, items_repository: repositories.Items):
+    def __init__(self, items_repository: repositories.Items, output_entity=entities.Item, no_output=False):
         assert isinstance(items_repository, repositories.Items)
         self.items_repository = items_repository
         self.__stop_create_existence_dict = False
         self.mode = 'skip'
         self.num_files = 0
         self.i_item = 0
-        self.pbar = tqdm.tqdm(total=0,
-                              disable=self.items_repository._client_api.verbose.disable_progress_bar)
-        self.reporter = dtlpy_services.Reporter(num_workers=0,
-                                                resource=dtlpy_services.Reporter.ITEMS_UPLOAD,
-                                                print_error_logs=items_repository._client_api.verbose.print_error_logs)
+        self.pbar = tqdm.tqdm(total=0, disable=self.items_repository._client_api.verbose.disable_progress_bar)
+        self.reporter = Reporter(num_workers=0, resource=Reporter.ITEMS_UPLOAD,
+                                 print_error_logs=items_repository._client_api.verbose.print_error_logs,
+                                 output_entity=output_entity, client_api=items_repository._client_api,
+                                 no_output=no_output)
 
     def upload(
             self,
@@ -55,7 +57,7 @@ class Uploader:
         """
         Upload local file to dataset.
         Local filesystem will remain.
-        If "*" at the end of local_path (e.g. "/images/*") items will be uploaded without head directory
+        If `*` at the end of local_path (e.g. '/images/*') items will be uploaded without head directory
 
         :param local_path: local file or folder to upload
         :param local_annotations_path: path to dataloop format annotations json files.
@@ -64,6 +66,7 @@ class Uploader:
         :param file_types: list of file type to upload. e.g ['.jpg', '.png']. default is all
         :param overwrite: optional - default = False
         :param item_metadata: upload the items with the metadata dictionary
+
         :return: Output (list)
         """
         ###################
@@ -88,7 +91,8 @@ class Uploader:
         self.pbar.close()
         # summary
         logger.info("Number of total files: {}".format(num_files))
-        for action in self.reporter.status_list:
+        status_list = self.reporter.status_list
+        for action in status_list:
             n_for_action = self.reporter.status_count(status=action)
             logger.info("Number of files {}: {}".format(action, n_for_action))
 
@@ -101,6 +105,11 @@ class Uploader:
                     n_error=errors_count, log_filepath=log_filepath))
 
         # TODO 2.0 always return a list
+        if len(status_list) == 1:
+            try:
+                return next(self.reporter.output)
+            except StopIteration:
+                return None
         return self.reporter.output
 
     def _build_elements_from_inputs(self,
@@ -479,9 +488,8 @@ class Uploader:
                     except Exception:
                         logger.exception('Error uploading annotations to item id: {}'.format(item.id))
 
-                reporter.set_index(i_item=i_item,
-                                   status=action,
-                                   output=item,
+                reporter.set_index(status=action,
+                                   output=item.to_json(),
                                    success=True,
                                    ref=item.id)
                 if pbar is not None:
@@ -493,10 +501,9 @@ class Uploader:
                     ref = element.buffer.name
                 else:
                     ref = 'Unknown'
-                reporter.set_index(i_item=i_item,
-                                   status='error',
+                reporter.set_index(ref=ref, status='error',
                                    success=False,
-                                   error="{}\n{}".format(err, trace), ref=ref)
+                                   error="{}\n{}".format(err, trace))
 
     async def __async_upload_annotations(self, annotations_filepath, item):
         with open(annotations_filepath, 'r', encoding="utf8") as f:

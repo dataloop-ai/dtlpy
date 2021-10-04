@@ -401,8 +401,11 @@ class Annotation(entities.BaseEntity):
     ##################
     def update_status(self, status: AnnotationStatus = AnnotationStatus.ISSUE):
         """
-        :param status: can be AnnotationStatus.ISSUE, AnnotationStatus.APPROVED, AnnotationStatus.REVIEW, AnnotationStatus.CLEAR
         Open an issue on the annotation
+
+        :param status: can be AnnotationStatus.ISSUE, AnnotationStatus.APPROVED, AnnotationStatus.REVIEW, AnnotationStatus.CLEAR
+
+        :return: Annotation object or None
         """
         return self.annotations.update_status(annotation=self, status=status)
 
@@ -417,6 +420,7 @@ class Annotation(entities.BaseEntity):
         """
         Update an existing annotation in host.
         :param system_metadata: True, if you want to change metadata system
+
         :return: Annotation object
         """
         return self.annotations.update(annotations=self,

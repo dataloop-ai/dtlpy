@@ -40,6 +40,7 @@ class Dtlpy:
     def token(self):
         """
         token
+
         :return: token in use
         """
         return self.client_api.token
@@ -47,6 +48,7 @@ class Dtlpy:
     def environment(self):
         """
         environment
+
         :return: current environment
         """
         return self.client_api.environment
@@ -54,6 +56,7 @@ class Dtlpy:
     def init(self):
         """
         init current directory as a Dataloop working directory
+
         :return:
         """
         from .services import CookieIO
@@ -63,6 +66,7 @@ class Dtlpy:
     def checkout_state(self):
         """
         Return the current checked out state
+
         :return:
         """
         state = self.client_api.state_io.read_json()

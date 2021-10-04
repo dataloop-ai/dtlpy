@@ -1,20 +1,25 @@
 import os
-import dtlpy as dl
 import json
 from pathlib import Path
 import numpy as np
 from PIL import Image
 from concurrent.futures import ThreadPoolExecutor
+import imgaug
+import torchvision
+
+from ... import entities
 
 
-class BaseLoader:
+class BaseGenerator:
     def __init__(self,
-                 dataset_entity: dl.Dataset,
-                 annotation_type: dl.AnnotationType,
+                 dataset_entity: entities.Dataset,
+                 annotation_type: entities.AnnotationType,
                  data_path=None,
                  label_to_id_map=None,
                  transforms=None,
                  num_workers=0,
+                 shuffle=True,
+                 seed=None,
                  # debug flags
                  with_orig=False,
                  separate_labels=False,
@@ -26,6 +31,8 @@ class BaseLoader:
             annotation_type: dl.AnnotationType - type of annotation to load from the annotated dataset
             data_path (string): Path to Dataloop annotations (root to "item" and "json").
             transforms (callable, optional): Optional transform to be applied on a sample.
+            shuffle: Whether to shuffle the data (default: True) If set to False, sorts the data in alphanumeric order.
+            seed: Optional random seed for shuffling and transformations.
             with_orig: bool - to return items before transformations (for debug)
             separate_labels: bool -  return labels and geo (and not concatenated to single array
         """
@@ -36,7 +43,7 @@ class BaseLoader:
                                      "{}_{}".format(dataset_entity.name,
                                                     dataset_entity.id))
             _ = dataset_entity.items.download(local_path=data_path,
-                                              annotation_options=[dl.VIEW_ANNOTATION_OPTIONS_JSON])
+                                              annotation_options=[entities.ViewAnnotationOptions.JSON])
         self.root_dir = data_path
         self._transforms = transforms
         self._dataset_entity = dataset_entity
@@ -61,11 +68,19 @@ class BaseLoader:
         for json_path in root_path.rglob('**/*.json'):
             with open(json_path, 'r') as f:
                 data = json.load(f)
-            annotation = dl.AnnotationCollection.from_json(data)
+            annotation = entities.AnnotationCollection.from_json(data)
             img_path = root_path.joinpath('items').joinpath(data['filename'][1:])
             if img_path.suffix.lower() in self.IMAGE_EXTENSIONS:
                 self.image_paths.append(img_path)
                 self.annotations.append(annotation)
+
+        if shuffle:
+            if seed is None:
+                seed = 42
+            np.random.seed(seed)
+            np.random.shuffle(self.annotations)
+            np.random.seed(seed)
+            np.random.shuffle(self.image_paths)
 
         #########
         # Debug #
@@ -77,32 +92,28 @@ class BaseLoader:
 
     @property
     def dataset_entity(self):
-        assert isinstance(self._dataset_entity, dl.Dataset)
+        assert isinstance(self._dataset_entity, entities.Dataset)
         return self._dataset_entity
 
     @dataset_entity.setter
     def dataset_entity(self, val):
-        assert isinstance(val, dl.Dataset)
+        assert isinstance(val, entities.Dataset)
         self._dataset_entity = val
 
     def __len__(self):
         return len(self.image_paths)
 
     def _type_to_var_name(self):
-        if self.annotation_type == dl.AnnotationType.BOX:
+        if self.annotation_type == entities.AnnotationType.BOX:
             return 'bounding_boxes'
-        elif self.annotation_type == dl.AnnotationType.SEGMENTATION:
+        elif self.annotation_type == entities.AnnotationType.SEGMENTATION:
             return 'segmentation_map'
-        elif self.annotation_type == dl.AnnotationType.POLYGON:
+        elif self.annotation_type == entities.AnnotationType.POLYGON:
             return 'polygons'
         else:
             return None
 
     def transform(self, image, target=None):
-        # TODO check the imports
-        import imgaug
-        import torchvision
-
         if isinstance(self._transforms, torchvision.transforms.Compose):
             # use torchvision compose
             ts = self._transforms.transforms
@@ -137,13 +148,13 @@ class BaseLoader:
         labels_id = list()
         for annotation in annotations:
             if annotation.type == self.annotation_type:
-                if annotation.type == dl.AnnotationType.BOX:
+                if annotation.type == entities.AnnotationType.BOX:
                     # [x1, y1, x2, y2]
                     geo = np.asarray([annotation.left,
                                       annotation.top,
                                       annotation.right,
                                       annotation.bottom])
-                elif annotation.type == dl.AnnotationType.CLASSIFICATION:
+                elif annotation.type == entities.AnnotationType.CLASSIFICATION:
                     # None
                     geo = None
                 else:
@@ -154,23 +165,23 @@ class BaseLoader:
         # reorder for output
         geos = np.asarray(geos).astype(float)
         labels_id = np.asarray(labels_id).reshape((-1, 1)).astype(float)
-        if self.annotation_type == dl.AnnotationType.BOX:
+        if self.annotation_type == entities.AnnotationType.BOX:
             geos = geos.reshape(-1, 4)
         return geos, labels_id
 
     def _to_dtlpy(self, targets, labels=None):
-        annotations = dl.AnnotationCollection(item=None)
+        annotations = entities.AnnotationCollection(item=None)
         if labels is None:
             labels = [None] * len(targets)
         for target, label in zip(targets, labels):
-            if self.annotation_type == dl.AnnotationType.BOX:
-                annotations.add(annotation_definition=dl.Box(left=target[0],
-                                                             top=target[1],
-                                                             right=target[2],
-                                                             bottom=target[3],
-                                                             label=label))
-            elif self.annotation_type == dl.AnnotationType.CLASSIFICATION:
-                annotations.add(annotation_definition=dl.Classification(label=label))
+            if self.annotation_type == entities.AnnotationType.BOX:
+                annotations.add(annotation_definition=entities.Box(left=target[0],
+                                                                   top=target[1],
+                                                                   right=target[2],
+                                                                   bottom=target[3],
+                                                                   label=label))
+            elif self.annotation_type == entities.AnnotationType.CLASSIFICATION:
+                annotations.add(annotation_definition=entities.Classification(label=label))
             else:
                 raise ValueError('unsupported annotation type: {}'.format(self.annotation_type))
         return annotations
@@ -215,7 +226,7 @@ class BaseLoader:
         to_return = (image,)
         targets = (geos, labels_ids)
         if not self.separate_labels:
-            if self.annotation_type == dl.AnnotationType.CLASSIFICATION:
+            if self.annotation_type == entities.AnnotationType.CLASSIFICATION:
                 # support only for single classification label
                 y = labels_ids.flatten()[0]
                 if self.to_categorical:
@@ -252,69 +263,3 @@ class BaseLoader:
         else:
             raise TypeError('list indices must be integers or slices, not {}'.format(type(idx)))
         return to_return
-
-
-def get_torch_dataset():
-    import torch
-    from torch.utils.data import DataLoader, Dataset
-
-    class DataGenerator(BaseLoader, Dataset):
-        """
-
-        """
-
-        def __getitem__(self, idx):
-            if torch.is_tensor(idx):
-                idx = idx.tolist()
-            return super(DataGenerator, self).__getitem__(idx)
-
-    return DataGenerator
-
-
-def get_keras_dataset():
-    import tensorflow.keras.utils
-
-    class DataGenerator(BaseLoader, tensorflow.keras.utils.Sequence):
-
-        def __init__(self,
-                     dataset_entity: dl.Dataset,
-                     annotation_type: dl.AnnotationType,
-                     data_path=None,
-                     label_to_id_map=None,
-                     transforms=None,
-                     to_categorical=False,
-                     # debug flags
-                     with_orig=False,
-                     separate_labels=False,
-                     # keras
-                     batch_size=32
-                     ) -> None:
-            """
-            """
-            super(DataGenerator, self).__init__(dataset_entity=dataset_entity,
-                                                annotation_type=annotation_type,
-                                                data_path=data_path,
-                                                label_to_id_map=label_to_id_map,
-                                                transforms=transforms,
-                                                to_categorical=to_categorical,
-                                                # debug flags
-                                                with_orig=with_orig,
-                                                separate_labels=separate_labels)
-            self.batch_size = batch_size
-
-        def __getitem__(self, index):
-            indices = slice(index * self.batch_size, (index + 1) * self.batch_size)
-            batch = super(DataGenerator, self).__getitem__(indices)
-            # convert to x, y
-            return np.asarray([x[0] for x in batch]), np.asarray([x[1] for x in batch])
-
-        def __iter__(self):
-            """Create a generator that iterate over the Sequence."""
-            for item in (self[i] for i in range(len(self))):
-                yield item
-
-        def __len__(self):
-            n_data = super(DataGenerator, self).__len__()
-            return int(np.floor(n_data / self.batch_size))
-
-    return DataGenerator

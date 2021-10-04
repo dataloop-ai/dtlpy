@@ -352,10 +352,11 @@ class Packages:
         :param checkout: checkout package to local dir
         :param revision_increment: optional - str - version bumping method - major/minor/patch - default = None
         :param version: semver version f the package
-        :param ignore_sanity_check:
+        :param ignore_sanity_check: NOT RECOMMENDED - skip code sanity check before pushing
         :param  service_update: optional - bool - update the service
-        :param  service_config : json of service - a service that have config from the main service if wanted
+        :param  service_config: json of service - a service that have config from the main service if wanted
         :param  slots: optional - list of slots PackageSlot of the package
+
         :return:
         """
         # get project

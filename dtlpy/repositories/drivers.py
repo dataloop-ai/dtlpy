@@ -98,3 +98,50 @@ class Drivers:
                 error='400',
                 message='Must provide an identifier (name or id) in inputs')
         return driver
+
+    def create(self, name, driver_type, integration_id, bucket_name, project_id=None, allow_external_delete=True,
+               region=None, storage_class="", path=""):
+        """
+        :param name: the driver name
+        :param driver_type: ExternalStorage.S3, ExternalStorage.GCS , ExternalStorage.AZUREBLOB
+        :param integration_id: the integration id
+        :param bucket_name: the external bucket name
+        :param project_id:
+        :param allow_external_delete:
+        :param region: rilevante only for s3 - the bucket region
+        :param storage_class: rilevante only for s3
+        :param path: Optional. By default path is the root folder. Path is case sensitive integration
+        :return: driver object
+        """
+        if driver_type == entities.ExternalStorage.S3:
+            bucket_payload = 'bucketName'
+        elif driver_type == entities.ExternalStorage.GCS:
+            bucket_payload = 'bucket'
+        else:
+            bucket_payload = 'containerName'
+        payload = {
+            "integrationId": integration_id,
+            "name": name,
+            "metadata": {
+                "system": {
+                    "projectId": self.project.id if project_id is None else project_id
+                }
+            },
+            "type": driver_type,
+            "payload": {
+                bucket_payload: bucket_name,
+                "storageClass": storage_class,
+                "region": region,
+                "path": path
+            },
+            "allowExternalDelete": allow_external_delete,
+            "creator": self._client_api.info().get('user_email')
+        }
+
+        success, response = self._client_api.gen_request(req_type='post',
+                                                         path='/drivers',
+                                                         json_req=payload)
+        if not success:
+            raise exceptions.PlatformException(response)
+        else:
+            return entities.Driver.from_json(_json=response.json(), client_api=self._client_api)

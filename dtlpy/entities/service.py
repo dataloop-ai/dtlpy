@@ -38,6 +38,7 @@ class Service(entities.BaseEntity):
     id = attr.ib()
     active = attr.ib()
     driver_id = attr.ib(repr=False)
+    secrets = attr.ib(repr=False)
 
     # name change
     runtime = attr.ib(repr=False)
@@ -136,7 +137,8 @@ class Service(entities.BaseEntity):
             versions=versions,
             client_api=client_api,
             package=package,
-            project=project
+            project=project,
+            secrets=("secrets", None)
         )
         inst.is_fetched = is_fetched
         return inst
@@ -244,7 +246,8 @@ class Service(entities.BaseEntity):
                 attr.fields(Service).runtime,
                 attr.fields(Service).queue_length_limit,
                 attr.fields(Service).max_attempts,
-                attr.fields(Service).on_reset)
+                attr.fields(Service).on_reset,
+                attr.fields(Service).secrets)
         )
 
         _json['projectId'] = self.project_id

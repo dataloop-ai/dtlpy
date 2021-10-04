@@ -84,13 +84,14 @@ class Polygon(BaseAnnotationDefinition):
     def from_segmentation(cls, mask, label, attributes=None, epsilon=None, max_instances=1, min_area=0):
         """
         Convert binary mask to Polygon
+
         :param mask: binary mask (0,1)
         :param label: annotation label
         :param attributes: annotations list of attributes
-        :param epsilon: from opencv: specifying the approximation accuracy. This is the maximum distance
-    .   between the original curve and its approximation. if 0 all points are returns
+        :param epsilon: from opencv: specifying the approximation accuracy. This is the maximum distance between the original curve and its approximation. if 0 all points are returns
         :param max_instances: number of max instances to return. if None all wil be returned
         :param min_area: remove polygons with area lower thn this threshold (pixels)
+
         :return: Polygon annotation
         """
         try:

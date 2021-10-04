@@ -146,7 +146,7 @@ class Executions:
                return_output=False,
                # misc
                return_curl_only=False,
-               timeout=3600) -> entities.Execution:
+               timeout=None) -> entities.Execution:
         """
         Execute a function on an existing service
 
@@ -162,7 +162,8 @@ class Executions:
         :param stream_logs: prints logs of the new execution. only works with sync=True
         :param return_output: if True and sync is True - will return the output directly
         :param return_curl_only: return the cURL of the creation WITHOUT actually do it
-        :param timeout: int, seconds to wait until TimeoutError is raised. if 0 - wait until done - by default wait 1H
+        :param timeout: int, seconds to wait until TimeoutError is raised. if <=0 - wait until done -
+         by default wait take the service timeout
         :return:
         """
         if service_id is None:
@@ -233,27 +234,7 @@ class Executions:
                                                  service=self._service)
 
         if sync and not return_output and not stream_logs:
-            elapsed = 0
-            start = int(time.time())
-            if timeout is None or timeout <= 0:
-                timeout = np.inf
-
-            i = 1
-            while elapsed < timeout:
-                execution = self.get(execution_id=execution.id)
-                if execution.latest_status['status'] not in ['inProgress', 'created']:
-                    break
-                elapsed = int(time.time()) - start
-                sleep_time = np.minimum(timeout - elapsed, 2 ** i)
-                time.sleep(sleep_time)
-                i += 1
-                if i > 18:
-                    break
-            if execution is None:
-                raise ValueError('Nothing to wait for')
-            if elapsed >= timeout:
-                raise TimeoutError("execution wait() got timeout. id: {!r}, status: {}".format(
-                    execution.id, execution.latest_status))
+            execution = self.wait(execution_id=execution.id, timeout=timeout)
 
         if sync and (stream_logs or return_output):
             thread = None
@@ -349,7 +330,7 @@ class Executions:
         """
         url_path = "/executions/{}".format(execution_id)
         if sync:
-            url_path += '?sync=true'
+            return self.wait(execution_id=execution_id)
 
         success, response = self._client_api.gen_request(req_type="get",
                                                          path=url_path)
@@ -426,31 +407,49 @@ class Executions:
                 service=self._service
             )
 
-    def wait(self, execution_id):
+    def wait(self, execution_id, timeout=None):
         """
         Get Service execution object
 
         :param execution_id:
+        :param timeout: int, seconds to wait until TimeoutError is raised. if <=0 - wait until done -
+         by default wait take the service timeout
         :return: Service execution object
         """
-        url_path = "/executions/{}?sync=true".format(execution_id)
+        url_path = "/executions/{}".format(execution_id)
+        elapsed = 0
+        start = int(time.time())
+        if timeout is not None and timeout <= 0:
+            timeout = np.inf
+
+        i = 1
         while True:
             success, response = self._client_api.gen_request(req_type="get",
                                                              path=url_path,
                                                              log_error=False)
-            if response.status_code in [500, 504]:
-                # while timing out continue wait
-                pass
-            else:
+            if not success:
+                raise exceptions.PlatformException(response)
+            # return entity
+            execution = entities.Execution.from_json(client_api=self._client_api,
+                                                     _json=response.json(),
+                                                     project=self._project,
+                                                     service=self._service)
+            if timeout is None:
+                timeout = execution.service.execution_timeout + 60
+            if execution.latest_status['status'] not in ['inProgress', 'created']:
                 break
-        # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
-        # return entity
-        return entities.Execution.from_json(client_api=self._client_api,
-                                            _json=response.json(),
-                                            project=self._project,
-                                            service=self._service)
+            elapsed = int(time.time()) - start
+            sleep_time = np.minimum(timeout - elapsed, 2 ** i)
+            time.sleep(sleep_time)
+            i += 1
+            if i > 18 or elapsed > timeout:
+                break
+        if execution is None:
+            raise ValueError('Nothing to wait for')
+        if elapsed >= timeout:
+            raise TimeoutError("execution wait() got timeout. id: {!r}, status: {}".format(
+                execution.id, execution.latest_status))
+        return execution
 
     def terminate(self, execution: entities.Execution):
         """

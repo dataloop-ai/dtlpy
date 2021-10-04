@@ -8,10 +8,8 @@ from .polygon import Polygon
 class Box(BaseAnnotationDefinition):
     """
         Box annotation object
-                Can create a box using 2 point using:
-         "top", "left", "bottom", "right" (to form a box [(left, top), (right, bottom)])
-        To create a rotated box need to input all 4 points using:
-         "top_left", "bottom_left", "bottom_right", "top_right" (each variable is in the form of [x,y])
+        Can create a box using 2 point using: "top", "left", "bottom", "right" (to form a box [(left, top), (right, bottom)])
+        For rotated box add the "angel"
     """
     type = "box"
 
@@ -174,9 +172,11 @@ class Box(BaseAnnotationDefinition):
     def from_segmentation(cls, mask, label, attributes=None):
         """
         Convert binary mask to Polygon
+
         :param mask: binary mask (0,1)
         :param label: annotation label
         :param attributes: annotations list of attributes
+
         :return: Box annotations list  to each separated  segmentation
         """
         polygons = Polygon.from_segmentation(

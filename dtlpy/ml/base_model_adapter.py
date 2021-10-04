@@ -88,9 +88,11 @@ class BaseModelAdapter:
         raise NotImplementedError("Please implement 'save' method in {}".format(self.__class__.__name__))
 
     def train(self, data_path, output_path, **kwargs):
-        """ Train the model according to data in data_paths and save the train outputs to output_path,
-            this include the weights and any other artifacts created during train
+        """
         Virtual method - need to implement
+
+        Train the model according to data in data_paths and save the train outputs to output_path,
+        this include the weights and any other artifacts created during train
 
         :param data_path: `str` local File System path to where the data was downloaded and converted at
         :param output_path: `str` local File System path where to dump training mid-results (checkpoints, logs...)
@@ -251,7 +253,8 @@ class BaseModelAdapter:
         :param cleanup: `bool` if set removes existing predictions with the same model-snapshot name (default: False)
         :param batch_size: `int` size of batch to run a single inference
         :param output_shape: `tuple` (width, height) of resize needed per image
-        :return: `List[dl.AnnotationCollection]' where all annotation in the collection are of type model.output_type
+
+        :return: `List[dl.AnnotationCollection]` where all annotation in the collection are of type model.output_type
                                                  and has prediction fields (model_info)
         """
         # TODO: do we want to add score filtering here?

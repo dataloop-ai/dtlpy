@@ -1,3 +1,5 @@
+import types
+
 import behave
 import os
 
@@ -16,10 +18,8 @@ def step_impl(context, get_method):
 
 @behave.then(u'Artifact "{resource}" was downloaded successfully')
 def step_impl(context, resource):
-    if not isinstance(context.artifact_get, list):
+    if not isinstance(context.artifact_get, list) and not isinstance(context.artifact_get, types.GeneratorType):
         context.artifact_get = [context.artifact_get]
-
-    assert len(context.artifact_get) > 0
 
     for artifact_get in context.artifact_get:
         assert os.path.isfile(artifact_get)

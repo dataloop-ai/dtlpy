@@ -1,6 +1,5 @@
 import logging
 import os
-import warnings
 
 from .. import entities, repositories
 
@@ -61,10 +60,11 @@ class Codebase:
 
 
 class GitCodebase(Codebase):
-    def __init__(self, git_url: str, git_tag: str):
+    def __init__(self, git_url: str, git_tag: str, credentials=None):
         super().__init__(package_codebase_type=PackageCodebaseType.GIT)
         self.git_url = git_url if git_url.endswith('.git') else git_url + '.git'
         self.git_tag = git_tag
+        self.credentials = credentials
         self._codebases = None
 
         # add .git prefix to the url
@@ -74,8 +74,8 @@ class GitCodebase(Codebase):
             self.git_url = git_url + '.git'
 
         if git_tag is None:
-            logger.warning("git_tag was set None. Using default 'main'!")
-            git_tag = 'main'
+            logger.warning("git_tag param not provided. Using 'master'!")
+            git_tag = 'master'
         self.git_tag = git_tag
 
     @property
@@ -89,6 +89,10 @@ class GitCodebase(Codebase):
         _json = super().to_json()
         _json['gitUrl'] = self.git_url
         _json['gitTag'] = self.git_tag
+
+        if self.credentials is not None:
+            _json['credentials'] = self.credentials
+
         return _json
 
     @classmethod
@@ -99,7 +103,8 @@ class GitCodebase(Codebase):
         """
         return cls(
             git_url=_json.get('gitUrl'),
-            git_tag=_json.get('gitTag')
+            git_tag=_json.get('gitTag'),
+            credentials=_json.get('credentials', None),
         )
 
     @property
@@ -110,6 +115,24 @@ class GitCodebase(Codebase):
     def git_repo_name(self):
         last = self.git_url.split('/')[-1]
         return os.path.splitext(last)[0]
+
+    @property
+    def git_username(self):
+        if self.credentials is not None:
+            return os.environ.get(
+                self.credentials.get('username', {}).get('key', ''),
+                None
+            )
+        return None
+
+    @property
+    def git_password(self):
+        if self.credentials is not None:
+            return os.environ.get(
+                self.credentials.get('password', {}).get('key', ''),
+                None
+            )
+        return None
 
     @staticmethod
     def is_git_repo(path):

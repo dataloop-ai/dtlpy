@@ -93,7 +93,8 @@ class SuperModelAdapter(BaseModelAdapter):
         :param cleanup: `bool` if set removes existing predictions with the same model-snapshot name (default: False)
         :param batch_size: `int` size of batch to run a single inference
         :param output_shape: `tuple` (width, height) of resize needed per image
-        :return: `List[Prediction]' `Prediction is set by model.output_type
+
+        :return: `List[Prediction]` Prediction is set by model.output_type
         """
         logger.debug("Predicting {} items, using batch size {}. Reshaping to: {}".
                      format(len(items), batch_size, output_shape))
@@ -270,8 +271,10 @@ class SuperModelAdapter(BaseModelAdapter):
     def aggregate_single_image_predictions(self, grids_predictions, by_class=False):
         """
          TEST FOR NMS WITH TORCH
+
         :param grids_predictions:
         :param by_class: `bool`
+
         :return:
         """
         scale_wh = (1, 1)  # # FIXME currently static

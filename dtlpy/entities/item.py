@@ -453,8 +453,10 @@ class Item(entities.BaseEntity):
     def update_status(self, status: ItemStatus, clear=False):
         """
         update item status
+
         :param status: "completed" ,"approved" ,"discarded"
         :param clear: bool -
+
         :return :True/False
         """
         if status not in list(ItemStatus):
@@ -488,6 +490,7 @@ class Item(entities.BaseEntity):
         Update Item description
 
         :param text: if None or "" description will be deleted
+
         :return
         """
         if text is None:

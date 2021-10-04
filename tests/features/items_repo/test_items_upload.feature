@@ -19,7 +19,7 @@ Feature: Items repository upload service testing
         And Upload method returned an Item object
         And Item object from host equals item uploaded
         And Item in host when downloaded to "test_items_upload_downloaded_item" equals item in "assets_split/items_upload/0000000162.jpg"
-    
+
     Scenario: Upload a single item with a specific remote name set via the buffer interface
         When I upload file in path "assets_split/items_upload/0000000162.jpg" with remote name "file.jpg" set via the buffer interface
         Then Item exist in host

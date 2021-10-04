@@ -87,8 +87,9 @@ class Bucket:
 
     def empty_bucket(self, sure: bool = False):
         """
-            delete the entire bucket's content
-        param sure: bool. must be True to perform the action
+        Delete the entire bucket's content
+
+        :param sure: bool. must be True to perform the action
         """
         self.buckets.empty_bucket(bucket=self, sure=sure)
 

@@ -401,7 +401,7 @@ class Services:
     def _create(self, service_name=None, package=None, module_name=None, bot=None, revision=None, init_input=None,
                 runtime=None, pod_type=None, project_id=None, sdk_version=None, agent_versions=None, verify=True,
                 driver_id=None, run_execution_as_process=None, execution_timeout=None, drain_time=None, on_reset=None,
-                max_attempts=None, **kwargs) -> entities.Service:
+                max_attempts=None, secrets=None, **kwargs) -> entities.Service:
         """
         Create service entity
         :param service_name:
@@ -422,6 +422,7 @@ class Services:
         :param drain_time:
         :param on_reset:
         :param max_attempts:
+        :param secrets: list of the integrations ids
         :param kwargs:
         :return:
         """
@@ -473,8 +474,13 @@ class Services:
             'versions': agent_versions,
             'moduleName': module_name,
             'packageRevision': revision if revision is not None else package.version,
-            'driverId': driver_id
+            'driverId': driver_id,
         }
+
+        if secrets is not None:
+            if not isinstance(secrets, list):
+                secrets = [secrets]
+            payload['secrets'] = secrets
 
         if runtime is not None:
             if isinstance(runtime, entities.KubernetesRuntime):
@@ -602,7 +608,7 @@ class Services:
         :param checkpoint:
         :param start: iso format time
         :param end: iso format time
-        :param follow: filters
+        :param follow: keep stream future logs
         :param text:
         :param execution_id:
         :param function_name:
@@ -763,6 +769,7 @@ class Services:
                max_attempts: int = None,
                on_reset: str = None,
                force: bool = False,
+               secrets: list = None,
                **kwargs) -> entities.Service:
         """
         Deploy service
@@ -788,13 +795,14 @@ class Services:
         :param max_attempts: Maximum execution retries in-case of a service reset
         :param on_reset:
         :param force: optional - terminate old replicas immediately
+        :param secrets: list of the integrations ids
         :param kwargs:
         :return:
         """
         package = package if package is not None else self._package
         if service_name is None:
             get_name = False
-            if package.service_config is not None and 'name' in package.service_config:
+            if package is not None and package.service_config is not None and 'name' in package.service_config:
                 service_name = package.service_config['name']
                 get_name = True
             else:
@@ -811,7 +819,7 @@ class Services:
                            'Next time use a 3-level semver for package/service versions'.format(revision))
 
         if func is not None:
-            return self.__deploy_function(name=service_name, project=self._project, func=func)
+            package = self.__deploy_function(name=service_name, project=self._project, func=func)
 
         if init_input is not None and not isinstance(init_input, dict):
             if not isinstance(init_input, list):
@@ -856,6 +864,10 @@ class Services:
                 service.versions = agent_versions
             if driver_id is not None:
                 service.driver_id = driver_id
+            if secrets is not None:
+                if not isinstance(secrets, list):
+                    secrets = [secrets]
+                service.secrets = secrets
             service = self.update(service=service, force=force)
         else:
             service = self._create(service_name=service_name,
@@ -877,7 +889,9 @@ class Services:
                                    execution_timeout=execution_timeout,
                                    drain_time=drain_time,
                                    max_attempts=max_attempts,
-                                   on_reset=on_reset)
+                                   on_reset=on_reset,
+                                   secrets=secrets
+                                   )
         if checkout:
             self.checkout(service=service)
         return service
@@ -907,7 +921,7 @@ class Services:
     def __deploy_function(self,
                           name: str,
                           func: Callable,
-                          project: entities.Project) -> entities.Service:
+                          project: entities.Project) -> entities.Package:
         package_dir = tempfile.mkdtemp()
         # imports_string = self.__get_import_string()
         imports_string = ''
@@ -929,7 +943,7 @@ class Services:
         return packages.push(src_path=package_dir,
                              package_name=name,
                              checkout=True,
-                             modules=[module]).deploy(service_name=name)
+                             modules=[module])
 
     def deploy_from_local_folder(self, cwd=None, service_file=None, bot=None, checkout=False,
                                  force=False) -> entities.Service:

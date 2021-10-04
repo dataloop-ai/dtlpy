@@ -226,11 +226,32 @@ class AnnotationCollection(entities.BaseEntity):
         except Exception as e:
             raise ValueError(e)
 
+    def _set_flip_args(self, orientation):
+        try:
+            import cv2
+        except (ImportError, ModuleNotFoundError):
+            logger.error(
+                'Import Error! Cant import cv2. that make the exif orientation not supported')
+            raise
+        if orientation == 3:
+            return cv2.ROTATE_180, cv2.ROTATE_180, 0
+        elif orientation == 4:
+            return cv2.ROTATE_180, cv2.ROTATE_180, 1
+        elif orientation == 5:
+            return cv2.ROTATE_90_CLOCKWISE, cv2.ROTATE_90_COUNTERCLOCKWISE, 1
+        elif orientation == 6:
+            return cv2.ROTATE_90_CLOCKWISE, cv2.ROTATE_90_COUNTERCLOCKWISE, 0
+        elif orientation == 7:
+            return cv2.ROTATE_90_COUNTERCLOCKWISE, cv2.ROTATE_90_CLOCKWISE, 1
+        else:
+            return cv2.ROTATE_90_COUNTERCLOCKWISE, cv2.ROTATE_90_CLOCKWISE, 0
+
     def download(self, filepath, img_filepath=None,
                  annotation_format: entities.ViewAnnotationOptions = entities.ViewAnnotationOptions.MASK,
                  height=None,
                  width=None, thickness=1,
-                 with_text=False):
+                 with_text=False,
+                 orientation=0):
         """
             Save annotations to file
 
@@ -241,6 +262,7 @@ class AnnotationCollection(entities.BaseEntity):
         :param width: width
         :param thickness: thickness
         :param with_text: add a text to the image
+        :param orientation: the image orientation
         :return:
         """
         dir_name, ex = os.path.splitext(filepath)
@@ -274,13 +296,27 @@ class AnnotationCollection(entities.BaseEntity):
                     return filepath
                 annotation_format = entities.ViewAnnotationOptions.MASK
                 image = np.asarray(Image.open(img_filepath))
+            if orientation in [3, 4, 5, 6, 7, 8]:
+                try:
+                    import cv2
+                except (ImportError, ModuleNotFoundError):
+                    logger.error(
+                        'Import Error! Cant import cv2. that make the exif orientation not supported')
+                    raise
+                first_rotate, second_rotate, flip = self._set_flip_args(orientation=orientation)
+                image = cv2.rotate(image, first_rotate)
+                if flip:
+                    image = np.flip(image, 1)
             mask = self.show(image=image,
                              thickness=thickness,
                              with_text=with_text,
                              height=height,
                              width=width,
                              annotation_format=annotation_format)
-            img = Image.fromarray(mask.astype(np.uint8))
+            if orientation not in [3, 4, 5, 6, 7, 8]:
+                img = Image.fromarray(mask.astype(np.uint8))
+            else:
+                img = Image.fromarray(cv2.rotate(mask.astype(np.uint8), second_rotate))
             img.save(filepath)
         elif annotation_format == entities.ViewAnnotationOptions.VTT:
             if not ex:

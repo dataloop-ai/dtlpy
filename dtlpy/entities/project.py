@@ -47,7 +47,7 @@ class Project(entities.BaseEntity):
         reps = namedtuple('repositories',
                           'projects triggers datasets items recipes packages codebases artifacts times_series services '
                           'executions assignments tasks bots webhooks models analytics ontologies snapshots buckets '
-                          'drivers pipelines feature_sets features')
+                          'drivers pipelines feature_sets features integrations')
         datasets = repositories.Datasets(client_api=self._client_api, project=self)
         artifacts = repositories.Artifacts(project=self, client_api=self._client_api)
         r = reps(projects=repositories.Projects(client_api=self._client_api),
@@ -74,6 +74,7 @@ class Project(entities.BaseEntity):
                  pipelines=repositories.Pipelines(client_api=self._client_api, project=self),
                  feature_sets=repositories.FeatureSets(client_api=self._client_api, project=self),
                  features=repositories.Features(client_api=self._client_api, project=self),
+                 integrations=repositories.Integrations(client_api=self._client_api, project=self),
                  )
         return r
 
@@ -81,6 +82,11 @@ class Project(entities.BaseEntity):
     def drivers(self):
         assert isinstance(self._repositories.drivers, repositories.Drivers)
         return self._repositories.drivers
+
+    @property
+    def integrations(self):
+        assert isinstance(self._repositories.integrations, repositories.Integrations)
+        return self._repositories.integrations
 
     @property
     def platform_url(self):

@@ -450,7 +450,9 @@ class Items:
             remote_name=None,
             file_types=None,
             overwrite=False,
-            item_metadata=None
+            item_metadata=None,
+            output_entity=entities.Item,
+            no_output=False
     ):
         """
         Upload local file to dataset.
@@ -465,6 +467,8 @@ class Items:
         :param file_types: list of file type to upload. e.g ['.jpg', '.png']. default is all
         :param item_metadata:
         :param overwrite: optional - default = False
+        :param output_entity: output type
+        :param no_output: do not return the items after upload
         :return: Output (list/single item)
         """
         # fix remote path
@@ -473,7 +477,7 @@ class Items:
                 remote_path = '/' + remote_path
 
         # initiate and use uploader
-        uploader = repositories.Uploader(self)
+        uploader = repositories.Uploader(items_repository=self, output_entity=output_entity, no_output=no_output)
         return uploader.upload(
             local_path=local_path,
             local_annotations_path=local_annotations_path,

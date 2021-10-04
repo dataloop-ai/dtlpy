@@ -4,6 +4,7 @@ from multiprocessing import Lock
 from .base_package_runner import Progress
 from .. import exceptions, entities, dtlpy_services
 import xml.etree.ElementTree as Et
+from ..services import Reporter
 from itertools import groupby
 from PIL import Image
 import numpy as np
@@ -78,6 +79,7 @@ class COCOUtils:
                 raise Exception('To use this functionality please install pycocotools:  "pip install pycocotools"')
             img = coco_utils_mask.decode(rle)
             return img
+
 
     @staticmethod
     def rle_to_binary_polygon(segmentation):
@@ -188,9 +190,10 @@ class Converter:
                     fp.write("{}\n".format(label))
 
         pbar = tqdm.tqdm(total=pages.items_count)
-        reporter = dtlpy_services.Reporter(num_workers=pages.items_count,
-                                           resource=dtlpy_services.Reporter.CONVERTER,
-                                           print_error_logs=self.dataset._client_api.verbose.print_error_logs)
+        reporter = Reporter(num_workers=pages.items_count,
+                            resource=Reporter.CONVERTER,
+                            print_error_logs=self.dataset._client_api.verbose.print_error_logs,
+                            client_api=self.dataset._client_api)
         for page in pages:
             for item in page:
                 # create input annotations json
@@ -273,15 +276,15 @@ class Converter:
                     raise Exception('Partial conversion: \n{}'.format(errors))
 
                 if reporter is not None and i_item is not None:
-                    reporter.set_index(i_item=i_item, status='success', success=True)
+                    reporter.set_index(status='success', success=True, ref=item.id)
             else:
                 if reporter is not None and i_item is not None:
-                    reporter.set_index(i_item=i_item, status='skip', success=True)
+                    reporter.set_index(ref=item.id, status='skip', success=True)
             if reporter is not None:
                 self.__update_progress(total=reporter.num_workers, of_total=i_item)
         except Exception:
             if reporter is not None and i_item is not None:
-                reporter.set_index(i_item=i_item, status='failed', success=False, error=traceback.format_exc(),
+                reporter.set_index(status='failed', success=False, error=traceback.format_exc(),
                                    ref=item.id)
 
     @staticmethod
@@ -327,9 +330,10 @@ class Converter:
         item_id_counter = 0
         pool = ThreadPool(processes=11)
         pbar = tqdm.tqdm(total=pages.items_count)
-        reporter = dtlpy_services.Reporter(num_workers=pages.items_count,
-                                           resource=dtlpy_services.Reporter.CONVERTER,
-                                           print_error_logs=dataset._client_api.verbose.print_error_logs)
+        reporter = Reporter(num_workers=pages.items_count,
+                            resource=Reporter.CONVERTER,
+                            print_error_logs=dataset._client_api.verbose.print_error_logs,
+                            client_api=dataset._client_api)
         for page in pages:
             for item in page:
                 pool.apply_async(func=self.__single_item_to_coco,
@@ -520,12 +524,12 @@ class Converter:
                 success, errors = self._sort_annotations(annotations=item_converted_annotations)
                 converted_annotations[item_id] = success
                 if errors:
-                    reporter.set_index(i_item=item_id, ref=item.id, status='failed', success=False,
+                    reporter.set_index(ref=item.id, status='failed', success=False,
                                        error=errors)
                 else:
-                    reporter.set_index(i_item=item_id, status='success', success=True)
+                    reporter.set_index(ref=item.id, status='success', success=True)
         except Exception:
-            reporter.set_index(i_item=item_id, ref=item.id, status='failed', success=False,
+            reporter.set_index(ref=item.id, status='failed', success=False,
                                error=traceback.format_exc())
             raise
 
@@ -647,9 +651,10 @@ class Converter:
     def _upload_annotations(self, local_annotations_path, from_format, **kwargs):
         self._only_bbox = kwargs.get('only_bbox', False)
         file_count = self.remote_items.items_count
-        reporter = dtlpy_services.Reporter(num_workers=file_count,
-                                           resource=dtlpy_services.Reporter.CONVERTER,
-                                           print_error_logs=self.dataset._client_api.verbose.print_error_logs)
+        reporter = Reporter(num_workers=file_count,
+                            resource=Reporter.CONVERTER,
+                            print_error_logs=self.dataset._client_api.verbose.print_error_logs,
+                            client_api=self.dataset._client_api)
         pbar = tqdm.tqdm(total=file_count)
         pool = ThreadPool(processes=6)
         i_item = 0
@@ -671,7 +676,7 @@ class Converter:
                     raise exceptions.PlatformException('400', 'Unknown annotation format: {}'.format(from_format))
                 if not found:
                     pbar.update()
-                    reporter.set_index(i_item=i_item, ref=item.filename, status='skip', success=False,
+                    reporter.set_index(ref=item.filename, status='skip', success=False,
                                        error='Cannot find annotations for item')
                     i_item += 1
                     continue
@@ -716,9 +721,10 @@ class Converter:
         file_count = sum(len([file for file in files if not file.endswith('.xml')]) for _, _, files in
                          os.walk(local_items_path))
 
-        reporter = dtlpy_services.Reporter(num_workers=file_count,
-                                           resource=dtlpy_services.Reporter.CONVERTER,
-                                           print_error_logs=self.dataset._client_api.verbose.print_error_logs)
+        reporter = Reporter(num_workers=file_count,
+                            resource=Reporter.CONVERTER,
+                            print_error_logs=self.dataset._client_api.verbose.print_error_logs,
+                            client_api=self.dataset._client_api)
         pbar = tqdm.tqdm(total=file_count)
 
         pool = ThreadPool(processes=6)
@@ -806,23 +812,20 @@ class Converter:
                                                          pbar=pbar)
             if errors:
                 if reporter is not None and i_item is not None:
-                    reporter.set_index(i_item=i_item,
-                                       ref=report_ref,
+                    reporter.set_index(ref=report_ref,
                                        status='warning',
                                        success=False,
                                        error='partial annotations upload: \n{}'.format(errors))
             else:
                 if reporter is not None and i_item is not None:
-                    reporter.set_index(i_item=i_item,
-                                       status='success',
+                    reporter.set_index(status='success',
                                        success=True,
                                        ref=report_ref)
             if reporter is not None:
                 self.__update_progress(total=reporter.num_workers, of_total=i_item)
         except Exception:
             if reporter is not None and i_item is not None:
-                reporter.set_index(i_item=i_item,
-                                   status='failed',
+                reporter.set_index(status='failed',
                                    success=False,
                                    error=traceback.format_exc(),
                                    ref=report_ref)
@@ -881,9 +884,10 @@ class Converter:
         :return:
         """
         file_count = sum(len(files) for _, _, files in os.walk(local_path))
-        reporter = dtlpy_services.Reporter(num_workers=file_count,
-                                           resource=dtlpy_services.Reporter.CONVERTER,
-                                           print_error_logs=self.dataset._client_api.verbose.print_error_logs)
+        reporter = Reporter(num_workers=file_count,
+                            resource=Reporter.CONVERTER,
+                            print_error_logs=self.dataset._client_api.verbose.print_error_logs,
+                            client_api=self.dataset._client_api)
         self.dataset = dataset
 
         pool = ThreadPool(processes=6)
@@ -934,12 +938,12 @@ class Converter:
                 conversion_func=conversion_func
             )
             if errors:
-                reporter.set_index(i_item=i_item, ref=file_path, status='warning', success=False,
+                reporter.set_index(ref=file_path, status='warning', success=False,
                                    error='partial annotations upload')
             else:
-                reporter.set_index(i_item=i_item, status='success', success=True)
+                reporter.set_index(ref=file_path, status='success', success=True)
         except Exception:
-            reporter.set_index(i_item=i_item, ref=file_path, status='failed', success=False,
+            reporter.set_index(ref=file_path, status='failed', success=False,
                                error=traceback.format_exc())
             raise
 

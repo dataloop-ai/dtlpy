@@ -388,7 +388,8 @@ class Package(entities.BaseEntity):
         :param modules: list of PackageModule
         :param revision_increment: optional - str - version bumping method - major/minor/patch - default = None
         :param  service_update: optional - bool - update the service
-        :param  service_config : optional - json of service - a service that have config from the main service if wanted
+        :param  service_config: optional - json of service - a service that have config from the main service if wanted
+
         :return:
         """
         return self.project.packages.push(

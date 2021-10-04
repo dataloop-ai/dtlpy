@@ -295,7 +295,8 @@ class Artifacts:
 
         artifact = self.items_repository.upload(local_path=filepath,
                                                 remote_path=remote_path,
-                                                overwrite=overwrite)
+                                                overwrite=overwrite,
+                                                output_entity=entities.Artifact)
 
         logger.debug('Artifact uploaded successfully')
         return artifact

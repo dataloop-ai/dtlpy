@@ -610,8 +610,9 @@ class Datasets:
             pool = dataset._client_api.thread_pools(pool_name='dataset.download')
             jobs = [None for _ in range(pages.items_count)]
             progress = tqdm.tqdm(total=pages.items_count)
+            i_item = 0
             for page in pages:
-                for i_item, item in enumerate(page):
+                for item in page:
                     jobs[i_item] = pool.submit(
                         Datasets._convert_single,
                         **{
@@ -627,6 +628,7 @@ class Datasets:
                             'progress': progress
                         }
                     )
+                    i_item += 1
             # get all results
             _ = [j.result() for j in jobs]
             progress.close()

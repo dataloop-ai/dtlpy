@@ -43,3 +43,5 @@ from .pipeline_executions import PipelineExecutions
 from .features import Features
 from .feature_sets import FeatureSets
 from .organizations import Organizations
+from .integrations import Integrations
+from .drivers import Drivers

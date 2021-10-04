@@ -18,4 +18,5 @@ dictdiffer>=0.8.0
 validators>=0.13.0
 pathspec
 filelock==3.0.12
+diskcache==5.2.1
 #scipy==1.7.1

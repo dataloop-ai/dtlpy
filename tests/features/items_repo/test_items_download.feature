@@ -26,7 +26,7 @@ Feature: Items repository download service testing
         And I upload an item by the name of "test_item.jpg"
         When I download without saving an item by the id of "/test_item.jpg"
         Then I receive item data
-        When I upload item data by name of "/test_item2.jpg"
+        When I upload item data by name of "test_item2.jpg"
         Then Item uploaded from data equals initial item uploaded
 
 

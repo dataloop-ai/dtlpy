@@ -224,23 +224,23 @@ class Buckets:
                ):
         """
         Create a new bucket- directory contains the artifacts (weights and other configurations) of the model.
-        :param bucket_type: `dl.BucketType`: Local, Item, Gcs
-            Local Bucket: is simply a the path to where the bucket is stored locally . environment vars are valid
-            Item Bucket: is used when you want to store your binary files of the model on our Dataloop Platform,
-                they are saved i a different dataset in a defined path
-            Gcs Bucket: is used when you have a Google Cloud Storage bucket and you can connect to it,
-                save / download your models directly to the bucket
-        :param local_path:  `str` where were the weights are currently saved - what directory to upload to the bucket
+        Available Bucket type:
+        Local Bucket: is simply a the path to where the bucket is stored locally . environment vars are valid
+        Item Bucket: is used when you want to store your binary files of the model on our Dataloop Platform, they are saved i a different dataset in a defined path
+        Gcs Bucket: is used when you have a Google Cloud Storage bucket and you can connect to it, save / download your models directly to the bucket
 
+        :param bucket_type: `dl.BucketType`: Local, Item, Gcs
+        :param local_path:  `str` where were the weights are currently saved - what directory to upload to the bucket
         :param gcs_project_name: `str` project name in your GCS (Google Cloud Storage) platform
         :param gcs_bucket_name:  `str` bucket name in your GCS
         :param gcs_prefix:  `str` prefix/ remote path of where your bucket is defined in GCS
-
         :param model_name: `str` optional to override the repo settings
         :param snapshot_name: `str` = optional to override the repo settings
         :param use_existing_gcs:
+
         :return: `dl.Bucket`
         """
+
         if bucket_type == entities.BucketType.ITEM:
             artifacts = repositories.Artifacts(project=self._project,
                                                project_id=self._project_id,
@@ -294,8 +294,11 @@ class Buckets:
 
     def empty_bucket(self, bucket, sure: bool = False):
         """
-            delete the entire bucket's content
-        param sure: bool. must be True to perform the action
+        delete the entire bucket's content
+
+        :param sure: `bool` must be True to perform the action
+
+        :return: True is deletion was successful
         """
 
         if not sure:

@@ -76,7 +76,7 @@ def step_impl(context, item_path):
 
 @behave.then(u'verify pipeline flow result')
 def step_impl(context):
-    time.sleep(10)
+    time.sleep(15)
     context.item = context.dataset.items.get(item_id=context.item.id)
     assert context.item.metadata['system'].get('fromPipe', False)
     context.item = context.dataset.items.get(item_id=context.item.id)
@@ -90,6 +90,6 @@ def step_impl(context):
         path='/assignments/{}/items/{}/status'.format(ass_id, context.item.id),
         json_req=payload
     )
-    time.sleep(20)
+    time.sleep(25)
     context.item = context.dataset.items.get(item_id=context.item.id)
     assert context.item.metadata['user'] == {'Hello': 'World'}

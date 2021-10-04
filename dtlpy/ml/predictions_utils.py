@@ -148,6 +148,7 @@ def measure_annotations(
     :param test_annotations: dl.AnnotationCollection entity with a list of annotations to test against ref_annotations (GT)
     :param ref_annotations: dl.AnnotationCollection entity with a list of annotations to perform as ground truth for the measure
     :param geometry_only: ignore label when comparing - measure only geometry
+
     Returns a dictionary of all the compare data
     """
 

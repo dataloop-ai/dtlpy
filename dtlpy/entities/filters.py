@@ -38,7 +38,7 @@ class FiltersResource(str, Enum):
     FEATURE = 'feature_vectors'
     FEATURE_SET = 'feature_sets'
     ORGANIZATIONS = 'organizations'
-
+    DRIVERS = 'drivers'
 
 class FiltersOperations(str, Enum):
     OR = "or"

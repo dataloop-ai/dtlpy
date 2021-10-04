@@ -562,8 +562,9 @@ class Ontology(entities.BaseEntity):
         :param label:
         :param add:
         :param icon_path: path to image to be display on label
-        :param upsert if True will add in case it does not existing
+        :param upsert: if True will add in case it does not existing
         :param update_ontology: update the ontology, default = False for backward compatible
+
         :return: Label entity
         """
         if upsert:
@@ -579,12 +580,13 @@ class Ontology(entities.BaseEntity):
         """
         Update a list of labels to ontology
 
-        :param label_list: list of labels [{"value": {"tag": "tag", "displayLabel": "displayLabel",
-                                            "color": "#color", "attributes": [attributes]}, "children": [children]}]
-        :param upsert if True will add in case it does not existing
+        :param label_list: list of labels [{"value": {"tag": "tag", "displayLabel": "displayLabel", "color": "#color", "attributes": [attributes]}, "children": [children]}]
+        :param upsert: if True will add in case it does not existing
         :param update_ontology: update the ontology, default = False for backward compatible
+
         :return: List of label entities added
         """
+
         if upsert:
             mode = LabelHandlerMode.UPSERT
         else:

@@ -55,7 +55,7 @@ from .entities import (
     Modality, ModalityTypeEnum, ModalityRefTypeEnum,
     Workload, WorkloadUnit, ItemAction,
     PipelineExecution, PipelineExecutionNode, Pipeline, PipelineConnection, PipelineNode,
-    PipelineConnectionPort, PipelineNodeIO, Organization, OrganizationsPlans
+    PipelineConnectionPort, PipelineNodeIO, Organization, OrganizationsPlans, Integration, Driver, ExternalStorage
 )
 from .ml import BaseModelAdapter, SuperModelAdapter
 from .utilities import Converter, BaseServiceRunner, Progress, AnnotationFormat
@@ -129,6 +129,8 @@ pipeline_executions = repositories.PipelineExecutions(client_api=client_api)
 feature_sets = repositories.FeatureSets(client_api=client_api)
 features = repositories.Features(client_api=client_api)
 organizations = repositories.Organizations(client_api=client_api)
+integrations = repositories.Integrations(client_api=client_api)
+drivers = repositories.Drivers(client_api=client_api)
 
 try:
     check_sdk.check(version=__version__, client_api=client_api)

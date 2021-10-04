@@ -1,9 +1,15 @@
 import logging
 import attr
-
+from enum import Enum
 from .. import services, entities
 
 logger = logging.getLogger(name=__name__)
+
+
+class ExternalStorage(str, Enum):
+    S3 = "s3"
+    GCS = "gcs"
+    AZUREBLOB = "azureblob"
 
 
 @attr.s()

@@ -275,8 +275,9 @@ class Execution(entities.BaseEntity):
 
     def logs(self, follow=False):
         """
-        :param follow:
         Print logs for execution
+
+        :param follow: keep stream future logs
         """
         self.services.log(execution_id=self.id,
                           view=True,

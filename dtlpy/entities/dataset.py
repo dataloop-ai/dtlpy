@@ -598,8 +598,9 @@ class Dataset(entities.BaseEntity):
         :param label:
         :param recipe_id: optional
         :param ontology_id: optional
-        :param upsert if True will add in case it does not existing
+        :param upsert: if True will add in case it does not existing
         :param icon_path: path to image to be display on label
+
         :return: label entity
         """
         # get recipe
@@ -633,7 +634,8 @@ class Dataset(entities.BaseEntity):
         :param label_list:
         :param ontology_id: optional
         :param recipe_id: optional
-        :param upsert if True will add in case it does not existing
+        :param upsert: if True will add in case it does not existing
+
         :return: label entities
         """
         # get recipe
@@ -711,12 +713,12 @@ class Dataset(entities.BaseEntity):
     def download_partition(self, partition, local_path=None, filters=None):
         """
         Download a specific partition of the dataset to local_path
-
         This function is commonly used with dl.ModelAdapter which implements thc convert to specific model structure
 
         :param partition: `dl.SnapshotPartitionType` name of the partition
         :param local_path: local path directory to download the data
         :param filters:  dl.entities.Filters to add the specific partitions constraint to
+
         :return List `str` of the new downloaded path of each item
         """
         if local_path is None:

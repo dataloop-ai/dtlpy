@@ -68,6 +68,7 @@ class Annotations:
             Get a single annotation
 
         :param annotation_id:
+
         :return: Annotation object or None
         """
         success, response = self._client_api.gen_request(req_type='get',
@@ -513,9 +514,12 @@ class Annotations:
                       status: entities.AnnotationStatus = entities.AnnotationStatus.ISSUE):
         """
         Set status on annotation
+
         :param annotation: optional - Annotation entity
         :param annotation_id: optional - annotation id to set status
         :param status: can be AnnotationStatus.ISSUE, AnnotationStatus.APPROVED, AnnotationStatus.REVIEW, AnnotationStatus.CLEAR
+
+        :return: Annotation object
         """
         if annotation is None:
             if annotation_id is None:
@@ -524,7 +528,7 @@ class Annotations:
         if status not in list(entities.AnnotationStatus):
             raise ValueError('status must be on of: {}'.format(', '.join(list(entities.AnnotationStatus))))
         annotation.status = status
-        annotation.update(system_metadata=True)
+        return annotation.update(system_metadata=True)
 
     def builder(self):
         return entities.AnnotationCollection(item=self.item)

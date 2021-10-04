@@ -14,6 +14,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
 from .. import entities, miscellaneous, PlatformException, dtlpy_services, exceptions
+from ..services import Reporter
 
 logger = logging.getLogger(name=__name__)
 
@@ -202,9 +203,10 @@ class Downloader:
         # create result lists
         client_api = self.items_repository._client_api
 
-        reporter = dtlpy_services.Reporter(num_workers=num_items,
-                                           resource=dtlpy_services.Reporter.ITEMS_DOWNLOAD,
-                                           print_error_logs=client_api.verbose.print_error_logs)
+        reporter = Reporter(num_workers=num_items,
+                            resource=Reporter.ITEMS_DOWNLOAD,
+                            print_error_logs=client_api.verbose.print_error_logs,
+                            client_api=client_api)
         jobs = [None for _ in range(num_items)]
         # pool
         pool = client_api.thread_pools(pool_name='item.download')
@@ -226,7 +228,7 @@ class Downloader:
 
                         if os.path.isfile(item_local_filepath) and not overwrite:
                             logger.debug("File Exists: {}".format(item_local_filepath))
-                            reporter.set_index(i_item=i_item, status='exist', output=item_local_filepath, success=True)
+                            reporter.set_index(ref=item.id, status='exist', output=item_local_filepath, success=True)
                             pbar.update()
                             if annotation_options and item.annotated:
                                 # download annotations only
@@ -287,7 +289,11 @@ class Downloader:
             log_filepath = reporter.generate_log_files()
             if log_filepath is not None:
                 logger.warning("Errors in {} files. See {} for full log".format(n_error, log_filepath))
-
+        if int(n_download) <= 1:
+            try:
+                return next(reporter.output)
+            except StopIteration:
+                return None
         return reporter.output
 
     def __thread_download_wrapper(self, i_item,
@@ -333,10 +339,10 @@ class Downloader:
         if download is None:
             if err is None:
                 err = self.items_repository._client_api.platform_exception
-            reporter.set_index(i_item=i_item, status="error", ref=item.id, success=False,
+            reporter.set_index(status="error", ref=item.id, success=False,
                                error="{}\n{}".format(err, trace))
         else:
-            reporter.set_index(i_item=i_item, status="download", output=download, success=True)
+            reporter.set_index(ref=item.id, status="download", output=download, success=True)
 
     @staticmethod
     def download_annotations(dataset: entities.Dataset,
@@ -440,8 +446,16 @@ class Downloader:
                           get('shebang', dict()). \
                           get('linkInfo', dict()). \
                           get('type', None) == 'url'
+
+        if item is not None:
+            orientation = item.system.get('exif', {}).get('Orientation', 0)
+        else:
+            orientation = 0
         if item.width is not None and item.height is not None:
-            img_shape = (item.height, item.width)
+            if orientation in [5, 6, 7, 8]:
+                img_shape = (item.width, item.height)
+            else:
+                img_shape = (item.height, item.width)
         elif ('image' in item.mimetype and img_filepath is not None) or \
                 (is_url_item and img_filepath is not None):
             img_shape = Image.open(img_filepath).size[::-1]
@@ -493,7 +507,8 @@ class Downloader:
                         height=img_shape[0],
                         width=img_shape[1],
                         thickness=thickness,
-                        with_text=with_text
+                        with_text=with_text,
+                        orientation=orientation
                     )
             else:
                 raise PlatformException(error="400", message="Unknown annotation option: {}".format(option))

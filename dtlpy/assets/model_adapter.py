@@ -43,9 +43,10 @@ class ModelAdapter(dl.BaseModelAdapter):
         raise NotImplementedError("Please implement 'save' method in {}".format(self.__class__.__name__))
 
     def train(self, data_path, dump_path, **kwargs):
-        """ Train the model according to data in local_path and save the snapshot to dump_path
+        """
+        Virtual method - need to implement
+        Train the model according to data in local_path and save the snapshot to dump_path
 
-            Virtual method - need to implement
         :param data_path: `str` local File System path to where the data was downloaded and converted at
         :param dump_path: `str` local File System path where to dump training mid-results (checkpoints, logs...)
         """
@@ -137,8 +138,10 @@ class ModelAdapter(dl.BaseModelAdapter):
         :param cleanup: `bool` if set removes existing predictions with the same model-snapshot name (default: False)
         :param batch_size: `int` size of batch to run a single inference
         :param output_shape: `tuple` (width, height) of resize needed per image
-        :return: `List[Prediction]' `Prediction is set by model.output_type
+
+        :return: `List[Prediction]` Prediction is set by model.output_type
         """
+
         return super(ModelAdapter, self).predict_items(items=items,
                                                        with_upload=with_upload,
                                                        cleanup=cleanup,

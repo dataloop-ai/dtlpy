@@ -47,10 +47,12 @@ class Organization(entities.BaseEntity):
     @_repositories.default
     def set_repositories(self):
         reps = namedtuple('repositories',
-                          field_names=['organizations', 'projects'])
+                          field_names=['organizations', 'projects', 'integrations'])
 
         r = reps(projects=repositories.Projects(client_api=self._client_api, org=self),
-                 organizations=repositories.Organizations(client_api=self._client_api))
+                 organizations=repositories.Organizations(client_api=self._client_api),
+                 integrations=repositories.Integrations(client_api=self._client_api, org=self)
+                 )
         return r
 
     @property
@@ -67,13 +69,19 @@ class Organization(entities.BaseEntity):
         assert isinstance(self._repositories.organizations, repositories.Organizations)
         return self._repositories.organizations
 
+    @property
+    def integrations(self):
+        assert isinstance(self._repositories.integrations, repositories.Integrations)
+        return self._repositories.integrations
+
     @staticmethod
     def _protected_from_json(_json, client_api):
         """
         Same as from_json but with try-except to catch if error
         :param _json: platform json
         :param client_api: ApiClient entity
-        :return:
+
+        :return: update status: bool, Organization entity
         """
         try:
             organization = Organization.from_json(_json=_json,
@@ -92,6 +100,7 @@ class Organization(entities.BaseEntity):
         :param is_fetched: is Entity fetched from Platform
         :param _json: _json response from host
         :param client_api: ApiClient entity
+
         :return: Project object
         """
         inst = cls(members=_json.get('members', None),
@@ -158,6 +167,9 @@ class Organization(entities.BaseEntity):
         get organization integrations
 
         """
+        logger.warning('Deprecation Warning - get_integrations will not use from 1.40.0'
+                       'Next time use a org.integrations.get() or project.integrations.get()')
+
         return self.organizations.get_integrations(organization=self, integrations_id=integrations_id)
 
     def list_members(self, role: MemberOrgRole = None):
@@ -209,13 +221,19 @@ class Organization(entities.BaseEntity):
     def add_integrations(self, integrations_type, name, options):
         """
         Add integrations to the Organization
+        Options for each type should be a dict with the following:
+        s3 - {key: "", secret: ""}
+        gcs - {key: "", secret: "", content: ""},
+        azureblob - {key: "", secret: "", clientId: "", tenantId: ""}
+
         :param integrations_type: "s3" , "gcs", "azureblob"
         :param name: integrations name
-        :param options: s3 - {key: "", secret: ""},
-                        gcs - {key: "", secret: "", content: ""},
-                        azureblob - {key: "", secret: "", clientId: "", tenantId: ""}
+        :param options: dict options for each type
+
         :return: True
         """
+        logger.warning('Deprecation Warning - get_integrations will not use from 1.40.0'
+                       'Next time use a org.integrations.create() or project.integrations.create()')
         return self.organizations.add_integrations(organization=self,
                                                    integrations_type=integrations_type,
                                                    name=name,
@@ -231,6 +249,8 @@ class Organization(entities.BaseEntity):
         :param really: really really?
         :return: True
         """
+        logger.warning('Deprecation Warning - get_integrations will not use from 1.40.0'
+                       'Next time use a org.integrations.delete() or project.integrations.delete()')
         return self.organizations.delete_integrations(organization=self,
                                                       integrations_id=integrations_id,
                                                       sure=sure,
@@ -241,4 +261,6 @@ class Organization(entities.BaseEntity):
         Update the integrations with new name
         :param new_name:
         """
+        logger.warning('Deprecation Warning - get_integrations will not use from 1.40.0'
+                       'Next time use a org.integrations.update() or project.integrations.update()')
         return self.organizations.update_integrations(organization=self, new_name=new_name)

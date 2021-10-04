@@ -218,6 +218,7 @@ def match_semantic(ref_annotations, test_annotations, match_thr=0.5, geometry_on
     :param test_annotations: list of test annotations
     :param match_thr: float - matching annotation iou threshold
     :param geometry_only: `bool` if True ignores the label name
+
     Returns `dict` of annotation_id: `Matching`
     """
     test_annotations_scores = {annotation.id: Matching(annotation.id) for annotation in test_annotations}

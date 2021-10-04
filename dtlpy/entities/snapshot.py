@@ -381,12 +381,12 @@ class Snapshot(entities.BaseEntity):
     def download_partition(self, partition, local_path=None, filters: entities.Filters = None):
         """
         Download a specific partition of the dataset to local_path
-
         This function is commonly used with dl.ModelAdapter which implements thc convert to specific model structure
 
         :param partition: `dl.SnapshotPartitionType` name of the partition
         :param local_path: local path directory to download the data
         :param filters:  dl.entities.Filters to add the specific partitions constraint to
+
         :return List `str` of the new downloaded path of each item
         """
         return self.dataset.download_partition(partition=partition,
