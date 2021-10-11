@@ -79,6 +79,7 @@ class Annotation(entities.BaseEntity):
     automated = attr.ib(default=None, repr=False)
     item_height = attr.ib(default=None)
     item_width = attr.ib(default=None)
+    label_suggestions = attr.ib(default=None)
 
     # snapshots
     frames = attr.ib(default=None, repr=False)
@@ -114,6 +115,7 @@ class Annotation(entities.BaseEntity):
                 self.__client_api = self._item._client_api
         assert isinstance(self.__client_api, ApiClient)
         return self.__client_api
+
 
     @property
     def dataset(self):
@@ -1156,7 +1158,8 @@ class Annotation(entities.BaseEntity):
             start_frame=start_frame,
             annotations=annotations,
             start_time=start_time,
-            recipe_2_attributes=named_attributes
+            recipe_2_attributes=named_attributes,
+            label_suggestions=_json.get('labelSuggestions', None)
         )
         annotation.__client_api = client_api
 
@@ -1253,7 +1256,8 @@ class Annotation(entities.BaseEntity):
                                                         attr.fields(Annotation).updatedAt,
                                                         attr.fields(Annotation).metadata,
                                                         attr.fields(Annotation).createdAt,
-                                                        attr.fields(Annotation).updatedBy))
+                                                        attr.fields(Annotation).updatedBy,
+                                                        ))
 
         # property attributes
         item_id = self.item_id
@@ -1265,6 +1269,8 @@ class Annotation(entities.BaseEntity):
         _json['label'] = self.label
         _json['attributes'] = self.attributes
         _json['dataset'] = self.dataset_url
+        if self.label_suggestions:
+            _json['labelSuggestions'] = self.label_suggestions
 
         if self._item is not None and self.dataset_id is None:
             _json['datasetId'] = self._item.datasetId

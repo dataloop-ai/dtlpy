@@ -138,15 +138,17 @@ class Bots:
         logger.info('Bot {} deleted successfully'.format(bot_id))
         return True
 
-    def create(self, name):
+    def create(self, name, return_credentials: bool = False):
         """
         Create a new Bot
         :param name:
+        :param return_credentials: with True well return the password when create
         :return: Bot object
         """
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/projects/{}/bots'.format(self.project.id),
-                                                         json_req={'name': name})
+                                                         json_req={'name': name,
+                                                                   'returnCredentials': return_credentials})
         if success:
             bot = entities.Bot.from_json(_json=response.json(),
                                          project=self.project,

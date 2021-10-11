@@ -40,6 +40,7 @@ class FiltersResource(str, Enum):
     ORGANIZATIONS = 'organizations'
     DRIVERS = 'drivers'
 
+
 class FiltersOperations(str, Enum):
     OR = "or"
     AND = "and"
@@ -197,8 +198,6 @@ class Filters:
         """
         :param field:
         """
-        if self.resource == FiltersResource.ANNOTATION:
-            raise PlatformException('400', 'Cannot join to annotations filters')
         if self.join is not None:
             for single_filter in self.join['filter']['$and']:
                 if field in single_filter:
@@ -211,13 +210,16 @@ class Filters:
         :param values:
         :param operator: optional - in, gt, lt, eq, ne
         """
-        if self.resource != FiltersResource.ITEM:
+        if self.resource not in [FiltersResource.ITEM, FiltersResource.ANNOTATION]:
             raise PlatformException('400', 'Cannot join to {} filters'.format(self.resource))
 
         if self.join is None:
             self.join = dict()
         if 'on' not in self.join:
-            self.join['on'] = {'resource': FiltersResource.ANNOTATION, 'local': 'itemId', 'forigen': 'id'}
+            if self.resource == FiltersResource.ITEM:
+                self.join['on'] = {'resource': FiltersResource.ANNOTATION, 'local': 'itemId', 'forigen': 'id'}
+            else:
+                self.join['on'] = {'resource': FiltersResource.ITEM, 'local': 'id', 'forigen': 'itemId'}
         if 'filter' not in self.join:
             self.join['filter'] = dict()
         if '$and' not in self.join['filter']:
@@ -243,7 +245,8 @@ class Filters:
                 self._unique_fields = ['type']
                 self.add(field='type',
                          values=['box', 'class', 'comparison', 'ellipse', 'point', 'segment', 'polyline', 'binary',
-                                 'subtitle', 'cube', 'pose', 'text_mark'], operator=FiltersOperations.IN, method=FiltersMethod.AND)
+                                 'subtitle', 'cube', 'pose', 'text_mark'], operator=FiltersOperations.IN,
+                         method=FiltersMethod.AND)
 
     def __generate_query(self):
         filters_dict = dict()

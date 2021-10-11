@@ -161,7 +161,7 @@ class Tasks:
             assignments=None,
             min_date=None,
             max_date=None,
-            filters=None
+            filters: entities.Filters = None
     ) -> Union[miscellaneous.List[entities.Task], entities.PagedEntities]:
         """
         Get Annotation Task list
@@ -178,56 +178,56 @@ class Tasks:
         :param filters: dl.Filters entity to filters items
         :return: List of Annotation Task objects
         """
-
-        if filters is not None:
-            return self.query(filters=filters, project_ids=project_ids)
-
         # url
-        url = URL_PATH
-        query = list()
+        url = URL_PATH + '/query'
+        if filters is None:
+            filters = entities.Filters(use_defaults=False, resource=entities.FiltersResource.TASK)
+
         if self._dataset is not None:
-            query.append('dataset={}'.format(self._dataset.id))
+            filters.add(field='datasetId', values=[self._dataset.id], operator=entities.FiltersOperations.IN)
+
+        if project_ids is not None:
+            if not isinstance(project_ids, list):
+                project_ids = [project_ids]
+        elif self._project_id is not None:
+            project_ids = [self._project_id]
         else:
-            if project_ids is not None:
-                if not isinstance(project_ids, list):
-                    project_ids = [project_ids]
-            elif self._project_id is not None:
-                project_ids = [self._project_id]
-            else:
-                raise ('400', 'Must provide project')
-            project_ids = ','.join(project_ids)
-            query.append('projects={}'.format(project_ids))
+            raise ('400', 'Must provide project')
+        filters.context = {"projectIds": project_ids}
 
         if assignments is not None:
             if not isinstance(assignments, list):
                 assignments = [assignments]
-            assignments = ','.join(assignments)
-            query.append('assignments={}'.format(assignments))
+            assignments = [
+                assignments_entity.id if isinstance(assignments_entity, entities.Assignment) else assignments_entity
+                for assignments_entity in assignments]
+            filters.add(field='assignmentIds', values=assignments, operator=entities.FiltersOperations.IN)
         if status is not None:
-            query.append('status={}'.format(status))
+            filters.add(field='status', values=status)
         if task_name is not None:
-            query.append('name={}'.format(task_name))
+            filters.add(field='name', values=task_name)
         if pages_size is not None:
-            query.append('pageSize={}'.format(pages_size))
+            filters.page_size = pages_size
         if pages_size is None:
-            query.append('pageSize={}'.format(500))
+            filters.page_size = 500
         if page_offset is not None:
-            query.append('pageOffset={}'.format(page_offset))
+            filters.page = page_offset
         if recipe is not None:
-            query.append('recipe={}'.format(recipe))
+            if not isinstance(recipe, list):
+                recipe = [recipe]
+            recipe = [recipe_entity.id if isinstance(recipe_entity, entities.Recipe) else recipe_entity
+                      for recipe_entity in recipe]
+            filters.add(field='recipeId', values=recipe, operator=entities.FiltersOperations.IN)
         if creator is not None:
-            query.append('creator={}'.format(creator))
+            filters.add(field='creator', values=creator)
         if min_date is not None:
-            query.append('minDate={}'.format(min_date))
+            filters.add(field='dueDate', values=min_date, operator=entities.FiltersOperations.GREATER_THAN)
         if max_date is not None:
-            query.append('maxDate={}'.format(max_date))
+            filters.add(field='dueDate', values=max_date, operator=entities.FiltersOperations.LESS_THAN)
 
-        if len(query) > 0:
-            query_string = '&'.join(query)
-            url = '{}?{}'.format(url, query_string)
-
-        success, response = self._client_api.gen_request(req_type='get',
-                                                         path=url)
+        success, response = self._client_api.gen_request(req_type='post',
+                                                         path=url,
+                                                         json_req=filters.prepare())
         if success:
             tasks = miscellaneous.List(
                 [entities.Task.from_json(client_api=self._client_api,

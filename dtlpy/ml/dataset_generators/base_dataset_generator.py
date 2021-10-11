@@ -11,6 +11,8 @@ from ... import entities
 
 
 class BaseGenerator:
+    IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.bmp']
+
     def __init__(self,
                  dataset_entity: entities.Dataset,
                  annotation_type: entities.AnnotationType,
@@ -20,10 +22,13 @@ class BaseGenerator:
                  num_workers=0,
                  shuffle=True,
                  seed=None,
-                 # debug flags
-                 with_orig=False,
-                 separate_labels=False,
-                 to_categorical=False) -> None:
+                 to_categorical=False,
+                 # flags
+                 return_originals=False,
+                 return_separate_labels=False,
+                 return_filename=True,
+                 return_label_id=True,
+                 ) -> None:
         """
         Args:
             dataset_entity: dl.Dataset entity
@@ -33,8 +38,10 @@ class BaseGenerator:
             transforms (callable, optional): Optional transform to be applied on a sample.
             shuffle: Whether to shuffle the data (default: True) If set to False, sorts the data in alphanumeric order.
             seed: Optional random seed for shuffling and transformations.
-            with_orig: bool - to return items before transformations (for debug)
-            separate_labels: bool -  return labels and geo (and not concatenated to single array
+            return_filename: bool - If True, return the parsed itemname along with image array and annotation
+            return_label_id: bool - If True, the returned annotation is by it's mapping id and not true label string
+            return_originals: bool - If True, return ALSO images and annotations before transformations (for debug)
+            return_separate_labels: bool - If True, return labels and geo separately and not concatenated to single array
         """
         if data_path is None:
             data_path = os.path.join(os.path.expanduser('~'),
@@ -58,37 +65,41 @@ class BaseGenerator:
         self.num_workers = num_workers
         self.to_categorical = to_categorical
         self.num_classes = len(label_to_id_map)
+        self.shuffle = shuffle
+        self.seed = seed
+        # inits
+        self.image_paths = list()
+        self.annotations = list()
+        # flags
+        self.return_filename = return_filename
+        self.return_label_id = return_label_id
+        self.return_originals = return_originals
+        self.return_separate_labels = return_separate_labels
 
         ####################
         # Load annotations #
         ####################
-        self.image_paths = list()
-        self.annotations = list()
+        self.load_annotations()
+
+    def load_annotations(self):
         root_path = Path(self.root_dir)
         for json_path in root_path.rglob('**/*.json'):
             with open(json_path, 'r') as f:
                 data = json.load(f)
             annotation = entities.AnnotationCollection.from_json(data)
-            img_path = root_path.joinpath('items').joinpath(data['filename'][1:])
+            img_path = root_path.joinpath(
+                'items').joinpath(data['filename'][1:])
             if img_path.suffix.lower() in self.IMAGE_EXTENSIONS:
                 self.image_paths.append(img_path)
                 self.annotations.append(annotation)
 
-        if shuffle:
-            if seed is None:
-                seed = 42
-            np.random.seed(seed)
+        if self.shuffle:
+            if self.seed is None:
+                self.seed = 42
+            np.random.seed(self.seed)
             np.random.shuffle(self.annotations)
-            np.random.seed(seed)
+            np.random.seed(self.seed)
             np.random.shuffle(self.image_paths)
-
-        #########
-        # Debug #
-        #########
-        self.with_orig = with_orig
-        self.separate_labels = separate_labels
-
-    IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.bmp']
 
     @property
     def dataset_entity(self):
@@ -158,9 +169,13 @@ class BaseGenerator:
                     # None
                     geo = None
                 else:
-                    raise ValueError('unsupported annotation type: {}'.format(annotation.type))
+                    raise ValueError(
+                        'unsupported annotation type: {}'.format(annotation.type))
                 geos.append(geo)
-                labels_id.append(self.label_to_id_map[annotation.label])
+                if self.return_label_id:
+                    labels_id.append(self.label_to_id_map[annotation.label])
+                else:
+                    labels_id.append(annotation.label)
 
         # reorder for output
         geos = np.asarray(geos).astype(float)
@@ -181,19 +196,21 @@ class BaseGenerator:
                                                                    bottom=target[3],
                                                                    label=label))
             elif self.annotation_type == entities.AnnotationType.CLASSIFICATION:
-                annotations.add(annotation_definition=entities.Classification(label=label))
+                annotations.add(
+                    annotation_definition=entities.Classification(label=label))
             else:
-                raise ValueError('unsupported annotation type: {}'.format(self.annotation_type))
+                raise ValueError(
+                    'unsupported annotation type: {}'.format(self.annotation_type))
         return annotations
 
     def visualize(self, idx=None, return_output=False, plot=True):
         import matplotlib.pyplot as plt
         if idx is None:
             idx = np.random.randint(self.__len__())
-        t = self.separate_labels
-        self.separate_labels = True
+        t = self.return_separate_labels
+        self.return_separate_labels = True
         image, targets, labels = self.__getitem__(idx)
-        self.separate_labels = t
+        self.return_separate_labels = t
         annotations = self._to_dtlpy(targets=targets, labels=labels)
         marked_image = annotations.show(image=image,
                                         height=image.shape[0],
@@ -207,13 +224,16 @@ class BaseGenerator:
             return marked_image, annotations
 
     def __getsingleitem__(self, idx):
-        image = np.asarray(Image.open(self.image_paths[idx]).convert('RGB'))
+        image_filename = self.image_paths[idx]
+        parsed_filename = os.path.basename(image_filename)
+
+        image = np.asarray(Image.open(image_filename).convert('RGB'))
         # get label ids as [N, 1], boxes [N, 4]
         geos, labels_ids = self._from_dtlpy(self.annotations[idx])
 
         orig_image = None
         orig_geos = None
-        if self.with_orig:
+        if self.return_originals:
             orig_image = image.copy()
             orig_geos = geos.copy()
 
@@ -225,7 +245,7 @@ class BaseGenerator:
 
         to_return = (image,)
         targets = (geos, labels_ids)
-        if not self.separate_labels:
+        if not self.return_separate_labels:
             if self.annotation_type == entities.AnnotationType.CLASSIFICATION:
                 # support only for single classification label
                 y = labels_ids.flatten()[0]
@@ -237,9 +257,11 @@ class BaseGenerator:
             else:
                 targets = (np.concatenate((geos, labels_ids), axis=1),)
         to_return += targets
-        if self.with_orig:
+        if self.return_originals:
             to_return += (orig_image, orig_geos)
 
+        if self.return_filename:
+            to_return += (parsed_filename,)
         return to_return
 
     def __getitem__(self, idx):
@@ -252,7 +274,8 @@ class BaseGenerator:
 
         elif isinstance(idx, slice):
             to_return = list()
-            idxs = list(range(idx.start, idx.stop, idx.step if idx.step else 1))
+            idxs = list(range(idx.start, idx.stop,
+                              idx.step if idx.step else 1))
             if self.num_workers == 0:
                 for dx in idxs:
                     to_return.append(self.__getsingleitem__(dx))

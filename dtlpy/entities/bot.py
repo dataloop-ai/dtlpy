@@ -13,6 +13,7 @@ class Bot(entities.User):
     Bot entity
     """
     _bots = attr.ib(repr=False, default=None)
+    password = attr.ib(default=None)
 
     @staticmethod
     def _protected_from_json(_json, project, client_api, bots=None):
@@ -60,7 +61,8 @@ class Bot(entities.User):
             id=_json.get('id', None),
             project=project,
             client_api=client_api,
-            bots=bots
+            bots=bots,
+            password=_json.get('password', None),
         )
 
     @property

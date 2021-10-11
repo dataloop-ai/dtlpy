@@ -17,6 +17,7 @@ class DictDiffer:
         dict_diff = list(dictdiffer.diff(origin, modified))
         for i_diff, diff in enumerate(dict_diff):
             modified_field_pointer = modified
+            root_change = False
             if len(diff[FIELD]) > 0:
                 field_pointer, modified_field_pointer, is_list = DictDiffer.get_field_path(
                     diffs=diffs,
@@ -26,7 +27,7 @@ class DictDiffer:
                     modified_field_pointer=modified_field_pointer
                 )
             else:
-                field_pointer, modified_field_pointer, is_list = origin, modified, False
+                field_pointer, modified_field_pointer, is_list, root_change = origin, modified, False, True
 
             if is_list:
                 for i in modified_field_pointer:
@@ -37,10 +38,14 @@ class DictDiffer:
                 if diff[TYPE] == 'add':
                     for addition in diff[LIST]:
                         field_pointer[addition[0]] = addition[1]
+                        if root_change is True:
+                            diffs[addition[0]] = addition[1]
 
                 elif diff[TYPE] == 'remove':
                     for deletion in diff[LIST]:
                         field_pointer[deletion[0]] = None
+                        if root_change is True:
+                            diffs[deletion[0]] = None
 
                 elif diff[TYPE] == 'change':
                     change = diff[LIST]

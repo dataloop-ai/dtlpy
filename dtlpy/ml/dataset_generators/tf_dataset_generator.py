@@ -16,11 +16,13 @@ class DataGenerator(BaseGenerator, tensorflow.keras.utils.Sequence):
                  to_categorical=False,
                  shuffle=True,
                  seed=None,
-                 # debug flags
-                 with_orig=False,
-                 separate_labels=False,
                  # keras
-                 batch_size=32
+                 batch_size=32,
+                 # flags
+                 return_originals=False,
+                 return_separate_labels=False,
+                 return_filename=True,
+                 return_label_id=True,
                  ) -> None:
         """
         """
@@ -32,16 +34,19 @@ class DataGenerator(BaseGenerator, tensorflow.keras.utils.Sequence):
                                             to_categorical=to_categorical,
                                             shuffle=shuffle,
                                             seed=seed,
-                                            # debug flags
-                                            with_orig=with_orig,
-                                            separate_labels=separate_labels)
+                                            # flags
+                                            return_filename=return_filename,
+                                            return_label_id=return_label_id,
+                                            return_originals=return_originals,
+                                            return_separate_labels=return_separate_labels)
         self.batch_size = batch_size
 
     def __getitem__(self, index):
         indices = slice(index * self.batch_size, (index + 1) * self.batch_size)
         batch = super(DataGenerator, self).__getitem__(indices)
-        # convert to x, y
-        return np.asarray([x[0] for x in batch]), np.asarray([x[1] for x in batch])
+        # convert from list of sample to a list per column (X, Y, ...)
+        nd_batch = np.asarray(batch)
+        return nd_batch.T
 
     def __iter__(self):
         """Create a generator that iterate over the Sequence."""
