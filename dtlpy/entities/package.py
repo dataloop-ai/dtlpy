@@ -20,8 +20,8 @@ class Package(entities.BaseEntity):
     id = attr.ib()
     url = attr.ib(repr=False)
     version = attr.ib()
-    createdAt = attr.ib()
-    updatedAt = attr.ib(repr=False)
+    created_at = attr.ib()
+    updated_at = attr.ib(repr=False)
     name = attr.ib()
     codebase = attr.ib()
     _modules = attr.ib()
@@ -41,6 +41,20 @@ class Package(entities.BaseEntity):
     _repositories = attr.ib(repr=False)
     _artifacts = attr.ib(default=None)
     _codebases = attr.ib(default=None)
+
+    @property
+    def createdAt(self):
+        logger.warning(
+            'Deprecation Warning - param "createdAt" will be deprecated from version "1.41.0'
+            'Use "created_at"')
+        return self.created_at
+
+    @property
+    def updatedAt(self):
+        logger.warning(
+            'Deprecation Warning - param "updatedAt" will be deprecated from version "1.41.0'
+            'Use "updated_at"')
+        return self.updated_at
 
     @property
     def modules(self):
@@ -118,8 +132,8 @@ class Package(entities.BaseEntity):
         inst = cls(
             project_id=_json.get('projectId', None),
             codebase=codebase,
-            createdAt=_json.get('createdAt', None),
-            updatedAt=_json.get('updatedAt', None),
+            created_at=_json.get('createdAt', None),
+            updated_at=_json.get('updatedAt', None),
             version=_json.get('version', None),
             creator=_json.get('creator', None),
             is_global=_json.get('global', None),
@@ -157,6 +171,8 @@ class Package(entities.BaseEntity):
                                                         attr.fields(Package).ui_hooks,
                                                         attr.fields(Package).codebase,
                                                         attr.fields(Package).service_config,
+                                                        attr.fields(Package).created_at,
+                                                        attr.fields(Package).updated_at,
                                                         ))
 
         modules = self.modules
@@ -172,6 +188,8 @@ class Package(entities.BaseEntity):
         if len(slot) > 0:
             _json['slots'] = slot
         _json['projectId'] = self.project_id
+        _json['createdAt'] = self.created_at
+        _json['updatedAt'] = self.updated_at
         if self.is_global is not None:
             _json['global'] = self.is_global
         if self.codebase is not None:

@@ -10,6 +10,7 @@ class ExternalStorage(str, Enum):
     S3 = "s3"
     GCS = "gcs"
     AZUREBLOB = "azureblob"
+    KEY_VALUE = "key_value"
 
 
 @attr.s()

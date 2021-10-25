@@ -35,8 +35,8 @@ class Model(entities.BaseEntity):
     """
     # platform
     id = attr.ib()
-    createdAt = attr.ib()
-    updatedAt = attr.ib(repr=False)
+    created_at = attr.ib()
+    updated_at = attr.ib(repr=False)
     creator = attr.ib()
     name = attr.ib()
     url = attr.ib(repr=False)
@@ -63,6 +63,20 @@ class Model(entities.BaseEntity):
     _repositories = attr.ib(repr=False)
     _codebases = attr.ib(default=None)
     _artifacts = attr.ib(default=None)
+
+    @property
+    def createdAt(self):
+        logger.warning(
+            'Deprecation Warning - param "createdAt" will be deprecated from version "1.41.0'
+            'Use "created_at"')
+        return self.created_at
+
+    @property
+    def updatedAt(self):
+        logger.warning(
+            'Deprecation Warning - param "updatedAt" will be deprecated from version "1.41.0'
+            'Use "updated_at"')
+        return self.updated_at
 
     @property
     def revisions(self):
@@ -116,8 +130,8 @@ class Model(entities.BaseEntity):
         inst = cls(
             project_id=_json.get('projectId', None),
             codebase=codebase,
-            createdAt=_json.get('createdAt', None),
-            updatedAt=_json.get('updatedAt', None),
+            created_at=_json.get('createdAt', None),
+            updated_at=_json.get('updatedAt', None),
             version=_json.get('version', None),
             description=_json.get('description', None),
             creator=_json.get('creator', None),
@@ -159,6 +173,8 @@ class Model(entities.BaseEntity):
                                                         attr.fields(Model).entry_point,
                                                         attr.fields(Model).class_name,
                                                         attr.fields(Model).project_id,
+                                                        attr.fields(Model).created_at,
+                                                        attr.fields(Model).updated_at,
                                                         ))
 
         _json['global'] = self.is_global
@@ -169,6 +185,8 @@ class Model(entities.BaseEntity):
         _json['entryPoint'] = self.entry_point
         _json['className'] = self.class_name
         _json['codebase'] = self.codebase.to_json()
+        _json['createdAt'] = self.created_at
+        _json['updatedAt'] = self.updated_at
 
         return _json
 

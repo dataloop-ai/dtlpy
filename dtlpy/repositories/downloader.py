@@ -37,8 +37,6 @@ class Downloader:
                  overwrite=False,
                  annotation_filters: entities.Filters = None,
                  annotation_options: entities.ViewAnnotationOptions = None,
-                 annotation_filter_type: entities.AnnotationType = None,
-                 annotation_filter_label=None,
                  to_items_folder=True,
                  thickness=1,
                  with_text=False,
@@ -59,8 +57,6 @@ class Downloader:
         :param overwrite: optional - default = False
         :param annotation_options: download annotations options. options: list(dl.ViewAnnotationOptions)
         :param annotation_filters: Filters entity to filter annotations for download
-        :param annotation_filter_type: DEPRECATED - list (dl.AnnotationType) of annotation types when downloading annotation, not relevant for JSON option
-        :param annotation_filter_label: DEPRECATED - list of labels types when downloading annotation, not relevant for JSON option
         :param to_items_folder: Create 'items' folder and download items to it
         :param with_text: optional - add text to annotations, default = False
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
@@ -105,40 +101,7 @@ class Downloader:
                     path_to_create = os.path.dirname(local_path)
                 logger.info("Creating new directory for download: {}".format(path_to_create))
                 os.makedirs(path_to_create, exist_ok=True)
-        #########################
-        # Annotations filtering #
-        #########################
-        if annotation_filter_type is not None or \
-                annotation_filter_label is not None:
-            if annotation_filters is not None:
-                logger.warning(
-                    'Cannot input "annotation_filters" with one of "annotation_filter_type" or "annotation_filter_label". Using ONLY "annotation_filters"')
-            else:
-                if annotation_filters is None:
-                    annotation_filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION)
-                    if annotation_filter_type is not None:
-                        if not isinstance(annotation_filter_type, list):
-                            annotation_filter_type = [annotation_filter_type]
-                        logger.warning(
-                            'Deprecation Warning - input param "annotation_filter_type" will be deprecated starting from version "1.30.0". '
-                            'Use "annotation_filters=dl.Filters(field={!r}, values={!r}, operator=entities.FiltersOperations.IN)"'.format(
-                                'type',
-                                annotation_filter_type))
-                        annotation_filters.add(field='type',
-                                               values=annotation_filter_type,
-                                               operator=entities.FiltersOperations.IN)
 
-                    if annotation_filter_label is not None:
-                        if not isinstance(annotation_filter_label, list):
-                            annotation_filter_label = [annotation_filter_label]
-                        logger.warning(
-                            'Deprecation Warning - input param "annotation_filter_label" will be deprecated starting from version "1.30.0". '
-                            'Use "annotation_filters=dl.Filters(field={!r}, values={!r}, operator=entities.FiltersOperations.IN)"'.format(
-                                'label',
-                                annotation_filter_label))
-                        annotation_filters.add(field='label',
-                                               values=annotation_filter_label,
-                                               operator=entities.FiltersOperations.IN)
         #####################
         # items to download #
         #####################

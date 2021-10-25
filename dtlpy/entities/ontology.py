@@ -333,7 +333,7 @@ class Ontology(entities.BaseEntity):
         item = dataset.items.upload(local_path=icon_path, remote_path=platform_path)
         display_data['displayImage'] = dict()
         display_data['displayImage']['itemId'] = item.id
-        display_data['displayImage']['datasetId'] = item.datasetId
+        display_data['displayImage']['datasetId'] = item.dataset_id
         return display_data
 
     def _label_handler(self, label_name, color=None, children=None, attributes=None, display_label=None, label=None,

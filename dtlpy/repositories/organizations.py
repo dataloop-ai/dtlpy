@@ -414,7 +414,7 @@ class Organizations:
 
         :return: True
         """
-        logger.warning('Deprecation Warning - get_integrations will not use from 1.40.0'
+        logger.warning('Deprecation Warning - add_integrations will not use from 1.40.0'
                        'Next time use a org.integrations.create() or project.integrations.create()')
         if organization is None and organization_id is None and organization_name is None:
             raise exceptions.PlatformException(
@@ -450,7 +450,7 @@ class Organizations:
         :param really: really really?
         :return: True
         """
-        logger.warning('Deprecation Warning - get_integrations will not use from 1.40.0'
+        logger.warning('Deprecation Warning - delete_integrations will not use from 1.40.0'
                        'Next time use a org.integrations.delete() or project.integrations.delete()')
         if sure and really:
             if organization is None and organization_id is None and organization_name is None:
@@ -484,7 +484,7 @@ class Organizations:
         :param organization_name:
         :param organization:
         """
-        logger.warning('Deprecation Warning - get_integrations will not use from 1.40.0'
+        logger.warning('Deprecation Warning - update_integrations will not use from 1.40.0'
                        'Next time use a org.integrations.update() or project.integrations.update()')
         if organization is None and organization_id is None and organization_name is None:
             raise exceptions.PlatformException(

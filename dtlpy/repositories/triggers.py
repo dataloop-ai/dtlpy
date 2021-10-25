@@ -1,6 +1,6 @@
 import logging
 
-from .. import entities, miscellaneous, exceptions, services
+from .. import entities, miscellaneous, exceptions, services, repositories
 
 logger = logging.getLogger(name=__name__)
 
@@ -14,10 +14,12 @@ class Triggers:
                  client_api: services.ApiClient,
                  project: entities.Project = None,
                  service: entities.Service = None,
-                 project_id: str = None):
+                 project_id: str = None,
+                 pipeline: entities.Pipeline = None):
         self._client_api = client_api
         self._project = project
         self._service = service
+        self._pipeline = pipeline
         if project_id is None:
             if self._project is not None:
                 project_id = self._project.id
@@ -43,6 +45,21 @@ class Triggers:
         if not isinstance(service, entities.Service):
             raise ValueError('Must input a valid Service entity')
         self._service = service
+
+    @property
+    def pipeline(self) -> entities.Pipeline:
+        if self._pipeline is None:
+            raise exceptions.PlatformException(
+                error='2001',
+                message='Missing "pipeline". need to set a Pipeline entity or use pipeline.triggers repository')
+        assert isinstance(self._pipeline, entities.Pipeline)
+        return self._pipeline
+
+    @pipeline.setter
+    def pipeline(self, pipeline: entities.Pipeline):
+        if not isinstance(pipeline, entities.Pipeline):
+            raise ValueError('Must input a valid Service entity')
+        self._pipeline = pipeline
 
     @property
     def project(self) -> entities.Project:
@@ -93,6 +110,10 @@ class Triggers:
                end_at=None,
                inputs=None,
                cron=None,
+               pipeline_id=None,
+               pipeline=None,
+               pipeline_node_id=None,
+               root_node_namespace=None,
                **kwargs) -> entities.BaseTrigger:
         """
         Create a Trigger. Can create two types: a cron trigger or an event trigger.
@@ -119,41 +140,69 @@ class Triggers:
         :param end_at: iso format date string to end the cron activation
         :param inputs: dictionary "name":"val" of inputs to the function
         :param cron: cron spec specifying when it should run. more information: https://en.wikipedia.org/wiki/Cron
+        :param pipeline_id: Id of pipeline to be triggered
+        :param pipeline: pipeline entity to be triggered
+        :param pipeline_node_id: Id of pipeline root node to be triggered
+        :param root_node_namespace: namespace of pipeline root node to be triggered
 
         :return: Trigger entity
         """
         scope = kwargs.get('scope', None)
 
-        if service_id is None and webhook_id is None:
+        if service_id is None and webhook_id is None and pipeline_id is None and pipeline is None:
             if self._service is not None:
                 service_id = self._service.id
+            elif self._pipeline is not None:
+                pipeline = self._pipeline
+                pipeline_id = self._pipeline.id
 
         # type
-        if (service_id is None and webhook_id is None) or (service_id is not None and webhook_id is not None):
-            raise exceptions.PlatformException('400', 'Must provide either service id or webhook id but not both')
+        input_num = sum(input_id is not None for input_id in [service_id, webhook_id, pipeline_id, pipeline])
+        if input_num != 1:
+            raise exceptions.PlatformException('400',
+                                               'Must provide only one of service id, webhook id, pipeline id or pipeline')
 
         if name is None:
             if self._service is not None:
                 name = self._service.name
             else:
-                name = 'default_trigger'
+                name = 'defaulttrigger'
 
         if filters is None:
             filters = dict()
         elif isinstance(filters, entities.Filters):
             filters = filters.prepare(query_only=True).get('filter', dict())
 
-        if service_id is None:
+        if webhook_id is not None:
             operation = {
                 'type': 'webhook',
                 'webhookId': webhook_id
             }
-        else:
+        elif service_id is not None:
             operation = {
                 'type': 'function',
                 'serviceId': service_id,
                 'functionName': function_name
 
+            }
+        else:
+            if not all([pipeline_node_id, root_node_namespace, pipeline_id]):
+                if pipeline is None:
+                    pipeline = repositories.Pipelines(client_api=self._client_api).get(pipeline_id=pipeline_id)
+                pipeline_id = pipeline.id
+                pipeline_node_id = pipeline.start_nodes[0]['nodeId']
+                root_node = [node for node in pipeline.nodes if node.node_id == pipeline_node_id][0]
+                root_node_namespace = root_node.namespace
+                root_node_project_id = root_node.project_id
+            else:
+                root_node_project_id = project_id
+
+            operation = {
+                'id': pipeline_id,
+                'nodeId': pipeline_node_id,
+                'rootNodeNamespace': root_node_namespace,
+                'rootNodeProjectId': root_node_project_id,
+                'type': 'pipeline',
             }
 
         if actions is not None:

@@ -55,8 +55,8 @@ class Artifact(entities.Item):
             # params
             annotations_link=_json.get('annotations_link', None),
             annotations_count=_json.get('annotationsCount', None),
-            createdAt=_json.get('createdAt', None),
-            datasetId=_json.get('datasetId', None),
+            created_at=_json.get('createdAt', None),
+            dataset_id=_json.get('datasetId', None),
             thumbnail=_json.get('thumbnail', None),
             annotated=_json.get('annotated', None),
             dataset_url=_json.get('dataset', None),

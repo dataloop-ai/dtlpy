@@ -3,7 +3,7 @@ import os
 from diskcache import Cache
 
 
-class DlCache(object):
+class DlCache:
 
     def __init__(self, name, level=1, options=None, enable_stats=False):
         if options is None:
@@ -11,7 +11,10 @@ class DlCache(object):
         self.name = name
         self.level = level
         self.cache_dir = options.get('cachePath',
-                                     os.path.join(os.path.expanduser('~'), '.dataloop\cache\{}'.format(name)))
+                                     os.path.join(os.path.expanduser('~'),
+                                                  '.dataloop',
+                                                  'cache',
+                                                  name))
         self.cache = Cache(directory=self.cache_dir)
         self.cache.stats(enable=enable_stats)
 

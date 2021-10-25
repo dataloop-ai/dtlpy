@@ -20,8 +20,8 @@ class Service(entities.BaseEntity):
     Service object
     """
     # platform
-    createdAt = attr.ib()
-    updatedAt = attr.ib(repr=False)
+    created_at = attr.ib()
+    updated_at = attr.ib(repr=False)
     creator = attr.ib()
     version = attr.ib()
 
@@ -58,6 +58,20 @@ class Service(entities.BaseEntity):
     # repositories
     _project = attr.ib(default=None, repr=False)
     _repositories = attr.ib(repr=False)
+
+    @property
+    def createdAt(self):
+        logger.warning(
+            'Deprecation Warning - param "createdAt" will be deprecated from version "1.41.0'
+            'Use "created_at"')
+        return self.created_at
+
+    @property
+    def updatedAt(self):
+        logger.warning(
+            'Deprecation Warning - param "updatedAt" will be deprecated from version "1.41.0'
+            'Use "updated_at"')
+        return self.updated_at
 
     @staticmethod
     def _protected_from_json(_json: dict, client_api: services.ApiClient, package=None, project=None, is_fetched=True):
@@ -112,8 +126,8 @@ class Service(entities.BaseEntity):
             package_revision=_json.get("packageRevision", None),
             bot=_json.get("botUserName", None),
             use_user_jwt=_json.get("useUserJwt", False),
-            createdAt=_json.get("createdAt", None),
-            updatedAt=_json.get("updatedAt", None),
+            created_at=_json.get("createdAt", None),
+            updated_at=_json.get("updatedAt", None),
             project_id=_json.get('projectId', None),
             package_id=_json.get('packageId', None),
             driver_id=_json.get('driverId', None),
@@ -247,7 +261,10 @@ class Service(entities.BaseEntity):
                 attr.fields(Service).queue_length_limit,
                 attr.fields(Service).max_attempts,
                 attr.fields(Service).on_reset,
-                attr.fields(Service).secrets)
+                attr.fields(Service).secrets,
+                attr.fields(Service).created_at,
+                attr.fields(Service).updated_at,
+            )
         )
 
         _json['projectId'] = self.project_id
@@ -263,6 +280,8 @@ class Service(entities.BaseEntity):
         _json['executionTimeout'] = self.execution_timeout
         _json['drainTime'] = self.drain_time
         _json['onReset'] = self.on_reset
+        _json['createdAt'] = self.created_at
+        _json['updatedAt'] = self.updated_at
 
         if self.max_attempts is not None:
             _json['maxAttempts'] = self.max_attempts

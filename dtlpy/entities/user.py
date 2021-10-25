@@ -12,8 +12,8 @@ class User(entities.BaseEntity):
     """
     User entity
     """
-    createdAt = attr.ib()
-    updatedAt = attr.ib(repr=False)
+    created_at = attr.ib()
+    updated_at = attr.ib(repr=False)
     name = attr.ib()
     last_name = attr.ib()
     username = attr.ib()
@@ -28,6 +28,20 @@ class User(entities.BaseEntity):
     _project = attr.ib(repr=False)
     _client_api = attr.ib(default=None, repr=False)
     _users = attr.ib(repr=False, default=None)
+
+    @property
+    def createdAt(self):
+        logger.warning(
+            'Deprecation Warning - param "createdAt" will be deprecated from version "1.41.0'
+            'Use "created_at"')
+        return self.created_at
+
+    @property
+    def updatedAt(self):
+        logger.warning(
+            'Deprecation Warning - param "updatedAt" will be deprecated from version "1.41.0'
+            'Use "updated_at"')
+        return self.updated_at
 
     @staticmethod
     def _protected_from_json(_json, project, client_api, users=None):
@@ -70,9 +84,9 @@ class User(entities.BaseEntity):
         :return: User object
         """
         return cls(
-            createdAt=_json.get('createdAt', None),
+            created_at=_json.get('createdAt', None),
             name=_json.get('firstName', None),
-            updatedAt=_json.get('updatedAt', None),
+            updated_at=_json.get('updatedAt', None),
             last_name=_json.get('lastName', None),
             username=_json.get('username', None),
             avatar=_json.get('avatar', None),
@@ -96,7 +110,12 @@ class User(entities.BaseEntity):
                                                         attr.fields(User).name,
                                                         attr.fields(User)._client_api,
                                                         attr.fields(User).users,
-                                                        attr.fields(User).last_name))
+                                                        attr.fields(User).last_name,
+                                                        attr.fields(User).created_at,
+                                                        attr.fields(User).updated_at,
+                                                        ))
         _json['firstName'] = self.name
         _json['lastName'] = self.last_name
+        _json['createdAt'] = self.created_at
+        _json['updatedAt'] = self.updated_at
         return _json

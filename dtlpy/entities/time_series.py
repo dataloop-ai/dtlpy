@@ -1,5 +1,8 @@
 import attr
 from .. import entities
+import logging
+
+logger = logging.getLogger(name=__name__)
 
 
 @attr.s
@@ -8,13 +11,27 @@ class TimeSeries(entities.BaseEntity):
     Time Series object
     """
     # platform
-    createdAt = attr.ib()
-    updatedAt = attr.ib(repr=False)
+    created_at = attr.ib()
+    updated_at = attr.ib(repr=False)
     owner = attr.ib()
     name = attr.ib()
     id = attr.ib()
     # entities
     _project = attr.ib(repr=False)
+
+    @property
+    def createdAt(self):
+        logger.warning(
+            'Deprecation Warning - param "createdAt" will be deprecated from version "1.41.0'
+            'Use "created_at"')
+        return self.created_at
+
+    @property
+    def updatedAt(self):
+        logger.warning(
+            'Deprecation Warning - param "updatedAt" will be deprecated from version "1.41.0'
+            'Use "updated_at"')
+        return self.updated_at
 
     @property
     def project(self):
@@ -31,8 +48,8 @@ class TimeSeries(entities.BaseEntity):
         :return: Time Series object
         """
         return cls(
-            createdAt=_json.get('createdAt', None),
-            updatedAt=_json.get('updatedAt', None),
+            created_at=_json.get('createdAt', None),
+            updated_at=_json.get('updatedAt', None),
             owner=_json.get('owner', None),
             name=_json.get('name', None),
             id=_json.get('id', None),
@@ -45,8 +62,14 @@ class TimeSeries(entities.BaseEntity):
 
         :return: platform json format of object
         """
-        return attr.asdict(self,
-                           filter=attr.filters.exclude(attr.fields(TimeSeries)._project))
+        _json = attr.asdict(self,
+                            filter=attr.filters.exclude(attr.fields(TimeSeries)._project,
+                                                        attr.fields(TimeSeries).created_at,
+                                                        attr.fields(TimeSeries).updated_at,
+                                                        ))
+        _json['createdAt'] = self.created_at
+        _json['updatedAt'] = self.updated_at
+        return _json
 
     ##########
     # Entity #

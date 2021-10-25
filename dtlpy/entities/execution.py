@@ -25,14 +25,14 @@ class Execution(entities.BaseEntity):
     id = attr.ib()
     url = attr.ib(repr=False)
     creator = attr.ib()
-    createdAt = attr.ib()
-    updatedAt = attr.ib(repr=False)
+    created_at = attr.ib()
+    updated_at = attr.ib(repr=False)
     input = attr.ib()
     output = attr.ib(repr=False)
-    feedbackQueue = attr.ib(repr=False)
+    feedback_queue = attr.ib(repr=False)
     _status = attr.ib(repr=False)
     status_log = attr.ib(repr=False)
-    syncReplyTo = attr.ib(repr=False)
+    sync_reply_to = attr.ib(repr=False)
     latest_status = attr.ib()
     function_name = attr.ib()
     duration = attr.ib()
@@ -80,6 +80,34 @@ class Execution(entities.BaseEntity):
         r = reps(executions=executions_repo,
                  services=services_repo)
         return r
+
+    @property
+    def createdAt(self):
+        logger.warning(
+            'Deprecation Warning - param "createdAt" will be deprecated from version "1.41.0'
+            'Use "created_at"')
+        return self.created_at
+
+    @property
+    def updatedAt(self):
+        logger.warning(
+            'Deprecation Warning - param "updatedAt" will be deprecated from version "1.41.0'
+            'Use "updated_at"')
+        return self.updated_at
+
+    @property
+    def syncReplyTo(self):
+        logger.warning(
+            'Deprecation Warning - param "syncReplyTo" will be deprecated from version "1.41.0'
+            'Use "sync_reply_to"')
+        return self.sync_reply_to
+
+    @property
+    def feedbackQueue(self):
+        logger.warning(
+            'Deprecation Warning - param "feedbackQueue" will be deprecated from version "1.41.0'
+            'Use "feedback_queue"')
+        return self.feedback_queue
 
     @property
     def status(self):
@@ -138,14 +166,14 @@ class Execution(entities.BaseEntity):
                 service = None
 
         inst = cls(
-            feedbackQueue=_json.get('feedbackQueue', None),
+            feedback_queue=_json.get('feedbackQueue', None),
             service_id=_json.get('serviceId', None),
             project_id=_json.get('projectId', None),
             pipeline_id=_json.get('pipelineId', None),
             latest_status=_json.get('latestStatus', None),
-            syncReplyTo=_json.get('syncReplyTo', None),
-            createdAt=_json.get('createdAt', None),
-            updatedAt=_json.get('updatedAt', None),
+            sync_reply_to=_json.get('syncReplyTo', None),
+            created_at=_json.get('createdAt', None),
+            updated_at=_json.get('updatedAt', None),
             creator=_json.get('creator', None),
             trigger_id=_json.get('triggerId', None),
             attempts=_json.get('attempts', None),
@@ -195,6 +223,10 @@ class Execution(entities.BaseEntity):
                 attr.fields(Execution).package_name,
                 attr.fields(Execution).status_log,
                 attr.fields(Execution)._status,
+                attr.fields(Execution).created_at,
+                attr.fields(Execution).updated_at,
+                attr.fields(Execution).feedback_queue,
+                attr.fields(Execution).sync_reply_to,
             )
         )
         # rename
@@ -211,6 +243,10 @@ class Execution(entities.BaseEntity):
         _json['packageName'] = self.package_name
         _json['statusLog'] = self.status_log
         _json['status'] = self._status
+        _json['createdAt'] = self.created_at
+        _json['updatedAt'] = self.updated_at
+        _json['feedbackQueue'] = self.feedback_queue
+        _json['syncReplyTo '] = self.sync_reply_to
 
         return _json
 

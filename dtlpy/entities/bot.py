@@ -48,9 +48,9 @@ class Bot(entities.User):
         :return: User object
         """
         return cls(
-            createdAt=_json.get('createdAt', None),
+            created_at=_json.get('createdAt', None),
             name=_json.get('firstName', None),
-            updatedAt=_json.get('updatedAt', None),
+            updated_at=_json.get('updatedAt', None),
             last_name=_json.get('lastName', None),
             username=_json.get('username', None),
             avatar=_json.get('avatar', None),
@@ -92,9 +92,14 @@ class Bot(entities.User):
                                                         attr.fields(Bot)._client_api,
                                                         attr.fields(Bot)._bots,
                                                         attr.fields(Bot)._users,
-                                                        attr.fields(Bot).last_name))
+                                                        attr.fields(Bot).last_name,
+                                                        attr.fields(Bot).created_at,
+                                                        attr.fields(Bot).updated_at,
+                                                        ))
         _json['firstName'] = self.name
         _json['lastName'] = self.last_name
+        _json['createdAt'] = self.created_at
+        _json['updatedAt'] = self.updated_at
         return _json
 
     def delete(self):

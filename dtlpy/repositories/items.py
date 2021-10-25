@@ -388,8 +388,6 @@ class Items:
             to_array=False,
             annotation_options: entities.ViewAnnotationOptions = None,
             annotation_filters: entities.Filters = None,
-            annotation_filter_type: entities.AnnotationType = None,
-            annotation_filter_label=None,
             overwrite=False,
             to_items_folder=True,
             thickness=1,
@@ -410,8 +408,6 @@ class Items:
         :param to_array: returns Ndarray when True and local_path = False
         :param annotation_options: download annotations options:  list(dl.ViewAnnotationOptions)
         :param annotation_filters: Filters entity to filter annotations for download
-        :param annotation_filter_type: DEPRECATED - list (dl.AnnotationType) of annotation types when downloading annotation, not relevant for JSON option
-        :param annotation_filter_label: DEPRECATED - list of labels types when downloading annotation, not relevant for JSON option
         :param overwrite: optional - default = False
         :param to_items_folder: Create 'items' folder and download items to it
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
@@ -430,8 +426,6 @@ class Items:
             to_array=to_array,
             annotation_options=annotation_options,
             annotation_filters=annotation_filters,
-            annotation_filter_type=annotation_filter_type,  # to deprecate - use "annotation_filters"
-            annotation_filter_label=annotation_filter_label,  # to deprecate - use "annotation_filters"
             overwrite=overwrite,
             to_items_folder=to_items_folder,
             thickness=thickness,

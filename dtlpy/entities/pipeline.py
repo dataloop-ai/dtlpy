@@ -283,14 +283,15 @@ class Pipeline(entities.BaseEntity):
     @_repositories.default
     def set_repositories(self):
         reps = namedtuple('repositories',
-                          field_names=['projects', 'pipelines', 'pipeline_executions'])
+                          field_names=['projects', 'pipelines', 'pipeline_executions', 'triggers'])
 
         r = reps(
             projects=repositories.Projects(client_api=self._client_api),
             pipelines=repositories.Pipelines(client_api=self._client_api),
             pipeline_executions=repositories.PipelineExecutions(
                 client_api=self._client_api, project=self._project, pipeline=self
-            )
+            ),
+            triggers=repositories.Triggers(client_api=self._client_api, pipeline=self)
         )
         return r
 
@@ -298,6 +299,11 @@ class Pipeline(entities.BaseEntity):
     def projects(self):
         assert isinstance(self._repositories.projects, repositories.Projects)
         return self._repositories.projects
+
+    @property
+    def triggers(self):
+        assert isinstance(self._repositories.triggers, repositories.Triggers)
+        return self._repositories.triggers
 
     @property
     def pipelines(self):

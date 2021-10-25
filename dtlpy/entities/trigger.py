@@ -45,8 +45,8 @@ class BaseTrigger(entities.BaseEntity):
     #######################
     id = attr.ib()
     url = attr.ib(repr=False)
-    createdAt = attr.ib()
-    updatedAt = attr.ib(repr=False)
+    created_at = attr.ib()
+    updated_at = attr.ib(repr=False)
     creator = attr.ib()
     name = attr.ib()
     active = attr.ib()
@@ -104,6 +104,20 @@ class BaseTrigger(entities.BaseEntity):
             raise exceptions.PlatformException('400', 'unknown trigger operation type: {}'.format(op_type))
 
         return service_id, webhook_id, pipeline_id
+
+    @property
+    def createdAt(self):
+        logger.warning(
+            'Deprecation Warning - param "createdAt" will be deprecated from version "1.41.0'
+            'Use "created_at"')
+        return self.created_at
+
+    @property
+    def updatedAt(self):
+        logger.warning(
+            'Deprecation Warning - param "updatedAt" will be deprecated from version "1.41.0'
+            'Use "updated_at"')
+        return self.updated_at
 
     @staticmethod
     def _protected_from_json(_json, client_api, project, service=None):
@@ -224,11 +238,15 @@ class BaseTrigger(entities.BaseEntity):
                                                               attr.fields(BaseTrigger).webhook_id,
                                                               attr.fields(BaseTrigger).pipeline_id,
                                                               attr.fields(BaseTrigger).function_name,
-                                                              attr.fields(BaseTrigger).is_global
+                                                              attr.fields(BaseTrigger).is_global,
+                                                              attr.fields(BaseTrigger).created_at,
+                                                              attr.fields(BaseTrigger).updated_at,
                                                               ))
 
         # rename
         _json['projectId'] = self.project_id
+        _json['createdAt'] = self.created_at
+        _json['updatedAt'] = self.updated_at
         if self.is_global is not None:
             _json['global'] = self.is_global
         return _json
@@ -297,8 +315,8 @@ class Trigger(BaseTrigger):
 
         return cls(
             execution_mode=spec.get('executionMode', None),
-            updatedAt=_json.get('updatedAt', None),
-            createdAt=_json.get('createdAt', None),
+            updated_at=_json.get('updatedAt', None),
+            created_at=_json.get('createdAt', None),
             resource=spec.get('resource', None),
             creator=_json.get('creator', None),
             special=_json.get('special', None),
@@ -370,8 +388,8 @@ class CronTrigger(BaseTrigger):
 
         service_id, webhook_id, pipeline_id = cls._get_operation(operation=operation)
         return cls(
-            updatedAt=_json.get('updatedAt', None),
-            createdAt=_json.get('createdAt', None),
+            updated_at=_json.get('updatedAt', None),
+            created_at=_json.get('createdAt', None),
             creator=_json.get('creator', None),
             special=_json.get('special', None),
             active=_json.get('active', None),

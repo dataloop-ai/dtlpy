@@ -23,7 +23,7 @@ def step_impl(context, project_index):
 
 @behave.then(u'item Dataset_id is equal to dataset {dataset_index} id')
 def step_impl(context, dataset_index):
-    assert context.item.datasetId == context.datasets[int(dataset_index)-1].id
+    assert context.item.dataset_id == context.datasets[int(dataset_index)-1].id
 
 
 @behave.then(u'item Dataset.id is equal to dataset {dataset_index} id')

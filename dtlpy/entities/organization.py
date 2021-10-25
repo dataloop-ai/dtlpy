@@ -29,20 +29,41 @@ class Organization(entities.BaseEntity):
     members = attr.ib(type=list)
     groups = attr.ib(type=list)
     accounts = attr.ib(type=list)
-    createdAt = attr.ib()
-    updatedAt = attr.ib()
+    created_at = attr.ib()
+    updated_at = attr.ib()
     id = attr.ib(repr=False)
     name = attr.ib(repr=False)
     logo_url = attr.ib(repr=False)
     plan = attr.ib(repr=False)
     owner = attr.ib(repr=False)
-    createdBy = attr.ib(repr=False)
+    created_by = attr.ib(repr=False)
 
     # api
     _client_api = attr.ib(type=services.ApiClient, repr=False)
 
     # repositories
     _repositories = attr.ib(repr=False)
+
+    @property
+    def createdAt(self):
+        logger.warning(
+            'Deprecation Warning - param "createdAt" will be deprecated from version "1.41.0'
+            'Use "created_at"')
+        return self.created_at
+
+    @property
+    def updatedAt(self):
+        logger.warning(
+            'Deprecation Warning - param "updatedAt" will be deprecated from version "1.41.0'
+            'Use "updated_at"')
+        return self.updated_at
+
+    @property
+    def createdBy(self):
+        logger.warning(
+            'Deprecation Warning - param "createdBy" will be deprecated from version "1.41.0'
+            'Use "created_by"')
+        return self.created_by
 
     @_repositories.default
     def set_repositories(self):
@@ -106,14 +127,14 @@ class Organization(entities.BaseEntity):
         inst = cls(members=_json.get('members', None),
                    groups=_json.get('groups', None),
                    accounts=_json.get('accounts', None),
-                   createdAt=_json.get('createdAt', None),
-                   updatedAt=_json.get('updatedAt', None),
+                   created_at=_json.get('createdAt', None),
+                   updated_at=_json.get('updatedAt', None),
                    id=_json.get('id', None),
                    name=_json.get('name', None),
                    logo_url=_json.get('logoUrl', None),
                    plan=_json.get('plan', None),
                    owner=_json.get('owner', None),
-                   createdBy=_json.get('createdBy', None),
+                   created_by=_json.get('createdBy', None),
                    client_api=client_api)
         inst.is_fetched = is_fetched
         return inst
@@ -126,18 +147,22 @@ class Organization(entities.BaseEntity):
         """
         output_dict = attr.asdict(self,
                                   filter=attr.filters.exclude(attr.fields(Organization)._client_api,
-                                                              attr.fields(Organization)._repositories))
+                                                              attr.fields(Organization)._repositories,
+                                                              attr.fields(Organization).created_at,
+                                                              attr.fields(Organization).updated_at,
+                                                              attr.fields(Organization).created_by,
+                                                              ))
         output_dict['members'] = self.members
         output_dict['groups'] = self.groups
         output_dict['accounts'] = self.accounts
-        output_dict['createdAt'] = self.createdAt
-        output_dict['updatedAt'] = self.updatedAt
+        output_dict['createdAt'] = self.created_at
+        output_dict['updatedAt'] = self.updated_at
         output_dict['id'] = self.id
         output_dict['name'] = self.name
         output_dict['logo_url'] = self.logo_url
         output_dict['plan'] = self.plan
         output_dict['owner'] = self.owner
-        output_dict['createdBy'] = self.createdBy
+        output_dict['createdBy'] = self.created_by
 
         return output_dict
 
@@ -160,6 +185,8 @@ class Organization(entities.BaseEntity):
         list all organization integrations
 
         """
+        logger.warning('Deprecation Warning - list_integrations will not use from 1.40.0'
+                       'Next time use a org.integrations.list() or project.integrations.list()')
         return self.organizations.list_integrations(organization=self, only_available=only_available)
 
     def get_integrations(self, integrations_id: str):
@@ -232,7 +259,7 @@ class Organization(entities.BaseEntity):
 
         :return: True
         """
-        logger.warning('Deprecation Warning - get_integrations will not use from 1.40.0'
+        logger.warning('Deprecation Warning - add_integrations will not use from 1.40.0'
                        'Next time use a org.integrations.create() or project.integrations.create()')
         return self.organizations.add_integrations(organization=self,
                                                    integrations_type=integrations_type,
@@ -249,7 +276,7 @@ class Organization(entities.BaseEntity):
         :param really: really really?
         :return: True
         """
-        logger.warning('Deprecation Warning - get_integrations will not use from 1.40.0'
+        logger.warning('Deprecation Warning - delete_integrations will not use from 1.40.0'
                        'Next time use a org.integrations.delete() or project.integrations.delete()')
         return self.organizations.delete_integrations(organization=self,
                                                       integrations_id=integrations_id,
@@ -261,6 +288,6 @@ class Organization(entities.BaseEntity):
         Update the integrations with new name
         :param new_name:
         """
-        logger.warning('Deprecation Warning - get_integrations will not use from 1.40.0'
+        logger.warning('Deprecation Warning - update_integrations will not use from 1.40.0'
                        'Next time use a org.integrations.update() or project.integrations.update()')
         return self.organizations.update_integrations(organization=self, new_name=new_name)

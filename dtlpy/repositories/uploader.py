@@ -37,9 +37,11 @@ class Uploader:
         self.num_files = 0
         self.i_item = 0
         self.pbar = tqdm.tqdm(total=0, disable=self.items_repository._client_api.verbose.disable_progress_bar)
-        self.reporter = Reporter(num_workers=0, resource=Reporter.ITEMS_UPLOAD,
+        self.reporter = Reporter(num_workers=0,
+                                 resource=Reporter.ITEMS_UPLOAD,
                                  print_error_logs=items_repository._client_api.verbose.print_error_logs,
-                                 output_entity=output_entity, client_api=items_repository._client_api,
+                                 output_entity=output_entity,
+                                 client_api=items_repository._client_api,
                                  no_output=no_output)
 
     def upload(

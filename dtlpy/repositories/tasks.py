@@ -1,3 +1,4 @@
+import datetime
 import logging
 import json
 from typing import Union
@@ -180,8 +181,11 @@ class Tasks:
         """
         # url
         url = URL_PATH + '/query'
+
         if filters is None:
             filters = entities.Filters(use_defaults=False, resource=entities.FiltersResource.TASK)
+        else: 
+            return self.query(filters=filters, project_ids=project_ids)
 
         if self._dataset is not None:
             filters.add(field='datasetId', values=[self._dataset.id], operator=entities.FiltersOperations.IN)
@@ -353,11 +357,11 @@ class Tasks:
         else:
             raise exceptions.PlatformException(response)
 
-    def create_qa_task(self, due_date, task, assignee_ids, filters=None, items=None, query=None) -> entities.Task:
+    def create_qa_task(self, task, assignee_ids, due_date=None, filters=None, items=None, query=None) -> entities.Task:
         """
-        :param due_date:
         :param task:
         :param assignee_ids:
+        :param due_date:
         :param filters:
         :param items:
         :param query:
@@ -378,7 +382,7 @@ class Tasks:
 
     def create(self,
                task_name,
-               due_date,
+               due_date=None,
                assignee_ids=None,
                workload=None,
                dataset=None,
@@ -393,7 +397,8 @@ class Tasks:
                items=None,
                query=None,
                available_actions=None,
-               wait=True
+               wait=True,
+               check_if_exist: entities.Filters = False
                ) -> entities.Task:
         """
         Create a new Annotation Task
@@ -415,12 +420,14 @@ class Tasks:
         :param query:
         :param available_actions:
         :param wait: wait the command to finish
+        :param check_if_exist: dl.Filters check if task exist according to filter
         :return: Annotation Task object
         """
 
         if dataset is None and self._dataset is None:
             raise exceptions.PlatformException('400', 'Please provide param dataset')
-
+        if due_date is None:
+            due_date = (datetime.datetime.now() + datetime.timedelta(days=7)).timestamp()
         if query is None:
             if filters is None and items is None:
                 query = entities.Filters().prepare()
@@ -469,6 +476,15 @@ class Tasks:
                    'dueDate': due_date,
                    'asynced': wait}
 
+        if check_if_exist:
+            if check_if_exist.resource != entities.FiltersResource.TASK:
+                raise exceptions.PlatformException(
+                    '407', 'Filter resource for check_if_exist param must be {}, got {}'.format(
+                        entities.FiltersResource.TASK, check_if_exist.resource
+                    )
+                )
+            payload['checkIfExist'] = {'query': check_if_exist.prepare()}
+
         if workload:
             payload['workload'] = workload.to_json()
 
@@ -485,7 +501,17 @@ class Tasks:
                                                          path=URL_PATH,
                                                          json_req=payload)
         if success:
-            command = entities.Command.from_json(_json=response.json(),
+
+            response_json = response.json()
+            if check_if_exist is not None and 'name' in response_json:
+                return entities.Task.from_json(
+                    _json=response.json(),
+                    client_api=self._client_api,
+                    project=self._project,
+                    dataset=self._dataset
+                )
+
+            command = entities.Command.from_json(_json=response_json,
                                                  client_api=self._client_api)
             if not wait:
                 return command

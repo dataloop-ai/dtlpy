@@ -33,7 +33,16 @@ def step_impl(context, entity):
             if 'runtime' in response:
                 if 'autoscaler' not in response['runtime']:
                     response['runtime']['autoscaler'] = None
-        if entity == 'pipeline':
+        elif entity == 'execution':
+            entity_to_json.pop('status')
+            response.pop('status')
+            entity_to_json.pop('latestStatus')
+            response.pop('latestStatus')
+            entity_to_json.pop('statusLog')
+            response.pop('statusLog')
+            entity_to_json.pop('updatedAt')
+            response.pop('updatedAt')
+        elif entity == 'pipeline':
             entity_to_json.pop('info')
             response.pop('info')
 

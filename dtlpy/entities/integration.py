@@ -1,7 +1,7 @@
 import logging
 import attr
 
-from .. import entities, services
+from .. import entities, services, exceptions, repositories
 
 logger = logging.getLogger(name=__name__)
 
@@ -57,12 +57,6 @@ class Integration(entities.BaseEntity):
 
     @property
     def project(self):
-        if self._project is None:
-            # get from cache
-            project = self._client_api.state_io.get('project')
-            if project is not None:
-                # build entity from json
-                self._project = entities.Project.from_json(_json=project, client_api=self._client_api)
         return self._project
 
     @project.setter
@@ -70,3 +64,41 @@ class Integration(entities.BaseEntity):
         if not isinstance(project, entities.Project):
             raise ValueError('Must input a valid Project entity')
         self._project = project
+
+    def update(self, new_name: str):
+        """
+        Update the integrations name
+        :param new_name:
+        """
+        if self.project is not None:
+            identifier = self.project
+        elif self.org is not None:
+            identifier = repositories.organizations.Organizations(client_api=self._client_api).get(
+                organization_id=self.org)
+        else:
+            raise exceptions.PlatformException(
+                error='400',
+                message='Must provide an identifier in inputs')
+
+        identifier.integrations.update(new_name=new_name, integrations_id=self.id)
+
+    def delete(self,
+               sure: bool = False,
+               really: bool = False) -> bool:
+        """
+        Delete integrations from the Organization
+        :param sure: are you sure you want to delete?
+        :param really: really really?
+        :return: True
+        """
+        if self.project is not None:
+            identifier = self.project
+        elif self.org is not None:
+            identifier = repositories.organizations.Organizations(client_api=self._client_api).get(
+                organization_id=self.org)
+        else:
+            raise exceptions.PlatformException(
+                error='400',
+                message='Must provide an identifier in inputs')
+
+        return identifier.integrations.delete(integrations_id=self.id, sure=sure, really=really)

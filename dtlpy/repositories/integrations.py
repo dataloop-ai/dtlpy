@@ -75,14 +75,15 @@ class Integrations:
                 error='403',
                 message='Cant delete integrations from SDK. Please login to platform to delete')
 
-    def create(self, integrations_type, name, options):
+    def create(self, integrations_type: entities.ExternalStorage, name, options):
         """
         Add integrations to the Organization
-        :param integrations_type: "s3" , "gcs", "azureblob"
+        :param integrations_type: dl.ExternalStorage
         :param name: integrations name
         :param options: s3 - {key: "", secret: ""},
                         gcs - {key: "", secret: "", content: ""},
                         azureblob - {key: "", secret: "", clientId: "", tenantId: ""}
+                        key_value - {key: "", value: ""}
         :return: True
         """
 
@@ -106,10 +107,11 @@ class Integrations:
         else:
             return entities.Integration.from_json(_json=response.json(), client_api=self._client_api)
 
-    def update(self, new_name: str):
+    def update(self, new_name: str, integrations_id):
         """
         Update the integrations name
         :param new_name:
+        :param integrations_id:
         """
         if self.project is None and self.org is None:
             raise exceptions.PlatformException(
@@ -122,7 +124,7 @@ class Integrations:
             organization_id = self.org.id
 
         url_path = '/orgs/{}/integrations/'.format(organization_id)
-        payload = dict(name=new_name)
+        payload = dict(name=new_name, id=integrations_id)
 
         success, response = self._client_api.gen_request(req_type='patch',
                                                          path=url_path,

@@ -61,9 +61,9 @@ class Annotation(entities.BaseEntity):
     _item = attr.ib(repr=False)
     item_id = attr.ib()
     creator = attr.ib()
-    createdAt = attr.ib()
-    updatedBy = attr.ib(repr=False)
-    updatedAt = attr.ib(repr=False)
+    created_at = attr.ib()
+    updated_by = attr.ib(repr=False)
+    updated_at = attr.ib(repr=False)
     type = attr.ib()
     dataset_url = attr.ib(repr=False)
 
@@ -106,6 +106,27 @@ class Annotation(entities.BaseEntity):
     ############
 
     @property
+    def createdAt(self):
+        logger.warning(
+            'Deprecation Warning - param "createdAt" will be deprecated from version "1.41.0'
+            'Use "created_at"')
+        return self.created_at
+
+    @property
+    def updatedAt(self):
+        logger.warning(
+            'Deprecation Warning - param "updatedAt" will be deprecated from version "1.41.0'
+            'Use "updated_at"')
+        return self.updated_at
+
+    @property
+    def updatedBy(self):
+        logger.warning(
+            'Deprecation Warning - param "updatedBy" will be deprecated from version "1.41.0'
+            'Use "updated_by"')
+        return self.updated_by
+
+    @property
     def _client_api(self) -> ApiClient:
         if self.__client_api is None:
             if self._item is None:
@@ -115,7 +136,6 @@ class Annotation(entities.BaseEntity):
                 self.__client_api = self._item._client_api
         assert isinstance(self.__client_api, ApiClient)
         return self.__client_api
-
 
     @property
     def dataset(self):
@@ -780,7 +800,7 @@ class Annotation(entities.BaseEntity):
         dataset_id = None
         if item is not None:
             dataset_url = item.dataset_url
-            dataset_id = item.datasetId
+            dataset_id = item.dataset_id
 
         if start_time is None:
             if fps is not None and frame_num is not None:
@@ -802,9 +822,9 @@ class Annotation(entities.BaseEntity):
             item=item,
             item_id=None,
             creator=None,
-            createdAt=None,
-            updatedBy=None,
-            updatedAt=None,
+            created_at=None,
+            updated_by=None,
+            updated_at=None,
             object_id=object_id,
             type=ann_type,
             dataset_url=dataset_url,
@@ -1030,7 +1050,7 @@ class Annotation(entities.BaseEntity):
         item_url = _json.get('item', item.url if item is not None else None)
         item_id = _json.get('itemId', item.id if item is not None else None)
         dataset_url = _json.get('dataset', item.dataset_url if item is not None else None)
-        dataset_id = _json.get('datasetId', item.datasetId if item is not None else None)
+        dataset_id = _json.get('datasetId', item.dataset_id if item is not None else None)
 
         if item is not None:
             if item.id != item_id:
@@ -1137,9 +1157,9 @@ class Annotation(entities.BaseEntity):
             dataset_url=dataset_url,
             dataset_id=dataset_id,
             creator=_json['creator'],
-            createdAt=_json['createdAt'],
-            updatedBy=_json['updatedBy'],
-            updatedAt=_json['updatedAt'],
+            created_at=_json['createdAt'],
+            updated_by=_json['updatedBy'],
+            updated_at=_json['updatedAt'],
             hash=_json.get('hash', None),
             object_id=object_id,
             type=_json['type'],
@@ -1251,13 +1271,7 @@ class Annotation(entities.BaseEntity):
                                                         attr.fields(Annotation).metadata,
                                                         attr.fields(Annotation).creator,
                                                         attr.fields(Annotation).hash,
-                                                        attr.fields(Annotation).createdAt,
-                                                        attr.fields(Annotation).updatedBy,
-                                                        attr.fields(Annotation).updatedAt,
-                                                        attr.fields(Annotation).metadata,
-                                                        attr.fields(Annotation).createdAt,
-                                                        attr.fields(Annotation).updatedBy,
-                                                        ))
+                                                        attr.fields(Annotation).metadata))
 
         # property attributes
         item_id = self.item_id
@@ -1269,11 +1283,16 @@ class Annotation(entities.BaseEntity):
         _json['label'] = self.label
         _json['attributes'] = self.attributes
         _json['dataset'] = self.dataset_url
+
+        _json['createdAt'] = self.created_at
+        _json['updatedBy'] = self.updated_by
+        _json['updatedAt'] = self.updated_at
+
         if self.label_suggestions:
             _json['labelSuggestions'] = self.label_suggestions
 
         if self._item is not None and self.dataset_id is None:
-            _json['datasetId'] = self._item.datasetId
+            _json['datasetId'] = self._item.dataset_id
         else:
             _json['datasetId'] = self.dataset_id
 

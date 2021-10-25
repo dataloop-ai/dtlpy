@@ -63,7 +63,7 @@ class ItemLink(Link):
                 name = ref
 
         if dataset_id is None and item is not None and isinstance(item, entities.Item):
-            dataset_id = item.datasetId
+            dataset_id = item.dataset_id
 
         # noinspection PyShadowingBuiltins
         type = LinkTypeEnum.ID

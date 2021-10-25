@@ -138,7 +138,7 @@ class ItemLinkUploadElement(BaseUploadElement):
     def __init__(self, all_upload_elements: dict):
         super().__init__(all_upload_elements)
 
-        link = entities.Link(ref=self.upload_item_element.id, type='id', dataset_id=self.upload_item_element.datasetId,
+        link = entities.Link(ref=self.upload_item_element.id, type='id', dataset_id=self.upload_item_element.dataset_id,
                              name='{}_link.json'.format(self.upload_item_element.name))
         if self.remote_name is None:
             self.remote_name = link.name

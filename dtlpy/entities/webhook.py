@@ -22,8 +22,8 @@ class Webhook(entities.BaseEntity):
     # platform
     id = attr.ib()
     url = attr.ib()
-    createdAt = attr.ib()
-    updatedAt = attr.ib(repr=False)
+    created_at = attr.ib()
+    updated_at = attr.ib(repr=False)
     creator = attr.ib()
     name = attr.ib()
 
@@ -39,6 +39,20 @@ class Webhook(entities.BaseEntity):
     # repos
     _webhooks = attr.ib(default=None)
 
+    @property
+    def createdAt(self):
+        logger.warning(
+            'Deprecation Warning - param "createdAt" will be deprecated from version "1.41.0'
+            'Use "created_at"')
+        return self.created_at
+
+    @property
+    def updatedAt(self):
+        logger.warning(
+            'Deprecation Warning - param "updatedAt" will be deprecated from version "1.41.0'
+            'Use "updated_at"')
+        return self.updated_at
+
     @classmethod
     def from_json(cls, _json: dict, client_api: services.ApiClient, project=None):
         """
@@ -53,8 +67,8 @@ class Webhook(entities.BaseEntity):
                 project = None
         return cls(
             http_method=_json.get('httpMethod', None),
-            createdAt=_json.get("createdAt", None),
-            updatedAt=_json.get("updatedAt", None),
+            created_at=_json.get("createdAt", None),
+            updated_at=_json.get("updatedAt", None),
             project_id=_json.get('project', None),
             hook_url=_json.get('hookUrl', None),
             creator=_json.get("creator", None),
@@ -89,12 +103,16 @@ class Webhook(entities.BaseEntity):
                 attr.fields(Webhook).project_id,
                 attr.fields(Webhook).hook_url,
                 attr.fields(Webhook).http_method,
+                attr.fields(Webhook).created_at,
+                attr.fields(Webhook).updated_at,
             ),
         )
 
         _json['project'] = self.project_id
         _json['hookUrl'] = self.hook_url
         _json['httpMethod'] = self.http_method
+        _json['createdAt'] = self.created_at
+        _json['updatedAt'] = self.updated_at
 
         return _json
 

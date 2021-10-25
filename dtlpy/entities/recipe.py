@@ -22,7 +22,7 @@ class Recipe(entities.BaseEntity):
     ontologyIds = attr.ib(repr=False)
     instructions = attr.ib(repr=False)
     examples = attr.ib(repr=False)
-    customActions = attr.ib(repr=False)
+    custom_actions = attr.ib(repr=False)
     metadata = attr.ib()
 
     # name change
@@ -35,6 +35,13 @@ class Recipe(entities.BaseEntity):
     _project = attr.ib(repr=False, default=None)
     # repositories
     _repositories = attr.ib(repr=False)
+
+    @property
+    def customActions(self):
+        logger.warning(
+            'Deprecation Warning - param "customActions" will be deprecated from version "1.41.0'
+            'Use "custom_actions"')
+        return self.custom_actions
 
     @classmethod
     def from_json(cls, _json, client_api, dataset=None, project=None, is_fetched=True):
@@ -69,7 +76,7 @@ class Recipe(entities.BaseEntity):
             ui_settings=_json.get('uiSettings', None),
             metadata=_json.get('metadata', None),
             examples=_json.get('examples', None),
-            customActions=_json.get('customActions', None))
+            custom_actions=_json.get('customActions', None))
         inst.is_fetched = is_fetched
         return inst
 
@@ -143,9 +150,12 @@ class Recipe(entities.BaseEntity):
                                                               attr.fields(Recipe)._project,
                                                               attr.fields(Recipe).project_ids,
                                                               attr.fields(Recipe).ui_settings,
-                                                              attr.fields(Recipe)._repositories))
+                                                              attr.fields(Recipe)._repositories,
+                                                              attr.fields(Recipe).custom_actions,
+                                                              ))
         _json['uiSettings'] = self.ui_settings
         _json['projectIds'] = self.project_ids
+        _json['customActions'] = self.custom_actions
         return _json
 
     @property

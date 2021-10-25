@@ -48,8 +48,8 @@ class Snapshot(entities.BaseEntity):
     # platform
     id = attr.ib()
     creator = attr.ib()
-    createdAt = attr.ib()
-    updatedAt = attr.ib(repr=False)
+    created_at = attr.ib()
+    updated_at = attr.ib(repr=False)
     bucket = attr.ib()
     name = attr.ib()
     description = attr.ib()
@@ -73,6 +73,20 @@ class Snapshot(entities.BaseEntity):
     _client_api = attr.ib(type=services.ApiClient, repr=False)
     _repositories = attr.ib(repr=False)
     _ontology = attr.ib(repr=False, default=None)
+
+    @property
+    def createdAt(self):
+        logger.warning(
+            'Deprecation Warning - param "createdAt" will be deprecated from version "1.41.0'
+            'Use "created_at"')
+        return self.created_at
+
+    @property
+    def updatedAt(self):
+        logger.warning(
+            'Deprecation Warning - param "updatedAt" will be deprecated from version "1.41.0'
+            'Use "updated_at"')
+        return self.updated_at
 
     @staticmethod
     def _protected_from_json(_json, client_api, project, model, is_fetched=True):
@@ -141,8 +155,8 @@ class Snapshot(entities.BaseEntity):
             bucket=bucket,
             ontology_id=ontology_spec.ontology_id,
             labels=ontology_spec.labels,
-            createdAt=_json.get('createdAt', None),
-            updatedAt=_json.get('updatedAt', None),
+            created_at=_json.get('createdAt', None),
+            updated_at=_json.get('updatedAt', None),
             creator=_json.get('creator', None),
             client_api=client_api,
             name=_json.get('name', None),
@@ -174,12 +188,16 @@ class Snapshot(entities.BaseEntity):
                                                         attr.fields(Snapshot).labels,
                                                         attr.fields(Snapshot).ontology_id,
                                                         attr.fields(Snapshot).bucket,
+                                                        attr.fields(Snapshot).created_at,
+                                                        attr.fields(Snapshot).updated_at,
                                                         ))
 
         _json['modelId'] = self.model_id
         _json['orgId'] = self.org_id
         _json['projectId'] = self.project_id
         _json['datasetId'] = self.dataset_id
+        _json['createdAt'] = self.created_at
+        _json['updatedAt'] = self.updated_at
         if self.bucket is not None:
             _json['bucket'] = self.bucket.to_json()
         _json['ontologySpec'] = entities.OntologySpec(ontology_id=self.ontology_id,

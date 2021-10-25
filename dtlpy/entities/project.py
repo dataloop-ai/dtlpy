@@ -23,15 +23,15 @@ class Project(entities.BaseEntity):
     """
 
     _contributors = attr.ib(repr=False)
-    createdAt = attr.ib()
+    created_at = attr.ib()
     creator = attr.ib()
     id = attr.ib()
     name = attr.ib()
     org = attr.ib(repr=False)
-    updatedAt = attr.ib(repr=False)
+    updated_at = attr.ib(repr=False)
     role = attr.ib(repr=False)
     account = attr.ib(repr=False)
-    isBlocked = attr.ib(repr=False)
+    is_blocked = attr.ib(repr=False)
 
     # name change
     feature_constraints = attr.ib()
@@ -41,6 +41,27 @@ class Project(entities.BaseEntity):
 
     # repositories
     _repositories = attr.ib(repr=False)
+
+    @property
+    def isBlocked(self):
+        logger.warning(
+            'Deprecation Warning - param "isBlocked" will be deprecated from version "1.41.0'
+            'Use "is_blocked"')
+        return self.is_blocked
+
+    @property
+    def createdAt(self):
+        logger.warning(
+            'Deprecation Warning - param "createdAt" will be deprecated from version "1.41.0'
+            'Use "created_at"')
+        return self.created_at
+
+    @property
+    def updatedAt(self):
+        logger.warning(
+            'Deprecation Warning - param "updatedAt" will be deprecated from version "1.41.0'
+            'Use "updated_at"')
+        return self.updated_at
 
     @_repositories.default
     def set_repositories(self):
@@ -242,9 +263,9 @@ class Project(entities.BaseEntity):
         """
         inst = cls(feature_constraints=_json.get('featureConstraints', None),
                    contributors=_json.get('contributors', None),
-                   isBlocked=_json.get('isBlocked', None),
-                   createdAt=_json.get('createdAt', None),
-                   updatedAt=_json.get('updatedAt', None),
+                   is_blocked=_json.get('isBlocked', None),
+                   created_at=_json.get('createdAt', None),
+                   updated_at=_json.get('updatedAt', None),
                    creator=_json.get('creator', None),
                    account=_json.get('account', None),
                    name=_json.get('name', None),
@@ -265,9 +286,16 @@ class Project(entities.BaseEntity):
                                   filter=attr.filters.exclude(attr.fields(Project)._client_api,
                                                               attr.fields(Project)._repositories,
                                                               attr.fields(Project).feature_constraints,
-                                                              attr.fields(Project)._contributors))
+                                                              attr.fields(Project)._contributors,
+                                                              attr.fields(Project).created_at,
+                                                              attr.fields(Project).updated_at,
+                                                              attr.fields(Project).is_blocked,
+                                                              ))
         output_dict['contributors'] = self._contributors
         output_dict['featureConstraints'] = self.feature_constraints
+        output_dict['createdAt'] = self.created_at
+        output_dict['updatedAt'] = self.updated_at
+        output_dict['isBlocked'] = self.is_blocked
 
         return output_dict
 

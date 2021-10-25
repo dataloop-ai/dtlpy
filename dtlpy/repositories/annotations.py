@@ -24,7 +24,7 @@ class Annotations:
             if dataset is not None:
                 dataset_id = dataset.id
             elif item is not None:
-                dataset_id = item.datasetId
+                dataset_id = item.dataset_id
         self._dataset_id = dataset_id
 
     ############

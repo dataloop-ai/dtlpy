@@ -3,7 +3,6 @@ import datetime
 import json
 import threading
 
-import numpy as np
 import logging
 from . import disk_cache
 
@@ -21,11 +20,10 @@ class Reporter:
 
     def __init__(self, num_workers, resource, client_api, print_error_logs=False, output_entity=None, no_output=False):
         self._num_workers = num_workers
-        self.writing = False
         self.mutex = threading.Lock()
         self.no_output = no_output
         self._client_api = client_api
-        self.key = datetime.datetime.now().strftime('%S-%M-%H-%d-%m-%Y')
+        self.key = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
         self._reports = {'errors': disk_cache.DlCache('errors-' + self.key),
                          'output': disk_cache.DlCache('output-' + self.key),
                          'status': disk_cache.DlCache('status-' + self.key),
@@ -37,28 +35,39 @@ class Reporter:
         self._status = dict()
         self._errors = dict()
         self._output = dict()
-
+        self.cache_items = {'errors': self._errors,
+                            'status': self._status,
+                            'output': self._output}
         self._resource = resource
         self._print_error_logs = print_error_logs
         self._output_entity = output_entity
 
     @property
     def has_errors(self):
+        """
+        return True if errors has occurred False otherwise
+        """
         return self.failure_count > 0
 
     def construct_output(self, entity):
+        """
+        convert the json to his entity object
+        """
         if self._output_entity and entity:
             return self._output_entity.from_json(client_api=self._client_api, _json=entity)
         return entity
 
     @property
     def output(self):
+        """
+        return a generator for all the outputs or the output it self if it is single
+        """
         if self.no_output:
             return
 
-        cache = self._reports.get('output')
-        for k in cache.keys():
-            for item in list(cache.get(key=k).values()):
+        output = self._reports.get('output')
+        for k in output.keys():
+            for item in list(output.get(key=k).values()):
                 yield self.construct_output(item)
 
         current = [self.construct_output(output) for output in list(self._output.values()) if output is not None]
@@ -67,6 +76,9 @@ class Reporter:
 
     @property
     def status_list(self):
+        """
+        return a list of all the status that get
+        """
         output = dict()
         status_cache = self._reports.get('status')
         for key in status_cache.keys():
@@ -77,55 +89,64 @@ class Reporter:
 
     @property
     def num_workers(self):
+        """
+        number of the threads to work
+        """
         return self._num_workers
 
     def upcount_num_workers(self):
+        """
+        increase the number of the threads to work
+        """
         self._num_workers += 1
 
     @property
     def failure_count(self):
+        """
+        return how many actions fail
+        """
         curr = len([suc for suc in (self._success.values()) if suc is False])
         return self._reports.get('status').get(key='failure') + curr
 
     @property
     def success_count(self):
+        """
+        return how many actions success
+        """
         curr = len([suc for suc in (self._success.values()) if suc is True])
         return self._reports.get('status').get(key='success') + curr
 
     def status_count(self, status):
+        """
+        :param status: str of status to check it
+        :return: how many times this status appear
+        """
         status_list = self.status_list
         return list(status_list).count(status)
 
     def _write_to_disk(self):
-        self.mutex.acquire()
-        self.writing = True
-        list_items_values = [self._errors,
-                             self._status,
-                             self._output,
-                             ]
-
-        list_items_names = ['errors',
-                            'status',
-                            'output',
-                            ]
-
-        if len(self._success) > CHUNK:
-            status_cache = self._reports.get('status')
-            status_cache.incr(key='failure',
-                              value=len([suc for suc in list(self._success.values()) if suc is False]))
-            status_cache.incr(key='success',
-                              value=len([suc for suc in list(self._success.values()) if suc is True]))
-            self._success.clear()
-        for i in range(len(list_items_values)):
-            if len(list_items_values[i]) > CHUNK:
-                self._reports[list_items_names[i]].push(list_items_values[i])
-                list_items_values[i].clear()
-
-        self.writing = False
-        self.mutex.release()
+        """
+        the function write to the dick the outputs that get until the chunk amount
+        """
+        with self.mutex:
+            if len(self._success) > CHUNK:
+                status_cache = self._reports.get('status')
+                num_true = sum(list(self._success.values()))
+                status_cache.incr(key='failure',
+                                  value=len(self._success) - num_true)
+                status_cache.incr(key='success',
+                                  value=num_true)
+                self._success.clear()
+            for name, cache_list in self.cache_items.items():
+                if len(cache_list) > CHUNK:
+                    self._reports[name].push(cache_list)
+                    cache_list.clear()
 
     def set_index(self, ref, error=None, status=None, success=None, output=None):
-        if self.writing:
+        """
+        set the values that we get from the actions in the reporter
+        """
+        if self.mutex.locked():
             self.mutex.acquire()
             self.mutex.release()
         if error is not None:
@@ -141,11 +162,16 @@ class Reporter:
             if not self.no_output:
                 self._output[ref] = output
 
-        if len(self._errors) > CHUNK or len(self._status) > CHUNK or len(
-                self._output) > CHUNK or len(self._success) > CHUNK:
+        if len(self._errors) > CHUNK or \
+                len(self._status) > CHUNK or \
+                len(self._output) > CHUNK or \
+                len(self._success) > CHUNK:
             self._write_to_disk()
 
     def generate_log_files(self):
+        """
+        build a log file that display the errors
+        """
         if len(self._errors) > 0:
             self._reports['errors'].push(self._errors)
             self._errors.clear()
@@ -171,15 +197,17 @@ class Reporter:
         clear the file system from the outputs
         """
         import shutil
-        date_now = datetime.datetime(year=int(self.key.split('-')[5]), month=int(self.key.split('-')[4]),
-                                     day=int(self.key.split('-')[3]))
+        date_now = datetime.datetime(year=int(self.key.split('-')[0]),
+                                     month=int(self.key.split('-')[1]),
+                                     day=int(self.key.split('-')[2]))
         cache_dir = os.path.dirname(self._reports['output'].cache_dir)
         cache_files_list = os.listdir(cache_dir)
         # remove all the cache files from the last day
         for filename in cache_files_list:
             try:
-                date_file = datetime.datetime(year=int(filename.split('-')[6]), month=int(filename.split('-')[5]),
-                                              day=int(filename.split('-')[4]))
+                date_file = datetime.datetime(year=int(filename.split('-')[1]),
+                                              month=int(filename.split('-')[2]),
+                                              day=int(filename.split('-')[3]))
             except:
                 continue
             if date_file < date_now:

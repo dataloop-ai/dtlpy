@@ -27,8 +27,8 @@ class Item(entities.BaseEntity):
     annotations_link = attr.ib(repr=False)
     dataset_url = attr.ib()
     thumbnail = attr.ib(repr=False)
-    createdAt = attr.ib()
-    datasetId = attr.ib()
+    created_at = attr.ib()
+    dataset_id = attr.ib()
     annotated = attr.ib(repr=False)
     metadata = attr.ib(repr=False)
     filename = attr.ib()
@@ -54,6 +54,20 @@ class Item(entities.BaseEntity):
 
     # repositories
     _repositories = attr.ib(repr=False)
+
+    @property
+    def createdAt(self):
+        logger.warning(
+            'Deprecation Warning - param "createdAt" will be deprecated from version "1.41.0'
+            'Use "created_at"')
+        return self.created_at
+
+    @property
+    def datasetId(self):
+        logger.warning(
+            'Deprecation Warning - param "datasetId" will be deprecated from version "1.41.0'
+            'Use "dataset_id"')
+        return self.dataset_id
 
     @staticmethod
     def _protected_from_json(_json, client_api, dataset=None):
@@ -104,10 +118,10 @@ class Item(entities.BaseEntity):
             # params
             annotations_link=_json.get('annotations', None),
             thumbnail=_json.get('thumbnail', None),
-            datasetId=_json.get('datasetId', dataset_id),
+            dataset_id=_json.get('datasetId', dataset_id),
             annotated=_json.get('annotated', None),
             dataset_url=_json.get('dataset', None),
-            createdAt=_json.get('createdAt', None),
+            created_at=_json.get('createdAt', None),
             annotations_count=_json.get('annotationsCount', None),
             hidden=_json.get('hidden', False),
             stream=_json.get('stream', None),
@@ -130,7 +144,7 @@ class Item(entities.BaseEntity):
     @property
     def dataset(self):
         if self._dataset is None:
-            self._dataset = self.datasets.get(dataset_id=self.datasetId, fetch=None)
+            self._dataset = self.datasets.get(dataset_id=self.dataset_id, fetch=None)
         assert isinstance(self._dataset, entities.Dataset)
         return self._dataset
 
@@ -139,7 +153,7 @@ class Item(entities.BaseEntity):
         if self._project is None:
             if self._dataset is None:
                 if self._dataset is None:
-                    self._dataset = self.datasets.get(dataset_id=self.datasetId, fetch=None)
+                    self._dataset = self.datasets.get(dataset_id=self.dataset_id, fetch=None)
             self._project = self._dataset.project
             if self._project is None:
                 raise exceptions.PlatformException(error='2001',
@@ -161,7 +175,7 @@ class Item(entities.BaseEntity):
         if self._dataset is None:
             items = repositories.Items(client_api=self._client_api,
                                        dataset=self._dataset,
-                                       dataset_id=self.datasetId,
+                                       dataset_id=self.dataset_id,
                                        datasets=repositories.Datasets(client_api=self._client_api, project=None))
             datasets = items.datasets
             features = repositories.Features(client_api=self._client_api,
@@ -172,7 +186,7 @@ class Item(entities.BaseEntity):
             features = self.dataset.features
 
         r = reps(annotations=repositories.Annotations(client_api=self._client_api,
-                                                      dataset_id=self.datasetId,
+                                                      dataset_id=self.dataset_id,
                                                       item=self,
                                                       dataset=self._dataset),
                  items=items,
@@ -314,11 +328,17 @@ class Item(entities.BaseEntity):
                                                         attr.fields(Item).annotations_count,
                                                         attr.fields(Item).dataset_url,
                                                         attr.fields(Item).annotations_link,
-                                                        attr.fields(Item).spec))
+                                                        attr.fields(Item).spec,
+                                                        attr.fields(Item).created_at,
+                                                        attr.fields(Item).dataset_id,
+                                                        ))
 
         _json.update({'annotations': self.annotations_link,
                       'annotationsCount': self.annotations_count,
-                      'dataset': self.dataset_url})
+                      'dataset': self.dataset_url,
+                      'createdAt': self.created_at,
+                      'datasetId': self.dataset_id,
+                      })
         if self.spec is not None:
             _json['spec'] = self.spec
         return _json
@@ -431,7 +451,7 @@ class Item(entities.BaseEntity):
         if remote_filepath is None:
             remote_filepath = self.filename
         if dst_dataset_id is None:
-            dst_dataset_id = self.datasetId
+            dst_dataset_id = self.dataset_id
         return self.items.clone(item_id=self.id,
                                 dst_dataset_id=dst_dataset_id,
                                 remote_filepath=remote_filepath,

@@ -47,7 +47,7 @@ class Dataset(entities.BaseEntity):
     annotated = attr.ib(repr=False)
     creator = attr.ib()
     projects = attr.ib(repr=False)
-    itemsCount = attr.ib()
+    items_count = attr.ib()
     metadata = attr.ib(repr=False)
     directoryTree = attr.ib(repr=False)
     export = attr.ib(repr=False)
@@ -76,6 +76,13 @@ class Dataset(entities.BaseEntity):
     _ontology_ids = attr.ib(default=None, repr=False)
     _labels = attr.ib(default=None, repr=False)
     _directory_tree = attr.ib(default=None, repr=False)
+
+    @property
+    def itemsCount(self):
+        logger.warning(
+            'Deprecation Warning - param "itemsCount" will be deprecated from version "1.41.0'
+            'Use "items_count"')
+        return self.items_count
 
     @staticmethod
     def _protected_from_json(project: entities.Project,
@@ -135,7 +142,7 @@ class Dataset(entities.BaseEntity):
                    readable_type=_json.get('readableType', None),
                    access_level=_json.get('accessLevel', None),
                    created_at=_json.get('createdAt', None),
-                   itemsCount=_json.get('itemsCount', None),
+                   items_count=_json.get('itemsCount', None),
                    annotated=_json.get('annotated', None),
                    readonly=_json.get('readonly', None),
                    projects=projects,
@@ -172,12 +179,15 @@ class Dataset(entities.BaseEntity):
                                                               attr.fields(Dataset).readable_type,
                                                               attr.fields(Dataset).created_at,
                                                               attr.fields(Dataset).items_url,
-                                                              attr.fields(Dataset).expiration_options))
+                                                              attr.fields(Dataset).expiration_options,
+                                                              attr.fields(Dataset).items_count,
+                                                              ))
         _json.update({'items': self.items_url})
         _json['readableType'] = self.readable_type
         _json['createdAt'] = self.created_at
         _json['accessLevel'] = self.access_level
         _json['readonly'] = self._readonly
+        _json['itemsCount'] = self.items_count
         if self.expiration_options and self.expiration_options.to_json():
             _json['expirationOptions'] = self.expiration_options.to_json()
         return _json
@@ -468,8 +478,6 @@ class Dataset(entities.BaseEntity):
                              filters=None,
                              annotation_options: ViewAnnotationOptions = None,
                              annotation_filters=None,
-                             annotation_filter_type: AnnotationType = None,
-                             annotation_filter_label=None,
                              overwrite=False,
                              thickness=1,
                              with_text=False,
@@ -483,8 +491,6 @@ class Dataset(entities.BaseEntity):
         :param filters: Filters entity or a dictionary containing filters parameters
         :param annotation_options: download annotations options: list(dl.ViewAnnotationOptions)
         :param annotation_filters: Filters entity to filter annotations for download
-        :param annotation_filter_type: DEPRECATED - list (dl.AnnotationType) of annotation types when downloading annotation, not relevant for JSON option
-        :param annotation_filter_label: DEPRECATED - list of labels types when downloading annotation, not relevant for JSON option
         :param overwrite: optional - default = False
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :param with_text: optional - add text to annotations, default = False
@@ -500,8 +506,6 @@ class Dataset(entities.BaseEntity):
             filters=filters,
             annotation_options=annotation_options,
             annotation_filters=annotation_filters,
-            annotation_filter_type=annotation_filter_type,  # to deprecate - use "annotation_filters"
-            annotation_filter_label=annotation_filter_label,  # to deprecate - use "annotation_filters"
             thickness=thickness,
             with_text=with_text,
             remote_path=remote_path)
@@ -659,8 +663,7 @@ class Dataset(entities.BaseEntity):
             local_path=None,
             file_types=None,
             annotation_options: ViewAnnotationOptions = None,
-            annotation_filter_type: AnnotationType = None,
-            annotation_filter_label=None,
+            annotation_filters=None,
             overwrite=False,
             to_items_folder=True,
             thickness=1,
@@ -675,10 +678,8 @@ class Dataset(entities.BaseEntity):
         :param filters: Filters entity or a dictionary containing filters parameters
         :param local_path: local folder or filename to save to.
         :param file_types: a list of file type to download. e.g ['video/webm', 'video/mp4', 'image/jpeg', 'image/png']
-        :param annotation_options: download annotations options: list(dl.ViewAnnotationOptions)
-        :param annotation_filter_type: list (dl.AnnotationType) of annotation types when downloading annotation,
-                                                                                        not relevant for JSON option
-        :param annotation_filter_label: list of labels types when downloading annotation, not relevant for JSON option
+        :param annotation_options: download annotations options: list(dl.ViewAnnotationOptions)                                                                                        not relevant for JSON option
+        :param annotation_filters: Filters entity to filter annotations for download                                                                                        not relevant for JSON option
         :param overwrite: optional - default = False
         :param to_items_folder: Create 'items' folder and download items to it
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
@@ -690,8 +691,7 @@ class Dataset(entities.BaseEntity):
                                    local_path=local_path,
                                    file_types=file_types,
                                    annotation_options=annotation_options,
-                                   annotation_filter_type=annotation_filter_type,
-                                   annotation_filter_label=annotation_filter_label,
+                                   annotation_filters=annotation_filters,
                                    overwrite=overwrite,
                                    to_items_folder=to_items_folder,
                                    thickness=thickness,

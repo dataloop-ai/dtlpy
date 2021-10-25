@@ -117,7 +117,7 @@ class Buckets:
         if isinstance(bucket, entities.ItemBucket):
             bucket_dir_item = self.items.get(item_id=bucket.directory_item_id)
             # fetch: False does not use an API call but created the dataset entity (with id)
-            dataset = bucket_dir_item.datasets.get(dataset_id=bucket_dir_item.datasetId, fetch=False)
+            dataset = bucket_dir_item.datasets.get(dataset_id=bucket_dir_item.dataset_id, fetch=False)
             bucket_filter = entities.Filters(field='dir', values=bucket_dir_item.filename)
             # self._client_api.verbose.disable_progress_bar(True)
             local_path = dataset.items.download(
