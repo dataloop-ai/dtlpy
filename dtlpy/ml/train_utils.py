@@ -56,33 +56,40 @@ def prepare_dataset(dataset: entities.Dataset,
     cloned_dataset.update(system_metadata=True)
 
     # set partitions
-    if partitions is None:
-        partitions = {'train': 0.8,
-                      'val': 0.2,
-                      'test': 0.0}
+    create_dataset_partition(dataset=dataset, partitions=partitions)
 
-    dataset_item_ids = None
-    total_items = 0
+    # https://dataloop.atlassian.net/browse/DAT-13390
+    # cloned_dataset.set_readonly(True)
+    return cloned_dataset
+
+
+def create_dataset_partition(dataset: entities.Dataset,
+                             partitions: dict = None, ):
+    # set partitions
+    if partitions is None:
+        partitions = {entities.SnapshotPartitionType.TRAIN: 0.8,
+                      entities.SnapshotPartitionType.VALIDATION: 0.2,
+                      entities.SnapshotPartitionType.TEST: 0.0}
+
+    with_filters = all([isinstance(f, entities.Filters) for f in partitions.keys()])
+
+    if not with_filters:
+        # TODO need to replace with download all first and updating in bulks
+        # not pages and not one by one
+        dataset_item_ids = [item.id for item in dataset.items.get_all_items()]
+        total_items = len(dataset_item_ids)
+        np.random.seed(seed=int(time.time()))
+        np.random.shuffle(dataset_item_ids)
+
     for partition, filters in partitions.items():
         if isinstance(filters, float):
-            if dataset_item_ids is None:
-                dataset_item_ids = [item.id for item in cloned_dataset.items.get_all_items()]
-                total_items = len(dataset_item_ids)
-                np.random.seed(seed=int(time.time()))
-                np.random.shuffle(dataset_item_ids)
             current_ids = [dataset_item_ids.pop() for _ in range(int(np.round(total_items * filters)))]
             filters = entities.Filters(field='id', values=current_ids, operator=entities.FiltersOperations.IN)
-            cloned_dataset.set_partition(partition=partition,
-                                         filters=filters)
+            dataset.set_partition(partition=partition, filters=filters)
         elif isinstance(filters, entities.Filters):
-            cloned_dataset.set_partition(partition=partition,
-                                         filters=filters)
+            dataset.set_partition(partition=partition, filters=filters)
         else:
             raise ValueError('unknown partition query type: {!}'.format(type(filters)))
 
     if dataset_item_ids is not None and len(dataset_item_ids) > 0:
         logger.warning('{} items left without partitions!'.format(len(dataset_item_ids)))
-
-    # https://dataloop.atlassian.net/browse/DAT-13390
-    # cloned_dataset.set_readonly(True)
-    return cloned_dataset

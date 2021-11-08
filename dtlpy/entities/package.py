@@ -44,16 +44,10 @@ class Package(entities.BaseEntity):
 
     @property
     def createdAt(self):
-        logger.warning(
-            'Deprecation Warning - param "createdAt" will be deprecated from version "1.41.0'
-            'Use "created_at"')
         return self.created_at
 
     @property
     def updatedAt(self):
-        logger.warning(
-            'Deprecation Warning - param "updatedAt" will be deprecated from version "1.41.0'
-            'Use "updated_at"')
         return self.updated_at
 
     @property
@@ -122,7 +116,10 @@ class Package(entities.BaseEntity):
                 project = None
 
         modules = [entities.PackageModule.from_json(_module) for _module in _json.get('modules', list())]
-        slots = [entities.PackageSlot.from_json(_slot) for _slot in _json.get('slots', list())]
+        slots = _json.get('slots', None)
+        if slots is not None:
+            slots = [entities.PackageSlot.from_json(_slot) for _slot in slots]
+
         if 'codebase' in _json:
             codebase = entities.Codebase.from_json(_json=_json['codebase'],
                                                    client_api=client_api)
@@ -183,9 +180,8 @@ class Package(entities.BaseEntity):
         if modules and isinstance(modules[0], entities.PackageModule):
             modules = [module.to_json() for module in modules]
         _json['modules'] = modules
-
-        slot = [slot.to_json() for slot in self.slots]
-        if len(slot) > 0:
+        if self.slots is not None:
+            slot = [slot.to_json() for slot in self.slots]
             _json['slots'] = slot
         _json['projectId'] = self.project_id
         _json['createdAt'] = self.created_at

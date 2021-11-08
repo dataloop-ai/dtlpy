@@ -160,3 +160,6 @@ from tests.features.steps.pipeline_entity import pipeline_get, pipeline_delete, 
 from tests.features.steps.features_vectors import test_features_create, test_features_delete
 
 from tests.features.steps.documentation_tests import test_projects_docs
+from tests.features.steps.documentation_tests import test_contributor_docs
+from tests.features.steps.documentation_tests import test_recipe_docs
+from tests.features.steps.documentation_tests import test_dataset_docs

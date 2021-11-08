@@ -93,7 +93,7 @@ class Bucket:
         """
         self.buckets.empty_bucket(bucket=self, sure=sure)
 
-    def upload(self, local_path, overwrite=False):
+    def upload(self, local_path, overwrite=False, file_types=None):
         """
 
         Upload binary file to bucket. get by name, id or type.
@@ -102,11 +102,14 @@ class Bucket:
 
         :param local_path: local binary file or folder to upload
         :param overwrite: optional - default = False
+        :param file_types: list of file type to upload. e.g ['.jpg', '.png']. default is all
         :return:
         """
         self.buckets.upload(bucket=self,
                             local_path=local_path,
-                            overwrite=overwrite)
+                            overwrite=overwrite,
+                            file_types=file_types
+                            )
 
     def download(self,
                  local_path=None,

@@ -26,7 +26,7 @@ class BaseGenerator:
                  # flags
                  return_originals=False,
                  return_separate_labels=False,
-                 return_filename=True,
+                 return_filename=False,
                  return_label_id=True,
                  ) -> None:
         """

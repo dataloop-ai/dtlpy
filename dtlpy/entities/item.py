@@ -57,16 +57,10 @@ class Item(entities.BaseEntity):
 
     @property
     def createdAt(self):
-        logger.warning(
-            'Deprecation Warning - param "createdAt" will be deprecated from version "1.41.0'
-            'Use "created_at"')
         return self.created_at
 
     @property
     def datasetId(self):
-        logger.warning(
-            'Deprecation Warning - param "datasetId" will be deprecated from version "1.41.0'
-            'Use "dataset_id"')
         return self.dataset_id
 
     @staticmethod

@@ -1,57 +1,164 @@
 Repositories
 ============
-The Repositories modules are action you can perform 
+
+
+.. toctree::
+   :caption: Table of Contents
+   :maxdepth: 6
+
+Organizations
+------------
+
+.. automodule:: dtlpy.repositories.organizations
+  :members:
+  :show-inheritance:
+
+Integrations
+~~~~~~~~~~~~
+
+.. automodule:: dtlpy.repositories.integrations
+  :members:
+  :show-inheritance:
+
 
 Projects
 --------
-Interface with :meth:`Projects <dtlpy.repositories.projects>`
+
+.. automodule:: dtlpy.repositories.projects
+  :members:
+  :show-inheritance:
+
 
 Datasets
 --------
-Create, delete, edit Dataset entity
-More information at: :meth:`Datasets  <dtlpy.repositories.datasets>`
+
+.. automodule:: dtlpy.repositories.datasets
+  :members:
+  :show-inheritance:
+
+Drivers
+~~~~~~~
+
+.. automodule:: dtlpy.repositories.drivers
+  :members:
+  :show-inheritance:
 
 Items
 -----
-Download, upload entire items with DQL filters.
-Can download with annotations as masks, instance or json files.
 
-Interface with :meth:`Items <dtlpy.repositories.items>`
+.. automodule:: dtlpy.repositories.items
+  :members:
+  :show-inheritance:
 
 Annotations
 -----------
-Interface with :meth:`Annotations <dtlpy.repositories.annotations>`
+
+.. automodule:: dtlpy.repositories.annotations
+  :members:
+  :show-inheritance:
+
+Recipes
+-------
+
+.. automodule:: dtlpy.repositories.recipes
+  :members:
+  :show-inheritance:
+
+Ontologies
+~~~~~~~~~~~
+
+.. automodule:: dtlpy.repositories.ontologies
+  :members:
+  :show-inheritance:
 
 Tasks
 -----
-Interface with :meth:`Tasks <dtlpy.repositories.tasks>`
+
+.. automodule:: dtlpy.repositories.tasks
+  :members:
+  :show-inheritance:
 
 Assignments
------------
-Interface with :meth:`Assignments <dtlpy.repositories.assignments>`
+~~~~~~~~~~~
 
-Recipe
-------
-Interface with :meth:`Recipes <dtlpy.repositories.recipes>`
-
-Ontology
---------
-Interface with :meth:`Ontologies <dtlpy.repositories.ontologies>`
+.. automodule:: dtlpy.repositories.assignments
+  :members:
+  :show-inheritance:
 
 Packages
 --------
-Interface with :meth:`Packages <dtlpy.repositories.packages>`
+
+.. automodule:: dtlpy.repositories.packages
+  :members:
+  :show-inheritance:
+
+Codebases
+~~~~~~~~~
+
+.. automodule:: dtlpy.repositories.codebases
+  :members:
+  :show-inheritance:
 
 Services
 --------
-Interface with :meth:`Services <dtlpy.repositories.services>`
+
+.. automodule:: dtlpy.repositories.services
+  :members:
+  :show-inheritance:
+
+Bots
+~~~~
+
+.. automodule:: dtlpy.repositories.bots
+  :members:
+  :show-inheritance:
 
 Triggers
 --------
-Interface with :meth:`Triggers <dtlpy.repositories.triggers>`
+
+.. automodule:: dtlpy.repositories.triggers
+  :members:
+  :show-inheritance:
 
 Executions
 ----------
-Interface with :meth:`Executions <dtlpy.repositories.executions>`
+
+.. automodule:: dtlpy.repositories.executions
+  :members:
+  :show-inheritance:
+
+Pipelines
+---------
+
+.. automodule:: dtlpy.repositories.pipelines
+  :members:
+  :show-inheritance:
+
+Pipeline Executions
+~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: dtlpy.repositories.pipeline_executions
+  :members:
+  :show-inheritance:
 
 
+General Commands
+----------------
+
+.. automodule:: dtlpy.repositories.commands
+  :members:
+  :show-inheritance:
+
+Download Commands
+~~~~~~~~~~~~~~~~~
+
+.. automodule:: dtlpy.repositories.downloader
+  :members:
+  :show-inheritance:
+
+Upload Commands
+~~~~~~~~~~~~~~~~~
+
+.. automodule:: dtlpy.repositories.uploader
+  :members:
+  :show-inheritance:

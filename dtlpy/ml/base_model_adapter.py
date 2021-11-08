@@ -138,7 +138,6 @@ class BaseModelAdapter:
         Prepares dataset locally before training.
         download the specific partition selected to data_path and preforms `self.convert` to the data_path dir
 
-        :param snapshot: dl.Snapshot to prepare for training
         :param root_path: `str` root directory for training. default is "tmp"
         :param data_path: `str` dataset directory. default <root_path>/"data"
         :param output_path: `str` save everything to this folder. default <root_path>/"output"
@@ -183,8 +182,9 @@ class BaseModelAdapter:
                                                         local_path=data_partiion_base_path,
                                                         filters=filters)
             logger.info("Downloaded {!r} SnapshotPartition complete. {} total items".format(partition,
-                                                                                            len(ret_list)))
-            self.convert_from_dtlpy(data_path=data_partiion_base_path, **kwargs)
+                                                                                            len(list(ret_list))))
+
+        self.convert_from_dtlpy(data_path=data_path, **kwargs)
         return root_path, data_path, output_path
 
     def load_from_snapshot(self, snapshot, local_path=None, **kwargs):
@@ -237,7 +237,9 @@ class BaseModelAdapter:
 
         if replace:
             self.snapshot.bucket.empty_bucket(sure=replace)
-        self.snapshot.bucket.upload(local_path=local_path, overwrite=True)
+        self.snapshot.bucket.upload(local_path=local_path,
+                                    overwrite=True,
+                                    file_types=kwargs.get('file_types'))
         if cleanup:
             shutil.rmtree(path=local_path, ignore_errors=True)
             logger.info("Clean-up. deleting {}".format(local_path))
@@ -283,7 +285,9 @@ class BaseModelAdapter:
                         [pred.type == self.model_entity.output_type for pred in itertools.chain(*all_predictions)]):
                     raise RuntimeError("Predictions annotation are not of model output type")
                 for idx, item in enumerate(items):
-                    self._upload_predictions_collection(item, all_predictions[idx], cleanup=cleanup)
+                    self._upload_predictions_collection(item,
+                                                        all_predictions[idx],
+                                                        cleanup=cleanup)
 
             except exceptions.InternalServerError as err:
                 self.logger.error("Failed to upload annotations items. Error: {}".format(err))

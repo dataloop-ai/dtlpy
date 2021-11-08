@@ -1,0 +1,18 @@
+Feature: Dataset SDK
+
+    Background: Initiate Platform Interface and create a project
+        Given Platform Interface is initialized as dlp and Environment is set according to git branch
+        And There is a project by the name of "my-project-dataset"
+        And Create a Dataset "my-dataset-name"
+
+    Scenario: Dataset SDK Scenario
+        When Get Commands - Get Projects Datasets List
+        Then Get Dataset by Name
+        And Get a dataset by ID
+        And Print a Dataset
+
+    Scenario: Create and Manage Datasets
+        When Clone Dataset "clone-dataset"
+        And I upload a file in path "assets_split/items_upload/0000000162.jpg"
+        And Clone Item
+        Then Merge Datasets "merge-dataset"

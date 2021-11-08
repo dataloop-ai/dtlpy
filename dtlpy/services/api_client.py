@@ -433,8 +433,17 @@ class ApiClient:
         self.refresh_token_active = True
         self.environments = environments
 
-    def add_environment(self, environment, audience, client_id, auth0_url,
-                        verify_ssl=True, token=None, refresh_token=None, alias=None, use_ssl_context=False):
+    def add_environment(self, environment,
+                        audience,
+                        client_id,
+                        auth0_url,
+                        verify_ssl=True,
+                        token=None,
+                        refresh_token=None,
+                        alias=None,
+                        use_ssl_context=False,
+                        gate_url=None
+                        ):
         environments = self.environments
         if environment in environments:
             logger.warning('Environment exists. Overwriting. env: {}'.format(environment))
@@ -447,6 +456,7 @@ class ApiClient:
                                      'auth0_url': auth0_url,
                                      'alias': alias,
                                      'token': token,
+                                     'gate_url': gate_url,
                                      'refresh_token': refresh_token,
                                      'verify_ssl': verify_ssl,
                                      'use_ssl_context': use_ssl_context}

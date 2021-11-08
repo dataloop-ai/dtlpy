@@ -1,5 +1,8 @@
+import shutil
+
 import behave
 import os
+import dtlpy as dl
 
 
 @behave.when(u'I download items annotations with "{ann_type}" to "{path}"')
@@ -32,6 +35,7 @@ def step_impl(context, ann_type, path):
     if context.item.width is None:
         context.item.width = 1536
     path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], path)
+    context.item = dl.items.get(item_id=context.item.id)
     context.item.download(
         local_path=path,
         annotation_options=ann_type,
@@ -48,7 +52,10 @@ def step_impl(context, folder_path):
         for item in items:
             if item != 'folder_keeper':
                 path = os.path.join(folder_path, item)
-                os.remove(path)
+                if os.path.isdir(path):
+                    shutil.rmtree(path)
+                else:
+                    os.remove(path)
         dirs = os.listdir(folder_path)
         dirs.pop(dirs.index('folder_keeper'))
         assert len(dirs) == 0

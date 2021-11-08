@@ -48,7 +48,6 @@ class Model(entities.BaseEntity):
     # name change
     is_global = attr.ib()
     project_id = attr.ib()
-    org_id = attr.ib()
     entry_point = attr.ib()
     class_name = attr.ib()
     input_type = attr.ib()
@@ -66,16 +65,10 @@ class Model(entities.BaseEntity):
 
     @property
     def createdAt(self):
-        logger.warning(
-            'Deprecation Warning - param "createdAt" will be deprecated from version "1.41.0'
-            'Use "created_at"')
         return self.created_at
 
     @property
     def updatedAt(self):
-        logger.warning(
-            'Deprecation Warning - param "updatedAt" will be deprecated from version "1.41.0'
-            'Use "updated_at"')
         return self.updated_at
 
     @property
@@ -142,7 +135,6 @@ class Model(entities.BaseEntity):
             url=_json.get('url', None),
             project=project,
             id=_json.get('id', None),
-            org_id=_json.get('orgId', None),
             output_type=_json.get('outputType', None),
             input_type=_json.get('inputType', None),
             is_global=_json.get('global', None),
@@ -165,7 +157,6 @@ class Model(entities.BaseEntity):
                                                         attr.fields(Model)._revisions,
                                                         attr.fields(Model).is_global,
                                                         attr.fields(Model)._artifacts,
-                                                        attr.fields(Model).org_id,
                                                         attr.fields(Model).input_type,
                                                         attr.fields(Model).output_type,
                                                         attr.fields(Model)._client_api,
@@ -178,7 +169,6 @@ class Model(entities.BaseEntity):
                                                         ))
 
         _json['global'] = self.is_global
-        _json['orgId'] = self.org_id
         _json['inputType'] = self.input_type
         _json['outputType'] = self.output_type
         _json['projectId'] = self.project_id

@@ -79,9 +79,6 @@ class Dataset(entities.BaseEntity):
 
     @property
     def itemsCount(self):
-        logger.warning(
-            'Deprecation Warning - param "itemsCount" will be deprecated from version "1.41.0'
-            'Use "items_count"')
         return self.items_count
 
     @staticmethod
@@ -531,7 +528,7 @@ class Dataset(entities.BaseEntity):
         """
         Add single label to dataset
 
-        :param label_name:
+        :param label_name: str - label name
         :param color:
         :param children:
         :param attributes:
@@ -668,7 +665,7 @@ class Dataset(entities.BaseEntity):
             to_items_folder=True,
             thickness=1,
             with_text=False,
-            without_relative_path=None
+            without_relative_path=None,
     ):
         """
         Download dataset by filters.

@@ -29,7 +29,8 @@ def step_impl(context):
     context.feature = context.feature_set.features.create(value=[0, 2, 15],
                                                           feature_set_id=context.feature_set.id,
                                                           entity_id=context.item.id,
-                                                          version='1.0.0')
+                                                          version='1.0.0',
+                                                          project_id=context.project.id)
     context.to_delete_feature_ids.append(context.feature.id)
 
 

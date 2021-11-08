@@ -50,8 +50,9 @@ class CookieIO:
             logger.debug('COOKIE.create: File: {}'.format(self.COOKIE))
             self.reset()
         try:
-            with open(self.COOKIE, 'r') as f:
-                json.load(f)
+            with FileLock(self.COOKIE + ".lock"):
+                with open(self.COOKIE, 'r') as f:
+                    json.load(f)
         except ValueError:
             print('{} is corrupted'.format(self.COOKIE))
             raise SystemExit
@@ -74,8 +75,9 @@ class CookieIO:
             cfg = {}
             for i in range(NUM_TRIES):
                 try:
-                    with open(self.COOKIE, 'r') as fp:
-                        cfg = json.load(fp)
+                    with FileLock(self.COOKIE + ".lock"):
+                        with open(self.COOKIE, 'r') as fp:
+                            cfg = json.load(fp)
                     break
                 except Exception:
                     if i == (NUM_TRIES - 1):

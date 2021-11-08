@@ -150,7 +150,7 @@ class Snapshots:
         return miscellaneous.List([r[1] for r in results if r[0] is True])
 
     def _list(self, filters: entities.Filters):
-        url = '/query/machine-learning'
+        url = '/snapshots/query'
         # request
         success, response = self._client_api.gen_request(req_type='POST',
                                                          path=url,
@@ -318,6 +318,9 @@ class Snapshots:
               configuration: dict = None,
               status='created',
               project_id: str = None,
+              labels: list = None,
+              description: str = None,
+              tags: list = None,
               ) -> entities.Snapshot:
         """
             Clones and creates a new snapshot out of existing one
@@ -329,6 +332,9 @@ class Snapshots:
         :param configuration: `dict` (optional) if passed replaces the current configuration
         :param status: `str` (optional) set the new status
         :param project_id: `str` specify the project id to create the new snapshot on (if other the the source snapshot)
+        :param labels:  `list` of `str` - label of the snapshot
+        :param description: `str` description of the new snapshot
+        :param tags:  `list` of `str` - label of the snapshot
 
         :return: dl.Snapshot which is a clone version of the existing snapshot
         """
@@ -342,6 +348,15 @@ class Snapshots:
             from_json['datasetId'] = dataset_id
         if configuration is not None:
             from_json['configuration'].update(configuration)
+        if labels is not None:
+            ontology_spec = entities.OntologySpec(ontology_id='null', labels=labels)
+            from_json['ontologySpec'] = ontology_spec.to_json(),
+        if description is not None:
+            from_json['description'] = description
+        if tags is not None:
+            from_json['tags'] = tags
+
+
 
         # update required fields or replace with new values
         if bucket is None:
@@ -379,7 +394,7 @@ class Snapshots:
         else:
             logger.warning('Not cloning the bucket!')
 
-        if new_snapshot.dataset.readonly is False:
+        if new_snapshot._dataset is not None and new_snapshot._dataset.readonly is False:
             logger.error("Snapshot does not support 'unlocked dataset'. Please change {!r} to readonly".format(
                 new_snapshot.dataset.name))
 

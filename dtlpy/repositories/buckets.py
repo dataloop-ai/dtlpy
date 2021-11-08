@@ -128,7 +128,7 @@ class Buckets:
                 without_relative_path=bucket_dir_item.filename
             )
             # self._client_api.verbose.disable_progress_bar(False)
-            if len(local_path) == 0:
+            if len(list(local_path)) == 0:
                 logger.warning("Bucket {} was empty".format(bucket))
             else:
                 logger.info('Bucket artifacts was unpacked to: {}'.format(local_path))
@@ -154,7 +154,8 @@ class Buckets:
                # what to upload
                local_path,
                # add information
-               overwrite=False):
+               overwrite=False,
+               file_types=None):
         """
 
         Upload binary file to bucket. get by name, id or type.
@@ -165,6 +166,7 @@ class Buckets:
         :param bucket: bucket entity
         :param local_path: local binary file or folder to upload
         :param overwrite: optional - default = False
+        :param file_types: list of file type to upload. e.g ['.jpg', '.png']. default is all
         :return:
         """
         if isinstance(bucket, entities.ItemBucket):
@@ -173,7 +175,8 @@ class Buckets:
             local_files = [os.path.join(local_path, ff) for ff in os.listdir(local_path)]
             items = directory_item.dataset.items.upload(local_path=local_files,
                                                         remote_path=directory_item.filename,
-                                                        overwrite=overwrite)
+                                                        overwrite=overwrite,
+                                                        file_types=file_types)
 
         elif isinstance(bucket, entities.GCSBucket):
             gcs_bucket = bucket._bucket
@@ -186,6 +189,8 @@ class Buckets:
                     blob = gcs_bucket.blob(os.path.join(bucket._gcs_prefix, local_path[local_prefix_len:], dir_name))
                     blob.upload_from_filename(os.path.join(root, dir_name))
                 for file_name in file_names:
+                    if file_types is not None and os.path.splitext(file_name)[1] not in file_types:
+                        continue
                     blob = gcs_bucket.blob(os.path.join(bucket._gcs_prefix, local_path[local_prefix_len:], file_name))
                     blob.upload_from_filename(os.path.join(root, file_name))
         elif isinstance(bucket, entities.LocalBucket):

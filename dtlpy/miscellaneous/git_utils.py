@@ -201,7 +201,7 @@ class GitUtils:
                 logging.error('Error executing:  {ps1} $ {cmd}\n{err}'.format(ps1=path, cmd=' '.join(cmd), err=err))
         except Exception:
             response = False
-            logging.warning('Error executing:  {ps1} $ {cmd}'.format(ps1=path, cmd=' '.join(cmd)))
+            logging.critical('Error executing:  {ps1} $ {cmd}'.format(ps1=path, cmd=' '.join(cmd)))
         finally:
             os.chdir(prev_dir)
         return response

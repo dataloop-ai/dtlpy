@@ -38,9 +38,6 @@ class Recipe(entities.BaseEntity):
 
     @property
     def customActions(self):
-        logger.warning(
-            'Deprecation Warning - param "customActions" will be deprecated from version "1.41.0'
-            'Use "custom_actions"')
         return self.custom_actions
 
     @classmethod

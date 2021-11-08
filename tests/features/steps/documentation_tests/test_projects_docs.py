@@ -14,8 +14,6 @@ def creating_a_project(context, project_name):
     context.project = context.dl.projects.create(project_name=project_name)
 
     context.to_delete_projects_ids.append(context.project.id)
-    time.sleep(5)  # to sleep because authorization takes time
-    context.project_name = project_name
 
 @behave.when(u'Create a Project "{project_name}"')
 def creating_a_project(context, project_name):
@@ -28,7 +26,6 @@ def creating_a_project(context, project_name):
 
     context.to_delete_projects_ids.append(context.project.id)
     time.sleep(5)  # to sleep because authorization takes time
-    context.project_name = project_name
 
 @behave.then(u'Get my projects')
 def user_projects_list(context):

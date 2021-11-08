@@ -83,37 +83,22 @@ class Execution(entities.BaseEntity):
 
     @property
     def createdAt(self):
-        logger.warning(
-            'Deprecation Warning - param "createdAt" will be deprecated from version "1.41.0'
-            'Use "created_at"')
         return self.created_at
 
     @property
     def updatedAt(self):
-        logger.warning(
-            'Deprecation Warning - param "updatedAt" will be deprecated from version "1.41.0'
-            'Use "updated_at"')
         return self.updated_at
 
     @property
     def syncReplyTo(self):
-        logger.warning(
-            'Deprecation Warning - param "syncReplyTo" will be deprecated from version "1.41.0'
-            'Use "sync_reply_to"')
         return self.sync_reply_to
 
     @property
     def feedbackQueue(self):
-        logger.warning(
-            'Deprecation Warning - param "feedbackQueue" will be deprecated from version "1.41.0'
-            'Use "feedback_queue"')
         return self.feedback_queue
 
     @property
     def status(self):
-        logger.warning(
-            'Deprecation Warning - param "status" will be deprecated from version "1.36.0'
-            'Use "status_log"')
         return self._status
 
     @property

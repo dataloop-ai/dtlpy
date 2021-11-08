@@ -333,7 +333,7 @@ class Codebases:
         """
         if not isinstance(codebase, entities.GitCodebase):
             raise RuntimeError('only support Git Codebase')
-        response = self.git_utils.git_clone(path=local_path,
+        response = self.git_utils.git_clone(path=os.path.join(local_path, codebase.git_repo_name),
                                             git_url=codebase.git_url,
                                             tag=codebase.git_tag)
         if response:
@@ -355,6 +355,10 @@ class Codebases:
             logger.info('pull successful {}(Git) to: {}'.format(codebase.git_url, os.path.dirname(local_path)))
         else:
             logger.critical("Could not pull")
+
+        # we can test if this is not the same repo if needed...
+        # FIXME need to change the order - checkout new branch and pull
+        response_2 = self.git_utils.git_command(path=local_path, cmd='git checkout {}'.format(codebase.git_tag))
         return local_path
 
     def unpack(self,

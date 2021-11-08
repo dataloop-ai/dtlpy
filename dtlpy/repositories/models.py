@@ -127,7 +127,7 @@ class Models:
         return miscellaneous.List([r[1] for r in results if r[0] is True])
 
     def _list(self, filters: entities.Filters):
-        url = '/query/machine-learning'
+        url = '/models/query'
         # request
         success, response = self._client_api.gen_request(req_type='POST',
                                                          path=url,
@@ -305,13 +305,7 @@ class Models:
         if self._project is None:
             raise exceptions.PlatformException('400', 'Repository must have a project to perform this action')
 
-        if self._project.org is not None:
-            org_id = self._project.org['id']
-        else:
-            raise exceptions.PlatformException('Cannot create model in a project without an org')
-
         payload = dict(
-            orgId=org_id,
             projectId=self._project.id,
             name=model_name
         )

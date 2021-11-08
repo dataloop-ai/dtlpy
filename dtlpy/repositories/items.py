@@ -393,7 +393,10 @@ class Items:
             thickness=1,
             with_text=False,
             without_relative_path=None,
-            avoid_unnecessary_annotation_download=False
+            avoid_unnecessary_annotation_download=False,
+            include_annotations_in_output=True,
+            export_png_files=False,
+            filter_output_annotations=False,
     ):
         """
         Download dataset by filters.
@@ -414,6 +417,9 @@ class Items:
         :param with_text: optional - add text to annotations, default = False
         :param without_relative_path: bool - download items without the relative path from platform
         :param avoid_unnecessary_annotation_download: default - False
+        :param include_annotations_in_output: default - False , if export should contain annotations
+        :param export_png_files: default - True, if semantic annotations should exported as png files
+        :param filter_output_annotations: default - False, given an export by filter - determine if to filter out annotations
         :return: `List` of local_path per each downloaded item
         """
         downloader = repositories.Downloader(self)
@@ -431,7 +437,10 @@ class Items:
             thickness=thickness,
             with_text=with_text,
             without_relative_path=without_relative_path,
-            avoid_unnecessary_annotation_download=avoid_unnecessary_annotation_download
+            avoid_unnecessary_annotation_download=avoid_unnecessary_annotation_download,
+            include_annotations_in_output=include_annotations_in_output,
+            export_png_files=export_png_files,
+            filter_output_annotations=filter_output_annotations
         )
 
     def upload(

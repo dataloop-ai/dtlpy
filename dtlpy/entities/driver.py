@@ -24,6 +24,7 @@ class Driver(entities.BaseEntity):
     allow_external_modification = attr.ib()
     created_at = attr.ib()
     region = attr.ib()
+    path = attr.ib()
     type = attr.ib()
     integration_id = attr.ib()
     metadata = attr.ib(repr=False)
@@ -53,7 +54,8 @@ class Driver(entities.BaseEntity):
                    metadata=_json.get('metadata', None),
                    name=_json.get('name', None),
                    id=_json.get('id', None),
-                   client_api=client_api)
+                   client_api=client_api,
+                   path=_json.get('path', None))
         inst.is_fetched = is_fetched
         return inst
 
@@ -70,11 +72,14 @@ class Driver(entities.BaseEntity):
                                                               attr.fields(Driver).allow_external_modification,
                                                               attr.fields(Driver).created_at,
                                                               attr.fields(Driver).integration_id,
+                                                              attr.fields(Driver).path,
                                                               ))
         output_dict['bucketName'] = self.bucket_name
         output_dict['allowExternalDelete'] = self.allow_external_delete
         output_dict['allowExternalModification'] = self.allow_external_modification
         output_dict['createdAt'] = self.created_at
         output_dict['integrationId'] = self.integration_id
+        if self.path is not None:
+            output_dict['path'] = self.path
 
         return output_dict

@@ -1190,22 +1190,25 @@ class Packages:
                            module_name=entities.package_defaults.DEFAULT_PACKAGE_MODULE_NAME,
                            function_name=entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME,
                            class_name=entities.package_defaults.DEFAULT_PACKAGE_CLASS_NAME,
-                           entry_point=entities.package_defaults.DEFAULT_PACKAGE_ENTRY_POINT):
+                           entry_point=entities.package_defaults.DEFAULT_PACKAGE_ENTRY_POINT,
+                           mock_file_path=None):
         """
         Test local package
-        :param cwd:
-        :param concurrency:
-        :param package:
-        :param module_name:
-        :param function_name:
-        :param class_name:
-        :param entry_point:
+        :param cwd: str - path to the file
+        :param concurrency: int -the concurrency of the test
+        :param package: entities.package
+        :param module_name: str - module name
+        :param function_name: str - function name
+        :param class_name: str - class name
+        :param entry_point: str - the file to run like main.py
+        :param mock_file_path: str - the mock file that have the inputs
         :return:
         """
         if cwd is None:
             cwd = os.getcwd()
-
-        with open(os.path.join(cwd, assets.paths.MOCK_FILENAME), 'r') as f:
+        if mock_file_path is None:
+            mock_file_path = assets.paths.MOCK_FILENAME
+        with open(os.path.join(cwd, mock_file_path), 'r') as f:
             mock_json = json.load(f)
         is_multithread = self.is_multithread(inputs=mock_json['inputs'])
 

@@ -63,7 +63,6 @@ class Snapshot(entities.BaseEntity):
     # name change
     model_id = attr.ib(repr=False)
     project_id = attr.ib()
-    org_id = attr.ib()
     dataset_id = attr.ib(repr=False)
 
     # sdk
@@ -76,16 +75,10 @@ class Snapshot(entities.BaseEntity):
 
     @property
     def createdAt(self):
-        logger.warning(
-            'Deprecation Warning - param "createdAt" will be deprecated from version "1.41.0'
-            'Use "created_at"')
         return self.created_at
 
     @property
     def updatedAt(self):
-        logger.warning(
-            'Deprecation Warning - param "updatedAt" will be deprecated from version "1.41.0'
-            'Use "updated_at"')
         return self.updated_at
 
     @staticmethod
@@ -145,7 +138,6 @@ class Snapshot(entities.BaseEntity):
         inst = cls(
             configuration=_json.get('configuration', None),
             is_global=_json.get('global', None),
-            org_id=_json.get('orgId', None),
             description=_json.get('description', None),
             status=_json.get('status', None),
             tags=_json.get('tags', None),
@@ -182,7 +174,6 @@ class Snapshot(entities.BaseEntity):
                                                         attr.fields(Snapshot)._repositories,
                                                         attr.fields(Snapshot)._client_api,
                                                         attr.fields(Snapshot).model_id,
-                                                        attr.fields(Snapshot).org_id,
                                                         attr.fields(Snapshot).project_id,
                                                         attr.fields(Snapshot).dataset_id,
                                                         attr.fields(Snapshot).labels,
@@ -193,7 +184,6 @@ class Snapshot(entities.BaseEntity):
                                                         ))
 
         _json['modelId'] = self.model_id
-        _json['orgId'] = self.org_id
         _json['projectId'] = self.project_id
         _json['datasetId'] = self.dataset_id
         _json['createdAt'] = self.created_at
@@ -377,6 +367,9 @@ class Snapshot(entities.BaseEntity):
               dataset_id: str = None,
               configuration: dict = None,
               project_id: str = None,
+              labels: list = None,
+              description: str = None,
+              tags: list = None,
               ):
         """
             Clones and creates a new snapshot out of existing one
@@ -386,6 +379,9 @@ class Snapshot(entities.BaseEntity):
         :param dataset_id: optional - dataset_id for the cloned snapshot
         :param configuration: optional - `dict` if passed replaces the current configuration
         :param project_id: `str` specify the project id to create the new snapshot on (if other the the source snapshot)
+        :param labels:  `list` of `str` - label of the snapshot
+        :param description: `str` description of the new snapshot
+        :param tags:  `list` of `str` - label of the snapshot
 
         :return: dl.Snapshot which is a clone version of the existing snapshot
         """
@@ -394,7 +390,11 @@ class Snapshot(entities.BaseEntity):
                                     project_id=project_id,
                                     bucket=bucket,
                                     dataset_id=dataset_id,
-                                    configuration=configuration)
+                                    configuration=configuration,
+                                    labels=labels,
+                                    description=description,
+                                    tags=tags
+                                    )
 
     def download_partition(self, partition, local_path=None, filters: entities.Filters = None):
         """

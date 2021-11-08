@@ -46,23 +46,14 @@ class Organization(entities.BaseEntity):
 
     @property
     def createdAt(self):
-        logger.warning(
-            'Deprecation Warning - param "createdAt" will be deprecated from version "1.41.0'
-            'Use "created_at"')
         return self.created_at
 
     @property
     def updatedAt(self):
-        logger.warning(
-            'Deprecation Warning - param "updatedAt" will be deprecated from version "1.41.0'
-            'Use "updated_at"')
         return self.updated_at
 
     @property
     def createdBy(self):
-        logger.warning(
-            'Deprecation Warning - param "createdBy" will be deprecated from version "1.41.0'
-            'Use "created_by"')
         return self.created_by
 
     @_repositories.default

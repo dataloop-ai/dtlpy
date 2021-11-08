@@ -65,6 +65,7 @@ class Annotation(entities.BaseEntity):
     updated_by = attr.ib(repr=False)
     updated_at = attr.ib(repr=False)
     type = attr.ib()
+    source = attr.ib(repr=False)
     dataset_url = attr.ib(repr=False)
 
     # api
@@ -107,23 +108,14 @@ class Annotation(entities.BaseEntity):
 
     @property
     def createdAt(self):
-        logger.warning(
-            'Deprecation Warning - param "createdAt" will be deprecated from version "1.41.0'
-            'Use "created_at"')
         return self.created_at
 
     @property
     def updatedAt(self):
-        logger.warning(
-            'Deprecation Warning - param "updatedAt" will be deprecated from version "1.41.0'
-            'Use "updated_at"')
         return self.updated_at
 
     @property
     def updatedBy(self):
-        logger.warning(
-            'Deprecation Warning - param "updatedBy" will be deprecated from version "1.41.0'
-            'Use "updated_by"')
         return self.updated_by
 
     @property
@@ -849,6 +841,7 @@ class Annotation(entities.BaseEntity):
 
             # temp
             platform_dict=dict(),
+            source='sdk'
         )
 
     def add_frames(self, annotation_definition,
@@ -1179,7 +1172,8 @@ class Annotation(entities.BaseEntity):
             annotations=annotations,
             start_time=start_time,
             recipe_2_attributes=named_attributes,
-            label_suggestions=_json.get('labelSuggestions', None)
+            label_suggestions=_json.get('labelSuggestions', None),
+            source=_json.get('source', None)
         )
         annotation.__client_api = client_api
 
@@ -1287,6 +1281,7 @@ class Annotation(entities.BaseEntity):
         _json['createdAt'] = self.created_at
         _json['updatedBy'] = self.updated_by
         _json['updatedAt'] = self.updated_at
+        _json['source'] = self.source
 
         if self.label_suggestions:
             _json['labelSuggestions'] = self.label_suggestions

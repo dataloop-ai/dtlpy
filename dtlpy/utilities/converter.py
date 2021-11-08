@@ -80,7 +80,6 @@ class COCOUtils:
             img = coco_utils_mask.decode(rle)
             return img
 
-
     @staticmethod
     def rle_to_binary_polygon(segmentation):
         return [segmentation[x:x + 2] for x in range(0, len(segmentation), 2)]
@@ -312,6 +311,7 @@ class Converter:
                 skeleton.append([order_dict[pair[0]], order_dict[pair[1]]])
             category = {'id': last_id,
                         'name': template['name'],
+                        'templateId': template['id'],
                         'keypoints': template['order'],
                         'skeleton': skeleton}
             instance_map[template['name']] = last_id
@@ -422,7 +422,7 @@ class Converter:
             pose = pose[0]
             pose_category = None
             for category in categories:
-                if pose.label == category['name']:
+                if pose.coordinates.get('templateId', "") == category.get('templateId', None):
                     pose_category = category
                     continue
             if pose_category is None:
@@ -1365,15 +1365,23 @@ class Converter:
                 for point in annotation.annotation_definition.points:
                     keypoints.append(point.x)
                     keypoints.append(point.y)
-                    if 'visible' in point.attributes and \
-                            ("not-visible" in point.attributes or 'not_visible' in point.attributes):
-                        keypoints.append(0)
-                    elif 'not-visible' in point.attributes or 'not_visible' in point.attributes:
-                        keypoints.append(1)
-                    elif 'visible' in point.attributes:
-                        keypoints.append(2)
+                    if isinstance(point.attributes, list):
+                        if 'visible' in point.attributes and \
+                                ("not-visible" in point.attributes or 'not_visible' in point.attributes):
+                            keypoints.append(0)
+                        elif 'not-visible' in point.attributes or 'not_visible' in point.attributes:
+                            keypoints.append(1)
+                        elif 'visible' in point.attributes:
+                            keypoints.append(2)
+                        else:
+                            keypoints.append(0)
                     else:
-                        keypoints.append(0)
+                        list_attributes = list(point.attributes.values())
+                        if 'Visible' in list_attributes:
+                            keypoints.append(2)
+                        else:
+                            keypoints.append(0)
+
         else:
             raise Exception('Unable to convert annotation of type {} to coco'.format(annotation.type))
 

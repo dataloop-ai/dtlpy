@@ -41,7 +41,10 @@ class Downloader:
                  thickness=1,
                  with_text=False,
                  without_relative_path=None,
-                 avoid_unnecessary_annotation_download=False
+                 avoid_unnecessary_annotation_download=False,
+                 include_annotations_in_output=True,
+                 export_png_files=False,
+                 filter_output_annotations=False,
                  ):
         """
         Download dataset by filters.
@@ -62,7 +65,9 @@ class Downloader:
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :param without_relative_path: bool - download items without the relative path from platform
         :param avoid_unnecessary_annotation_download: DEPRECATED only items and annotations in filters are downloaded
-
+        :param include_annotations_in_output: default - False , if export should contain annotations
+        :param export_png_files: default - True, if semantic annotations should exported as png files
+        :param filter_output_annotations: default - False, given an export by filter - determine if to filter out annotations
         :return: Output (list)
         """
 
@@ -81,26 +86,6 @@ class Downloader:
                         error='400',
                         message='Unknown annotation download option: {}, please choose from: {}'.format(
                             ann_option, list(entities.ViewAnnotationOptions)))
-
-        ##############
-        # local path #
-        ##############
-        if local_path is None:
-            # create default local path
-            local_path = self.__default_local_path()
-
-        if os.path.isdir(local_path):
-            logger.info('Local folder already exists:{}. merge/overwrite according to "overwrite option"'.format(
-                local_path))
-        else:
-            # check if filename
-            _, ext = os.path.splitext(local_path)
-            if not ext:
-                path_to_create = local_path
-                if local_path.endswith('*'):
-                    path_to_create = os.path.dirname(local_path)
-                logger.info("Creating new directory for download: {}".format(path_to_create))
-                os.makedirs(path_to_create, exist_ok=True)
 
         #####################
         # items to download #
@@ -145,6 +130,36 @@ class Downloader:
         if num_items == 0:
             logger.warning('No items found! Nothing was downloaded')
             return list()
+
+        ##############
+        # local path #
+        ##############
+        is_folder = False
+        if local_path is None:
+            # create default local path
+            local_path = self.__default_local_path()
+
+        if os.path.isdir(local_path):
+            logger.info('Local folder already exists:{}. merge/overwrite according to "overwrite option"'.format(
+                local_path))
+        else:
+            # check if filename
+            _, ext = os.path.splitext(local_path)
+            if num_items > 1:
+                is_folder = True
+            else:
+                item_to_download = items_to_download[0][0]
+                file_name = item_to_download.name
+                _, ext_download = os.path.splitext(file_name)
+                if ext_download != ext:
+                    is_folder = True
+            if is_folder:
+                path_to_create = local_path
+                if local_path.endswith('*'):
+                    path_to_create = os.path.dirname(local_path)
+                logger.info("Creating new directory for download: {}".format(path_to_create))
+                os.makedirs(path_to_create, exist_ok=True)
+
         ####################
         # annotations json #
         ####################
@@ -158,7 +173,11 @@ class Downloader:
                                               "filters": filters,
                                               "annotation_filters": annotation_filters,
                                               "local_path": local_path,
-                                              'overwrite': overwrite})
+                                              'overwrite': overwrite,
+                                              'include_annotations_in_output': include_annotations_in_output,
+                                              'export_png_files': export_png_files,
+                                              'filter_output_annotations': filter_output_annotations,
+                                              })
             thread.start()
         ###############
         # downloading #
@@ -187,7 +206,8 @@ class Downloader:
                             local_path=local_path,
                             without_relative_path=without_relative_path,
                             item=item,
-                            to_items_folder=to_items_folder)
+                            to_items_folder=to_items_folder,
+                            is_folder=is_folder)
 
                         if os.path.isfile(item_local_filepath) and not overwrite:
                             logger.debug("File Exists: {}".format(item_local_filepath))
@@ -312,7 +332,11 @@ class Downloader:
                              local_path: str,
                              filters: entities.Filters = None,
                              annotation_filters: entities.Filters = None,
-                             overwrite=False):
+                             overwrite=False,
+                             include_annotations_in_output=True,
+                             export_png_files=False,
+                             filter_output_annotations=False
+                             ):
         """
         Download annotations json for entire dataset
 
@@ -321,6 +345,9 @@ class Downloader:
         :param filters: dl.Filters entity to filters items
         :param annotation_filters: dl.Filters entity to filters items' annotations
         :param overwrite: optional - overwrite annotations if exist, default = false
+        :param include_annotations_in_output: default - False , if export should contain annotations
+        :param export_png_files: default - True, if semantic annotations should exported as png files
+        :param filter_output_annotations: default - False, given an export by filter - determine if to filter out annotations
         :return:
         """
         local_path = os.path.join(local_path, "json")
@@ -337,6 +364,11 @@ class Downloader:
                 payload['itemsQuery'] = filters.prepare()
             if annotation_filters is not None:
                 payload['annotationsQuery'] = annotation_filters.prepare()
+                payload['annotations'] = {
+                    "include": include_annotations_in_output,
+                    "convertSemantic": export_png_files,
+                    "filter": filter_output_annotations
+                }
             success, response = dataset._client_api.gen_request(req_type='post',
                                                                 path='/datasets/{}/export'.format(dataset.id),
                                                                 json_req=payload)
@@ -384,10 +416,10 @@ class Downloader:
         if local_path.endswith("/items") or local_path.endswith("\\items"):
             local_path = os.path.dirname(local_path)
 
-        annotation_rel_path = item.filename[1:]
+        annotation_rel_path = os.path.basename(img_filepath)
 
         # find annotations json
-        annotations_json_filepath = os.path.join(local_path, "json", item.filename[1:])
+        annotations_json_filepath = os.path.join(local_path, "json", annotation_rel_path)
         name, _ = os.path.splitext(annotations_json_filepath)
         annotations_json_filepath = name + ".json"
 
@@ -477,10 +509,10 @@ class Downloader:
                 raise PlatformException(error="400", message="Unknown annotation option: {}".format(option))
 
     @staticmethod
-    def __get_local_filepath(local_path, item, to_items_folder, without_relative_path=None):
+    def __get_local_filepath(local_path, item, to_items_folder, without_relative_path=None, is_folder=False):
         # create paths
         _, ext = os.path.splitext(local_path)
-        if ext:
+        if ext and not is_folder:
             # local_path is a filename
             local_filepath = local_path
             local_path = os.path.dirname(local_filepath)
