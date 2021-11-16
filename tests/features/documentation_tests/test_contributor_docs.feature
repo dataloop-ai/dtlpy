@@ -2,8 +2,9 @@ Feature: Contributor Roles SDK
 
     Background: Initiate Platform Interface and create a project
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
-        And I create a project by the name of "my-project"
+        And There is a project by the name of "my-project"
 
+  @testrail-C4523096
     Scenario: Contributor Roles SDK Scenario
         When List Members
         Then Add Members "annotator1@dataloop.ai"

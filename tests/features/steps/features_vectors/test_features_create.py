@@ -6,8 +6,8 @@ import string
 @behave.given(u'There are no feature sets')
 def step_impl(context):
     try:
-        # for f in context.project.feature_sets.list():
-        #     f.delete()
+        for f in context.project.feature_sets.list():
+            f.delete()
         assert len(context.project.feature_sets.list()) == 0
     except Exception as error:
         assert 'not found' in error.args[1]

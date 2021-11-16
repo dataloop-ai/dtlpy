@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 
 class SuperModelAdapter(BaseModelAdapter):
 
-    def __init__(self, model_entity, log_level='INFO'):
-        super(SuperModelAdapter, self).__init__(model_entity, log_Level=log_level)
+    def __init__(self, model_entity):
+        super(SuperModelAdapter, self).__init__(model_entity)
         self.grids = None  # Note this class support static grids only that are set once for all the images
 
     # =============

@@ -163,13 +163,11 @@ class Models:
         paged.get_page()
         return paged
 
-    def build(self, model: entities.Model, local_path=None, from_local=None,
-              log_level='INFO') -> ml.BaseModelAdapter:
+    def build(self, model: entities.Model, local_path=None, from_local=None) -> ml.BaseModelAdapter:
         """
         :param model: Model entity
         :param local_path: local path of the model (if from_local=False - codebase will be downloaded)
         :param from_local: bool. use current directory to build
-        :param log_level: log level
 
         :return:dl.BaseModelAdapter
         """
@@ -218,7 +216,6 @@ class Models:
         spec.loader.exec_module(adapter_module)
         model_adapter_cls = getattr(adapter_module, class_name)
         model_adapter = model_adapter_cls(model_entity=model)
-        model_adapter.__set_adapter_handler__(level=log_level)
         logger.info('Model adapter loaded successfully!')
         return model_adapter
 

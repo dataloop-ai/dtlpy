@@ -10,6 +10,8 @@ Feature: Tasks repository list method testing
     @second_project.delete
     Scenario: list
         Given There is a second project and dataset
+        And There are items for another dataset, path = "filters/image.jpg"
+            |annotated_type={"box": 3, "polygon": 3}|metadata={"user.good": 3, "user.bad": 3}|
         When I create Task
             | task_name=list_tasks | due_date=auto | project_id=auto | recipe_id=auto | assignee_ids=auto |
         And I create Task in second project

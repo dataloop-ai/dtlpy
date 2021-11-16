@@ -172,12 +172,10 @@ class Item(entities.BaseEntity):
                                        dataset_id=self.dataset_id,
                                        datasets=repositories.Datasets(client_api=self._client_api, project=None))
             datasets = items.datasets
-            features = repositories.Features(client_api=self._client_api,
-                                             project=self._project)
+
         else:
             items = self.dataset.items
             datasets = self.dataset.datasets
-            features = self.dataset.features
 
         r = reps(annotations=repositories.Annotations(client_api=self._client_api,
                                                       dataset_id=self.dataset_id,
@@ -188,7 +186,9 @@ class Item(entities.BaseEntity):
                  codebases=None,
                  artifacts=None,
                  modalities=Modalities(item=self),
-                 features=features)
+                 features=repositories.Features(client_api=self._client_api,
+                                                project=self._project,
+                                                item=self))
         return r
 
     @property

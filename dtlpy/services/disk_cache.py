@@ -1,20 +1,17 @@
-import diskcache
-import os
+from .service_defaults import DATALOOP_PATH
 from diskcache import Cache
+import os
 
 
 class DlCache:
-
     def __init__(self, name, level=1, options=None, enable_stats=False):
         if options is None:
             options = dict()
         self.name = name
         self.level = level
-        self.cache_dir = options.get('cachePath',
-                                     os.path.join(os.path.expanduser('~'),
-                                                  '.dataloop',
-                                                  'cache',
-                                                  name))
+        self.cache_dir = options.get(
+            "cachePath", os.path.join(DATALOOP_PATH, "cache", name)
+        )
         self.cache = Cache(directory=self.cache_dir)
         self.cache.stats(enable=enable_stats)
 
@@ -27,7 +24,7 @@ class DlCache:
         """
         if not isinstance(key, str) and not isinstance(key, int):
             raise ValueError("key must be string or int")
-        with diskcache.Cache(self.cache.directory) as reference:
+        with Cache(self.cache.directory) as reference:
             reference.set(key=key, value=value)
 
     def get(self, key):
@@ -142,6 +139,7 @@ class DlCache:
         """
         self.cache.close()
         import shutil
+
         try:
             shutil.rmtree(self.cache.directory)
         except OSError:  # Windows wonkiness

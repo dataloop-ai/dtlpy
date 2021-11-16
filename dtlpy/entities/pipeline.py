@@ -349,3 +349,12 @@ class Pipeline(entities.BaseEntity):
         :return: Composition entity
         """
         return self.pipelines.install(pipeline=self)
+
+    def execute(self, execution_input: dict = None):
+        """
+        execute a pipeline and return the execute
+        :param execution_input: dict of the pipeline input - example {'input': {'item': 'item_id'}}
+        :return: entities.PipelineExecution object
+        """
+        execution = self.pipeline_executions.create(pipeline_id=self.id, execution_input=execution_input)
+        return execution

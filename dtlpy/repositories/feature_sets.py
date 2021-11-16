@@ -48,7 +48,6 @@ class FeatureSets:
             raise exceptions.PlatformException(response)
 
         features = miscellaneous.List([entities.FeatureSet.from_json(_json=_json,
-                                                                     project=self._project,
                                                                      client_api=self._client_api) for _json in
                                        response.json()])
         return features
@@ -70,27 +69,43 @@ class FeatureSets:
 
         # return entity
         return entities.FeatureSet.from_json(client_api=self._client_api,
-                                             project=self._project,
                                              _json=response.json())
 
-    def create(self, name: str, size: int, set_type: str, entity_type: entities.FeatureEntityType, context=None,
-               tags=None):
-        if context is None:
-            context = dict()
+    def create(self, name: str,
+               size: int,
+               set_type: str,
+               entity_type: entities.FeatureEntityType,
+               project_id=None,
+               tags=None,
+               org_id=None):
+        """
+        Create a new Feature Set
+
+        :param name: str - the Feature name
+        :param size: str - the Feature size
+        :param set_type: str - the Feature type
+        :param entity_type: entities.FeatureEntityType
+        :param project_id: project id
+        :param tags:
+        :param org_id: org id
+        :return:
+        """
         if tags is None:
             tags = list()
-        if 'project' not in context:
+        if project_id is None:
             if self._project is None:
-                raise ValueError('Must input a project id in context')
+                raise ValueError('Must input a project id')
             else:
-                context['project'] = self._project.id
+                project_id = self._project.id
 
         payload = {'name': name,
                    'size': size,
                    'tags': tags,
                    'type': set_type,
-                   'context': context,
+                   'project': project_id,
                    'entityType': entity_type}
+        if org_id is not None:
+            payload['org'] = org_id
         success, response = self._client_api.gen_request(req_type="post",
                                                          json_req=payload,
                                                          path=self.URL)
@@ -101,7 +116,6 @@ class FeatureSets:
 
         # return entity
         return entities.FeatureSet.from_json(client_api=self._client_api,
-                                             project=self._project,
                                              _json=response.json()[0])
 
     def delete(self, feature_set_id):
@@ -121,3 +135,19 @@ class FeatureSets:
             return success
         else:
             raise exceptions.PlatformException(response)
+
+    def _build_entities_from_response(self, response_items) -> miscellaneous.List[entities.Item]:
+        pool = self._client_api.thread_pools(pool_name='entity.create')
+        jobs = [None for _ in range(len(response_items))]
+        # return triggers list
+        for i_item, item in enumerate(response_items):
+            jobs[i_item] = pool.submit(entities.FeatureSet._protected_from_json,
+                                       **{'client_api': self._client_api,
+                                          '_json': item})
+        # get all results
+        results = [j.result() for j in jobs]
+        # log errors
+        _ = [logger.warning(r[1]) for r in results if r[0] is False]
+        # return good jobs
+        items = miscellaneous.List([r[1] for r in results if r[0] is True])
+        return items

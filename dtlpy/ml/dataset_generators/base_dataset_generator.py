@@ -1,13 +1,16 @@
-import os
-import json
-from pathlib import Path
-import numpy as np
-from PIL import Image
 from concurrent.futures import ThreadPoolExecutor
-import imgaug
+from pathlib import Path
+from PIL import Image
 import torchvision
+import numpy as np
+import logging
+import imgaug
+import json
+import os
 
 from ... import entities
+
+logger = logging.getLogger(__name__)
 
 
 class BaseGenerator:
@@ -23,11 +26,11 @@ class BaseGenerator:
                  shuffle=True,
                  seed=None,
                  to_categorical=False,
-                 # flags
+                 # debug flags
                  return_originals=False,
                  return_separate_labels=False,
                  return_filename=False,
-                 return_label_id=True,
+                 return_label_string=False,
                  ) -> None:
         """
         Args:
@@ -39,7 +42,7 @@ class BaseGenerator:
             shuffle: Whether to shuffle the data (default: True) If set to False, sorts the data in alphanumeric order.
             seed: Optional random seed for shuffling and transformations.
             return_filename: bool - If True, return the parsed itemname along with image array and annotation
-            return_label_id: bool - If True, the returned annotation is by it's mapping id and not true label string
+            return_label_string: bool - If True, the returned annotation is by it's label string and not label id mapping
             return_originals: bool - If True, return ALSO images and annotations before transformations (for debug)
             return_separate_labels: bool - If True, return labels and geo separately and not concatenated to single array
         """
@@ -72,7 +75,7 @@ class BaseGenerator:
         self.annotations = list()
         # flags
         self.return_filename = return_filename
-        self.return_label_id = return_label_id
+        self.return_label_string = return_label_string
         self.return_originals = return_originals
         self.return_separate_labels = return_separate_labels
 
@@ -172,14 +175,17 @@ class BaseGenerator:
                     raise ValueError(
                         'unsupported annotation type: {}'.format(annotation.type))
                 geos.append(geo)
-                if self.return_label_id:
-                    labels_id.append(self.label_to_id_map[annotation.label])
-                else:
+                if self.return_label_string:
                     labels_id.append(annotation.label)
+                else:
+                    labels_id.append(self.label_to_id_map[annotation.label])
 
         # reorder for output
         geos = np.asarray(geos).astype(float)
-        labels_id = np.asarray(labels_id).reshape((-1, 1)).astype(float)
+        if self.return_label_string:
+            labels_id = np.asarray(labels_id).reshape((-1, 1))
+        else:
+            labels_id = np.asarray(labels_id).reshape((-1, 1)).astype(float)
         if self.annotation_type == entities.AnnotationType.BOX:
             geos = geos.reshape(-1, 4)
         return geos, labels_id
@@ -246,7 +252,11 @@ class BaseGenerator:
         to_return = (image,)
         targets = (geos, labels_ids)
         if not self.return_separate_labels:
-            if self.annotation_type == entities.AnnotationType.CLASSIFICATION:
+            if labels_ids.shape[0] == 0:
+                logger.warning('Empty annotation for image filename: {}'.format(image_filename))
+                # empty labels ids
+                targets = (labels_ids,)
+            elif self.annotation_type == entities.AnnotationType.CLASSIFICATION:
                 # support only for single classification label
                 y = labels_ids.flatten()[0]
                 if self.to_categorical:

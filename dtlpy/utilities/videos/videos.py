@@ -1,4 +1,6 @@
 import time
+import types
+
 import numpy as np
 import os
 import logging
@@ -26,6 +28,19 @@ class Videos:
             raise
         probe = ffmpeg.probe(filepath)
         return probe
+
+    @staticmethod
+    def get_max_object_id(item):
+        max_object_id = 1
+        annotations_list = item.annotations.list().annotations
+        if len(annotations_list) < 1:
+            return 1
+        for annotation in annotations_list:
+            if annotation.object_id is not None:
+                current_object_id = int(annotation.object_id)
+                if current_object_id > max_object_id:
+                    max_object_id = current_object_id
+        return max_object_id
 
     @staticmethod
     def video_snapshots_generator(item_id=None, item=None, frame_interval=30, image_ext="png"):
@@ -98,10 +113,12 @@ class Videos:
             # classification tpe annotation creation for each file
             builder = item.annotations.builder()
             annotation_itemlinks = []
-            if not isinstance(snapshots_items, list):
+            if not isinstance(snapshots_items, types.GeneratorType):
                 snapshots_items = [snapshots_items]
 
+            max_object_id = Videos().get_max_object_id(item=item)
             for snapshot_item in snapshots_items:
+                max_object_id += 1
                 item_frame = snapshot_item.name.rsplit("frame.", 1)[1].split(".")[0]
                 if item_frame.isnumeric():
                     item_time = int(item_frame) * video_fps
@@ -120,13 +137,13 @@ class Videos:
 
                 snapshot_item.update(system_metadata=True)
                 annotation_definition = dl.Classification(label="Snapshot")
-
                 builder.add(annotation_definition=annotation_definition,
                             frame_num=int(item_frame),
                             end_frame_num=nb_frames if int(item_frame) + int(video_fps) > nb_frames else int(
                                 item_frame) + int(video_fps),
                             start_time=item_time,
-                            end_time=duration if item_time + 1 > duration else item_time + 1)
+                            end_time=duration if item_time + 1 > duration else item_time + 1,
+                            object_id=max_object_id)
 
             annotations = item.annotations.upload(annotations=builder)
 

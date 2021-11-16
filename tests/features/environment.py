@@ -91,6 +91,8 @@ def after_tag(context, tag):
             logging.exception('Failed to delete converter dataset')
     elif tag == 'frozen_dataset':
         pass
+    elif 'testrail-C' in tag:
+        pass
     else:
         raise ValueError('unknown tag: {}'.format(tag))
 

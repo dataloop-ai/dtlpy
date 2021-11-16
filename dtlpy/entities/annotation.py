@@ -340,13 +340,14 @@ class Annotation(entities.BaseEntity):
 
     @attributes.setter
     def attributes(self, attributes):
-        if not isinstance(attributes, list) and not isinstance(attributes, dict):
-            attributes = [attributes]
-
         if self._use_attributes_2:
+            if not isinstance(attributes, dict):
+                raise ValueError('Attributes must be a dict')
             self._recipe_2_attributes = attributes
-
-        self.annotation_definition.attributes = attributes
+        else:
+            if not isinstance(attributes, list):
+                raise ValueError('Attributes must be a list')
+            self.annotation_definition.attributes = attributes
 
     @property
     def color(self):
@@ -515,6 +516,23 @@ class Annotation(entities.BaseEntity):
             logger.error(
                 'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
             raise
+
+        if height is None:
+            if self._item is None or self._item.height is None:
+                if image is None:
+                    raise PlatformException(error='400', message='must provide item width and height')
+                else:
+                    height = image.shape[0]
+            else:
+                height = self._item.height
+        if width is None:
+            if self._item is None or self._item.width is None:
+                if image is None:
+                    raise PlatformException(error='400', message='must provide item width and height')
+                else:
+                    width = image.shape[1]
+            else:
+                width = self._item.width
         # s_frame and n_frame display the start and end frames, get them from the metadata
         if self.metadata:
             s_frame = self.metadata.get('system', dict()).get('frame', 0)
@@ -534,7 +552,11 @@ class Annotation(entities.BaseEntity):
         if is_video:
             # is the image empty make a zeros one
             if image is None:
-                image = [None] * (e_frame - s_frame)
+                nb_frames = self.item.system.get('nb_frames', 0)
+                if nb_frames > 0:
+                    image = [None] * nb_frames
+                else:
+                    raise exceptions.PlatformException(404, "can not show video annotations with out nb_frames")
             frames = list()
             i_frame = 0
 
@@ -564,14 +586,17 @@ class Annotation(entities.BaseEntity):
                                                               label_instance_dict=label_instance_dict)
                     except Exception as e:
                         raise ValueError(e)
-                    text = '%s-%s' % (self.label, ','.join(self.attributes))
-                    frame = cv2.putText(frame,
-                                        text=text,
-                                        org=tuple([int(np.round(self.left)), int(np.round(self.top))]),
-                                        color=self.color,
-                                        fontFace=cv2.FONT_HERSHEY_DUPLEX,
-                                        fontScale=1,
-                                        thickness=thickness)
+                    if with_text:
+                        text = '%s-%s' % (self.label, ','.join(self.attributes))
+                        frame = cv2.putText(frame,
+                                            text=text,
+                                            org=tuple([int(np.round(self.left)), int(np.round(self.top))]),
+                                            color=self.color,
+                                            fontFace=cv2.FONT_HERSHEY_DUPLEX,
+                                            fontScale=1,
+                                            thickness=thickness)
+                if annotation_format == entities.ViewAnnotationOptions.MASK:
+                    frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2BGR)
                 frames.append(frame)
                 i_frame += 1
             return frames
@@ -612,23 +637,6 @@ class Annotation(entities.BaseEntity):
         if self.annotation_definition.type == 'cube_3d':
             logger.warning('the show for 3d_cube is not supported.')
             return image
-
-        if height is None:
-            if self._item is None or self._item.height is None:
-                if image is None:
-                    raise PlatformException(error='400', message='must provide item width and height')
-                else:
-                    height = image.shape[0]
-            else:
-                height = self._item.height
-        if width is None:
-            if self._item is None or self._item.width is None:
-                if image is None:
-                    raise PlatformException(error='400', message='must provide item width and height')
-                else:
-                    width = image.shape[1]
-            else:
-                width = self._item.width
 
         if annotation_format == entities.ViewAnnotationOptions.MASK:
             # create an empty mask
@@ -683,6 +691,12 @@ class Annotation(entities.BaseEntity):
                                     message='unknown annotations format: "{}". known formats: "{}"'.format(
                                         annotation_format, '", "'.join(list(entities.ViewAnnotationOptions))))
 
+        # show annotation
+        if image is None:
+            image = np.zeros((height, width, len(color)), dtype=np.uint8)
+            if image.shape[2] == 1:
+                image = np.squeeze(image)
+
         # color
         if color is None:
             if annotation_format == entities.ViewAnnotationOptions.MASK:
@@ -694,20 +708,16 @@ class Annotation(entities.BaseEntity):
                 color = label_instance_dict.get(self.label, 1)
             elif annotation_format == entities.ViewAnnotationOptions.OBJECT_ID:
                 if self.object_id is None:
-                    raise PlatformException(
-                        error='1001',
-                        message='Try to show object_id but annotation has no value. annotation id: {}'.format(
-                            self.id))
+                    logger.warning(
+                        'Try to show object_id but annotation has no value. annotation id: {}'.format(self.id)
+                    )
+                    return image
                 color = int(self.object_id)
             else:
                 raise PlatformException('404',
                                         'unknown annotations format: {}. known formats: "{}"'.format(
                                             annotation_format, '", "'.join(list(entities.ViewAnnotationOptions))))
-            # show annotation
-        if image is None:
-            image = np.zeros((height, width, len(color)), dtype=np.uint8)
-            if image.shape[2] == 1:
-                image = np.squeeze(image)
+
         return self.annotation_definition.show(image=image,
                                                thickness=thickness,
                                                with_text=with_text,
@@ -1064,17 +1074,19 @@ class Annotation(entities.BaseEntity):
             raise PlatformException('400', 'missing id in annotation json')
 
         metadata = _json.get('metadata', dict())
-        named_attributes = metadata.get('system', dict()).get('attributes', None)
 
         # get metadata, status, attributes and object id
         object_id = None
         status = None
-        attributes = _json.get('attributes', None)
         if 'system' in metadata and metadata['system'] is not None:
             object_id = _json['metadata']['system'].get('objectId', object_id)
             status = _json['metadata']['system'].get('status', status)
 
-        first_frame_attributes = None
+        recipe_2_attributes = os.environ.get("USE_ATTRIBUTE_2", 'false') == 'true'
+        named_attributes = metadata.get('system', dict()).get('attributes', None)
+        attributes = named_attributes if recipe_2_attributes else _json.get('attributes', None)
+
+        first_frame_attributes = attributes
         first_frame_coordinates = list()
         first_frame_number = 0
         first_frame_start_time = 0
@@ -1099,7 +1111,7 @@ class Annotation(entities.BaseEntity):
             # get video-only attributes
             end_time = 1.5
             # get first frame attribute
-            first_frame_attributes = _json.get('attributes', first_frame_attributes)
+            first_frame_attributes = first_frame_attributes
             # get first frame coordinates
             first_frame_coordinates = _json.get('coordinates', first_frame_coordinates)
             if 'system' in metadata:
@@ -1275,7 +1287,10 @@ class Annotation(entities.BaseEntity):
         _json['itemId'] = item_id
         _json['item'] = self.item_url
         _json['label'] = self.label
-        _json['attributes'] = self.attributes
+
+        # Need to put back after transition to attributes 2.0
+        # _json['attributes'] = self.attributes
+
         _json['dataset'] = self.dataset_url
 
         _json['createdAt'] = self.created_at
@@ -1306,8 +1321,15 @@ class Annotation(entities.BaseEntity):
             # if status is CLEAR need to set status to None so it will be deleted in backend
             _json['metadata']['system']['status'] = self.status if self.status != AnnotationStatus.CLEAR else None
 
-        if self._recipe_2_attributes:
+        if self._use_attributes_2:
             _json['metadata']['system']['attributes'] = self._recipe_2_attributes
+            if 'attributes' in self._platform_dict:
+                _json['attributes'] = self._platform_dict['attributes']
+        else:
+            _json['attributes'] = self.attributes
+            orig_metadata_system = self._platform_dict.get('metadata', {}).get('system', {})
+            if 'attributes' in orig_metadata_system:
+                _json['metadata']['system']['attributes'] = orig_metadata_system['attributes']
 
         # add frame info
         if self.is_video:
@@ -1378,6 +1400,10 @@ class FrameAnnotation(entities.BaseEntity):
     @property
     def label(self):
         return self.annotation_definition.label
+
+    @label.setter
+    def label(self, label):
+        self.annotation_definition.label = label
 
     @property
     def attributes(self):

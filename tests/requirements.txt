@@ -1,4 +1,5 @@
 behave>=1.2.6
 opencv_python<4.0.0
+behave-testrail-reporter>=0.5.1
 filelock
 pycocotools

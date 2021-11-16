@@ -350,13 +350,11 @@ class Snapshots:
             from_json['configuration'].update(configuration)
         if labels is not None:
             ontology_spec = entities.OntologySpec(ontology_id='null', labels=labels)
-            from_json['ontologySpec'] = ontology_spec.to_json(),
+            from_json['ontologySpec'] = ontology_spec.to_json()
         if description is not None:
             from_json['description'] = description
         if tags is not None:
             from_json['tags'] = tags
-
-
 
         # update required fields or replace with new values
         if bucket is None:
@@ -366,7 +364,7 @@ class Snapshots:
                 clone_bucket_path = os.path.join(orig_dir, datetime.datetime.now().strftime('%Y%m%d-%H%M%S'))
                 bucket = from_snapshot.buckets.create(bucket_type=entities.BucketType.LOCAL,
                                                       local_path=clone_bucket_path,
-                                                      item_bucket_snapshot_name=snapshot_name)
+                                                      snapshot_name=snapshot_name)
             elif isinstance(from_snapshot.bucket, entities.ItemBucket):
                 logger.info("Copying bucket_item")
                 bucket = from_snapshot.buckets.create(bucket_type=entities.BucketType.ITEM,

@@ -69,7 +69,7 @@ def step_impl(context):
 
 @behave.when(u'I upload item in "{item_path}" to pipe dataset')
 def step_impl(context, item_path):
-    time.sleep(10)
+    time.sleep(30)
     item_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], item_path)
     context.item = context.dataset.items.upload(local_path=item_path)
 

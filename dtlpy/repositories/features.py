@@ -84,7 +84,9 @@ class Features:
                 error='400',
                 message='Filters resource must to be FiltersResource.FEATURE. Got: {!r}'.format(filters.resource))
         if self._feature_set is not None:
-            filters.custom_filter = {'featureSetId': self._feature_set.id}
+            filters.add(field='featureSetId', values=self._feature_set.id)
+        if self._item is not None:
+            filters.add(field='entityId', values=self._item.id)
         paged = entities.PagedEntities(items_repository=self,
                                        filters=filters,
                                        page_offset=filters.page,
@@ -93,7 +95,7 @@ class Features:
         paged.get_page()
         return paged
 
-    def get(self, feature_id=None) -> entities.Feature:
+    def get(self, feature_id) -> entities.Feature:
         """
         Get Feature object
 
@@ -112,30 +114,37 @@ class Features:
         return entities.Feature.from_json(client_api=self._client_api,
                                           _json=response.json())
 
-    def create(self, value, feature_set_id=None, entity_id=None, version=None, parent_id=None):
+    def create(self, value,
+               project_id=None,
+               feature_set_id=None,
+               entity_id=None,
+               version=None,
+               parent_id=None,
+               org_id=None):
         """
         Create a new Feature vector
 
         :param value: the vector (list of floats)
+        :param project_id: project id
         :param feature_set_id: FeatureSet id
         :param entity_id: id of the entity the feature vector is linked to (item.id, annotation.id etc)
         :param version:
         :param parent_id: optional: parent FeatureSet id
+        :param org_id: org id
         :return:
         """
-        context = dict()
-        if 'project' not in context:
+        if project_id is None:
             if self._project is None:
-                raise ValueError('Must input a project id in context')
+                raise ValueError('Must input a project id')
             else:
-                context['project'] = self._project.id
+                project_id = self._project.id
         if feature_set_id is None:
             if self._feature_set is None:
                 raise ValueError(
                     'Missing feature_set_id. Input the variable or create from context - feature_set.features.create()')
             feature_set_id = self._feature_set.id
 
-        payload = {'context': context,
+        payload = {'project': project_id,
                    'entityId': entity_id,
                    'value': value,
                    'featureSetId': feature_set_id}
@@ -143,6 +152,8 @@ class Features:
             payload['version'] = version
         if parent_id is not None:
             payload['parentId'] = parent_id
+        if org_id is not None:
+            payload['org'] = org_id
         success, response = self._client_api.gen_request(req_type="post",
                                                          json_req=payload,
                                                          path=self.URL)
@@ -172,3 +183,19 @@ class Features:
             return success
         else:
             raise exceptions.PlatformException(response)
+
+    def _build_entities_from_response(self, response_items) -> miscellaneous.List[entities.Item]:
+        pool = self._client_api.thread_pools(pool_name='entity.create')
+        jobs = [None for _ in range(len(response_items))]
+        # return triggers list
+        for i_item, item in enumerate(response_items):
+            jobs[i_item] = pool.submit(entities.Feature._protected_from_json,
+                                       **{'client_api': self._client_api,
+                                          '_json': item})
+        # get all results
+        results = [j.result() for j in jobs]
+        # log errors
+        _ = [logger.warning(r[1]) for r in results if r[0] is False]
+        # return good jobs
+        items = miscellaneous.List([r[1] for r in results if r[0] is True])
+        return items

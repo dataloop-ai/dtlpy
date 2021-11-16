@@ -5,6 +5,7 @@ import jwt
 import os
 import dtlpy as dl
 import numpy as np
+from behave_testrail_reporter import TestrailReporter
 
 try:
     # for local import
@@ -63,12 +64,19 @@ def before_all(context):
                 pass
 
         allow_locally_with_user = os.environ.get('ALLOW_RUN_TESTS_LOCALLY_WITH_USER', 'false') == 'true'
+
         if not allow_locally_with_user and payload['email'] not in ['oa-test-4@dataloop.ai', 'oa-test-1@dataloop.ai', 'oa-test-2@dataloop.ai',
                                     'oa-test-3@dataloop.ai']:
             assert False, 'Cannot run test on user: "{}". only test users'.format(payload['email'])
 
         # save to feature level
         context.feature.dataloop_feature_dl = context.dl
+
+        avoid_testrail = os.environ.get('AVOID_TESTRAIL', 'false') == 'true'
+        if not avoid_testrail:
+            current_branch = get_env_from_git_branch() + " " + time.strftime("%d-%m %H:%M")  # Get the current build branch of your CI system
+            testrail_reporter = TestrailReporter(current_branch)
+            context.config.reporters.append(testrail_reporter)
 
 
 @behave.given('There is a project by the name of "{project_name}"')

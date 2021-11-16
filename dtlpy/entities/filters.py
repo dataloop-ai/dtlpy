@@ -203,12 +203,17 @@ class Filters:
                 if field in single_filter:
                     self.join['filter']['$and'].remove(single_filter)
 
-    def add_join(self, field, values, operator: FiltersOperations = None):
+    def add_join(self, field,
+                 values,
+                 operator: FiltersOperations = None,
+                 method: FiltersMethod = FiltersMethod.AND
+                 ):
         """
         join a query to the filter
         :param field:
         :param values:
         :param operator: optional - in, gt, lt, eq, ne
+        :param method: optional - str - FiltersMethod.AND, FiltersMethod.OR
         """
         if self.resource not in [FiltersResource.ITEM, FiltersResource.ANNOTATION]:
             raise PlatformException('400', 'Cannot join to {} filters'.format(self.resource))
@@ -222,9 +227,10 @@ class Filters:
                 self.join['on'] = {'resource': FiltersResource.ITEM, 'local': 'id', 'forigen': 'itemId'}
         if 'filter' not in self.join:
             self.join['filter'] = dict()
-        if '$and' not in self.join['filter']:
-            self.join['filter']['$and'] = list()
-        self.join['filter']['$and'].append(SingleFilter(field=field, values=values, operator=operator).prepare())
+        join_method = '$' + method
+        if join_method not in self.join['filter']:
+            self.join['filter'][join_method] = list()
+        self.join['filter'][join_method].append(SingleFilter(field=field, values=values, operator=operator).prepare())
 
     def __add_defaults(self):
         if self._use_defaults:

@@ -5,12 +5,15 @@ Feature: Dataset SDK
         And There is a project by the name of "my-project-dataset"
         And Create a Dataset "my-dataset-name"
 
+
+    @testrail-C4523097
     Scenario: Dataset SDK Scenario
         When Get Commands - Get Projects Datasets List
         Then Get Dataset by Name
         And Get a dataset by ID
         And Print a Dataset
 
+    @testrail-C4523097
     Scenario: Create and Manage Datasets
         When Clone Dataset "clone-dataset"
         And I upload a file in path "assets_split/items_upload/0000000162.jpg"

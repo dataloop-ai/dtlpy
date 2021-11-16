@@ -322,7 +322,7 @@ class Model(entities.BaseEntity):
                                         codebase=codebase,
                                         src_path=src_path)
 
-    def build(self, local_path=None, from_local=None, log_level='INFO'):
+    def build(self, local_path=None, from_local=None):
         """
         Push local model
 
@@ -330,13 +330,11 @@ class Model(entities.BaseEntity):
                            if model is downloaded - this will be the point it will be downloaded
                            (if from_local=False - codebase will be downloaded)
         :param from_local: bool. use current directory to build
-        :param log_level: log level
         :return: ModelAdapter (dl.BaseModelAdapter)
         """
         return self.models.build(model=self,
                                  local_path=local_path,
-                                 from_local=from_local,
-                                 log_level=log_level)
+                                 from_local=from_local)
 
     def generate_adapter(self, local_path=None, overwrite=False):
         """

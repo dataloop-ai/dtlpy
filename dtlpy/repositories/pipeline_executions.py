@@ -136,7 +136,8 @@ class PipelineExecutions:
         if filters.resource != entities.FiltersResource.PIPELINE_EXECUTION:
             raise exceptions.PlatformException(
                 error='400',
-                message='Filters resource must to be FiltersResource.PIPELINE_EXECUTION. Got: {!r}'.format(filters.resource))
+                message='Filters resource must to be FiltersResource.PIPELINE_EXECUTION. Got: {!r}'.format(
+                    filters.resource))
 
         project_id = None
         if self._project is not None:
@@ -159,3 +160,31 @@ class PipelineExecutions:
 
         paged.get_page()
         return paged
+
+    def create(self,
+               pipeline_id: str = None,
+               execution_input: dict = None):
+        """
+        execute a pipeline and return the execute
+        :param pipeline_id: pipeline id
+        :param execution_input: dict of the pipeline input - example {'input': {'item': 'item_id'}}
+        :return: entities.PipelineExecution object
+        """
+        if pipeline_id is None:
+            if self._pipeline is None:
+                raise exceptions.PlatformException('400', 'Please provide pipeline id')
+            pipeline_id = self._pipeline.id
+
+        success, response = self._client_api.gen_request(
+            path='/pipelines/{}/execute'.format(pipeline_id),
+            req_type='POST',
+            json_req=execution_input
+        )
+
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        execution = entities.PipelineExecution.from_json(_json=response.json(),
+                                                         client_api=self._client_api,
+                                                         pipeline=self._pipeline)
+        return execution

@@ -478,7 +478,11 @@ class Dataset(entities.BaseEntity):
                              overwrite=False,
                              thickness=1,
                              with_text=False,
-                             remote_path=None):
+                             remote_path=None,
+                             include_annotations_in_output=True,
+                             export_png_files=False,
+                             filter_output_annotations=False
+                             ):
         """
         Download dataset by filters.
         Filtering the dataset for items and save them local
@@ -492,7 +496,9 @@ class Dataset(entities.BaseEntity):
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :param with_text: optional - add text to annotations, default = False
         :param remote_path: DEPRECATED and ignored. use filters
-        :num_workers:
+        :param include_annotations_in_output: default - False , if export should contain annotations
+        :param export_png_files: default - True, if semantic annotations should exported as png files
+        :param filter_output_annotations: default - False, given an export by filter - determine if to filter out annotations
         :return: `List` of local_path per each downloaded item
         """
 
@@ -505,7 +511,11 @@ class Dataset(entities.BaseEntity):
             annotation_filters=annotation_filters,
             thickness=thickness,
             with_text=with_text,
-            remote_path=remote_path)
+            remote_path=remote_path,
+            include_annotations_in_output=include_annotations_in_output,
+            export_png_files=export_png_files,
+            filter_output_annotations=filter_output_annotations
+        )
 
     def checkout(self):
         """

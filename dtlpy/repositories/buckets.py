@@ -144,6 +144,8 @@ class Buckets:
                     os.makedirs(os.path.dirname(filename))
                 blob.download_to_filename(filename=filename,
                                           client=bucket._client)
+        elif isinstance(bucket, entities.LocalBucket):
+            _ = distutils.dir_util.copy_tree(src=bucket.local_path, dst=local_path)
         else:
             raise NotImplemented(
                 'missing implementation for "buckets.download" for bucket type: {!r}'.format(bucket.type))

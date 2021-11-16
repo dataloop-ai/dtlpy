@@ -43,7 +43,6 @@ class Execution(entities.BaseEntity):
     # name changed
     trigger_id = attr.ib()
     service_id = attr.ib()
-    pipeline_id = attr.ib()
     project_id = attr.ib()
     service_version = attr.ib()
     package_id = attr.ib()
@@ -54,6 +53,9 @@ class Execution(entities.BaseEntity):
     _service = attr.ib(repr=False)
     _project = attr.ib(repr=False, default=None)
     _repositories = attr.ib(repr=False)
+
+    # optional
+    pipeline = attr.ib(type=dict, default=None, repr=False)
 
     ################
     # repositories #
@@ -154,7 +156,6 @@ class Execution(entities.BaseEntity):
             feedback_queue=_json.get('feedbackQueue', None),
             service_id=_json.get('serviceId', None),
             project_id=_json.get('projectId', None),
-            pipeline_id=_json.get('pipelineId', None),
             latest_status=_json.get('latestStatus', None),
             sync_reply_to=_json.get('syncReplyTo', None),
             created_at=_json.get('createdAt', None),
@@ -177,7 +178,8 @@ class Execution(entities.BaseEntity):
             service=service,
             service_version=_json.get('serviceVersion', False),
             package_id=_json.get('packageId', None),
-            package_name=_json.get('packageName', None)
+            package_name=_json.get('packageName', None),
+            pipeline=_json.get('pipeline', None)
         )
         inst.is_fetched = is_fetched
         return inst
@@ -198,7 +200,6 @@ class Execution(entities.BaseEntity):
                 attr.fields(Execution)._repositories,
                 attr.fields(Execution).project_id,
                 attr.fields(Execution).service_id,
-                attr.fields(Execution).pipeline_id,
                 attr.fields(Execution).trigger_id,
                 attr.fields(Execution).function_name,
                 attr.fields(Execution).max_attempts,
@@ -212,13 +213,14 @@ class Execution(entities.BaseEntity):
                 attr.fields(Execution).updated_at,
                 attr.fields(Execution).feedback_queue,
                 attr.fields(Execution).sync_reply_to,
+                attr.fields(Execution).pipeline,
             )
         )
+
         # rename
         _json['projectId'] = self.project_id
         _json['triggerId'] = self.trigger_id
         _json['serviceId'] = self.service_id
-        _json['pipelineId'] = self.pipeline_id
         _json['functionName'] = self.function_name
         _json['latestStatus'] = self.latest_status
         _json['maxAttempts'] = self.max_attempts
@@ -233,7 +235,31 @@ class Execution(entities.BaseEntity):
         _json['feedbackQueue'] = self.feedback_queue
         _json['syncReplyTo '] = self.sync_reply_to
 
+        if self.pipeline:
+            _json['pipeline'] = self.pipeline
+
         return _json
+
+    @property
+    def pipeline_id(self) -> str:
+        pipeline_id = None
+        if self.pipeline:
+            pipeline_id = self.pipeline.get('id', None)
+        return pipeline_id
+
+    @property
+    def node_id(self) -> str:
+        node_id = None
+        if self.pipeline:
+            node_id = self.pipeline.get('nodeId', None)
+        return node_id
+
+    @property
+    def pipeline_execution_id(self) -> str:
+        pipeline_execution_id = None
+        if self.pipeline:
+            pipeline_execution_id = self.pipeline.get('executionId', None)
+        return pipeline_execution_id
 
     @property
     def service(self):

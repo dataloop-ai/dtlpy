@@ -15,10 +15,11 @@ logger = logging.getLogger(__name__)
 
 
 class BaseModelAdapter:
-    configuration = {'label_map': None,  # {'label_name' : `int`, ...}
-                     }
+    configuration = {
+        'label_map': None,  # {'label_name' : `int`, ...}
+    }
 
-    def __init__(self, model_entity, log_Level='INFO'):
+    def __init__(self, model_entity):
         if not isinstance(model_entity, entities.Model):
             raise TypeError("model_entity must be of type dl.Model")
 
@@ -29,7 +30,6 @@ class BaseModelAdapter:
         self.model = None
         self.bucket_path = None
         self.logger = logger
-        self.__add_adapter_handler(level=log_Level)
 
     ############
     # Entities #
@@ -46,7 +46,7 @@ class BaseModelAdapter:
         assert isinstance(snapshot, entities.Snapshot)
         if self._snapshot is not None:
             if self._snapshot.id != snapshot.id:
-                logger.warning('Replacing snapshot from {!r} to {!r}'.format(self._snapshot.name, snapshot.name))
+                self.logger.warning('Replacing snapshot from {!r} to {!r}'.format(self._snapshot.name, snapshot.name))
         self._snapshot = snapshot
 
     @property
@@ -171,18 +171,18 @@ class BaseModelAdapter:
             raise ValueError('must create train and test partitions')
 
         if len(os.listdir(data_path)) > 0:
-            logger.warning("Data path directory ({}) is not empty..".format(data_path))
+            self.logger.warning("Data path directory ({}) is not empty..".format(data_path))
 
         # Download the partitions items
         for partition in partitions:
-            logger.debug("Downloading {!r} SnapshotPartition (DataPartition) of {}".format(partition,
-                                                                                           self.snapshot.dataset.name))
+            self.logger.debug("Downloading {!r} SnapshotPartition (DataPartition) of {}".format(partition,
+                                                                                                self.snapshot.dataset.name))
             data_partiion_base_path = os.path.join(data_path, partition)
             ret_list = self.snapshot.download_partition(partition=partition,
                                                         local_path=data_partiion_base_path,
                                                         filters=filters)
-            logger.info("Downloaded {!r} SnapshotPartition complete. {} total items".format(partition,
-                                                                                            len(list(ret_list))))
+            self.logger.info("Downloaded {!r} SnapshotPartition complete. {} total items".format(partition,
+                                                                                                 len(list(ret_list))))
 
         self.convert_from_dtlpy(data_path=data_path, **kwargs)
         return root_path, data_path, output_path
@@ -242,9 +242,9 @@ class BaseModelAdapter:
                                     file_types=kwargs.get('file_types'))
         if cleanup:
             shutil.rmtree(path=local_path, ignore_errors=True)
-            logger.info("Clean-up. deleting {}".format(local_path))
+            self.logger.info("Clean-up. deleting {}".format(local_path))
         self.snapshot.status = 'trained'
-        self.snapshot.update()
+        self.snapshot = self.snapshot.update()
 
     def predict_items(self, items: list, with_upload=True, cleanup=False, batch_size=16, output_shape=None, **kwargs):
         """
@@ -260,7 +260,7 @@ class BaseModelAdapter:
                                                  and has prediction fields (model_info)
         """
         # TODO: do we want to add score filtering here?
-        logger.debug(
+        self.logger.debug(
             "Predicting {} items, using batch size {}. Reshaping to: {}".format(len(items), batch_size, output_shape))
         all_predictions = list()
         for b in tqdm.tqdm(range(0, len(items), batch_size), desc='predicting', unit='bt', leave=None):
@@ -285,15 +285,15 @@ class BaseModelAdapter:
                         [pred.type == self.model_entity.output_type for pred in itertools.chain(*all_predictions)]):
                     raise RuntimeError("Predictions annotation are not of model output type")
                 for idx, item in enumerate(items):
-                    self._upload_predictions_collection(item,
-                                                        all_predictions[idx],
-                                                        cleanup=cleanup)
+                    all_predictions[idx] = self._upload_predictions_collection(item,
+                                                                               all_predictions[idx],
+                                                                               cleanup=cleanup)
 
             except exceptions.InternalServerError as err:
                 self.logger.error("Failed to upload annotations items. Error: {}".format(err))
 
-            self.logger.info('Uploading  items annotation for snapshot {!r}. cleanup {}'.
-                             format(self.snapshot.name, cleanup))
+            self.logger.info('Uploading  items annotation for snapshot {!r}. cleanup {}'.format(self.snapshot.name,
+                                                                                                cleanup))
         else:
             # fix the collection to have to correct item in the annotations
             for item, ann_coll in zip(items, all_predictions):
@@ -363,7 +363,7 @@ class BaseModelAdapter:
             clean_filter.add(field='metadata.user.model.name', values=model_info_name)
             item.annotations.delete(filters=clean_filter)
 
-        item.annotations.upload(annotations=predictions)
+        return item.annotations.upload(annotations=predictions)
 
     def _box_compare(self, act: entities.Annotation, predictions):
         """ Calculates best matched  prediction to a single gt. Returns namedTuple (score, prd_id)"""
@@ -395,25 +395,6 @@ class BaseModelAdapter:
             'frozen_datasetId': self.snapshot.dataset_id,
         }
         return _sample
-
-    ###########
-    # Utility #
-    ###########
-    def __set_adapter_handler__(self, level):
-        for hdl in self.logger.handlers:
-            if hdl.name.startswith('adapter'):
-                hdl.setLevel(level=level)
-
-    def __add_adapter_handler(self, level):
-        fmt = '%(levelname).1s: %(name)-20s %(asctime)-s [%(filename)-s:%(lineno)-d](%(funcName)-s):: %(msg)s'
-        hdl = logging.StreamHandler()
-        hdl.setFormatter(logging.Formatter(fmt=fmt, datefmt='%X'))
-        hdl.setLevel(level=level.upper())
-        hdl.name = 'adapter_handler'  # use the name to get the specific logger
-        if hdl.name in [h.name for h in self.logger.handlers]:
-            pass  # Handler already on logger
-        else:
-            self.logger.addHandler(hdlr=hdl)
 
     ##############################
     # Callback Factory functions #

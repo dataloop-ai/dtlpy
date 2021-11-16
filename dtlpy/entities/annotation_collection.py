@@ -187,12 +187,19 @@ class AnnotationCollection(entities.BaseEntity):
 
         return image
 
-    def _video_maker(self, input_filepath, output_filepath, thickness=1):
+    def _video_maker(self,
+                     input_filepath,
+                     output_filepath,
+                     thickness=1,
+                     annotation_format=entities.ViewAnnotationOptions.ANNOTATION_ON_IMAGE,
+                     with_text=False):
         """
         create a video from frames
-        :param input_filepath:
-        :param output_filepath:
-        :param thickness:
+        :param input_filepath: str - input file path
+        :param output_filepath: str - out put file path
+        :param thickness: int - thickness of the annotations
+        :param annotation_format: str - ViewAnnotationOptions - annotations format
+        :param with_text: bool - if True show the label in the output
         """
         try:
             import cv2
@@ -200,28 +207,49 @@ class AnnotationCollection(entities.BaseEntity):
             logger.error(
                 'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
             raise
+
+        nd_array = True
+        if annotation_format in [entities.ViewAnnotationOptions.INSTANCE, entities.ViewAnnotationOptions.OBJECT_ID]:
+            nd_array = False
+
         # read input video
         try:
-            reader = cv2.VideoCapture(input_filepath)
-            width = int(reader.get(cv2.CAP_PROP_FRAME_WIDTH))
-            height = int(reader.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            fps = reader.get(cv2.CAP_PROP_FPS)
-            writer = cv2.VideoWriter(output_filepath, cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height))
-            frames = list()
-            while reader.isOpened():
-                ret, frame = reader.read()
-                if not ret:
-                    break
-                frames.append(frame)
+            if input_filepath is not None:
+                reader = cv2.VideoCapture(input_filepath)
+                width = int(reader.get(cv2.CAP_PROP_FRAME_WIDTH))
+                height = int(reader.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                fps = reader.get(cv2.CAP_PROP_FPS)
+                writer = cv2.VideoWriter(output_filepath,
+                                         cv2.VideoWriter_fourcc(*"mp4v"),
+                                         fps,
+                                         (width, height),
+                                         nd_array)
+                frames = list()
+                while reader.isOpened():
+                    ret, frame = reader.read()
+                    if not ret:
+                        break
+                    frames.append(frame)
+                reader.release()
+            else:
+                fps = self.item.system.get('fps', 0)
+                height = self.item.system.get('height', 0)
+                width = self.item.system.get('width', 0)
+                writer = cv2.VideoWriter(output_filepath,
+                                         cv2.VideoWriter_fourcc(*"mp4v"),
+                                         fps,
+                                         (width, height),
+                                         nd_array)
+                frames = None
             for annotation in self.annotations:
                 frames = annotation.show(image=frames, color=annotation.color,
-                                         annotation_format=entities.ViewAnnotationOptions.ANNOTATION_ON_IMAGE,
+                                         annotation_format=annotation_format,
                                          thickness=thickness,
                                          height=height,
-                                         width=width)
+                                         width=width,
+                                         with_text=with_text)
             for ann_frame in frames:
                 writer.write(ann_frame.astype(np.uint8))
-            reader.release()
             writer.release()
         except Exception as e:
             raise ValueError(e)
@@ -288,12 +316,15 @@ class AnnotationCollection(entities.BaseEntity):
             if not ex:
                 filepath = '{}/{}.png'.format(dir_name, os.path.splitext(self.item.name)[0])
             image = None
+            if 'video' in self.item.mimetype:
+                self._video_maker(input_filepath=img_filepath,
+                                  output_filepath=filepath,
+                                  thickness=thickness,
+                                  annotation_format=annotation_format,
+                                  with_text=with_text
+                                  )
+                return filepath
             if annotation_format == entities.ViewAnnotationOptions.ANNOTATION_ON_IMAGE:
-                if 'video' in self.item.mimetype:
-                    self._video_maker(input_filepath=img_filepath, output_filepath=filepath,
-                                      thickness=thickness,
-                                      )
-                    return filepath
                 annotation_format = entities.ViewAnnotationOptions.MASK
                 image = np.asarray(Image.open(img_filepath))
             if orientation in [3, 4, 5, 6, 7, 8]:

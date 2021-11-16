@@ -46,7 +46,7 @@ class SlotPostAction:
 class SlotDisplayScope:
     resource = attr.ib(type=str)
     filters = attr.ib(type=entities.Filters, default=None)
-    panel = attr.ib(default=None, type=str)
+    panel = attr.ib(default=UiBindingPanel.ALL, type=str)
 
     @classmethod
     def from_json(cls, _json):
@@ -98,13 +98,18 @@ class PackageSlot(entities.BaseEntity):
     display_name = attr.ib(default=None)
     display_scopes = attr.ib(default=None, type=list)
     display_icon = attr.ib(repr=False, default=None)
-    post_action = attr.ib(default=None, type=SlotPostAction)
+    post_action = attr.ib(type=SlotPostAction)
     default_inputs = attr.ib(default=None, type=list)
     input_options = attr.ib(default=None, type=list)
 
+    @post_action.default
+    def post_action_setter(self):
+        return SlotPostAction(type=SlotPostActionType.NO_ACTION)
+
+
     @classmethod
     def from_json(cls, _json):
-        post_action = None
+        post_action = SlotPostAction(type=SlotPostActionType.NO_ACTION)
         if 'postAction' in _json and _json['postAction'] is not None:
             post_action = SlotPostAction.from_json(_json.get('postAction'))
 

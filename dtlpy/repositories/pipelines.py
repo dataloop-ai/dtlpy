@@ -291,3 +291,24 @@ class Pipelines:
 
         if not success:
             raise exceptions.PlatformException(response)
+
+    def execute(self,
+                pipeline: entities.Pipeline = None,
+                pipeline_id: str = None,
+                pipeline_name: str = None,
+                execution_input: dict = None):
+        """
+        execute a pipeline and return the execute
+        :param pipeline: entities.Pipeline object
+        :param pipeline_id: pipeline id
+        :param pipeline_name: pipeline name
+        :param execution_input: dict of the pipeline input - example {'input': {'item': 'item_id'}}
+        :return: entities.PipelineExecution object
+        """
+        if pipeline is None:
+            pipeline = self.get(pipeline_id=pipeline_id, pipeline_name=pipeline_name)
+        execution = repositories.PipelineExecutions(pipeline=pipeline,
+                                                    client_api=self._client_api,
+                                                    project=self._project).create(pipeline_id=pipeline.id,
+                                                                                  execution_input=execution_input)
+        return execution

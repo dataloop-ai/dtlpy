@@ -515,7 +515,11 @@ class Datasets:
                              overwrite=False,
                              thickness=1,
                              with_text=False,
-                             remote_path=None):
+                             remote_path=None,
+                             include_annotations_in_output=True,
+                             export_png_files=False,
+                             filter_output_annotations=False
+                             ):
         """
         Download dataset's annotations by filters.
         Filtering the dataset both for items and for annotations and download annotations
@@ -530,6 +534,9 @@ class Datasets:
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :param with_text: optional - add text to annotations, default = False
         :param remote_path: DEPRECATED and ignored
+        :param include_annotations_in_output: default - False , if export should contain annotations
+        :param export_png_files: default - True, if semantic annotations should exported as png files
+        :param filter_output_annotations: default - False, given an export by filter - determine if to filter out annotations
         :return: `List` of local_path per each downloaded item
         """
         if remote_path is not None:
@@ -556,15 +563,27 @@ class Datasets:
         if filters is None:
             filters = entities.Filters()
         if annotation_filters is not None:
-            annotation_filters.resource = entities.FiltersResource.ANNOTATION
-            filters.join = annotation_filters.prepare(query_only=True)
+            for annotation_filter_and in annotation_filters.and_filter_list:
+                filters.add_join(field=annotation_filter_and.field,
+                                 values=annotation_filter_and.values,
+                                 operator=annotation_filter_and.operator,
+                                 method=entities.FiltersMethod.AND)
+            for annotation_filter_or in annotation_filters.or_filter_list:
+                filters.add_join(field=annotation_filter_or.field,
+                                 values=annotation_filter_or.values,
+                                 operator=annotation_filter_or.operator,
+                                 method=entities.FiltersMethod.OR)
 
         downloader = repositories.Downloader(items_repository=dataset.items)
         downloader.download_annotations(dataset=dataset,
                                         filters=filters,
                                         annotation_filters=annotation_filters,
                                         local_path=local_path,
-                                        overwrite=overwrite)
+                                        overwrite=overwrite,
+                                        include_annotations_in_output=include_annotations_in_output,
+                                        export_png_files=export_png_files,
+                                        filter_output_annotations=filter_output_annotations
+                                        )
         if annotation_options is not None:
             pages = dataset.items.list(filters=filters)
             if not isinstance(annotation_options, list):

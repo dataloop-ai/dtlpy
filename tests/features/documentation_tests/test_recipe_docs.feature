@@ -5,6 +5,7 @@ Feature: Recipe SDK
         And There is a project by the name of "my-project-recipe"
         And Create a Dataset "my-dataset-name"
 
+    @testrail-C4523099
     Scenario: Recipe SDK Scenario
         When Get Recipe from List
         Then Get Recipe by ID
@@ -12,6 +13,7 @@ Feature: Recipe SDK
         And Delete Recipe
         And Recipe Switch
 
+    @testrail-C4523099
     Scenario: Add Labels by Dataset
         When View Datasets Labels
         Then Add one Label "person"
@@ -23,6 +25,8 @@ Feature: Recipe SDK
         And Add a Label with children and attributes
         And Add multiple Labels with children and attributes "My-Recipe-name"
 
+
+    @testrail-C4523099
     Scenario: Add hierarchy labels with nested - Different options for hierarchy label creation.
         When Option A
         And Option B

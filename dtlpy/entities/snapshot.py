@@ -6,7 +6,7 @@ from typing import List
 
 import attr
 
-from .. import repositories, entities, services
+from .. import repositories, entities, services, exceptions
 
 logger = logging.getLogger(name=__name__)
 
@@ -296,7 +296,11 @@ class Snapshot(entities.BaseEntity):
     def label_map(self):
         if 'label_map' not in self.configuration:
             # default
-            self.configuration['label_map'] = {ont.tag: i for i, ont in enumerate(self.ontology.labels)}
+            if self.ontology_id == 'null' or self.ontology_id is None:
+                self.configuration['label_map'] = {idx: lbl for idx, lbl in enumerate(self.labels)}
+            else:
+                self.configuration['label_map'] = {ont.tag: i for i, ont in enumerate(self.ontology.labels)}
+
         return self.configuration['label_map']
 
     @label_map.setter

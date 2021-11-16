@@ -14,13 +14,14 @@ class Feature(entities.BaseEntity):
     id = attr.ib()
     entity_id = attr.ib()
     url = attr.ib(repr=False)
-    context = attr.ib(repr=False)
     created_at = attr.ib()
     feature_set_id = attr.ib()
-    feature_set = attr.ib()
     version = attr.ib()
     value = attr.ib()
     parent_id = attr.ib()
+    project_id = attr.ib()
+    org_id = attr.ib()
+    creator = attr.ib()
 
     # sdk
     _client_api = attr.ib(type=services.ApiClient, repr=False)
@@ -74,15 +75,16 @@ class Feature(entities.BaseEntity):
         inst = cls(
             id=_json.get('id', None),
             feature_set_id=_json.get('featureSetId', None),
-            feature_set=_json.get('featureSet', None),
             entity_id=_json.get('entityId', None),
             url=_json.get('url', None),
-            context=_json.get('context', None),
+            project_id=_json.get('project', None),
             created_at=_json.get('createdAt', None),
             version=_json.get('version', None),
             value=_json.get('value', None),
             parent_id=_json.get('parentId', None),
-            client_api=client_api
+            client_api=client_api,
+            org_id=_json.get('org', None),
+            creator=_json.get('creator', None),
         )
         inst.is_fetched = is_fetched
         return inst
@@ -99,10 +101,13 @@ class Feature(entities.BaseEntity):
                  'id': self.id,
                  'featureSetId': self.feature_set_id,
                  'url': self.url,
-                 'context': self.context,
+                 'project': self.project_id,
+                 'creator': self.creator,
                  'version': self.version,
                  'value': self.value,
                  }
         if self.parent_id is not None:
             _json['parentId'] = self.parent_id
+        if self.org_id is not None:
+            _json['org'] = self.org_id
         return _json

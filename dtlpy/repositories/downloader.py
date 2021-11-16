@@ -86,7 +86,6 @@ class Downloader:
                         error='400',
                         message='Unknown annotation download option: {}, please choose from: {}'.format(
                             ann_option, list(entities.ViewAnnotationOptions)))
-
         #####################
         # items to download #
         #####################
@@ -122,8 +121,17 @@ class Downloader:
             if file_types is not None:
                 filters.add(field='metadata.system.mimetype', values=file_types, operator=entities.FiltersOperations.IN)
             if annotation_filters is not None:
-                filters.join = annotation_filters.prepare(query_only=True)
-                filters.join['on'] = {'resource': 'annotations', 'local': 'itemId', 'forigen': 'id'}
+                for annotation_filter_and in annotation_filters.and_filter_list:
+                    filters.add_join(field=annotation_filter_and.field,
+                                     values=annotation_filter_and.values,
+                                     operator=annotation_filter_and.operator,
+                                     method=entities.FiltersMethod.AND)
+                for annotation_filter_or in annotation_filters.or_filter_list:
+                    filters.add_join(field=annotation_filter_or.field,
+                                     values=annotation_filter_or.values,
+                                     operator=annotation_filter_or.operator,
+                                     method=entities.FiltersMethod.OR)
+
             items_to_download = self.items_repository.list(filters=filters)
             num_items = items_to_download.items_count
 
@@ -168,17 +176,16 @@ class Downloader:
         if num_items > 1 and annotation_options:
             # a new folder named 'json' will be created under the "local_path"
             logger.info("Downloading annotations formats: {}".format(annotation_options))
-            thread = threading.Thread(target=self.download_annotations,
-                                      kwargs={"dataset": self.items_repository.dataset,
-                                              "filters": filters,
-                                              "annotation_filters": annotation_filters,
-                                              "local_path": local_path,
-                                              'overwrite': overwrite,
-                                              'include_annotations_in_output': include_annotations_in_output,
-                                              'export_png_files': export_png_files,
-                                              'filter_output_annotations': filter_output_annotations,
-                                              })
-            thread.start()
+            self.download_annotations(**{
+                "dataset": self.items_repository.dataset,
+                "filters": filters,
+                "annotation_filters": annotation_filters,
+                "local_path": local_path,
+                'overwrite': overwrite,
+                'include_annotations_in_output': include_annotations_in_output,
+                'export_png_files': export_png_files,
+                'filter_output_annotations': filter_output_annotations
+            })
         ###############
         # downloading #
         ###############
@@ -362,13 +369,14 @@ class Downloader:
             payload = dict()
             if filters is not None:
                 payload['itemsQuery'] = filters.prepare()
+            payload['annotations'] = {
+                "include": include_annotations_in_output,
+                "convertSemantic": export_png_files
+            }
             if annotation_filters is not None:
                 payload['annotationsQuery'] = annotation_filters.prepare()
-                payload['annotations'] = {
-                    "include": include_annotations_in_output,
-                    "convertSemantic": export_png_files,
-                    "filter": filter_output_annotations
-                }
+                payload['annotations']['filter'] = filter_output_annotations
+
             success, response = dataset._client_api.gen_request(req_type='post',
                                                                 path='/datasets/{}/export'.format(dataset.id),
                                                                 json_req=payload)
@@ -416,7 +424,7 @@ class Downloader:
         if local_path.endswith("/items") or local_path.endswith("\\items"):
             local_path = os.path.dirname(local_path)
 
-        annotation_rel_path = os.path.basename(img_filepath)
+        annotation_rel_path = item.filename[1:]
 
         # find annotations json
         annotations_json_filepath = os.path.join(local_path, "json", annotation_rel_path)
@@ -485,7 +493,6 @@ class Downloader:
                         annotation_filepath = temp_path + ".mp4"
                     else:
                         annotation_filepath = temp_path + ".png"
-
                 if not os.path.isfile(annotation_filepath) or overwrite:
                     # if not exists OR (exists AND overwrite)
                     if not os.path.exists(os.path.dirname(annotation_filepath)):

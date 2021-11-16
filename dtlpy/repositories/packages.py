@@ -1221,7 +1221,8 @@ class Packages:
                                           module_name=module_name,
                                           function_name=function_name,
                                           class_name=class_name,
-                                          entry_point=entry_point)
+                                          entry_point=entry_point,
+                                          mock_file_path=mock_file_path)
 
         if self._project is None:
             try:
@@ -1375,7 +1376,8 @@ class LocalServiceRunner:
                  module_name=entities.package_defaults.DEFAULT_PACKAGE_MODULE_NAME,
                  function_name=entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME,
                  class_name=entities.package_defaults.DEFAULT_PACKAGE_CLASS_NAME,
-                 entry_point=entities.package_defaults.DEFAULT_PACKAGE_ENTRY_POINT):
+                 entry_point=entities.package_defaults.DEFAULT_PACKAGE_ENTRY_POINT,
+                 mock_file_path=None):
         if cwd is None:
             self.cwd = os.getcwd()
         else:
@@ -1392,7 +1394,9 @@ class LocalServiceRunner:
         self._class_name = class_name
         self.package = package
 
-        with open(os.path.join(self.cwd, 'mock.json'), 'r') as f:
+        if mock_file_path is None:
+            mock_file_path = 'mock.json'
+        with open(os.path.join(self.cwd, mock_file_path), 'r') as f:
             self.mock_json = json.load(f)
 
     @property
