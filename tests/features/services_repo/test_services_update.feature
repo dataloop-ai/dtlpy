@@ -10,6 +10,7 @@ Feature: Services repository update service testing
 
      @services.delete
      @packages.delete
+     @testrail-C4523164
      Scenario: Update service
          When I change service "concurrency" to "17"
          And I update service

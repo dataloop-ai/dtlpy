@@ -90,7 +90,7 @@ class Converter:
     Annotation Converter
     """
 
-    def __init__(self):
+    def __init__(self, concurrency=6, return_error_filepath=False):
         self.known_formats = [AnnotationFormat.YOLO,
                               AnnotationFormat.COCO,
                               AnnotationFormat.VOC,
@@ -111,6 +111,8 @@ class Converter:
         self._progress_checkpoint = 0
         self._checkpoint_lock = Lock()
         self.remote_items = None
+        self.concurrency = concurrency
+        self.return_error_filepath = return_error_filepath
 
     def attach_agent_progress(self, progress: Progress, progress_update_frequency: int = None):
         self._progress = progress
@@ -141,13 +143,15 @@ class Converter:
             labels.sort()
             self.labels = {label: i for i, label in enumerate(labels)}
 
-    def convert_dataset(self,
-                        dataset,
-                        to_format,
-                        local_path,
-                        conversion_func=None,
-                        filters=None,
-                        annotation_filter=None):
+    def convert_dataset(
+            self,
+            dataset,
+            to_format,
+            local_path,
+            conversion_func=None,
+            filters=None,
+            annotation_filter=None
+    ):
         """
         Convert entire dataset
 
@@ -160,11 +164,18 @@ class Converter:
         :return:
         """
         if to_format.lower() == AnnotationFormat.COCO:
-            return self.__convert_dataset_to_coco(dataset=dataset,
-                                                  local_path=local_path,
-                                                  filters=filters,
-                                                  annotation_filter=annotation_filter)
-        num_workers = 6
+            coco_json, has_errors, log_filepath = self.__convert_dataset_to_coco(
+                dataset=dataset,
+                local_path=local_path,
+                filters=filters,
+                annotation_filter=annotation_filter
+            )
+
+            if self.return_error_filepath:
+                return coco_json, has_errors, log_filepath
+            else:
+                return coco_json
+
         assert isinstance(dataset, entities.Dataset)
         self.dataset = dataset
 
@@ -175,7 +186,7 @@ class Converter:
             logger.info('Annotations downloaded')
         local_annotations_path = os.path.join(local_path, "json")
         output_annotations_path = os.path.join(local_path, to_format)
-        pool = ThreadPool(processes=num_workers)
+        pool = ThreadPool(processes=self.concurrency)
         i_item = 0
         pages = dataset.items.list(filters=filters)
 
@@ -189,10 +200,12 @@ class Converter:
                     fp.write("{}\n".format(label))
 
         pbar = tqdm.tqdm(total=pages.items_count)
-        reporter = Reporter(num_workers=pages.items_count,
-                            resource=Reporter.CONVERTER,
-                            print_error_logs=self.dataset._client_api.verbose.print_error_logs,
-                            client_api=self.dataset._client_api)
+        reporter = Reporter(
+            num_workers=pages.items_count,
+            resource=Reporter.CONVERTER,
+            print_error_logs=self.dataset._client_api.verbose.print_error_logs,
+            client_api=self.dataset._client_api
+        )
         for page in pages:
             for item in page:
                 # create input annotations json
@@ -226,6 +239,8 @@ class Converter:
         pool.join()
         pool.terminate()
 
+        log_filepath = None
+
         if reporter.has_errors:
             log_filepath = reporter.generate_log_files()
             if log_filepath is not None:
@@ -235,6 +250,9 @@ class Converter:
         logger.info('Total converted: {}'.format(reporter.status_count('success')))
         logger.info('Total skipped: {}'.format(reporter.status_count('skip')))
         logger.info('Total failed: {}'.format(reporter.status_count('failed')))
+
+        if self.return_error_filepath:
+            return reporter.has_errors, log_filepath
 
     def __save_filtered_annotations_and_convert(self, item: entities.Item, filters, to_format, from_format, file_path,
                                                 save_locally=False,
@@ -328,12 +346,14 @@ class Converter:
         images = [None for _ in range(pages.items_count)]
         converted_annotations = [None for _ in range(pages.items_count)]
         item_id_counter = 0
-        pool = ThreadPool(processes=11)
+        pool = ThreadPool(processes=6)
         pbar = tqdm.tqdm(total=pages.items_count)
-        reporter = Reporter(num_workers=pages.items_count,
-                            resource=Reporter.CONVERTER,
-                            print_error_logs=dataset._client_api.verbose.print_error_logs,
-                            client_api=dataset._client_api)
+        reporter = Reporter(
+            num_workers=pages.items_count,
+            resource=Reporter.CONVERTER,
+            print_error_logs=dataset._client_api.verbose.print_error_logs,
+            client_api=dataset._client_api
+        )
         for page in pages:
             for item in page:
                 pool.apply_async(func=self.__single_item_to_coco,
@@ -375,6 +395,7 @@ class Converter:
         with open(os.path.join(local_path, 'coco.json'), 'w+') as f:
             json.dump(coco_json, f)
 
+        log_filepath = None
         if reporter.has_errors:
             log_filepath = reporter.generate_log_files()
             if log_filepath is not None:
@@ -383,8 +404,8 @@ class Converter:
 
         logger.info('Total converted: {}'.format(reporter.status_count('success')))
         logger.info('Total failed: {}'.format(reporter.status_count('failed')))
-
-        return coco_json
+        
+        return coco_json, reporter.has_errors, log_filepath
 
     @staticmethod
     def __get_item_shape(item: entities.Item = None, local_path: str = None):
@@ -651,12 +672,15 @@ class Converter:
     def _upload_annotations(self, local_annotations_path, from_format, **kwargs):
         self._only_bbox = kwargs.get('only_bbox', False)
         file_count = self.remote_items.items_count
-        reporter = Reporter(num_workers=file_count,
-                            resource=Reporter.CONVERTER,
-                            print_error_logs=self.dataset._client_api.verbose.print_error_logs,
-                            client_api=self.dataset._client_api)
+        reporter = Reporter(
+            num_workers=file_count,
+            resource=Reporter.CONVERTER,
+            print_error_logs=self.dataset._client_api.verbose.print_error_logs,
+            client_api=self.dataset._client_api
+        )
+
         pbar = tqdm.tqdm(total=file_count)
-        pool = ThreadPool(processes=6)
+        pool = ThreadPool(processes=self.concurrency)
         i_item = 0
 
         for page in self.remote_items:
@@ -698,6 +722,7 @@ class Converter:
         pool.join()
         pool.terminate()
 
+        log_filepath = None
         if reporter.has_errors:
             log_filepath = reporter.generate_log_files()
             if log_filepath is not None:
@@ -706,6 +731,9 @@ class Converter:
 
         logger.info('Total converted and uploaded: {}'.format(reporter.status_count('success')))
         logger.info('Total failed: {}'.format(reporter.status_count('failed')))
+
+        if self.return_error_filepath:
+            return reporter.has_errors, log_filepath
 
     def _upload_directory(self, local_items_path, local_annotations_path, from_format, conversion_func=None, **kwargs):
         """
@@ -721,13 +749,16 @@ class Converter:
         file_count = sum(len([file for file in files if not file.endswith('.xml')]) for _, _, files in
                          os.walk(local_items_path))
 
-        reporter = Reporter(num_workers=file_count,
-                            resource=Reporter.CONVERTER,
-                            print_error_logs=self.dataset._client_api.verbose.print_error_logs,
-                            client_api=self.dataset._client_api)
+        reporter = Reporter(
+            num_workers=file_count,
+            resource=Reporter.CONVERTER,
+            print_error_logs=self.dataset._client_api.verbose.print_error_logs,
+            client_api=self.dataset._client_api
+        )
+
         pbar = tqdm.tqdm(total=file_count)
 
-        pool = ThreadPool(processes=6)
+        pool = ThreadPool(processes=self.concurrency)
         i_item = 0
         metadata = None
         for path, subdirs, files in os.walk(local_items_path):
@@ -778,6 +809,7 @@ class Converter:
         pool.join()
         pool.terminate()
 
+        log_filepath = None
         if reporter.has_errors:
             log_filepath = reporter.generate_log_files()
             if log_filepath is not None:
@@ -786,6 +818,9 @@ class Converter:
 
         logger.info('Total converted and uploaded: {}'.format(reporter.status_count('success')))
         logger.info('Total failed: {}'.format(reporter.status_count('failed')))
+
+        if self.return_error_filepath:
+            return reporter.has_errors, log_filepath
 
     def _upload_item_and_convert(self, item_path, ann_path, from_format, conversion_func=None, **kwargs):
         reporter = kwargs.get('reporter', None)
@@ -863,14 +898,26 @@ class Converter:
 
         self.dataset = dataset
         if from_format.lower() == AnnotationFormat.COCO:
-            self._upload_coco_dataset(local_items_path=local_items_path, local_annotations_path=local_annotations_path,
-                                      only_bbox=only_bbox, remote_items=remote_items)
+            return self._upload_coco_dataset(
+                local_items_path=local_items_path,
+                local_annotations_path=local_annotations_path,
+                only_bbox=only_bbox,
+                remote_items=remote_items
+            )
         if from_format.lower() == AnnotationFormat.YOLO:
-            self._upload_yolo_dataset(local_items_path=local_items_path, local_annotations_path=local_annotations_path,
-                                      labels_file_path=local_labels_path, remote_items=remote_items)
+            return self._upload_yolo_dataset(
+                local_items_path=local_items_path,
+                local_annotations_path=local_annotations_path,
+                labels_file_path=local_labels_path,
+                remote_items=remote_items
+            )
         if from_format.lower() == AnnotationFormat.VOC:
-            self._upload_voc_dataset(local_items_path=local_items_path, local_annotations_path=local_annotations_path,
-                                     labels_file_path=local_labels_path, remote_items=remote_items)
+            return self._upload_voc_dataset(
+                local_items_path=local_items_path,
+                local_annotations_path=local_annotations_path,
+                labels_file_path=local_labels_path,
+                remote_items=remote_items
+            )
 
     def convert_directory(self, local_path, to_format, from_format, dataset, conversion_func=None):
         """
@@ -884,13 +931,15 @@ class Converter:
         :return:
         """
         file_count = sum(len(files) for _, _, files in os.walk(local_path))
-        reporter = Reporter(num_workers=file_count,
-                            resource=Reporter.CONVERTER,
-                            print_error_logs=self.dataset._client_api.verbose.print_error_logs,
-                            client_api=self.dataset._client_api)
+        reporter = Reporter(
+            num_workers=file_count,
+            resource=Reporter.CONVERTER,
+            print_error_logs=self.dataset._client_api.verbose.print_error_logs,
+            client_api=self.dataset._client_api
+        )
         self.dataset = dataset
 
-        pool = ThreadPool(processes=6)
+        pool = ThreadPool(processes=self.concurrency)
         i_item = 0
         for path, subdirs, files in os.walk(local_path):
             for name in files:
@@ -917,6 +966,7 @@ class Converter:
         pool.join()
         pool.terminate()
 
+        log_filepath = None
         if reporter.has_errors:
             log_filepath = reporter.generate_log_files()
             if log_filepath is not None:
@@ -925,6 +975,9 @@ class Converter:
 
         logger.info('Total converted and uploaded: {}'.format(reporter.status_count('success')))
         logger.info('Total failed: {}'.format(reporter.status_count('failed')))
+
+        if self.return_error_filepath:
+            return reporter.has_errors, log_filepath
 
     def _convert_and_report(self, to_format, from_format, file_path, save_locally, save_to, conversion_func, reporter,
                             i_item):
@@ -1147,24 +1200,16 @@ class Converter:
             method = self.custom_format
 
         # run all annotations
-        pool = ThreadPool(processes=6)
         for i_annotation, annotation in enumerate(annotations):
-            pool.apply_async(
-                func=self._convert_single,
-                kwds={
-                    "annotation": annotation,
-                    "i_annotation": i_annotation,
-                    "conversion_func": conversion_func,
-                    'annotations': annotations,
-                    'from_format': AnnotationFormat.DATALOOP,
-                    'item': item,
-                    'method': method
-                }
+            self._convert_single(
+                annotation=annotation,
+                i_annotation=i_annotation,
+                conversion_func=conversion_func,
+                annotations=annotations,
+                from_format=AnnotationFormat.DATALOOP,
+                item=item,
+                method=method
             )
-
-        pool.close()
-        pool.join()
-        pool.terminate()
         return annotations
 
     @staticmethod

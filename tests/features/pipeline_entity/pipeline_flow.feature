@@ -9,6 +9,7 @@ Feature: Pipeline entity method testing
 
 
     @pipelines.delete
+    @testrail-C4523142
     Scenario: pipeline flow
         When I create a package and service to pipeline
         And I create a pipeline from json

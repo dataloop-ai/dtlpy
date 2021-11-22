@@ -8,6 +8,7 @@ Feature: Triggers repository create service testing
 
     @services.delete
     @packages.delete
+    @testrail-C4523177
     Scenario: Created Item Trigger
         Given There is a package (pushed from "triggers/item") by the name of "triggers-create"
         And There is a service by the name of "triggers-create" with module name "default_module" saved to context "service"
@@ -19,6 +20,7 @@ Feature: Triggers repository create service testing
 
     @services.delete
     @packages.delete
+    @testrail-C4523177
     Scenario: Created Item Trigger - specified function name
         Given There is a package (pushed from "triggers/function_name") with function "train"
         And There is a service by the name of "triggers-create" with module name "default_module" saved to context "service"
@@ -30,6 +32,7 @@ Feature: Triggers repository create service testing
 
     @services.delete
     @packages.delete
+    @testrail-C4523177
     Scenario: Updated Item Trigger
         Given There is a package (pushed from "triggers/item") by the name of "triggers-create"
         And There is a service by the name of "triggers-create" with module name "default_module" saved to context "service"
@@ -43,6 +46,7 @@ Feature: Triggers repository create service testing
         
     @services.delete
     @packages.delete
+    @testrail-C4523177
     Scenario: Created Annotation Trigger
         Given There is a package (pushed from "triggers/annotation") by the name of "triggers-create"
         And There is a service by the name of "triggers-create" with module name "default_module" saved to context "service"

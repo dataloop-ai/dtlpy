@@ -45,6 +45,7 @@ class Downloader:
                  include_annotations_in_output=True,
                  export_png_files=False,
                  filter_output_annotations=False,
+                 alpha=None,
                  ):
         """
         Download dataset by filters.
@@ -68,6 +69,7 @@ class Downloader:
         :param include_annotations_in_output: default - False , if export should contain annotations
         :param export_png_files: default - True, if semantic annotations should exported as png files
         :param filter_output_annotations: default - False, given an export by filter - determine if to filter out annotations
+        :param alpha: opacity value [0 1], default 1
         :return: Output (list)
         """
 
@@ -232,6 +234,7 @@ class Downloader:
                                         "annotation_filters": annotation_filters,
                                         "local_path": local_path,
                                         "thickness": thickness,
+                                        "alpha": alpha,
                                         "with_text": with_text
                                     },
                                 )
@@ -257,6 +260,7 @@ class Downloader:
                             "pbar": pbar,
                             "overwrite": overwrite,
                             "thickness": thickness,
+                            "alpha": alpha,
                             "with_text": with_text
                         },
                     )
@@ -279,7 +283,7 @@ class Downloader:
             log_filepath = reporter.generate_log_files()
             if log_filepath is not None:
                 logger.warning("Errors in {} files. See {} for full log".format(n_error, log_filepath))
-        if int(n_download) <= 1:
+        if int(n_download) <= 1 and int(n_exist) <= 1:
             try:
                 return next(reporter.output)
             except StopIteration:
@@ -293,7 +297,7 @@ class Downloader:
                                   # annotations params
                                   annotation_options, annotation_filters, with_text, thickness,
                                   # threading params
-                                  reporter, pbar):
+                                  reporter, pbar, alpha):
 
         download = None
         err = None
@@ -312,6 +316,7 @@ class Downloader:
                                                   annotation_filters=annotation_filters,
                                                   overwrite=overwrite,
                                                   thickness=thickness,
+                                                  alpha=alpha,
                                                   with_text=with_text)
                 logger.debug("Download item: {path}. Try {i}/{n}. Success. Item id: {id}".format(path=item.filename,
                                                                                                  i=i_try + 1,
@@ -412,7 +417,8 @@ class Downloader:
                                   annotation_options,
                                   annotation_filters,
                                   thickness=1,
-                                  with_text=False):
+                                  with_text=False,
+                                  alpha=None):
 
         # check if local_path is a file name
         _, ext = os.path.splitext(local_path)
@@ -509,6 +515,7 @@ class Downloader:
                         height=img_shape[0],
                         width=img_shape[1],
                         thickness=thickness,
+                        alpha=alpha,
                         with_text=with_text,
                         orientation=orientation
                     )
@@ -579,7 +586,8 @@ class Downloader:
                           annotation_filters,
                           chunk_size=8192,
                           thickness=1,
-                          with_text=False
+                          with_text=False,
+                          alpha=None
                           ):
         """
         Get a single item's binary data
@@ -596,8 +604,7 @@ class Downloader:
         :param chunk_size: size of chunks to download - optional. default = 8192
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :param with_text: optional - add text to annotations, default = False
-
-
+        :param alpha: opacity value [0 1], default 1
         :return:
         """
         # check if need to download image binary from platform
@@ -663,6 +670,7 @@ class Downloader:
                                                    local_path=local_path,
                                                    overwrite=overwrite,
                                                    thickness=thickness,
+                                                   alpha=alpha,
                                                    with_text=with_text
                                                    )
             else:

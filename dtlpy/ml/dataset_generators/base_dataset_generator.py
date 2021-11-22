@@ -5,6 +5,7 @@ import torchvision
 import numpy as np
 import logging
 import imgaug
+import shutil
 import json
 import os
 
@@ -20,6 +21,7 @@ class BaseGenerator:
                  dataset_entity: entities.Dataset,
                  annotation_type: entities.AnnotationType,
                  data_path=None,
+                 overwrite=False,
                  label_to_id_map=None,
                  transforms=None,
                  num_workers=0,
@@ -33,27 +35,42 @@ class BaseGenerator:
                  return_label_string=False,
                  ) -> None:
         """
-        Args:
-            dataset_entity: dl.Dataset entity
-            label_to_id_map: dict - {label_string: id} dictionary
-            annotation_type: dl.AnnotationType - type of annotation to load from the annotated dataset
-            data_path (string): Path to Dataloop annotations (root to "item" and "json").
-            transforms (callable, optional): Optional transform to be applied on a sample.
-            shuffle: Whether to shuffle the data (default: True) If set to False, sorts the data in alphanumeric order.
-            seed: Optional random seed for shuffling and transformations.
-            return_filename: bool - If True, return the parsed itemname along with image array and annotation
-            return_label_string: bool - If True, the returned annotation is by it's label string and not label id mapping
-            return_originals: bool - If True, return ALSO images and annotations before transformations (for debug)
-            return_separate_labels: bool - If True, return labels and geo separately and not concatenated to single array
+        Base Dataset Generator to build and iterate over images and annotations
+
+        :param dataset_entity: dl.Dataset entity
+        :param annotation_type: dl.AnnotationType - type of annotation to load from the annotated dataset
+        :param data_path: Path to Dataloop annotations (root to "item" and "json").
+        :param overwrite:
+        :param label_to_id_map: dict - {label_string: id} dictionary
+        :param transforms: Optional transform to be applied on a sample. list or torchvision.Transform
+        :param num_workers:
+        :param shuffle: Whether to shuffle the data (default: True) If set to False, sorts the data in alphanumeric order.
+        :param seed: Optional random seed for shuffling and transformations.
+        :param to_categorical: convert label id to categorical format
+        :param return_originals: bool - If True, return ALSO images and annotations before transformations (for debug)
+        :param return_separate_labels: bool - If True, return labels and geo separately and not concatenated to single array
+        :param return_filename: bool - If True, return the parsed itemname along with image array and annotation
+        :param return_label_string: bool - If True, the returned annotation is by it's label string and not label id mapping
         """
+
         if data_path is None:
             data_path = os.path.join(os.path.expanduser('~'),
                                      '.dataloop',
                                      'datasets',
                                      "{}_{}".format(dataset_entity.name,
                                                     dataset_entity.id))
-            _ = dataset_entity.items.download(local_path=data_path,
-                                              annotation_options=[entities.ViewAnnotationOptions.JSON])
+        download = False
+        if os.path.isdir(data_path):
+            if overwrite:
+                logger.warning('overwrite flag is True! deleting and overwriting')
+                shutil.rmtree(data_path)
+                download = True
+        else:
+            download = True
+        if download:
+            # TODO optimize
+            _ = dataset_entity.download_annotations(local_path=data_path)
+            _ = dataset_entity.items.download(local_path=data_path)
         self.root_dir = data_path
         self._transforms = transforms
         self._dataset_entity = dataset_entity
@@ -89,12 +106,19 @@ class BaseGenerator:
         for json_path in root_path.rglob('**/*.json'):
             with open(json_path, 'r') as f:
                 data = json.load(f)
-            annotation = entities.AnnotationCollection.from_json(data)
-            img_path = root_path.joinpath(
-                'items').joinpath(data['filename'][1:])
-            if img_path.suffix.lower() in self.IMAGE_EXTENSIONS:
-                self.image_paths.append(img_path)
-                self.annotations.append(annotation)
+            img_path = root_path.joinpath('items').joinpath(data['filename'][1:])
+            geos, labels_ids = None, None
+            if self.annotation_type is not None:
+                annotation = entities.AnnotationCollection.from_json(data)
+                if img_path.suffix.lower() in self.IMAGE_EXTENSIONS:
+                    # loading a single item's annotations
+                    # get label ids as [N, 1], boxes [N, 4]
+                    geos, labels_ids = self._from_dtlpy(annotation)
+                    if labels_ids.shape[0] == 0:
+                        logger.warning('Empty annotation for image filename: {}'.format(img_path))
+                        continue
+            self.image_paths.append(img_path)
+            self.annotations.append((geos, labels_ids))
 
         if self.shuffle:
             if self.seed is None:
@@ -231,11 +255,9 @@ class BaseGenerator:
 
     def __getsingleitem__(self, idx):
         image_filename = self.image_paths[idx]
+        geos, labels_ids = self.annotations[idx]
         parsed_filename = os.path.basename(image_filename)
-
         image = np.asarray(Image.open(image_filename).convert('RGB'))
-        # get label ids as [N, 1], boxes [N, 4]
-        geos, labels_ids = self._from_dtlpy(self.annotations[idx])
 
         orig_image = None
         orig_geos = None
@@ -250,26 +272,25 @@ class BaseGenerator:
             image, geos = self.transform(image, geos)
 
         to_return = (image,)
-        targets = (geos, labels_ids)
-        if not self.return_separate_labels:
-            if labels_ids.shape[0] == 0:
-                logger.warning('Empty annotation for image filename: {}'.format(image_filename))
-                # empty labels ids
-                targets = (labels_ids,)
-            elif self.annotation_type == entities.AnnotationType.CLASSIFICATION:
-                # support only for single classification label
-                y = labels_ids.flatten()[0]
-                if self.to_categorical:
-                    categorical = np.zeros(self.num_classes, dtype='float32')
-                    categorical[int(y)] = 1
-                    y = categorical
-                targets = (y,)
-            else:
-                targets = (np.concatenate((geos, labels_ids), axis=1),)
-        to_return += targets
+        if self.annotation_type is not None:
+            # build the annotations format to return
+            targets = (geos, labels_ids)
+            if not self.return_separate_labels:
+                if self.annotation_type == entities.AnnotationType.CLASSIFICATION:
+                    # support only for single classification label
+                    y = labels_ids.flatten()[0]
+                    if self.to_categorical:
+                        categorical = np.zeros(self.num_classes, dtype='float32')
+                        categorical[int(y)] = 1
+                        y = categorical
+                    targets = (y,)
+                else:
+                    targets = (np.concatenate((geos, labels_ids), axis=1),)
+            to_return += targets
+        # return original images flag
         if self.return_originals:
             to_return += (orig_image, orig_geos)
-
+        # return item filename flag
         if self.return_filename:
             to_return += (parsed_filename,)
         return to_return

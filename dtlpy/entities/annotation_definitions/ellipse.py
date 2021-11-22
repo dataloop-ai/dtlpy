@@ -48,7 +48,7 @@ class Ellipse(BaseAnnotationDefinition):
         return self.y + np.sqrt(np.power(self.rx, 2) * np.power(np.sin(-self.rad), 2)
                                 + np.power(self.ry, 2) * np.power(np.cos(-self.rad), 2))
 
-    def show(self, image, thickness, with_text, height, width, annotation_format, color):
+    def show(self, image, thickness, with_text, height, width, annotation_format, color, alpha=1):
         """
         Show annotation as ndarray
         :param image: empty or image to draw on
@@ -58,6 +58,7 @@ class Ellipse(BaseAnnotationDefinition):
         :param width: item width
         :param annotation_format: options: list(dl.ViewAnnotationOptions)
         :param color: color
+        :param alpha: opacity value [0 1], default 1
         :return: ndarray
         """
         try:

@@ -5,6 +5,7 @@ Feature: Annotations repository Draw method testing
         And There is a project by the name of "Project_annotations_draw"
         And I create a dataset with a random name
 
+    @testrail-C4523034
     Scenario: Draw mask
         Given Classes in file: "classes_new.json" are uploaded to test Dataset
         And Dataset ontology has attributes "attr1" and "attr2"

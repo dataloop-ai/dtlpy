@@ -5,6 +5,7 @@ Feature: Dataset Entity repo services
         And There is a project by the name of "dataset_repo_methods"
         And I create a dataset with a random name
 
+    @testrail-C4523094
     Scenario: Download Annotations
         Given Labels in file: "labels.json" are uploaded to test Dataset
         And Item in path "0000000162.jpg" is uploaded to "Dataset"
@@ -14,6 +15,7 @@ Feature: Dataset Entity repo services
         Then I get a folder named "json" in assets folder
         And Annotations downloaded equal to the annotations uploaded
 
+    @testrail-C4523094
     Scenario: Download dataset with items
         Given Item in path "0000000162.png" is uploaded to "Dataset"
         And Labels in file: "labels.json" are uploaded to test Dataset
@@ -23,10 +25,12 @@ Feature: Dataset Entity repo services
         Then Dataset downloaded to "downloaded_dataset" is equal to dataset in "downloaded_dataset-should_be"
         And There is no "log" file in folder "downloaded_dataset"
 
+    @testrail-C4523094
     Scenario: Delete dataset
         When I delete a dataset entity
         Then Dataset with same name does not exists
 
+    @testrail-C4523094
     Scenario: To Json
         Then Object "Dataset" to_json() equals to Platform json.
 

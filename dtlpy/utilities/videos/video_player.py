@@ -237,7 +237,8 @@ class VideoPlayer:
             for annotation in annotations:
                 if annotation is None:
                     continue
-                frame = annotation.show(image=frame, color=self.get_class_color(annotation.label))
+                frame = annotation.show(image=frame,
+                                        color=self.get_class_color(annotation.label))
                 if self.show_label:
                     text = '%s-%s' % (annotation.label, ','.join(annotation.attributes))
                     frame = cv2.putText(frame,

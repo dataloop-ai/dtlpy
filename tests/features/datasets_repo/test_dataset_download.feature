@@ -5,6 +5,7 @@ Feature: Datasets repository download service testing
         And There is a project by the name of "datasets_download"
         And I create a dataset with a random name
 
+    @testrail-C4523092
     Scenario: Download dataset with items
         Given Item in path "0000000162.png" is uploaded to "Dataset"
         And Labels in file: "labels.json" are uploaded to test Dataset

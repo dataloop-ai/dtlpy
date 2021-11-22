@@ -5,6 +5,7 @@ Feature: Items repository set_items_entity service testing
         And There is a project by the name of "set_items_entity"
         And I create a dataset with a random name
 
+    @testrail-C4523118
     Scenario: Change items entity to legal entity
         When I change entity to "Artifact"
         Then Items item entity is "Artifact"
@@ -13,6 +14,7 @@ Feature: Items repository set_items_entity service testing
         When I change entity to "Codebase"
         Then Items item entity is "Codebase"
 
+    @testrail-C4523118
     Scenario: Change items entity to legal entity
         When I try to change entity to "Dataset"
         Then "Forbidden" exception should be raised

@@ -5,6 +5,7 @@ Feature: Annotaions repository Delete service testing
         And There is a project by the name of "Project_test_annotations_delete"
         And I create a dataset with a random name
 
+    @testrail-C4523032
     Scenario: Delete annotation
         Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
         And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"
@@ -13,6 +14,7 @@ Feature: Annotaions repository Delete service testing
         When I delete a annotation x
         Then Annotation x does not exist in item
 
+    @testrail-C4523032
     Scenario: Delete a non-existing Annotation
         Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
         And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"
@@ -21,6 +23,7 @@ Feature: Annotaions repository Delete service testing
         Then "NotFound" exception should be raised
         And No annotation was deleted
 
+    @testrail-C4523032
     Scenario: Delete Annotation using filters on Dataset level
         Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
         And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"
@@ -31,6 +34,7 @@ Feature: Annotaions repository Delete service testing
         When I delete annotation from type "box" using "dataset" entity
         Then I verify that I has the right number of annotations
 
+    @testrail-C4523032
     Scenario: Delete Annotation using filters on Item level
         Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
         And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"

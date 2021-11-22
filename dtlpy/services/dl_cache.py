@@ -3,7 +3,7 @@ from diskcache import Cache
 import os
 
 
-class DlCache:
+class DiskCache:
     def __init__(self, name, level=1, options=None, enable_stats=False):
         if options is None:
             options = dict()

@@ -8,6 +8,7 @@ Feature: Task repository Context testing
         And I create task belong to dataset 1
             | task_name=context_task_test | due_date=auto | assignee_ids=auto |
 
+    @testrail-C4523172
     Scenario: Get Task from the Project it belong to
         When I get the task from project number 1
         Then task Project_id is equal to project 1 id
@@ -15,6 +16,7 @@ Feature: Task repository Context testing
         And task dataset_id is equal to dataset 1 id
         And task dataset.id is equal to dataset 1 id
 
+    @testrail-C4523172
     Scenario: Get Task from the Project it is not belong to
         When I get the task from project number 2
         Then task Project_id is equal to project 1 id
@@ -22,6 +24,7 @@ Feature: Task repository Context testing
         And task dataset_id is equal to dataset 1 id
         And task dataset.id is equal to dataset 1 id
 
+    @testrail-C4523172
     Scenario: Get Task from the Dataset it belong to
         When I get the task from dataset number 1
         Then task Project_id is equal to project 1 id
@@ -29,6 +32,7 @@ Feature: Task repository Context testing
         And task dataset_id is equal to dataset 1 id
         And task dataset.id is equal to dataset 1 id
 
+        @testrail-C4523172
         Scenario: Get Task from the Dataset it not belong to
           When I get the task from dataset number 2
           Then task Project_id is equal to project 1 id

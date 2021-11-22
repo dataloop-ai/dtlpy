@@ -12,6 +12,7 @@ Feature: Triggers repository get service testing
 
     @services.delete
     @packages.delete
+    @testrail-C4523179
     Scenario: Get by id
         When I get trigger by id
         Then I receive a Trigger object
@@ -19,6 +20,7 @@ Feature: Triggers repository get service testing
 
     @services.delete
     @packages.delete
+    @testrail-C4523179
     Scenario: Get by name
         When I get trigger by name
         Then I receive a Trigger object

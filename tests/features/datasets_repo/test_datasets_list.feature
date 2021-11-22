@@ -4,11 +4,13 @@ Feature: Datasets repository list service testing
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
         And There is a project by the name of "datasets_list"
 
+    @testrail-C4523089
     Scenario: List all datasets when no dataset exists
         Given There are no datasets
         When I list all datasets
         Then I receive an empty datasets list
 
+    @testrail-C4523089
     Scenario: List all datasets when datasets exist
         Given There are no datasets
         And I careat a dataset by the name of "Dataset"

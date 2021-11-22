@@ -11,11 +11,13 @@ Feature: Assignments repository get method testing
             | task_name=min_params | due_date=auto | assignee_ids=auto | items=3 |
         And I get an Assignment
 
+    @testrail-C4523056
     Scenario: GET - id
         When I get assignment by "id"
         Then I get an assignment entity
         And Assignment received equals assignment created
 
+    @testrail-C4523056
     Scenario: GET - name
         When I get assignment by "name"
         Then I get an assignment entity

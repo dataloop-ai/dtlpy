@@ -10,6 +10,7 @@ Feature: Assignments repository redistribute method testing
             | task_name=redistribute| due_date=auto | assignee_ids=auto |
         And I get the first assignment
 
+    @testrail-C4523060
     Scenario: redistribute
         When I redistribute assignment to "annotator1,annotator2"
         Then Assignments was redistributed to "annotator1,annotator2"

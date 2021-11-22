@@ -490,8 +490,17 @@ class Datasets:
         return dataset
 
     @staticmethod
-    def _convert_single(downloader, item, img_filepath, local_path, overwrite, annotation_options,
-                        annotation_filters, thickness, with_text, progress):
+    def _convert_single(downloader,
+                        item,
+                        img_filepath,
+                        local_path,
+                        overwrite,
+                        annotation_options,
+                        annotation_filters,
+                        thickness,
+                        with_text,
+                        progress,
+                        alpha):
         # this is to convert the downloaded json files to any other annotation type
         try:
             downloader._download_img_annotations(item=item,
@@ -501,6 +510,7 @@ class Datasets:
                                                  annotation_options=annotation_options,
                                                  annotation_filters=annotation_filters,
                                                  thickness=thickness,
+                                                 alpha=alpha,
                                                  with_text=with_text)
         except Exception:
             logger.error('Failed to download annotation for item: {!r}'.format(item.name))
@@ -518,7 +528,8 @@ class Datasets:
                              remote_path=None,
                              include_annotations_in_output=True,
                              export_png_files=False,
-                             filter_output_annotations=False
+                             filter_output_annotations=False,
+                             alpha=None
                              ):
         """
         Download dataset's annotations by filters.
@@ -537,6 +548,7 @@ class Datasets:
         :param include_annotations_in_output: default - False , if export should contain annotations
         :param export_png_files: default - True, if semantic annotations should exported as png files
         :param filter_output_annotations: default - False, given an export by filter - determine if to filter out annotations
+        :param alpha: opacity value [0 1], default 1
         :return: `List` of local_path per each downloaded item
         """
         if remote_path is not None:
@@ -607,7 +619,8 @@ class Datasets:
                             'annotation_filters': annotation_filters,
                             'thickness': thickness,
                             'with_text': with_text,
-                            'progress': progress
+                            'progress': progress,
+                            'alpha': alpha
                         }
                     )
                     i_item += 1

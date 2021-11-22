@@ -5,6 +5,7 @@ Feature: Annotaions repository Get service testing
         And There is a project by the name of "annotations_get"
         And I create a dataset with a random name
 
+    @testrail-C4523036
     Scenario: Get an existing annotation by id
         Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
         And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"
@@ -14,6 +15,7 @@ Feature: Annotaions repository Get service testing
         Then I receive an Annotation object
         And Annotation received equals to annotation x
 
+    @testrail-C4523036
     Scenario: Get non-existing annotation
         Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
         And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"

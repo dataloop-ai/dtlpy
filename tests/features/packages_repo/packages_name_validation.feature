@@ -4,12 +4,14 @@
          Given Platform Interface is initialized as dlp and Environment is set according to git branch
          And There is a project by the name of "test_packages_create"
 
+     @testrail-C4523138
      Scenario: Create package with illegal name
          When I try to push package
              |codebase_id=None|package_name=illegal_name|src_path=packages_create|inputs=None|outputs=None|
          Then "BadRequest" exception should be raised
          And Name is invalid
 
+     @testrail-C4523138
      Scenario: Validate names
          When I validate name "1package"
          Then Name is invalid

@@ -7,18 +7,21 @@ Feature: Tasks repository add/get items method testing
         And There are items, path = "filters/image.jpg"
             |annotated_type={"box": 3, "polygon": 3}|metadata={"user.good": 3, "user.bad": 3}|
 
+    @testrail-C4523166
     Scenario: Get items - by name
         When I create Task
             | task_name=min_params | due_date=auto | assignee_ids=auto |
         And I get Task items by "name"
         Then I receive task items list of "12" items
 
+    @testrail-C4523166
     Scenario: Get items - by id
         When I create Task
             | task_name=min_params | due_date=auto | assignee_ids=auto |
         And I get Task items by "id"
         Then I receive task items list of "12" items
 
+    @testrail-C4523166
     Scenario: Add items
       When I create Task
           | task_name=min_params | due_date=auto | assignee_ids=auto | filters={"filter": {"$and": [{"hidden": false}, {"type": "file"}, {"annotated": true}]}} |

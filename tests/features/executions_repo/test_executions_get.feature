@@ -13,6 +13,7 @@ Feature: Executions repository get service testing
 
     @services.delete
     @packages.delete
+    @testrail-C4523102
     Scenario: Get by id
         When I get execution by id
         Then I receive an Execution object

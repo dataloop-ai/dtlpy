@@ -5,6 +5,7 @@ Feature: Annotaions repository update service testing
         And There is a project by the name of "Project_annotations_edit"
         And I create a dataset with a random name
 
+    @testrail-C4523035
     Scenario: Updateing annotations: remove attributes
         Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
         And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"
@@ -14,6 +15,7 @@ Feature: Annotaions repository update service testing
         When I update annotations
         Then  Item annotations has no attributes
 
+    @testrail-C4523035
     Scenario: Updateing annotations: change label
         Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
         And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"
@@ -29,6 +31,7 @@ Feature: Annotaions repository update service testing
     #     When I try to update annotations
     #     Then  "InternalServerError" exception should be raised
 
+    @testrail-C4523035
     Scenario: Updateing annotation: change single annotation
         Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
         And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"
@@ -39,6 +42,7 @@ Feature: Annotaions repository update service testing
         When I update annotation
         Then Annotation should be updated
 
+    @testrail-C4523035
     Scenario: Updateing annotations: change coordinates
         Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
         And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"

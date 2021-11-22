@@ -6,11 +6,13 @@ Feature: Packages repository list service testing
         And Directory "packages_list" is empty
         When I generate package by the name of "test-package" to "packages_list"
 
+    @testrail-C4523137
     Scenario: list packages when 0 exist
         When I list all project packages
         Then I receive a list of "0" packages
 
     @packages.delete
+    @testrail-C4523137
     Scenario: list packages when 1 exist
         When I push "first" package
             |codebase_id=None|package_name=None|src_path=packages_list|inputs=None|outputs=None|

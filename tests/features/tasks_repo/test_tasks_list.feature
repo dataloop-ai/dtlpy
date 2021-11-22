@@ -8,6 +8,7 @@ Feature: Tasks repository list method testing
             |annotated_type={"box": 3, "polygon": 3}|metadata={"user.good": 3, "user.bad": 3}|
 
     @second_project.delete
+    @testrail-C4523170
     Scenario: list
         Given There is a second project and dataset
         And There are items for another dataset, path = "filters/image.jpg"

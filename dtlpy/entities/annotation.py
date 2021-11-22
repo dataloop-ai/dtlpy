@@ -454,7 +454,8 @@ class Annotation(entities.BaseEntity):
                  height=None,
                  width=None,
                  thickness=1,
-                 with_text=False):
+                 with_text=False,
+                 alpha=None):
         """
         Save annotation to file
         :param filepath: local path to where annotation will be downloaded to
@@ -463,6 +464,7 @@ class Annotation(entities.BaseEntity):
         :param width: image width
         :param thickness: thickness
         :param with_text: get mask with text
+        :param alpha: opacity value [0 1], default 1
         :return: filepath
         """
         if annotation_format == ViewAnnotationOptions.JSON:
@@ -470,6 +472,7 @@ class Annotation(entities.BaseEntity):
                 json.dump(self.to_json(), f, indent=2)
         else:
             mask = self.show(thickness=thickness,
+                             alpha=alpha,
                              with_text=with_text,
                              height=height,
                              width=width,
@@ -494,9 +497,17 @@ class Annotation(entities.BaseEntity):
     ############
     # Plotting #
     ############
-    def show(self, image=None, thickness=None, with_text=False, height=None, width=None,
+    def show(self,
+             image=None,
+             thickness=None,
+             with_text=False,
+             height=None,
+             width=None,
              annotation_format: ViewAnnotationOptions = ViewAnnotationOptions.MASK,
-             color=None, label_instance_dict=None):
+             color=None,
+             label_instance_dict=None,
+             alpha=None,
+             ):
         """
         Show annotations
         mark the annotation of the image array and return it
@@ -508,6 +519,7 @@ class Annotation(entities.BaseEntity):
         :param annotation_format: list(dl.ViewAnnotationOptions)
         :param color: optional - color tuple
         :param label_instance_dict: the instance labels
+        :param alpha: opacity value [0 1], default 1
         :return: list or single ndarray of the annotations
         """
         try:
@@ -576,10 +588,14 @@ class Annotation(entities.BaseEntity):
                         annotation = self.from_json(ann_json)
                         annotation._item = item
                     try:
+                        if annotation_format in [entities.ViewAnnotationOptions.INSTANCE,
+                                                 entities.ViewAnnotationOptions.OBJECT_ID]:
+                            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
                         frame = annotation._show_single_frame(image=frame,
                                                               color=self.color,
                                                               annotation_format=annotation_format,
                                                               thickness=thickness,
+                                                              alpha=alpha,
                                                               with_text=with_text,
                                                               height=height,
                                                               width=width,
@@ -597,12 +613,14 @@ class Annotation(entities.BaseEntity):
                                             thickness=thickness)
                 if annotation_format == entities.ViewAnnotationOptions.MASK:
                     frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2BGR)
+
                 frames.append(frame)
                 i_frame += 1
             return frames
         else:
             return self._show_single_frame(image=image,
                                            thickness=thickness,
+                                           alpha=alpha,
                                            with_text=with_text,
                                            height=height,
                                            width=width,
@@ -610,9 +628,16 @@ class Annotation(entities.BaseEntity):
                                            color=color,
                                            label_instance_dict=label_instance_dict)
 
-    def _show_single_frame(self, image=None, thickness=None, with_text=False, height=None, width=None,
+    def _show_single_frame(self,
+                           image=None,
+                           thickness=None,
+                           with_text=False,
+                           height=None,
+                           width=None,
                            annotation_format: ViewAnnotationOptions = ViewAnnotationOptions.MASK,
-                           color=None, label_instance_dict=None):
+                           color=None,
+                           label_instance_dict=None,
+                           alpha=None):
         """
         Show annotations
         mark the annotation of the single frame array and return it
@@ -624,6 +649,7 @@ class Annotation(entities.BaseEntity):
         :param annotation_format: list(dl.ViewAnnotationOptions)
         :param color: optional - color tuple
         :param label_instance_dict: the instance labels
+        :param alpha: opacity value [0 1], default 1
         :return: ndarray of the annotations
         """
         try:
@@ -632,6 +658,12 @@ class Annotation(entities.BaseEntity):
             logger.error(
                 'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
             raise
+        if alpha is None:
+            alpha = 1
+        elif alpha > 1 or alpha < 0:
+            raise PlatformException(
+                error='1001',
+                message='alpha should be between 0 and 1')
 
         # height/width
         if self.annotation_definition.type == 'cube_3d':
@@ -702,7 +734,11 @@ class Annotation(entities.BaseEntity):
             if annotation_format == entities.ViewAnnotationOptions.MASK:
                 color = self.color
                 if len(color) == 3:
-                    color = color + (255,)
+                    if alpha == 0:
+                        channel = 1
+                    else:
+                        channel = (255 / alpha)
+                    color = color + (channel,)
             elif annotation_format == entities.ViewAnnotationOptions.INSTANCE:
                 # if label not in dataset label - put it as background
                 color = label_instance_dict.get(self.label, 1)
@@ -724,7 +760,8 @@ class Annotation(entities.BaseEntity):
                                                height=height,
                                                width=width,
                                                annotation_format=annotation_format,
-                                               color=color)
+                                               color=color,
+                                               alpha=alpha)
 
     #######
     # I/O #

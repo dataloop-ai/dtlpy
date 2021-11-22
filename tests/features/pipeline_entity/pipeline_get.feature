@@ -6,11 +6,13 @@ Feature: Pipeline entity method testing
         And Directory "pipeline_get" is empty
 
     @pipelines.delete
+    @testrail-C4523143
     Scenario: To Json
         When I create a pipeline with name "testpipeline"
         Then Object "Pipeline" to_json() equals to Platform json.
 
     @pipelines.delete
+    @testrail-C4523143
     Scenario: get pipeline
         When I create a pipeline with name "testpipeline"
         And I get pipeline by the name of "testpipeline"

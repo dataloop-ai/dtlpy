@@ -8,6 +8,7 @@ Feature: Features vectors repository get service testing
 
     @feature.delete
     @feature_set.delete
+    @testrail-C4523107
     Scenario: To Json
         When I create a feature sets with a random name
         When I create a feature
@@ -16,6 +17,7 @@ Feature: Features vectors repository get service testing
 
     @feature.delete
     @feature_set.delete
+    @testrail-C4523107
     Scenario: get Feature
         When I create a feature sets with a random name
         When I create a feature

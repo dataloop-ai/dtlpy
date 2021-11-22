@@ -16,6 +16,7 @@ Feature: Executions repository context testing
 
     @services.delete
     @packages.delete
+    @testrail-C4523100
     Scenario: Get Execution from the project it belong to
         When I get the execution from project number 1
         Then Execution Project_id is equal to project 1 id
@@ -25,6 +26,7 @@ Feature: Executions repository context testing
 
     @services.delete
     @packages.delete
+    @testrail-C4523100
     Scenario: Get Execution from the project it belong to
         When I get the execution from project number 2
         Then Execution Project_id is equal to project 1 id
@@ -34,6 +36,7 @@ Feature: Executions repository context testing
 
     @services.delete
     @packages.delete
+    @testrail-C4523100
     Scenario: Get Execution from the service it belong to
         When I get the execution from service number 1
         Then Execution Project_id is equal to project 1 id
@@ -43,6 +46,7 @@ Feature: Executions repository context testing
 
     @services.delete
     @packages.delete
+    @testrail-C4523100
     Scenario: Get Execution from the service it belong to
         Given There is a service by the name of "executions-context2" with module name "default_module" saved to context "service"
         And I append service to services

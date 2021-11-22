@@ -148,9 +148,16 @@ class AnnotationCollection(entities.BaseEntity):
     ############
     # Plotting #
     ############
-    def show(self, image=None, thickness=None, with_text=False, height=None, width=None,
+    def show(self,
+             image=None,
+             thickness=None,
+             with_text=False,
+             height=None,
+             width=None,
              annotation_format: entities.ViewAnnotationOptions = entities.ViewAnnotationOptions.MASK,
-             label_instance_dict=None, color=None):
+             label_instance_dict=None,
+             color=None,
+             alpha=None):
         """
             Show annotations according to annotation_format
 
@@ -162,6 +169,7 @@ class AnnotationCollection(entities.BaseEntity):
         :param annotation_format: how to show thw annotations. options: list(dl.ViewAnnotationOptions)
         :param label_instance_dict: instance label map {'Label': 1, 'More': 2}
         :param color: optional - color tuple
+        :param alpha: opacity value [0 1], default 1
         :return: ndarray of the annotations
         """
         # if 'video' in self.item.mimetype and (annotation_format != 'json' or annotation_format != ['json']):
@@ -183,6 +191,7 @@ class AnnotationCollection(entities.BaseEntity):
                                     label_instance_dict=label_instance_dict,
                                     annotation_format=annotation_format,
                                     image=image,
+                                    alpha=alpha,
                                     color=color)
 
         return image
@@ -192,7 +201,8 @@ class AnnotationCollection(entities.BaseEntity):
                      output_filepath,
                      thickness=1,
                      annotation_format=entities.ViewAnnotationOptions.ANNOTATION_ON_IMAGE,
-                     with_text=False):
+                     with_text=False,
+                     alpha=None):
         """
         create a video from frames
         :param input_filepath: str - input file path
@@ -245,6 +255,7 @@ class AnnotationCollection(entities.BaseEntity):
                 frames = annotation.show(image=frames, color=annotation.color,
                                          annotation_format=annotation_format,
                                          thickness=thickness,
+                                         alpha=alpha,
                                          height=height,
                                          width=width,
                                          with_text=with_text)
@@ -274,12 +285,16 @@ class AnnotationCollection(entities.BaseEntity):
         else:
             return cv2.ROTATE_90_COUNTERCLOCKWISE, cv2.ROTATE_90_CLOCKWISE, 0
 
-    def download(self, filepath, img_filepath=None,
+    def download(self,
+                 filepath,
+                 img_filepath=None,
                  annotation_format: entities.ViewAnnotationOptions = entities.ViewAnnotationOptions.MASK,
                  height=None,
-                 width=None, thickness=1,
+                 width=None,
+                 thickness=1,
                  with_text=False,
-                 orientation=0):
+                 orientation=0,
+                 alpha=None):
         """
             Save annotations to file
 
@@ -291,6 +306,7 @@ class AnnotationCollection(entities.BaseEntity):
         :param thickness: thickness
         :param with_text: add a text to the image
         :param orientation: the image orientation
+        :param alpha: opacity value [0 1], default 1
         :return:
         """
         dir_name, ex = os.path.splitext(filepath)
@@ -314,14 +330,18 @@ class AnnotationCollection(entities.BaseEntity):
                                    entities.ViewAnnotationOptions.OBJECT_ID,
                                    entities.ViewAnnotationOptions.ANNOTATION_ON_IMAGE]:
             if not ex:
-                filepath = '{}/{}.png'.format(dir_name, os.path.splitext(self.item.name)[0])
+                if 'video' in self.item.mimetype:
+                    filepath = '{}/{}.mp4'.format(dir_name, os.path.splitext(self.item.name)[0])
+                else:
+                    filepath = '{}/{}.png'.format(dir_name, os.path.splitext(self.item.name)[0])
             image = None
             if 'video' in self.item.mimetype:
                 self._video_maker(input_filepath=img_filepath,
                                   output_filepath=filepath,
                                   thickness=thickness,
                                   annotation_format=annotation_format,
-                                  with_text=with_text
+                                  with_text=with_text,
+                                  alpha=alpha
                                   )
                 return filepath
             if annotation_format == entities.ViewAnnotationOptions.ANNOTATION_ON_IMAGE:
@@ -343,6 +363,7 @@ class AnnotationCollection(entities.BaseEntity):
                              with_text=with_text,
                              height=height,
                              width=width,
+                             alpha=alpha,
                              annotation_format=annotation_format)
             if orientation not in [3, 4, 5, 6, 7, 8]:
                 img = Image.fromarray(mask.astype(np.uint8))

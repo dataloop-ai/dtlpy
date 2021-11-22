@@ -5,6 +5,7 @@ Feature: Datasets repository Context testing
         And I create projects by the name of "project1 project2"
 
 
+    @testrail-C4523091
     Scenario: Get Dataset from the checkout Project it belong to
         Given I create datasets by the name of "dataset1 dataset2"
         When I checkout project number 1
@@ -12,6 +13,7 @@ Feature: Datasets repository Context testing
         Then dataset Project.id is equal to project 1 id
 
 
+    @testrail-C4523091
     Scenario: Get Dataset from the checkout Project it is not belong to
         Given I create datasets by the name of "dataset1 dataset2"
         When I checkout project number 1
@@ -19,12 +21,14 @@ Feature: Datasets repository Context testing
         Then dataset Project.id is equal to project 2 id
 
 
+    @testrail-C4523091
     Scenario: Get Dataset from the Project it is  belong to
         Given I create datasets by the name of "dataset1 dataset2"
         When I get a dataset number 1 from project number 1
         Then dataset Project.id is equal to project 1 id
 
 
+    @testrail-C4523091
     Scenario: Get Dataset from the Project it is not belong to
         Given I create datasets by the name of "dataset1 dataset2"
         When I get a dataset number 1 from project number 2

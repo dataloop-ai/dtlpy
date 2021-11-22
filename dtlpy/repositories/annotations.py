@@ -180,8 +180,14 @@ class Annotations:
                                                'Please use item.annotations.list() or dataset.annotations.list() '
                                                'to perform this action.')
 
-    def show(self, image=None, thickness=1, with_text=False, height=None, width=None,
-             annotation_format: entities.ViewAnnotationOptions = entities.ViewAnnotationOptions.MASK):
+    def show(self,
+             image=None,
+             thickness=1,
+             with_text=False,
+             height=None,
+             width=None,
+             annotation_format: entities.ViewAnnotationOptions = entities.ViewAnnotationOptions.MASK,
+             alpha=None):
         """
         Show annotations
 
@@ -191,6 +197,7 @@ class Annotations:
         :param height: height
         :param width: width
         :param annotation_format: options: list(dl.ViewAnnotationOptions)
+        :param alpha: opacity value [0 1], default 1
         :return: ndarray of the annotations
         """
         # get item's annotations
@@ -200,14 +207,18 @@ class Annotations:
                                 width=width,
                                 height=height,
                                 thickness=thickness,
+                                alpha=alpha,
                                 with_text=with_text,
                                 annotation_format=annotation_format)
 
     def download(self, filepath,
                  annotation_format: entities.ViewAnnotationOptions = entities.ViewAnnotationOptions.MASK,
                  img_filepath=None,
-                 height=None, width=None,
-                 thickness=1, with_text=False):
+                 height=None,
+                 width=None,
+                 thickness=1,
+                 with_text=False,
+                 alpha=None):
         """
             Save annotation format to file
 
@@ -218,6 +229,7 @@ class Annotations:
         :param width: optional - image width
         :param thickness: optional - annotation format, default =1
         :param with_text: optional - draw annotation with text, default = False
+        :param alpha: opacity value [0 1], default 1
         :return:
         """
         # get item's annotations
@@ -241,7 +253,8 @@ class Annotations:
                                     height=height,
                                     thickness=thickness,
                                     with_text=with_text,
-                                    annotation_format=annotation_format)
+                                    annotation_format=annotation_format,
+                                    alpha=alpha)
 
     def _delete_single_annotation(self, w_annotation_id):
         try:

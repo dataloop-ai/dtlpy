@@ -8,6 +8,7 @@ Feature: Executions repository create service testing
 
     @services.delete
     @packages.delete
+    @testrail-C4523101
     Scenario: Created Item Execution - Execution input object - sync
         Given There is a package (pushed from "executions/item") by the name of "execution-create"
         And There is a service by the name of "executions-create" with module name "default_module" saved to context "service"
@@ -19,6 +20,7 @@ Feature: Executions repository create service testing
 
     @services.delete
     @packages.delete
+    @testrail-C4523101
     Scenario: Created Item Execution - Execution input params - sync
         Given There is a package (pushed from "executions/item") by the name of "execution-create"
         And There is a service by the name of "executions-create" with module name "default_module" saved to context "service"
@@ -30,6 +32,7 @@ Feature: Executions repository create service testing
 
     @services.delete
     @packages.delete
+    @testrail-C4523101
     Scenario: Created Item Execution - Execution input params - async
         Given There is a package (pushed from "executions/item") by the name of "execution-create"
         And There is a service by the name of "executions-create" with module name "default_module" saved to context "service"
@@ -41,6 +44,7 @@ Feature: Executions repository create service testing
 
     @services.delete
     @packages.delete
+    @testrail-C4523101
     Scenario: Created Item Execution for multiple modules and functions - sync
         Given There is a package (pushed from "executions/multiple_modules_functions") by the name of "execution-create"
         And There is a service by the name of "executions-create-first" with module name "first" saved to context "first_service"

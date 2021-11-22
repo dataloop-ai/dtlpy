@@ -60,7 +60,7 @@ class Segmentation(BaseAnnotationDefinition):
             bottom = np.max(self.pts[0])
         return bottom
 
-    def show(self, image, thickness, with_text, height, width, annotation_format, color):
+    def show(self, image, thickness, with_text, height, width, annotation_format, color, alpha=1):
         """
         Show annotation as ndarray
         :param image: empty or image to draw on
@@ -70,9 +70,31 @@ class Segmentation(BaseAnnotationDefinition):
         :param width: item width
         :param annotation_format: options: list(dl.ViewAnnotationOptions)
         :param color: color
+        :param alpha: opacity value [0 1], default 1
         :return: ndarray
         """
-        image[np.where(self.geo)] = color
+        try:
+            import cv2
+        except (ImportError, ModuleNotFoundError):
+            raise ImportError('opencv not found. Must install to perform this function')
+
+        if alpha != 1:
+            overlay = image.copy()
+        else:
+            overlay = image
+        # draw annotation
+        overlay[np.where(self.geo)] = color
+
+        if not isinstance(color, int) and len(color) == 4 and color[3] != 255:
+            # add with opacity
+            image = cv2.addWeighted(src1=overlay,
+                                    alpha=alpha,
+                                    src2=image,
+                                    beta=1 - alpha,
+                                    gamma=0)
+        else:
+            image = overlay
+
         if with_text:
             image = self.add_text_to_image(image=image, annotation=self)
         return image

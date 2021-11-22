@@ -5,11 +5,13 @@ Feature: Ontologies repository get service testing
         And There is a project by the name of "ontologies_get"
         And I create a dataset with a random name
 
+    @testrail-C4523130
     Scenario: Get an existing ontology by id
         Given Dataset has ontology
         When I get a ontology by id
         Then I get an Ontology object
 
+    @testrail-C4523130
     Scenario: Get non-existing Ontology by id
         Given Dataset has ontology
         When I try to get Ontology by "some_id"

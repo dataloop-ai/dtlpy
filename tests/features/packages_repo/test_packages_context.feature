@@ -8,6 +8,7 @@ Feature: Packages repository Context testing
         When I generate package by the name of "test-package" to "packages_get"
 
     @packages.delete
+    @testrail-C4523140
     Scenario: Get Package from the project it belong to
         When I push "first" package
             |codebase_id=None|package_name=test-package|src_path=packages_get|inputs=None|outputs=None|
@@ -15,6 +16,7 @@ Feature: Packages repository Context testing
         Then Package project_id is equal to project 1 id
         And Package project.id is equal to project 1 id
 
+    @testrail-C4523140
     Scenario: Get Package from the project it is not belong to
         When I push "first" package
             |codebase_id=None|package_name=test-package|src_path=packages_get|inputs=None|outputs=None|

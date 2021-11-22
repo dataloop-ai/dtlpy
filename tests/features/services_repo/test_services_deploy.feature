@@ -9,6 +9,7 @@ Feature: Services repository deploy service testing
 
     @services.delete
     @packages.delete
+    @testrail-C4523160
     Scenario: Deploy
         Given There are no services
         When I deploy a service

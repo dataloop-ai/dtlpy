@@ -1,4 +1,6 @@
 import random
+
+import attr
 import behave
 import time
 import jwt
@@ -13,6 +15,21 @@ try:
 except ImportError:
     # for remote import
     from env_from_git_branch import get_env_from_git_branch
+
+
+@attr.s
+class TimeKey:
+    # For TestRail test-run
+    _key = None
+
+    @property
+    def key(self):
+        if self._key is None:
+            self._key = time.strftime("%d-%m %H:%M")
+        return self._key
+
+
+time_key = TimeKey()
 
 
 @behave.given('Platform Interface is initialized as dlp and Environment is set according to git branch')
@@ -66,15 +83,17 @@ def before_all(context):
         allow_locally_with_user = os.environ.get('ALLOW_RUN_TESTS_LOCALLY_WITH_USER', 'false') == 'true'
 
         if not allow_locally_with_user and payload['email'] not in ['oa-test-4@dataloop.ai', 'oa-test-1@dataloop.ai', 'oa-test-2@dataloop.ai',
-                                    'oa-test-3@dataloop.ai']:
+                                                                    'oa-test-3@dataloop.ai']:
             assert False, 'Cannot run test on user: "{}". only test users'.format(payload['email'])
 
         # save to feature level
         context.feature.dataloop_feature_dl = context.dl
 
         avoid_testrail = os.environ.get('AVOID_TESTRAIL', 'false') == 'true'
-        if not avoid_testrail:
-            current_branch = get_env_from_git_branch() + " " + time.strftime("%d-%m %H:%M")  # Get the current build branch of your CI system
+
+        if not avoid_testrail and len(context.config.reporters) == 1:
+            build_number = os.environ.get('BITBUCKET_BUILD_NUMBER')
+            current_branch = get_env_from_git_branch() + " - #" + str(build_number)  # Get the current build branch
             testrail_reporter = TestrailReporter(current_branch)
             context.config.reporters.append(testrail_reporter)
 

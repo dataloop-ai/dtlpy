@@ -6,11 +6,13 @@ Feature: Cli Others
         And I am logged in
         And I have context random number
 
+    @testrail-C4523069
     Scenario: Exit
         When I perform command:
             |exit|
         Then I succeed
 
+    @testrail-C4523069
     Scenario: Help
         When I perform command:
             |help|
@@ -25,6 +27,7 @@ Feature: Cli Others
         Then I succeed
         And "CLI for Dataloop" in output
 
+    @testrail-C4523069
     Scenario: Exit
         When I perform command:
             |version|

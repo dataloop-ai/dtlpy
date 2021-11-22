@@ -7,6 +7,7 @@ Feature: Packages repository push service testing
         When I generate package by the name of "test-package" to "packages_push"
 
     @packages.delete
+    @testrail-C4523139
     Scenario: Push local package - no params
         When I push "first" package
             |codebase_id=None|package_name=None|src_path=packages_push|inputs=None|outputs=None|

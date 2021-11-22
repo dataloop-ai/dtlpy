@@ -7,6 +7,7 @@
          When I generate package by the name of "test-package" to "packages_create"
 
      @packages.delete
+     @testrail-C4523134
      Scenario: Create package
          When I push "first" package
              |codebase_id=None|package_name=test-package|src_path=packages_create|inputs=None|outputs=None|

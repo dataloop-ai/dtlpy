@@ -5,6 +5,7 @@ Feature: Items repository list service testing
         And There is a project by the name of "items_list"
         And I create a dataset with a random name
 
+    @testrail-C4523117
     Scenario: List dataset items
         Given There is an item
         When I list items
@@ -12,6 +13,7 @@ Feature: Items repository list service testing
         And PageEntity items has length of "1"
         And Item in PageEntity items equals item uploaded
 
+    @testrail-C4523117
     Scenario: List dataset items - with size
         Given There are "10" items
         When I list items with size of "5"
@@ -21,6 +23,7 @@ Feature: Items repository list service testing
         And PageEntity next page items has length of "5"
         And PageEntity items does not have next page
 
+    @testrail-C4523117
     Scenario: List dataset items - with offset
         Given There are "10" items
         When I list items with offset of "1" and size of "5"
@@ -28,6 +31,7 @@ Feature: Items repository list service testing
         And PageEntity items has length of "5"
         And PageEntity items does not have next page
 
+    @testrail-C4523117
     Scenario: List dataset items - with query - filename
         Given There are "10" items
         And There is one item by the name of "test_name.jpg"
@@ -36,6 +40,7 @@ Feature: Items repository list service testing
         And PageEntity items has length of "1"
         And PageEntity item received equal to item uploaded with name "test_name"
 
+    @testrail-C4523117
     Scenario: List dataset items - with query - filepath
         Given There are "5" items
         And There are "5" items in remote path "/folder"
@@ -44,6 +49,7 @@ Feature: Items repository list service testing
         And PageEntity items has length of "5"
         And PageEntity items received have "/folder" in the filename
 
+    @testrail-C4523117
     Scenario: List dataset items - with query - mimetypes png
         Given There are "5" .jpg items
         And There is one .png item
@@ -52,6 +58,7 @@ Feature: Items repository list service testing
         And PageEntity items has length of "1"
         And And PageEntity item received equal to .png item uploadede
 
+    @testrail-C4523117
     Scenario: List dataset items - with query - mimetypes video
         Given There are "5" .jpg items
         And There is one .mp4 item

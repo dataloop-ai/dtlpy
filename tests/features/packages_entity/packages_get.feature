@@ -7,6 +7,7 @@ Feature: Packages entity method testing
         When I generate package by the name of "test-package" to "packages_get"
 
     @packages.delete
+    @testrail-C4523132
     Scenario: To Json
         When I push "first" package
             |codebase_id=None|package_name=test-package|src_path=packages_get|inputs=None|outputs=None|

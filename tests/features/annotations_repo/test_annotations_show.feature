@@ -5,6 +5,7 @@ Feature: Annotations repository show method testing
         And There is a project by the name of "annotations_show"
         And I create a dataset with a random name
 
+    @testrail-C4523038
     Scenario: Show mask
         Given Classes in file: "assets_split/annotations_show/classes_new.json" are uploaded to test Dataset
         And Dataset ontology has attributes "attr1" and "attr2"
@@ -13,6 +14,7 @@ Feature: Annotations repository show method testing
         And I show items annotations with param "mask"
         Then I receive annotations mask and it is equal to mask in "new_mask_should_be.npy"
 
+    @testrail-C4523038
     Scenario: Show instance
         Given Classes in file: "assets_split/annotations_show/classes_new.json" are uploaded to test Dataset
         And Dataset ontology has attributes "attr1" and "attr2"
@@ -21,6 +23,7 @@ Feature: Annotations repository show method testing
         And I show items annotations with param "instance"
         Then I receive annotations mask and it is equal to mask in "new_instance_should_be.npy"
 
+    @testrail-C4523038
     Scenario: Show object id
         Given Classes in file: "assets_split/annotations_show/classes_new.json" are uploaded to test Dataset
         And Dataset ontology has attributes "attr1" and "attr2"

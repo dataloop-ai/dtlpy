@@ -5,6 +5,7 @@ Feature: Items repository upload service testing
         And There is a project by the name of "items_upload"
         And I create a dataset with a random name
 
+    @testrail-C4523119
     Scenario: Upload a single item
         When I upload a file in path "assets_split/items_upload/0000000162.jpg"
         Then Item exist in host
@@ -12,6 +13,7 @@ Feature: Items repository upload service testing
         And Item object from host equals item uploaded
         And Item in host when downloaded to "test_items_upload_downloaded_item" equals item in "assets_split/items_upload/0000000162.jpg"
 
+    @testrail-C4523119
     Scenario: Upload a single item to a specific remote path
         When I upload file in path "assets_split/items_upload/0000000162.jpg" to remote path "/folder"
         Then Item exist in host
@@ -20,6 +22,7 @@ Feature: Items repository upload service testing
         And Item object from host equals item uploaded
         And Item in host when downloaded to "test_items_upload_downloaded_item" equals item in "assets_split/items_upload/0000000162.jpg"
 
+    @testrail-C4523119
     Scenario: Upload a single item with a specific remote name set via the buffer interface
         When I upload file in path "assets_split/items_upload/0000000162.jpg" with remote name "file.jpg" set via the buffer interface
         Then Item exist in host
@@ -28,6 +31,7 @@ Feature: Items repository upload service testing
         And Item object from host equals item uploaded
         And Item in host when downloaded to "test_items_upload_downloaded_item" equals item in "assets_split/items_upload/0000000162.jpg"
 
+    @testrail-C4523119
     Scenario: Upload a single item with a specific remote name
         When I upload the file in path "assets_split/items_upload/0000000162.jpg" with remote name "file.jpg"
         Then Item exist in host
@@ -36,6 +40,7 @@ Feature: Items repository upload service testing
         And Item object from host equals item uploaded
         And Item in host when downloaded to "test_items_upload_downloaded_item" equals item in "assets_split/items_upload/0000000162.jpg"
 
+    @testrail-C4523119
     Scenario: Upload a single item with a specific remote name to a specific remote path
         When I upload the file from path "assets_split/items_upload/0000000162.jpg" with remote name "file.jpg" to remote path "/folder"
         Then Item exist in host
@@ -45,6 +50,7 @@ Feature: Items repository upload service testing
         And Item object from host equals item uploaded
         And Item in host when downloaded to "test_items_upload_downloaded_item" equals item in "assets_split/items_upload/0000000162.jpg"
 
+    @testrail-C4523119
     Scenario: Upload a single item - overwrite
         Given Item in path "assets_split/items_upload/0000000162.jpg" is uploaded to "Dataset"
         When I upload with "overwrite" a file in path "assets_split/items_upload/0000000162.jpg"
@@ -53,6 +59,7 @@ Feature: Items repository upload service testing
         And Item object from host equals item uploaded
         And Item in host when downloaded to "test_items_upload_downloaded_item" equals item in "assets_split/items_upload/0000000162.jpg"
 
+    @testrail-C4523119
     Scenario: Upload a single item - merge
         Given Item in path "assets_split/items_upload/0000000162.jpg" is uploaded to "Dataset"
         When I upload with "merge" a file in path "assets_split/items_upload/0000000162.jpg"
@@ -67,10 +74,12 @@ Feature: Items repository upload service testing
 #        When I try to upload file in path "assets_split/items_upload/0000000162.jpg" to remote path "/fol.der"
 #        Then Number of error files should be larger by one
 
+    @testrail-C4523119
     Scenario: Upload a non-existing file
         When I try to upload file in path "non-existing-path/file.jpg"
         Then "NotFound" exception should be raised
 
+    @testrail-C4523119
     Scenario: Upload items from buffer
         Given There are "3" items
         And I download items to buffer
@@ -78,6 +87,7 @@ Feature: Items repository upload service testing
         When I upload items from buffer to host
         Then There are "3" items in host
 
+    @testrail-C4523119
     Scenario: Upload item from buffer with specific remote name
         When I use a buffer to upload the file in path "assets_split/items_upload/0000000162.jpg" with remote name "file.jpg"
         Then Item exist in host
@@ -94,6 +104,7 @@ Feature: Items repository upload service testing
 #         And Upload method returned an Item object
 #         And Item object from host equals item uploaded
 
+    @testrail-C4523119
     Scenario: Upload a single item - video
         When I upload a file in path "sample_video.mp4"
         Then Item exist in host
@@ -102,10 +113,12 @@ Feature: Items repository upload service testing
         #todo
         # And video download from host equal video in "sample_video.mp4"
 
+    @testrail-C4523119
     Scenario: Verify mimetype Upload item - video
         When I upload a file in path "sample_video.mp4"
         Then Item mimetype is the item type "mp4"
 
+    @testrail-C4523119
     Scenario: Verify mimetype Upload item - image
         When I upload a file in path "assets_split/items_upload/0000000162.jpg"
         Then Item mimetype is the item type "jpeg"

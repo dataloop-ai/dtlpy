@@ -8,6 +8,7 @@ Feature: Features vectors repository create service testing
 
   @feature.delete
   @feature_set.delete
+  @testrail-C4523105
   Scenario: Create a Feature set
     When I create a feature sets with a random name
     When I create a feature
@@ -18,6 +19,7 @@ Feature: Features vectors repository create service testing
 
   @feature.delete
   @feature_set.delete
+  @testrail-C4523105
   Scenario: List Feature set
     Given There are no feature sets
     When I create a feature sets with a random name

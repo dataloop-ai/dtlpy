@@ -4,7 +4,7 @@ import json
 import threading
 
 import logging
-from . import disk_cache
+from . import dl_cache
 
 logger = logging.getLogger(name=__name__)
 CHUNK = 200000
@@ -18,19 +18,33 @@ class Reporter:
     ITEMS_UPLOAD = 'uploader'
     CONVERTER = 'converter'
 
-    def __init__(self, num_workers, resource, client_api, print_error_logs=False, output_entity=None, no_output=False):
+    def __init__(self,
+                 num_workers,
+                 resource,
+                 client_api,
+                 print_error_logs=False,
+                 output_entity=None,
+                 no_output=False):
         self._num_workers = num_workers
         self.mutex = threading.Lock()
         self.no_output = no_output
         self._client_api = client_api
         self.key = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-        self._reports = {'errors': disk_cache.DlCache('errors-' + self.key),
-                         'output': disk_cache.DlCache('output-' + self.key),
-                         'status': disk_cache.DlCache('status-' + self.key),
-                         }
-        self._reports.get('status').add('success', 0)
-        self._reports.get('status').add('failure', 0)
-        self.clear_reporter()
+        self.cache_mode = client_api.cookie_io.get('cache_mode')
+        if self.cache_mode is None:
+            self.cache_mode = 'diskcache'
+        self.cache_chunk = client_api.cookie_io.get('cache_chunk')
+        if self.cache_chunk is None:
+            self.cache_chunk = CHUNK
+        if self.cache_mode == 'diskcache':
+            self._reports = {'errors': dl_cache.DiskCache('errors-' + self.key),
+                             'output': dl_cache.DiskCache('output-' + self.key),
+                             'status': dl_cache.DiskCache('status-' + self.key),
+                             }
+            self._reports.get('status').add('success', 0)
+            self._reports.get('status').add('failure', 0)
+            self.clear_reporter()
+
         self._success = dict()
         self._status = dict()
         self._errors = dict()
@@ -64,11 +78,11 @@ class Reporter:
         """
         if self.no_output:
             return
-
-        output = self._reports.get('output')
-        for k in output.keys():
-            for item in list(output.get(key=k).values()):
-                yield self.construct_output(item)
+        if self.cache_mode == 'diskcache':
+            output = self._reports.get('output')
+            for k in output.keys():
+                for item in list(output.get(key=k).values()):
+                    yield self.construct_output(item)
 
         current = [self.construct_output(output) for output in list(self._output.values()) if output is not None]
         for item in current:
@@ -80,10 +94,11 @@ class Reporter:
         return a list of all the status that get
         """
         output = dict()
-        status_cache = self._reports.get('status')
-        for key in status_cache.keys():
-            if key not in ['failure', 'success']:
-                output.update(status_cache.get(key=key))
+        if self.cache_mode == 'diskcache':
+            status_cache = self._reports.get('status')
+            for key in status_cache.keys():
+                if key not in ['failure', 'success']:
+                    output.update(status_cache.get(key=key))
         output.update(self._status)
         return list(output.values())
 
@@ -106,7 +121,10 @@ class Reporter:
         return how many actions fail
         """
         curr = len([suc for suc in (self._success.values()) if suc is False])
-        return self._reports.get('status').get(key='failure') + curr
+        if self.cache_mode == 'diskcache':
+            return self._reports.get('status').get(key='failure') + curr
+        else:
+            return curr
 
     @property
     def success_count(self):
@@ -114,7 +132,10 @@ class Reporter:
         return how many actions success
         """
         curr = len([suc for suc in (self._success.values()) if suc is True])
-        return self._reports.get('status').get(key='success') + curr
+        if self.cache_mode == 'diskcache':
+            return self._reports.get('status').get(key='success') + curr
+        else:
+            return curr
 
     def status_count(self, status):
         """
@@ -129,7 +150,7 @@ class Reporter:
         the function write to the dick the outputs that get until the chunk amount
         """
         with self.mutex:
-            if len(self._success) > CHUNK:
+            if len(self._success) > self.cache_chunk:
                 status_cache = self._reports.get('status')
                 num_true = sum(list(self._success.values()))
                 status_cache.incr(key='failure',
@@ -138,7 +159,7 @@ class Reporter:
                                   value=num_true)
                 self._success.clear()
             for name, cache_list in self.cache_items.items():
-                if len(cache_list) > CHUNK:
+                if len(cache_list) > self.cache_chunk:
                     self._reports[name].push(cache_list)
                     cache_list.clear()
 
@@ -162,17 +183,19 @@ class Reporter:
             if not self.no_output:
                 self._output[ref] = output
 
-        if len(self._errors) > CHUNK or \
-                len(self._status) > CHUNK or \
-                len(self._output) > CHUNK or \
-                len(self._success) > CHUNK:
-            self._write_to_disk()
+        if len(self._errors) > self.cache_chunk or \
+                len(self._status) > self.cache_chunk or \
+                len(self._output) > self.cache_chunk or \
+                len(self._success) > self.cache_chunk:
+            if self.cache_mode == 'diskcache':
+                self._write_to_disk()
 
     def generate_log_files(self):
         """
         build a log file that display the errors
         """
-        if len(self._errors) > 0:
+        if len(self._errors) > 0 and self.cache_mode == 'diskcache':
+            # write from RAM to disk
             self._reports['errors'].push(self._errors)
             self._errors.clear()
 
@@ -180,9 +203,12 @@ class Reporter:
                                     "log_{}_{}.json".format(self._resource,
                                                             datetime.datetime.utcnow().strftime("%Y%m%d_%H%M%S")))
         errors_json = dict()
-        err_cache = self._reports['errors']
-        for k in err_cache.keys():
-            errors_json.update(err_cache.get(k))
+        if self.cache_mode == 'diskcache':
+            err_cache = self._reports['errors']
+            for k in err_cache.keys():
+                errors_json.update(err_cache.get(k))
+        if self._errors:
+            errors_json.update(self._errors)
         if self._print_error_logs:
             for key in errors_json:
                 logger.warning("{}\n{}".format(key, errors_json[key]))

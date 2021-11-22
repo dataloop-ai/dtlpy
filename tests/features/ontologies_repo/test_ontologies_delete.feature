@@ -6,10 +6,12 @@ Feature: Ontologies repository Delete service testing
         And I create a dataset with a random name
         And Dataset has ontology
 
+    @testrail-C4523128
     Scenario: Delete existing ontology by id
         When I delete ontology by id
         Then Ontology does not exist in dataset
 
+    @testrail-C4523128
     Scenario: Delete non-existing ontology by id
         When I try to delete ontology by "some_id"
         Then "BadRequest" exception should be raised

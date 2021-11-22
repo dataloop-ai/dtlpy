@@ -5,18 +5,21 @@ Feature: Items repository delete service testing
         And There is a project by the name of "items_delete"
         And I create a dataset with a random name
 
+    @testrail-C4523111
     Scenario: Delete item by name
         Given There are no items
         And I upload an item by the name of "test_item.jpg"
         When I delete the item by name
         Then There are no items
-    
+
+    @testrail-C4523111
     Scenario: Delete item by id
         Given There are no items
         And I upload an item by the name of "test_item.jpg"
         When I delete the item by id
         Then There are no items
 
+    @testrail-C4523111
     Scenario: Delete a non-existing item by name
         Given There are no items
         And I upload an item by the name of "test_item.jpg"
@@ -24,6 +27,7 @@ Feature: Items repository delete service testing
         Then "NotFound" exception should be raised
         And No item was deleted
 
+    @testrail-C4523111
     Scenario: Delete a non-existing item by id
         Given There are no items
         And I upload an item by the name of "test_item.jpg"

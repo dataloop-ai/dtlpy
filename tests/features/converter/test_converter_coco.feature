@@ -5,6 +5,7 @@ Feature: Converter coco format
         And There is a project by the name of "coco_converter"
         And I create a dataset with a random name
 
+    @testrail-C4523080
     Scenario: Convert local coco dataset to dataloop
         Given There is a local "coco" dataset in "converter/coco/local_dataset"
         When I convert local "coco" dataset to "dataloop"

@@ -5,6 +5,7 @@ Feature: Recipes repository Delete service testing
         And There is a project by the name of "recipes_delete"
         And I create a dataset with a random name
 
+    @testrail-C4523153
     Scenario: Delete recipe
         Given Dataset has Recipes
         When I delete recipe

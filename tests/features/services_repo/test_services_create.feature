@@ -9,6 +9,7 @@ Feature: Services repository create service testing
 
     @services.delete
     @packages.delete
+    @testrail-C4523158
     Scenario: Create Service
         When I create a service
             |service_name=services-create|package=services-create|revision=None|config=None|runtime=None|

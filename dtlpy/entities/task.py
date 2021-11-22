@@ -250,12 +250,13 @@ class Task:
         """
         self._client_api._open_in_web(url=self.platform_url)
 
-    def delete(self):
+    def delete(self, wait=True):
         """
         Delete task from platform
+        :param wait: wait the command to finish
         :return: True
         """
-        return self.tasks.delete(task_id=self.id)
+        return self.tasks.delete(task_id=self.id, wait=wait)
 
     def update(self, system_metadata=False):
         """

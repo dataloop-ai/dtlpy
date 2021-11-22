@@ -5,6 +5,7 @@ Feature: Datasets repository download_annotations service testing
         And There is a project by the name of "datasets_download_annotations"
         And I create a dataset with a random name
 
+    @testrail-C4523086
     Scenario: Download existing annotations
         Given Item in path "0000000162.png" is uploaded to "Dataset"
         And There are a few annotations in the item

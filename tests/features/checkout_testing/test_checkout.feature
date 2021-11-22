@@ -8,6 +8,7 @@
 
    @packages.delete
    @services.delete
+   @testrail-C4523066
    Scenario: Feature entities
      Given Feature: I create a dataset by the name of "Dataset"
      When I checkout
@@ -15,24 +16,28 @@
      Given Feature: There is a package and service
      And Done setting
 
+   @testrail-C4523066
    Scenario: Projects
      When I checkout
        |project|
      Then I am checked out
        |project|
 
+   @testrail-C4523066
    Scenario: Dataset
      When I checkout
        |dataset|
      Then I am checked out
        |dataset|
 
+   @testrail-C4523066
    Scenario: Package
      When I checkout
        |package|
      Then I am checked out
        |package|
 
+    @testrail-C4523066
     Scenario: Service
      When I checkout
        |service|

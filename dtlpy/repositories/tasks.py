@@ -184,7 +184,7 @@ class Tasks:
 
         if filters is None:
             filters = entities.Filters(use_defaults=False, resource=entities.FiltersResource.TASK)
-        else: 
+        else:
             return self.query(filters=filters, project_ids=project_ids)
 
         if self._dataset is not None:
@@ -308,12 +308,13 @@ class Tasks:
         else:
             self._client_api._open_in_web(url=self.platform_url)
 
-    def delete(self, task: entities.Task = None, task_name=None, task_id=None):
+    def delete(self, task: entities.Task = None, task_name=None, task_id=None, wait=True):
         """
         Delete an Annotation Task
         :param task:
         :param task_name:
         :param task_id:
+        :param wait: wait the command to finish
         :return: True
         """
         if task_id is None:
@@ -329,10 +330,21 @@ class Tasks:
         url = URL_PATH
         url = '{}/{}'.format(url, task_id)
         success, response = self._client_api.gen_request(req_type='delete',
-                                                         path=url)
+                                                         path=url,
+                                                         json_req={'asynced': wait})
 
         if not success:
             raise exceptions.PlatformException(response)
+        response_json = response.json()
+        command = entities.Command.from_json(_json=response_json,
+                                             client_api=self._client_api)
+        if not wait:
+            return command
+        command = command.wait(timeout=0)
+        if 'deleteTaskId' not in command.spec:
+            raise exceptions.PlatformException(error='400',
+                                               message="deleteTaskId key is missing in command response: {}"
+                                               .format(response))
         return True
 
     def update(self, task: entities.Task = None, system_metadata=False) -> entities.Task:

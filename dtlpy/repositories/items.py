@@ -397,6 +397,7 @@ class Items:
             include_annotations_in_output=True,
             export_png_files=False,
             filter_output_annotations=False,
+            alpha=None
     ):
         """
         Download dataset by filters.
@@ -420,6 +421,7 @@ class Items:
         :param include_annotations_in_output: default - False , if export should contain annotations
         :param export_png_files: default - True, if semantic annotations should exported as png files
         :param filter_output_annotations: default - False, given an export by filter - determine if to filter out annotations
+        :param alpha: opacity value [0 1], default 1
         :return: `List` of local_path per each downloaded item
         """
         downloader = repositories.Downloader(self)
@@ -435,6 +437,7 @@ class Items:
             overwrite=overwrite,
             to_items_folder=to_items_folder,
             thickness=thickness,
+            alpha=alpha,
             with_text=with_text,
             without_relative_path=without_relative_path,
             avoid_unnecessary_annotation_download=avoid_unnecessary_annotation_download,

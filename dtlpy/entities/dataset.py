@@ -481,7 +481,8 @@ class Dataset(entities.BaseEntity):
                              remote_path=None,
                              include_annotations_in_output=True,
                              export_png_files=False,
-                             filter_output_annotations=False
+                             filter_output_annotations=False,
+                             alpha=None
                              ):
         """
         Download dataset by filters.
@@ -499,6 +500,7 @@ class Dataset(entities.BaseEntity):
         :param include_annotations_in_output: default - False , if export should contain annotations
         :param export_png_files: default - True, if semantic annotations should exported as png files
         :param filter_output_annotations: default - False, given an export by filter - determine if to filter out annotations
+        :param alpha: opacity value [0 1], default 1
         :return: `List` of local_path per each downloaded item
         """
 
@@ -514,7 +516,8 @@ class Dataset(entities.BaseEntity):
             remote_path=remote_path,
             include_annotations_in_output=include_annotations_in_output,
             export_png_files=export_png_files,
-            filter_output_annotations=filter_output_annotations
+            filter_output_annotations=filter_output_annotations,
+            alpha=alpha
         )
 
     def checkout(self):
@@ -676,6 +679,7 @@ class Dataset(entities.BaseEntity):
             thickness=1,
             with_text=False,
             without_relative_path=None,
+            alpha=None
     ):
         """
         Download dataset by filters.
@@ -692,6 +696,7 @@ class Dataset(entities.BaseEntity):
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :param with_text: optional - add text to annotations, default = False
         :param without_relative_path: string - remote path - download items without the relative path from platform
+        :param alpha: opacity value [0 1], default 1
         :return: `List` of local_path per each downloaded item
         """
         return self.items.download(filters=filters,
@@ -703,7 +708,8 @@ class Dataset(entities.BaseEntity):
                                    to_items_folder=to_items_folder,
                                    thickness=thickness,
                                    with_text=with_text,
-                                   without_relative_path=without_relative_path)
+                                   without_relative_path=without_relative_path,
+                                   alpha=alpha)
 
     def delete_labels(self, label_names):
         """

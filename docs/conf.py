@@ -26,7 +26,7 @@ author = 'Or Shabtay'
 # The short X.Y version
 version = ''
 # The full version, including alpha/beta/rc tags
-release = '1.41.29'
+release = '1.42.23'
 
 add_module_names = False
 

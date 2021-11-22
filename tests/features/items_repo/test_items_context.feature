@@ -11,6 +11,7 @@ Feature: Items repository Context testing
 #        And Item in path "0000000162.jpg" is uploaded to "Dataset"
 #        And I set item to Item 2
 
+    @testrail-C4523110
     Scenario: Get Item from the Project it belong to
         When I get the item from project number 1
         Then item dataset_id is equal to dataset 1 id
@@ -27,6 +28,7 @@ Feature: Items repository Context testing
 #        And item ProjectId is equal to project 1 id
 #        And item Project.id is equal to project 1 id
 
+    @testrail-C4523110
     Scenario: Get Item from the Dataset it belong to
         When I get the item from dataset number 1
         Then item dataset_id is equal to dataset 1 id
@@ -35,6 +37,7 @@ Feature: Items repository Context testing
 #        And item ProjectId is equal to project 1 id
         And item Project.id is equal to project 1 id
 
+    @testrail-C4523110
     Scenario: Get Item from the Dataset it not belong to
         When I get the item from dataset number 2
         Then item dataset_id is equal to dataset 1 id

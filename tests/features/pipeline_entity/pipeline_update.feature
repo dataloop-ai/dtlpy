@@ -8,6 +8,7 @@ Feature: Pipeline update testing
     And I update dataset recipe to the new recipe
 
   @pipelines.delete
+  @testrail-C4523145
   Scenario: Update pipeline
     When I create a package and service to pipeline
     And I create a pipeline from json

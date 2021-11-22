@@ -6,6 +6,7 @@ Feature: Annotations collection testing
         And I create a dataset with a random name
 
 
+    @testrail-C4523048
     Scenario: Annotation a text item
         When I upload a file in path "ann_text_object/tx.txt"
         Then Item exist in host

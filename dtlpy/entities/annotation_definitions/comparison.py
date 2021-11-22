@@ -36,7 +36,7 @@ class Comparison(BaseAnnotationDefinition):
     def z(self):
         return 0
 
-    def show(self, image, thickness, with_text, height, width, annotation_format, color):
+    def show(self, image, thickness, with_text, height, width, annotation_format, color, alpha=1):
         """
         Show annotation as ndarray
         :param image: empty or image to draw on
@@ -46,6 +46,7 @@ class Comparison(BaseAnnotationDefinition):
         :param width: item width
         :param annotation_format: options: list(dl.ViewAnnotationOptions)
         :param color: color
+        :param alpha: opacity value [0 1], default 1
         :return: ndarray
         """
         if with_text:

@@ -4,7 +4,8 @@ Feature: Annotation Entity Draw annotation
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
         And There is a project by the name of "Project_test_annotation_draw"
         And I create a dataset with a random name
-    
+
+    @testrail-C4523042
     Scenario: Draw - mask
         Given Classes in file: "classes_new.json" are uploaded to test Dataset
         And Dataset ontology has attributes "attr1" and "attr2"

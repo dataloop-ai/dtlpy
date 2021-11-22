@@ -6,6 +6,7 @@ Feature: Pipeline entity method testing
         And Directory "pipeline_list" is empty
 
     @pipelines.delete
+    @testrail-C4523144
     Scenario: test list pipeline
         When i list a project pipelines i get "0"
         And I create a pipeline with name "testpipelinelist"

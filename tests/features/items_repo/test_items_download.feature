@@ -21,6 +21,7 @@ Feature: Items repository download service testing
     #     Then There are "1" files in "test_items_download"
     #     And Item is correctly downloaded to "test_items_download/items/test_item.jpg" (compared with "0000000162.jpg")
 
+    @testrail-C4523112
     Scenario: Download item by id - do not save locally
         Given There are no items
         And I upload an item by the name of "test_item.jpg"

@@ -11,6 +11,7 @@ class DataGenerator(BaseGenerator, tensorflow.keras.utils.Sequence):
                  dataset_entity: entities.Dataset,
                  annotation_type: entities.AnnotationType,
                  data_path=None,
+                 overwrite=False,
                  label_to_id_map=None,
                  transforms=None,
                  to_categorical=False,
@@ -22,13 +23,14 @@ class DataGenerator(BaseGenerator, tensorflow.keras.utils.Sequence):
                  return_originals=False,
                  return_separate_labels=False,
                  return_filename=False,
-                 return_label_id=True,
+                 return_label_string=False,
                  ) -> None:
         """
         """
         super(DataGenerator, self).__init__(dataset_entity=dataset_entity,
                                             annotation_type=annotation_type,
                                             data_path=data_path,
+                                            overwrite=overwrite,
                                             label_to_id_map=label_to_id_map,
                                             transforms=transforms,
                                             to_categorical=to_categorical,
@@ -36,7 +38,7 @@ class DataGenerator(BaseGenerator, tensorflow.keras.utils.Sequence):
                                             seed=seed,
                                             # flags
                                             return_filename=return_filename,
-                                            return_label_id=return_label_id,
+                                            return_label_string=return_label_string,
                                             return_originals=return_originals,
                                             return_separate_labels=return_separate_labels)
         self.batch_size = batch_size

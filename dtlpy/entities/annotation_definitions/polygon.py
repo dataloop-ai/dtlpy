@@ -48,7 +48,7 @@ class Polygon(BaseAnnotationDefinition):
     def from_coordinates(coordinates):
         return np.asarray([[pt["x"], pt["y"]] for pt in coordinates])
 
-    def show(self, image, thickness, with_text, height, width, annotation_format, color):
+    def show(self, image, thickness, with_text, height, width, annotation_format, color, alpha=1):
         """
         Show annotation as ndarray
         :param image: empty or image to draw on
@@ -58,6 +58,7 @@ class Polygon(BaseAnnotationDefinition):
         :param width: item width
         :param annotation_format: options: list(dl.ViewAnnotationOptions)
         :param color: color
+        :param alpha: opacity value [0 1], default 1
         :return: ndarray
         """
         try:
@@ -69,13 +70,31 @@ class Polygon(BaseAnnotationDefinition):
 
         if thickness is None:
             thickness = 2
-        image = cv2.drawContours(
-            image=image,
+
+        # create image to draw on
+        if alpha != 1:
+            overlay = image.copy()
+        else:
+            overlay = image
+
+        overlay = cv2.drawContours(
+            image=overlay,
             contours=[np.round(self.geo).astype(int)],
             contourIdx=-1,
             color=color,
             thickness=thickness,
         )
+
+        if not isinstance(color, int) and len(color) == 4 and color[3] != 255:
+            # add with opacity
+            image = cv2.addWeighted(src1=overlay,
+                                    alpha=alpha,
+                                    src2=image,
+                                    beta=1 - alpha,
+                                    gamma=0)
+        else:
+            image = overlay
+
         if with_text:
             image = self.add_text_to_image(image=image, annotation=self)
         return image

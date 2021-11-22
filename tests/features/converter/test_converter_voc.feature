@@ -5,6 +5,7 @@ Feature: Converter voc format
         And There is a project by the name of "voc_converter"
         And I create a dataset with a random name
 
+    @testrail-C4523082
     Scenario: Convert local voc dataset to dataloop
         Given There is a local "voc" dataset in "converter/voc/local_dataset"
         When I convert local "voc" dataset to "dataloop"

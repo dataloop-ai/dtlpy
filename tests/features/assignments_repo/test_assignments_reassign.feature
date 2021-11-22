@@ -12,6 +12,7 @@ Feature: Assignments repository reassign method testing
         And I create an Assignment from "task" entity
             | assignee_id=annotator2@dataloop.ai | items=2 |
 
+    @testrail-C4523059
     Scenario: Reassign
         When I reassign assignment to "new_annotator@dataloop.ai"
         Then Assignments was reassigned to "new_annotator@dataloop.ai"

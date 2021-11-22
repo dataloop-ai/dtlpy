@@ -6,6 +6,7 @@ Feature: Features vectors repository delete service testing
         And I create a dataset with a random name
         And I upload an item by the name of "test_item.jpg"
 
+    @testrail-C4523106
     Scenario: Delete features set
         Given There are no feature sets
         When I create a feature sets with a random name

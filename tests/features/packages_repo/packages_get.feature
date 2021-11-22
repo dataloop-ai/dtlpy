@@ -7,6 +7,7 @@ Feature: Packages repository get service testing
         When I generate package by the name of "test-package" to "packages_get"
 
     @packages.delete
+    @testrail-C4523136
     Scenario: Get package by name
         When I push "first" package
             |codebase_id=None|package_name=test-package|src_path=packages_get|inputs=None|outputs=None|
@@ -15,6 +16,7 @@ Feature: Packages repository get service testing
         And It is equal to package created
 
     @packages.delete
+    @testrail-C4523136
     Scenario: Get package by id
         When I push "first" package
             |codebase_id=None|package_name=test-package|src_path=packages_get|inputs=None|outputs=None|

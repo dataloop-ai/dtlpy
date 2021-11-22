@@ -349,7 +349,8 @@ class Item(entities.BaseEntity):
             to_items_folder=True,
             thickness=1,
             with_text=False,
-            annotation_filters=None
+            annotation_filters=None,
+            alpha=None,
     ):
         """
         Download dataset by filters.
@@ -366,6 +367,7 @@ class Item(entities.BaseEntity):
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :param with_text: optional - add text to annotations, default = False
         :param annotation_filters: Filters entity to filter annotations for download
+        :param alpha: opacity value [0 1], default 1
         :return: Output (list)
         """
         # if dir - concatenate local path and item name
@@ -389,6 +391,7 @@ class Item(entities.BaseEntity):
                                    to_items_folder=to_items_folder,
                                    annotation_filters=annotation_filters,
                                    thickness=thickness,
+                                   alpha=alpha,
                                    with_text=with_text)
 
     def delete(self):
