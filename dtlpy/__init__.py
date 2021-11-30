@@ -147,6 +147,7 @@ add_environment = client_api.add_environment
 setenv = client_api.setenv
 token_expired = client_api.token_expired
 info = client_api.info
+cache_state = client_api.cache_state
 
 
 def get_secret(secret):

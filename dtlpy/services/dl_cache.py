@@ -1,4 +1,3 @@
-from .service_defaults import DATALOOP_PATH
 from diskcache import Cache
 import os
 
@@ -10,10 +9,15 @@ class DiskCache:
         self.name = name
         self.level = level
         self.cache_dir = options.get(
-            "cachePath", os.path.join(DATALOOP_PATH, "cache", name)
+            "cachePath", os.path.join(self.dataloop_path, "cache", name)
         )
         self.cache = Cache(directory=self.cache_dir)
         self.cache.stats(enable=enable_stats)
+
+    @property
+    def dataloop_path(self):
+        return os.environ['DATALOOP_PATH'] if 'DATALOOP_PATH' in os.environ \
+            else os.path.join(os.path.expanduser('~'), '.dataloop')
 
     def set(self, key, value):
         """

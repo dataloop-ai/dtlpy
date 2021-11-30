@@ -181,8 +181,19 @@ class AnnotationCollection(entities.BaseEntity):
             logger.error(
                 'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
             raise
-        # gor over all annotations and put the id where the annotations is
+
+        # split the annotations to binary and not binary to put the binaries first
+        segment_annotations = list()
+        rest_annotations = list()
         for annotation in self.annotations:
+            if annotation.type == 'binary':
+                segment_annotations.append(annotation)
+            else:
+                rest_annotations.append(annotation)
+        all_annotations = segment_annotations + rest_annotations
+
+        # gor over all annotations and put the id where the annotations is
+        for annotation in all_annotations:
             # get the mask of the annotation
             image = annotation.show(thickness=thickness,
                                     with_text=with_text,
@@ -251,14 +262,13 @@ class AnnotationCollection(entities.BaseEntity):
                                          (width, height),
                                          nd_array)
                 frames = None
-            for annotation in self.annotations:
-                frames = annotation.show(image=frames, color=annotation.color,
-                                         annotation_format=annotation_format,
-                                         thickness=thickness,
-                                         alpha=alpha,
-                                         height=height,
-                                         width=width,
-                                         with_text=with_text)
+            frames = self.show(image=frames,
+                               annotation_format=annotation_format,
+                               thickness=thickness,
+                               alpha=alpha,
+                               height=height,
+                               width=width,
+                               with_text=with_text)
             for ann_frame in frames:
                 writer.write(ann_frame.astype(np.uint8))
             writer.release()

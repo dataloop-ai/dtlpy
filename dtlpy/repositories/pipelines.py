@@ -292,6 +292,20 @@ class Pipelines:
         if not success:
             raise exceptions.PlatformException(response)
 
+    def pause(self, pipeline: entities.Pipeline = None):
+        """
+        pause a pipeline
+        :param pipeline:
+        :return: Composition object
+        """
+
+        success, response = self._client_api.gen_request(req_type='post',
+                                                         path='/compositions/{}/uninstall'.format(
+                                                             pipeline.composition_id))
+
+        if not success:
+            raise exceptions.PlatformException(response)
+
     def execute(self,
                 pipeline: entities.Pipeline = None,
                 pipeline_id: str = None,

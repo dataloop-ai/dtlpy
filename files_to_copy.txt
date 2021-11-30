@@ -13,5 +13,6 @@ MANIFEST.in
 README.md
 release_notes.txt
 requirements.txt
+requirements-full.txt
 setup.py
 tests

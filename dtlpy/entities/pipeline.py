@@ -350,6 +350,14 @@ class Pipeline(entities.BaseEntity):
         """
         return self.pipelines.install(pipeline=self)
 
+    def pause(self):
+        """
+        pause pipeline
+
+        :return: Composition entity
+        """
+        return self.pipelines.pause(pipeline=self)
+
     def execute(self, execution_input: dict = None):
         """
         execute a pipeline and return the execute

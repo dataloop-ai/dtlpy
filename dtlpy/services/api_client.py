@@ -136,6 +136,51 @@ class Verbose:
         self.to_cookie()
 
 
+class CacheMode:
+    __DEFAULT_ENABLE_CACHE = True
+    __DEFAULT_CHUNK_CACHE = 200000
+
+    def __init__(self, cookie):
+        self.cookie = cookie
+        dictionary = self.cookie.get('cache_mode')
+        if isinstance(dictionary, dict):
+            self.from_cookie(dictionary)
+        else:
+            self._enable_cache = self.__DEFAULT_ENABLE_CACHE
+            self._chunk_cache = self.__DEFAULT_CHUNK_CACHE
+            self.to_cookie()
+
+    def to_cookie(self):
+        dictionary = {'enable_cache': self._enable_cache,
+                      'chunk_cache': self._chunk_cache}
+        self.cookie.put(key='cache_mode', value=dictionary)
+
+    def from_cookie(self, dictionary):
+        self._enable_cache = dictionary.get('enable_cache', self.__DEFAULT_ENABLE_CACHE)
+        self._chunk_cache = dictionary.get('chunk_cache', self.__DEFAULT_CHUNK_CACHE)
+
+    @property
+    def enable_cache(self):
+        return self._enable_cache
+
+    @enable_cache.setter
+    def enable_cache(self, val: bool):
+        if not isinstance(val, bool):
+            raise exceptions.PlatformException(error=400,
+                                               message="input must be of type bool")
+        self._enable_cache = val
+        self.to_cookie()
+
+    @property
+    def chunk_cache(self):
+        return self._chunk_cache
+
+    @chunk_cache.setter
+    def chunk_cache(self, val):
+        self._chunk_cache = val
+        self.to_cookie()
+
+
 class Decorators:
     @staticmethod
     def token_expired_decorator(method):
@@ -175,6 +220,7 @@ class ApiClient:
         self._environments = None
         self._environment = None
         self._verbose = None
+        self._cache_state = None
         self._fetch_entities = None
         # define other params
         self.last_response = None
@@ -390,6 +436,13 @@ class ApiClient:
             self._verbose = Verbose(cookie=self.cookie_io)
         assert isinstance(self._verbose, Verbose)
         return self._verbose
+
+    @property
+    def cache_state(self):
+        if self._cache_state is None:
+            self._cache_state = CacheMode(cookie=self.cookie_io)
+        assert isinstance(self._cache_state, CacheMode)
+        return self._cache_state
 
     @property
     def token(self):

@@ -68,6 +68,7 @@ class Task:
     query = attr.ib(repr=False)
     assignmentIds = attr.ib(repr=False)
     annotation_status = attr.ib(repr=False)
+    progress = attr.ib()
     for_review = attr.ib()
     issues = attr.ib()
     updated_at = attr.ib()
@@ -140,6 +141,7 @@ class Task:
             project=project,
             client_api=client_api,
             annotation_status=_json.get('annotationStatus', None),
+            progress=_json.get('progress', None),
             for_review=_json.get('forReview', None),
             issues=_json.get('issues', None),
             updated_at=_json.get('updatedAt', None),
@@ -180,6 +182,7 @@ class Task:
         _json['taskOwner'] = self.task_owner
         _json['dueDate'] = self.due_date
         _json['totalItems'] = self.total_items
+        _json['forReview'] = self.for_review
 
         if self.available_actions is not None:
             _json['availableActions'] = [action.to_json() for action in self.available_actions]

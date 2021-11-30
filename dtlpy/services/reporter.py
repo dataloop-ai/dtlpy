@@ -2,7 +2,7 @@ import os
 import datetime
 import json
 import threading
-
+from .. import exceptions
 import logging
 from . import dl_cache
 
@@ -30,20 +30,25 @@ class Reporter:
         self.no_output = no_output
         self._client_api = client_api
         self.key = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-        self.cache_mode = client_api.cookie_io.get('cache_mode')
+        self.cache_mode = client_api.cache_state.enable_cache
         if self.cache_mode is None:
-            self.cache_mode = 'diskcache'
-        self.cache_chunk = client_api.cookie_io.get('cache_chunk')
+            self.cache_mode = True
+        self.cache_chunk = client_api.cache_state.chunk_cache
         if self.cache_chunk is None:
             self.cache_chunk = CHUNK
-        if self.cache_mode == 'diskcache':
-            self._reports = {'errors': dl_cache.DiskCache('errors-' + self.key),
-                             'output': dl_cache.DiskCache('output-' + self.key),
-                             'status': dl_cache.DiskCache('status-' + self.key),
-                             }
-            self._reports.get('status').add('success', 0)
-            self._reports.get('status').add('failure', 0)
-            self.clear_reporter()
+        if self.cache_mode:
+            try:
+                self._reports = {'errors': dl_cache.DiskCache('errors-' + self.key),
+                                 'output': dl_cache.DiskCache('output-' + self.key),
+                                 'status': dl_cache.DiskCache('status-' + self.key),
+                                 }
+                self._reports.get('status').add('success', 0)
+                self._reports.get('status').add('failure', 0)
+                self.clear_reporter()
+            except:
+                raise exceptions.PlatformException(
+                    error='2001',
+                    message='Failed to initialize cache handler. Please disable cache usage:  dl.cache_state.enable_cache = False')
 
         self._success = dict()
         self._status = dict()
