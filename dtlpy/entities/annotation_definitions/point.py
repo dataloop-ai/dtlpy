@@ -21,11 +21,11 @@ class Point(BaseAnnotationDefinition):
 
     @property
     def left(self):
-        return self.y
+        return self.x
 
     @property
     def top(self):
-        return self.x
+        return self.y
 
     @property
     def right(self):

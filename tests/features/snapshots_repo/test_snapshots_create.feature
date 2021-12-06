@@ -16,8 +16,9 @@ Feature: Snapshots repository create testing
         Given I create a model with a random name
         And I create a snapshot with a random name
         When I create a snapshot with the same name
-        Then "BadRequest" exception should be raised
-        And "Snapshot name must be unique in model" in error message
+        Then "Conflict" exception should be raised
+#        And "Snapshot name must be unique in model" in error message
+        And "Failed creating  E11000 duplicate key error collection" in error message
         And No snapshot was created
 
 #    Scenario: Create a model with an ItemBucket

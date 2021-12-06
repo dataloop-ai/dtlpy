@@ -65,6 +65,26 @@ def prepare_dataset(dataset: entities.Dataset,
 
 def create_dataset_partition(dataset: entities.Dataset,
                              partitions: dict = None, ):
+    """
+    Creates a Partition of the given dataset to Train-Validation-Test  (dl.SnapshotPartition)
+    :param dataset: dl.Dataset to preform the parition on
+    :param partitions: `dict` {partition: filter}
+        filter can be dl.Filter or a float (accumaliting to 1)
+        partition needs to be one of dl.SnapshotPartition
+    :return: None
+    """
+
+
+    has_partitions = dataset.get_partitions(list(entities.SnapshotPartitionType)).items_count > 0
+    if has_partitions:
+        logger.warning("Dataset {} ({!r}) already have Data Partitions".format(dataset.name, dataset.id))
+    elif dataset.items_count > 200000:
+        # FIXME: https://dataloop.atlassian.net/browse/DAT-18168
+        err_msg = 'Set partition on large dataset is under construction. Current Dataset {ds_n!r} has {n_it} items\n'. \
+            format(ds_n=dataset.name, n_it=dataset.items_count)
+        err_msg += 'Please set the Partitions manually using smaller filters  Or advice with support@dataloop.ai'
+        raise exceptions.SDKError(status_code=500, message=err_msg)
+
     # set partitions
     if partitions is None:
         partitions = {entities.SnapshotPartitionType.TRAIN: 0.8,

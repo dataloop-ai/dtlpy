@@ -119,7 +119,7 @@ class BaseModelAdapter:
         :param data_path: `str` local File System directory path where we already downloaded the data from dataloop platform
         :return:
         """
-        raise NotImplementedError("Please implement 'convert' method in {}".format(self.__class__.__name__))
+        raise NotImplementedError("Please implement 'convert_from_dtlpy' method in {}".format(self.__class__.__name__))
 
     #################
     # DTLPY METHODS #
@@ -168,10 +168,15 @@ class BaseModelAdapter:
         # Make sure snapshot.dataset has partitions
         has_partitions = self.snapshot.get_partitions(list(entities.SnapshotPartitionType)).items_count > 0
         if not has_partitions:  # set the partitions
-            raise ValueError('must create train and test partitions')
+            raise ValueError('must create train and test partitions for snapshot {!r} / dataset {!r}'.
+                             format(self.snapshot.id, self.snapshot.dataset.id))
 
         if len(os.listdir(data_path)) > 0:
             self.logger.warning("Data path directory ({}) is not empty..".format(data_path))
+
+        annotation_options = entities.ViewAnnotationOptions.JSON
+        if self.model_entity.output_type in [entities.AnnotationType.SEGMENTATION]:
+            annotation_options = entities.ViewAnnotationOptions.INSTANCE
 
         # Download the partitions items
         for partition in partitions:
@@ -180,6 +185,7 @@ class BaseModelAdapter:
             data_partiion_base_path = os.path.join(data_path, partition)
             ret_list = self.snapshot.download_partition(partition=partition,
                                                         local_path=data_partiion_base_path,
+                                                        annotation_options=annotation_options,
                                                         filters=filters)
             self.logger.info("Downloaded {!r} SnapshotPartition complete. {} total items".format(partition,
                                                                                                  len(list(ret_list))))
@@ -244,6 +250,7 @@ class BaseModelAdapter:
             shutil.rmtree(path=local_path, ignore_errors=True)
             self.logger.info("Clean-up. deleting {}".format(local_path))
         self.snapshot.status = 'trained'
+        self.snapshot.configuration = self.configuration
         self.snapshot = self.snapshot.update()
 
     def predict_items(self, items: list, with_upload=True, cleanup=False, batch_size=16, output_shape=None, **kwargs):

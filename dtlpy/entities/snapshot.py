@@ -400,7 +400,7 @@ class Snapshot(entities.BaseEntity):
                                     tags=tags
                                     )
 
-    def download_partition(self, partition, local_path=None, filters: entities.Filters = None):
+    def download_partition(self, partition, local_path=None, filters: entities.Filters = None, annotation_options=None):
         """
         Download a specific partition of the dataset to local_path
         This function is commonly used with dl.ModelAdapter which implements thc convert to specific model structure
@@ -413,7 +413,8 @@ class Snapshot(entities.BaseEntity):
         """
         return self.dataset.download_partition(partition=partition,
                                                local_path=local_path,
-                                               filters=filters)
+                                               filters=filters,
+                                               annotation_options=annotation_options)
 
     def set_partition(self, partition, filters=None):
         """

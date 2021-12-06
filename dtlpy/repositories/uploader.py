@@ -94,7 +94,7 @@ class Uploader:
         # summary
         logger.info("Number of total files: {}".format(num_files))
         status_list = self.reporter.status_list
-        for action in status_list:
+        for action in set(status_list):
             n_for_action = self.reporter.status_count(status=action)
             logger.info("Number of files {}: {}".format(action, n_for_action))
 

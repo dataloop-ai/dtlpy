@@ -1509,62 +1509,19 @@ class LocalServiceRunner:
         logging.root.level = current_level
         return results
 
-    def get_dataset(self, resource_id, project=None) -> entities.Dataset:
-        """
-        Get dataset
-        :param resource_id:
-        :param project: project entity
-        :return: Dataset entity
-        """
-        dataset_id = resource_id.get('dataset_id', None) if isinstance(resource_id, dict) else resource_id
+    @staticmethod
+    def _is_entity(output_type: str):
+        # output_type is a entity class starts with capital
+        return hasattr(entities, output_type)
 
-        if not isinstance(dataset_id, str):
-            dataset_id = self._client_api.state_io.get('dataset')
-
-        if project is not None:
-            datasets = project.datasets
+    @staticmethod
+    def _fetch_single_resource(value, output_type, sdk):
+        if isinstance(value, dict):
+            params = {'{}_id'.format(output_type.lower()): value['{}_id'.format(output_type.lower())]}
         else:
-            datasets = repositories.Datasets(client_api=self._client_api)
+            params = {'{}_id'.format(output_type.lower()): value}
 
-        return datasets.get(dataset_id=dataset_id)
-
-    def get_project(self, resource_id) -> entities.Project:
-        """
-        Get project
-        :param resource_id:
-        :return: Project entity
-        """
-        project_id = resource_id.get('project_id', None) if isinstance(resource_id, dict) else resource_id
-
-        if not isinstance(project_id, str):
-            project_id = self._client_api.state_io.get('project').get('id', None)
-
-        return repositories.Projects(client_api=self._client_api).get(project_id=project_id)
-
-    def get_item(self, resource_id, project=None) -> entities.Item:
-        """
-        Get item
-        :param resource_id:
-        :param project: project entity
-        :return: Item entity
-        """
-        if project is not None:
-            items = project.items
-        else:
-            items = repositories.Items(client_api=self._client_api)
-
-        return items.get(item_id=resource_id['item_id'] if isinstance(resource_id, dict) else resource_id)
-
-    def get_annotation(self, resource_id, project=None) -> entities.Annotation:
-        """
-        Get annotation
-        :param resource_id:
-        :param project: project entity
-        :return: Annotation entity
-        """
-        item = self.get_item(project=project, resource_id=resource_id)
-        return item.annotations.get(
-            annotation_id=resource_id['annotation_id'] if isinstance(resource_id, dict) else resource_id)
+        return getattr(sdk, '{}s'.format(output_type.lower())).get(**params)
 
     def get_field(self, field_name, field_type, mock_json, project=None, mock_inputs=None):
         """
@@ -1585,26 +1542,22 @@ class LocalServiceRunner:
         if len(filtered_mock_inputs) > 1:
             raise Exception('Duplicate entries for field {} found in mock'.format(field_name))
 
+        if field_type not in list(entities.PackageInputType):
+            raise exceptions.PlatformException('400', 'Unknown resource type for field {}'.format(field_name))
+
         mock_input = filtered_mock_inputs[0]
         resource_id = mock_input['value']
 
-        if field_type == 'Dataset':
-            return self.get_dataset(project=project, resource_id=resource_id)
-
-        elif field_type == 'Item':
-            return self.get_item(project=project, resource_id=resource_id)
-
-        elif field_type == 'Annotation':
-            return self.get_annotation(project=project, resource_id=resource_id)
-
-        elif field_type == 'Project':
-            return self.get_project(resource_id=resource_id)
-
-        elif field_type == 'Json':
-            return mock_input['value']
-
+        if field_type.endswith('[]') and self._is_entity(output_type=field_type.replace('[]', '')):
+            field_type = field_type.replace('[]', '')
+            value = resource_id if isinstance(resource_id, list) else [resource_id]
+            return [
+                self._fetch_single_resource(value=val, output_type=field_type, sdk=project) for val in value
+            ]
+        elif self._is_entity(output_type=field_type):
+            return self._fetch_single_resource(value=resource_id, output_type=field_type, sdk=project)
         else:
-            raise exceptions.PlatformException('400', 'Unknown resource type for field {}'.format(field_name))
+            return resource_id
 
 
 class PackageIO:

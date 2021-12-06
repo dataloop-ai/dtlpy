@@ -3,10 +3,11 @@ from pathlib import Path
 from PIL import Image
 import torchvision
 import numpy as np
+import traceback
 import logging
 import imgaug
 import shutil
-import json
+import tqdm
 import os
 
 from ... import entities
@@ -30,9 +31,7 @@ class BaseGenerator:
                  to_categorical=False,
                  # debug flags
                  return_originals=False,
-                 return_separate_labels=False,
-                 return_filename=False,
-                 return_label_string=False,
+                 ignore_empty=True
                  ) -> None:
         """
         Base Dataset Generator to build and iterate over images and annotations
@@ -48,9 +47,7 @@ class BaseGenerator:
         :param seed: Optional random seed for shuffling and transformations.
         :param to_categorical: convert label id to categorical format
         :param return_originals: bool - If True, return ALSO images and annotations before transformations (for debug)
-        :param return_separate_labels: bool - If True, return labels and geo separately and not concatenated to single array
-        :param return_filename: bool - If True, return the parsed itemname along with image array and annotation
-        :param return_label_string: bool - If True, the returned annotation is by it's label string and not label id mapping
+        :param ignore_empty: bool - If True, generator will NOT collect items without annotations
         """
 
         if data_path is None:
@@ -68,10 +65,15 @@ class BaseGenerator:
         else:
             download = True
         if download:
-            # TODO optimize
-            _ = dataset_entity.download_annotations(local_path=data_path)
-            _ = dataset_entity.items.download(local_path=data_path)
+            if annotation_type in [entities.AnnotationType.SEGMENTATION]:
+                annotation_options = entities.ViewAnnotationOptions.INSTANCE
+            else:
+                annotation_options = entities.ViewAnnotationOptions.JSON
+            _ = dataset_entity.items.download(local_path=data_path, annotation_options=annotation_options)
         self.root_dir = data_path
+        self._items_path = Path(self.root_dir).joinpath('items')
+        self._json_path = Path(self.root_dir).joinpath('json')
+        self._mask_path = Path(self.root_dir).joinpath('instance')
         self._transforms = transforms
         self._dataset_entity = dataset_entity
         if label_to_id_map is None:
@@ -88,45 +90,117 @@ class BaseGenerator:
         self.shuffle = shuffle
         self.seed = seed
         # inits
-        self.image_paths = list()
-        self.annotations = list()
+        self.data_items = list()
         # flags
-        self.return_filename = return_filename
-        self.return_label_string = return_label_string
         self.return_originals = return_originals
-        self.return_separate_labels = return_separate_labels
+        self.ignore_empty = ignore_empty
 
         ####################
         # Load annotations #
         ####################
         self.load_annotations()
 
-    def load_annotations(self):
-        root_path = Path(self.root_dir)
-        for json_path in root_path.rglob('**/*.json'):
-            with open(json_path, 'r') as f:
-                data = json.load(f)
-            img_path = root_path.joinpath('items').joinpath(data['filename'][1:])
-            geos, labels_ids = None, None
+    def _load_single(self, image_filepath, pbar=None):
+        try:
+            is_empty = False
+            item_info = dict(image_filepath=str(image_filepath))
+            # get "platform" path
+            rel_path = image_filepath.relative_to(self._items_path)
+            # replace suffix to JSON
+            rel_path_wo_png_ext = rel_path.with_suffix('.json')
+            # create local path
+            annotation_filepath = Path(self._json_path, rel_path_wo_png_ext)
             if self.annotation_type is not None:
-                annotation = entities.AnnotationCollection.from_json(data)
-                if img_path.suffix.lower() in self.IMAGE_EXTENSIONS:
-                    # loading a single item's annotations
-                    # get label ids as [N, 1], boxes [N, 4]
-                    geos, labels_ids = self._from_dtlpy(annotation)
-                    if labels_ids.shape[0] == 0:
-                        logger.warning('Empty annotation for image filename: {}'.format(img_path))
-                        continue
-            self.image_paths.append(img_path)
-            self.annotations.append((geos, labels_ids))
+                annotations = entities.AnnotationCollection.from_json_file(annotation_filepath)
+                box_coordinates = list()
+                classes_ids = list()
+                labels = list()
+                for annotation in annotations:
+                    if annotation.type == self.annotation_type:
+                        classes_ids.append(self.label_to_id_map[annotation.label])
+                        labels.append(annotation.label)
+
+                        if annotation.type == entities.AnnotationType.BOX:
+                            # [x1, y1, x2, y2]
+                            annotation: entities.Box
+                            box_coordinates.append(np.asarray([annotation.left,
+                                                               annotation.top,
+                                                               annotation.right,
+                                                               annotation.bottom]))
+                            classes_ids.append(self.label_to_id_map[annotation.label])
+                            labels.append(annotation.label)
+                        elif annotation.type in [entities.AnnotationType.CLASSIFICATION,
+                                                 entities.AnnotationType.SEGMENTATION]:
+                            ...
+                        else:
+                            raise ValueError(
+                                'unsupported annotation type: {}'.format(annotation.type))
+                # reorder for output
+                item_info.update({entities.AnnotationType.BOX.value: np.asarray(box_coordinates).astype(float),
+                                  entities.AnnotationType.CLASSIFICATION.value: np.asarray(classes_ids),
+                                  'labels': labels})
+                if len(item_info['labels']) == 0:
+                    logger.debug('Empty annotation for image filename: {}'.format(image_filepath))
+                    is_empty = True
+            if self.annotation_type in [entities.AnnotationType.SEGMENTATION]:
+                # get "platform" path
+                rel_path = image_filepath.relative_to(self._items_path)
+                # replace suffix to PNG
+                rel_path_wo_png_ext = rel_path.with_suffix('.png')
+                # create local path
+                mask_filepath = Path(self._mask_path, rel_path_wo_png_ext)
+                if not os.path.isfile(mask_filepath):
+                    logger.debug('Empty annotation for image filename: {}'.format(image_filepath))
+                    is_empty = True
+                item_info.update({entities.AnnotationType.SEGMENTATION.value: str(mask_filepath)})
+            item_info.update(annotation_filepath=str(annotation_filepath))
+            return item_info, is_empty
+        except Exception:
+            logger.exception('failed loading item in generator! {!r}'.format(image_filepath))
+            return None, True
+        finally:
+            if pbar is not None:
+                pbar.update()
+
+    def load_annotations(self):
+        files = list(self._items_path.rglob('*'))
+        pool = ThreadPoolExecutor(max_workers=32)
+        jobs = list()
+        pbar = tqdm.tqdm(total=len(files), desc='Loading Data Generator')
+        for image_filepath in files:
+            if image_filepath.suffix.lower() not in self.IMAGE_EXTENSIONS:
+                continue
+            jobs.append(pool.submit(self._load_single,
+                                    image_filepath=image_filepath,
+                                    pbar=pbar))
+
+        outputs = [job.result() for job in jobs]
+        pbar.close()
+
+        n_items = len(outputs)
+        n_empty_items = sum([1 for _, is_empty in outputs if is_empty is True])
+
+        output_msg = 'Done loading items. Total items loaded: {}.'.format(n_items)
+        if n_empty_items > 0:
+            output_msg += '{action} {n_empty_items} items without annotations'.format(
+                action='IGNORING' if self.ignore_empty else 'INCLUDING',
+                n_empty_items=n_empty_items)
+
+        if self.ignore_empty:
+            # take ONLY non-empty
+            data_items = [data_item for data_item, is_empty in outputs if is_empty is False]
+        else:
+            # take all
+            data_items = [data_item for data_item, is_empty in outputs]
+
+        self.data_items = data_items
+        logger.info(output_msg)
 
         if self.shuffle:
             if self.seed is None:
                 self.seed = 42
             np.random.seed(self.seed)
-            np.random.shuffle(self.annotations)
-            np.random.seed(self.seed)
-            np.random.shuffle(self.image_paths)
+            np.random.shuffle(self.data_items)
 
     @property
     def dataset_entity(self):
@@ -139,13 +213,13 @@ class BaseGenerator:
         self._dataset_entity = val
 
     def __len__(self):
-        return len(self.image_paths)
+        return len(self.data_items)
 
     def _type_to_var_name(self):
         if self.annotation_type == entities.AnnotationType.BOX:
             return 'bounding_boxes'
         elif self.annotation_type == entities.AnnotationType.SEGMENTATION:
-            return 'segmentation_map'
+            return 'segmentation_maps'
         elif self.annotation_type == entities.AnnotationType.POLYGON:
             return 'polygons'
         else:
@@ -180,73 +254,48 @@ class BaseGenerator:
                 image = t(image)
         return image, target
 
-    def _from_dtlpy(self, annotations):
-        # collect annotations
-        geos = list()
-        labels_id = list()
-        for annotation in annotations:
-            if annotation.type == self.annotation_type:
-                if annotation.type == entities.AnnotationType.BOX:
-                    # [x1, y1, x2, y2]
-                    geo = np.asarray([annotation.left,
-                                      annotation.top,
-                                      annotation.right,
-                                      annotation.bottom])
-                elif annotation.type == entities.AnnotationType.CLASSIFICATION:
-                    # None
-                    geo = None
-                else:
-                    raise ValueError(
-                        'unsupported annotation type: {}'.format(annotation.type))
-                geos.append(geo)
-                if self.return_label_string:
-                    labels_id.append(annotation.label)
-                else:
-                    labels_id.append(self.label_to_id_map[annotation.label])
-
-        # reorder for output
-        geos = np.asarray(geos).astype(float)
-        if self.return_label_string:
-            labels_id = np.asarray(labels_id).reshape((-1, 1))
-        else:
-            labels_id = np.asarray(labels_id).reshape((-1, 1)).astype(float)
-        if self.annotation_type == entities.AnnotationType.BOX:
-            geos = geos.reshape(-1, 4)
-        return geos, labels_id
-
     def _to_dtlpy(self, targets, labels=None):
         annotations = entities.AnnotationCollection(item=None)
+        annotations._dataset = self._dataset_entity
         if labels is None:
             labels = [None] * len(targets)
-        for target, label in zip(targets, labels):
-            if self.annotation_type == entities.AnnotationType.BOX:
+        if self.annotation_type == entities.AnnotationType.SEGMENTATION:
+            for label, label_ind in self.label_to_id_map.items():
+                target = targets == label_ind
+                if np.any(target):
+                    annotations.add(annotation_definition=entities.Segmentation(geo=target,
+                                                                                label=label))
+        elif self.annotation_type == entities.AnnotationType.BOX:
+            for target, label in zip(targets, labels):
                 annotations.add(annotation_definition=entities.Box(left=target[0],
                                                                    top=target[1],
                                                                    right=target[2],
                                                                    bottom=target[3],
                                                                    label=label))
-            elif self.annotation_type == entities.AnnotationType.CLASSIFICATION:
-                annotations.add(
-                    annotation_definition=entities.Classification(label=label))
-            else:
-                raise ValueError(
-                    'unsupported annotation type: {}'.format(self.annotation_type))
+        elif self.annotation_type == entities.AnnotationType.CLASSIFICATION:
+            for target, label in zip(targets, labels):
+                annotations.add(annotation_definition=entities.Classification(label=label))
+        else:
+            raise ValueError('unsupported annotation type: {}'.format(self.annotation_type))
+        # set dataset for color
+        for annotation in annotations:
+            annotation._dataset = self._dataset_entity
         return annotations
 
     def visualize(self, idx=None, return_output=False, plot=True):
         import matplotlib.pyplot as plt
         if idx is None:
             idx = np.random.randint(self.__len__())
-        t = self.return_separate_labels
-        self.return_separate_labels = True
-        image, targets, labels = self.__getitem__(idx)
-        self.return_separate_labels = t
+        data_item = self.__getitem__(idx)
+        image = data_item.get('image')
+        labels = data_item.get('labels')
+        targets = data_item.get('annotations')
         annotations = self._to_dtlpy(targets=targets, labels=labels)
         marked_image = annotations.show(image=image,
                                         height=image.shape[0],
                                         width=image.shape[1],
-                                        color=(255, 0, 0),
-                                        with_text=True)
+                                        alpha=0.8,
+                                        with_text=False)
         if plot:
             plt.figure()
             plt.imshow(marked_image)
@@ -254,46 +303,33 @@ class BaseGenerator:
             return marked_image, annotations
 
     def __getsingleitem__(self, idx):
-        image_filename = self.image_paths[idx]
-        geos, labels_ids = self.annotations[idx]
-        parsed_filename = os.path.basename(image_filename)
-        image = np.asarray(Image.open(image_filename).convert('RGB'))
+        data_item = self.data_items[idx]
 
-        orig_image = None
-        orig_geos = None
+        image_filename = data_item.get('image_filepath')
+        image = np.asarray(Image.open(image_filename).convert('RGB'))
+        data_item.update({'image': image})
+
+        annotations = data_item.get(self.annotation_type)
+        if self.annotation_type == entities.AnnotationType.SEGMENTATION:
+            # if segmentation - read from file
+            mask_filepath = annotations
+            annotations = np.asarray(Image.open(mask_filepath).convert('L'))
+        data_item.update({'annotations': annotations})
+
         if self.return_originals:
-            orig_image = image.copy()
-            orig_geos = geos.copy()
+            annotations = data_item.get('annotations')
+            data_item.update({'orig_image': image.copy(),
+                              'orig_annotations': annotations.copy()})
 
         ###########################
         # perform transformations #
         ###########################
         if self._transforms:
-            image, geos = self.transform(image, geos)
-
-        to_return = (image,)
-        if self.annotation_type is not None:
-            # build the annotations format to return
-            targets = (geos, labels_ids)
-            if not self.return_separate_labels:
-                if self.annotation_type == entities.AnnotationType.CLASSIFICATION:
-                    # support only for single classification label
-                    y = labels_ids.flatten()[0]
-                    if self.to_categorical:
-                        categorical = np.zeros(self.num_classes, dtype='float32')
-                        categorical[int(y)] = 1
-                        y = categorical
-                    targets = (y,)
-                else:
-                    targets = (np.concatenate((geos, labels_ids), axis=1),)
-            to_return += targets
-        # return original images flag
-        if self.return_originals:
-            to_return += (orig_image, orig_geos)
-        # return item filename flag
-        if self.return_filename:
-            to_return += (parsed_filename,)
-        return to_return
+            annotations = data_item.get('annotations')
+            image, annotations = self.transform(image, annotations)
+            data_item.update({'image': image,
+                              'annotations': annotations})
+        return data_item
 
     def __getitem__(self, idx):
         """

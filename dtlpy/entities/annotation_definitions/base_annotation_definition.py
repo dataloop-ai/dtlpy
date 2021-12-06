@@ -78,7 +78,7 @@ class BaseAnnotationDefinition:
             left = image.shape[1] / 10
         return cv2.putText(img=image,
                            text=text,
-                           org=tuple([int(np.round(top)), int(np.round(left))]),
+                           org=tuple([int(np.round(left)), int(np.round(top))]),
                            color=(255, 0, 0),
                            fontFace=cv2.FONT_HERSHEY_DUPLEX,
                            fontScale=1,

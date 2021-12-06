@@ -561,7 +561,8 @@ class Annotation(entities.BaseEntity):
         else:
             is_video = False
 
-        if is_video:
+        # we enter to video mode if this an annotation for video and (we get a list of frames or None)
+        if is_video and (isinstance(image, list) or image is None):
             # is the image empty make a zeros one
             if image is None:
                 nb_frames = self.item.system.get('nb_frames', 0)
@@ -602,15 +603,6 @@ class Annotation(entities.BaseEntity):
                                                               label_instance_dict=label_instance_dict)
                     except Exception as e:
                         raise ValueError(e)
-                    if with_text:
-                        text = '%s-%s' % (self.label, ','.join(self.attributes))
-                        frame = cv2.putText(frame,
-                                            text=text,
-                                            org=tuple([int(np.round(self.left)), int(np.round(self.top))]),
-                                            color=self.color,
-                                            fontFace=cv2.FONT_HERSHEY_DUPLEX,
-                                            fontScale=1,
-                                            thickness=thickness)
                 if annotation_format == entities.ViewAnnotationOptions.MASK:
                     frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2BGR)
 

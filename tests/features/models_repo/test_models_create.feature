@@ -16,7 +16,7 @@ Feature: Models repository create testing
         Given There are no models
         And I create a model with a random name
         When I create a model with the same name
-        Then "BadRequest" exception should be raised
+        Then "Conflict" exception should be raised
         And No model was created
 
     @testrail-C4523124

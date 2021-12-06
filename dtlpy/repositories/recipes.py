@@ -128,6 +128,7 @@ class Recipes:
             _ = [logger.warning(r[1]) for r in results if r[0] is False]
             # return good jobs
             recipes = miscellaneous.List([r[1] for r in results if r[0] is True])
+            logger.warning('Deprecation Warning - return type will be pageEntity from version 1.46.0 not a list')
         elif self._project_id is not None:
             if filters is None:
                 filters = entities.Filters(resource=entities.FiltersResource.RECIPE)

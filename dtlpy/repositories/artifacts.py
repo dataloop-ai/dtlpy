@@ -131,6 +131,7 @@ class Artifacts:
         filters.add(field='filename', values=remote_path)
         pages = self.items_repository.list(filters=filters)
         items = [item for page in pages for item in page]
+        logger.warning('Deprecation Warning - return type will be pageEntity from version 1.46.0 not a list')
         return miscellaneous.List(items)
 
     def get(self,

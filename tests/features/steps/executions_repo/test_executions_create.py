@@ -133,6 +133,15 @@ def step_impl(context, resource_type):
     assert success
 
 
+@behave.then(u'Execution was executed and finished')
+def step_impl(context):
+    success = False
+    execution = context.service.executions.get(execution_id=context.execution.id)
+    if execution.latest_status['status'] == 'success':
+        success = True
+    assert success
+
+
 @behave.given(u'I upload item in "{item_path}" to dataset')
 def step_impl(context, item_path):
     item_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], item_path)

@@ -17,6 +17,7 @@ from tests.features.steps.datasets_repo import test_datasets_delete
 from tests.features.steps.datasets_repo import test_datasets_update
 from tests.features.steps.datasets_repo import test_datasets_readonly
 from tests.features.steps.datasets_repo import test_datasets_download_annotations
+from tests.features.steps.datasets_repo import test_dataset_upload_annotations
 from tests.features.steps.datasets_repo import test_datasets_download
 from tests.features.steps.datasets_repo import test_dataset_context
 

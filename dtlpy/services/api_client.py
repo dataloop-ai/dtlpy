@@ -341,16 +341,10 @@ class ApiClient:
                 pool_name,
                 list(self._thread_pools_names.keys())))
         num_processes = self._thread_pools_names[pool_name]
-        if pool_name not in self._thread_pools:
+        if pool_name not in self._thread_pools or self._thread_pools[pool_name]._shutdown:
             self._thread_pools[pool_name] = ThreadPoolExecutor(max_workers=num_processes)
         pool = self._thread_pools[pool_name]
         assert isinstance(pool, concurrent.futures.ThreadPoolExecutor)
-        # if pool._broken:
-        #     # pool is closed, open a new one
-        #     self._stopped_pools.append(pool)
-        #     logger.debug('Global ThreadPool is not running. Creating a new one')
-        #     pool = ThreadPoolExecutor(max_workers=num_processes)
-        #     self._thread_pools[pool_name] = pool
         return pool
 
     @property

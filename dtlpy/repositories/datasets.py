@@ -6,7 +6,6 @@ import os
 import tqdm
 import logging
 from urllib.parse import urlencode
-
 from .. import entities, repositories, miscellaneous, exceptions, services
 
 logger = logging.getLogger(name=__name__)
@@ -628,6 +627,59 @@ class Datasets:
             _ = [j.result() for j in jobs]
             progress.close()
         return local_path
+
+    def _upload_single_item_annotation(self, item, file, pbar):
+        try:
+            item.annotations.upload(file)
+        except Exception as err:
+            raise err
+        finally:
+            pbar.update()
+
+    def upload_annotations(self,
+                           dataset,
+                           local_path,
+                           filters: entities.Filters = None,
+                           clean=False,
+                           remote_root_path='/'
+                           ):
+        """
+        Upload annotations to dataset.
+        :param dataset: dataset to upload to it
+        :param local_path: str - local folder where the annotations files is.
+        :param filters: Filters entity or a dictionary containing filters parameters
+        :param clean: bool - if True it remove the old annotations
+        :param remote_root_path: str - the remote root path to match remote and local items
+        For example, if the item filepath is a/b/item and remote_root_path is /a the start folder will be b instead of a
+        :return:
+        """
+        if filters is None:
+            filters = entities.Filters()
+        pages = dataset.items.list(filters=filters)
+        total_items = pages.items_count
+        pbar = tqdm.tqdm(total=total_items)
+        pool = self._client_api.thread_pools('annotation.upload')
+        annotations_uploaded_count = 0
+        for item in pages.all():
+            _, ext = os.path.splitext(item.filename)
+            filepath = item.filename.replace(ext, '.json')
+            # make the file path ignore the hierarchy of the files that in remote_root_path
+            filepath = os.path.relpath(filepath, remote_root_path)
+            json_file = os.path.join(local_path, filepath)
+            if not os.path.isfile(json_file):
+                pbar.update()
+                continue
+            annotations_uploaded_count += 1
+            if item.annotated and clean:
+                item.annotations.delete(filters=entities.Filters(resource=entities.FiltersResource.ANNOTATION))
+            pool.submit(self._upload_single_item_annotation, **{'item': item,
+                                                                'file': json_file,
+                                                                'pbar': pbar})
+        pool.shutdown()
+        if annotations_uploaded_count == 0:
+            logger.warning(msg="No annotations uploaded to dataset! ")
+        else:
+            logger.info(msg='Found and uploaded {} annotations.'.format(annotations_uploaded_count))
 
     def set_readonly(self, state: bool, dataset: entities.Dataset):
         """

@@ -1,8 +1,17 @@
 import numpy as np
+import tensorflow as tf
+import tensorflow.keras.utils
+import collections.abc
+import re
 
 from .base_dataset_generator import BaseGenerator
 from ... import entities
-import tensorflow.keras.utils
+
+np_str_obj_array_pattern = re.compile(r'[SaUO]')
+
+default_collate_err_msg_format = (
+    "default_collate: batch must contain tensors, numpy arrays, numbers, "
+    "dicts or lists; found {}")
 
 
 class DataGenerator(BaseGenerator, tensorflow.keras.utils.Sequence):
@@ -21,9 +30,7 @@ class DataGenerator(BaseGenerator, tensorflow.keras.utils.Sequence):
                  batch_size=32,
                  # flags
                  return_originals=False,
-                 return_separate_labels=False,
-                 return_filename=False,
-                 return_label_string=False,
+                 ignore_empty=True
                  ) -> None:
         """
         """
@@ -37,18 +44,16 @@ class DataGenerator(BaseGenerator, tensorflow.keras.utils.Sequence):
                                             shuffle=shuffle,
                                             seed=seed,
                                             # flags
-                                            return_filename=return_filename,
-                                            return_label_string=return_label_string,
                                             return_originals=return_originals,
-                                            return_separate_labels=return_separate_labels)
+                                            ignore_empty=ignore_empty
+                                            )
         self.batch_size = batch_size
 
     def __getitem__(self, index):
         indices = slice(index * self.batch_size, (index + 1) * self.batch_size)
         batch = super(DataGenerator, self).__getitem__(indices)
-        # convert from list of sample to a list per column (X, Y, ...)
-        nd_batch = np.asarray(batch)
-        return nd_batch.T
+        # convert from list of sample to a unified dict of all samples
+        return collate(batch=batch)
 
     def __iter__(self):
         """Create a generator that iterate over the Sequence."""
@@ -58,3 +63,35 @@ class DataGenerator(BaseGenerator, tensorflow.keras.utils.Sequence):
     def __len__(self):
         n_data = super(DataGenerator, self).__len__()
         return int(np.floor(n_data / self.batch_size))
+
+
+def collate(batch):
+    r"""Puts each data field into a tensor with outer dimension batch size"""
+
+    elem = batch[0]
+    elem_type = type(elem)
+    if isinstance(elem, tf.Tensor):
+        return tf.stack(batch, axis=0)
+    elif elem_type.__module__ == 'numpy' and elem_type.__name__ != 'str_' and elem_type.__name__ != 'string_':
+        if elem_type.__name__ == 'ndarray' or elem_type.__name__ == 'memmap':
+            # array of string classes and object
+            if np_str_obj_array_pattern.search(elem.dtype.str) is not None:
+                raise TypeError(default_collate_err_msg_format.format(elem.dtype))
+            return tf.convert_to_tensor(batch)
+            # return [tf.convert_to_tensor(b) for b in batch]
+        elif elem.shape == ():  # scalars
+            return tf.convert_to_tensor(batch)
+    elif isinstance(elem, float):
+        return tf.convert_to_tensor(batch, dtype=tf.float64)
+    elif isinstance(elem, int):
+        return tf.convert_to_tensor(batch)
+    elif isinstance(elem, str) or isinstance(elem, bytes) or elem is None:
+        return batch
+    elif isinstance(elem, collections.abc.Mapping):
+        return {key: collate([d[key] for d in batch]) for key in elem}
+    elif isinstance(elem, tuple) and hasattr(elem, '_fields'):  # namedtuple
+        return elem_type(*(collate(samples) for samples in zip(*batch)))
+    elif isinstance(elem, collections.abc.Sequence):
+        transposed = zip(*batch)
+        return transposed
+    raise TypeError(default_collate_err_msg_format.format(elem_type))

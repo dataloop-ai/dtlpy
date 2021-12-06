@@ -520,6 +520,31 @@ class Dataset(entities.BaseEntity):
             alpha=alpha
         )
 
+    def upload_annotations(self,
+                           local_path,
+                           filters=None,
+                           clean=False,
+                           remote_root_path='/'
+                           ):
+        """
+        Upload annotations to dataset.
+
+        :param local_path: str - local folder where the annotations files is.
+        :param filters: Filters entity or a dictionary containing filters parameters
+        :param clean: bool - if True it remove the old annotations
+        :param remote_root_path: str - the remote root path to match remote and local items
+        For example, if the item filepath is a/b/item and remote_root_path is /a the start folder will be b instead of a
+        :return:
+        """
+
+        return self.datasets.upload_annotations(
+            dataset=self,
+            local_path=local_path,
+            filters=filters,
+            clean=clean,
+            remote_root_path=remote_root_path
+        )
+
     def checkout(self):
         """
         Checkout the dataset
@@ -723,7 +748,7 @@ class Dataset(entities.BaseEntity):
                 ontology.delete_labels(label_names=label_names)
         self._labels = None
 
-    def download_partition(self, partition, local_path=None, filters=None):
+    def download_partition(self, partition, local_path=None, filters=None, annotation_options=None):
         """
         Download a specific partition of the dataset to local_path
         This function is commonly used with dl.ModelAdapter which implements thc convert to specific model structure
@@ -738,6 +763,8 @@ class Dataset(entities.BaseEntity):
             local_path = os.getcwd()
         if filters is None:
             filters = entities.Filters(resource=entities.FiltersResource.ITEM)
+        if annotation_options is None:
+            annotation_options = entities.ViewAnnotationOptions.JSON
 
         if partition == 'all':  # TODO: should it be all or None (all != list(SnapshotPartitions) )
             logger.info("downloading all items - even without partitions")
@@ -746,7 +773,7 @@ class Dataset(entities.BaseEntity):
 
         return self.items.download(filters=filters,
                                    local_path=local_path,
-                                   annotation_options=entities.ViewAnnotationOptions.JSON)
+                                   annotation_options=annotation_options)
 
     def set_partition(self, partition, filters=None):
         """
@@ -759,7 +786,8 @@ class Dataset(entities.BaseEntity):
         if filters is None:
             filters = entities.Filters(resource=entities.FiltersResource.ITEM)
         # TODO: How to preform update using the Filter - where do i set the field - docstring should state dict key-val while arg name is only values....
-        return self.items.update(filters=filters, system_update_values={'snapshotPartition': partition},
+        return self.items.update(filters=filters,
+                                 system_update_values={'snapshotPartition': partition},
                                  system_metadata=True)
 
     def get_partitions(self, partitions, filters=None):

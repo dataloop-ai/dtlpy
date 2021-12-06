@@ -357,7 +357,7 @@ class Downloader:
         :param filters: dl.Filters entity to filters items
         :param annotation_filters: dl.Filters entity to filters items' annotations
         :param overwrite: optional - overwrite annotations if exist, default = false
-        :param include_annotations_in_output: default - False , if export should contain annotations
+        :param include_annotations_in_output: default - True , if export should contain annotations
         :param export_png_files: default - True, if semantic annotations should exported as png files
         :param filter_output_annotations: default - False, given an export by filter - determine if to filter out annotations
         :return:
@@ -431,6 +431,10 @@ class Downloader:
             local_path = os.path.dirname(local_path)
 
         annotation_rel_path = item.filename[1:]
+        if img_filepath is not None:
+            dir_name = os.path.dirname(annotation_rel_path)
+            base_name = os.path.basename(img_filepath)
+            annotation_rel_path = os.path.join(dir_name, base_name)
 
         # find annotations json
         annotations_json_filepath = os.path.join(local_path, "json", annotation_rel_path)
