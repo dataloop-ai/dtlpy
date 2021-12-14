@@ -2,6 +2,7 @@ from collections import namedtuple
 from enum import Enum
 import traceback
 import logging
+import warnings
 from typing import List
 
 import attr
@@ -294,18 +295,28 @@ class Snapshot(entities.BaseEntity):
 
     @property
     def label_map(self):
-        if 'label_map' not in self.configuration:
-            # default
-            if self.ontology_id == 'null' or self.ontology_id is None:
-                self.configuration['label_map'] = {idx: lbl for idx, lbl in enumerate(self.labels)}
-            else:
-                self.configuration['label_map'] = {ont.tag: i for i, ont in enumerate(self.ontology.labels)}
-
-        return self.configuration['label_map']
+        logger.warning('Deprecation warning: Please use id_to_label_map')
+        return self.id_to_label_map
 
     @label_map.setter
     def label_map(self, mapping: dict):
-        self.configuration['label_map'] = mapping
+        logger.warning('Deprecation warning: Please use id_to_label_map')
+        self.configuration['id_to_label_map'] = mapping
+
+    @property
+    def id_to_label_map(self):
+        if 'id_to_label_map' not in self.configuration:
+            # default
+            if self.ontology_id == 'null' or self.ontology_id is None:
+                self.configuration['id_to_label_map'] = {idx: lbl for idx, lbl in enumerate(self.labels)}
+            else:
+                self.configuration['id_to_label_map'] = {ont.tag: i for i, ont in enumerate(self.ontology.labels)}
+
+        return self.configuration['id_to_label_map']
+
+    @label_map.setter
+    def id_to_label_map(self, mapping: dict):
+        self.configuration['id_to_label_map'] = mapping
 
     ###########
     # methods #
@@ -426,15 +437,16 @@ class Snapshot(entities.BaseEntity):
         """
         self.dataset.set_partition(partition, filters=filters)
 
-    def get_partitions(self, partitions, filters: entities.Filters = None):
+    def get_partitions(self, partitions, filters: entities.Filters = None, batch_size: int = None):
         """
         Returns PagedEntity of items from one or more partitions
 
         :param partitions: `dl.entities.SnapshotPartitionType` or a list. Name of the partitions
         :param filters:  dl.Filters to add the specific partitions constraint to
+        :param batch_size: `int` how many items per page
         :return: `dl.PagedEntities` of `dl.Item`  preforms items.list()
         """
-        return self.dataset.get_partitions(partitions=partitions, filters=filters)
+        return self.dataset.get_partitions(partitions=partitions, filters=filters, batch_size=batch_size)
 
     def add_metric_samples(self, samples):
         """

@@ -332,7 +332,9 @@ class Annotation(entities.BaseEntity):
 
     @property
     def _use_attributes_2(self):
-        return os.environ.get("USE_ATTRIBUTE_2", 'false') == 'true'
+        if self.__client_api is None and self._item is None:
+            return os.environ.get("USE_ATTRIBUTE_2", 'false') == 'true'
+        return self._client_api.attributes_mode.use_attributes_2
 
     @property
     def attributes(self):
@@ -1111,7 +1113,10 @@ class Annotation(entities.BaseEntity):
             object_id = _json['metadata']['system'].get('objectId', object_id)
             status = _json['metadata']['system'].get('status', status)
 
-        recipe_2_attributes = os.environ.get("USE_ATTRIBUTE_2", 'false') == 'true'
+        if client_api is not None:
+            recipe_2_attributes = client_api.attributes_mode.use_attributes_2
+        else:
+            recipe_2_attributes = False
         named_attributes = metadata.get('system', dict()).get('attributes', None)
         attributes = named_attributes if recipe_2_attributes else _json.get('attributes', None)
 
@@ -1277,8 +1282,9 @@ class Annotation(entities.BaseEntity):
 
                     annotation.frames[frame.frame_num] = frame
                     last_frame = frame
-                while last_frame.frame_num < annotation.end_frame:
-                    last_frame = Annotation._add_reflected_frame(annotation=annotation, last_frame=last_frame)
+                if annotation.end_frame is not None:
+                    while last_frame.frame_num < annotation.end_frame:
+                        last_frame = Annotation._add_reflected_frame(annotation=annotation, last_frame=last_frame)
 
             annotation.annotation_definition = annotation.frames[min(frames)].annotation_definition
 

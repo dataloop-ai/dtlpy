@@ -94,7 +94,10 @@ class Projects:
         logger.info('Checked out to project {}'.format(project.name))
 
     def _send_mail(self, project_id: str, send_to: str, title: str, content: str) -> bool:
-        url = '/projects/{}/mail'.format(project_id)
+        if project_id:
+            url = '/projects/{}/mail'.format(project_id)
+        else:
+            url = '/outbox'
         assert isinstance(title, str)
         assert isinstance(content, str)
         if self._client_api.token is not None:

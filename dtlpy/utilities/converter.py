@@ -338,7 +338,7 @@ class Converter:
 
     def __convert_dataset_to_coco(self, dataset: entities.Dataset, local_path, filters=None, annotation_filter=None):
         pages = dataset.items.list(filters=filters)
-        dataset.download_annotations(local_path=local_path)
+        dataset.download_annotations(local_path=local_path, filters=filters, annotation_filters=annotation_filter)
         path_to_dataloop_annotations_dir = os.path.join(local_path, 'json')
         label_to_id = dataset.instance_map
         recipe = dataset.recipes.list()[0]

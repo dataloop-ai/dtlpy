@@ -36,20 +36,7 @@ class Reporter:
         self.cache_chunk = client_api.cache_state.chunk_cache
         if self.cache_chunk is None:
             self.cache_chunk = CHUNK
-        if self.cache_mode:
-            try:
-                self._reports = {'errors': dl_cache.DiskCache('errors-' + self.key),
-                                 'output': dl_cache.DiskCache('output-' + self.key),
-                                 'status': dl_cache.DiskCache('status-' + self.key),
-                                 }
-                self._reports.get('status').add('success', 0)
-                self._reports.get('status').add('failure', 0)
-                self.clear_reporter()
-            except:
-                raise exceptions.PlatformException(
-                    error='2001',
-                    message='Failed to initialize cache handler. Please disable cache usage:  dl.cache_state.enable_cache = False')
-
+        self._reports = None
         self._success = dict()
         self._status = dict()
         self._errors = dict()
@@ -67,6 +54,21 @@ class Reporter:
         return True if errors has occurred False otherwise
         """
         return self.failure_count > 0
+
+    def build_cache(self):
+        if self.cache_mode:
+            try:
+                self._reports = {'errors': dl_cache.DiskCache('errors-' + self.key),
+                                 'output': dl_cache.DiskCache('output-' + self.key),
+                                 'status': dl_cache.DiskCache('status-' + self.key),
+                                 }
+                self._reports.get('status').add('success', 0)
+                self._reports.get('status').add('failure', 0)
+                self.clear_reporter()
+            except:
+                raise exceptions.PlatformException(
+                    error='2001',
+                    message='Failed to initialize cache handler. Please disable cache usage:  dl.cache_state.enable_cache = False')
 
     def construct_output(self, entity):
         """
@@ -155,6 +157,8 @@ class Reporter:
         the function write to the dick the outputs that get until the chunk amount
         """
         with self.mutex:
+            if self._reports is None:
+                self.build_cache()
             if len(self._success) > self.cache_chunk:
                 status_cache = self._reports.get('status')
                 num_true = sum(list(self._success.values()))
@@ -192,7 +196,7 @@ class Reporter:
                 len(self._status) > self.cache_chunk or \
                 len(self._output) > self.cache_chunk or \
                 len(self._success) > self.cache_chunk:
-            if self.cache_mode == 'diskcache':
+            if self.cache_mode:
                 self._write_to_disk()
 
     def generate_log_files(self):

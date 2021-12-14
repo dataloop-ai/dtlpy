@@ -181,6 +181,39 @@ class CacheMode:
         self.to_cookie()
 
 
+class Attributes2:
+    __DEFAULT_USE_ATTRIBUTE = False
+
+    def __init__(self, cookie):
+        self.cookie = cookie
+        dictionary = self.cookie.get('use_attributes_2')
+        if isinstance(dictionary, dict):
+            self.from_cookie(dictionary)
+        else:
+            self._use_attributes_2 = self.__DEFAULT_USE_ATTRIBUTE
+            self.to_cookie()
+
+    def to_cookie(self):
+        dictionary = {'use_attributes_2': self._use_attributes_2}
+        self.cookie.put(key='use_attributes_2', value=dictionary)
+
+    def from_cookie(self, dictionary):
+        self._use_attributes_2 = dictionary.get('use_attributes_2', self.__DEFAULT_USE_ATTRIBUTE)
+
+    @property
+    def use_attributes_2(self):
+        return self._use_attributes_2
+
+    @use_attributes_2.setter
+    def use_attributes_2(self, val: bool):
+        if not isinstance(val, bool):
+            raise exceptions.PlatformException(error=400,
+                                               message="input must be of type bool")
+        self._use_attributes_2 = val
+        os.environ["USE_ATTRIBUTE_2"] = json.dumps(val)
+        self.to_cookie()
+
+
 class Decorators:
     @staticmethod
     def token_expired_decorator(method):
@@ -221,6 +254,7 @@ class ApiClient:
         self._environment = None
         self._verbose = None
         self._cache_state = None
+        self._attributes_mode = None
         self._fetch_entities = None
         # define other params
         self.last_response = None
@@ -277,6 +311,7 @@ class ApiClient:
                                     'dataset.download': num_processes}
         # set logging level
         logging.getLogger('dtlpy').handlers[0].setLevel(logging._nameToLevel[self.verbose.logging_level.upper()])
+        os.environ["USE_ATTRIBUTE_2"] = json.dumps(self.attributes_mode.use_attributes_2)
 
     def __del__(self):
         for name, pool in self._thread_pools.items():
@@ -437,6 +472,13 @@ class ApiClient:
             self._cache_state = CacheMode(cookie=self.cookie_io)
         assert isinstance(self._cache_state, CacheMode)
         return self._cache_state
+
+    @property
+    def attributes_mode(self):
+        if self._attributes_mode is None:
+            self._attributes_mode = Attributes2(cookie=self.cookie_io)
+        assert isinstance(self._attributes_mode, Attributes2)
+        return self._attributes_mode
 
     @property
     def token(self):

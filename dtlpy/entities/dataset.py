@@ -790,15 +790,16 @@ class Dataset(entities.BaseEntity):
                                  system_update_values={'snapshotPartition': partition},
                                  system_metadata=True)
 
-    def get_partitions(self, partitions, filters=None):
+    def get_partitions(self, partitions, filters=None, batch_size: int = None):
         """
         Returns PagedEntity of items from one or more partitions
 
         :param partitions: `dl.entities.SnapshotPartitionType` or a list. Name of the partitions
         :param filters:  dl.Filters to add the specific partitions constraint to
+        :param batch_size: `int` how many items per page
         :return: `dl.PagedEntities` of `dl.Item`  preforms items.list()
         """
-        # Question: do we have to give a partition? how do we get in case no partiton is defined?
+        # Question: do we have to give a partition? how do we get in case no partition is defined?
         if isinstance(partitions, str):
             partitions = [partitions]
         if filters is None:
@@ -810,4 +811,4 @@ class Dataset(entities.BaseEntity):
             filters.add(field='metadata.system.snapshotPartition',
                         values=partitions,
                         operator=entities.FiltersOperations.IN)
-        return self.items.list(filters=filters)
+        return self.items.list(filters=filters, page_size=batch_size)

@@ -69,7 +69,7 @@ class Buckets:
         if isinstance(bucket, entities.ItemBucket):
             directory_item = self.items.get(item_id=bucket.directory_item_id)
             output = directory_item.dataset.items.list(filters=entities.Filters(field='dir',
-                                                                                values=directory_item.filename))
+                                                                                values=directory_item.filename+'*'))
         elif isinstance(bucket, entities.GCSBucket):
             gcs_bucket = bucket._bucket
             blobs = gcs_bucket.list_blobs(prefix=bucket._gcs_prefix)
@@ -93,7 +93,7 @@ class Buckets:
         """
         if isinstance(bucket, entities.ItemBucket):
             directory_item = self.items.get(item_id=bucket.directory_item_id)
-            filters = entities.Filters(field='dir', values=directory_item.filename)
+            filters = entities.Filters(field='dir', values=directory_item.filename+'*')
             filters.add(field='name', values=filename)
             output = directory_item.dataset.items.list(filters=filters)
         else:
@@ -104,6 +104,7 @@ class Buckets:
                  bucket: entities.Bucket,
                  local_path=None,
                  overwrite=False,
+                 without_relative_path=None
                  ):
         """
 
@@ -112,23 +113,24 @@ class Buckets:
         :param bucket: bucket entity
         :param local_path: local binary file or folder to upload
         :param overwrite: optional - default = False
+        :param without_relative_path: bool - download items without the relative path from platform
         :return:
         """
         if isinstance(bucket, entities.ItemBucket):
             bucket_dir_item = self.items.get(item_id=bucket.directory_item_id)
             # fetch: False does not use an API call but created the dataset entity (with id)
             dataset = bucket_dir_item.datasets.get(dataset_id=bucket_dir_item.dataset_id, fetch=False)
-            bucket_filter = entities.Filters(field='dir', values=bucket_dir_item.filename)
+            bucket_filter = entities.Filters(field='dir', values=bucket_dir_item.filename+'*')
             # self._client_api.verbose.disable_progress_bar(True)
-            local_path = dataset.items.download(
+            local_path_gen = dataset.items.download(
                 filters=bucket_filter,
                 local_path=local_path,
                 overwrite=overwrite,
                 to_items_folder=False,
-                without_relative_path=bucket_dir_item.filename
+                without_relative_path=without_relative_path
             )
             # self._client_api.verbose.disable_progress_bar(False)
-            if len(list(local_path)) == 0:
+            if len(list(local_path_gen)) == 0:
                 logger.warning("Bucket {} was empty".format(bucket))
             else:
                 logger.info('Bucket artifacts was unpacked to: {}'.format(local_path))
@@ -314,7 +316,7 @@ class Buckets:
         if isinstance(bucket, entities.ItemBucket):
             # delete entire folder content with DQL
             directory_item = self.items.get(item_id=bucket.directory_item_id)
-            filters = entities.Filters(field='dir', values=directory_item.filename)
+            filters = entities.Filters(field='dir', values=directory_item.filename+'*')
             directory_item.dataset.items.delete(filters=filters)
         elif isinstance(bucket, entities.GCSBucket):
             raise NotImplemented(

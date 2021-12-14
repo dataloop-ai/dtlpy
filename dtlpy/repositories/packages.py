@@ -1514,14 +1514,12 @@ class LocalServiceRunner:
         # output_type is a entity class starts with capital
         return hasattr(entities, output_type)
 
-    @staticmethod
-    def _fetch_single_resource(value, output_type, sdk):
+    def _fetch_single_resource(self, value, output_type):
         if isinstance(value, dict):
             params = {'{}_id'.format(output_type.lower()): value['{}_id'.format(output_type.lower())]}
         else:
             params = {'{}_id'.format(output_type.lower()): value}
-
-        return getattr(sdk, '{}s'.format(output_type.lower())).get(**params)
+        return getattr(repositories, '{}s'.format(output_type))(self._client_api).get(**params)
 
     def get_field(self, field_name, field_type, mock_json, project=None, mock_inputs=None):
         """
@@ -1552,10 +1550,10 @@ class LocalServiceRunner:
             field_type = field_type.replace('[]', '')
             value = resource_id if isinstance(resource_id, list) else [resource_id]
             return [
-                self._fetch_single_resource(value=val, output_type=field_type, sdk=project) for val in value
+                self._fetch_single_resource(value=val, output_type=field_type) for val in value
             ]
         elif self._is_entity(output_type=field_type):
-            return self._fetch_single_resource(value=resource_id, output_type=field_type, sdk=project)
+            return self._fetch_single_resource(value=resource_id, output_type=field_type)
         else:
             return resource_id
 

@@ -3,16 +3,31 @@ from pathlib import Path
 from PIL import Image
 import torchvision
 import numpy as np
+import collections
 import traceback
 import logging
 import imgaug
 import shutil
+import copy
 import tqdm
 import os
 
 from ... import entities
 
 logger = logging.getLogger(__name__)
+
+
+class DataItem(dict):
+    def __init__(self, *args, **kwargs):
+        super(DataItem, self).__init__(*args, **kwargs)
+
+    @property
+    def image_filepath(self):
+        return self['image_filepath']
+
+    @image_filepath.setter
+    def image_filepath(self, val):
+        self['image_filepath'] = val
 
 
 class BaseGenerator:
@@ -29,6 +44,7 @@ class BaseGenerator:
                  shuffle=True,
                  seed=None,
                  to_categorical=False,
+                 class_balancing=False,
                  # debug flags
                  return_originals=False,
                  ignore_empty=True
@@ -46,6 +62,7 @@ class BaseGenerator:
         :param shuffle: Whether to shuffle the data (default: True) If set to False, sorts the data in alphanumeric order.
         :param seed: Optional random seed for shuffling and transformations.
         :param to_categorical: convert label id to categorical format
+        :param class_balancing: if True - performing random over-sample with class ids as the target to balance training data
         :param return_originals: bool - If True, return ALSO images and annotations before transformations (for debug)
         :param ignore_empty: bool - If True, generator will NOT collect items without annotations
         """
@@ -89,6 +106,7 @@ class BaseGenerator:
         self.num_classes = len(label_to_id_map)
         self.shuffle = shuffle
         self.seed = seed
+        self.class_balancing = class_balancing
         # inits
         self.data_items = list()
         # flags
@@ -103,7 +121,8 @@ class BaseGenerator:
     def _load_single(self, image_filepath, pbar=None):
         try:
             is_empty = False
-            item_info = dict(image_filepath=str(image_filepath))
+            item_info = DataItem()
+            item_info.image_filepath = str(image_filepath)
             # get "platform" path
             rel_path = image_filepath.relative_to(self._items_path)
             # replace suffix to JSON
@@ -116,6 +135,9 @@ class BaseGenerator:
                 classes_ids = list()
                 labels = list()
                 for annotation in annotations:
+                    if 'user' in annotation.metadata and 'model' in annotation.metadata['user']: # and 'name' in annotation.metadata['user']['model']:
+                        # Do not use prediction annotations in the data generator
+                        continue
                     if annotation.type == self.annotation_type:
                         classes_ids.append(self.label_to_id_map[annotation.label])
                         labels.append(annotation.label)
@@ -163,17 +185,18 @@ class BaseGenerator:
                 pbar.update()
 
     def load_annotations(self):
-        files = list(self._items_path.rglob('*'))
+        logger.info(f"Collecting items with the following extensions: {self.IMAGE_EXTENSIONS}")
+        files = list()
+        for ext in self.IMAGE_EXTENSIONS:
+            files.extend(self._items_path.rglob(f'*{ext}'))
+
         pool = ThreadPoolExecutor(max_workers=32)
         jobs = list()
         pbar = tqdm.tqdm(total=len(files), desc='Loading Data Generator')
         for image_filepath in files:
-            if image_filepath.suffix.lower() not in self.IMAGE_EXTENSIONS:
-                continue
             jobs.append(pool.submit(self._load_single,
                                     image_filepath=image_filepath,
                                     pbar=pbar))
-
         outputs = [job.result() for job in jobs]
         pbar.close()
 
@@ -195,6 +218,27 @@ class BaseGenerator:
 
         self.data_items = data_items
         logger.info(output_msg)
+        ###################
+        # class balancing #
+        ###################
+        labels = [label for item in self.data_items for label in item['labels']]
+        logger.info(f"Data Generator labels balance statistics: {collections.Counter(labels)}")
+        if self.class_balancing:
+            try:
+                from imblearn.over_sampling import RandomOverSampler
+            except Exception:
+                logger.error(
+                    'Class balancing is on but missing "imbalanced-learn". run "pip install -U imbalanced-learn" and try again')
+                raise
+            logger.info('Class balance is on!')
+            class_ids = [class_id for item in self.data_items for class_id in item['class']]
+            dummy_inds = [i_item for i_item, item in enumerate(self.data_items) for _ in item['class']]
+            over_sampler = RandomOverSampler(random_state=42)
+            X_res, y_res = over_sampler.fit_resample(np.asarray(dummy_inds).reshape(-1, 1), np.asarray(class_ids))
+            over_sampled_data_items = [self.data_items[i] for i in X_res.flatten()]
+            oversampled_labels = [label for item in over_sampled_data_items for label in item['labels']]
+            logger.info(f"Data Generator labels after oversampling: {collections.Counter(oversampled_labels)}")
+            self.data_items = over_sampled_data_items
 
         if self.shuffle:
             if self.seed is None:
@@ -303,7 +347,7 @@ class BaseGenerator:
             return marked_image, annotations
 
     def __getsingleitem__(self, idx):
-        data_item = self.data_items[idx]
+        data_item = copy.deepcopy(self.data_items[idx])
 
         image_filename = data_item.get('image_filepath')
         image = np.asarray(Image.open(image_filename).convert('RGB'))

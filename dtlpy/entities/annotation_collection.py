@@ -475,6 +475,8 @@ class AnnotationCollection(entities.BaseEntity):
                     height = system_metadata.get('height', None)
                     width = system_metadata.get('width', None)
         else:
+            if client_api is None:
+                client_api = item._client_api
             fps = item.fps
             height = item.height
             width = item.width

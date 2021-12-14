@@ -148,7 +148,7 @@ setenv = client_api.setenv
 token_expired = client_api.token_expired
 info = client_api.info
 cache_state = client_api.cache_state
-
+attributes_mode = client_api.attributes_mode
 
 def get_secret(secret):
     return os.environ.get(secret, None)
@@ -192,7 +192,7 @@ def checkout_state():
 
 
 def use_attributes_2(state: bool = True):
-    os.environ["USE_ATTRIBUTE_2"] = json.dumps(state)
+    client_api.attributes_mode.use_attributes_2 = state
 
 
 class LoggingLevel:
