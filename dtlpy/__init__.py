@@ -43,6 +43,7 @@ from .entities import (
     SnapshotPartitionType, BucketType, Bucket, ItemBucket, GCSBucket, LocalBucket, ModelOutputType,
     ModelInputType,
     #
+    RequirementOperator, PackageRequirement,
     Command, CommandsStatus,
     GitCodebase, ItemCodebase, FilesystemCodebase, PackageCodebaseType,
     OntologySpec,
@@ -282,6 +283,8 @@ INSTANCE_CATALOG_GPU_K80_S = InstanceCatalog.GPU_K80_S
 INSTANCE_CATALOG_GPU_K80_M = InstanceCatalog.GPU_K80_M
 
 MODALITY_TYPE_OVERLAY = ModalityTypeEnum.OVERLAY
+MODALITY_TYPE_PREVIEW = ModalityTypeEnum.PREVIEW
+MODALITY_TYPE_REPLACE = ModalityTypeEnum.REPLACE
 
 MODALITY_REF_TYPE_ID = ModalityRefTypeEnum.ID
 MODALITY_REF_TYPE_URL = ModalityRefTypeEnum.URL
@@ -380,3 +383,9 @@ MEMBER_ROLE_ANNOTATION_MANAGER = MemberRole.ANNOTATION_MANAGER
 MEMBER_ORG_ROLE_OWNER = MemberOrgRole.OWNER
 MEMBER_ORG_ROLE_ADMIN = MemberOrgRole.ADMIN
 MEMBER_ORG_ROLE_MEMBER = MemberOrgRole.MEMBER
+
+PACKAGE_REQUIREMENT_OP_EQUAL = RequirementOperator.EQUAL
+PACKAGE_REQUIREMENT_OP_GREATER_THAN = RequirementOperator.GREATER_THAN
+PACKAGE_REQUIREMENT_OP_LESS_THAN = RequirementOperator.LESS_THAN
+PACKAGE_REQUIREMENT_OP_EQUAL_OR_LESS_THAN = RequirementOperator.EQUAL_OR_LESS_THAN
+PACKAGE_REQUIREMENT_OP_EQUAL_OR_GREATER_THAN = RequirementOperator.EQUAL_OR_GREATER_THAN

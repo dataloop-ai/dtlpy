@@ -19,6 +19,7 @@ class PackageInputType(str, Enum):
     SERVICE = "Service"
     PACKAGE = "Package"
     PROJECT = "Project"
+    RECIPE = "Recipe"
     JSON = "Json"
     STRING = "String"
     NUMBER = "Number"
@@ -44,6 +45,7 @@ class PackageInputType(str, Enum):
     BOOLEANS = "Boolean[]"
     MODELS = "Model[]"
     SNAPSHOTS = "Snapshot[]"
+    RECIPES = "Recipe[]"
 
 
 @attr.s

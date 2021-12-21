@@ -8,6 +8,7 @@ import traceback
 import logging
 import imgaug
 import shutil
+import json
 import copy
 import tqdm
 import os
@@ -122,6 +123,7 @@ class BaseGenerator:
         try:
             is_empty = False
             item_info = DataItem()
+            # add image path
             item_info.image_filepath = str(image_filepath)
             # get "platform" path
             rel_path = image_filepath.relative_to(self._items_path)
@@ -129,13 +131,20 @@ class BaseGenerator:
             rel_path_wo_png_ext = rel_path.with_suffix('.json')
             # create local path
             annotation_filepath = Path(self._json_path, rel_path_wo_png_ext)
+            item_id = ''
             if self.annotation_type is not None:
-                annotations = entities.AnnotationCollection.from_json_file(annotation_filepath)
+                # add item id from json
+                with open(annotation_filepath, 'r') as f:
+                    data = json.load(f)
+                    item_id = data.get('_id')
+                    annotations = entities.AnnotationCollection.from_json(data)
                 box_coordinates = list()
                 classes_ids = list()
                 labels = list()
                 for annotation in annotations:
-                    if 'user' in annotation.metadata and 'model' in annotation.metadata['user']: # and 'name' in annotation.metadata['user']['model']:
+                    if 'user' in annotation.metadata and \
+                            'model' in annotation.metadata['user']:
+                        # and 'name' in annotation.metadata['user']['model']:
                         # Do not use prediction annotations in the data generator
                         continue
                     if annotation.type == self.annotation_type:
@@ -175,7 +184,8 @@ class BaseGenerator:
                     logger.debug('Empty annotation for image filename: {}'.format(image_filepath))
                     is_empty = True
                 item_info.update({entities.AnnotationType.SEGMENTATION.value: str(mask_filepath)})
-            item_info.update(annotation_filepath=str(annotation_filepath))
+            item_info.update(annotation_filepath=str(annotation_filepath),
+                             item_id=item_id)
             return item_info, is_empty
         except Exception:
             logger.exception('failed loading item in generator! {!r}'.format(image_filepath))

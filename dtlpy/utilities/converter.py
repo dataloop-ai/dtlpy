@@ -182,7 +182,7 @@ class Converter:
         # download annotations
         if annotation_filter is None:
             logger.info('Downloading annotations...')
-            dataset.download_annotations(local_path=local_path, overwrite=True)
+            dataset.download_annotations(local_path=local_path, overwrite=True, filters=filters)
             logger.info('Annotations downloaded')
         local_annotations_path = os.path.join(local_path, "json")
         output_annotations_path = os.path.join(local_path, to_format)

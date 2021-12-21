@@ -157,38 +157,12 @@ class Organization(entities.BaseEntity):
 
         return output_dict
 
-    def list_project(self, user_id: str = None):
-        """
-        list all organization projects
-
-        """
-        return self.organizations.list_project(organization=self, user_id=user_id)
-
     def list_groups(self):
         """
         list all organization groups
 
         """
         return self.organizations.list_groups(organization=self)
-
-    def list_integrations(self, only_available=False):
-        """
-        list all organization integrations
-
-        """
-        logger.warning('Deprecation Warning - list_integrations will not use from 1.40.0'
-                       'Next time use a org.integrations.list() or project.integrations.list()')
-        return self.organizations.list_integrations(organization=self, only_available=only_available)
-
-    def get_integrations(self, integrations_id: str):
-        """
-        get organization integrations
-
-        """
-        logger.warning('Deprecation Warning - get_integrations will not use from 1.40.0'
-                       'Next time use a org.integrations.get() or project.integrations.get()')
-
-        return self.organizations.get_integrations(organization=self, integrations_id=integrations_id)
 
     def list_members(self, role: MemberOrgRole = None):
         """
@@ -235,50 +209,3 @@ class Organization(entities.BaseEntity):
 
         """
         self._client_api._open_in_web(url=self.platform_url)
-
-    def add_integrations(self, integrations_type, name, options):
-        """
-        Add integrations to the Organization
-        Options for each type should be a dict with the following:
-        s3 - {key: "", secret: ""}
-        gcs - {key: "", secret: "", content: ""},
-        azureblob - {key: "", secret: "", clientId: "", tenantId: ""}
-
-        :param integrations_type: "s3" , "gcs", "azureblob"
-        :param name: integrations name
-        :param options: dict options for each type
-
-        :return: True
-        """
-        logger.warning('Deprecation Warning - add_integrations will not use from 1.40.0'
-                       'Next time use a org.integrations.create() or project.integrations.create()')
-        return self.organizations.add_integrations(organization=self,
-                                                   integrations_type=integrations_type,
-                                                   name=name,
-                                                   options=options)
-
-    def delete_integrations(self, integrations_id: str,
-                            sure: bool = False,
-                            really: bool = False) -> bool:
-        """
-        Delete integrations from the Organization
-        :param integrations_id:
-        :param sure: are you sure you want to delete?
-        :param really: really really?
-        :return: True
-        """
-        logger.warning('Deprecation Warning - delete_integrations will not use from 1.40.0'
-                       'Next time use a org.integrations.delete() or project.integrations.delete()')
-        return self.organizations.delete_integrations(organization=self,
-                                                      integrations_id=integrations_id,
-                                                      sure=sure,
-                                                      really=really)
-
-    def update_integrations(self, new_name: str, ):
-        """
-        Update the integrations with new name
-        :param new_name:
-        """
-        logger.warning('Deprecation Warning - update_integrations will not use from 1.40.0'
-                       'Next time use a org.integrations.update() or project.integrations.update()')
-        return self.organizations.update_integrations(organization=self, new_name=new_name)

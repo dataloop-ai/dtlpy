@@ -390,15 +390,15 @@ class Service(entities.BaseEntity):
         Execute a function on an existing service
 
         :param execution_input: input dictionary or list of FunctionIO entities
-        :param function_name: function name to run
-        :param resource: input type.
-        :param item_id: optional - input to function
-        :param dataset_id: optional - input to function
-        :param annotation_id: optional - input to function
-        :param project_id: resource's project
-        :param sync: wait for function to end
-        :param stream_logs: prints logs of the new execution. only works with sync=True
-        :param return_output: if True and sync is True - will return the output directly
+        :param function_name: str - function name to run
+        :param resource:dl.PackageInputType -  input type.
+        :param item_id:str - optional - input to function
+        :param dataset_id:str - optional - input to function
+        :param annotation_id:str - optional - input to function
+        :param project_id:str - resource's project
+        :param sync: bool - wait for function to end
+        :param stream_logs: bool - prints logs of the new execution. only works with sync=True
+        :param return_output: bool - if True and sync is True - will return the output directly
         :return:
         """
         execution = self.executions.create(sync=sync,

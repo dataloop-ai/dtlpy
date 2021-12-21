@@ -336,7 +336,9 @@ class Packages:
              ignore_sanity_check: bool = False,
              service_update: bool = False,
              service_config: dict = None,
-             slots: List[entities.PackageSlot] = None) -> entities.Package:
+             slots: List[entities.PackageSlot] = None,
+             requirements: List[entities.PackageRequirement] = None
+             ) -> entities.Package:
         """
         Push local package.
         Project will be taken in the following hierarchy:
@@ -356,6 +358,7 @@ class Packages:
         :param  service_update: optional - bool - update the service
         :param  service_config: json of service - a service that have config from the main service if wanted
         :param  slots: optional - list of slots PackageSlot of the package
+        :param slots: requirements - list of package requirements
 
         :return:
         """
@@ -448,6 +451,9 @@ class Packages:
                 if version is not None:
                     package.version = version
 
+                if requirements is not None:
+                    package.requirements = requirements
+
                 package = self.update(package=package, revision_increment=revision_increment)
             else:
                 package = self._create(
@@ -458,7 +464,8 @@ class Packages:
                     codebase=codebase,
                     is_global=is_global,
                     version=version,
-                    service_config=service_config
+                    service_config=service_config,
+                    requirements=requirements
                 )
             if checkout:
                 self.checkout(package=package)
@@ -487,7 +494,8 @@ class Packages:
                 modules: List[entities.PackageModule] = None,
                 version: str = None,
                 service_config: dict = None,
-                slots: List[entities.PackageSlot] = None
+                slots: List[entities.PackageSlot] = None,
+                requirements: List[entities.PackageRequirement] = None
                 ) -> entities.Package:
         """
         Create a package in platform
@@ -500,6 +508,7 @@ class Packages:
         :param version: semver version of the package
         :param  service_config : json of service - a service that have config from the main service if wanted
         :param slots: optional - list of slots PackageSlot of the package
+        :param slots: requirements - list of package requirements
         :return: Package Entity
         """
         # if is dtlpy entity convert to dict
@@ -521,6 +530,9 @@ class Packages:
 
         if codebase is not None:
             payload['codebase'] = codebase.to_json()
+
+        if requirements is not None:
+            payload['requirements'] = [r.to_json() for r in requirements]
 
         if version is not None:
             payload['version'] = version

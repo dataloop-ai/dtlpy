@@ -36,7 +36,7 @@ from .annotation_definitions import Box, Cube, Cube3d, Point, Segmentation, Poly
     Polyline, Comparison, UndefinedAnnotationType, Note, Description, Pose
 from .label import Label
 from .codebase import Codebase, PackageCodebaseType, ItemCodebase, GitCodebase, FilesystemCodebase, LocalCodebase
-from .package import Package
+from .package import Package, RequirementOperator, PackageRequirement
 from .package_module import PackageModule
 from .package_slot import PackageSlot, SlotPostAction, SlotPostActionType, SlotDisplayScope, SlotDisplayScopeResource
 from .package_function import PackageFunction, FunctionIO, PackageInputType

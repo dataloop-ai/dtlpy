@@ -310,13 +310,13 @@ class Pipelines:
                 pipeline: entities.Pipeline = None,
                 pipeline_id: str = None,
                 pipeline_name: str = None,
-                execution_input: dict = None):
+                execution_input=None):
         """
         execute a pipeline and return the execute
         :param pipeline: entities.Pipeline object
         :param pipeline_id: pipeline id
         :param pipeline_name: pipeline name
-        :param execution_input: dict of the pipeline input - example {'input': {'item': 'item_id'}}
+        :param execution_input: list of the dl.FunctionIO or dict of pipeline input - example {'item': 'item_id'}
         :return: entities.PipelineExecution object
         """
         if pipeline is None:

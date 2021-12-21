@@ -1,5 +1,6 @@
 import os
 from collections import namedtuple
+from enum import Enum
 from typing import Union
 import logging
 import traceback
@@ -9,6 +10,43 @@ import json
 from .. import repositories, entities, exceptions, services
 
 logger = logging.getLogger(name=__name__)
+
+
+class RequirementOperator(str, Enum):
+    EQUAL = '==',
+    GREATER_THAN = '>',
+    LESS_THAN = '<',
+    EQUAL_OR_LESS_THAN = '<=',
+    EQUAL_OR_GREATER_THAN = '>='
+
+    @staticmethod
+    def keys():
+        return [key.value for key in list(RequirementOperator)]
+
+
+class PackageRequirement:
+
+    def __init__(self, name: str, version: str = None, operator: str = None):
+        self.name = name
+        self.version = version
+
+        valid_operators = RequirementOperator.keys()
+        if operator is not None and operator not in valid_operators:
+            raise Exception('Illegal operator: {}. Please select from: {}'.format(operator, valid_operators))
+
+        self.operator = operator
+
+    def to_json(self):
+        _json = {'name': self.name}
+        if self.version is not None:
+            _json['version'] = self.version
+        if self.operator is not None:
+            _json['operator'] = self.operator
+        return _json
+
+    @classmethod
+    def from_json(cls, _json: dict):
+        return cls(**_json)
 
 
 @attr.s
@@ -41,6 +79,9 @@ class Package(entities.BaseEntity):
     _repositories = attr.ib(repr=False)
     _artifacts = attr.ib(default=None)
     _codebases = attr.ib(default=None)
+
+    # defaults
+    requirements = attr.ib(default=None)
 
     @property
     def createdAt(self):
@@ -126,6 +167,10 @@ class Package(entities.BaseEntity):
         else:
             codebase = None
 
+        requirements = _json.get('requirements', None)
+        if requirements is not None:
+            requirements = [PackageRequirement.from_json(r) for r in requirements]
+
         inst = cls(
             project_id=_json.get('projectId', None),
             codebase=codebase,
@@ -143,6 +188,7 @@ class Package(entities.BaseEntity):
             project=project,
             id=_json.get('id', None),
             service_config=_json.get('serviceConfig', None),
+            requirements=requirements,
             type=_json.get('type', None)
         )
         inst.is_fetched = is_fetched
@@ -170,6 +216,7 @@ class Package(entities.BaseEntity):
                                                         attr.fields(Package).service_config,
                                                         attr.fields(Package).created_at,
                                                         attr.fields(Package).updated_at,
+                                                        attr.fields(Package).requirements,
                                                         ))
 
         modules = self.modules
@@ -193,7 +240,10 @@ class Package(entities.BaseEntity):
         if self.ui_hooks is not None:
             _json['uiHooks'] = self.ui_hooks
         if self.service_config is not None:
-            _json['serviceConfig '] = self.service_config
+            _json['serviceConfig'] = self.service_config
+
+        if self.requirements is not None:
+            _json['requirements'] = [r.to_json() for r in self.requirements]
 
         return _json
 

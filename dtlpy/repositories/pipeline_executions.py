@@ -163,11 +163,11 @@ class PipelineExecutions:
 
     def create(self,
                pipeline_id: str = None,
-               execution_input: dict = None):
+               execution_input=None):
         """
         execute a pipeline and return the execute
         :param pipeline_id: pipeline id
-        :param execution_input: dict of the pipeline input - example {'input': {'item': 'item_id'}}
+        :param execution_input: list of the dl.FunctionIO or dict of pipeline input - example {'item': 'item_id'}
         :return: entities.PipelineExecution object
         """
         if pipeline_id is None:
@@ -175,10 +175,23 @@ class PipelineExecutions:
                 raise exceptions.PlatformException('400', 'Please provide pipeline id')
             pipeline_id = self._pipeline.id
 
+        payload = dict()
+        if isinstance(execution_input, dict):
+            payload['input'] = execution_input
+        else:
+            if not isinstance(execution_input, list):
+                execution_input = [execution_input]
+            if len(execution_input) > 0 and isinstance(execution_input[0], entities.FunctionIO):
+                payload['input'] = dict()
+                for single_input in execution_input:
+                    payload['input'].update(single_input.to_json(resource='execution'))
+            else:
+                raise exceptions.PlatformException('400', 'Unknown input type')
+
         success, response = self._client_api.gen_request(
             path='/pipelines/{}/execute'.format(pipeline_id),
             req_type='POST',
-            json_req=execution_input
+            json_req=payload
         )
 
         if not success:

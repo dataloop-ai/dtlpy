@@ -548,6 +548,7 @@ class ModalityTypeEnum(str, Enum):
     """
     OVERLAY = "overlay"
     REPLACE = "replace"
+    PREVIEW = "preview"
 
 
 class ModalityRefTypeEnum(str, Enum):
@@ -560,7 +561,7 @@ class ModalityRefTypeEnum(str, Enum):
 
 class Modality:
     def __init__(self, _json=None, modality_type=None, ref=None, ref_type=ModalityRefTypeEnum.ID,
-                 name=None, timestamp=None):
+                 name=None, timestamp=None, mimetype=None):
         """
         :param _json: json represent of all modality params
         :param modality_type: ModalityTypeEnum.OVERLAY,ModalityTypeEnum.REPLACE
@@ -568,6 +569,7 @@ class Modality:
         :param ref_type: ModalityRefTypeEnum.ID, ModalityRefTypeEnum.URL
         :param name:
         :param timestamp: ISOString, epoch of UTC
+        :param mimetype: str - type of the file
         """
         if _json is None:
             _json = dict()
@@ -576,6 +578,7 @@ class Modality:
         self.ref = _json.get('ref', ref)
         self.name = _json.get('name', name)
         self.timestamp = _json.get('timestamp', timestamp)
+        self.mimetype = _json.get('mimetype', mimetype)
 
     def to_json(self):
         _json = {"type": self.type,
@@ -585,6 +588,8 @@ class Modality:
             _json['name'] = self.name
         if self.timestamp is not None:
             _json['timestamp'] = self.timestamp
+        if self.mimetype is not None:
+            _json['mimetype'] = self.mimetype
         return _json
 
 
@@ -605,7 +610,9 @@ class Modalities:
     def create(self, name, ref,
                ref_type: ModalityRefTypeEnum = ModalityRefTypeEnum.ID,
                modality_type: ModalityTypeEnum = ModalityTypeEnum.OVERLAY,
-               timestamp=None):
+               timestamp=None,
+               mimetype=None,
+               ):
         """
         create Modalities entity
         :param name:
@@ -613,6 +620,7 @@ class Modalities:
         :param ref_type: ModalityRefTypeEnum.ID, ModalityRefTypeEnum.URL
         :param modality_type: ModalityTypeEnum.OVERLAY,ModalityTypeEnum.REPLACE
         :param timestamp: ISOString, epoch of UTC
+        :param mimetype: str - type of the file
         """
         if self.modalities is None:
             self.item.metadata['system']['modalities'] = list()
@@ -624,6 +632,8 @@ class Modalities:
             _json['name'] = name
         if timestamp is not None:
             _json['timestamp'] = timestamp
+        if mimetype is not None:
+            _json['mimetype'] = mimetype
 
         self.item.metadata['system']['modalities'].append(_json)
 

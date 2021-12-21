@@ -696,19 +696,20 @@ class Services:
                 project_id=None,
                 ) -> entities.Execution:
         """
-        service execute
-        :param service:
-        :param service_id:
-        :param service_name:
-        :param sync:
-        :param function_name:
-        :param stream_logs:
-        :param execution_input:
-        :param resource:
-        :param item_id:
-        :param dataset_id:
-        :param annotation_id:
-        :param project_id:
+        Execute a function on an existing service
+
+        :param service: dl.Service -  service entity
+        :param service_id: str -  service id
+        :param service_name: str - service name
+        :param sync: bool -  wait for function to end
+        :param function_name: str -  function name to run
+        :param stream_logs: bool - prints logs of the new execution. only works with sync=True
+        :param execution_input: input dictionary or list of FunctionIO entities
+        :param resource: dl.PackageInputType - input type.
+        :param item_id: str - optional - input to function
+        :param dataset_id: str - optional - input to function
+        :param annotation_id: str - optional - input to function
+        :param project_id: str - resource's project
         :return entities.Execution:
         """
         if service is None:
