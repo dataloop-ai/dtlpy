@@ -3,7 +3,7 @@ import attr
 from enum import Enum
 from .. import services, entities
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class ExternalStorage(str, Enum):

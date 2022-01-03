@@ -2,7 +2,7 @@ import logging
 
 from .. import entities, exceptions, repositories, miscellaneous, services
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class Items:

@@ -9,10 +9,11 @@ from copy import deepcopy
 from shutil import copyfile
 from concurrent.futures import ThreadPoolExecutor
 from typing import Union, List
+import re
 
 from .. import entities, repositories, exceptions, utilities, miscellaneous, assets, services
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 DEFAULT_PACKAGE_METHOD = entities.PackageFunction(name=entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME,
                                                   description='',
@@ -322,6 +323,40 @@ class Packages:
                 raise ValueError('Function {!r} in slots is not defined in module {!r}.'.format(slot.function_name,
                                                                                                 slot.module_name))
 
+    def build_requirements(self, filepath) -> list:
+        """
+        build a requirements list from file path
+        :param filepath: path of the requirements file
+        :return: a list of dl.PackageRequirement
+        """
+        try:
+            import pkg_resources
+        except (ImportError, ModuleNotFoundError):
+            logger.warning(
+                'We tried to convert you requirements file into PackageRequirements so your service will run with all the required packages. \n'
+                'We cannot pkg_resources is not installed \n '
+                'Please install setuptools package or add requirements manual by using dl.PackageRequirement'
+                )
+            return []
+        requirements_list = []
+        with open(filepath) as requirements_txt:
+            for requirement in pkg_resources.parse_requirements(requirements_txt):
+                requirement = str(requirement)
+                requirement_spit = requirement.split(',')
+                for req in requirement_spit:
+                    name_version = re.split('<=|>=|==|<|>', req)
+                    req_name = name_version[0]
+                    req_version, op = None, None
+                    if len(name_version) > 1:
+                        op = re.findall('<=|>=|==|<|>', req)[0]
+                        req_version = name_version[1]
+                        if req_name == '':
+                            req_name = last_req_name
+                        last_req_name = req_name
+                    requirements_list.append(
+                        entities.PackageRequirement(name=req_name, version=req_version, operator=op))
+        return requirements_list
+
     def push(self,
              project: entities.Project = None,
              project_id: str = None,
@@ -337,7 +372,7 @@ class Packages:
              service_update: bool = False,
              service_config: dict = None,
              slots: List[entities.PackageSlot] = None,
-             requirements: List[entities.PackageRequirement] = None
+             requirements: List[entities.PackageRequirement] = []
              ) -> entities.Package:
         """
         Push local package.
@@ -358,7 +393,7 @@ class Packages:
         :param  service_update: optional - bool - update the service
         :param  service_config: json of service - a service that have config from the main service if wanted
         :param  slots: optional - list of slots PackageSlot of the package
-        :param slots: requirements - list of package requirements
+        :param requirements: requirements - list of package requirements
 
         :return:
         """
@@ -394,6 +429,14 @@ class Packages:
         if assets.paths.PACKAGE_FILENAME in os.listdir(src_path):
             with open(os.path.join(src_path, assets.paths.PACKAGE_FILENAME), 'r') as f:
                 package_from_json = json.load(f)
+
+        if requirements and assets.paths.REQUIREMENTS_FILENAME in os.listdir(src_path):
+            logger.warning('Have both requirements param and requirements file will overwrite the requirements file')
+
+        if not requirements and assets.paths.REQUIREMENTS_FILENAME in os.listdir(src_path):
+            req_path = os.path.join(src_path, assets.paths.REQUIREMENTS_FILENAME)
+            req_from_file = self.build_requirements(filepath=req_path)
+            requirements = req_from_file
 
         # get name
         if package_name is None:
@@ -453,6 +496,9 @@ class Packages:
 
                 if requirements is not None:
                     package.requirements = requirements
+
+                if service_config is not None:
+                    package.service_config = service_config
 
                 package = self.update(package=package, revision_increment=revision_increment)
             else:
@@ -1370,6 +1416,7 @@ class Packages:
             raise ValueError('There are conflicts between modules and source code:'
                              '\n{}\n{}'.format(missing,
                                                'Please fix conflicts or use flag ignore_sanity_check'))
+
         return modules
 
 

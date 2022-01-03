@@ -5,7 +5,7 @@ Integrations Repository
 import logging
 from .. import entities, exceptions, services, miscellaneous
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class Integrations:

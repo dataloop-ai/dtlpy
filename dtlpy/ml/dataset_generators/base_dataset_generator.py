@@ -15,7 +15,7 @@ import os
 
 from ... import entities
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('dtlpy')
 
 
 class DataItem(dict):
@@ -37,6 +37,7 @@ class BaseGenerator:
     def __init__(self,
                  dataset_entity: entities.Dataset,
                  annotation_type: entities.AnnotationType,
+                 filters: entities.Filters = None,
                  data_path=None,
                  overwrite=False,
                  label_to_id_map=None,
@@ -55,6 +56,7 @@ class BaseGenerator:
 
         :param dataset_entity: dl.Dataset entity
         :param annotation_type: dl.AnnotationType - type of annotation to load from the annotated dataset
+        :param filters: dl.Filters - filtering entity to filter the dataset items
         :param data_path: Path to Dataloop annotations (root to "item" and "json").
         :param overwrite:
         :param label_to_id_map: dict - {label_string: id} dictionary
@@ -87,7 +89,9 @@ class BaseGenerator:
                 annotation_options = entities.ViewAnnotationOptions.INSTANCE
             else:
                 annotation_options = entities.ViewAnnotationOptions.JSON
-            _ = dataset_entity.items.download(local_path=data_path, annotation_options=annotation_options)
+            _ = dataset_entity.items.download(filters=filters,
+                                              local_path=data_path,
+                                              annotation_options=annotation_options)
         self.root_dir = data_path
         self._items_path = Path(self.root_dir).joinpath('items')
         self._json_path = Path(self.root_dir).joinpath('json')
@@ -131,41 +135,48 @@ class BaseGenerator:
             rel_path_wo_png_ext = rel_path.with_suffix('.json')
             # create local path
             annotation_filepath = Path(self._json_path, rel_path_wo_png_ext)
-            item_id = ''
-            if self.annotation_type is not None:
-                # add item id from json
+
+            if os.path.isfile(annotation_filepath):
                 with open(annotation_filepath, 'r') as f:
                     data = json.load(f)
                     item_id = data.get('_id')
                     annotations = entities.AnnotationCollection.from_json(data)
+            else:
+                item_id = ''
+                annotations = None
+            item_info.update(item_id=item_id)
+            if self.annotation_type is not None:
+                # add item id from json
+
                 box_coordinates = list()
                 classes_ids = list()
                 labels = list()
-                for annotation in annotations:
-                    if 'user' in annotation.metadata and \
-                            'model' in annotation.metadata['user']:
-                        # and 'name' in annotation.metadata['user']['model']:
-                        # Do not use prediction annotations in the data generator
-                        continue
-                    if annotation.type == self.annotation_type:
-                        classes_ids.append(self.label_to_id_map[annotation.label])
-                        labels.append(annotation.label)
-
-                        if annotation.type == entities.AnnotationType.BOX:
-                            # [x1, y1, x2, y2]
-                            annotation: entities.Box
-                            box_coordinates.append(np.asarray([annotation.left,
-                                                               annotation.top,
-                                                               annotation.right,
-                                                               annotation.bottom]))
+                if annotations is not None:
+                    for annotation in annotations:
+                        if 'user' in annotation.metadata and \
+                                'model' in annotation.metadata['user']:
+                            # and 'name' in annotation.metadata['user']['model']:
+                            # Do not use prediction annotations in the data generator
+                            continue
+                        if annotation.type == self.annotation_type:
                             classes_ids.append(self.label_to_id_map[annotation.label])
                             labels.append(annotation.label)
-                        elif annotation.type in [entities.AnnotationType.CLASSIFICATION,
-                                                 entities.AnnotationType.SEGMENTATION]:
-                            ...
-                        else:
-                            raise ValueError(
-                                'unsupported annotation type: {}'.format(annotation.type))
+
+                            if annotation.type == entities.AnnotationType.BOX:
+                                # [x1, y1, x2, y2]
+                                annotation: entities.Box
+                                box_coordinates.append(np.asarray([annotation.left,
+                                                                   annotation.top,
+                                                                   annotation.right,
+                                                                   annotation.bottom]))
+                                classes_ids.append(self.label_to_id_map[annotation.label])
+                                labels.append(annotation.label)
+                            elif annotation.type in [entities.AnnotationType.CLASSIFICATION,
+                                                     entities.AnnotationType.SEGMENTATION]:
+                                ...
+                            else:
+                                raise ValueError(
+                                    'unsupported annotation type: {}'.format(annotation.type))
                 # reorder for output
                 item_info.update({entities.AnnotationType.BOX.value: np.asarray(box_coordinates).astype(float),
                                   entities.AnnotationType.CLASSIFICATION.value: np.asarray(classes_ids),
@@ -184,8 +195,7 @@ class BaseGenerator:
                     logger.debug('Empty annotation for image filename: {}'.format(image_filepath))
                     is_empty = True
                 item_info.update({entities.AnnotationType.SEGMENTATION.value: str(mask_filepath)})
-            item_info.update(annotation_filepath=str(annotation_filepath),
-                             item_id=item_id)
+            item_info.update(annotation_filepath=str(annotation_filepath))
             return item_info, is_empty
         except Exception:
             logger.exception('failed loading item in generator! {!r}'.format(image_filepath))
@@ -231,7 +241,7 @@ class BaseGenerator:
         ###################
         # class balancing #
         ###################
-        labels = [label for item in self.data_items for label in item['labels']]
+        labels = [label for item in self.data_items for label in item.get('labels', list())]
         logger.info(f"Data Generator labels balance statistics: {collections.Counter(labels)}")
         if self.class_balancing:
             try:
@@ -360,7 +370,7 @@ class BaseGenerator:
         data_item = copy.deepcopy(self.data_items[idx])
 
         image_filename = data_item.get('image_filepath')
-        image = np.asarray(Image.open(image_filename).convert('RGB'))
+        image = np.asarray(Image.open(image_filename))
         data_item.update({'image': image})
 
         annotations = data_item.get(self.annotation_type)

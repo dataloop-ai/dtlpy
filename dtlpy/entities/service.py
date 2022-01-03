@@ -6,7 +6,7 @@ import attr
 
 from .. import services, repositories, entities
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class OnResetAction(str, Enum):

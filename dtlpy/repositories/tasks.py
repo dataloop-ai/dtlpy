@@ -5,7 +5,7 @@ from typing import Union
 
 from .. import exceptions, miscellaneous, entities, repositories, services
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 URL_PATH = '/annotationtasks'
 
 

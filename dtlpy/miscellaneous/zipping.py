@@ -4,7 +4,7 @@ import logging
 import zipfile
 import os
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 MAX_ZIP_FILE = 100e6  # 100MB
 

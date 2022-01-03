@@ -4,6 +4,7 @@ import logging
 import shutil
 import tqdm
 import time
+import tempfile
 import os
 from PIL import Image
 import numpy as np
@@ -11,7 +12,7 @@ from collections import namedtuple
 
 from .. import entities, exceptions, dtlpy_services
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('dtlpy')
 
 
 class BaseModelAdapter:
@@ -151,14 +152,15 @@ class BaseModelAdapter:
             partitions = [partitions]
 
         # define paths
+        dataloop_path = os.path.join(os.path.expanduser('~'), '.dataloop')
         if root_path is None:
-            now = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
-            root_path = os.path.join(os.path.expanduser('~'),
-                                     '.dataloop',
+            now = datetime.datetime.now()
+            root_path = os.path.join(dataloop_path,
                                      'training',
-                                     "{}_{}".format(self.snapshot.id, now))
+                                     "{s_id}_{s_n}".format(s_id=self.snapshot.id, s_n=self.snapshot.name),
+                                     now.strftime('%Y-%m-%d-%H%M%S'),
+                                     )
         if data_path is None:
-            dataloop_path = os.path.join(os.path.expanduser('~'), '.dataloop')
             data_path = os.path.join(dataloop_path, 'datasets', self.snapshot.dataset.id)
             os.makedirs(data_path, exist_ok=True)
         if output_path is None:
@@ -180,14 +182,14 @@ class BaseModelAdapter:
 
         # Download the partitions items
         for partition in partitions:
-            self.logger.debug("Downloading {!r} SnapshotPartition (DataPartition) of {}".format(partition,
+            self.logger.debug("Downloading {!r} SnapshotPartition (DataPartition) of {}".format(partition.value,
                                                                                                 self.snapshot.dataset.name))
             data_partiion_base_path = os.path.join(data_path, partition)
             ret_list = self.snapshot.download_partition(partition=partition,
                                                         local_path=data_partiion_base_path,
                                                         annotation_options=annotation_options,
                                                         filters=filters)
-            self.logger.info("Downloaded {!r} SnapshotPartition complete. {} total items".format(partition,
+            self.logger.info("Downloaded {!r} SnapshotPartition complete. {} total items".format(partition.value,
                                                                                                  len(list(ret_list))))
 
         self.convert_from_dtlpy(data_path=data_path, **kwargs)
@@ -200,6 +202,7 @@ class BaseModelAdapter:
 
         :param snapshot:  `str` dl.Snapshot entity
         :param local_path:  `str` directory path in local FileSystem to download the snapshot to
+        :param overwrite: `bool` (default False) if False does not downloads files with same name else (True) download all
         """
         overwrite = kwargs.get('overwrite', False)
         self.snapshot = snapshot
@@ -223,18 +226,23 @@ class BaseModelAdapter:
             # local_path = bucket.local_path
         self.load(local_path, **kwargs)
 
-    def save_to_snapshot(self, local_path, cleanup=False, replace=True, **kwargs):
+    def save_to_snapshot(self, local_path=None, cleanup=False, replace=True, **kwargs):
         """
             saves the model state to a new bucket and configuration
 
             Saves configuration and weights to new snapshot bucket
+            Mark the snapshot as `trained`
             loads only applies for remote buckets
 
-        :param local_path: `str` directory path in local FileSystem to save the current model bucket (weights)
+        :param local_path: `str` directory path in local FileSystem to save the current model bucket (weights) (default will create a temp dir)
         :param replace: `bool` will clean the bucket's content before uploading new files
         :param cleanup: `bool` if True (default) remove the data from local FileSystem after upload
         :return:
         """
+        if local_path is None:
+            local_path = tempfile.mkdtemp(prefix="snapshot_" + self.snapshot.name)
+            self.logger.debug("Using temporary dir at {}".format(local_path))
+
         self.save(local_path=local_path, **kwargs)
 
         if self.snapshot is None:
@@ -299,8 +307,8 @@ class BaseModelAdapter:
             except exceptions.InternalServerError as err:
                 self.logger.error("Failed to upload annotations items. Error: {}".format(err))
 
-            self.logger.info('Uploading  items annotation for snapshot {!r}. cleanup {}'.format(self.snapshot.name,
-                                                                                                cleanup))
+            self.logger.debug('Uploading  items annotation for snapshot {!r}. cleanup {}'.format(self.snapshot.name,
+                                                                                                 cleanup))
         else:
             # fix the collection to have to correct item in the annotations
             for item, ann_coll in zip(items, all_predictions):

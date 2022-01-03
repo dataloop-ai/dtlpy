@@ -7,7 +7,7 @@ import os
 
 from .. import entities, exceptions, miscellaneous, services
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class Annotations:

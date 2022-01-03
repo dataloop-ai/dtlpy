@@ -3,7 +3,7 @@ import traceback
 
 from .. import entities, miscellaneous, exceptions, services
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class Ontologies:
@@ -113,6 +113,9 @@ class Ontologies:
             ontology = entities.Ontology.from_json(_json=response.json(),
                                                    client_api=self._client_api,
                                                    recipe=self._recipe)
+            if self._recipe:
+                self._recipe.ontology_ids.append(ontology.id)
+                self._recipe.update()
         else:
             logger.error("Failed to create Ontology")
             raise exceptions.PlatformException(response)
@@ -184,7 +187,7 @@ class Ontologies:
         :return:
         """
         if self._recipe is not None:
-            ontologies = [ontology_id for ontology_id in self.recipe.ontologyIds]
+            ontologies = [ontology_id for ontology_id in self.recipe.ontology_ids]
 
             pool = self._client_api.thread_pools(pool_name='entity.create')
             jobs = [None for _ in range(len(ontologies))]

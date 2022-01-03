@@ -7,7 +7,7 @@ import numpy as np
 
 from .. import entities, exceptions
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('dtlpy')
 
 
 def prepare_dataset(dataset: entities.Dataset,

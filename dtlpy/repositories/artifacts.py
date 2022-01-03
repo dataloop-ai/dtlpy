@@ -2,7 +2,7 @@ import logging
 
 from .. import entities, miscellaneous, PlatformException, exceptions, services, repositories
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class Artifacts:

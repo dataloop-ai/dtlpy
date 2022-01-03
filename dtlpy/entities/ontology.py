@@ -8,7 +8,7 @@ from .. import entities, PlatformException, repositories, services, exceptions
 
 from .label import Label
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class LabelHandlerMode:

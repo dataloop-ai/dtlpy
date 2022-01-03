@@ -16,7 +16,7 @@ from urllib3.util import Retry
 from .. import entities, miscellaneous, PlatformException, dtlpy_services, exceptions
 from ..services import Reporter
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 NUM_TRIES = 3  # try to download 3 time before fail on item
 

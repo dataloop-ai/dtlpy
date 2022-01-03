@@ -9,7 +9,7 @@ import json
 
 from .. import repositories, entities, exceptions, services
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class RequirementOperator(str, Enum):

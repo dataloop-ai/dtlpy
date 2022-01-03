@@ -5,7 +5,7 @@ import os
 import numpy as np
 import dtlpy as dl
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 class VideoPlayer:
     """

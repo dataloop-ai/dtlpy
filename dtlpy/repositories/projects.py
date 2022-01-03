@@ -4,7 +4,7 @@ import jwt
 
 from .. import entities, miscellaneous, exceptions, services
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class Projects:
@@ -259,6 +259,11 @@ class Projects:
                     message='No checked-out Project was found, must checkout or provide an identifier in inputs')
         elif fetch:
             if project_id is not None:
+                if not isinstance(project_id, str):
+                    raise exceptions.PlatformException(
+                        error='400',
+                        message='project_id must be strings')
+
                 project = self.__get_by_id(project_id)
                 # verify input project name is same as the given id
                 if project_name is not None and project.name != project_name:
@@ -268,6 +273,11 @@ class Projects:
                             project_name,
                             project.name))
             elif project_name is not None:
+                if not isinstance(project_name, str):
+                    raise exceptions.PlatformException(
+                        error='400',
+                        message='project_name must be strings')
+
                 projects = self.list()
                 project = [project for project in projects if project.name == project_name]
                 if not project:

@@ -8,7 +8,7 @@ import logging
 from urllib.parse import urlencode
 from .. import entities, repositories, miscellaneous, exceptions, services
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class Datasets:

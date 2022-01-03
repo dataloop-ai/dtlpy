@@ -1,6 +1,6 @@
 import logging
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class DirectoryTree:

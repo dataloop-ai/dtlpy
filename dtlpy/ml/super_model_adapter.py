@@ -10,7 +10,7 @@ from PIL import Image
 from .. import entities
 from . import BaseModelAdapter
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('dtlpy')
 
 
 class SuperModelAdapter(BaseModelAdapter):

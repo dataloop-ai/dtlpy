@@ -6,7 +6,7 @@ import os
 import zipfile
 import datetime
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class ServiceRunner(dl.BaseServiceRunner):

@@ -5,7 +5,7 @@ import json
 import jwt
 import os
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 def login_m2m(api_client, email, password, client_id=None, client_secret=None, force=False):

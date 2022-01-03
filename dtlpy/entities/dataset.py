@@ -7,7 +7,7 @@ import os
 from .. import repositories, entities, services, exceptions
 from .annotation import ViewAnnotationOptions, AnnotationType
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class ExpirationOptions:
@@ -249,7 +249,7 @@ class Dataset(entities.BaseEntity):
                 recipe_ids = self.get_recipe_ids()
                 for rec_id in recipe_ids:
                     recipe = self.recipes.get(recipe_id=rec_id)
-                    self._ontology_ids += recipe.ontologyIds
+                    self._ontology_ids += recipe.ontology_ids
         return self._ontology_ids
 
     @_repositories.default
@@ -584,7 +584,7 @@ class Dataset(entities.BaseEntity):
 
         # get ontology
         if ontology_id is None:
-            ontology_id = recipe.ontologyIds[0]
+            ontology_id = recipe.ontology_ids[0]
         ontology = recipe.ontologies.get(ontology_id=ontology_id)
         # ontology._dataset = self
 
@@ -616,7 +616,7 @@ class Dataset(entities.BaseEntity):
 
         # get ontology
         if ontology_id is None:
-            ontology_id = recipe.ontologyIds[0]
+            ontology_id = recipe.ontology_ids[0]
         ontology = recipe.ontologies.get(ontology_id=ontology_id)
 
         # add labels to ontology
@@ -650,7 +650,7 @@ class Dataset(entities.BaseEntity):
 
         # get ontology
         if ontology_id is None:
-            ontology_id = recipe.ontologyIds[0]
+            ontology_id = recipe.ontology_ids[0]
         ontology = recipe.ontologies.get(ontology_id=ontology_id)
 
         # add label
@@ -684,7 +684,7 @@ class Dataset(entities.BaseEntity):
 
         # get ontology
         if ontology_id is None:
-            ontology_id = recipe.ontologyIds[0]
+            ontology_id = recipe.ontology_ids[0]
         ontology = recipe.ontologies.get(ontology_id=ontology_id)
 
         # add labels to ontology

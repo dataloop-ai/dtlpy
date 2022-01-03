@@ -3,7 +3,7 @@ import traceback
 
 from .. import entities, miscellaneous, repositories, exceptions, services
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class Recipes:

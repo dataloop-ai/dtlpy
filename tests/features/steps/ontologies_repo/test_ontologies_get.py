@@ -4,7 +4,7 @@ import behave
 @behave.given(u'Dataset has ontology')
 def step_impl(context):
     context.recipe = context.dataset.recipes.get(recipe_id=context.dataset.metadata['system']['recipes'][0])
-    context.ontology = context.recipe.ontologies.get(ontology_id=context.recipe.ontologyIds[0])
+    context.ontology = context.recipe.ontologies.get(ontology_id=context.recipe.ontology_ids[0])
 
 
 @behave.when(u'I get a ontology by id')

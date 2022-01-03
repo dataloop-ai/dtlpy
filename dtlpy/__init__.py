@@ -13,13 +13,12 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with DTLPY.  If not, see <http://www.gnu.org/licenses/>.
-import json
 import logging
 import sys
 import os
 
 from . import services as dtlpy_services
-from .services import DataloopLogger, ApiClient, check_sdk, Reporter, VerboseLoggingLevel, service_defaults
+from .services import DataloopLogger, DtlpyFilter, ApiClient, check_sdk, Reporter, VerboseLoggingLevel, service_defaults
 from .exceptions import PlatformException
 from . import repositories, exceptions, entities, examples
 from .__version__ import version as __version__
@@ -84,21 +83,30 @@ Main Platform Interface module for Dataloop
 ##########
 # Logger #
 ##########
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 if len(logger.handlers) == 0:
     logger.setLevel(logging.DEBUG)
     log_filepath = DataloopLogger.get_log_filepath()
     # set file handler to save all logs to file
-    formatter = logging.Formatter(
-        fmt="%(asctime)s.%(msecs)03d [%(levelname)s]-[%(threadName)s]-[v" + __version__ + "]%(name)s: %(message)s",
+    stream_formatter = logging.Formatter(
+        fmt="[%(asctime)-s][%(levelname).3s][%(name)s:v" + __version__ + "][%(relativepath)-s:%(lineno)-d] %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
+    file_formatter = logging.Formatter(
+        fmt="[%(asctime)s.%(msecs)03d][%(threadName)s][%(levelname).3s][%(name)s:v" + __version__ + "][%(relativepath)-s:%(lineno)-d](%(funcName)-s): %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    package_path = os.path.dirname(__file__)
+    # relative function path filtering
+    filtering = DtlpyFilter(package_path)
     fh = DataloopLogger(log_filepath, maxBytes=(1048 * 1000 * 5))
     fh.setLevel(logging.DEBUG)
-    fh.setFormatter(formatter)
+    fh.setFormatter(file_formatter)
+    fh.addFilter(filtering)
     sh = logging.StreamHandler()
     sh.setLevel(logging.WARNING)
-    sh.setFormatter(formatter)
+    sh.setFormatter(stream_formatter)
+    sh.addFilter(filtering)
     # set handlers to main logger
     logger.addHandler(sh)
     logger.addHandler(fh)
@@ -150,6 +158,7 @@ token_expired = client_api.token_expired
 info = client_api.info
 cache_state = client_api.cache_state
 attributes_mode = client_api.attributes_mode
+
 
 def get_secret(secret):
     return os.environ.get(secret, None)

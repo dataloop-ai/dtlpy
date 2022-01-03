@@ -3,7 +3,7 @@ import pandas as pd
 import datetime
 from dtlpy import entities, miscellaneous, exceptions, services
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class TimesSeries:

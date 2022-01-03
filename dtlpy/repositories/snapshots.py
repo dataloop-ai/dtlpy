@@ -7,7 +7,7 @@ from typing import List
 
 from .. import entities, repositories, exceptions, miscellaneous, services
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class Snapshots:

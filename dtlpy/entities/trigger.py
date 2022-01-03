@@ -6,7 +6,7 @@ from collections import namedtuple
 
 from .. import entities, services, exceptions, repositories
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class TriggerResource(str, Enum):

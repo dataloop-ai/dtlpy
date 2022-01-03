@@ -1,7 +1,7 @@
 import logging
 import numpy as np
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class BaseAnnotationDefinition:

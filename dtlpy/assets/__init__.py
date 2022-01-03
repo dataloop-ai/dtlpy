@@ -11,6 +11,7 @@ class PATHS:
     PARTIAL_MAIN = 'main_partial.py'
     MODULE_A_FILENAME = 'first_module_class.py'
     MODULE_B_FILENAME = 'second_module_class.py'
+    REQUIREMENTS_FILENAME = 'requirements.txt'
 
     ASSETS_PATH = os.path.dirname(__file__)
     ASSETS_MAIN_FILEPATH = os.path.join(ASSETS_PATH, MAIN_FILENAME)

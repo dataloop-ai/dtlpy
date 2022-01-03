@@ -8,7 +8,7 @@ import distutils.dir_util
 
 from .. import entities, services, repositories
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class Buckets:
@@ -104,7 +104,7 @@ class Buckets:
                  bucket: entities.Bucket,
                  local_path=None,
                  overwrite=False,
-                 without_relative_path=None
+                 without_relative_path=True
                  ):
         """
 

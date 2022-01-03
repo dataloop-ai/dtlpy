@@ -3,7 +3,7 @@ import os
 
 from .. import entities, repositories
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class PackageCodebaseType:

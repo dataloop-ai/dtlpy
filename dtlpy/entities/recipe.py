@@ -5,7 +5,7 @@ import attr
 
 from .. import repositories, entities, services, exceptions
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 @attr.s
@@ -19,7 +19,7 @@ class Recipe(entities.BaseEntity):
     title = attr.ib()
     project_ids = attr.ib()
     description = attr.ib()
-    ontologyIds = attr.ib(repr=False)
+    ontology_ids = attr.ib(repr=False)
     instructions = attr.ib(repr=False)
     examples = attr.ib(repr=False)
     custom_actions = attr.ib(repr=False)
@@ -39,6 +39,11 @@ class Recipe(entities.BaseEntity):
     @property
     def customActions(self):
         return self.custom_actions
+
+    @property
+    def ontologyIds(self):
+        logger.warning('Deprecation Warning - ontologyIds will be Deprecation from version 1.52.0 use ontology_ids')
+        return self.ontology_ids
 
     @classmethod
     def from_json(cls, _json, client_api, dataset=None, project=None, is_fetched=True):
@@ -68,7 +73,7 @@ class Recipe(entities.BaseEntity):
             title=_json.get('title', None),
             project_ids=project_ids,
             description=_json.get('description', None),
-            ontologyIds=_json.get('ontologyIds', None),
+            ontology_ids=_json.get('ontologyIds', None),
             instructions=_json.get('instructions', None),
             ui_settings=_json.get('uiSettings', None),
             metadata=_json.get('metadata', None),
@@ -149,10 +154,12 @@ class Recipe(entities.BaseEntity):
                                                               attr.fields(Recipe).ui_settings,
                                                               attr.fields(Recipe)._repositories,
                                                               attr.fields(Recipe).custom_actions,
+                                                              attr.fields(Recipe).ontology_ids,
                                                               ))
         _json['uiSettings'] = self.ui_settings
         _json['projectIds'] = self.project_ids
         _json['customActions'] = self.custom_actions
+        _json['ontologyIds'] = self.ontology_ids
         return _json
 
     @property

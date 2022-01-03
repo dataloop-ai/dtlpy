@@ -7,7 +7,7 @@ from typing import Union, List
 
 from .. import entities, repositories, exceptions, miscellaneous, assets, services, ml
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 DEFAULT_ENTRY_POINT = 'model_adapter.py'
 DEFAULT_CLASS_NAME = 'ModelAdapter'

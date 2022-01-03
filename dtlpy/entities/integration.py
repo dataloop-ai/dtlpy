@@ -3,7 +3,7 @@ import attr
 
 from .. import entities, services, exceptions, repositories
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 @attr.s

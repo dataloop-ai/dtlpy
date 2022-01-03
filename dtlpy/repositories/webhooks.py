@@ -2,7 +2,7 @@ import logging
 from urllib.parse import urlencode
 from .. import exceptions, entities, miscellaneous, services
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class Webhooks:

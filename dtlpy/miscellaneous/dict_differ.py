@@ -2,7 +2,7 @@ import dictdiffer
 import logging
 from typing import Union
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 TYPE = 0
 FIELD = 1
 LIST = 2

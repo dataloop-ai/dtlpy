@@ -6,7 +6,7 @@ import random
 
 from .. import entities, PlatformException, exceptions, repositories, miscellaneous, services
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class Codebases:

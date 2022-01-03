@@ -5,7 +5,7 @@ import attr
 from .. import services, miscellaneous
 import tqdm
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 @attr.s

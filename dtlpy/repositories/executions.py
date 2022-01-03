@@ -5,7 +5,7 @@ import numpy as np
 
 from .. import exceptions, entities, repositories, miscellaneous, services
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class Executions:

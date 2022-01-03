@@ -98,7 +98,7 @@ def main(project_name, dataset_name):
     # get recipe
     new_dataset_recipe = new_dataset.recipes.list()[0]
     # Copy from a different dataset
-    new_dataset_recipe.ontologyIds = dataset.ontology_ids
+    new_dataset_recipe.ontology_ids = dataset.ontology_ids
     # Update the new dataset
     new_dataset_recipe.update()
 

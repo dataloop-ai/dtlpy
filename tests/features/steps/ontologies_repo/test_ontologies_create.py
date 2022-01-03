@@ -12,7 +12,7 @@ def step_impl(context):
 
 @behave.given(u"dataset has at least {count} ontology")
 def step_impl(context, count):
-    assert len(context.recipe.ontologyIds) >= int(count)
+    assert len(context.recipe.ontology_ids) >= int(count)
 
 
 @behave.when(u'I create a new ontology with labels from file "{file_path}" and attributes "{attributes}"')
@@ -65,13 +65,13 @@ def step_impl(context, labels):
 
 @behave.when(u'I update dataset ontology to the one created')
 def step_impl(context):
-    context.recipe.ontologyIds = [context.ontology.id]
+    context.recipe.ontology_ids = [context.ontology.id]
     context.dataset.recipes.update(context.recipe)
 
 
 @behave.when(u'I try toupdate dataset ontology to the one created')
 def step_impl(context):
-    context.recipe.ontologyIds = [context.ontology.id]
+    context.recipe.ontology_ids = [context.ontology.id]
     try:
         context.dataset.recipes.update(context.recipe)
         context.error = None

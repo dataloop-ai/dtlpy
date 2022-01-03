@@ -4,7 +4,7 @@ import threading
 import traceback
 import jwt
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('dtlpy')
 
 
 def check_in_thread(version, client_api):

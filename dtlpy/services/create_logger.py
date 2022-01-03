@@ -1,15 +1,14 @@
 import datetime
 import threading
-
+import logging.handlers
 import os
-from logging import handlers, getLogger
 
 from .service_defaults import DATALOOP_PATH
 
-logger = getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
-class DataloopLogger(handlers.BaseRotatingHandler):
+class DataloopLogger(logging.handlers.BaseRotatingHandler):
     """
         Based on logging.handlers.RotatingFileHandler
         Create a new log file after reached maxBytes
@@ -136,3 +135,19 @@ class DataloopLogger(handlers.BaseRotatingHandler):
             if self.stream.tell() + len(msg) >= self.maxBytes:
                 return 1
         return 0
+
+
+class DtlpyFilter(logging.Filter):
+    def __init__(self, package_path):
+        super(DtlpyFilter, self).__init__(name='dtlpy')
+        self._package_path = package_path
+
+    def filter(self, record):
+        pathname = record.pathname
+        try:
+            relativepath = os.path.splitext(os.path.relpath(pathname, self._package_path))[0]
+            relativepath = relativepath.replace(os.sep, '.')
+        except Exception:
+            relativepath = ''
+        record.relativepath = relativepath
+        return True

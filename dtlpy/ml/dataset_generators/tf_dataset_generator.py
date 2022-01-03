@@ -19,11 +19,14 @@ class DataGenerator(BaseGenerator, tensorflow.keras.utils.Sequence):
     def __init__(self,
                  dataset_entity: entities.Dataset,
                  annotation_type: entities.AnnotationType,
+                 filters: entities.Filters = None,
                  data_path=None,
                  overwrite=False,
                  label_to_id_map=None,
                  transforms=None,
+                 num_workers=0,
                  to_categorical=False,
+                 class_balancing=False,
                  shuffle=True,
                  seed=None,
                  # keras
@@ -33,14 +36,33 @@ class DataGenerator(BaseGenerator, tensorflow.keras.utils.Sequence):
                  ignore_empty=True
                  ) -> None:
         """
+        Base Dataset Generator to build and iterate over images and annotations
+
+        :param dataset_entity: dl.Dataset entity
+        :param annotation_type: dl.AnnotationType - type of annotation to load from the annotated dataset
+        :param filters: dl.Filters - filtering entity to filter the dataset items
+        :param data_path: Path to Dataloop annotations (root to "item" and "json").
+        :param overwrite:
+        :param label_to_id_map: dict - {label_string: id} dictionary
+        :param transforms: Optional transform to be applied on a sample. list or torchvision.Transform
+        :param num_workers:
+        :param shuffle: Whether to shuffle the data (default: True) If set to False, sorts the data in alphanumeric order.
+        :param seed: Optional random seed for shuffling and transformations.
+        :param to_categorical: convert label id to categorical format
+        :param class_balancing: if True - performing random over-sample with class ids as the target to balance training data
+        :param return_originals: bool - If True, return ALSO images and annotations before transformations (for debug)
+        :param ignore_empty: bool - If True, generator will NOT collect items without annotations
         """
         super(DataGenerator, self).__init__(dataset_entity=dataset_entity,
                                             annotation_type=annotation_type,
+                                            filters=filters,
                                             data_path=data_path,
                                             overwrite=overwrite,
                                             label_to_id_map=label_to_id_map,
                                             transforms=transforms,
+                                            num_workers=num_workers,
                                             to_categorical=to_categorical,
+                                            class_balancing=class_balancing,
                                             shuffle=shuffle,
                                             seed=seed,
                                             # flags

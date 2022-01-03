@@ -6,7 +6,7 @@ import json
 
 from .. import entities
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('dtlpy')
 
 
 class Matching:

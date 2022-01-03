@@ -9,7 +9,7 @@ import os
 from .. import repositories, entities, services, exceptions
 from .annotation import ViewAnnotationOptions
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class ItemStatus(str, Enum):
@@ -40,6 +40,7 @@ class Item(entities.BaseEntity):
     hidden = attr.ib(repr=False)
     dir = attr.ib(repr=False)
     spec = attr.ib()
+    creator = attr.ib()
 
     # name change
     annotations_count = attr.ib()
@@ -126,7 +127,8 @@ class Item(entities.BaseEntity):
             type=_json.get('type', None),
             url=_json.get('url', None),
             id=_json.get('id', None),
-            spec=_json.get('spec', None)
+            spec=_json.get('spec', None),
+            creator=_json.get('creator', None)
         )
         inst.is_fetched = is_fetched
         return inst
@@ -323,6 +325,7 @@ class Item(entities.BaseEntity):
                                                         attr.fields(Item).dataset_url,
                                                         attr.fields(Item).annotations_link,
                                                         attr.fields(Item).spec,
+                                                        attr.fields(Item).creator,
                                                         attr.fields(Item).created_at,
                                                         attr.fields(Item).dataset_id,
                                                         ))
@@ -335,6 +338,8 @@ class Item(entities.BaseEntity):
                       })
         if self.spec is not None:
             _json['spec'] = self.spec
+        if self.creator is not None:
+            _json['creator'] = self.creator
         return _json
 
     def download(

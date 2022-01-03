@@ -6,7 +6,7 @@ from .. import exceptions
 import logging
 from . import dl_cache
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 CHUNK = 200000
 
 

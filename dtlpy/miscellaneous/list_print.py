@@ -6,7 +6,7 @@ import pandas
 
 from .. import exceptions
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 T = typing.TypeVar('T')
 

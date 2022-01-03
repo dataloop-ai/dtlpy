@@ -36,7 +36,7 @@ def step_impl(context, class_file, attribute1, attribute2):
 
 @behave.then(u'Dataset ontology in host has labels from "{class_file}" and attributes: "{attribute1}", "{attribute2}"')
 def step_impl(context, class_file, attribute1, attribute2):
-    ontology_get = context.recipe.ontologies.get(ontology_id=context.recipe.ontologyIds[0])
+    ontology_get = context.recipe.ontologies.get(ontology_id=context.recipe.ontology_ids[0])
     for root in ontology_get.to_json()['roots']:
         assert root in context.labels
     assert ontology_get.attributes == [attribute1, attribute2]
@@ -45,5 +45,5 @@ def step_impl(context, class_file, attribute1, attribute2):
 @behave.when(u'I create a new plain recipe with existing ontology id')
 def step_impl(context):
     recipe = context.dataset.recipes.get(context.dataset.metadata['system']['recipes'][0])
-    context.ontology = recipe.ontologies.get(recipe.ontologyIds[0])
+    context.ontology = recipe.ontologies.get(recipe.ontology_ids[0])
     context.recipe = context.dataset.recipes.create(ontology_ids=context.ontology.id)

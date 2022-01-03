@@ -7,7 +7,7 @@ import logging
 import dtlpy as dl
 import shutil
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 ##########

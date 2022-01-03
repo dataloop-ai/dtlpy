@@ -10,7 +10,7 @@ import random
 from .service_defaults import DATALOOP_PATH
 from filelock import FileLock
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 NUM_TRIES = 3
 

@@ -5,7 +5,7 @@ import tqdm
 
 from .. import exceptions, entities, services, miscellaneous
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class Commands:

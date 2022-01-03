@@ -12,7 +12,7 @@ from PIL import Image
 
 from .. import entities, PlatformException, miscellaneous
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 @attr.s

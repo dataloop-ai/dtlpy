@@ -35,7 +35,7 @@ from .service_defaults import DEFAULT_ENVIRONMENTS, DEFAULT_ENVIRONMENT
 from .aihttp_retry import RetryClient
 from .. import miscellaneous, exceptions, __version__
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 threadLock = threading.Lock()
 
 
@@ -743,7 +743,7 @@ class ApiClient:
                         text = await request.text()
                         try:
                             _json = await request.json()
-                        except:
+                        except Exception:
                             _json = dict()
                         response = AsyncResponse(text=text,
                                                  _json=_json,

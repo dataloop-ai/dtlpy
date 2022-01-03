@@ -4,7 +4,7 @@ import random
 
 from .. import PlatformException
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 @attr.s

@@ -6,7 +6,7 @@ from collections import namedtuple
 
 from .. import repositories, entities, services
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class ExecutionStatus(str, Enum):

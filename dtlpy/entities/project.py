@@ -6,7 +6,7 @@ import attr
 
 from .. import repositories, miscellaneous, services, entities
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class MemberRole(str, Enum):

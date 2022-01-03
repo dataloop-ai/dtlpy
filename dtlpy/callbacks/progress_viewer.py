@@ -7,7 +7,7 @@ def main():
     import json
     import os
 
-    logger = logging.getLogger(name=__name__)
+    logger = logging.getLogger(name='dtlpy')
 
     class ProgressViewer(Callback):
         def __init__(self, session_id, directory=None):

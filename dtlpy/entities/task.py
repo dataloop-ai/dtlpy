@@ -5,7 +5,7 @@ import logging
 
 from .. import repositories, entities, exceptions
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class ItemAction:

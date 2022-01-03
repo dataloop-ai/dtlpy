@@ -16,6 +16,6 @@
 from .api_client import ApiClient, VerboseLoggingLevel
 from .async_utils import AsyncResponse, AsyncThreadEventLoop
 from .cookie import CookieIO
-from .create_logger import DataloopLogger
+from .create_logger import DataloopLogger, DtlpyFilter
 from .reporter import Reporter
 from . import service_defaults

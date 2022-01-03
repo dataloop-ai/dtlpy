@@ -5,17 +5,18 @@ import attr
 
 from .. import repositories, entities, services
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class PipelineNodeIO:
-    def __init__(self, port_id, input_type, name, color, display_name, port_percentage):
+    def __init__(self, port_id, input_type, name, color, display_name, port_percentage, default_value=None):
         self.port_id = port_id
         self.input_type = input_type
         self.name = name
         self.color = color
         self.display_name = display_name
         self.port_percentage = port_percentage
+        self.default_value = default_value
 
     @staticmethod
     def from_json(_json: dict):
@@ -25,7 +26,8 @@ class PipelineNodeIO:
             name=_json.get('name', None),
             color=_json.get('color', None),
             display_name=_json.get('displayName', None),
-            port_percentage=_json.get('portPercentage', None)
+            port_percentage=_json.get('portPercentage', None),
+            default_value=_json.get('defaultValue', None)
         )
 
     def to_json(self):
@@ -35,7 +37,8 @@ class PipelineNodeIO:
             'name': self.name,
             'color': self.color,
             'displayName': self.display_name,
-            'portPercentage': self.port_percentage
+            'portPercentage': self.port_percentage,
+            'defaultValue': self.default_value
         }
         return _json
 

@@ -10,7 +10,7 @@ from jinja2 import Environment, PackageLoader
 from concurrent.futures import ThreadPoolExecutor
 import dtlpy as dl
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class BaseConverterFromPlatform:
@@ -167,13 +167,14 @@ class DtlpyToVoc(BaseConverterFromPlatform):
 
         width = item.width
         height = item.height
+        depth = item.metadata['system'].get('channels', 3)
         output_annotation = {
             'path': item.filename,
             'filename': os.path.basename(item.filename),
             'folder': os.path.basename(os.path.dirname(item.filename)),
             'width': width,
             'height': height,
-            'depth': 3,
+            'depth': depth,
             'database': 'Unknown',
             'segmented': 0,
             'objects': list()

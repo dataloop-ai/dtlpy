@@ -9,7 +9,7 @@ import attr
 
 from .. import repositories, entities, services, exceptions
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 # TODO: Consider using DataPartition as a new name
@@ -310,11 +310,11 @@ class Snapshot(entities.BaseEntity):
             if self.ontology_id == 'null' or self.ontology_id is None:
                 self.configuration['id_to_label_map'] = {idx: lbl for idx, lbl in enumerate(self.labels)}
             else:
-                self.configuration['id_to_label_map'] = {ont.tag: i for i, ont in enumerate(self.ontology.labels)}
+                self.configuration['id_to_label_map'] = {idx: lbl.tag for idx, lbl in enumerate(self.ontology.labels)}
 
         return self.configuration['id_to_label_map']
 
-    @label_map.setter
+    @id_to_label_map.setter
     def id_to_label_map(self, mapping: dict):
         self.configuration['id_to_label_map'] = mapping
 

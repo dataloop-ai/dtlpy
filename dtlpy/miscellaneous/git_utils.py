@@ -2,7 +2,7 @@ import subprocess
 import logging
 import os
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class GitUtils:

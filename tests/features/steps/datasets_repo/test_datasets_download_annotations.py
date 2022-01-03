@@ -46,7 +46,7 @@ def step_impl(context):
     labels = [context.dl.Label.from_root(root) for root in labels]
     recipe_id = context.dataset.metadata["system"]["recipes"][0]
     recipe = context.dataset.recipes.get(recipe_id)
-    ont_id = recipe.ontologyIds[0]
+    ont_id = recipe.ontology_ids[0]
     ontology = recipe.ontologies.get(ont_id)
     ontology.labels = labels
     recipe.ontologies.update(ontology)

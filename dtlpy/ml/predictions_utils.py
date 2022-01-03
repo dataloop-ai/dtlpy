@@ -9,7 +9,7 @@ import datetime
 from .. import entities
 from . import BaseModelAdapter, metrics
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 # Utility functions to use in the model adapters

@@ -4,7 +4,7 @@ from . import BaseAnnotationDefinition
 # from scipy.spatial.transform import Rotation as R
 import logging
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class Cube3d(BaseAnnotationDefinition):

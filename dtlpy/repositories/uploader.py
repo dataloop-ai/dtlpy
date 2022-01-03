@@ -23,7 +23,7 @@ from . import upload_element
 from .. import PlatformException, entities, repositories, exceptions, dtlpy_services
 from ..services import Reporter
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 NUM_TRIES = 5  # try to upload 3 time before fail on item
 

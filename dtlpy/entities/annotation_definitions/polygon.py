@@ -3,7 +3,7 @@ import logging
 
 from . import BaseAnnotationDefinition
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class Polygon(BaseAnnotationDefinition):

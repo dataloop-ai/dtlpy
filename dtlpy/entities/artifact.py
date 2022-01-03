@@ -5,7 +5,7 @@ import copy
 
 from .. import entities
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 @attr.s
@@ -69,6 +69,7 @@ class Artifact(entities.Item):
             dir=_json.get('dir', None),
             url=_json.get('url', None),
             id=_json['id'],
-            spec=_json.get('spec', None))
+            spec=_json.get('spec', None),
+            creator=_json.get('creator', None))
         inst.is_fetched = is_fetched
         return inst

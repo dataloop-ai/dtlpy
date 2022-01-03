@@ -16,7 +16,7 @@ import copy
 import tqdm
 import os
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class AnnotationFormat:
@@ -404,7 +404,7 @@ class Converter:
 
         logger.info('Total converted: {}'.format(reporter.status_count('success')))
         logger.info('Total failed: {}'.format(reporter.status_count('failed')))
-        
+
         return coco_json, reporter.has_errors, log_filepath
 
     @staticmethod
@@ -1128,13 +1128,14 @@ class Converter:
         # XML #
         elif self.save_to_format == 'xml':
             item = Converter.__get_item_shape(item=item)
+            depth = item.metadata['system'].get('channels', 3)
             output_annotation = {
                 'path': item.filename,
                 'filename': os.path.basename(item.filename),
                 'folder': os.path.basename(os.path.dirname(item.filename)),
                 'width': item.width,
                 'height': item.height,
-                'depth': 3,
+                'depth': depth,
                 'database': 'Unknown',
                 'segmented': 0,
                 'objects': annotations

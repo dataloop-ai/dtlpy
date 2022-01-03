@@ -10,7 +10,7 @@ from enum import Enum
 
 from .. import entities, PlatformException, repositories, ApiClient, exceptions
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class AnnotationStatus(str, Enum):

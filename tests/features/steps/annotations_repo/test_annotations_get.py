@@ -21,7 +21,7 @@ def step_impl(context, labels_file_path):
         context.labels = json.load(f)
     context.recipe_id = context.dataset.metadata['system']['recipes'][0]
     context.recipe = context.dataset.recipes.get(context.recipe_id)
-    context.ontology_id = context.recipe.ontologyIds[0]
+    context.ontology_id = context.recipe.ontology_ids[0]
     context.ontology = context.recipe.ontologies.get(context.ontology_id)
     for label in context.labels:
         context.ontology.labels.append(context.dl.Label.from_root(label))

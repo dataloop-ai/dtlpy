@@ -3,7 +3,7 @@ from enum import Enum
 from ..exceptions import PlatformException
 import os
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 
 
 class FiltersKnownFields(str, Enum):

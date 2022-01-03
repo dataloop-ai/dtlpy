@@ -9,7 +9,7 @@ from typing import Union, List, Callable
 from .. import miscellaneous, exceptions, entities, repositories, assets, ApiClient
 from ..__version__ import version as __version__
 
-logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(name='dtlpy')
 FUNCTION_END_LINE = '[Done] Executing function.'
 
 

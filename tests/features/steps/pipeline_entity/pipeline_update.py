@@ -3,6 +3,7 @@ from behave import when, then
 
 @when(u'I update pipeline description')
 def step_impl(context):
+    context.pipeline.pause()
     context.pipeline.description = "up"
     context.update_pipeline = context.pipeline.update()
 

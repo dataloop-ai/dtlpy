@@ -4,7 +4,7 @@ def get_callback(progress):
     import logging
     import time
 
-    logger = logging.getLogger(name=__name__)
+    logger = logging.getLogger(name='dtlpy')
 
     class PiperProgressReporter(Callback):
         def __init__(self, progress):
