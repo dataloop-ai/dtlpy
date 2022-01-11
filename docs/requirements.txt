@@ -2,7 +2,7 @@ aiohttp==3.7.4
 requests-toolbelt==0.9.1
 opencv_python==4.2.0.32
 requests==2.21.0
-numpy==1.16.2
+numpy==1.21.0
 pandas==0.24.2
 tabulate==0.8.3
 tqdm==4.32.2
