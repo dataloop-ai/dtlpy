@@ -202,6 +202,19 @@ class Assignment(entities.BaseEntity):
                                              workload=workload,
                                              wait=wait)
 
+    def set_status(self, status: str, operation: str, item_id: str):
+        """
+        Update item status within task
+
+        :param status: str - string the describes the status
+        :param operation: str -  'create' or 'delete'
+        :param item_id: str
+
+        :return : Boolean
+
+        """
+        return self.assignments.set_status(status=status, operation=operation, item_id=item_id, assignment_id=self.id)
+
 
 @attr.s
 class WorkloadUnit:

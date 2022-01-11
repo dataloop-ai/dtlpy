@@ -433,3 +433,28 @@ class Assignments:
         filters.add(field='metadata.system.refs.id', values=[assignment_id], operator=entities.FiltersOperations.IN)
 
         return dataset.items.list(filters=filters)
+
+    def set_status(self, status: str, operation: str, item_id: str, assignment_id: str):
+        """
+        Set item status within assignment
+        @param status: str
+        @param operation: created/deleted
+        @param item_id: str
+        @param assignment_id: str
+        @return: Boolean
+        """
+        url = '/assignments/{assignment_id}/items/{item_id}/status'.format(assignment_id=assignment_id, item_id=item_id)
+        payload = {
+            'operation': operation,
+            'status': status
+        }
+        success, response = self._client_api.gen_request(
+            req_type='post',
+            path=url,
+            json_req=payload
+        )
+
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        return True

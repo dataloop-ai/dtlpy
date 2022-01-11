@@ -1,7 +1,7 @@
 import datetime
 import logging
 import json
-from typing import Union
+from typing import Union, List
 
 from .. import exceptions, miscellaneous, entities, repositories, services
 
@@ -681,3 +681,35 @@ class Tasks:
         filters.add(field='metadata.system.refs.id', values=[task_id], operator=entities.FiltersOperations.IN)
 
         return dataset.items.list(filters=filters)
+
+    def set_status(self, status: str, operation: str, task_id: str, item_ids: List[str]):
+        """
+        Update item status within task
+
+        :param status: str - string the describes the status
+        :param operation: str -  'create' or 'delete'
+        :param task_id: str - task id
+        :param item_ids: List[str]
+
+        :return : Boolean
+
+        """
+        url = '/assignments/items/tasks/{task_id}/status'.format(task_id=task_id)
+        payload = {
+            'itemIds': item_ids,
+            'statusPayload': {
+                'operation': operation,
+                'status': status
+            }
+        }
+        
+        success, response = self._client_api.gen_request(
+            req_type='post',
+            path=url,
+            json_req=payload
+        )
+
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        return True

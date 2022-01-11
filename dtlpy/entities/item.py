@@ -165,32 +165,50 @@ class Item(entities.BaseEntity):
     def set_repositories(self):
         reps = namedtuple('repositories',
                           field_names=['annotations', 'datasets', 'items', 'codebases', 'artifacts', 'modalities',
-                                       'features'])
-        reps.__new__.__defaults__ = (None, None, None, None, None, None, None)
+                                       'features', 'assignments', 'tasks'])
+        reps.__new__.__defaults__ = (None, None, None, None, None, None, None, None, None)
 
         if self._dataset is None:
-            items = repositories.Items(client_api=self._client_api,
-                                       dataset=self._dataset,
-                                       dataset_id=self.dataset_id,
-                                       datasets=repositories.Datasets(client_api=self._client_api, project=None))
+            items = repositories.Items(
+                client_api=self._client_api,
+                dataset=self._dataset,
+                dataset_id=self.dataset_id,
+                datasets=repositories.Datasets(client_api=self._client_api, project=None)
+            )
             datasets = items.datasets
 
         else:
             items = self.dataset.items
             datasets = self.dataset.datasets
 
-        r = reps(annotations=repositories.Annotations(client_api=self._client_api,
-                                                      dataset_id=self.dataset_id,
-                                                      item=self,
-                                                      dataset=self._dataset),
-                 items=items,
-                 datasets=datasets,
-                 codebases=None,
-                 artifacts=None,
-                 modalities=Modalities(item=self),
-                 features=repositories.Features(client_api=self._client_api,
-                                                project=self._project,
-                                                item=self))
+        r = reps(
+            annotations=repositories.Annotations(
+                client_api=self._client_api,
+                dataset_id=self.dataset_id,
+                item=self,
+                dataset=self._dataset
+            ),
+            items=items,
+            datasets=datasets,
+            codebases=None,
+            artifacts=None,
+            modalities=Modalities(item=self),
+            features=repositories.Features(
+                client_api=self._client_api,
+                project=self._project,
+                item=self
+            ),
+            tasks=repositories.Tasks(
+                client_api=self._client_api,
+                project=self._project,
+                dataset=self._dataset
+            ),
+            assignments=repositories.Assignments(
+                client_api=self._client_api,
+                project=self._project,
+                dataset=self._dataset
+            )
+        )
         return r
 
     @property
@@ -207,6 +225,16 @@ class Item(entities.BaseEntity):
     def datasets(self):
         assert isinstance(self._repositories.datasets, repositories.Datasets)
         return self._repositories.datasets
+
+    @property
+    def assignments(self):
+        assert isinstance(self._repositories.assignments, repositories.Assignments)
+        return self._repositories.assignments
+
+    @property
+    def tasks(self):
+        assert isinstance(self._repositories.tasks, repositories.Tasks)
+        return self._repositories.tasks
 
     @property
     def items(self):
@@ -472,40 +500,66 @@ class Item(entities.BaseEntity):
         """
         self._client_api._open_in_web(url=self.platform_url)
 
-    def update_status(self, status: ItemStatus, clear=False):
+    def _set_action(self, status: str, operation: str, assignment_id: str = None, task_id: str = None):
         """
         update item status
 
-        :param status: "completed" ,"approved" ,"discarded"
-        :param clear: bool -
+        :param status: str - string the describes the status
+        :param operation: str -  'create' or 'delete'
+        :param assignment_id: str - assignment id
+        :param task_id: str - task id
 
         :return :True/False
         """
-        if status not in list(ItemStatus):
-            raise exceptions.PlatformException(
-                error='400',
-                message='Unknown status: {}. Please choose from: {}'.format(status, list(ItemStatus)))
-        filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION)
-        filters.add(field='label', values=status)
-        filters.add(field='metadata.system.system', values=True)
-        filters.add(field='type', values='class')
-        annotations = self.annotations.list(filters)
-        if len(annotations) > 0:
+        if assignment_id:
+            success = self.assignments.set_status(
+                status=status,
+                operation=operation,
+                item_id=self.id,
+                assignment_id=assignment_id
+            )
+        elif task_id:
+            success = self.tasks.set_status(
+                status=status,
+                operation=operation,
+                item_ids=[self.id],
+                task_id=task_id
+            )
+
+        else:
+            raise exceptions.PlatformException('400', 'Must provide task_id or assignment_id')
+
+        return success
+
+    def update_status(self, status: str, clear: bool = False, assignment_id: str = None, task_id: str = None):
+        """
+        update item status
+
+        :param str status: "completed" ,"approved" ,"discarded"
+        :param bool clear: if true delete status
+        :param str assignment_id: assignment id
+        :param str task_id: task id
+
+        :return :True/False
+        """
+        if not assignment_id and not task_id:
+            system_metadata = self.metadata.get('system', dict())
+            if 'refs' in system_metadata:
+                refs = system_metadata['refs']
+                if len(refs) <= 2:
+                    for ref in refs:
+                        if ref.get('type', '') == 'assignment':
+                            assignment_id = ref['id']
+                        if ref.get('type', '') == 'task':
+                            task_id = ref['id']
+
+        if assignment_id or task_id:
             if clear:
-                # delete all annotation (AnnotationCollection)
-                annotations.delete()
-            return True
-        try:
-            if not clear:
-                annotation_definition = entities.Classification(label=status)
-                entities.Annotation.new(item=self,
-                                        annotation_definition=annotation_definition,
-                                        metadata={'system': {'system': True}}).upload()
-            return True
-        except Exception:
-            logger.error('Error updating status. Please use platform')
-            logger.debug(traceback.format_exc())
-            return False
+                self._set_action(status=status, operation='delete', assignment_id=assignment_id, task_id=task_id)
+            else:
+                self._set_action(status=status, operation='create', assignment_id=assignment_id, task_id=task_id)
+        else:
+            raise exceptions.PlatformException('400', 'must provide assignment_id or task_id')
 
     def set_description(self, text: str):
         """

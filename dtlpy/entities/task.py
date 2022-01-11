@@ -1,5 +1,5 @@
 import traceback
-
+from typing import Union, List
 import attr
 import logging
 
@@ -318,3 +318,16 @@ class Task:
         :return:
         """
         return self.tasks.get_items(task_id=self.id, dataset=self.dataset, filters=filters)
+
+    def set_status(self, status: str, operation: str, item_ids: List[str]):
+        """
+        Update item status within task
+
+        :param status: str - string the describes the status
+        :param operation: str -  'create' or 'delete'
+        :param item_ids: List[str]
+
+        :return : Boolean
+
+        """
+        return self.tasks.set_status(status=status, operation=operation, item_ids=item_ids, task_id=self.id)
