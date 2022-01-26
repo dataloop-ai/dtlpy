@@ -52,24 +52,44 @@ class FeatureSets:
                                        response.json()])
         return features
 
-    def get(self, feature_set_id=None) -> entities.Feature:
+    def get(self, feature_set_name=None, feature_set_id=None) -> entities.Feature:
         """
-        Get Feature object
+        Get Feature Set object
 
-        :param feature_set_id:id of entity to GET
+        :param feature_set_name: name of the feature set
+        :param feature_set_id: id of the feature set
         :return: Feature object
         """
+        if feature_set_id is not None:
+            success, response = self._client_api.gen_request(req_type="GET",
+                                                             path="{}/{}".format(self.URL, feature_set_id))
+            if not success:
+                raise exceptions.PlatformException(response)
+            feature_set = entities.FeatureSet.from_json(client_api=self._client_api,
+                                                        _json=response.json())
+        elif feature_set_name is not None:
+            if not isinstance(feature_set_name, str):
+                raise exceptions.PlatformException(
+                    error='400',
+                    message='feature_set_name must be string')
 
-        success, response = self._client_api.gen_request(req_type="GET",
-                                                         path="{}/{}".format(self.URL, feature_set_id))
-
-        # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
-
-        # return entity
-        return entities.FeatureSet.from_json(client_api=self._client_api,
-                                             _json=response.json())
+            feature_sets = [feature_set for feature_set in self.list() if feature_set.name == feature_set_name]
+            if len(feature_sets) == 0:
+                raise exceptions.PlatformException(
+                    error='404',
+                    message='Feature set not found. name: {!r}'.format(feature_set_name))
+            elif len(feature_sets) > 1:
+                # more than one matching project
+                raise exceptions.PlatformException(
+                    error='404',
+                    message='More than one feature_set with same name. Please "get" by id')
+            else:
+                feature_set = feature_sets[0]
+        else:
+            raise exceptions.PlatformException(
+                error='400',
+                message='Must provide an identifier in inputs, feature_set_name or feature_set_id')
+        return feature_set
 
     def create(self, name: str,
                size: int,

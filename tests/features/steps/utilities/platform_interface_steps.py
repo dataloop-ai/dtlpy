@@ -82,7 +82,8 @@ def before_all(context):
 
         allow_locally_with_user = os.environ.get('ALLOW_RUN_TESTS_LOCALLY_WITH_USER', 'false') == 'true'
 
-        if not allow_locally_with_user and payload['email'] not in ['oa-test-4@dataloop.ai', 'oa-test-1@dataloop.ai', 'oa-test-2@dataloop.ai',
+        if not allow_locally_with_user and payload['email'] not in ['oa-test-4@dataloop.ai', 'oa-test-1@dataloop.ai',
+                                                                    'oa-test-2@dataloop.ai',
                                                                     'oa-test-3@dataloop.ai']:
             assert False, 'Cannot run test on user: "{}". only test users'.format(payload['email'])
 
@@ -120,3 +121,15 @@ def step_impl(context, project_name):
             context.feature.bot = context.bot
             context.bot_user = context.bot.email
             context.feature.bot_user = context.bot_user
+
+
+@behave.given('There is a dataset by the name of "{dataset_name}"')
+def step_impl(context, dataset_name):
+    if hasattr(context.feature, 'dataloop_feature_dataset'):
+        context.dataset = context.feature.dataloop_feature_dataset
+    else:
+        num = random.randint(10000, 100000)
+        dataset_name = 'to-delete-test-{}_{}'.format(str(num), dataset_name)
+        context.dataset = context.project.datasets.create(dataset_name=dataset_name)
+        context.feature.dataloop_feature_dataset = context.dataset
+        time.sleep(5)

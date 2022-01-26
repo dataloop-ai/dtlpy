@@ -152,10 +152,12 @@ from tests.features.steps.converter import converter
 
 from tests.features.steps.models_repo import test_models_create
 from tests.features.steps.models_repo import test_models_delete
+from tests.features.steps.models_repo import test_models_list
 
 from tests.features.steps.model_entity import test_model_update
 
 from tests.features.steps.snapshots_repo import test_snapshots_create
+from tests.features.steps.snapshots_repo import test_snapshots_list
 
 from tests.features.steps.pipeline_entity import pipeline_get, pipeline_delete, pipeline_update, pipeline_flow
 from tests.features.steps.features_vectors import test_features_create, test_features_delete

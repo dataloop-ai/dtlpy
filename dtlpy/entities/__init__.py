@@ -56,10 +56,14 @@ from .model import Model, ModelOutputType, ModelInputType
 from .snapshot import Snapshot, OntologySpec, SnapshotPartitionType
 from .bucket import BucketType, Bucket, ItemBucket, GCSBucket, LocalBucket
 from .driver import Driver
-from .pipeline import Pipeline, PipelineConnection, PipelineNode, PipelineConnectionPort, PipelineNodeIO
+from .pipeline import Pipeline
+from .node import PipelineConnection, PipelineNode, PipelineConnectionPort, PipelineNodeIO, TaskNode,\
+    CodeNode, FunctionNode, PipelineNodeType, PipelineNameSpace, DatasetNode
 from .pipeline_execution import PipelineExecution, PipelineExecutionNode
 from .feature import Feature
 from .feature_set import FeatureSet, FeatureEntityType
 from .organization import Organization, OrganizationsPlans, MemberOrgRole
 from .integration import Integration
 from .driver import Driver, ExternalStorage
+from .setting import Role, PlatformEntityType, SettingsValueTypes, SettingsTypes, SettingsSectionNames, SettingScope, \
+    BaseSetting, FeatureFlag, UserSetting

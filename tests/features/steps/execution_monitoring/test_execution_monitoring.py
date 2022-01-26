@@ -40,7 +40,7 @@ def step_impl(context):
 
 @behave.then(u'Execution was terminated')
 def step_impl(context):
-    num_tries = 15
+    num_tries = 20
     interval = 10
     terminated = False
 
@@ -59,8 +59,8 @@ def step_impl(context):
 @behave.then(u'Execution "{on_reset}" on timeout')
 def step_impl(context, on_reset):
     time.sleep(context.service.execution_timeout + context.service.drain_time + 5)
-    num_tries = 15
-    interval = 3
+    num_tries = 50
+    interval = 4
 
     reset = False
     for _ in range(num_tries):
@@ -75,6 +75,8 @@ def step_impl(context, on_reset):
                     and stat['status'] == 'failed' \
                     and 'Failed due to runner timeout' in stat['message']:
                 reset = True
+            if reset:
+                break
         if reset:
             break
         time.sleep(interval)

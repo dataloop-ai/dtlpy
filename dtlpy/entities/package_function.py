@@ -180,8 +180,8 @@ class FunctionIO:
             if not self.is_json_serializable(value):
                 value_ok = False
         else:
-            expected_value = '{} string or dictionary'.format(expected_value)
-            if type(value) not in [dict, str]:
+            expected_value = 'Unknown value type: {}'.format(type(value))
+            if type(value) not in [dict, str, float, int, bool]:
                 value_ok = False
 
         if not value_ok and value is not None:

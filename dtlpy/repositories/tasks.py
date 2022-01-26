@@ -379,8 +379,36 @@ class Tasks:
         :param items:
         :param query:
         """
-        if filters is None and items is None and query is None:
-            query = json.loads(task.query)
+        source_filter = entities.filters.SingleFilter(
+            field='metadata.system.refs',
+            values={
+                "id": task.id,
+                "type": "task",
+                "metadata":
+                    {
+                        "status":
+                            {
+                                "$exists": True
+                            }
+                    }
+            },
+            operator=entities.FiltersOperations.MATCH
+        )
+
+        if query is not None:
+            and_list = query.get('filter', query).get('$and', None)
+            if and_list is not None:
+                and_list.append(source_filter.prepare())
+            else:
+                if 'filter' not in query:
+                    query['filter'] = {}
+                query['filter']['$and'] = [source_filter.prepare()]
+
+        else:
+            if filters is None:
+                filters = entities.Filters()
+            filters.and_filter_list.append(source_filter)
+
         return self.create(task_name='{}_qa'.format(task.name),
                            task_type='qa',
                            task_parent_id=task.id,
@@ -702,7 +730,7 @@ class Tasks:
                 'status': status
             }
         }
-        
+
         success, response = self._client_api.gen_request(
             req_type='post',
             path=url,

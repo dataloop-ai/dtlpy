@@ -629,6 +629,7 @@ class Downloader:
                 if not result:
                     raise PlatformException(response)
             else:
+                local_filepath = os.path.normpath(local_filepath.split('_link.json')[0])
                 response = self.get_url_stream(url=url)
 
             if save_locally:

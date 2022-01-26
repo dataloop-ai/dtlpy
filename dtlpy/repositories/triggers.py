@@ -192,7 +192,7 @@ class Triggers:
                 pipeline_id = pipeline.id
                 pipeline_node_id = pipeline.start_nodes[0]['nodeId']
                 root_node = [node for node in pipeline.nodes if node.node_id == pipeline_node_id][0]
-                root_node_namespace = root_node.namespace
+                root_node_namespace = root_node.namespace.to_json()
                 root_node_project_id = root_node.project_id
             else:
                 root_node_project_id = project_id

@@ -106,7 +106,6 @@ class PackageSlot(entities.BaseEntity):
     def post_action_setter(self):
         return SlotPostAction(type=SlotPostActionType.NO_ACTION)
 
-
     @classmethod
     def from_json(cls, _json):
         post_action = SlotPostAction(type=SlotPostActionType.NO_ACTION)

@@ -54,11 +54,15 @@ from .entities import (
     ItemLink, UrlLink, LinkTypeEnum,
     Modality, ModalityTypeEnum, ModalityRefTypeEnum,
     Workload, WorkloadUnit, ItemAction,
-    PipelineExecution, PipelineExecutionNode, Pipeline, PipelineConnection, PipelineNode,
-    PipelineConnectionPort, PipelineNodeIO, Organization, OrganizationsPlans, Integration, Driver, ExternalStorage
+    PipelineExecution, PipelineExecutionNode, Pipeline, PipelineConnection,
+    PipelineNode, TaskNode, CodeNode,
+    PipelineNodeType, PipelineNameSpace,
+    FunctionNode, DatasetNode, PipelineConnectionPort, PipelineNodeIO, Organization, OrganizationsPlans, Integration, Driver,
+    ExternalStorage, Role, PlatformEntityType, SettingsValueTypes, SettingsTypes, SettingsSectionNames, SettingScope, \
+    BaseSetting, FeatureFlag, UserSetting
 )
 from .ml import BaseModelAdapter, SuperModelAdapter
-from .utilities import Converter, BaseServiceRunner, Progress, AnnotationFormat
+from .utilities import Converter, BaseServiceRunner, Progress, Context, AnnotationFormat
 from .repositories.packages import PackageCatalog
 from .repositories import FUNCTION_END_LINE
 
@@ -140,6 +144,7 @@ features = repositories.Features(client_api=client_api)
 organizations = repositories.Organizations(client_api=client_api)
 integrations = repositories.Integrations(client_api=client_api)
 drivers = repositories.Drivers(client_api=client_api)
+settings = repositories.Settings(client_api=client_api)
 
 try:
     check_sdk.check(version=__version__, client_api=client_api)

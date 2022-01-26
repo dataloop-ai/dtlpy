@@ -7,6 +7,7 @@ pipelines:
           image: gcr.io/google.com/cloudsdktool/cloud-sdk:latest
           name: Build SDK Container
           script:
+            - echo $BITBUCKET_BRANCH
             # Get an oauth access token using the client credentials, parsing out the token with jq.
             - apt-get update && apt-get install -y curl jq
 

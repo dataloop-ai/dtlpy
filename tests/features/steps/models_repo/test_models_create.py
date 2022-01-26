@@ -99,3 +99,19 @@ def step_impl(context, codebase_path):
 def step_impl(context):
     model = context.dl.models.get(model_id=context.model.id)
     assert isinstance(model.codebase, context.dl.ItemCodebase)
+
+
+@behave.when(u'I rename "{entity}" to {new_name}')
+def step_impl(context, entity, new_name):
+    entity = getattr(context, entity)
+    entity.name = new_name
+    entity.update()
+
+
+@behave.then(u'"{entity}" name is {new_name}')
+def step_impl(context, entity, new_name):
+    repo_name = '{}s'.format(entity)
+    entity_object = getattr(context, entity)
+    host_entity = getattr(context.dl, repo_name).get(**{'{}_id'.format(entity): entity_object.id})
+    assert host_entity.name == new_name, "Name was not change: current: {!r}, new {!r}".format(host_entity.name,
+                                                                                               new_name)

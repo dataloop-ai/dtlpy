@@ -5,7 +5,6 @@ import json
 import os
 import tempfile
 from typing import Union, List, Callable
-
 from .. import miscellaneous, exceptions, entities, repositories, assets, ApiClient
 from ..__version__ import version as __version__
 
@@ -26,6 +25,7 @@ class Services:
             if project is not None:
                 project_id = project.id
         self._project_id = project_id
+        self._settings = repositories.Settings(project=project, client_api=client_api)
 
     ############
     # entities #
@@ -597,6 +597,112 @@ class Services:
                                           client_api=self._client_api,
                                           package=package,
                                           project=self._project)
+
+    def activate_slots(
+            self,
+            service: entities.Service,
+            project_id: str = None,
+            task_id: str = None,
+            dataset_id: str = None,
+            org_id: str = None,
+            user_email: str = None,
+            slots: List[entities.PackageSlot] = None,
+            role=None,
+            prevent_override: bool = True,
+            visible: bool = True,
+            icon: str = 'fas fa-magic',
+            **kwargs
+    ):
+        """
+        Activate service slots (creates buttons in the UI that activate services).
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a package.
+
+        :param dtlpy.entities.service.Service service: service entity
+        :param str project_id: project id
+        :param str task_id: task id
+        :param str dataset_id: dataset id
+        :param str org_id: org id
+        :param str user_email: user email
+        :param list slots: list of entities.PackageSlot
+        :param str role: user role MemberOrgRole.ADMIN, MemberOrgRole.owner, MemberOrgRole.MEMBER
+        :param bool prevent_override: True to prevent override
+        :param bool visible: visible
+        :param str icon: icon
+        :param kwargs: all additional arguments
+        :return: list of user setting for activated slots
+        :rtype: list
+        """
+        package = service.package
+        if not isinstance(package.slots, list) or len(package.slots) == 0:
+            raise exceptions.PlatformException('400', "Service's package has no slots")
+
+        if kwargs.get('is_global', False):
+            project_id = '*'
+            scope_ids = [project_id]
+        else:
+            scope_ids = [s_id for s_id in [project_id, task_id, org_id, dataset_id, user_email] if s_id is not None]
+            if len(scope_ids) == 0:
+                raise exceptions.PlatformException('400', "Must provide scope resource ID")
+
+        settings = list()
+
+        if role is None:
+            role = entities.Role.ALL
+
+        if not slots:
+            slots = [s.to_json() for s in service.package.slots]
+        elif isinstance(slots, list) and isinstance(slots[0], entities.PackageSlot):
+            slots = [s.to_json() for s in slots]
+        else:
+            raise exceptions.PlatformException('400', "Slots param must be a list of PackageSlot objects")
+
+        for scope_id in scope_ids:
+
+            if kwargs.get('is_global', False):
+                scope_type = entities.PlatformEntityType.DATALOOP
+            elif scope_id == project_id:
+                scope_type = entities.PlatformEntityType.PROJECT
+            elif scope_id == task_id:
+                scope_type = entities.PlatformEntityType.TASK
+            elif scope_id == dataset_id:
+                scope_type = entities.PlatformEntityType.DATASET
+            elif scope_id == user_email:
+                scope_type = entities.PlatformEntityType.USER
+            elif scope_id == org_id:
+                scope_type = entities.PlatformEntityType.ORG
+            else:
+                raise exceptions.PlatformException('400', "Unknown resource id")
+
+            setting = entities.UserSetting(
+                default_value=True,
+                value=True,
+                inputs=None,
+                name=service.name,
+                value_type=entities.SettingsValueTypes.BOOLEAN,
+                scope=entities.SettingScope(
+                    type=scope_type,
+                    id=scope_id,
+                    role=role,
+                    prevent_override=prevent_override,
+                    visible=visible
+                ),
+                metadata={
+                    'serviceId': service.id,
+                    'serviceName': service.name,
+                    'projectId': service.project_id,
+                    'slots': slots
+                },
+                description=service.name,
+                icon=icon,
+                section_name=entities.SettingsSectionNames.APPLICATIONS,
+                sub_section_name=None,
+                hint=None
+            )
+
+            settings.append(self._settings.create(setting=setting))
+
+        return settings
 
     def log(self, service, size=None, checkpoint=None, start=None, end=None, follow=False, text=None,
             execution_id=None, function_name=None, replica_id=None, system=False, view=True, until_completed=True):

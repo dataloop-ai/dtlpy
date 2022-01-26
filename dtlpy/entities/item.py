@@ -15,7 +15,7 @@ logger = logging.getLogger(name='dtlpy')
 class ItemStatus(str, Enum):
     COMPLETED = "completed"
     APPROVED = "approved"
-    DISCARDED = "discarded"
+    DISCARDED = "discard"
 
 
 @attr.s
@@ -535,7 +535,7 @@ class Item(entities.BaseEntity):
         """
         update item status
 
-        :param str status: "completed" ,"approved" ,"discarded"
+        :param str status: "completed" ,"approved" ,"discard"
         :param bool clear: if true delete status
         :param str assignment_id: assignment id
         :param str task_id: task id

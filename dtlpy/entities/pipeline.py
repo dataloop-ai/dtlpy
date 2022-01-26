@@ -3,131 +3,10 @@ import logging
 import traceback
 import attr
 
+from .node import PipelineNode, PipelineConnection
 from .. import repositories, entities, services
 
 logger = logging.getLogger(name='dtlpy')
-
-
-class PipelineNodeIO:
-    def __init__(self, port_id, input_type, name, color, display_name, port_percentage, default_value=None):
-        self.port_id = port_id
-        self.input_type = input_type
-        self.name = name
-        self.color = color
-        self.display_name = display_name
-        self.port_percentage = port_percentage
-        self.default_value = default_value
-
-    @staticmethod
-    def from_json(_json: dict):
-        return PipelineNodeIO(
-            port_id=_json.get('portId', None),
-            input_type=_json.get('type', None),
-            name=_json.get('name', None),
-            color=_json.get('color', None),
-            display_name=_json.get('displayName', None),
-            port_percentage=_json.get('portPercentage', None),
-            default_value=_json.get('defaultValue', None)
-        )
-
-    def to_json(self):
-        _json = {
-            'portId': self.port_id,
-            'type': self.input_type,
-            'name': self.name,
-            'color': self.color,
-            'displayName': self.display_name,
-            'portPercentage': self.port_percentage,
-            'defaultValue': self.default_value
-        }
-        return _json
-
-
-class PipelineNode:
-    def __init__(self, name, node_id, outputs, inputs, metadata, node_type, namespace, project_id, config=None):
-        self.name = name
-        self.node_id = node_id
-        self.outputs = outputs
-        self.inputs = inputs
-        self.metadata = metadata
-        self.node_type = node_type
-        self.namespace = namespace
-        self.project_id = project_id
-        self.config = config
-
-    @staticmethod
-    def from_json(_json: dict):
-        inputs = [PipelineNodeIO.from_json(_json=i_input) for i_input in _json.get('inputs', list())]
-        outputs = [PipelineNodeIO.from_json(_json=i_output) for i_output in _json.get('outputs', list())]
-        return PipelineNode(
-            name=_json.get('name', None),
-            node_id=_json.get('id', None),
-            outputs=outputs,
-            inputs=inputs,
-            metadata=_json.get('metadata', None),
-            node_type=_json.get('type', None),
-            namespace=_json.get('namespace', None),
-            project_id=_json.get('projectId', None),
-            config=_json.get('config', None)
-        )
-
-    def to_json(self):
-        _json = {
-            'name': self.name,
-            'id': self.node_id,
-            'outputs': [_io.to_json() for _io in self.outputs],
-            'inputs': [_io.to_json() for _io in self.inputs],
-            'metadata': self.metadata,
-            'type': self.node_type,
-            'namespace': self.namespace,
-            'projectId': self.project_id,
-        }
-        if self.config is not None:
-            _json['config'] = self.config
-        return _json
-
-
-class PipelineConnectionPort:
-    def __init__(self, node_id: str, port_id: str):
-        self.node_id = node_id
-        self.port_id = port_id
-
-    @staticmethod
-    def from_json(_json: dict):
-        return PipelineConnectionPort(
-            node_id=_json.get('nodeId', None),
-            port_id=_json.get('portId', None),
-        )
-
-    def to_json(self):
-        _json = {
-            'nodeId': self.node_id,
-            'portId': self.port_id,
-        }
-        return _json
-
-
-class PipelineConnection:
-    def __init__(self, source: PipelineConnectionPort, target: PipelineConnectionPort, condition):
-        self.source = source
-        self.target = target
-        self.condition = condition
-
-    @staticmethod
-    def from_json(_json: dict):
-        return PipelineConnection(
-            source=PipelineConnectionPort.from_json(_json=_json.get('src', None)),
-            target=PipelineConnectionPort.from_json(_json=_json.get('tgt', None)),
-            condition=_json.get('condition', None),
-        )
-
-    def to_json(self):
-        _json = {
-            'src': self.source.to_json(),
-            'tgt': self.target.to_json(),
-            'condition': self.condition,
-        }
-        return _json
 
 
 @attr.s
@@ -140,7 +19,6 @@ class Pipeline(entities.BaseEntity):
     name = attr.ib()
     creator = attr.ib()
     org_id = attr.ib()
-    nodes = attr.ib()
     connections = attr.ib()
 
     # name change
@@ -198,7 +76,6 @@ class Pipeline(entities.BaseEntity):
                 logger.warning('Pipeline has been fetched from a project that is not belong to it')
                 project = None
 
-        nodes = [PipelineNode.from_json(_json=node) for node in _json.get('nodes', list())]
         connections = [PipelineConnection.from_json(_json=con) for con in _json.get('connections', list())]
         inst = cls(
             created_at=_json.get('createdAt', None),
@@ -211,7 +88,6 @@ class Pipeline(entities.BaseEntity):
             name=_json.get('name', None),
             project=project,
             id=_json.get('id', None),
-            nodes=nodes,
             connections=connections,
             start_nodes=_json.get('startNodes', None),
             url=_json.get('url', None),
@@ -220,6 +96,8 @@ class Pipeline(entities.BaseEntity):
             revisions=_json.get('revisions', None),
             info=_json.get('info', None)
         )
+        for node in _json.get('nodes', list()):
+            inst.nodes.add(node=PipelineNode.from_json(node))
         inst.is_fetched = is_fetched
         return inst
 
@@ -235,7 +113,6 @@ class Pipeline(entities.BaseEntity):
                                                         attr.fields(Pipeline)._client_api,
                                                         attr.fields(Pipeline).project_id,
                                                         attr.fields(Pipeline).org_id,
-                                                        attr.fields(Pipeline).nodes,
                                                         attr.fields(Pipeline).connections,
                                                         attr.fields(Pipeline).created_at,
                                                         attr.fields(Pipeline).updated_at,
@@ -286,7 +163,7 @@ class Pipeline(entities.BaseEntity):
     @_repositories.default
     def set_repositories(self):
         reps = namedtuple('repositories',
-                          field_names=['projects', 'pipelines', 'pipeline_executions', 'triggers'])
+                          field_names=['projects', 'pipelines', 'pipeline_executions', 'triggers', 'nodes'])
 
         r = reps(
             projects=repositories.Projects(client_api=self._client_api),
@@ -294,7 +171,8 @@ class Pipeline(entities.BaseEntity):
             pipeline_executions=repositories.PipelineExecutions(
                 client_api=self._client_api, project=self._project, pipeline=self
             ),
-            triggers=repositories.Triggers(client_api=self._client_api, pipeline=self)
+            triggers=repositories.Triggers(client_api=self._client_api, pipeline=self),
+            nodes=repositories.Nodes(client_api=self._client_api, pipeline=self)
         )
         return r
 
@@ -307,6 +185,11 @@ class Pipeline(entities.BaseEntity):
     def triggers(self):
         assert isinstance(self._repositories.triggers, repositories.Triggers)
         return self._repositories.triggers
+
+    @property
+    def nodes(self):
+        assert isinstance(self._repositories.nodes, repositories.Nodes)
+        return self._repositories.nodes
 
     @property
     def pipelines(self):
@@ -369,3 +252,17 @@ class Pipeline(entities.BaseEntity):
         """
         execution = self.pipeline_executions.create(pipeline_id=self.id, execution_input=execution_input)
         return execution
+
+    def set_start_node(self, node: PipelineNode):
+        """
+        Set the start node of the pipeline
+
+        :param PipelineNode node: node to be the start node
+        """
+        if self.start_nodes:
+            for pipe_node in self.start_nodes:
+                if pipe_node['type'] == 'root':
+                    pipe_node['nodeId'] = node.node_id
+        else:
+            self.start_nodes = [{"nodeId": node.node_id,
+                                 "type": "root", }]

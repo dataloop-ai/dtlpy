@@ -37,6 +37,20 @@ class Projects:
             raise exceptions.PlatformException(error="404", message="Project not found")
         return project
 
+    def __get_by_name(self, project_name: str):
+        """
+        :param project_name:
+        """
+        success, response = self._client_api.gen_request(req_type='get',
+                                                         path='/projects/{}/name'.format(project_name))
+        if success:
+            projects = [entities.Project.from_json(client_api=self._client_api,
+                                                   _json=project_json) for project_json in response.json()]
+        else:
+            # TODO because of a bug in gate wrong error is returned so for now manually raise not found
+            raise exceptions.PlatformException(error="404", message="Project not found")
+        return projects
+
     def __get_by_identifier(self, identifier=None) -> entities.Project:
         """
         :param identifier:
@@ -278,20 +292,14 @@ class Projects:
                         error='400',
                         message='project_name must be strings')
 
-                projects = self.list()
-                project = [project for project in projects if project.name == project_name]
-                if not project:
-                    # list is empty
-                    raise exceptions.PlatformException(error='404',
-                                                       message='Project not found. Name: {}'.format(project_name))
-                    # project = None
-                elif len(project) > 1:
+                projects = self.__get_by_name(project_name)
+                if len(projects) > 1:
                     # more than one matching project
                     raise exceptions.PlatformException(
                         error='404',
                         message='More than one project with same name. Please "get" by id')
                 else:
-                    project = project[0]
+                    project = projects[0]
             else:
                 raise exceptions.PlatformException(
                     error='404',

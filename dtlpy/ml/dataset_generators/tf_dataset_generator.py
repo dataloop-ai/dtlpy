@@ -72,7 +72,7 @@ class DataGenerator(BaseGenerator, tensorflow.keras.utils.Sequence):
         self.batch_size = batch_size
 
     def __getitem__(self, index):
-        indices = slice(index * self.batch_size, (index + 1) * self.batch_size)
+        indices = slice(index * self.batch_size, min((index + 1) * self.batch_size, len(self.data_items)))
         batch = super(DataGenerator, self).__getitem__(indices)
         # convert from list of sample to a unified dict of all samples
         return collate(batch=batch)
@@ -84,7 +84,7 @@ class DataGenerator(BaseGenerator, tensorflow.keras.utils.Sequence):
 
     def __len__(self):
         n_data = super(DataGenerator, self).__len__()
-        return int(np.floor(n_data / self.batch_size))
+        return int(np.ceil(n_data / self.batch_size))
 
 
 def collate(batch):

@@ -69,7 +69,7 @@ class Buckets:
         if isinstance(bucket, entities.ItemBucket):
             directory_item = self.items.get(item_id=bucket.directory_item_id)
             output = directory_item.dataset.items.list(filters=entities.Filters(field='dir',
-                                                                                values=directory_item.filename+'*'))
+                                                                                values=directory_item.filename + '*'))
         elif isinstance(bucket, entities.GCSBucket):
             gcs_bucket = bucket._bucket
             blobs = gcs_bucket.list_blobs(prefix=bucket._gcs_prefix)
@@ -93,7 +93,7 @@ class Buckets:
         """
         if isinstance(bucket, entities.ItemBucket):
             directory_item = self.items.get(item_id=bucket.directory_item_id)
-            filters = entities.Filters(field='dir', values=directory_item.filename+'*')
+            filters = entities.Filters(field='dir', values=directory_item.filename + '*')
             filters.add(field='name', values=filename)
             output = directory_item.dataset.items.list(filters=filters)
         else:
@@ -120,17 +120,30 @@ class Buckets:
             bucket_dir_item = self.items.get(item_id=bucket.directory_item_id)
             # fetch: False does not use an API call but created the dataset entity (with id)
             dataset = bucket_dir_item.datasets.get(dataset_id=bucket_dir_item.dataset_id, fetch=False)
-            bucket_filter = entities.Filters(field='dir', values=bucket_dir_item.filename+'*')
-            # self._client_api.verbose.disable_progress_bar(True)
-            local_path_gen = dataset.items.download(
+            bucket_filter = entities.Filters(field='dir', values=bucket_dir_item.filename + '*')
+            # 1. download to temp folder
+            temp_dir = tempfile.mkdtemp()
+            local_temp_files = list(dataset.items.download(
                 filters=bucket_filter,
-                local_path=local_path,
+                local_path=temp_dir,
                 overwrite=overwrite,
                 to_items_folder=False,
-                without_relative_path=without_relative_path
-            )
-            # self._client_api.verbose.disable_progress_bar(False)
-            if len(list(local_path_gen)) == 0:
+            ))
+            # 2. move to local_path without remote path prefix
+            for item in bucket.list_content().all():
+                for filepath in local_temp_files:
+                    if os.path.join(temp_dir, item.filename[1:]) == filepath:
+                        src = filepath
+                        # remove the prefix with relpath
+                        dst = os.path.join(local_path,
+                                           os.path.relpath(item.filename, bucket_dir_item.filename))
+                        os.makedirs(os.path.dirname(dst), exist_ok=True)
+                        shutil.move(src=src, dst=dst)
+            # clean temo dir
+            if os.path.isdir(temp_dir):
+                shutil.rmtree(temp_dir)
+
+            if len(local_temp_files) == 0:
                 logger.warning("Bucket {} was empty".format(bucket))
             else:
                 logger.info('Bucket artifacts was unpacked to: {}'.format(local_path))
@@ -316,7 +329,7 @@ class Buckets:
         if isinstance(bucket, entities.ItemBucket):
             # delete entire folder content with DQL
             directory_item = self.items.get(item_id=bucket.directory_item_id)
-            filters = entities.Filters(field='dir', values=directory_item.filename+'*')
+            filters = entities.Filters(field='dir', values=directory_item.filename + '*')
             directory_item.dataset.items.delete(filters=filters)
         elif isinstance(bucket, entities.GCSBucket):
             raise NotImplemented(

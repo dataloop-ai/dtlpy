@@ -83,6 +83,7 @@ class Task:
     _project = attr.ib(default=None, repr=False)
     _dataset = attr.ib(default=None, repr=False)
     _tasks = attr.ib(default=None, repr=False)
+    _settings = attr.ib(default=None, repr=False)
 
     @staticmethod
     def _protected_from_json(_json, client_api, project, dataset):
@@ -156,26 +157,30 @@ class Task:
 
         :return: platform json format of object
         """
-        _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(Task)._client_api,
-                                                              attr.fields(Task)._project,
-                                                              attr.fields(Task).project_id,
-                                                              attr.fields(Task).dataset_id,
-                                                              attr.fields(Task).recipe_id,
-                                                              attr.fields(Task).task_owner,
-                                                              attr.fields(Task).available_actions,
-                                                              attr.fields(Task).item_status,
-                                                              attr.fields(Task).due_date,
-                                                              attr.fields(Task)._tasks,
-                                                              attr.fields(Task)._dataset,
-                                                              attr.fields(Task)._current_assignments,
-                                                              attr.fields(Task)._assignments,
-                                                              attr.fields(Task).annotation_status,
-                                                              attr.fields(Task).for_review,
-                                                              attr.fields(Task).issues,
-                                                              attr.fields(Task).updated_at,
-                                                              attr.fields(Task).created_at,
-                                                              attr.fields(Task).total_items,
-                                                              ))
+        _json = attr.asdict(
+            self, filter=attr.filters.exclude(
+                attr.fields(Task)._client_api,
+                attr.fields(Task)._project,
+                attr.fields(Task).project_id,
+                attr.fields(Task).dataset_id,
+                attr.fields(Task).recipe_id,
+                attr.fields(Task).task_owner,
+                attr.fields(Task).available_actions,
+                attr.fields(Task).item_status,
+                attr.fields(Task).due_date,
+                attr.fields(Task)._tasks,
+                attr.fields(Task)._dataset,
+                attr.fields(Task)._current_assignments,
+                attr.fields(Task)._assignments,
+                attr.fields(Task).annotation_status,
+                attr.fields(Task).for_review,
+                attr.fields(Task).issues,
+                attr.fields(Task).updated_at,
+                attr.fields(Task).created_at,
+                attr.fields(Task).total_items,
+                attr.fields(Task)._settings,
+            )
+        )
         _json['projectId'] = self.project_id
         _json['datasetId'] = self.dataset_id
         _json['recipeId'] = self.recipe_id
@@ -215,6 +220,18 @@ class Task:
             self._tasks = repositories.Tasks(client_api=self._client_api, project=self.project, dataset=self.dataset)
         assert isinstance(self._tasks, repositories.Tasks)
         return self._tasks
+
+    @property
+    def settings(self):
+        if self._settings is None:
+            self._settings = repositories.Settings(
+                client_api=self._client_api,
+                project=self.project,
+                dataset=self.dataset,
+                task=self
+            )
+        assert isinstance(self._settings, repositories.Settings)
+        return self._settings
 
     @property
     def project(self):

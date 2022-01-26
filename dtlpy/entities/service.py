@@ -2,9 +2,10 @@ from collections import namedtuple
 from enum import Enum
 import traceback
 import logging
+from typing import List
 import attr
-
 from .. import services, repositories, entities
+
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -379,13 +380,19 @@ class Service(entities.BaseEntity):
         """
         return self.services.resume(service_id=self.id)
 
-    def execute(self,
-                # executions info
-                execution_input=None, function_name=None,
-                # inputs info
-                resource=None, item_id=None, dataset_id=None, annotation_id=None, project_id=None,
-                # execution config
-                sync=False, stream_logs=True, return_output=True):
+    def execute(
+            self,
+            execution_input=None,
+            function_name=None,
+            resource=None,
+            item_id=None,
+            dataset_id=None,
+            annotation_id=None,
+            project_id=None,
+            sync=False,
+            stream_logs=True,
+            return_output=True
+    ):
         """
         Execute a function on an existing service
 
@@ -412,6 +419,50 @@ class Service(entities.BaseEntity):
                                            project_id=project_id,
                                            return_output=return_output)
         return execution
+
+    def activate_slots(
+            self,
+            project_id: str = None,
+            task_id: str = None,
+            dataset_id: str = None,
+            org_id: str = None,
+            user_email: str = None,
+            slots=None,
+            role=None,
+            prevent_override: bool = True,
+            visible: bool = True,
+            icon: str = 'fas fa-magic',
+            **kwargs
+    ) -> object:
+        """
+        @rtype: List[UserSetting]
+        @param project_id: str
+        @param task_id: str
+        @param dataset_id: str
+        @param org_id: str
+        @param user_email: str
+        @param slots: List[PackageSlot]
+        @param role: Role
+        @param prevent_override: bool
+        @param visible: bool
+        @param icon: str
+        @param kwargs: system
+        @return: List of user setting for activated slots
+        """
+        return self.services.activate_slots(
+            service=self,
+            project_id=project_id,
+            task_id=task_id,
+            dataset_id=dataset_id,
+            org_id=org_id,
+            user_email=user_email,
+            slots=slots,
+            role=role,
+            prevent_override=prevent_override,
+            visible=visible,
+            icon=icon,
+            **kwargs
+        )
 
 
 class InstanceCatalog(str, Enum):

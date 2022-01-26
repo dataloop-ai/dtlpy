@@ -336,7 +336,7 @@ class Packages:
                 'We tried to convert you requirements file into PackageRequirements so your service will run with all the required packages. \n'
                 'We cannot pkg_resources is not installed \n '
                 'Please install setuptools package or add requirements manual by using dl.PackageRequirement'
-                )
+            )
             return []
         requirements_list = []
         with open(filepath) as requirements_txt:
@@ -372,7 +372,7 @@ class Packages:
              service_update: bool = False,
              service_config: dict = None,
              slots: List[entities.PackageSlot] = None,
-             requirements: List[entities.PackageRequirement] = []
+             requirements: List[entities.PackageRequirement] = None
              ) -> entities.Package:
         """
         Push local package.
@@ -429,6 +429,9 @@ class Packages:
         if assets.paths.PACKAGE_FILENAME in os.listdir(src_path):
             with open(os.path.join(src_path, assets.paths.PACKAGE_FILENAME), 'r') as f:
                 package_from_json = json.load(f)
+
+        if requirements is not None and not isinstance(requirements, list):
+            requirements = [requirements]
 
         if requirements and assets.paths.REQUIREMENTS_FILENAME in os.listdir(src_path):
             logger.warning('Have both requirements param and requirements file will overwrite the requirements file')

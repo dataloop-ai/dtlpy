@@ -8,7 +8,7 @@ def step_impl(context, test_pipeline):
                'nodes': [],
                'connections': []}
 
-    context.pipeline = context.project.pipelines.create(payload)
+    context.pipeline = context.project.pipelines.create(pipeline_json=payload)
     context.to_delete_pipelines_ids.append(context.pipeline.id)
 
 

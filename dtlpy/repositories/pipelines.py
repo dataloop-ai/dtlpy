@@ -3,6 +3,13 @@ from .. import entities, repositories, exceptions, miscellaneous, services
 
 logger = logging.getLogger(name='dtlpy')
 
+BASIC_PIPELINE = {
+    "name": "",
+    "projectId": "",
+    "nodes": [],
+    "connections": []
+}
+
 
 class Pipelines:
     """
@@ -260,12 +267,26 @@ class Pipelines:
             project=self._project
         )
 
-    def create(self, pipeline_json) -> entities.Pipeline:
+    def create(self, name=None, project_id=None, pipeline_json=None) -> entities.Pipeline:
         """
         Create a new pipeline
-        :param pipeline_json: json contain the pipeline fields
+        :param name: str - pipeline name
+        :param project_id: str - project id
+        :param pipeline_json: dict - json contain the pipeline fields
         :return: Pipeline object
         """
+        if pipeline_json is None:
+            pipeline_json = BASIC_PIPELINE
+
+        if name is not None:
+            pipeline_json['name'] = name
+
+        if project_id is not None:
+            pipeline_json['projectId'] = project_id
+        else:
+            if not pipeline_json.get('projectId', None):
+                pipeline_json['projectId'] = self.project.id
+
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/pipelines',
                                                          json_req=pipeline_json)

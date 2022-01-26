@@ -129,6 +129,9 @@ class BaseGenerator:
             item_info = DataItem()
             # add image path
             item_info.image_filepath = str(image_filepath)
+            if os.stat(image_filepath).st_size <  5:
+                logger.exception('Corrupted Image: {!r}'.format(image_filepath))
+                return None, True
             # get "platform" path
             rel_path = image_filepath.relative_to(self._items_path)
             # replace suffix to JSON
@@ -139,7 +142,10 @@ class BaseGenerator:
             if os.path.isfile(annotation_filepath):
                 with open(annotation_filepath, 'r') as f:
                     data = json.load(f)
-                    item_id = data.get('_id')
+                    if 'id' in data:
+                        item_id = data.get('id')
+                    elif '_id' in data:
+                        item_id = data.get('_id')
                     annotations = entities.AnnotationCollection.from_json(data)
             else:
                 item_id = ''

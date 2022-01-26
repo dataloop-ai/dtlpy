@@ -1,10 +1,11 @@
-import numpy as np
 import pandas as pd
-import os
-import tqdm
-import logging
+import numpy as np
 import traceback
 import datetime
+import logging
+import tqdm
+import uuid
+import os
 
 from .. import entities
 from . import BaseModelAdapter, metrics
@@ -139,242 +140,97 @@ def measure_item_box_predictions(item: entities.Item, model: entities.Model = No
 
 
 def measure_annotations(
-        test_annotations: entities.AnnotationCollection,
-        ref_annotations: entities.AnnotationCollection,
-        geometry_only=False):
+        annotations_set_one: entities.AnnotationCollection,
+        annotations_set_two: entities.AnnotationCollection,
+        match_threshold=0.5,
+        geometry_only=False,
+        compare_types=None):
     """
     Compares list (or collections) of annotations
 
-    :param test_annotations: dl.AnnotationCollection entity with a list of annotations to test against ref_annotations (GT)
-    :param ref_annotations: dl.AnnotationCollection entity with a list of annotations to perform as ground truth for the measure
+    :param annotations_set_one: dl.AnnotationCollection entity with a list of annotations to compare
+    :param annotations_set_two: dl.AnnotationCollection entity with a list of annotations to compare
+    :param match_threshold: IoU threshold to count as a match
     :param geometry_only: ignore label when comparing - measure only geometry
+    :param compare_types: list of type to compare. enum dl.AnnotationType
 
     Returns a dictionary of all the compare data
     """
 
-    # Assign list per type of annotation
-    t_classes = list()
-    t_boxes = list()
-    t_polygons = list()
-    t_points = list()
-    t_semantics = list()
-    t_un_supported = list()
-    #
-    r_classes = list()
-    r_boxes = list()
-    r_polygons = list()
-    r_points = list()
-    r_semantics = list()
-    r_un_supported = list()
+    if compare_types is None:
+        compare_types = [entities.AnnotationType.BOX,
+                         entities.AnnotationType.CLASSIFICATION,
+                         entities.AnnotationType.POLYGON,
+                         entities.AnnotationType.POINT,
+                         entities.AnnotationType.SEGMENTATION]
+    final_results = dict()
+    all_scores = list()
 
-    # create lists for test annotations
-    for ann in test_annotations:
-        if ann.metadata.get('system', dict()).get('system', False):
-            continue
-        if ann.type == 'class':
-            t_classes.append(ann)
-        elif ann.type == 'box':
-            t_boxes.append(ann)
-        elif ann.type == 'segment':
-            t_polygons.append(ann)
-        elif ann.type == 'point':
-            t_points.append(ann)
-        elif ann.type == 'binary':
-            t_semantics.append(ann)
+    # for local annotations - set random id if None
+    for annotation in annotations_set_one:
+        if annotation.id is None:
+            annotation.id = str(uuid.uuid1())
+    for annotation in annotations_set_two:
+        if annotation.id is None:
+            annotation.id = str(uuid.uuid1())
+
+    # start comparing
+    for compare_type in compare_types:
+        matches = metrics.Matches()
+        annotation_subset_one = [a for a in annotations_set_one if
+                                 a.type == compare_type and not a.metadata.get('system', dict()).get('system', False)]
+        annotation_subset_two = [a for a in annotations_set_two if
+                                 a.type == compare_type and not a.metadata.get('system', dict()).get('system', False)]
+        # create 2d dataframe with annotation id as names and set all to -1 -> not calculated
+        if geometry_only:
+            matches = metrics.Matchers.general_match(matches=matches,
+                                                     first_set=annotation_subset_one,
+                                                     second_set=annotation_subset_two,
+                                                     match_type=compare_type,
+                                                     match_threshold=match_threshold)
         else:
-            t_un_supported.append(ann)
-    if len(t_un_supported):
-        logger.debug("test annotations have unsupported types {}:\n{}".
-                     format([ann.type for ann in t_un_supported], t_un_supported))
-
-    # create lists for ref annotations
-    for ann in ref_annotations:
-        if ann.metadata.get('system', dict()).get('system', False):
+            unique_labels = np.unique([a.label for a in annotation_subset_one] +
+                                      [a.label for a in annotation_subset_two])
+            for label in unique_labels:
+                first_set = [a for a in annotation_subset_one if a.label == label]
+                second_set = [a for a in annotation_subset_two if a.label == label]
+                matches = metrics.Matchers.general_match(matches=matches,
+                                                         first_set=first_set,
+                                                         second_set=second_set,
+                                                         match_type=compare_type,
+                                                         match_threshold=match_threshold)
+        if len(matches) == 0:
             continue
-        if ann.type == 'class':
-            r_classes.append(ann)
-        elif ann.type == 'box':
-            r_boxes.append(ann)
-        elif ann.type == 'segment':
-            r_polygons.append(ann)
-        elif ann.type == 'point':
-            r_points.append(ann)
-        elif ann.type == 'binary':
-            r_semantics.append(ann)
-        else:
-            r_un_supported.append(ann)
-    if len(r_un_supported):
-        logger.debug("ref annotations have unsupported types {}:\n{}".
-                     format([ann.type for ann in t_un_supported], t_un_supported))
-
-    # match classes
-    class_scores = metrics.match_class(ref_annotations=r_classes,
-                                       test_annotations=t_classes)
-
-    # match box
-    box_scores = metrics.match_box(ref_annotations=r_boxes,
-                                   test_annotations=t_boxes,
-                                   geometry_only=geometry_only)
-    # polygon
-    polygon_scores = metrics.match_polygon(ref_annotations=r_polygons,
-                                           test_annotations=t_polygons)
-    # point
-    point_scores = metrics.match_point(ref_annotations=r_points,
-                                       test_annotations=t_points)
-    # Semantic / Masks
-    semantic_scores = metrics.match_semantic(ref_annotations=r_semantics,
-                                             test_annotations=t_semantics)
-
-    final = dict()
-    scores = list()
-    # classification
-    if (len(r_classes) + len(t_classes)) > 0:
-        test_iou_scores = [match.annotation_score for match in class_scores.values() if match.annotation_score > 0]
-        matched_class = int(np.sum([1 for score in test_iou_scores if score > 0]))  # len(test_iou_scores)
-        total_class = len(r_classes) + len(t_classes)
-        extra_class = len(t_classes) - matched_class
-        missing_class = len(r_classes) - matched_class
-        assert total_class == extra_class + 2 * matched_class + missing_class
-        # add missing to score
-        test_iou_scores.extend([0 for _ in range(missing_class)])
-        test_iou_scores.extend([0 for _ in range(extra_class)])
-        scores.extend(test_iou_scores)
-        final.update(
-            {'class_ious': class_scores,
-             'class_annotations': r_classes,
-             'class_mean_iou': mean_or_nan(test_iou_scores),
-             'class_attributes_scores': mean_or_nan([match.attributes_score for match in class_scores.values()]),
-             'class_ref_number': len(r_classes),
-             'class_test_number': len(t_classes),
-             'class_missing': missing_class,
-             'class_total': total_class,
-             'class_matched': matched_class,
-             'class_extra': extra_class,
-             })
-    # polygon
-    if (len(r_polygons) + len(t_polygons)) > 0:
-        test_iou_scores = [match.annotation_score for match in polygon_scores.values() if match.annotation_score > 0]
-        matched_polygon = int(np.sum([1 for score in test_iou_scores if score > 0]))  # len(test_iou_scores)
-        total_polygon = len(r_polygons) + len(t_polygons)
-        extra_polygon = len(t_polygons) - matched_polygon
-        missing_polygon = len(r_polygons) - matched_polygon
-        assert total_polygon == extra_polygon + 2 * matched_polygon + missing_polygon
-        # add missing to score
-        test_iou_scores.extend([0 for _ in range(missing_polygon)])
-        test_iou_scores.extend([0 for _ in range(extra_polygon)])
-        scores.extend(test_iou_scores)
-        final.update(
-            {'polygon_ious': polygon_scores,
-             'polygon_annotations': r_polygons,
-             'polygon_mean_iou': mean_or_nan(test_iou_scores),
-             'polygon_attributes_scores': mean_or_nan([match.attributes_score for match in polygon_scores.values()]),
-             'polygon_ref_number': len(r_polygons),
-             'polygon_test_number': len(t_polygons),
-             'polygon_missing': missing_polygon,
-             'polygon_total': total_polygon,
-             'polygon_matched': matched_polygon,
-             'polygon_extra': extra_polygon,
-             })
-    # box
-    if (len(r_boxes) + len(t_boxes)) > 0:
-        test_iou_scores = [match.annotation_score for match in box_scores.values() if match.annotation_score > 0]
-        matched_box = int(np.sum([1 for score in test_iou_scores if score > 0]))  # len(test_iou_scores)
-        total_box = len(r_boxes) + len(t_boxes)
-        extra_box = len(t_boxes) - matched_box
-        missing_box = len(r_boxes) - matched_box
-        assert total_box == extra_box + 2 * matched_box + missing_box
-        # add missing to score
-        test_iou_scores.extend([0 for _ in range(missing_box)])
-        test_iou_scores.extend([0 for _ in range(extra_box)])
-        scores.extend(test_iou_scores)
-        final.update(
-            {'box_ious': box_scores,
-             'box_annotations': r_boxes,
-             'box_mean_iou': mean_or_nan(test_iou_scores),
-             'box_attributes_scores': mean_or_nan([match.attributes_score for match in box_scores.values()]),
-             'box_ref_number': len(r_boxes),
-             'box_test_number': len(t_boxes),
-             'box_missing': missing_box,
-             'box_total': total_box,
-             'box_matched': matched_box,
-             'box_extra': extra_box,
-             })
-    # point
-    if (len(r_points) + len(t_points)) > 0:
-        test_iou_scores = [match.annotation_score for match in point_scores.values() if match.annotation_score > 0]
-        matched_point = int(np.sum([1 for score in test_iou_scores if score > 0]))  # len(test_iou_scores)
-        total_point = len(r_points) + len(t_points)
-        extra_point = len(t_points) - matched_point
-        missing_point = len(r_points) - matched_point
-        assert total_point == extra_point + 2 * matched_point + missing_point
-        # add missing to score
-        test_iou_scores.extend([0 for _ in range(missing_point)])
-        test_iou_scores.extend([0 for _ in range(extra_point)])
-        scores.extend(test_iou_scores)
-        final.update(
-            {'point_ious': point_scores,
-             'point_annotations': r_points,
-             'point_mean_iou': mean_or_nan(test_iou_scores),
-             'point_attributes_scores': mean_or_nan([match.attributes_score for match in point_scores.values()]),
-             'point_ref_number': len(r_points),
-             'point_test_number': len(t_points),
-             'point_missing': missing_point,
-             'point_total': total_point,
-             'point_matched': matched_point,
-             'point_extra': extra_point,
-             })
-    # semantic
-    if (len(r_semantics) + len(t_semantics)) > 0:
-        test_iou_scores = [match.annotation_score for match in semantic_scores.values() if match.annotation_score > 0]
-        matched_semantic = int(np.sum([1 for score in test_iou_scores if score > 0]))  # len(test_iou_scores)
-        total_semantic = len(r_semantics) + len(t_semantics)
-        extra_semantic = len(t_semantics) - matched_semantic
-        missing_semantic = len(r_semantics) - matched_semantic
-        assert total_semantic == extra_semantic + 2 * matched_semantic + missing_semantic
-        # add missing to score
-        test_iou_scores.extend([0 for _ in range(missing_semantic)])
-        test_iou_scores.extend([0 for _ in range(extra_semantic)])
-        scores.extend(test_iou_scores)
-        final.update(
-            {'semantic_ious': semantic_scores,
-             'semantic_annotations': r_semantics,
-             'semantic_mean_iou': mean_or_nan(test_iou_scores),
-             'semantic_attributes_scores': mean_or_nan([match.attributes_score for match in semantic_scores.values()]),
-             'semantic_ref_number': len(r_semantics),
-             'semantic_test_number': len(t_semantics),
-             'semantic_missing': missing_semantic,
-             'semantic_total': total_semantic,
-             'semantic_matched': matched_semantic,
-             'semantic_extra': extra_semantic,
-             })
-    final['total_mean_score'] = mean_or_nan(scores)
-    return final
+        all_scores.extend(matches.to_df()['annotation_score'])
+        final_results[compare_type] = metrics.Results(matches=matches,
+                                                      annotation_type=compare_type)
+    final_results['total_mean_score'] = mean_or_nan(all_scores)
+    return final_results
 
 
 def measure_item(ref_item: entities.Item,
                  test_item: entities.Item,
-                 test_dataset: entities.Dataset = None,
-                 ref_dataset: entities.Dataset = None,
                  ref_project: entities.Project = None,
                  test_project: entities.Project = None,
                  pbar=None):
     try:
-        ref_annotations = ref_item.annotations.list()
-        test_annotations = test_item.annotations.list()
-        final = measure_annotations(ref_annotations=ref_annotations, test_annotations=test_annotations)
+        annotations_set_one = ref_item.annotations.list()
+        annotations_set_two = test_item.annotations.list()
+        final = measure_annotations(annotations_set_one=annotations_set_one,
+                                    annotations_set_two=annotations_set_two)
 
         # get times
         try:
             ref_item_duration_s = metrics.item_annotation_duration(item=ref_item, project=ref_project)
             ref_item_duration = str(datetime.timedelta(seconds=int(np.round(ref_item_duration_s))))
-        except:
+        except Exception:
             ref_item_duration_s = -1
             ref_item_duration = ''
 
         try:
             test_item_duration_s = metrics.item_annotation_duration(item=test_item, project=test_project)
             test_item_duration = str(datetime.timedelta(seconds=int(np.round(test_item_duration_s))))
-        except:
+        except Exception:
             test_item_duration_s = -1
             test_item_duration = ''
 
@@ -412,8 +268,6 @@ def measure_items(ref_items, ref_project, ref_dataset, ref_name,
             test_item = test_items_filepath_dict[filepath]
             jobs[ref_item.filename] = pool.apply_async(measure_item, kwds={'test_item': test_item,
                                                                            'ref_item': ref_item,
-                                                                           'ref_dataset': ref_dataset,
-                                                                           'test_dataset': test_dataset,
                                                                            'ref_project': ref_project,
                                                                            'test_project': test_project,
                                                                            'pbar': pbar})
@@ -436,51 +290,22 @@ def measure_items(ref_items, ref_project, ref_dataset, ref_name,
     ref_column_name = 'Ref-{!r}'.format(ref_name)
     test_column_name = 'Test-{!r}'.format(test_name)
     for filename, scores in raw_items_summary.items():
-        has_box = 'box_test_number' in scores
-        has_point = 'point_test_number' in scores
-        has_polygon = 'polygon_test_number' in scores
-        has_semantic = 'semantic_test_number' in scores
-        has_class = 'class_test_number' in scores
         line = {'filename': scores['filename'],
                 ref_column_name: scores['ref_url'],
                 test_column_name: scores['test_url'],
                 'total_score': scores['total_mean_score'],
                 'ref_duration[s]': scores['ref_item_duration[s]'],
                 'test_duration[s]': scores['test_item_duration[s]'],
-                'diff_duration[s]': scores['diff_duration[s]'],
-                }
-        if has_class:
-            line['class_score'] = scores['class_mean_iou']
-            line['class_attributes_score'] = mean_or_nan(scores['class_attributes_scores'])
-            line['class_ref_number'] = scores['class_ref_number']
-            line['class_test_number'] = scores['class_test_number']
-        if has_box:
-            line['box_score'] = scores['box_mean_iou']
-            line['box_attributes_score'] = mean_or_nan(scores['box_attributes_scores'])
-            line['box_ref_number'] = scores['box_ref_number']
-            line['box_test_number'] = scores['box_test_number']
-        if has_point:
-            line['point_score'] = scores['point_mean_iou']
-            line['point_attributes_score'] = mean_or_nan(scores['point_attributes_scores'])
-            line['point_ref_number'] = scores['point_ref_number']
-            line['point_test_number'] = scores['point_test_number']
-        if has_polygon:
-            line['polygon_score'] = scores['polygon_mean_iou']
-            line['polygon_attributes_score'] = mean_or_nan(scores['polygon_attributes_scores'])
-            line['polygon_ref_number'] = scores['polygon_ref_number']
-            line['polygon_test_number'] = scores['polygon_test_number']
-        if has_semantic:
-            line['semantic_score'] = scores['semantic_mean_iou']
-            line['semantic_attributes_score'] = mean_or_nan(scores['semantic_attributes_scores'])
-            line['semantic_ref_number'] = scores['semantic_ref_number']
-            line['semantic_test_number'] = scores['semantic_test_number']
+                'diff_duration[s]': scores['diff_duration[s]']}
+        for tool_type in list(entities.AnnotationType):
+            if tool_type in scores:
+                res = scores[tool_type].summary()
+                line['{}_annotation_score'.format(tool_type)] = res['mean_annotations_scores']
+                line['{}_attributes_score'.format(tool_type)] = res['mean_attributes_scores']
+                line['{}_ref_number'.format(tool_type)] = res['n_annotations_set_one']
+                line['{}_test_number'.format(tool_type)] = res['n_annotations_set_two']
         summary.append(line)
-    # columns = ['filename', ref_column_name, test_column_name, 'ref_duration', 'test_duration',
-    #            'semantic_score', 'semantic_ref_number', 'semantic_test_number',
-    #            'polygon_score', 'polygon_ref_number', 'polygon_test_number',
-    #            'box_score', 'box_attributes_score', 'box_ref_number', 'box_test_number',
-    #            'point_score', 'point_ref_number', 'point_test_number']
-    df = pd.DataFrame(summary)  # ,                      columns=columns)
+    df = pd.DataFrame(summary)
     # Drop column only if all the values are None
     df = df.dropna(how='all', axis=1)
     ####

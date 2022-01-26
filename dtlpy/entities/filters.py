@@ -39,6 +39,7 @@ class FiltersResource(str, Enum):
     FEATURE_SET = 'feature_sets'
     ORGANIZATIONS = 'organizations'
     DRIVERS = 'drivers'
+    SETTINGS = 'setting'
 
 
 class FiltersOperations(str, Enum):
@@ -50,6 +51,7 @@ class FiltersOperations(str, Enum):
     GREATER_THAN = "gt"
     LESS_THAN = "lt"
     EXISTS = "exists"
+    MATCH = "match"
 
 
 class FiltersMethod(str, Enum):

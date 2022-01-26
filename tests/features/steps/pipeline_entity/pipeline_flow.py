@@ -43,6 +43,49 @@ def step_impl(context):
     time.sleep(10)
 
 
+@behave.when(u'I create a pipeline from sdk')
+def step_impl(context):
+    context.pipeline = context.project.pipelines.create(name='sdk-pipeline-test', project_id=context.project.id)
+
+    function_node = dl.FunctionNode(
+        name='automate',
+        position=(1, 1),
+        service=dl.services.get(service_id=context.service.id),
+        function_name='automate'
+    )
+
+    task_node = dl.TaskNode(
+        name='My Task',
+        recipe_id=context.recipe.id,
+        recipe_title=context.recipe.title,
+        task_owner=dl.info()['user_email'],
+        workload=[dl.WorkloadUnit(assignee_id=dl.info()['user_email'], load=100)],
+        position=(2, 2),
+        project_id=context.project.id,
+        dataset_id=context.dataset.id,
+    )
+
+    def run(item):
+        item.metadata['user'] = {'Hello': 'World'}
+        item.update()
+        return item
+
+    code_node = dl.CodeNode(
+        name='My Function',
+        position=(3, 3),
+        project_id=context.project.id,
+        method=run,
+        project_name=context.project.name
+    )
+
+    context.pipeline.nodes.add(node=function_node).connect(node=task_node) \
+        .connect(node=code_node)
+    function_node.add_trigger()
+    context.pipeline.update()
+    context.pipeline.install()
+    context.to_delete_pipelines_ids.append(context.pipeline.id)
+
+
 @behave.when(u'I create a pipeline from json')
 def step_impl(context):
     pipeline_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], "pipeline_flow/pipeline_flow.json")
@@ -59,6 +102,7 @@ def step_impl(context):
 
     pipeline_json['nodes'][1]['metadata']['recipeTitle'] = context.recipe.title
     pipeline_json['nodes'][1]['metadata']['recipeId'] = context.recipe.id
+    pipeline_json['nodes'][1]['metadata']['datasetId'] = context.dataset.id
 
     pipeline_json['nodes'][2]['namespace']['projectName'] = context.project.name
 
@@ -79,6 +123,7 @@ def step_impl(context):
     time.sleep(15)
     context.item = context.dataset.items.get(item_id=context.item.id)
     assert context.item.metadata['system'].get('fromPipe', False)
+    time.sleep(20)
     context.item = context.dataset.items.get(item_id=context.item.id)
     ass_id = None
     for ref in context.item.metadata['system']['refs']:
@@ -90,6 +135,19 @@ def step_impl(context):
         path='/assignments/{}/items/{}/status'.format(ass_id, context.item.id),
         json_req=payload
     )
-    time.sleep(25)
+    time.sleep(30)
     context.item = context.dataset.items.get(item_id=context.item.id)
     assert context.item.metadata['user'] == {'Hello': 'World'}
+
+
+@behave.when(u'I update the pipeline nodes')
+def step_impl(context):
+    context.pipeline.pause()
+    context.pipeline.nodes.remove("My Function")
+    context.pipeline.update()
+
+
+@behave.when(u'check pipeline nodes')
+def step_impl(context):
+    assert len(context.pipeline.nodes) == 2
+    assert len(context.pipeline.connections) == 1

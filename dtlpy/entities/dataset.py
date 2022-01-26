@@ -256,7 +256,7 @@ class Dataset(entities.BaseEntity):
     def set_repositories(self):
         reps = namedtuple('repositories',
                           field_names=['items', 'recipes', 'datasets', 'assignments', 'tasks', 'annotations',
-                                       'ontologies', 'features'])
+                                       'ontologies', 'features', 'settings'])
         if self._project is None:
             datasets = repositories.Datasets(client_api=self._client_api, project=self._project)
             features = repositories.Features(client_api=self._client_api, project=self._project)
@@ -264,15 +264,22 @@ class Dataset(entities.BaseEntity):
             datasets = self._project.datasets
             features = self._project.features
 
-        r = reps(items=repositories.Items(client_api=self._client_api, dataset=self, datasets=datasets),
-                 recipes=repositories.Recipes(client_api=self._client_api, dataset=self),
-                 assignments=repositories.Assignments(project=self._project, client_api=self._client_api, dataset=self),
-                 tasks=repositories.Tasks(client_api=self._client_api, project=self._project, dataset=self),
-                 annotations=repositories.Annotations(client_api=self._client_api, dataset=self),
-                 datasets=datasets,
-                 ontologies=repositories.Ontologies(client_api=self._client_api, dataset=self),
-                 features=features)
-        return r
+        return reps(
+            items=repositories.Items(client_api=self._client_api, dataset=self, datasets=datasets),
+            recipes=repositories.Recipes(client_api=self._client_api, dataset=self),
+            assignments=repositories.Assignments(project=self._project, client_api=self._client_api, dataset=self),
+            tasks=repositories.Tasks(client_api=self._client_api, project=self._project, dataset=self),
+            annotations=repositories.Annotations(client_api=self._client_api, dataset=self),
+            datasets=datasets,
+            ontologies=repositories.Ontologies(client_api=self._client_api, dataset=self),
+            features=features,
+            settings=repositories.Settings(client_api=self._client_api, dataset=self),
+        )
+
+    @property
+    def settings(self):
+        assert isinstance(self._repositories.settings, repositories.Settings)
+        return self._repositories.settings
 
     @property
     def items(self):
