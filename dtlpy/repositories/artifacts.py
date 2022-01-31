@@ -12,8 +12,8 @@ class Artifacts:
 
     def __init__(self,
                  client_api: services.ApiClient,
-                 project: entities.Project = None,
-                 dataset: entities.Dataset = None,
+                 project=None,
+                 dataset=None,
                  project_id: str = None,
                  model: entities.Model = None,
                  package: entities.Package = None,
@@ -102,17 +102,19 @@ class Artifacts:
         return remote_path
 
     def list(self,
-             execution_id=None,
-             package_name=None,
-             model_name=None,
-             snapshot_name=None) -> miscellaneous.List[entities.Artifact]:
+             execution_id: str = None,
+             package_name: str = None,
+             model_name: str = None,
+             snapshot_name: str = None) -> miscellaneous.List[entities.Artifact]:
         """
         List of artifacts
-        :param execution_id:
-        :param package_name:
-        :param model_name:
-        :param snapshot_name:
+
+        :param str execution_id: execution id
+        :param str package_name: package name
+        :param str model_name: model name
+        :param str snapshot_name: snapshot name
         :return: list of artifacts
+        :rtype: miscellaneous.List[dtlpy.entities.artifact.Artifact]
         """
         if self._model is not None:
             model_name = self._model.name
@@ -135,23 +137,25 @@ class Artifacts:
         return miscellaneous.List(items)
 
     def get(self,
-            artifact_id=None,
-            artifact_name=None,
-            model_name=None,
-            snapshot_name=None,
-            execution_id=None,
-            package_name=None) -> entities.Artifact:
+            artifact_id: str = None,
+            artifact_name: str = None,
+            model_name: str = None,
+            snapshot_name: str = None,
+            execution_id: str = None,
+            package_name: str = None) -> entities.Artifact:
         """
 
         Get an artifact object by name, id or type
         If by name or type - need to input also execution/task id for the artifact folder
-        :param artifact_id: optional - search by id
-        :param artifact_name:
-        :param model_name:
-        :param snapshot_name:
-        :param execution_id:
-        :param package_name:
+
+        :param str artifact_id: search by artifact id
+        :param str artifact_name: search by artifact id
+        :param str model_name: model name
+        :param str snapshot_name: snapshot name
+        :param str execution_id: execution id
+        :param str package_name: package name
         :return: Artifact object
+        :rtype: dtlpy.entities.artifact.Artifact
         """
         if self._model is not None:
             model_name = self._model.name
@@ -189,31 +193,32 @@ class Artifacts:
 
     def download(
             self,
-            artifact_id=None,
-            artifact_name=None,
-            execution_id=None,
-            package_name=None,
-            model_name=None,
-            snapshot_name=None,
-            local_path=None,
-            overwrite=False,
-            save_locally=True
+            artifact_id: str = None,
+            artifact_name: str = None,
+            execution_id: str = None,
+            package_name: str = None,
+            model_name: str = None,
+            snapshot_name: str = None,
+            local_path: str = None,
+            overwrite: bool = False,
+            save_locally: bool = True
     ):
         """
 
         Download artifact binary.
         Get artifact by name, id or type
 
-        :param artifact_id: optional - search by id
-        :param artifact_name:
-        :param execution_id:
-        :param package_name:
-        :param model_name:
-        :param snapshot_name:
-        :param local_path: artifact will be saved to this filepath
-        :param overwrite: optional - default = False
-        :param save_locally:
-        :return: Artifact object
+        :param str artifact_id: search by artifact id
+        :param str artifact_name: search by artifact id
+        :param str execution_id: execution id
+        :param str package_name: package name
+        :param str model_name: model name
+        :param str snapshot_name: snapshot name
+        :param str local_path: artifact will be saved to this filepath
+        :param bool overwrite: optional - default = False
+        :param bool save_locally: to save the file local
+        :return: file path
+        :rtype: str
         """
         if self._model is not None:
             model_name = self._model.name
@@ -258,26 +263,32 @@ class Artifacts:
 
     def upload(self,
                # what to upload
-               filepath,
+               filepath: str,
                # where to upload
-               package_name=None, package=None, execution_id=None, execution=None, model_name=None, snapshot_name=None,
+               package_name: str = None,
+               package: entities.Package = None,
+               execution_id: str = None,
+               execution: entities.Execution = None,
+               model_name: str = None,
+               snapshot_name: str = None,
                # add information
-               overwrite=False):
+               overwrite: bool = False):
         """
 
         Upload binary file to artifact. get by name, id or type.
         If artifact exists - overwriting binary
         Else and if create==True a new artifact will be created and uploaded
 
-        :param filepath: local binary file
-        :param package_name:
-        :param package:
-        :param execution_id:
-        :param execution:
-        :param model_name:
-        :param snapshot_name:
-        :param overwrite: optional - default = False
+        :param str filepath: local binary file
+        :param str package_name: package name
+        :param dtlpy.entities.package.Package package: package object
+        :param str execution_id: execution id
+        :param dtlpy.entities.execution.Execution execution: execution object
+        :param str model_name: model name
+        :param str snapshot_name: snapshot name
+        :param bool overwrite: optional - default = False to overwrite an existing object
         :return: Artifact Object
+        :rtype: dtlpy.entities.artifact.Artifact
         """
         if self._model is not None:
             model_name = self._model.name
@@ -312,14 +323,14 @@ class Artifacts:
         """
         Delete artifacts
 
-        :param artifact_id:
-        :param artifact_name:
-        :param execution_id:
-        :param model_name:
-        :param snapshot_name:
-        :param package_name:
-
+        :param str artifact_id: search by artifact id
+        :param str artifact_name: search by artifact id
+        :param str execution_id: execution id
+        :param str model_name: model name
+        :param str snapshot_name: snapshot name
+        :param str package_name: package name
         :return: True if success
+        :rtype: bool
         """
         if self._model is not None:
             model_name = self._model.name

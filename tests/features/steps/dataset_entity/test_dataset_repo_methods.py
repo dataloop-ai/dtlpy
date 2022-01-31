@@ -1,4 +1,6 @@
 import shutil
+import random
+import string
 
 import behave
 import os
@@ -30,6 +32,14 @@ def step_impl(context):
 @behave.when(u'I create a new recipe to dataset entity')
 def step_impl(context):
     context.recipe = context.dataset.recipes.create()
+
+@behave.when(u'I update dataset name to new random name')
+def step_impl(context):
+    rand_str = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(5))
+    dataset_name = 'random_dataset_{}'.format(rand_str)
+    context.dataset.name = dataset_name
+    context.dataset.update(True)
+    assert context.dl.datasets.get(dataset_id=context.dataset.id).name == dataset_name, 'Failed to update dataset name'
 
 
 @behave.when(u'I upload to dataset entity a file in path "{item_local_path}"')

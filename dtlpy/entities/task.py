@@ -89,6 +89,7 @@ class Task:
     def _protected_from_json(_json, client_api, project, dataset):
         """
         Same as from_json but with try-except to catch if error
+
         :param _json: platform json
         :param client_api: ApiClient entity
         :param project: project entity
@@ -156,6 +157,7 @@ class Task:
         Returns platform _json format of object
 
         :return: platform json format of object
+        :rtype: dict
         """
         _json = attr.asdict(
             self, filter=attr.filters.exclude(
@@ -273,6 +275,7 @@ class Task:
     def delete(self, wait=True):
         """
         Delete task from platform
+
         :param wait: wait the command to finish
         :return: True
         """
@@ -280,24 +283,29 @@ class Task:
 
     def update(self, system_metadata=False):
         """
+        Update an Annotation Task
+
         :param system_metadata: True, if you want to change metadata system
         """
         return self.tasks.update(task=self, system_metadata=system_metadata)
 
     def create_qa_task(self, due_date, assignee_ids):
         """
-        :param due_date:
-        :param assignee_ids:
+        Create a new QA Task
+
+        :param float due_date: date to when finish the task
+        :param list assignee_ids: list of assignee
         """
         return self.tasks.create_qa_task(task=self, due_date=due_date, assignee_ids=assignee_ids)
 
     def create_assignment(self, assignment_name, assignee_id, items=None, filters=None):
         """
+        Create a new assignment
 
         :param assignment_name: assignment name
         :param assignee_id: list of assignee for the assignment
         :param items: items list for the assignment
-        :param filters: Filters entity or a dictionary containing filters parameters
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :return:
         """
         assignment = self.assignments.create(assignee_id=assignee_id,
@@ -313,11 +321,13 @@ class Task:
 
     def add_items(self, filters=None, items=None, assignee_ids=None, workload=None, limit=0, wait=True):
         """
-        :param filters: Filters entity or a dictionary containing filters parameters
+        Add items to Task
+
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :param items: items list for the assignment
         :param assignee_ids: list of assignee for the assignment
         :param workload: the load of work
-        :param limit:
+        :param limit: limit
         :param wait: wait the command to finish
         :return:
         """
@@ -331,7 +341,9 @@ class Task:
 
     def get_items(self, filters=None):
         """
-        :param filters:
+        Get the task items
+
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :return:
         """
         return self.tasks.get_items(task_id=self.id, dataset=self.dataset, filters=filters)

@@ -45,13 +45,18 @@ class Models:
     ###########
     # methods #
     ###########
-    def get(self, model_name=None, model_id=None, checkout=False, fetch=None) -> entities.Model:
+    def get(self,
+            model_name: str = None,
+            model_id: str = None,
+            checkout: bool = False,
+            fetch=None
+            ) -> entities.Model:
         """
         Get model object
 
-        :param model_name:
-        :param model_id:
-        :param checkout: bool
+        :param str model_name: model name
+        :param str model_id: model id
+        :param bool checkout: checkout the current model
         :param fetch: optional - fetch entity from platform, default taken from cookie
         :return: model object
         """
@@ -139,8 +144,10 @@ class Models:
     def list(self, filters: entities.Filters = None) -> entities.PagedEntities:
         """
         List project models
-        :param filters: Filters entity or a dictionary containing filters parameters
-        :return:
+
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
+        :return: Paged entity
+        :rtype: dtlpy.entities.paged_entities.PagedEntities
         """
         if filters is None:
             filters = entities.Filters(resource=entities.FiltersResource.MODEL)
@@ -165,11 +172,12 @@ class Models:
 
     def build(self, model: entities.Model, local_path=None, from_local=None) -> ml.BaseModelAdapter:
         """
-        :param model: Model entity
-        :param local_path: local path of the model (if from_local=False - codebase will be downloaded)
-        :param from_local: bool. use current directory to build
+        Build a model
 
-        :return:dl.BaseModelAdapter
+        :param model: Model entity
+        :param str local_path: local path of the model (if from_local=False - codebase will be downloaded)
+        :param bool from_local: bool. use current directory to build
+        :return: dl.BaseModelAdapter
         """
 
         if model.codebase is None:
@@ -231,12 +239,11 @@ class Models:
         Uploads and updates codebase to Model
 
         :param model: Model entity
-        :param src_path: codebase location (path to directory of the code). if None pwd will be taken
-        :param entry_point: relative path to the module where model adapter class is defined
-        :param class_name: name of the adapter class in entry point. default: ModelAdapter
-        :param codebase: `dl.Codebase` object - representing the model code  if None new will be created from src_path
-
-        :return:
+        :param str src_path: codebase location (path to directory of the code). if None pwd will be taken
+        :param str entry_point: relative path to the module where model adapter class is defined
+        :param str class_name: name of the adapter class in entry point. default: ModelAdapter
+        :param dtlpy.entities.codebase.Codebase codebase: `dl.Codebase` object - representing the model code  if None new will be created from src_path
+        :return: model entity
         """
 
         # get or create codebase
@@ -283,19 +290,18 @@ class Models:
         If any of the "online mode" params are entered - codebase will be pushed after creation
 
         For offline mode:
-        :param model_name: name of model
-        :param description: model description
-        :param output_type: model output type (annotation type)
-        :param input_type: model input mimetype
-        :param is_global: is model global
-        :param checkout: checkout model to local state
-        :param tags: list of string tags
+        :param str model_name: name of model
+        :param str description: model description
+        :param str output_type: model output type (annotation type)
+        :param str input_type: model input mimetype
+        :param bool is_global: is model global
+        :param bool checkout: checkout model to local state
+        :param list tags: list of string tags
         For online mode
-        :param codebase: optional - model codebase
-        :param src_path: codebase location. if None no codebase will be pushed
-        :param entry_point: location of the model adapter class
-        :param class_name: Name of the model adapter class, default is ModelAdapter
-
+        :param dtlpy.entities.codebase.Codebase codebase: optional - model codebase
+        :param str src_path: codebase location. if None no codebase will be pushed
+        :param str entry_point: location of the model adapter class
+        :param str class_name: Name of the model adapter class, default is ModelAdapter
         :return: Model Entity
         """
 
@@ -353,10 +359,11 @@ class Models:
         """
         Delete Model object
 
-        :param model:
-        :param model_name:
-        :param model_id:
-        :return: True
+        :param model: model entity
+        :param model_name: model name
+        :param model_id: model id
+        :return: True if success
+        :rtype: bool
         """
         # get id and name
         if model_name is None or model_id is None:
@@ -407,10 +414,10 @@ class Models:
                  overwrite=False):
         """
         Generate new model adapter file
-        :param src_path: `str` path where to create te model_adapter file (if None uses current working dir)
-        :param entry_point: `str` name of the python module to create (if None uses model_adapter.py as default)
-        :param overwrite:  `bool` whether to over write an existing file (default False)
 
+        :param str src_path: path where to create te model_adapter file (if None uses current working dir)
+        :param str entry_point: name of the python module to create (if None uses model_adapter.py as default)
+        :param bool overwrite: whether to over write an existing file (default False)
         :return: path where the adapter was created
         """
         # src path
@@ -440,10 +447,10 @@ class Models:
     def checkout(self, model: entities.Model = None, model_id=None, model_name=None):
         """
         Checkout as model
-        :param model:
-        :param model_id:
-        :param model_name:
-        :return:
+
+        :param model: model entity
+        :param model_name: model name
+        :param model_id: model id
         """
         if model is None:
             model = self.get(model_id=model_id, model_name=model_name)
@@ -455,7 +462,7 @@ class Models:
         Get model revisions history
 
         :param model: Package entity
-        :param model_id: package id
+        :param str model_id: model id
         """
         if model is None and model_id is None:
             raise exceptions.PlatformException(

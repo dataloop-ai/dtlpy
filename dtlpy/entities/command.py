@@ -61,6 +61,7 @@ class Command(entities.BaseEntity):
     def _protected_from_json(_json, client_api, is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
+
         :param _json: platform json
         :param client_api: ApiClient entity
         :param is_fetched: is Entity fetched from Platform
@@ -106,6 +107,7 @@ class Command(entities.BaseEntity):
         Returns platform _json format of object
 
         :return: platform json format of object
+        :rtype: dict
         """
         # get excluded
         _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(Command)._client_api,
@@ -129,7 +131,8 @@ class Command(entities.BaseEntity):
         """
         Check if command is still in one of the in progress statuses
 
-        :return: Boolean
+        :return: True if command still in progress
+        :rtype: bool
         """
         return self.status in [entities.CommandsStatus.CREATED,
                                entities.CommandsStatus.MAKING_CHILDREN,
@@ -141,8 +144,8 @@ class Command(entities.BaseEntity):
         """
         Wait for Command to finish
 
-        :param timeout: int, seconds to wait until TimeoutError is raised. if 0 - wait until done
-        :param step: int, seconds between polling
+        :param int timeout: int, seconds to wait until TimeoutError is raised. if 0 - wait until done
+        :param int step: int, seconds between polling
         :return: Command  object
         """
         if not self.in_progress():

@@ -63,8 +63,10 @@ class Buckets:
     def list_content(self, bucket: entities.Bucket):
         """
         List bucket content
-        :param bucket:
+
+        :param dtlpy.entities.bucket.Bucket bucket: Bucket entity
         :return: list of items in bucket TBD
+        :rtype: list
         """
         if isinstance(bucket, entities.ItemBucket):
             directory_item = self.items.get(item_id=bucket.directory_item_id)
@@ -81,15 +83,16 @@ class Buckets:
         return output
 
     def get_single_file(self,
-                        filename,
+                        filename: str,
                         bucket: entities.Bucket):
         """
 
         Get a filename from bucket
         If by name or type - need to input also execution/task id for the bucket folder
 
-        :param filename: Bucket entity
-        :param bucket: Bucket entity
+        :param str filename: filename
+        :param dtlpy.entities.bucket.Bucket bucket: Bucket entity
+        :return:
         """
         if isinstance(bucket, entities.ItemBucket):
             directory_item = self.items.get(item_id=bucket.directory_item_id)
@@ -102,18 +105,18 @@ class Buckets:
 
     def download(self,
                  bucket: entities.Bucket,
-                 local_path=None,
-                 overwrite=False,
-                 without_relative_path=True
+                 local_path: str = None,
+                 overwrite: bool = False,
+                 without_relative_path: bool = True
                  ):
         """
 
         Download binary file from bucket.
 
-        :param bucket: bucket entity
-        :param local_path: local binary file or folder to upload
-        :param overwrite: optional - default = False
-        :param without_relative_path: bool - download items without the relative path from platform
+        :param dtlpy.entities.bucket.Bucket bucket: Bucket entity
+        :param str local_path: local binary file or folder to upload
+        :param bool overwrite: optional - default = False
+        :param bool without_relative_path: download items without the relative path from platform
         :return:
         """
         if isinstance(bucket, entities.ItemBucket):
@@ -169,10 +172,10 @@ class Buckets:
     def upload(self,
                bucket: entities.Bucket,
                # what to upload
-               local_path,
+               local_path: str,
                # add information
-               overwrite=False,
-               file_types=None):
+               overwrite: bool = False,
+               file_types: list = None):
         """
 
         Upload binary file to bucket. get by name, id or type.
@@ -180,11 +183,12 @@ class Buckets:
         Else and if create==True a new bucket will be created and uploaded
         For LocalBucket - this "upload" will copy the content of "local_path" to the bucket.path
 
-        :param bucket: bucket entity
-        :param local_path: local binary file or folder to upload
-        :param overwrite: optional - default = False
-        :param file_types: list of file type to upload. e.g ['.jpg', '.png']. default is all
-        :return:
+        :param dtlpy.entities.bucket.Bucket bucket: Bucket entity
+        :param str local_path: local binary file or folder to upload
+        :param bool overwrite: optional - default = False
+        :param list file_types: list of file type to upload. e.g ['.jpg', '.png']. default is all
+        :return: True if success
+        :rtype: bool
         """
         if isinstance(bucket, entities.ItemBucket):
             directory_item = self.items.get(item_id=bucket.directory_item_id)
@@ -221,8 +225,9 @@ class Buckets:
         """
         Delete bucket
 
-        :param bucket: bucket entity
+        :param dtlpy.entities.bucket.Bucket bucket: Bucket entity
         :return: True if success
+        :rtype: bool
         """
         if isinstance(bucket, entities.ItemBucket):
             path = self.items.delete(item_id=bucket.directory_item_id)
@@ -233,7 +238,7 @@ class Buckets:
 
     def create(self, bucket_type=entities.BucketType.ITEM,
                # item bucket / local_bucket
-               local_path=None,
+               local_path: str = None,
                # gcs bucket
                gcs_project_name: str = None,
                gcs_bucket_name: str = None,
@@ -251,16 +256,17 @@ class Buckets:
         Item Bucket: is used when you want to store your binary files of the model on our Dataloop Platform, they are saved i a different dataset in a defined path
         Gcs Bucket: is used when you have a Google Cloud Storage bucket and you can connect to it, save / download your models directly to the bucket
 
-        :param bucket_type: `dl.BucketType`: Local, Item, Gcs
-        :param local_path:  `str` where were the weights are currently saved - what directory to upload to the bucket
-        :param gcs_project_name: `str` project name in your GCS (Google Cloud Storage) platform
-        :param gcs_bucket_name:  `str` bucket name in your GCS
-        :param gcs_prefix:  `str` prefix/ remote path of where your bucket is defined in GCS
-        :param model_name: `str` optional to override the repo settings
-        :param snapshot_name: `str` = optional to override the repo settings
-        :param use_existing_gcs:
+        :param str bucket_type: `dl.BucketType`: Local, Item, Gcs
+        :param str local_path: where were the weights are currently saved - what directory to upload to the bucket
+        :param str gcs_project_name: project name in your GCS (Google Cloud Storage) platform
+        :param str gcs_bucket_name: bucket name in your GCS
+        :param str gcs_prefix:  prefix/ remote path of where your bucket is defined in GCS
+        :param str model_name: optional to override the repo settings
+        :param str snapshot_name: optional to override the repo settings
+        :param bool use_existing_gcs: use existing gcs
 
         :return: `dl.Bucket`
+        :rtype: dtlpy.entities.bucket.Bucket
         """
 
         if bucket_type == entities.BucketType.ITEM:
@@ -308,19 +314,30 @@ class Buckets:
         else:
             raise NotImplemented('missing implementation in "buckets.create" for bucket type: {!r}'.format(bucket_type))
 
-    def clone(self, src_bucket: entities.Bucket, dst_bucket: entities.Bucket):
+    def clone(self,
+              src_bucket: entities.Bucket,
+              dst_bucket: entities.Bucket):
+        """
+        Clone the entire bucket's content
+
+        :param dtlpy.entities.bucket.Bucket src_bucket: source bucket
+        :param dtlpy.entities.bucket.Bucket dst_bucket: dist bucket
+        """
         temp_dir = tempfile.mkdtemp()
         src_bucket.download(local_path=temp_dir)
         dst_bucket.upload(local_path=temp_dir)
         shutil.rmtree(temp_dir)
 
-    def empty_bucket(self, bucket, sure: bool = False):
+    def empty_bucket(self,
+                     bucket: entities.Bucket,
+                     sure: bool = False):
         """
-        delete the entire bucket's content
+        Delete the entire bucket's content
 
-        :param sure: `bool` must be True to perform the action
-
+        :param dtlpy.entities.bucket.Bucket bucket: Bucket entity
+        :param bool sure: must be True to perform the action
         :return: True is deletion was successful
+        :rtype: bool
         """
 
         if not sure:

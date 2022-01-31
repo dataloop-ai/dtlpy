@@ -9,7 +9,7 @@ def step_impl(context):
 
 @behave.when(u'I delete recipe')
 def step_impl(context):
-    context.recipe.delete()
+    context.recipe.delete(force=True)
 
 
 @behave.then(u'Dataset has no recipes')

@@ -150,6 +150,7 @@ class GitUtils:
         :param git_url: `str` git url to clone from
         :return `bool` for successful clone
         """
+        cmd = ''
         if not os.path.isdir(path):
             os.makedirs(path)
         try:
@@ -171,7 +172,7 @@ class GitUtils:
                 logging.error('Error executing:  {ps1} $ {cmd}\n{err}'.format(ps1=path, cmd=' '.join(cmd), err=err))
         except Exception:
             response = False
-            logging.warning('Error cloning git to: {}'.format(path))
+            logging.exception('Error cloning git with cmd: {}'.format(cmd))
         return response
 
     @staticmethod

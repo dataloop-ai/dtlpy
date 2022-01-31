@@ -94,6 +94,7 @@ class Feature(entities.BaseEntity):
         Returns platform _json format of object
 
         :return: platform json format of object
+        :rtype: dict
         """
 
         _json = {'createdAt': self.created_at,

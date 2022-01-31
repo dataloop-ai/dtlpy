@@ -110,3 +110,25 @@ def step_impl(context, raise_value):
 def step_impl(context):
     annotation_get = context.item.annotations.get(context.annotation_x.id)
     assert annotation_get.coordinates == context.annotation_x.coordinates
+
+
+@behave.when(u'I get the only annotation')
+def step_impl(context):
+    context.annotation = context.item.annotations.list()[0]
+
+
+@behave.then(u'Annotation snapshots equal to platform snapshots')
+def step_impl(context):
+    ann = context.annotation
+    assert len(ann.frames.actual_keys()) == 5
+    time.sleep(10)
+    vals = list(ann.frames.values())
+    assert len(vals) == 46
+    platform_snapshots = context.annotation._platform_dict['metadata']['system']['snapshots_']
+    ann_snapshot = ann.to_json()['metadata']['system']['snapshots_']
+    assert len(platform_snapshots) == len(ann_snapshot)
+    for platform_snap in platform_snapshots:
+        ann_snap = [snap for snap in ann_snapshot if snap['frame'] == platform_snap['frame']][0]
+        assert ann_snap
+        assert ann_snap['frame'] == platform_snap['frame']
+        assert ann_snap['data'] == platform_snap['data']

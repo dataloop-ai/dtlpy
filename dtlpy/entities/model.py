@@ -81,6 +81,7 @@ class Model(entities.BaseEntity):
     def _protected_from_json(_json, client_api, project, is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
+
         :param _json: platform representation of model
         :param client_api: ApiClient entity
         :param project: project entity
@@ -149,6 +150,7 @@ class Model(entities.BaseEntity):
         Turn Model entity into a platform representation of Model
 
         :return: platform json of model
+        :rtype: dict
         """
         _json = attr.asdict(self,
                             filter=attr.filters.exclude(attr.fields(Model)._project,
@@ -314,7 +316,7 @@ class Model(entities.BaseEntity):
 
         :param src_path: codebase location. if None pwd will be taken
         :param entry_point: location on the ModelAdapter class
-        :param codebase: if none new will be created from src_path
+        :param dtlpy.entities.codebase.Codebase codebase: codebase object  if none new will be created from src_path
         :return:
         """
         return self.project.models.push(model=self,
@@ -339,6 +341,7 @@ class Model(entities.BaseEntity):
     def generate_adapter(self, local_path=None, overwrite=False):
         """
         Creates a local model_adapter file with virtual functions to be implemented
+
         :param local_path: `str` path to save the adapter (if None uses current working dir)
         :param overwrite:  `bool` whether to over write an existing file (default False)
         """

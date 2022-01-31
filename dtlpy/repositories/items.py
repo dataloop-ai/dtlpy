@@ -7,7 +7,9 @@ logger = logging.getLogger(name='dtlpy')
 
 class Items:
     """
-    Items repository
+    Items Repository
+
+    The Items class allows you to manage items in your datasets. For information on actions related to items see `Organizing Your Dataset <https:/dataloop.ai/docs/sdk-organize-dataset>`_, `Item Metadata <https://dataloop.ai/docs/sdk-add-item-metadata>`_, and `Item Metadata-Based Filtering <https://dataloop.ai/docs/sdk-custom-filter-metadata>`_.
     """
 
     def __init__(self,
@@ -58,18 +60,30 @@ class Items:
     ###########
     # methods #
     ###########
+    
     def set_items_entity(self, entity):
+        """
+        Set the item entity type to `Artifact <https://dataloop.ai/docs/auto-annotation-service?#uploading-model-weights-as-artifacts>`_, Item, or Codebase.
+
+        :param entities.Item, entities.Artifact, entities.Codebase entity: entity type [entities.Item, entities.Artifact, entities.Codebase]
+        """
         if entity in [entities.Item, entities.Artifact, entities.Codebase]:
             self.items_entity = entity
         else:
             raise exceptions.PlatformException(error="403",
                                                message="Unable to set given entity. Entity give: {}".format(entity))
 
+
+
     def get_all_items(self, filters: entities.Filters = None) -> [entities.Item]:
         """
-        Get all items in dataset
-        :param filters: dl.Filters entity to filters items
+        Get all items in dataset.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param dtlpy.entities.filters.Filters filters: dl.Filters entity to filters items
         :return: list of all items
+        :rtype: list
         """
         if filters is None:
             filters = entities.Filters()
@@ -104,7 +118,7 @@ class Items:
         Get dataset items list This is a browsing endpoint, for any given path item count will be returned,
         user is expected to perform another request then for every folder item to actually get the its item list.
 
-        :param filters: Filters entity or a dictionary containing filters parameters
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :return: json response
         """
         # prepare request
@@ -115,14 +129,21 @@ class Items:
             raise exceptions.PlatformException(response)
         return response.json()
 
-    def list(self, filters: entities.Filters = None, page_offset=None, page_size=None) -> entities.PagedEntities:
+    def list(self,
+             filters: entities.Filters = None,
+             page_offset: int = None,
+             page_size: int = None
+             ) -> entities.PagedEntities:
         """
-        List items
+        List items in a dataset.
 
-        :param filters: Filters entity or a dictionary containing filters parameters
-        :param page_offset: start page
-        :param page_size: page size
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
+        :param int page_offset: start page
+        :param int page_size: page size
         :return: Pages object
+        :rtype: dtlpy.entities.paged_entities.PagedEntities
         """
         # default filters
         if filters is None:
@@ -164,15 +185,23 @@ class Items:
         paged.get_page()
         return paged
 
-    def get(self, filepath=None, item_id=None, fetch=None, is_dir=False) -> entities.Item:
+    def get(self,
+            filepath: str = None,
+            item_id: str = None,
+            fetch: bool = None,
+            is_dir: bool = False
+            ) -> entities.Item:
         """
         Get Item object
 
-        :param filepath: optional - search by remote path
-        :param item_id: optional - search by id
-        :param fetch: optional - fetch entity from platform, default taken from cookie
-        :param is_dir: True if you want to get an item from dir type
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param str filepath: optional - search by remote path
+        :param str item_id: optional - search by id
+        :param bool fetch: optional - fetch entity from platform, default taken from cookie
+        :param bool is_dir: True if you want to get an item from dir type
         :return: Item object
+        :rtype: dtlpy.entities.item.Item
         """
         if fetch is None:
             fetch = self._client_api.fetch_entities
@@ -223,20 +252,32 @@ class Items:
         assert isinstance(item, entities.Item)
         return item
 
-    def clone(self, item_id, dst_dataset_id, remote_filepath=None, metadata=None, with_annotations=True,
-              with_metadata=True, with_task_annotations_status=False, allow_many=False, wait=True):
+    def clone(self,
+              item_id: str,
+              dst_dataset_id: str,
+              remote_filepath: str = None,
+              metadata: dict = None,
+              with_annotations: bool = True,
+              with_metadata: bool = True,
+              with_task_annotations_status: bool = False,
+              allow_many: bool = False,
+              wait: bool = True):
         """
-        Clone item
-        :param item_id: item to clone
-        :param dst_dataset_id: destination dataset id
-        :param remote_filepath: complete filepath
-        :param metadata: new metadata to add
-        :param with_annotations: clone annotations
-        :param with_metadata: clone metadata
-        :param with_task_annotations_status: clone task annotations status
-        :param allow_many: `bool` if True use multiple clones in single dataset is allowed, (default=False)
-        :param wait: wait the command to finish
-        :return: Item
+        Clone item. Read more about cloning datatsets and items in our `documentation <https://dataloop.ai/docs/clone-merge-dataset#cloned-dataset>`_ and `SDK documentation <https://dataloop.ai/docs/sdk-create-dataset#clone-dataset>`_.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param str item_id: item to clone
+        :param str dst_dataset_id: destination dataset id
+        :param str remote_filepath: complete filepath
+        :param dict metadata: new metadata to add
+        :param bool with_annotations: clone annotations
+        :param bool with_metadata: clone metadata
+        :param bool with_task_annotations_status: clone task annotations status
+        :param bool allow_many: `bool` if True, using multiple clones in single dataset is allowed, (default=False)
+        :param bool wait: wait for the command to finish
+        :return: Item object
+        :rtype: dtlpy.entities.item.Item
         """
         if metadata is None:
             metadata = dict()
@@ -269,14 +310,22 @@ class Items:
         cloned_item = self.get(item_id=command.spec['returnedModelId'][0])
         return cloned_item
 
-    def delete(self, filename=None, item_id=None, filters: entities.Filters = None):
+    def delete(self,
+               filename: str = None,
+               item_id: str = None,
+               filters: entities.Filters = None):
         """
-        Delete item from platform
+        Delete item from platform.
 
-        :param filename: optional - search item by remote path
-        :param item_id: optional - search item by id
-        :param filters: optional - delete items by filter
-        :return: True
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        You must provide at least ONE of the following params: item id, filename, filters.
+
+        :param str filename: optional - search item by remote path
+        :param str item_id: optional - search item by id
+        :param dtlpy.entities.filters.Filters filters: optional - delete items by filter
+        :return: True if success
+        :rtype: bool
         """
         if item_id is not None:
             success, response = self._client_api.gen_request(req_type="delete",
@@ -316,15 +365,21 @@ class Items:
                filters: entities.Filters = None,
                update_values=None,
                system_update_values=None,
-               system_metadata=False):
+               system_metadata: bool = False):
         """
-        Update items metadata
-        :param item: Item object
-        :param filters: optional update filtered items by given filter
+        Update item metadata.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        You must provide at least ONE of the following params: update_values, system_update_values.
+
+        :param dtlpy.entities.item.Item item: Item object
+        :param dtlpy.entities.filters.Filters filters: optional update filtered items by given filter
         :param update_values: optional field to be updated and new values
         :param system_update_values: values in system metadata to be updated
-        :param system_metadata: bool - True, if you want to change metadata system
+        :param bool system_metadata: True, if you want to update the metadata system
         :return: Item object
+        :rtype: dtlpy.entities.item.Item
         """
         ref = filters is not None and (filters._ref_task or filters._ref_assignment)
 
@@ -382,47 +437,52 @@ class Items:
             filters: entities.Filters = None,
             items=None,
             # download options
-            local_path=None,
-            file_types=None,
-            save_locally=True,
-            to_array=False,
+            local_path: str = None,
+            file_types: list = None,
+            save_locally: bool = True,
+            to_array: bool = False,
             annotation_options: entities.ViewAnnotationOptions = None,
             annotation_filters: entities.Filters = None,
-            overwrite=False,
-            to_items_folder=True,
-            thickness=1,
-            with_text=False,
+            overwrite: bool = False,
+            to_items_folder: bool = True,
+            thickness: int = 1,
+            with_text: bool = False,
             without_relative_path=None,
-            avoid_unnecessary_annotation_download=False,
-            include_annotations_in_output=True,
-            export_png_files=False,
-            filter_output_annotations=False,
-            alpha=None
+            avoid_unnecessary_annotation_download: bool = False,
+            include_annotations_in_output: bool = True,
+            export_png_files: bool = False,
+            filter_output_annotations: bool = False,
+            alpha: float = None
     ):
         """
-        Download dataset by filters.
-        Filtering the dataset for items and save them local
-        Optional - also download annotation, mask, instance and image mask of the item
+        Download dataset items by filters.
 
-        :param filters: Filters entity or a dictionary containing filters parameters
-        :param items: download Item entity or item_id (or a list of item)
-        :param local_path: local folder or filename to save to.
-        :param file_types: a list of file type to download. e.g ['video/webm', 'video/mp4', 'image/jpeg', 'image/png']
-        :param save_locally: bool. save to disk or return a buffer
-        :param to_array: returns Ndarray when True and local_path = False
-        :param annotation_options: download annotations options:  list(dl.ViewAnnotationOptions)
-        :param annotation_filters: Filters entity to filter annotations for download
-        :param overwrite: optional - default = False
-        :param to_items_folder: Create 'items' folder and download items to it
-        :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
-        :param with_text: optional - add text to annotations, default = False
-        :param without_relative_path: bool - download items without the relative path from platform
-        :param avoid_unnecessary_annotation_download: default - False
-        :param include_annotations_in_output: default - False , if export should contain annotations
-        :param export_png_files: default - True, if semantic annotations should exported as png files
-        :param filter_output_annotations: default - False, given an export by filter - determine if to filter out annotations
-        :param alpha: opacity value [0 1], default 1
-        :return: `List` of local_path per each downloaded item
+        Filters the dataset for items and saves them locally.
+
+        Optional -- download annotation, mask, instance, and image mask of the item.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
+        :param List[dtlpy.entities.item.Item] or dtlpy.entities.item.Item items: download Item entity or item_id (or a list of item)
+        :param str local_path: local folder or filename to save to.
+        :param list file_types: a list of file type to download. e.g ['video/webm', 'video/mp4', 'image/jpeg', 'image/png']
+        :param bool save_locally: bool. save to disk or return a buffer
+        :param bool to_array: returns Ndarray when True and local_path = False
+        :param list annotation_options: download annotations options:  list(dl.ViewAnnotationOptions)
+        :param dtlpy.entities.filters.Filters annotation_filters: Filters entity to filter annotations for download
+        :param bool overwrite: optional - default = False
+        :param bool to_items_folder: Create 'items' folder and download items to it
+        :param int thickness: optional - line thickness, if -1 annotation will be filled, default =1
+        :param bool with_text: optional - add text to annotations, default = False
+        :param bool without_relative_path: bool - download items without the relative path from platform
+        :param bool avoid_unnecessary_annotation_download: default - False
+        :param bool include_annotations_in_output: default - False , if export should contain annotations
+        :param bool export_png_files: default - if True, semantic annotations should be exported as png files
+        :param bool filter_output_annotations: default - False, given an export by filter - determine if to filter out annotations
+        :param float alpha: opacity value [0 1], default 1
+        :return: generator of local_path per each downloaded item
+        :rtype: generator or single item
         """
         downloader = repositories.Downloader(self)
         return downloader.download(
@@ -449,33 +509,35 @@ class Items:
     def upload(
             self,
             # what to upload
-            local_path,
-            local_annotations_path=None,
+            local_path: str,
+            local_annotations_path: str = None,
             # upload options
-            remote_path="/",
-            remote_name=None,
-            file_types=None,
-            overwrite=False,
-            item_metadata=None,
+            remote_path: str = "/",
+            remote_name: str = None,
+            file_types: list = None,
+            overwrite: bool = False,
+            item_metadata: dict = None,
             output_entity=entities.Item,
-            no_output=False
+            no_output: bool = False
     ):
         """
         Upload local file to dataset.
-        Local filesystem will remain.
-        If "*" at the end of local_path (e.g. "/images/*") items will be uploaded without head directory
+        Local filesystem will remain unchanged.
+        If "*" at the end of local_path (e.g. "/images/*") items will be uploaded without the head directory.
 
-        :param local_path: list of local file, local folder, BufferIO, numpy.ndarray or url to upload
-        :param local_annotations_path: path to dataloop format annotations json files.
-        :param remote_path: remote path to save.
-        :param remote_name: remote base name to save.
-                            when upload numpy.ndarray as local path, remote_name with .jpg or .png ext is mandatory
-        :param file_types: list of file type to upload. e.g ['.jpg', '.png']. default is all
-        :param item_metadata:
-        :param overwrite: optional - default = False
+        **Prerequisites**: Any user can upload items.
+
+        :param str local_path: list of local file, local folder, BufferIO, numpy.ndarray or url to upload
+        :param str local_annotations_path: path to dataloop format annotations json files.
+        :param str remote_path: remote path to save.
+        :param str remote_name: remote base name to save. when upload numpy.ndarray as local path, remote_name with .jpg or .png ext is mandatory
+        :param list file_types: list of file type to upload. e.g ['.jpg', '.png']. default is all
+        :param dict item_metadata: metadata to item
+        :param bool overwrite: optional - default = False
         :param output_entity: output type
-        :param no_output: do not return the items after upload
-        :return: Output (list/single item)
+        :param bool no_output: do not return the items after upload
+        :return: Output (generator/single item)
+        :rtype: generator or single item
         """
         # fix remote path
         if remote_path is not None:
@@ -504,9 +566,13 @@ class Items:
 
     def open_in_web(self, filepath=None, item_id=None, item=None):
         """
-        :param filepath: item file path
-        :param item_id: item id
-        :param item: item entity
+        Open the item in web platform
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer* or be an *annotation manager*/*annotator* with access to that item through task. 
+
+        :param str filepath: item file path
+        :param str item_id: item id
+        :param dtlpy.entities.item.Item item: item entity
         """
         if filepath is not None:
             item = self.get(filepath=filepath)
@@ -517,15 +583,26 @@ class Items:
         else:
             self._client_api._open_in_web(url=self.platform_url)
 
-    def update_status(self, status: entities.ItemStatus, items=None, item_ids=None,
-                      filters=None, dataset=None, clear=False):
+    def update_status(self,
+                      status: entities.ItemStatus,
+                      items=None,
+                      item_ids=None,
+                      filters=None,
+                      dataset=None,
+                      clear=False):
         """
-        :param status: ItemStatus.COMPLETED, ItemStatus.APPROVED, ItemStatus.DISCARDED
-        :param items:
-        :param item_ids:
-        :param filters:
-        :param dataset:
-        :param clear:
+        Update item status in task
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer* or *annotation manager* who has been assigned a task with the item.
+
+        You must provide at least ONE of the following params: items, item_ids, filters.
+
+        :param str status: ItemStatus.COMPLETED, ItemStatus.APPROVED, ItemStatus.DISCARDED
+        :param list items: list of items
+        :param list item_ids: list of items id
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
+        :param dtlpy.entities.dataset.Dataset dataset: dataset object
+        :param bool clear: to delete status
         """
         if items is None and item_ids is None and filters is None:
             raise exceptions.PlatformException('400', 'Must provide either items, item_ids or filters')
@@ -573,11 +650,14 @@ class Items:
 
     def make_dir(self, directory, dataset: entities.Dataset = None) -> entities.Item:
         """
-        Create a directory in a dataset
+        Create a directory in a dataset.
 
-        :param directory: name of directory
-        :param dataset: optional
-        :return:
+        **Prerequisites**: All users.
+
+        :param str directory: name of directory
+        :param dtlpy.entities.dataset.Dataset dataset: dataset object
+        :return: Item object
+        :rtype: dtlpy.entities.item.Item
         """
         if self._dataset_id is None and dataset is None:
             raise exceptions.PlatformException('400', 'Please provide parameter dataset')
@@ -600,18 +680,24 @@ class Items:
 
         return item
 
-    def move_items(self, destination, filters: entities.Filters = None, items=None,
-                   dataset: entities.Dataset = None) -> bool:
+    def move_items(self,
+                   destination: str,
+                   filters: entities.Filters = None,
+                   items=None,
+                   dataset: entities.Dataset = None
+                   ) -> bool:
         """
         Move items to another directory.
-
         If directory does not exist we will create it
 
-        :param destination: destination directory
-        :param filters: optional - either this or items. Query of items to move
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param str destination: destination directory
+        :param dtlpy.entities.filters.Filters filters: optional - either this or items. Query of items to move
         :param items: optional - either this or filters. A list of items to move
-        :param dataset: optional
+        :param dtlpy.entities.dataset.Dataset dataset: dataset object
         :return: True if success
+        :rtype: bool
         """
         if filters is None and items is None:
             raise exceptions.PlatformException('400', 'Must provide either filters or items')

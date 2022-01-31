@@ -9,7 +9,7 @@ Feature: Pipeline entity method testing
 
 
     @pipelines.delete
-    @testrail-C4524925
+    @testrail-C4525314
     Scenario: pipeline flow
         When I create a package and service to pipeline
         And I create a pipeline from sdk
@@ -17,7 +17,7 @@ Feature: Pipeline entity method testing
         Then verify pipeline flow result
 
     @pipelines.delete
-    @testrail-C4524925
+    @testrail-C4525314
     Scenario: pipeline delete use sdk
         When I create a package and service to pipeline
         And I create a pipeline from json

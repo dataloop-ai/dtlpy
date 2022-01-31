@@ -160,7 +160,7 @@ class Converter:
         :param to_format:
         :param local_path:
         :param conversion_func: Custom conversion service
-        :param filters: optional
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :return:
         """
         if to_format.lower() == AnnotationFormat.COCO:
@@ -879,7 +879,7 @@ class Converter:
         Convert and Upload local dataset to dataloop platform
 
         :param remote_items:
-        :param filters:
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :param only_bbox: only for coco datasets
         :param from_format:
         :param dataset:

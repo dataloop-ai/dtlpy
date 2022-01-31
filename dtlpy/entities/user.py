@@ -41,6 +41,7 @@ class User(entities.BaseEntity):
     def _protected_from_json(_json, project, client_api, users=None):
         """
         Same as from_json but with try-except to catch if error
+
         :param _json: platform json
         :param project: project entity
         :param client_api: ApiClient entity
@@ -71,11 +72,12 @@ class User(entities.BaseEntity):
         """
         Build a User entity object from a json
 
-        :param _json: _json response from host
-        :param project: project entity
+        :param dict _json: _json response from host
+        :param dtlpy.entities.project.Project project: project entity
         :param client_api: ApiClient entity
         :param users: Users repository
         :return: User object
+        :rtype: dtlpy.entities.user.User
         """
         return cls(
             created_at=_json.get('createdAt', None),
@@ -98,6 +100,7 @@ class User(entities.BaseEntity):
         Returns platform _json format of object
 
         :return: platform json format of object
+        :rtype: dict
         """
         _json = attr.asdict(self,
                             filter=attr.filters.exclude(attr.fields(User)._project,

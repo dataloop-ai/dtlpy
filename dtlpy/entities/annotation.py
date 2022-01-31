@@ -318,9 +318,9 @@ class Annotation(entities.BaseEntity):
 
     @property
     def last_frame(self):
-        if len(self.frames) == 0:
+        if len(self.frames.actual_keys()) == 0:
             return 0
-        return max(self.frames)
+        return max(self.frames.actual_keys())
 
     @property
     def label(self):
@@ -370,7 +370,7 @@ class Annotation(entities.BaseEntity):
     ####################
     @property
     def frame_num(self):
-        if len(self.frames) > 0:
+        if len(self.frames.actual_keys()) > 0:
             return self.current_frame
         else:
             return self.start_frame
@@ -384,31 +384,31 @@ class Annotation(entities.BaseEntity):
 
     @property
     def fixed(self):
-        if len(self.frames) > 0:
+        if len(self.frames.actual_keys()) > 0:
             return self.frames[self.current_frame].fixed
         else:
             return False
 
     @fixed.setter
     def fixed(self, fixed):
-        if len(self.frames) > 0:
+        if len(self.frames.actual_keys()) > 0:
             self.frames[self.current_frame].fixed = fixed
 
     @property
     def object_visible(self):
-        if len(self.frames) > 0:
+        if len(self.frames.actual_keys()) > 0:
             return self.frames[self.current_frame].object_visible
         else:
             return False
 
     @object_visible.setter
     def object_visible(self, object_visible):
-        if len(self.frames) > 0:
+        if len(self.frames.actual_keys()) > 0:
             self.frames[self.current_frame].object_visible = object_visible
 
     @property
     def is_video(self):
-        if len(self.frames) == 0:
+        if len(self.frames.actual_keys()) == 0:
             return False
         else:
             return True
@@ -418,27 +418,30 @@ class Annotation(entities.BaseEntity):
     ##################
     def update_status(self, status: AnnotationStatus = AnnotationStatus.ISSUE):
         """
-        Open an issue on the annotation
+        Set status on annotation
 
-        :param status: can be AnnotationStatus.ISSUE, AnnotationStatus.APPROVED, AnnotationStatus.REVIEW, AnnotationStatus.CLEAR
-
-        :return: Annotation object or None
+        :param str status: can be AnnotationStatus.ISSUE, AnnotationStatus.APPROVED, AnnotationStatus.REVIEW, AnnotationStatus.CLEAR
+        :return: Annotation object
+        :rtype: dtlpy.entities.annotation.Annotation
         """
         return self.annotations.update_status(annotation=self, status=status)
 
     def delete(self):
         """
         Remove an annotation from item
-        :return: True
+
+        :return: True if success
+        :rtype: bool
         """
         return self.annotations.delete(annotation_id=self.id)
 
     def update(self, system_metadata=False):
         """
         Update an existing annotation in host.
-        :param system_metadata: True, if you want to change metadata system
 
+        :param system_metadata: True, if you want to change metadata system
         :return: Annotation object
+        :rtype: dtlpy.entities.annotation.Annotation
         """
         return self.annotations.update(annotations=self,
                                        system_metadata=system_metadata)[0]
@@ -446,28 +449,32 @@ class Annotation(entities.BaseEntity):
     def upload(self):
         """
         Create a new annotation in host
-        :return:
+
+        :return: Annotation entity
+        :rtype: dtlpy.entities.annotation.Annotation
         """
         return self.annotations.upload(annotations=self)[0]
 
     def download(self,
-                 filepath,
+                 filepath: str,
                  annotation_format: ViewAnnotationOptions = ViewAnnotationOptions.MASK,
-                 height=None,
-                 width=None,
-                 thickness=1,
-                 with_text=False,
-                 alpha=None):
+                 height: float = None,
+                 width: float = None,
+                 thickness: int = 1,
+                 with_text: bool = False,
+                 alpha: float = None):
         """
         Save annotation to file
-        :param filepath: local path to where annotation will be downloaded to
-        :param annotation_format: options: list(dl.ViewAnnotationOptions)
-        :param height: image height
-        :param width: image width
-        :param thickness: thickness
-        :param with_text: get mask with text
-        :param alpha: opacity value [0 1], default 1
+
+        :param str filepath: local path to where annotation will be downloaded to
+        :param list annotation_format: options: list(dl.ViewAnnotationOptions)
+        :param float height: image height
+        :param float width: image width
+        :param int thickness: thickness
+        :param bool with_text: get mask with text
+        :param float alpha: opacity value [0 1], default 1
         :return: filepath
+        :rtype: str
         """
         if annotation_format == ViewAnnotationOptions.JSON:
             with open(filepath, 'w') as f:
@@ -486,8 +493,10 @@ class Annotation(entities.BaseEntity):
     def set_frame(self, frame):
         """
         Set annotation to frame state
-        :param frame: frame number
-        :return: True
+
+        :param int frame: frame number
+        :return: True if success
+        :rtype: bool
         """
         if frame in self.frames:
             self.current_frame = frame
@@ -513,15 +522,16 @@ class Annotation(entities.BaseEntity):
         """
         Show annotations
         mark the annotation of the image array and return it
+
         :param image: empty or image to draw on
-        :param thickness: line thickness
-        :param with_text: add label to annotation
-        :param height: height
-        :param width: width
+        :param int thickness: line thickness
+        :param bool with_text: add label to annotation
+        :param float height: height
+        :param float width: width
         :param annotation_format: list(dl.ViewAnnotationOptions)
-        :param color: optional - color tuple
+        :param tuple color: optional - color tuple
         :param label_instance_dict: the instance labels
-        :param alpha: opacity value [0 1], default 1
+        :param float alpha: opacity value [0 1], default 1
         :return: list or single ndarray of the annotations
         """
         try:
@@ -775,17 +785,18 @@ class Annotation(entities.BaseEntity):
         """
         Create a new annotation object annotations
 
-        :param item: item to annotate
+        :param dtlpy.entities.item.Items item: item to annotate
         :param annotation_definition: annotation type object
-        :param object_id: object_id
-        :param automated: is automated
-        :param metadata: metadata
-        :param frame_num: optional - first frame number if video annotation
-        :param parent_id: add parent annotation ID
+        :param str object_id: object_id
+        :param bool automated: is automated
+        :param dict metadata: metadata
+        :param int frame_num: optional - first frame number if video annotation
+        :param str parent_id: add parent annotation ID
         :param start_time: optional - start time if video annotation
-        :param item_height: annotation item's height
-        :param item_width: annotation item's width
+        :param float item_height: annotation item's height
+        :param float item_width: annotation item's width
         :return: annotation object
+        :rtype: dtlpy.entities.annotation.Annotation
         """
         if frame_num is None:
             frame_num = 0
@@ -813,7 +824,7 @@ class Annotation(entities.BaseEntity):
             metadata['system']['status'] = annotation_definition.status
 
         # frames
-        frames = dict()
+        frames = entities.ReflectDict(value_type=FrameAnnotation, on_access=Annotation.on_access)
 
         # handle fps
         fps = None
@@ -885,21 +896,25 @@ class Annotation(entities.BaseEntity):
             source='sdk'
         )
 
-    def add_frames(self, annotation_definition,
-                   frame_num=None, end_frame_num=None,
-                   start_time=None, end_time=None,
-                   fixed=True, object_visible=True):
+    def add_frames(self,
+                   annotation_definition,
+                   frame_num=None,
+                   end_frame_num=None,
+                   start_time=None,
+                   end_time=None,
+                   fixed=True,
+                   object_visible=True):
         """
         Add a frames state to annotation
 
         :param annotation_definition: annotation type object - must be same type as annotation
-        :param frame_num: first frame number
-        :param end_frame_num: last frame number
+        :param int frame_num: first frame number
+        :param int end_frame_num: last frame number
         :param start_time: starting time for video
         :param end_time: ending time for video
-        :param fixed: is fixed
-        :param object_visible: does the annotated object is visible
-        :return: annotation object
+        :param bool fixed: is fixed
+        :param bool object_visible: does the annotated object is visible
+        :return:
         """
         # handle fps
         if self.fps is None:
@@ -926,15 +941,20 @@ class Annotation(entities.BaseEntity):
                            fixed=fixed,
                            object_visible=object_visible)
 
-    def add_frame(self, annotation_definition, frame_num=None, fixed=True, object_visible=True):
+    def add_frame(self,
+                  annotation_definition,
+                  frame_num=None,
+                  fixed=True,
+                  object_visible=True):
         """
         Add a frame state to annotation
 
         :param annotation_definition: annotation type object - must be same type as annotation
-        :param frame_num: frame number
-        :param fixed: is fixed
-        :param object_visible: does the annotated object is visible
-        :return: annotation object
+        :param int frame_num: frame number
+        :param bool fixed: is fixed
+        :param bool object_visible: does the annotated object is visible
+        :return: True if success
+        :rtype: bool
         """
         # handle fps
         if self.fps is None:
@@ -996,7 +1016,7 @@ class Annotation(entities.BaseEntity):
                                     annotation=self)
 
         self.frames[frame_num] = frame
-        self.end_frame = max(self.frames)
+        self.end_frame = max(self.last_frame, frame_num)
         self.end_time = self.end_frame / self.fps
 
         return True
@@ -1012,6 +1032,7 @@ class Annotation(entities.BaseEntity):
                              dataset=None):
         """
         Same as from_json but with try-except to catch if error
+
         :param _json: platform json
         :param item: item
         :param client_api: ApiClient entity
@@ -1020,7 +1041,6 @@ class Annotation(entities.BaseEntity):
         :param fps:
         :param item_metadata:
         :param dataset
-
         :return: annotation object
         """
         try:
@@ -1051,16 +1071,18 @@ class Annotation(entities.BaseEntity):
                   is_audio=None):
         """
         Create an annotation object from platform json
-        :param _json: platform json
-        :param item: item
+
+        :param dict _json: platform json
+        :param dtlpy.entities.item.Item item: item
         :param client_api: ApiClient entity
         :param annotations:
-        :param is_video:
-        :param fps:
-        :param item_metadata:
-        :param dataset
-        :param is_audio:
+        :param bool is_video: is video
+        :param fps: video fps
+        :param item_metadata: item metadata
+        :param dataset: dataset entity
+        :param bool is_audio: is audio
         :return: annotation object
+        :rtype: dtlpy.entities.annotation.Annotation
         """
         if item_metadata is None:
             item_metadata = dict()
@@ -1128,6 +1150,8 @@ class Annotation(entities.BaseEntity):
         end_frame = None
         start_time = 0
         start_frame = 0
+        end_time = None
+        annotation_definition = None
 
         ############
         # if video #
@@ -1158,8 +1182,6 @@ class Annotation(entities.BaseEntity):
                 automated = _json['metadata']['system'].get('automated', automated)
                 end_frame = _json['metadata']['system'].get('endFrame', end_frame)
                 end_time = _json['metadata']['system'].get('endTime', end_time)
-
-            annotation_definition = None
         ################
         # if not video #
         ################
@@ -1178,7 +1200,7 @@ class Annotation(entities.BaseEntity):
                         'attributes': attributes}
             annotation_definition = FrameAnnotation.json_to_annotation_definition(def_dict)
 
-        frames = dict()
+        frames = entities.ReflectDict(value_type=FrameAnnotation, on_access=Annotation.on_access)
 
         # init annotation
         annotation = cls(
@@ -1269,43 +1291,39 @@ class Annotation(entities.BaseEntity):
                 )
                 annotation.frames[frame.frame_num] = frame
                 annotation.annotation_definition = frame.annotation_definition
+
                 # put snapshots if there are any
-                last_frame = frame
                 for snapshot in _json['metadata']['system']['snapshots_']:
                     frame = FrameAnnotation.from_snapshot(
                         _json=snapshot,
                         annotation=annotation,
                         fps=fps
                     )
-                    while last_frame.frame_num < frame.frame_num - 1:
-                        last_frame = Annotation._add_reflected_frame(annotation=annotation, last_frame=last_frame)
 
                     annotation.frames[frame.frame_num] = frame
-                    last_frame = frame
-                if annotation.end_frame is not None:
-                    while last_frame.frame_num < annotation.end_frame:
-                        last_frame = Annotation._add_reflected_frame(annotation=annotation, last_frame=last_frame)
 
-            annotation.annotation_definition = annotation.frames[min(frames)].annotation_definition
+            annotation.annotation_definition = annotation.frames[min(frames.actual_keys())].annotation_definition
 
         return annotation
 
     @staticmethod
-    def _add_reflected_frame(annotation, last_frame):
-        last_frame = copy.copy(last_frame)
-        last_frame._interpolation = True
-        last_frame.fixed = False
-        last_frame.frame_num += 1
-        annotation.frames[last_frame.frame_num] = last_frame
-        return last_frame
+    def on_access(reflect_dict, actual_key: int, requested_key: int, val):
+        val = copy.copy(val)
+        val._interpolation = True
+        val.fixed = False
+        val.frame_num = requested_key
+        reflect_dict[requested_key] = val
+        return val
 
     def to_json(self):
         """
         Convert annotation object to a platform json representation
+
         :return: platform json
+        :rtype: dict
         """
-        if len(self.frames) > 0:
-            self.set_frame(min(self.frames))
+        if len(self.frames.actual_keys()) > 0:
+            self.set_frame(min(self.frames.actual_keys()))
         _json = attr.asdict(self,
                             filter=attr.filters.include(attr.fields(Annotation).id,
                                                         attr.fields(Annotation).url,
@@ -1370,10 +1388,10 @@ class Annotation(entities.BaseEntity):
         if self.is_video:
             # get all snapshots but the first one
             snapshots = list()
-            first_frame_num = min(self.frames)
-            for frame_num in sorted(self.frames):
+            first_frame_num = min(self.frames.actual_keys())
+            frame_numbers = self.frames.actual_keys()
+            for frame_num in sorted(frame_numbers):
                 if frame_num == first_frame_num:
-                    # ignore first frame in snapshots
                     continue
                 if not self.frames[frame_num]._interpolation or self.frames[frame_num].fixed:
                     snapshots.append(self.frames[frame_num].to_snapshot())
@@ -1560,6 +1578,7 @@ class FrameAnnotation(entities.BaseEntity):
     def new(cls, annotation, annotation_definition, frame_num, fixed, object_visible=True):
         """
         new frame state to annotation
+
         :param annotation: annotation
         :param annotation_definition: annotation type object - must be same type as annotation
         :param frame_num: frame number
@@ -1582,6 +1601,7 @@ class FrameAnnotation(entities.BaseEntity):
     def from_snapshot(cls, annotation, _json, fps):
         """
         new frame state to annotation
+
         :param annotation: annotation
         :param _json: annotation type object - must be same type as annotation
         :param fps: frame number

@@ -78,6 +78,8 @@ class PipelineNodeIO:
                  action: str = None,
                  default_value=None):
         """
+        Pipeline Node
+
         :param entities.PackageInputType input_type: entities.PackageInputType of the input type of the pipeline
         :param str name: name of the input
         :param str display_name: of the input
@@ -450,21 +452,29 @@ class CodeNode(PipelineNode):
             inputs = [self._default_io()]
         if not outputs:
             outputs = [self._default_io()]
+
+        if method is None or not isinstance(method, Callable):
+            raise Exception('must provide a function as input')
+        else:
+            function_code = self._build_code_from_func(method)
+            function_name = method.__name__
+
         super().__init__(name=name,
                          node_id=str(uuid.uuid4()),
                          outputs=outputs,
                          inputs=inputs,
                          metadata={},
                          node_type=PipelineNodeType.CODE,
-                         namespace=PipelineNameSpace(function_name=method.__name__, project_name=project_name),
+                         namespace=PipelineNameSpace(function_name=function_name, project_name=project_name),
                          project_id=project_id,
                          position=position)
 
-        # code = repositories.services.Services
         self.config = {
             "package":
                 {
-                    "code": self._build_code_from_func(method)
+                    "code": function_code,
+                    "name": function_name,
+                    "type": "code"
                 }
         }
 
@@ -520,12 +530,17 @@ class TaskNode(PipelineNode):
             actions = []
 
         inputs = [self._default_io()]
-        actions = set(actions)
-        actions.add('discard')
+
         if task_type == 'qa':
-            actions.add('approve')
+            if 'approve' not in actions:
+                actions.insert(0, 'approve')
         else:
-            actions.add('complete')
+            if 'complete' not in actions:
+                actions.insert(0, 'complete')
+
+        if 'discard' not in actions:
+            actions.insert(1, 'discard')
+
         outputs = [self._default_io(action=action) for action in actions]
         super().__init__(name=name,
                          node_id=str(uuid.uuid4()),

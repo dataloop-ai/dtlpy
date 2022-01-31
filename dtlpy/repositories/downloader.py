@@ -52,7 +52,7 @@ class Downloader:
         Filtering the dataset for items and save them local
         Optional - also download annotation, mask, instance and image mask of the item
 
-        :param filters: Filters entity or a dictionary containing filters parameters
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :param items: download Item entity or item_id (or a list of item)
         :param local_path: local folder or filename to save to.
         :param file_types: a list of file type to download. e.g ['video/webm', 'video/mp4', 'image/jpeg', 'image/png']
@@ -67,7 +67,7 @@ class Downloader:
         :param without_relative_path: bool - download items without the relative path from platform
         :param avoid_unnecessary_annotation_download: DEPRECATED only items and annotations in filters are downloaded
         :param include_annotations_in_output: default - False , if export should contain annotations
-        :param export_png_files: default - True, if semantic annotations should exported as png files
+        :param export_png_files: default - True, if semantic annotations should be exported as png files
         :param filter_output_annotations: default - False, given an export by filter - determine if to filter out annotations
         :param alpha: opacity value [0 1], default 1
         :return: Output (list)
@@ -354,11 +354,11 @@ class Downloader:
 
         :param dataset: Dataset entity
         :param local_path:
-        :param filters: dl.Filters entity to filters items
+        :param dtlpy.entities.filters.Filters filters: dl.Filters entity to filters items
         :param annotation_filters: dl.Filters entity to filters items' annotations
         :param overwrite: optional - overwrite annotations if exist, default = false
         :param include_annotations_in_output: default - True , if export should contain annotations
-        :param export_png_files: default - True, if semantic annotations should exported as png files
+        :param export_png_files: default - if True, semantic annotations should be exported as png files
         :param filter_output_annotations: default - False, given an export by filter - determine if to filter out annotations
         :return:
         """

@@ -189,6 +189,7 @@ class Execution(entities.BaseEntity):
         Returns platform _json format of object
 
         :return: platform json format of object
+        :rtype: dict
         """
         # get excluded
         _json = attr.asdict(
@@ -297,12 +298,12 @@ class Execution(entities.BaseEntity):
         """
         Update Execution Progress
 
-        :param status: ExecutionStatus
-        :param percent_complete:
-        :param message:
-        :param output:
-        :param service_version:
-        :return:
+        :param str status: ExecutionStatus
+        :param int percent_complete: percent complete
+        :param str message: message to update the progress state
+        :param str output: output
+        :param str service_version: service version
+        :return: Service execution object
         """
         return self.executions.progress_update(
             execution_id=self.id,
@@ -316,6 +317,7 @@ class Execution(entities.BaseEntity):
     def update(self):
         """
         Update execution changes to platform
+
         :return: execution entity
         """
         return self.executions.update(execution=self)
@@ -343,7 +345,7 @@ class Execution(entities.BaseEntity):
         """
         Re-run
 
-        :return:
+        :return: Execution object
         """
         return self.executions.rerun(execution=self)
 
@@ -351,7 +353,7 @@ class Execution(entities.BaseEntity):
         """
         Terminate execution
 
-        :return:
+        :return: execution object
         """
         return self.executions.terminate(execution=self)
 
@@ -359,6 +361,6 @@ class Execution(entities.BaseEntity):
         """
         Wait for execution
 
-        :return:
+        :return: Service execution object
         """
         return self.executions.wait(execution_id=self.id)

@@ -67,3 +67,4 @@ from .integration import Integration
 from .driver import Driver, ExternalStorage
 from .setting import Role, PlatformEntityType, SettingsValueTypes, SettingsTypes, SettingsSectionNames, SettingScope, \
     BaseSetting, FeatureFlag, UserSetting
+from .reflect_dict import ReflectDict

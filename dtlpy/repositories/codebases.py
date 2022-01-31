@@ -11,7 +11,9 @@ logger = logging.getLogger(name='dtlpy')
 
 class Codebases:
     """
-    Codebase repository
+    Codebase Repository
+
+    The Codebases class allows the user to manage codebases and their properties. The codebase is the code the user uploads for the user's packages to run. Read more about `codebase <https://dataloop.ai/docs/tutorial-ui?#1-codebase>`_ in our FaaS (function as a service).
     """
 
     def __init__(self,
@@ -81,12 +83,15 @@ class Codebases:
                 m.update(chunk)
         return m.hexdigest()
 
-    def list_versions(self, codebase_name):
+    def list_versions(self, codebase_name: str):
         """
-        List all codebase versions
+        List all codebase versions.
 
-        :param codebase_name: code base name
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a package.
+
+        :param str codebase_name: code base name
         :return: list of versions
+        :rtype: list
         """
         filters = entities.Filters()
         filters.add(field='filename', values='/codebases/{}/*'.format(codebase_name))
@@ -95,8 +100,12 @@ class Codebases:
 
     def list(self) -> entities.PagedEntities:
         """
-        List all code bases
+        List all codebases.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a package.
+
         :return: Paged entity
+        :rtype: dtlpy.entities.paged_entities.PagedEntities
         """
         filters = entities.Filters()
         filters.add(field='filename', values='/codebases/*')
@@ -104,12 +113,18 @@ class Codebases:
         codebases = self.items_repository.list(filters=filters)
         return codebases
 
-    def get(self, codebase_name=None, codebase_id=None, version=None):
+    def get(self,
+            codebase_name: str = None,
+            codebase_id: str = None,
+            version: str = None):
         """
-        Get a Codebase object
-        :param codebase_name: optional - search by name
-        :param codebase_id: optional - search by id
-        :param version: codebase version. default is latest. options: "all", "latest" or ver number - "10"
+        Get a Codebase object to use in your code.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a package.
+
+        :param str codebase_name: optional - search by name
+        :param str codebase_id: optional - search by id
+        :param str version: codebase version. default is latest. options: "all", "latest" or ver number - "10"
         :return: Codebase object
         """
         if codebase_id is not None:
@@ -175,8 +190,14 @@ class Codebases:
     @staticmethod
     def get_current_version(all_versions_pages, zip_md):
         """
-        :param all_versions_pages:
-        :param zip_md:
+        This method returns the current version of the codebase and other versions found.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a package.
+
+        :param codebase all_versions_pages: codebase object
+        :param zip_md: zipped file of codebase
+        :return: current version and all versions found of codebase
+        :rtype: int, int
         """
         latest_version = 0
         same_version_found = None
@@ -191,13 +212,20 @@ class Codebases:
                 break
         return latest_version + 1, same_version_found
 
-    def pack(self, directory, name=None, description=''):
+    def pack(self,
+             directory: str,
+             name: str = None,
+             description: str = ''):
         """
-        Zip a local code directory and post to codebases
-        :param directory: local directory to pack
-        :param name: codebase name
-        :param description: codebase description
+        Zip a local code directory and post to codebases.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a package.
+
+        :param str directory: local directory to pack
+        :param str name: codebase name
+        :param dtr description: codebase description
         :return: Codebase object
+        :rtype: dtlpy.entities.codebase.Codebase
         """
         # create/get .dataloop dir
         cwd = os.getcwd()
@@ -283,12 +311,12 @@ class Codebases:
 
     def _unpack_single(self,
                        codebase,
-                       download_path,
-                       local_path):
+                       download_path: str,
+                       local_path: str):
         """
-        :param codebase:
-        :param download_path:
-        :param local_path:
+        :param dtlpy.entities.codebase.Codebase codebase: codebase object
+        :param str download_path:
+        :param str local_path:
         """
         # downloading with specific filename
         if isinstance(codebase, entities.ItemCodebase):
@@ -326,10 +354,18 @@ class Codebases:
             raise ValueError('Not implemented: "_unpack_single" for codebase type: {!r}'.format(codebase.type))
         return artifact_filepath
 
-    def clone_git(self, codebase, local_path):
+    def clone_git(self,
+                  codebase: entities.Codebase,
+                  local_path: str):
         """
-        :param codebase:
-        :param local_path:
+        Clone code base
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a package.
+
+        :param dtlpy.entities.codebase.Codebase codebase: codebase object
+        :param str local_path: local path
+        :return: path where the clone will be
+        :rtype: str
         """
         if not isinstance(codebase, entities.GitCodebase):
             raise RuntimeError('only support Git Codebase')
@@ -344,8 +380,14 @@ class Codebases:
 
     def pull_git(self, codebase, local_path):
         """
-        :param codebase:
-        :param local_path:
+        Pull (download) a codebase.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a package.
+
+        :param dtlpy.entities.codebase.Codebase codebase: codebase object
+        :param str local_path: local path
+        :return: path where the Pull will be
+        :rtype: str
         """
         pull_cmd = 'git pull'
         if not codebase.is_git_repo(local_path):
@@ -363,18 +405,22 @@ class Codebases:
 
     def unpack(self,
                codebase: entities.Codebase = None,
-               codebase_name=None,
-               codebase_id=None,
-               local_path=None,
-               version=None):
+               codebase_name: str = None,
+               codebase_id: str = None,
+               local_path: str = None,
+               version: str = None):
         """
-        Unpack codebase locally. Download source code and unzip
-        :param codebase: `dl.Codebase` object
-        :param codebase_name: search by name
-        :param codebase_id: search by id
-        :param local_path: local path to save codebase
-        :param version: codebase version to unpack. default - latest
+        Unpack codebase locally. Download source code and unzip.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a package.
+
+        :param dtlpy.entities.codebase.Codebase codebase: `dl.Codebase` object
+        :param str codebase_name: search by name
+        :param str codebase_id: search by id
+        :param str local_path: local path to save codebase
+        :param str version: codebase version to unpack. default - latest
         :return: String (dirpath)
+        :rtype: str
         """
         # get the codebase / multiple codebase
         if codebase is None:

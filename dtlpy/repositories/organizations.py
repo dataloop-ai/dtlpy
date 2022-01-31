@@ -8,17 +8,23 @@ logger = logging.getLogger(name='dtlpy')
 
 class Organizations:
     """
-    organizations repository
+    Organizations Repository
+    
+    Read our `documentation <https://dataloop.ai/docs/org-setup>`_ and `SDK documentation <https://dataloop.ai/docs/sdk-org>`_ to learn more about Organizations in the Dataloop platform.
     """
 
     def __init__(self, client_api: services.ApiClient):
         self._client_api = client_api
 
-    def create(self, organization_json) -> entities.Organization:
+    def create(self, organization_json: dict) -> entities.Organization:
         """
-        Create a new pipeline
-        :param organization_json: json contain the Organization fields
-        :return: Pipeline object
+        Create a new organization.
+
+        **Prerequisites**: This method can only be used by a **superuser**.
+
+        :param dict organization_json: json contain the Organization fields
+        :return: Organization object
+        :rtype: dtlpy.entities.organization.Organization
         """
 
         success, response = self._client_api.gen_request(req_type='post',
@@ -36,11 +42,17 @@ class Organizations:
                     organization_id: str = None,
                     organization_name: str = None):
         """
-        list all organization groups
-        :param organization:
-        :param organization_id:
-        :param organization_name:
-        :return groups list:
+        List all organization groups (groups that were created within the organization).
+
+        **Prerequisites**: You must be an organization *owner* to use this method.
+
+        You must provide at least ONE of the following params: organization, organization_name, or organization_id.
+
+        :param entities.Organization organization: Organization object
+        :param str organization_id: Organization id
+        :param str organization_name: Organization name
+        :return: groups list
+        :rtype: list
         """
         if organization is None and organization_id is None and organization_name is None:
             raise exceptions.PlatformException(
@@ -65,12 +77,18 @@ class Organizations:
                           organization_name: str = None,
                           only_available=False):
         """
-        list all organization integrations
-        :param organization:
-        :param organization_id:
-        :param organization_name:
-        :param only_available: bool - if True list only the available integrations
-        :return groups list:
+        List all organization integrations with external cloud storage.
+
+        **Prerequisites**: You must be an organization *owner* to use this method.
+
+        You must provide at least ONE of the following params: organization_id, organization_name, or organization.
+
+        :param entities.Organization organization: Organization object
+        :param str organization_id: Organization id
+        :param str organization_name: Organization name
+        :param bool only_available: if True list only the available integrations
+        :return: integrations list
+        :rtype: list
         """
         if organization is None and organization_id is None and organization_name is None:
             raise exceptions.PlatformException(
@@ -98,12 +116,18 @@ class Organizations:
                      organization_name: str = None,
                      role: entities.MemberOrgRole = None):
         """
-        list all organization members
-        :param organization:
-        :param organization_id:
-        :param organization_name:
-        :param role: MemberOrgRole.ADMIN ,MemberOrgRole.OWNER ,MemberOrgRole.MEMBER
-        :return projects list:
+        List all organization members.
+
+        **Prerequisites**: You must be an organization *owner* to use this method.
+
+        You must provide at least ONE of the following params: organization_id, organization_name, or organization.
+
+        :param entities.Organization organization: Organization object
+        :param str organization_id: Organization id
+        :param str organization_name: Organization name
+        :param entities.MemberOrgRole role: MemberOrgRole.ADMIN, MemberOrgRole.OWNER, MemberOrgRole.MEMBER
+        :return: projects list
+        :rtype: list
         """
         if organization is None and organization_id is None and organization_name is None:
             raise exceptions.PlatformException(
@@ -136,8 +160,12 @@ class Organizations:
 
     def list(self) -> miscellaneous.List[entities.Organization]:
         """
-        Get Organization's list.
+        Lists all the organizations in Dataloop.
+
+        **Prerequisites**: You must be a **superuser** to use this method.
+
         :return: List of Organization objects
+        :rtype: list
         """
         success, response = self._client_api.gen_request(req_type='get',
                                                          path='/orgs')
@@ -168,12 +196,17 @@ class Organizations:
             organization_name: str = None,
             fetch: bool = None) -> entities.Organization:
         """
-        Get a Organization object
-        :param organization_id: optional - search by id
-        :param organization_name: optional - search by name
+        Get Organization object to be able to use it in your code.
+
+        **Prerequisites**: You must be a **superuser** to use this method.
+
+        You must provide at least ONE of the following params: organization_name or organization_id.
+
+        :param str organization_id: optional - search by id
+        :param str organization_name: optional - search by name
         :param fetch: optional - fetch entity from platform, default taken from cookie
         :return: Organization object
-
+        :rtype: dtlpy.entities.organization.Organization
         """
         if organization_name is None and organization_id is None:
             raise exceptions.PlatformException(
@@ -223,12 +256,18 @@ class Organizations:
                organization_id: str = None,
                organization_name: str = None) -> entities.Organization:
         """
-        Update a organization
-        :param plan: OrganizationsPlans.FREEMIUM, OrganizationsPlans.PREMIUM
-        :param organization:
-        :param organization_id:
-        :param organization_name:
+        Update an organization.
+
+        **Prerequisites**: You must be a **superuser** to update an organization.
+
+        You must provide at least ONE of the following params: organization, organization_name, or organization_id.
+
+        :param str plan: OrganizationsPlans.FREEMIUM, OrganizationsPlans.PREMIUM
+        :param entities.Organization organization: Organization object
+        :param str organization_id: Organization id
+        :param str organization_name: Organization name
         :return: organization object
+        :rtype: dtlpy.entities.organization.Organization
         """
         if organization is None and organization_id is None and organization_name is None:
             raise exceptions.PlatformException(
@@ -252,19 +291,25 @@ class Organizations:
         else:
             raise exceptions.PlatformException(response)
 
-    def add_member(self, email,
+    def add_member(self, email: str,
                    role: entities.MemberOrgRole = entities.MemberOrgRole.MEMBER,
                    organization_id: str = None,
                    organization_name: str = None,
                    organization: entities.Organization = None):
         """
-        Add member to the Organization
-        :param email:
-        :param role: MemberOrgRole.ADMIN ,MemberOrgRole.OWNER ,MemberOrgRole.MEMBER
-        :param organization_id:
-        :param organization_name:
-        :param organization:
-        :return: True
+        Add members to your organization. Read about members and groups `here <https://dataloop.ai/docs/org-members-groups>`_.
+
+        **Prerequisities**: To add members to an organization, you must be an *owner* in that organization.
+        
+        You must provide at least ONE of the following params: organization, organization_name, or organization_id.
+
+        :param str email: the member's email
+        :param str role: MemberOrgRole.ADMIN, MemberOrgRole.OWNER, MemberOrgRole.MEMBER
+        :param str organization_id: Organization id
+        :param str organization_name: Organization name
+        :param entities.Organization organization: Organization object
+        :return: True if successful or error if unsuccessful
+        :rtype: bool
         """
 
         if organization is None and organization_id is None and organization_name is None:
@@ -300,14 +345,20 @@ class Organizations:
                       sure: bool = False,
                       really: bool = False) -> bool:
         """
-        delete member from the Organization
-        :param user_id:
-        :param organization_id:
-        :param organization_name:
-        :param organization:
-        :param sure: are you sure you want to delete?
-        :param really: really really?
-        :return: True
+        Delete member from the Organization.
+
+        **Prerequisites**: Must be an organization *owner* to delete members.
+
+        You must provide at least ONE of the following params: organization_id, organization_name, organization.
+
+        :param str user_id: user id
+        :param str organization_id: Organization id
+        :param str organization_name: Organization name
+        :param entities.Organization organization: Organization object
+        :param bool sure: Are you sure you want to delete?
+        :param bool really: Really really sure?
+        :return: True if success and error if not
+        :rtype: bool
         """
         if sure and really:
             if organization is None and organization_id is None and organization_name is None:
@@ -336,12 +387,19 @@ class Organizations:
                       organization_name: str = None,
                       organization: entities.Organization = None):
         """
-        Update the member role
-        :param email:
-        :param role: MemberOrgRole.ADMIN ,MemberOrgRole.OWNER ,MemberOrgRole.MEMBER
-        :param organization_id:
-        :param organization_name:
-        :param organization:
+        Update member role.
+
+        **Prerequisites**: You must be an organization *owner* to update a member's role.
+       
+        You must provide at least ONE of the following params: organization, organization_name, or organization_id.
+
+        :param str email: the member's email
+        :param str role: MemberOrgRole.ADMIN, MemberOrgRole.OWNER, MemberOrgRole.MEMBER
+        :param str organization_id: Organization id
+        :param str organization_name: Organization name
+        :param entities.Organization organization: Organization object
+        :return: json of the member fields
+        :rtype: dict
         """
         if organization is None and organization_id is None and organization_name is None:
             raise exceptions.PlatformException(

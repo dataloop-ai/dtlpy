@@ -13,7 +13,9 @@ logger = logging.getLogger(name='dtlpy')
 
 class Datasets:
     """
-    Datasets repository
+    Datasets Repository
+
+    The Datasets class allows the user to manage datasets. Read more about datasets in our `documentation <https://dataloop.ai/docs/dataset>`_ and `SDK documentation <https://dataloop.ai/docs/sdk-create-dataset>`_.
     """
 
     def __init__(self, client_api: services.ApiClient, project: entities.Project = None):
@@ -85,11 +87,18 @@ class Datasets:
     def platform_url(self):
         return self._client_api._get_resource_url("projects/{}/datasets".format(self.project.id))
 
-    def open_in_web(self, dataset_name=None, dataset_id=None, dataset=None):
+    def open_in_web(self,
+                    dataset_name: str = None,
+                    dataset_id: str = None,
+                    dataset: entities.Dataset = None):
         """
-        :param dataset_name:
-        :param dataset_id:
-        :param dataset:
+        Open the dataset in web platform.
+
+        **Prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param str dataset_name: dataset name
+        :param str dataset_id: dataset id
+        :param dtlpy.entities.dataset.Dataset dataset: dataset object
         """
         if dataset_name is not None:
             dataset = self.get(dataset_name=dataset_name)
@@ -100,14 +109,22 @@ class Datasets:
         else:
             self._client_api._open_in_web(url=self.platform_url)
 
-    def checkout(self, identifier=None, dataset_name=None, dataset_id=None, dataset=None):
+    def checkout(self,
+                 identifier: str = None,
+                 dataset_name: str = None,
+                 dataset_id: str = None,
+                 dataset: entities.Dataset = None):
         """
-        Check-out a project
-        :param identifier: project name or partial id
-        :param dataset_name:
-        :param dataset_id:
-        :param dataset:
-        :return:
+        Checkout (switch) to a dataset to work on it.
+
+        **Prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        You must provide at least ONE of the following params: dataset_id, dataset_name.
+
+        :param str identifier: project name or partial id
+        :param str dataset_name: dataset name
+        :param str dataset_id: dataset id
+        :param dtlpy.entities.dataset.Dataset dataset: dataset object
         """
         if dataset is None:
             if dataset_id is not None or dataset_name is not None:
@@ -126,9 +143,13 @@ class Datasets:
     def list(self, name=None, creator=None) -> miscellaneous.List[entities.Dataset]:
         """
         List all datasets.
-        :param name:
-        :param creator:
+
+        **Prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param str name: list by name
+        :param str creator: list by creator
         :return: List of datasets
+        :rtype: list
         """
         url = '/datasets'
 
@@ -166,15 +187,25 @@ class Datasets:
             raise exceptions.PlatformException(response)
         return datasets
 
-    def get(self, dataset_name=None, dataset_id=None, checkout=False, fetch=None) -> entities.Dataset:
+    def get(self,
+            dataset_name: str = None,
+            dataset_id: str = None,
+            checkout: bool = False,
+            fetch: bool = None
+            ) -> entities.Dataset:
         """
-        Get dataset by name or id
+        Get dataset by name or id.
 
-        :param dataset_name: optional - search by name
-        :param dataset_id: optional - search by id
-        :param checkout:
-        :param fetch: optional - fetch entity from platform, default taken from cookie
+        **Prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        You must provide at least ONE of the following params: dataset_id, dataset_name.
+
+        :param str dataset_name: optional - search by name
+        :param str dataset_id: optional - search by id
+        :param bool checkout: True to checkout
+        :param bool fetch: optional - fetch entity from platform, default taken from cookie
         :return: Dataset object
+        :rtype: dtlpy.entities.dataset.Dataset
         """
         if fetch is None:
             fetch = self._client_api.fetch_entities
@@ -221,14 +252,22 @@ class Datasets:
             self.checkout(dataset=dataset)
         return dataset
 
-    def delete(self, dataset_name=None, dataset_id=None, sure=False, really=False):
+    def delete(self,
+               dataset_name: str = None,
+               dataset_id: str = None,
+               sure: bool = False,
+               really: bool = False):
         """
         Delete a dataset forever!
-        :param dataset_name: optional - search by name
-        :param dataset_id: optional - search by id
-        :param sure: are you sure you want to delete?
-        :param really: really really?
-        :return: True
+
+        **Prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param str dataset_name: optional - search by name
+        :param str dataset_id: optional - search by id
+        :param bool sure: Are you sure you want to delete?
+        :param bool really: Really really sure?
+        :return: True is success
+        :rtype: bool
         """
         if sure and really:
             dataset = self.get(dataset_name=dataset_name, dataset_id=dataset_id)
@@ -243,13 +282,21 @@ class Datasets:
                 error='403',
                 message='Cant delete dataset from SDK. Please login to platform to delete')
 
-    def update(self, dataset: entities.Dataset, system_metadata=False, patch: dict = None) -> entities.Dataset:
+    def update(self,
+               dataset: entities.Dataset,
+               system_metadata: bool = False,
+               patch: dict = None
+               ) -> entities.Dataset:
         """
-        Update dataset field
-        :param dataset: Dataset entity
-        :param system_metadata: bool - True, if you want to change metadata system
-        :param patch: Specific patch request
+        Update dataset field.
+
+        **Prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param dtlpy.entities.dataset.Dataset dataset: dataset object
+        :param bool system_metadata: True, if you want to change metadata system
+        :param dict patch: Specific patch request
         :return: Dataset object
+        :rtype: dtlpy.entities.dataset.Dataset
         """
         url_path = '/datasets/{}'.format(dataset.id)
         if system_metadata:
@@ -267,13 +314,21 @@ class Datasets:
         else:
             raise exceptions.PlatformException(response)
 
-    def directory_tree(self, dataset: entities.Dataset = None, dataset_name=None, dataset_id=None):
+    def directory_tree(self,
+                       dataset: entities.Dataset = None,
+                       dataset_name: str = None,
+                       dataset_id: str = None):
         """
-        Get dataset's directory tree
-        :param dataset:
-        :param dataset_name:
-        :param dataset_id:
-        :return:
+        Get dataset's directory tree.
+
+        **Prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        You must provide at least ONE of the following params: dataset, dataset_name, dataset_id.
+
+        :param dtlpy.entities.dataset.Dataset dataset: dataset object
+        :param str dataset_name: dataset name
+        :param str dataset_id: dataset id
+        :return: DirectoryTree
         """
         if dataset is None and dataset_name is None and dataset_id is None:
             raise exceptions.PlatformException('400', 'Must provide dataset, dataset name or dataset id')
@@ -292,18 +347,27 @@ class Datasets:
         else:
             raise exceptions.PlatformException(response)
 
-    def clone(self, dataset_id, clone_name, filters=None, with_items_annotations=True, with_metadata=True,
-              with_task_annotations_status=True):
+    def clone(self,
+              dataset_id: str,
+              clone_name: str,
+              filters: entities.Filters = None,
+              with_items_annotations: bool = True,
+              with_metadata: bool = True,
+              with_task_annotations_status: bool = True):
         """
-        Clone a dataset
+        Clone a dataset. Read more about cloning datatsets and items in our `documentation <https://dataloop.ai/docs/clone-merge-dataset#cloned-dataset>`_ and `SDK documentation <https://dataloop.ai/docs/sdk-create-dataset#clone-dataset>`_.
 
-        :param dataset_id: to clone dataset
-        :param clone_name: new dataset name
-        :param filters: Filters entity or a query dict
-        :param with_items_annotations:
-        :param with_metadata:
-        :param with_task_annotations_status:
-        :return:
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+
+        :param str dataset_id: id of the dataset you wish to clone
+        :param str clone_name: new dataset name
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a query dict
+        :param bool with_items_annotations: true to clone with items annotations
+        :param bool with_metadata: true to clone with metadata
+        :param bool with_task_annotations_status: true to clone with task annotations' status
+        :return: dataset object
+        :rtype: dtlpy.entities.dataset.Dataset
         """
         if filters is None:
             filters = entities.Filters().prepare()
@@ -340,19 +404,28 @@ class Datasets:
                                                .format(response))
         return self.get(dataset_id=command.spec['returnedModelId'])
 
-    def merge(self, merge_name, dataset_ids, project_ids, with_items_annotations=True, with_metadata=True,
-              with_task_annotations_status=True, wait=True):
+    def merge(self,
+              merge_name: str,
+              dataset_ids: str,
+              project_ids: str,
+              with_items_annotations: bool = True,
+              with_metadata: bool = True,
+              with_task_annotations_status: bool = True,
+              wait: bool = True):
         """
-        merge a dataset
+        Merge a dataset. See our `SDK docs <https://dataloop.ai/docs/sdk-create-dataset#merge-datasets>`_ for more information.
 
-        :param merge_name: to clone dataset
-        :param dataset_ids: new dataset name
-        :param project_ids: Filters entity or a query dict
-        :param with_items_annotations:
-        :param with_metadata:
-        :param with_task_annotations_status:
-        :param wait: wait the command to finish
-        :return:
+        **Prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param str merge_name: new dataset name
+        :param str dataset_ids: id's of the datatsets you wish to merge
+        :param str project_ids: project id
+        :param bool with_items_annotations: with items annotations
+        :param bool with_metadata: with metadata
+        :param bool with_task_annotations_status: with task annotations status
+        :param bool wait: wait the command to finish
+        :return: True if success
+        :rtype: bool
         """
         payload = {
             "name": merge_name,
@@ -383,13 +456,16 @@ class Datasets:
         else:
             raise exceptions.PlatformException(response)
 
-    def sync(self, dataset_id, wait=True):
+    def sync(self, dataset_id: str, wait: bool = True):
         """
-        Sync dataset with external storage
+        Sync dataset with external storage.
 
-        :param dataset_id: to sync dataset
-        :param wait: wait the command to finish
-        :return:
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param str dataset_id: to sync dataset
+        :param bool wait: wait the command to finish
+        :return: True if success
+        :rtype: bool
         """
 
         success, response = self._client_api.gen_request(req_type='post',
@@ -410,27 +486,29 @@ class Datasets:
             raise exceptions.PlatformException(response)
 
     def create(self,
-               dataset_name,
+               dataset_name: str,
                labels=None,
                attributes=None,
                ontology_ids=None,
-               driver=None,
-               driver_id=None,
-               checkout=False,
+               driver: entities.Driver = None,
+               driver_id: str = None,
+               checkout: bool = False,
                expiration_options: entities.ExpirationOptions = None) -> entities.Dataset:
         """
         Create a new dataset
 
-        :param dataset_name: name
-        :param labels: dictionary of {tag: color} or list of label entities
-        :param attributes: dataset's ontology's attributes
-        :param ontology_ids: optional - dataset ontology
-        :param driver: optional - storage driver Driver object or driver name
-        :param driver_id: optional - driver id
-        :param checkout: bool. cache the dataset to work locally
-        :param expiration_options: dl.ExpirationOptions object that contain definitions for dataset like MaxItemDays
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
 
+        :param str dataset_name: dataset name
+        :param list labels: dictionary of {tag: color} or list of label entities
+        :param list attributes: dataset's ontology's attributes
+        :param list ontology_ids: optional - dataset ontology
+        :param dtlpy.entities.driver.Driver driver: optional - storage driver Driver object or driver name
+        :param str driver_id: optional - driver id
+        :param bool checkout: bool. cache the dataset to work locally
+        :param expiration_options: dl.ExpirationOptions object that contain definitions for dataset like MaxItemDays
         :return: Dataset object
+        :rtype: dtlpy.entities.dataset.Dataset
         """
         create_default_recipe = True
         if labels is not None or attributes is not None or ontology_ids is not None:
@@ -516,39 +594,44 @@ class Datasets:
         progress.update()
 
     @staticmethod
-    def download_annotations(dataset,
-                             local_path=None,
+    def download_annotations(dataset: entities.Dataset,
+                             local_path: str = None,
                              filters: entities.Filters = None,
                              annotation_options: entities.ViewAnnotationOptions = None,
                              annotation_filters: entities.Filters = None,
-                             overwrite=False,
-                             thickness=1,
-                             with_text=False,
-                             remote_path=None,
-                             include_annotations_in_output=True,
-                             export_png_files=False,
-                             filter_output_annotations=False,
-                             alpha=None
-                             ):
+                             overwrite: bool = False,
+                             thickness: int = 1,
+                             with_text: bool = False,
+                             remote_path: str = None,
+                             include_annotations_in_output: bool = True,
+                             export_png_files: bool = False,
+                             filter_output_annotations: bool = False,
+                             alpha: float = None
+                             ) -> str:
         """
         Download dataset's annotations by filters.
-        Filtering the dataset both for items and for annotations and download annotations
-        Optional - also download annotations as: mask, instance, image mask of the item
 
-        :param dataset: dataset to download from
-        :param local_path: local folder or filename to save to.
-        :param filters: Filters entity or a dictionary containing filters parameters
-        :param annotation_options: download annotations options: list(dl.ViewAnnotationOptions)
-        :param annotation_filters: Filters entity to filter annotations for download
-        :param overwrite: optional - default = False
-        :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
-        :param with_text: optional - add text to annotations, default = False
-        :param remote_path: DEPRECATED and ignored
-        :param include_annotations_in_output: default - False , if export should contain annotations
-        :param export_png_files: default - True, if semantic annotations should exported as png files
-        :param filter_output_annotations: default - False, given an export by filter - determine if to filter out annotations
-        :param alpha: opacity value [0 1], default 1
-        :return: `List` of local_path per each downloaded item
+        You may filter the dataset both for items and for annotations and download annotations.
+        
+        Optional -- download annotations as: mask, instance, image mask of the item.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param dtlpy.entities.dataset.Dataset dataset: dataset object
+        :param str local_path: local folder or filename to save to.
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
+        :param list annotation_options: download annotations options: list(dl.ViewAnnotationOptions)
+        :param dtlpy.entities.filters.Filters annotation_filters: Filters entity to filter annotations for download
+        :param bool overwrite: optional - default = False
+        :param int thickness: optional - line thickness, if -1 annotation will be filled, default =1
+        :param bool with_text: optional - add text to annotations, default = False
+        :param str remote_path: DEPRECATED and ignored
+        :param bool include_annotations_in_output: default - False , if export should contain annotations
+        :param bool export_png_files: default - if True, semantic annotations should be exported as png files
+        :param bool filter_output_annotations: default - False, given an export by filter - determine if to filter out annotations
+        :param float alpha: opacity value [0 1], default 1
+        :return: local_path of the directory where all the downloaded item
+        :rtype: str
         """
         if remote_path is not None:
             logger.warning(
@@ -644,14 +727,18 @@ class Datasets:
                            remote_root_path='/'
                            ):
         """
-        Upload annotations to dataset.
-        :param dataset: dataset to upload to it
-        :param local_path: str - local folder where the annotations files is.
-        :param filters: Filters entity or a dictionary containing filters parameters
-        :param clean: bool - if True it remove the old annotations
-        :param remote_root_path: str - the remote root path to match remote and local items
-        For example, if the item filepath is a/b/item and remote_root_path is /a the start folder will be b instead of a
-        :return:
+        Upload annotations to dataset. 
+        
+        Example for remote_root_path: If the item filepath is a/b/item and
+        remote_root_path is /a the start folder will be b instead of a
+
+        **Prerequisites**: You must have a dataset with items that are related to the annotations. The relationship between the dataset and annotations is shown in the name. You must be in the role of an *owner* or *developer*.
+
+        :param dtlpy.entities.dataset.Dataset dataset: dataset to upload to
+        :param str local_path: str - local folder where the annotations files is
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
+        :param bool clean: True to remove the old annotations
+        :param str remote_root_path: the remote root path to match remote and local items
         """
         if filters is None:
             filters = entities.Filters()
@@ -683,10 +770,12 @@ class Datasets:
 
     def set_readonly(self, state: bool, dataset: entities.Dataset):
         """
-        Set dataset readonly mode
-        :param state:
-        :param dataset:
-        :return:
+        Set dataset readonly mode.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param bool state: state to update readonly mode
+        :param dtlpy.entities.dataset.Dataset dataset: dataset object
         """
         if dataset.readonly != state:
             patch = {'readonly': state}

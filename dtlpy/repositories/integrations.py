@@ -10,7 +10,12 @@ logger = logging.getLogger(name='dtlpy')
 
 class Integrations:
     """
-    Datasets repository
+    Integrations Repository
+
+    The Integrations class allows you to manage data integrtion from your external storage (e.g., S3, GCS, Azure) into your Dataloop's Dataset storage, as well as sync data in your Dataloop's Datasets with data in your external storage.
+
+    For more information on Organization Storgae Integration see the `Dataloop documentation <https://dataloop.ai/docs/organization-integrations>`_  and `SDK External Storage <https://dataloop.ai/docs/sdk-sync-storage>`_.
+
     """
 
     def __init__(self, client_api: services.ApiClient, org: entities.Organization = None,
@@ -42,15 +47,20 @@ class Integrations:
             raise ValueError('Must input a valid Organization entity')
         self._org = org
 
-    def delete(self, integrations_id: str,
+    def delete(self,
+               integrations_id: str,
                sure: bool = False,
                really: bool = False) -> bool:
         """
-        Delete integrations from the Organization
-        :param integrations_id:
-        :param sure: are you sure you want to delete?
-        :param really: really really?
-        :return: True
+        Delete integrations from the organization.
+
+        **Prerequisites**: You must be an organization *owner* to delete an integration.
+
+        :param str integrations_id: integrations id
+        :param bool sure: Are you sure you want to delete?
+        :param bool really: Really really sure?
+        :return: success
+        :rtype: bool
         """
         if sure and really:
             if self.project is None and self.org is None:
@@ -75,22 +85,32 @@ class Integrations:
                 error='403',
                 message='Cant delete integrations from SDK. Please login to platform to delete')
 
-    def create(self, integrations_type: entities.ExternalStorage, name, options):
+    def create(self,
+               integrations_type: entities.ExternalStorage,
+               name: str,
+               options: dict):
         """
-        Add integrations to the Organization
-        :param integrations_type: dl.ExternalStorage
-        :param name: integrations name
-        :param options: s3 - {key: "", secret: ""},
-                        gcs - {key: "", secret: "", content: ""},
-                        azureblob - {key: "", secret: "", clientId: "", tenantId: ""}
-                        key_value - {key: "", value: ""}
-        :return: True
+        Create an integration between an external storage and the organization.
+
+        **Examples for options include**:
+        s3 - {key: "", secret: ""};
+        gcs - {key: "", secret: "", content: ""};
+        azureblob - {key: "", secret: "", clientId: "", tenantId: ""};
+        key_value - {key: "", value: ""}
+
+        **Prerequisites**: You must be an *owner* in the organization.
+
+        :param str integrations_type: integrations type dl.ExternalStorage
+        :param str name: integrations name
+        :param dict options: dict of storage secrets
+        :return: success
+        :rtype: bool
         """
 
         if self.project is None and self.org is None:
             raise exceptions.PlatformException(
                 error='400',
-                message='Must provide an identifier in inputs')
+                message='Must have an organization or project')
 
         if self.project is not None:
             organization_id = self.project.org.get('id')
@@ -107,16 +127,23 @@ class Integrations:
         else:
             return entities.Integration.from_json(_json=response.json(), client_api=self._client_api)
 
-    def update(self, new_name: str, integrations_id):
+    def update(self,
+               new_name: str,
+               integrations_id: str):
         """
-        Update the integrations name
-        :param new_name:
-        :param integrations_id:
+        Update the integration's name.
+
+        **Prerequisites**: You must be an *owner* in the organization.
+
+        :param str new_name: new name
+        :param str integrations_id: integrations id
+        :return: Integration object
+        :rtype: dtlpy.entities.integration.Integration
         """
         if self.project is None and self.org is None:
             raise exceptions.PlatformException(
                 error='400',
-                message='Must provide an identifier in inputs')
+                message='Must have an organization or project')
 
         if self.project is not None:
             organization_id = self.project.org.get('id')
@@ -136,14 +163,18 @@ class Integrations:
 
     def get(self, integrations_id: str):
         """
-        get organization integrations
-        :param integrations_id:
-        :return organization integrations:
+        Get organization integrations. Use this method to access your integration and be able to use it in your code.
+
+        **Prerequisites**: You must be an *owner* in the organization.
+
+        :param str integrations_id: integrations id
+        :return: Integration object
+        :rtype: dtlpy.entities.integration.Integration
         """
         if self.project is None and self.org is None:
             raise exceptions.PlatformException(
                 error='400',
-                message='Must provide an identifier in inputs')
+                message='Must have an organization or project')
 
         if self.project is not None:
             organization_id = self.project.org.get('id')
@@ -160,14 +191,18 @@ class Integrations:
 
     def list(self, only_available=False):
         """
-        list all organization integrations
-        :param only_available: bool - if True list only the available integrations
-        :return groups list:
+        List all the organization's integrations with external storage.
+
+        **Prerequisites**: You must be an *owner* in the organization.
+
+        :param bool only_available: if True list only the available integrations.
+        :return: groups list
+        :rtype: list
         """
         if self.project is None and self.org is None:
             raise exceptions.PlatformException(
                 error='400',
-                message='Must provide an identifier in inputs')
+                message='Must have an organization or project')
 
         if self.project is not None:
             organization_id = self.project.org.get('id')

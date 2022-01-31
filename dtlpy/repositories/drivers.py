@@ -7,7 +7,9 @@ logger = logging.getLogger(name='dtlpy')
 
 class Drivers:
     """
-    Drivers repository
+    Drivers Repository
+    
+    The Drivers class allows users to manage drivers that are used to connect with external storage. Read more about external storage in our `documentation <https://dataloop.ai/docs/storage>`_ and `SDK documentation <https://dataloop.ai/docs/sdk-sync-storage>`_.
     """
 
     def __init__(self, client_api: services.ApiClient, project: entities.Project = None):
@@ -53,8 +55,12 @@ class Drivers:
 
     def list(self) -> miscellaneous.List[entities.Driver]:
         """
-        Get project's drivers list.
+        Get the project's drivers list.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
         :return: List of Drivers objects
+        :rtype: list
         """
 
         success, response = self._client_api.gen_request(req_type='get',
@@ -70,11 +76,16 @@ class Drivers:
             driver_name: str = None,
             driver_id: str = None) -> entities.Driver:
         """
-        Get a Driver object
-        :param driver_name: optional - search by name
-        :param driver_id: optional - search by id
-        :return: Driver object
+        Get a Driver object to use in your code.
 
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        You must provide at least ONE of the following params: driver_name, driver_id.
+
+        :param str driver_name: optional - search by name
+        :param str driver_id: optional - search by id
+        :return: Driver object
+        :rtype: dtlpy.entities.driver.Driver
         """
         if driver_id is not None:
             driver = self.__get_by_id(driver_id)
@@ -99,19 +110,32 @@ class Drivers:
                 message='Must provide an identifier (name or id) in inputs')
         return driver
 
-    def create(self, name, driver_type, integration_id, bucket_name, project_id=None, allow_external_delete=True,
-               region=None, storage_class="", path=""):
+    def create(self,
+               name: str,
+               driver_type: entities.ExternalStorage,
+               integration_id: str,
+               bucket_name: str,
+               project_id: str = None,
+               allow_external_delete: bool = True,
+               region: str = None,
+               storage_class: str = "",
+               path: str = ""):
         """
-        :param name: the driver name
-        :param driver_type: ExternalStorage.S3, ExternalStorage.GCS , ExternalStorage.AZUREBLOB
-        :param integration_id: the integration id
-        :param bucket_name: the external bucket name
-        :param project_id:
-        :param allow_external_delete:
-        :param region: rilevante only for s3 - the bucket region
-        :param storage_class: rilevante only for s3
-        :param path: Optional. By default path is the root folder. Path is case sensitive integration
+        Create a storage driver.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param str name: the driver name
+        :param str driver_type: ExternalStorage.S3, ExternalStorage.GCS, ExternalStorage.AZUREBLOB
+        :param str integration_id: the integration id
+        :param str bucket_name: the external bucket name
+        :param str project_id: project id
+        :param bool allow_external_delete: true to allow deleting files from external storage when files are deleted in your Dataloop storage
+        :param str region: relevant only for s3 - the bucket region
+        :param str storage_class: rilevante only for s3
+        :param str path: Optional. By default path is the root folder. Path is case sensitive integration
         :return: driver object
+        :rtype: dtlpy.entities.driver.Driver
         """
         if driver_type == entities.ExternalStorage.S3:
             bucket_payload = 'bucketName'

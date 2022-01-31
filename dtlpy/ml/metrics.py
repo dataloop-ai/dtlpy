@@ -117,7 +117,7 @@ class Matches:
 class Matchers:
 
     @staticmethod
-    def calculate_iou_box(pts1, pts2):
+    def calculate_iou_box(pts1, pts2, config):
         """
         Measure the two list of points IoU
         :param pts1: ann.geo coordinates
@@ -167,7 +167,7 @@ class Matchers:
         return iou
 
     @staticmethod
-    def calculate_iou_classification(pts1, pts2):
+    def calculate_iou_classification(pts1, pts2, config):
         """
         Measure the two list of points IoU
         :param pts1: ann.geo coordinates
@@ -177,7 +177,7 @@ class Matchers:
         return 1
 
     @staticmethod
-    def calculate_iou_polygon(pts1, pts2):
+    def calculate_iou_polygon(pts1, pts2, config):
         try:
             # from shapely.geometry import Polygon
             import cv2
@@ -213,15 +213,32 @@ class Matchers:
         return iou
 
     @staticmethod
-    def calculate_iou_semantic(mask1, mask2):
+    def calculate_iou_semantic(mask1, mask2, config):
         joint_mask = mask1 + mask2
         return np.sum(np.sum(joint_mask == 2) / np.sum(joint_mask > 0))
 
     @staticmethod
-    def calculate_iou_point(pt1, pt2):
-        # [x,y]
-        # to create a score between [0, 1] - 1 is the exact match
-        return np.exp(-1 / 4 * np.linalg.norm(pt1 - pt2))
+    def calculate_iou_point(pt1, pt2, config):
+        """
+        pt is [x,y]
+        normalizing  to score  between [0, 1] -> 1 is the exact match
+        if same point score is 1
+        at about 20 pix distance score is about 0.5, 100 goes to 0
+        :param pt1:
+        :param pt2:
+        :return:
+        """
+        """
+        x = np.arange(int(diag))
+        y = np.exp(-1 / diag * 20 * x)
+        plt.figure()
+        plt.plot(x, y)
+        """
+        height = config.get('height', 500)
+        width = config.get('width', 500)
+        diag = np.sqrt(height ** 2 + width**2)
+        # 20% of the image diagonal tolerance (empirically). need to
+        return np.exp(-1 / diag * 20 * np.linalg.norm(np.asarray(pt1) - np.asarray(pt2)))
 
     @staticmethod
     def match_attributes(attributes1, attributes2):
@@ -230,7 +247,7 @@ class Matchers:
         0: no matching
         1: perfect attributes match
         """
-        if type(attributes1) == type(attributes2):
+        if type(attributes1) is not type(attributes2):
             logger.warning('attributes are not same type: {}, {}'.format(type(attributes1), type(attributes2)))
             return 0
 
@@ -238,12 +255,14 @@ class Matchers:
             return 1
 
         if isinstance(attributes1, dict) and isinstance(attributes2, dict):
-            logger.warning('attributes2.0 not supported yet')
-            return 1
+            # convert to list
+            attributes1 = ['{}-{}'.format(key, val) for key, val in attributes1.items()]
+            attributes2 = ['{}-{}'.format(key, val) for key, val in attributes2.items()]
 
         intersection = set(attributes1).intersection(set(attributes2))
         union = set(attributes1).union(attributes2)
         if len(union) == 0:
+            # if there is no union - there are no attributes at all
             return 1
         return len(intersection) / len(union)
 
@@ -271,8 +290,18 @@ class Matchers:
                 if match_type not in annotation_type_to_func:
                     raise ValueError('unsupported type: {}'.format(match_type))
                 if df[annotation_one.id][annotation_two.id] == -1:
-                    df[annotation_one.id][annotation_two.id] = annotation_type_to_func[match_type](annotation_one.geo,
-                                                                                                   annotation_two.geo)
+                    try:
+                        config = {'height': annotation_one._item.height if annotation_one._item is not None else 500,
+                                  'width': annotation_one._item.width if annotation_one._item is not None else 500}
+                        df[annotation_one.id][annotation_two.id] = annotation_type_to_func[match_type](
+                            annotation_one.geo,
+                            annotation_two.geo,
+                            config)
+                    except np.ZeroDivisionError:
+                        logger.warning(
+                            'Found annotations with area=0!: annotations ids: {!r}, {!r}'.format(annotation_one.id,
+                                                                                                 annotation_two.id))
+                        df[annotation_one.id][annotation_two.id] = 0
 
         while True:
             # take max IoU score, list the match and remove annotations' ids from columns and rows

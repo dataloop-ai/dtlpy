@@ -18,7 +18,7 @@ def prepare_dataset(dataset: entities.Dataset,
     clones the given dataset and locks it to be readonly
 
     :param dataset:  `dl.Dataset` to clone
-    :param filters: `dl.Filters` to use when cloning - which items to clone
+    :param dtlpy.entities.filters.Filters filters: `dl.Filters` to use when cloning - which items to clone
     :param partitions: dictionary to set partitions. key is partition name, value is the filter to set, eg.
                                     {dl.SnapshotPartitionType.TEST: dl.Filters(field='dir', values='/test')}
     :param async_clone: `bool` if True (default) - waits until the sync is complete

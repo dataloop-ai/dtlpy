@@ -7,6 +7,8 @@ logger = logging.getLogger(name='dtlpy')
 class PipelineExecutions:
     """
     PipelineExecutions Repository
+
+    The PipelineExecutions class allows users to manage pipeline executions. See our documentation for more information on `pipelines <https://dataloop.ai/docs/pipelines-introduction>`_.
     """
 
     def __init__(
@@ -53,13 +55,19 @@ class PipelineExecutions:
     ###########
     # methods #
     ###########
-    def get(self, pipeline_execution_id: str, pipeline_id: str = None) -> entities.Pipeline:
+    def get(self,
+            pipeline_execution_id: str,
+            pipeline_id: str = None
+            ) -> entities.PipelineExecution:
         """
         Get Pipeline Execution object
 
-        :param pipeline_execution_id: str
-        :param pipeline_id: str
-        :return: Pipeline object
+        **prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param str pipeline_execution_id: pipeline execution id
+        :param str pipeline_id: pipeline id
+        :return: PipelineExecution object
+        :rtype: dtlpy.entities.pipeline_execution.PipelineExecution
         """
 
         if pipeline_id is None and self._pipeline is None:
@@ -123,9 +131,13 @@ class PipelineExecutions:
 
     def list(self, filters: entities.Filters = None) -> entities.PagedEntities:
         """
-        List project pipeline executions
-        :param filters:
-        :return:
+        List project pipeline executions.
+
+        **prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
+        :return: Paged entity
+        :rtype: dtlpy.entities.paged_entities.PagedEntities
         """
         if filters is None:
             filters = entities.Filters(resource=entities.FiltersResource.PIPELINE_EXECUTION)
@@ -165,10 +177,14 @@ class PipelineExecutions:
                pipeline_id: str = None,
                execution_input=None):
         """
-        execute a pipeline and return the execute
+        Execute a pipeline and return the execute.
+
+        **prerequisites**: You must be an *owner* or *developer* to use this method.
+
         :param pipeline_id: pipeline id
         :param execution_input: list of the dl.FunctionIO or dict of pipeline input - example {'item': 'item_id'}
         :return: entities.PipelineExecution object
+        :rtype: dtlpy.entities.pipeline_execution.PipelineExecution
         """
         if pipeline_id is None:
             if self._pipeline is None:

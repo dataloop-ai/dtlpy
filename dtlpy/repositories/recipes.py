@@ -8,7 +8,9 @@ logger = logging.getLogger(name='dtlpy')
 
 class Recipes:
     """
-    Items repository
+    Recipes Repository
+
+    The Recipes class allows you to manage recipes and their properties. For more information on Recipes, see our `documentation <https://dataloop.ai/docs/ontology>`_ and `SDK documentation <https://dataloop.ai/docs/sdk-recipe>`_.
     """
 
     def __init__(self,
@@ -52,17 +54,26 @@ class Recipes:
     ###########
     # methods #
     ###########
-    def create(self, project_ids=None, ontology_ids=None, labels=None, recipe_name=None,
-               attributes=None) -> entities.Recipe:
+    def create(self,
+               project_ids=None,
+               ontology_ids=None,
+               labels=None,
+               recipe_name=None,
+               attributes=None
+               ) -> entities.Recipe:
         """
-        Create New Recipe
+        Create a new Recipe.
+        Note: If the param ontology_ids is None, an ontology will be created first.
 
-        if ontology_ids is None an ontology will be created first
-        :param project_ids:
-        :param ontology_ids:
-        :param labels:
-        :param recipe_name:
-        :param attributes:
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param project_ids: project ids
+        :param ontology_ids: ontology ids
+        :param labels: labels
+        :param recipe_name: recipe name
+        :param attributes: attributes
+        :return: Recipe entity
+        :rtype: dtlpy.entities.recipe.Recipe
         """
         if labels is None:
             labels = list()
@@ -108,8 +119,13 @@ class Recipes:
 
     def list(self, filters: entities.Filters = None) -> miscellaneous.List[entities.Recipe]:
         """
-        List recipes for dataset
-        :param filters:
+        List recipes for a dataset.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
+        :return: list of all recipes
+        :retype: list
         """
         if self._dataset is not None:
             try:
@@ -197,12 +213,15 @@ class Recipes:
             status = False
         return status, recipe
 
-    def get(self, recipe_id) -> entities.Recipe:
+    def get(self, recipe_id: str) -> entities.Recipe:
         """
-        Get Recipe object
+        Get a Recipe object to use in your code.
 
-        :param recipe_id: recipe id
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param str recipe_id: recipe id
         :return: Recipe object
+        :rtype: dtlpy.entities.recipe.Recipe
         """
         success, response = self._client_api.gen_request(req_type='get',
                                                          path='/recipes/%s' % recipe_id)
@@ -217,10 +236,16 @@ class Recipes:
 
         return recipe
 
-    def open_in_web(self, recipe=None, recipe_id=None):
+    def open_in_web(self,
+                    recipe: entities.Recipe = None,
+                    recipe_id: str = None):
         """
-        :param recipe:
-        :param recipe_id:
+        Open the recipe in web platform.
+
+        **Prerequisites**: All users.
+
+        :param dtlpy.entities.recipe.Recipe recipe: recipe entity
+        :param str recipe_id: recipe id
         """
         if recipe is not None:
             recipe.open_in_web()
@@ -229,15 +254,22 @@ class Recipes:
         else:
             self._client_api._open_in_web(url=self.platform_url)
 
-    def delete(self, recipe_id):
+    def delete(self, recipe_id: str, force: bool = False):
         """
-        Delete recipe from platform
+        Delete recipe from platform.
+        
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
 
-        :param recipe_id: recipe id
-        :return: True
+        :param str recipe_id: recipe id
+        :param bool force: force delete recipe
+        :return: True if success
+        :rtype: bool
         """
+        path = '/recipes/{}'.format(recipe_id)
+        if force:
+            path += '?force=true'
         success, response = self._client_api.gen_request(req_type='delete',
-                                                         path='/recipes/%s' % recipe_id)
+                                                         path=path)
         if not success:
             raise exceptions.PlatformException(response)
         logger.info('Recipe id {} deleted successfully'.format(recipe_id))
@@ -245,11 +277,14 @@ class Recipes:
 
     def update(self, recipe: entities.Recipe, system_metadata=False) -> entities.Recipe:
         """
-        Update items metadata
+        Update recipe.
 
-        :param recipe: Recipe object
-        :param system_metadata: bool - True, if you want to change metadata system
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param dtlpy.entities.recipe.Recipe recipe: Recipe object
+        :param bool system_metadata: True, if you want to change metadata system
         :return: Recipe object
+        :rtype: dtlpy.entities.recipe.Recipe
         """
         url_path = '/recipes/%s' % recipe.id
         if system_metadata:
@@ -263,16 +298,20 @@ class Recipes:
             logger.error('Error while updating item:')
             raise exceptions.PlatformException(response)
 
-    def clone(self, recipe: entities.Recipe = None,
-              recipe_id=None,
-              shallow=False):
+    def clone(self,
+              recipe: entities.Recipe = None,
+              recipe_id: str = None,
+              shallow: bool = False):
         """
-        Clone Recipe
+        Clone recipe.
 
-       :param recipe: Recipe object
-       :param recipe_id: Recipe id
-       :param shallow: If True, link ot existing ontology, clones all ontology that are link to the recipe as well
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+       :param dtlpy.entities.recipe.Recipe recipe: Recipe object
+       :param str recipe_id: Recipe id
+       :param bool shallow: If True, link to existing ontology, clones all ontologies that are linked to the recipe as well
        :return: Cloned ontology object
+       :rtype: dtlpy.entities.recipe.Recipe
        """
         if recipe is None and recipe_id is None:
             raise exceptions.PlatformException('400', 'Must provide recipe or recipe_id')

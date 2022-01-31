@@ -39,8 +39,9 @@ class TimesSeries:
     def create(self, series_name) -> entities.TimeSeries:
         """
         Create a new time series
-        :param series_name: name
-        :return:
+
+        :param str series_name: name
+        :return: TimeSeries object
         """
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/projects/{}/timeSeries'.format(self.project.id),
@@ -56,6 +57,7 @@ class TimesSeries:
     def list(self) -> miscellaneous.List[entities.TimeSeries]:
         """
         List all time series for project
+
         :return:
         """
         success, response = self._client_api.gen_request(req_type='get',
@@ -70,8 +72,9 @@ class TimesSeries:
     def get(self, series_name=None, series_id=None) -> entities.TimeSeries:
         """
         Get time series entity
-        :param series_name: by name
-        :param series_id: by id
+
+        :param str series_name: by name
+        :param str series_id: by id
         :return:
         """
         if series_id is not None:
@@ -112,9 +115,11 @@ class TimesSeries:
     def delete(self, series_id=None, series=None):
         """
         Delete a Time Series
-        :param series_id: optional - search by id
+
+        :param str series_id: optional - search by id
         :param series: optional - TimeSeries object
         :return: True
+        :rtype: bool
         """
         if series_id is not None:
             pass
@@ -138,8 +143,9 @@ class TimesSeries:
     def delete_samples(self, series_id, filters):
         """
         Delete samples from table
-        :param series_id: time series id
-        :param filters: query to delete by
+
+        :param str series_id: time series id
+        :param dtlpy.entities.filters.Filters filters: query to delete by
         :return:
         """
         filters = self._validate_query(query=filters)
@@ -168,8 +174,9 @@ class TimesSeries:
     def get_samples(self, series_id, filters=None) -> pd.DataFrame:
         """
         Get Series table
-        :param series_id: TimeSeries id
-        :param filters: match filters to get specific data from series
+
+        :param str series_id: TimeSeries id
+        :param dtlpy.entities.filters.Filters filters: match filters to get specific data from series
         :return:
         """
         filters = self._validate_query(query=filters)
@@ -192,7 +199,8 @@ class TimesSeries:
     def add_samples(self, series_id, data):
         """
         Add samples to series
-        :param series_id: TimeSeries id
+
+        :param str series_id: TimeSeries id
         :param data: list or dictionary of samples
         :return:
         """
@@ -211,8 +219,9 @@ class TimesSeries:
     def get_sample(self, series_id, sample_id) -> pd.DataFrame:
         """
         Get single sample from series
-        :param series_id: TimeSeries id
-        :param sample_id: id of sample line
+
+        :param str series_id: TimeSeries id
+        :param str sample_id: id of sample line
         :return:
         """
         success, response = self._client_api.gen_request(req_type='get',
@@ -235,9 +244,10 @@ class TimesSeries:
     def update_sample(self, series_id, sample_id, data):
         """
         Add data to existing sample
-        :param series_id: time series id
-        :param sample_id: sample line id
-        :param data: dictionary
+
+        :param str series_id: time series id
+        :param str sample_id: sample line id
+        :param dict data: dictionary
         :return:
         """
         success, response = self._client_api.gen_request(req_type='post',
@@ -252,8 +262,9 @@ class TimesSeries:
     def delete_sample(self, series_id, sample_id):
         """
         Delete single samples form time series
-        :param series_id:
-        :param sample_id:
+
+        :param str series_id:
+        :param str sample_id:
         :return:
         """
         success, response = self._client_api.gen_request(req_type='delete',

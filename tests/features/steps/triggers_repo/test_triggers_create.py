@@ -105,24 +105,34 @@ def step_impl(context, function_name):
     assert context.trigger.function_name == function_name
 
 
-@behave.then(u'Service was triggered on "{item_type}"')
-def step_impl(context, item_type):
-    is_item = item_type == 'item'
+@behave.then(u'Service was triggered on "{resource_type}"')
+def step_impl(context, resource_type):
+    context.trigger_type = resource_type
     num_try = 60
     interval = 10
     triggered = False
 
     for i in range(num_try):
         time.sleep(interval)
-        if is_item:
+        if resource_type == 'item':
             item = context.dataset.items.get(item_id=context.uploaded_item_with_trigger.id)
             if 'executionLogs' in item.system:
                 if context.service.name in item.system['executionLogs']:
                     triggered = True
                     break
-        else:
+        elif resource_type == 'annotation':
             item = context.annotation.item.annotations.get(annotation_id=context.annotation.id)
             if item.label == "Edited":
+                triggered = True
+                break
+        elif resource_type == 'dataset':
+            if context.service.executions.list().items_count == 1:
+                execution = context.service.executions.list()[0][0]
+                assert resource_type in execution.input.keys()
+                triggered = True
+                break
+        elif resource_type == 'task':
+            if context.task.name == "name updated by trigger":
                 triggered = True
                 break
 

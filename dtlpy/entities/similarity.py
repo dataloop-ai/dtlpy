@@ -107,6 +107,7 @@ class Collection:
         Returns platform _json format of object
 
         :return: platform json format of object
+        :rtype: dict
         """
         _json = {
             "type": self.type,
@@ -205,6 +206,7 @@ class Similarity(Collection):
         Returns platform _json format of object
 
         :return: platform json format of object
+        :rtype: dict
         """
         _json = super().to_json()
         _json['metadata']['target'] = {
@@ -241,6 +243,7 @@ class MultiView(Collection):
         Returns platform _json format of object
 
         :return: platform json format of object
+        :rtype: dict
         """
         _json = super().to_json()
         _json['items'] = self._items

@@ -14,6 +14,8 @@ BASIC_PIPELINE = {
 class Pipelines:
     """
     Pipelines Repository
+
+    The Pipelines class allows users to manage pipelines and their properties. See our documentation for more information on `pipelines <https://dataloop.ai/docs/pipelines-introduction>`_.
     """
 
     def __init__(self, client_api: services.ApiClient, project: entities.Project = None):
@@ -47,11 +49,18 @@ class Pipelines:
     def platform_url(self):
         return self._client_api._get_resource_url("projects/{}/pipelines".format(self.project.id))
 
-    def open_in_web(self, pipeline=None, pipeline_id=None, pipeline_name=None):
+    def open_in_web(self,
+                    pipeline: entities.Pipeline = None,
+                    pipeline_id: str = None,
+                    pipeline_name: str = None):
         """
-        :param pipeline:
-        :param pipeline_id:
-        :param pipeline_name:
+        Open the pipeline in web platform.
+
+        **prerequisites**: Must be *owner* or *developer* to use this method.
+
+        :param dtlpy.entities.pipeline.Pipeline pipeline: pipeline entity
+        :param str pipeline_id: pipeline id
+        :param str pipeline_name: pipeline name
         """
         if pipeline_name is not None:
             pipeline = self.get(pipeline_name=pipeline_name)
@@ -62,14 +71,23 @@ class Pipelines:
         else:
             self._client_api._open_in_web(url=self.platform_url)
 
-    def get(self, pipeline_name=None, pipeline_id=None, fetch=None) -> entities.Pipeline:
+    def get(self,
+            pipeline_name=None,
+            pipeline_id=None,
+            fetch=None
+            ) -> entities.Pipeline:
         """
-        Get Pipeline object
+        Get Pipeline object to use in your code.
 
-        :param pipeline_name: str
-        :param pipeline_id: str
+        **prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        You must provide at least ONE of the following params: pipeline_name, pipeline_id.
+
+        :param str pipeline_id: pipeline id
+        :param str pipeline_name: pipeline name
         :param fetch: optional - fetch entity from platform, default taken from cookie
         :return: Pipeline object
+        :rtype: dtlpy.entities.pipeline.Pipeline
         """
         if fetch is None:
             fetch = self._client_api.fetch_entities
@@ -169,12 +187,19 @@ class Pipelines:
             raise exceptions.PlatformException(response)
         return response.json()
 
-    def list(self, filters: entities.Filters = None, project_id=None) -> entities.PagedEntities:
+    def list(self,
+             filters: entities.Filters = None,
+             project_id: str = None
+             ) -> entities.PagedEntities:
         """
-        List project pipelines
-        :param filters:
-        :param project_id:
-        :return:
+        List project pipelines.
+
+        **prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
+        :param str project_id: project id
+        :return: Paged entity
+        :rtype: dtlpy.entities.paged_entities.PagedEntities
         """
         if filters is None:
             filters = entities.Filters(resource=entities.FiltersResource.PIPELINE)
@@ -211,15 +236,21 @@ class Pipelines:
         if not success:
             raise exceptions.PlatformException(response)
 
-    def delete(self, pipeline: entities.Pipeline = None, pipeline_name=None, pipeline_id=None):
+    def delete(self,
+               pipeline: entities.Pipeline = None,
+               pipeline_name: str = None,
+               pipeline_id: str = None):
         """
-        Delete Pipeline object
+        Delete Pipeline object.
 
-        :param pipeline:
-        :param pipeline_name:
-        :param pipeline_id:
-        :return: True
-        """
+        **prerequisites**: You must be an *owner* or *developer* to use this method.
+
+       :param dtlpy.entities.pipeline.Pipeline pipeline: pipeline entity
+       :param str pipeline_id: pipeline id
+       :param str pipeline_name: pipeline name
+       :return: True if success
+       :rtype: bool
+       """
         # get id and name
         if pipeline_id is None:
             if pipeline is None:
@@ -239,12 +270,17 @@ class Pipelines:
         # return results
         return True
 
-    def update(self, pipeline: entities.Pipeline = None) -> entities.Pipeline:
+    def update(self,
+               pipeline: entities.Pipeline = None
+               ) -> entities.Pipeline:
         """
-        Update pipeline changes to platform
+        Update pipeline changes to platform.
 
-        :param pipeline:
-        :return: pipeline entity
+        **prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param dtlpy.entities.pipeline.Pipeline pipeline: pipeline entity
+        :return: Pipeline object
+        :rtype: dtlpy.entities.pipeline.Pipeline
         """
 
         # payload
@@ -267,13 +303,21 @@ class Pipelines:
             project=self._project
         )
 
-    def create(self, name=None, project_id=None, pipeline_json=None) -> entities.Pipeline:
+    def create(self,
+               name: str = None,
+               project_id: str = None,
+               pipeline_json: dict = None
+               ) -> entities.Pipeline:
         """
-        Create a new pipeline
-        :param name: str - pipeline name
-        :param project_id: str - project id
-        :param pipeline_json: dict - json contain the pipeline fields
+        Create a new pipeline.
+
+        **prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param str name: pipeline name
+        :param str project_id: project id
+        :param dict pipeline_json: json containing the pipeline fields
         :return: Pipeline object
+        :rtype: dtlpy.entities.pipeline.Pipeline
         """
         if pipeline_json is None:
             pipeline_json = BASIC_PIPELINE
@@ -301,8 +345,11 @@ class Pipelines:
 
     def install(self, pipeline: entities.Pipeline = None):
         """
-        install a pipeline
-        :param pipeline:
+        Install (start) a pipeline.
+
+        **prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param dtlpy.entities.pipeline.Pipeline pipeline: pipeline entity
         :return: Composition object
         """
 
@@ -315,8 +362,11 @@ class Pipelines:
 
     def pause(self, pipeline: entities.Pipeline = None):
         """
-        pause a pipeline
-        :param pipeline:
+        Pause a pipeline.
+
+        **prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param dtlpy.entities.pipeline.Pipeline pipeline: pipeline entity
         :return: Composition object
         """
 
@@ -333,12 +383,16 @@ class Pipelines:
                 pipeline_name: str = None,
                 execution_input=None):
         """
-        execute a pipeline and return the execute
-        :param pipeline: entities.Pipeline object
-        :param pipeline_id: pipeline id
-        :param pipeline_name: pipeline name
+        Execute a pipeline and return the pipeline execution as an object.
+
+        **prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param dtlpy.entities.pipeline.Pipeline pipeline: pipeline entity
+        :param str pipeline_id: pipeline id
+        :param str pipeline_name: pipeline name
         :param execution_input: list of the dl.FunctionIO or dict of pipeline input - example {'item': 'item_id'}
         :return: entities.PipelineExecution object
+        :rtype: dtlpy.entities.pipeline_execution.PipelineExecution
         """
         if pipeline is None:
             pipeline = self.get(pipeline_id=pipeline_id, pipeline_name=pipeline_name)

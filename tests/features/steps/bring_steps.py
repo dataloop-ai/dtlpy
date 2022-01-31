@@ -57,6 +57,7 @@ from tests.features.steps.items_repo import test_items_context
 
 from tests.features.steps.item_entity import test_item_repo_methods
 from tests.features.steps.item_entity import test_item_move
+from tests.features.steps.item_entity import test_item_update_status
 
 from tests.features.steps.ontologies_repo import test_ontologies_create
 from tests.features.steps.ontologies_repo import test_ontologies_get
@@ -103,6 +104,8 @@ from tests.features.steps.triggers_repo import test_triggers_list
 from tests.features.steps.triggers_repo import test_triggers_update
 from tests.features.steps.triggers_repo import test_triggers_delete
 from tests.features.steps.triggers_repo import test_triggers_context
+from tests.features.steps.triggers_repo import test_triggers_item_update
+from tests.features.steps.triggers_repo import test_triggers_annotation_update
 
 from tests.features.steps.services_repo import test_services_deploy
 from tests.features.steps.services_repo import test_services_create

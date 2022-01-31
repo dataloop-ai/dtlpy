@@ -87,6 +87,7 @@ class Item(entities.BaseEntity):
     def from_json(cls, _json, client_api, dataset=None, project=None, is_fetched=True):
         """
         Build an item entity object from a json
+
         :param project: project entity
         :param _json: _json response from host
         :param dataset: dataset in which the annotation's item is located
@@ -341,7 +342,9 @@ class Item(entities.BaseEntity):
     def to_json(self):
         """
         Returns platform _json format of object
+
         :return: platform json format of object
+        :rtype: dict
         """
         _json = attr.asdict(self,
                             filter=attr.filters.exclude(attr.fields(Item)._repositories,
@@ -430,6 +433,7 @@ class Item(entities.BaseEntity):
     def delete(self):
         """
         Delete item from platform
+
         :return: True
         """
         return self.items.delete(item_id=self.id)
@@ -437,6 +441,7 @@ class Item(entities.BaseEntity):
     def update(self, system_metadata=False):
         """
         Update items metadata
+
         :param system_metadata: bool - True, if you want to change metadata system
         :return: Item object
         """
@@ -446,6 +451,7 @@ class Item(entities.BaseEntity):
         """
         Move item from one folder to another in Platform
         If the directory doesn't exist it will be created
+
         :param new_path: new full path to move item to.
         :return: True if update successfully
         """
@@ -467,6 +473,7 @@ class Item(entities.BaseEntity):
               with_metadata=True, with_task_annotations_status=False, allow_many=False, wait=True):
         """
         Clone item
+
         :param dst_dataset_id: destination dataset id
         :param remote_filepath: complete filepath
         :param metadata: new metadata to add
@@ -674,7 +681,8 @@ class Modalities:
                ):
         """
         create Modalities entity
-        :param name:
+
+        :param name: name
         :param ref: id or url of the item reference
         :param ref_type: ModalityRefTypeEnum.ID, ModalityRefTypeEnum.URL
         :param modality_type: ModalityTypeEnum.OVERLAY,ModalityTypeEnum.REPLACE

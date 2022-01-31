@@ -12,7 +12,9 @@ logger = logging.getLogger(name='dtlpy')
 
 class Annotations:
     """
-        Annotations repository
+    Annotations Repository
+
+    The Annotation class allows you to manage the annotations of data items. For information on annotations explore our documentation at `Classification SDK <https://dataloop.ai/docs/sdk-classify-item>`_, `Annotation Labels and Attributes <https://dataloop.ai/docs/sdk-annotation-ontology>`_, `Show Video with Annotations <https://dataloop.ai/docs/sdk-show-videos>`_.
     """
 
     def __init__(self, client_api: services.ApiClient, item=None, dataset=None, dataset_id=None):
@@ -63,13 +65,15 @@ class Annotations:
     ###########
     # methods #
     ###########
-    def get(self, annotation_id):
+    def get(self, annotation_id: str) -> entities.Annotation:
         """
-            Get a single annotation
+        Get a single annotation.
 
-        :param annotation_id:
+        **Prerequisites**: You must have an item that has been annotated. You must have the role of an *owner* or *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*. 
 
+        :param str annotation_id: annotation id
         :return: Annotation object or None
+        :rtype: dtlpy.entities.annotation.Annotation
         """
         success, response = self._client_api.gen_request(req_type='get',
                                                          path='/annotations/{}'.format(annotation_id))
@@ -104,11 +108,13 @@ class Annotations:
 
     def _list(self, filters: entities.Filters):
         """
-        Get dataset items list This is a browsing endpoint, for any given path item count will be returned,
-        user is expected to perform another request then for every folder item to actually get the its item list.
+        Get a dataset's item list. This is a browsing endpoint. For any given path, item count will be returned.
+        The user is then expected to perform another request for every folder to actually get its item list.
 
-        :param filters: Filters entity or a dictionary containing filters parameters
+        :param dtlpy.entities.filters.Filters filters: Filter entity or a dictionary containing filters parameters
+
         :return: json response
+        :rtype: 
         """
         # prepare request
         success, response = self._client_api.gen_request(req_type="POST",
@@ -118,14 +124,17 @@ class Annotations:
             raise exceptions.PlatformException(response)
         return response.json()
 
-    def list(self, filters: entities.Filters = None, page_offset=None, page_size=None):
+    def list(self, filters: entities.Filters = None, page_offset: int = None, page_size: int = None):
         """
-        List Annotation
+        List Annotations of a specific item. You must get the item first and then list the annotations with the desired filters.
 
-        :param filters: Filters entity or a dictionary containing filters parameters
-        :param page_offset: starting page
-        :param page_size: size of page
+        **Prerequisites**: You must have an item that has been annotated. You must have the role of an *owner* or *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*.
+
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
+        :param int page_offset: starting page
+        :param int page_size: size of page
         :return: Pages object
+        :rtype: dtlpy.entities.paged_entities.PagedEntities
         """
         if self._dataset_id is not None:
             if filters is None:
@@ -182,23 +191,26 @@ class Annotations:
 
     def show(self,
              image=None,
-             thickness=1,
-             with_text=False,
-             height=None,
-             width=None,
+             thickness: int = 1,
+             with_text: bool = False,
+             height: float = None,
+             width: float = None,
              annotation_format: entities.ViewAnnotationOptions = entities.ViewAnnotationOptions.MASK,
-             alpha=None):
+             alpha: float = None):
         """
-        Show annotations
+        Show annotations. To use this method, you must get the item first and then show the annotations with the desired filters. The method returns an array showing all the annotations. 
 
-        :param image: empty or image to draw on
-        :param thickness: line thickness
-        :param with_text: add label to annotation
-        :param height: height
-        :param width: width
-        :param annotation_format: options: list(dl.ViewAnnotationOptions)
-        :param alpha: opacity value [0 1], default 1
+        **Prerequisites**: You must have an item that has been annotated. You must have the role of an *owner* or *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*. 
+
+        :param ndarray image: empty or image to draw on
+        :param int thickness: line thickness
+        :param bool with_text: add label to annotation
+        :param float height: height
+        :param float width: width
+        :param str annotation_format: options: list(dl.ViewAnnotationOptions)
+        :param float alpha: opacity value [0 1], default 1
         :return: ndarray of the annotations
+        :rtype: ndarray
         """
         # get item's annotations
         annotations = self.list()
@@ -211,26 +223,30 @@ class Annotations:
                                 with_text=with_text,
                                 annotation_format=annotation_format)
 
-    def download(self, filepath,
+    def download(self,
+                 filepath: str,
                  annotation_format: entities.ViewAnnotationOptions = entities.ViewAnnotationOptions.MASK,
-                 img_filepath=None,
-                 height=None,
-                 width=None,
-                 thickness=1,
-                 with_text=False,
-                 alpha=None):
+                 img_filepath: str = None,
+                 height: float = None,
+                 width: float = None,
+                 thickness: int = 1,
+                 with_text: bool = False,
+                 alpha: float = None):
         """
-            Save annotation format to file
+        Save annotation to file.
 
-        :param filepath: Target download directory
-        :param annotation_format: optional - list(dl.ViewAnnotationOptions)
-        :param img_filepath: img file path - needed for img_mask
-        :param height: optional - image height
-        :param width: optional - image width
-        :param thickness: optional - annotation format, default =1
-        :param with_text: optional - draw annotation with text, default = False
-        :param alpha: opacity value [0 1], default 1
-        :return:
+        **Prerequisites**: You must have an item that has been annotated. You must have the role of an *owner* or *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*. 
+
+        :param str filepath: Target download directory
+        :param list annotation_format: optional - list(dl.ViewAnnotationOptions)
+        :param str img_filepath: img file path - needed for img_mask
+        :param float height: optional - image height
+        :param float width: optional - image width
+        :param int thickness: optional - annotation format, default =1
+        :param bool with_text: optional - draw annotation with text, default = False
+        :param float alpha: opacity value [0 1], default 1
+        :return: file path to where save the annotations
+        :rtype: str
         """
         # get item's annotations
         annotations = self.list()
@@ -272,14 +288,19 @@ class Annotations:
             logger.exception('Failed to delete annotation')
             raise
 
-    def delete(self, annotation=None, annotation_id=None, filters: entities.Filters = None):
+    def delete(self, annotation: entities.Annotation = None,
+               annotation_id: str = None,
+               filters: entities.Filters = None) -> bool:
         """
-            Remove an annotation from item
+        Remove an annotation from item.
 
-        :param annotation: Annotation object
-        :param annotation_id: annotation id
-        :param filters: Filters entity or a dictionary containing filters parameters
+        **Prerequisites**: You must have an item that has been annotated. You must have the role of an *owner* or *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*. 
+
+        :param dtlpy.entities.annotation.Annotation annotation: Annotation object
+        :param str annotation_id: annotation id
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :return: True/False
+        :rtype: bool
         """
         if annotation is not None:
             if isinstance(annotation, entities.Annotation):
@@ -332,15 +353,14 @@ class Annotations:
 
     def _update_snapshots(self, origin, modified):
         """
-        function that update the snapshots if a change is happen
-        return list of the new snapshots with the flag to update
+        Update the snapshots if a change occurred and return a list of the new snapshots with the flag to update.
         """
         update = False
         origin_snapshots = list()
         origin_metadata = origin['metadata'].get('system', None)
         if origin_metadata:
             origin_snapshots = origin_metadata.get('snapshots_', None)
-            if origin_snapshots:
+            if origin_snapshots is not None:
                 modified_snapshots = modified['metadata'].get('system', dict()).get('snapshots_', None)
                 # if the number of the snapshots change
                 if len(origin_snapshots) != len(modified_snapshots):
@@ -356,6 +376,8 @@ class Annotations:
                         break
                     i += 1
         return update, origin_snapshots
+
+
 
     def _update_single_annotation(self, w_annotation, system_metadata):
         try:
@@ -414,11 +436,15 @@ class Annotations:
 
     def update(self, annotations, system_metadata=False):
         """
-            Update an existing annotation.
+        Update an existing annotation. For example, you may change the annotation's label and then use the update method. 
 
-        :param annotations: annotations object
-        :param system_metadata: bool - True, if you want to change metadata system
-        :return: True
+        **Prerequisites**: You must have an item that has been annotated. You must have the role of an *owner* or *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*. 
+
+        :param dtlpy.entities.annotation.Annotation annotation: Annotation object
+        :param bool system_metadata: bool - True, if you want to change metadata system
+
+        :return: True if successful or error if unsuccessful
+        :rtype: bool
         """
         pool = self._client_api.thread_pools(pool_name='annotation.update')
         if not isinstance(annotations, list):
@@ -499,10 +525,13 @@ class Annotations:
 
     def upload(self, annotations):
         """
-        Create a new annotation
+        Upload a new annotation/annotations. You must first create the annotation using the annotation *builder* method.
 
-        :param annotations: list or single annotation of type Annotation
+        **Prerequisites**: Any user can upload annotations.
+
+        :param List[dtlpy.entities.annotation.Annotation] or dtlpy.entities.annotation.Annotation annotations: list or single annotation of type Annotation
         :return: list of annotation objects
+        :rtype: list
         """
         # make list if not list
         if isinstance(annotations, entities.AnnotationCollection):
@@ -522,17 +551,21 @@ class Annotations:
         out_annotations = self._upload_annotations(annotations=annotations)
         return out_annotations
 
-    def update_status(self, annotation: entities.Annotation = None,
-                      annotation_id=None,
-                      status: entities.AnnotationStatus = entities.AnnotationStatus.ISSUE):
+    def update_status(self,
+                      annotation: entities.Annotation = None,
+                      annotation_id: str = None,
+                      status: entities.AnnotationStatus = entities.AnnotationStatus.ISSUE
+                      ) -> entities.Annotation:
         """
-        Set status on annotation
+        Set status on annotation.
 
-        :param annotation: optional - Annotation entity
-        :param annotation_id: optional - annotation id to set status
-        :param status: can be AnnotationStatus.ISSUE, AnnotationStatus.APPROVED, AnnotationStatus.REVIEW, AnnotationStatus.CLEAR
+        **Prerequisites**: You must have an item that has been annotated. You must have the role of an *owner* or *developer* or be assigned a task that includes that item as an *annotation manager*. 
 
+        :param dtlpy.entities.annotation.Annotation annotation: Annotation object
+        :param str annotation_id: optional - annotation id to set status
+        :param str status: can be AnnotationStatus.ISSUE, AnnotationStatus.APPROVED, AnnotationStatus.REVIEW, AnnotationStatus.CLEAR
         :return: Annotation object
+        :rtype: dtlpy.entities.annotation.Annotation
         """
         if annotation is None:
             if annotation_id is None:
@@ -544,6 +577,14 @@ class Annotations:
         return annotation.update(system_metadata=True)
 
     def builder(self):
+        """
+        Create Annotation collection.
+
+        **Prerequisites**: You must have an item to be annotated. You must have the role of an *owner* or *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*. 
+
+        :return: Annotation collection object
+        :rtype: dtlpy.entities.annotation_collection.AnnotationCollection
+        """
         return entities.AnnotationCollection(item=self.item)
 
     ##################

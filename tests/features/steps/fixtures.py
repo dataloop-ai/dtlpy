@@ -92,7 +92,12 @@ def get_value(params, context):
     elif key == 'recipe_id':
         if val == 'second':
             val = context.second_project.datasets.list()[1].get_recipe_ids()[0]
-
+    elif key == 'available_actions':
+        action_status = val.split()
+        available_actions_list = list()
+        for action in action_status:
+            available_actions_list.append(context.dl.ItemAction(action=action, display_name=action, color='#2ef16c'))
+        val = available_actions_list
     return val
 
 

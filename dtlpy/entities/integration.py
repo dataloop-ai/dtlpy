@@ -50,6 +50,7 @@ class Integration(entities.BaseEntity):
         Returns platform _json format of object
 
         :return: platform json format of object
+        :rtype: dict
         """
         _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(Integration)._client_api,
                                                               attr.fields(Integration)._project))
@@ -68,7 +69,8 @@ class Integration(entities.BaseEntity):
     def update(self, new_name: str):
         """
         Update the integrations name
-        :param new_name:
+
+        :param str new_name: new name
         """
         if self.project is not None:
             identifier = self.project
@@ -87,9 +89,11 @@ class Integration(entities.BaseEntity):
                really: bool = False) -> bool:
         """
         Delete integrations from the Organization
-        :param sure: are you sure you want to delete?
-        :param really: really really?
+
+        :param bool sure: are you sure you want to delete?
+        :param bool really: really really?
         :return: True
+        :rtype: bool
         """
         if self.project is not None:
             identifier = self.project

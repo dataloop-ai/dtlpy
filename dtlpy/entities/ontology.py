@@ -186,6 +186,7 @@ class Ontology(entities.BaseEntity):
         Returns platform _json format of object
 
         :return: platform json format of object
+        :rtype: dict
         """
         roots = [label.to_root() for label in self.labels]
         _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(Ontology)._client_api,
@@ -346,8 +347,8 @@ class Ontology(entities.BaseEntity):
         :param children: optional - children
         :param attributes: optional - attributes
         :param display_label: optional - display_label
-        :param label:
-        :param add:
+        :param label: label
+        :param add:to add or not
         :param icon_path: path to image to be display on label
         :param update_ontology: update the ontology, default = False for backward compatible
         :param mode add, update or upsert, relevant on update_ontology=True only
@@ -528,8 +529,8 @@ class Ontology(entities.BaseEntity):
         :param children: optional - children
         :param attributes: optional - attributes
         :param display_label: optional - display_label
-        :param label:
-        :param add:
+        :param label: label
+        :param add: to add or not
         :param icon_path: path to image to be display on label
         :param update_ontology: update the ontology, default = False for backward compatible
         :return: Label entity
@@ -559,8 +560,8 @@ class Ontology(entities.BaseEntity):
         :param children: optional - children
         :param attributes: optional - attributes
         :param display_label: optional - display_label
-        :param label:
-        :param add:
+        :param label: label
+        :param add: to add or not
         :param icon_path: path to image to be display on label
         :param upsert: if True will add in case it does not existing
         :param update_ontology: update the ontology, default = False for backward compatible

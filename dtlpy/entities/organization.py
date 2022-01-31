@@ -90,6 +90,7 @@ class Organization(entities.BaseEntity):
     def _protected_from_json(_json, client_api):
         """
         Same as from_json but with try-except to catch if error
+
         :param _json: platform json
         :param client_api: ApiClient entity
 
@@ -135,6 +136,7 @@ class Organization(entities.BaseEntity):
         Returns platform _json format of object
 
         :return: platform json format of object
+        :rtype: dict
         """
         output_dict = attr.asdict(self,
                                   filter=attr.filters.exclude(attr.fields(Organization)._client_api,
@@ -159,47 +161,77 @@ class Organization(entities.BaseEntity):
 
     def list_groups(self):
         """
-        list all organization groups
+        List all organization groups (groups that were created within the organization).
+
+        Prerequisites: You must be an organization "owner" to use this method.
+
+        :return: groups list
+        :rtype: list
 
         """
         return self.organizations.list_groups(organization=self)
 
     def list_members(self, role: MemberOrgRole = None):
         """
-        list all organization members
+        List all organization members.
 
+        Prerequisites: You must be an organization "owner" to use this method.
+
+        :param str role: MemberOrgRole.ADMIN, MemberOrgRole.OWNER, MemberOrgRole.MEMBER
+        :return: projects list
+        :rtype: list
         """
         return self.organizations.list_members(organization=self, role=role)
 
     def update(self, plan: str):
         """
-        Update the Organization
+        Update Organization.
 
-        :return: Organization object
+        Prerequisities: You must be an Organization **superuser** to update an organization.
+
+        :param str plan: OrganizationsPlans.FREEMIUM, OrganizationsPlans.PREMIUM
+
+        :return: organization object
         """
         return self.organizations.update(organization=self, plan=plan)
 
     def add_member(self, email, role: MemberOrgRole = MemberOrgRole):
         """
-        Add member to the Organization
+        Add members to your organization. Read about members and groups [here](https://dataloop.ai/docs/org-members-groups).
 
-        :return: True
+        Prerequisities: To add members to an organization, you must be in the role of an "owner" in that organization.
+
+        :param str email: the member's email
+        :param str role: MemberOrgRole.ADMIN, MemberOrgRole.OWNER, MemberOrgRole.MEMBER
+        :return: True if successful or error if unsuccessful
+        :rtype: bool
         """
         return self.organizations.add_member(organization=self, email=email, role=role)
 
     def delete_member(self, user_id: str, sure: bool = False, really: bool = False):
         """
-        delete member from the Organization
+        Delete member from the Organization.
 
-        :return: True
+        Prerequisites: Must be an organization "owner" to delete members.
+
+        :param str user_id: user id
+        :param bool sure: Are you sure you want to delete?
+        :param bool really: Really really sure?
+        :return: True if success and error if not
+        :rtype: bool
         """
         return self.organizations.delete_member(organization=self, user_id=user_id, sure=sure, really=really)
 
     def update_member(self, email: str, role: MemberOrgRole = MemberOrgRole.MEMBER):
         """
-        Update the member role
+        Update member role.
 
-        :return: True
+        Prerequisities: You must be an organization "owner" to update a member's role.
+
+        :param str email: the member's email
+        :param str role: MemberOrgRole.ADMIN, MemberOrgRole.OWNER, MemberOrgRole.MEMBER
+        :return: json of the member fields
+        :rtype: dict
         """
         return self.organizations.update_member(organization=self, email=email, role=role)
 

@@ -10,7 +10,9 @@ logger = logging.getLogger(name='dtlpy')
 
 class Executions:
     """
-    Service Executions repository
+    Service Executions Repository
+
+    The Executions class allows the users to manage executions (executions of services) and their properties. See our documentation for more information about `executions <https://dataloop.ai/docs/faas-execution>`_.
     """
 
     def __init__(self,
@@ -131,40 +133,43 @@ class Executions:
     ###########
     def create(self,
                # executions info
-               service_id=None,
-               execution_input=None,
-               function_name=None,
+               service_id: str = None,
+               execution_input: list = None,
+               function_name: str = None,
                # inputs info
                resource: entities.PackageInputType = None,
-               item_id=None,
-               dataset_id=None,
-               annotation_id=None,
-               project_id=None,
+               item_id: str = None,
+               dataset_id: str = None,
+               annotation_id: str = None,
+               project_id: str = None,
                # execution config
-               sync=False,
-               stream_logs=False,
-               return_output=False,
+               sync: bool = False,
+               stream_logs: bool = False,
+               return_output: bool = False,
                # misc
-               return_curl_only=False,
-               timeout=None) -> entities.Execution:
+               return_curl_only: bool = False,
+               timeout: int = None) -> entities.Execution:
         """
         Execute a function on an existing service
 
-        :param service_id: service id to execute on
-        :param execution_input: input dictionary or list of FunctionIO entities
-        :param function_name: function name to run
-        :param resource: input type.
-        :param item_id: optional - input to function
-        :param dataset_id: optional - input to function
-        :param annotation_id: optional - input to function
-        :param project_id: resource's project
-        :param sync: wait for function to end
-        :param stream_logs: prints logs of the new execution. only works with sync=True
-        :param return_output: if True and sync is True - will return the output directly
-        :param return_curl_only: return the cURL of the creation WITHOUT actually do it
-        :param timeout: int, seconds to wait until TimeoutError is raised. if <=0 - wait until done -
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a service.
+
+        :param str service_id: service id to execute on
+        :param List[FunctionIO] or dict execution_input: input dictionary or list of FunctionIO entities
+        :param str function_name: function name to run
+        :param str resource: input type.
+        :param str item_id: optional - item id as input to function
+        :param str dataset_id: optional - dataset id as input to function
+        :param str annotation_id: optional - annotation id as input to function
+        :param str project_id: resource's project
+        :param bool sync: if true, wait for function to end
+        :param bool stream_logs: prints logs of the new execution. only works with sync=True
+        :param bool return_output: if True and sync is True - will return the output directly
+        :param bool return_curl_only: return the cURL of the creation WITHOUT actually do it
+        :param int timeout: int, seconds to wait until TimeoutError is raised. if <=0 - wait until done -
          by default wait take the service timeout
-        :return:
+        :return: execution object
+        :rtype: dtlpy.entities.execution.Execution
         """
         if service_id is None:
             if self._service is None:
@@ -257,7 +262,8 @@ class Executions:
     def _list(self, filters: entities.Filters):
         """
         List service executions
-        :param filters: dl.Filters entity to filters items
+
+        :param dtlpy.entities.filters.Filters filters: dl.Filters entity to filters items
         :return:
         """
         url = '/query/faas'
@@ -274,8 +280,12 @@ class Executions:
     def list(self, filters: entities.Filters = None) -> entities.PagedEntities:
         """
         List service executions
-        :param filters: dl.Filters entity to filters items
-        :return:
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a service.
+
+        :param dtlpy.entities.filters.Filters filters: dl.Filters entity to filters items
+        :return: Paged entity
+        :rtype: dtlpy.entities.paged_entities.PagedEntities
         """
         # default filtersf
         if filters is None:
@@ -320,13 +330,19 @@ class Executions:
         # return good jobs
         return miscellaneous.List([r[1] for r in results if r[0] is True])
 
-    def get(self, execution_id=None, sync=False) -> entities.Execution:
+    def get(self,
+            execution_id: str = None,
+            sync: bool = False
+            ) -> entities.Execution:
         """
         Get Service execution object
 
-        :param execution_id:
-        :param sync: wait for the execution to finish
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a service.
+
+        :param str execution_id: execution id
+        :param bool sync: if true, wait for the execution to finish
         :return: Service execution object
+        :rtype: dtlpy.entities.execution.Execution
         """
         url_path = "/executions/{}".format(execution_id)
         if sync:
@@ -345,12 +361,18 @@ class Executions:
                                             project=self._project,
                                             service=self._service)
 
-    def logs(self, execution_id, follow=True, until_completed=True):
+    def logs(self,
+             execution_id: str,
+             follow: bool = True,
+             until_completed: bool = True):
         """
         executions logs
-        :param execution_id:
-        :param follow:
-        :param until_completed:
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a service.
+
+        :param str execution_id: execution id
+        :param bool follow: if true, keep stream future logs
+        :param bool until_completed: if true, wait until completed
         :return: executions logs
         """
         return self.service.log(execution_id=execution_id,
@@ -360,9 +382,13 @@ class Executions:
 
     def increment(self, execution: entities.Execution):
         """
-        Increment attempts
-        :param execution:
+        Increment the number of attempts that an execution is allowed to attempt to run a service that is not responding. 
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a service.
+
+        :param dtlpy.entities.execution.Execution execution:
         :return: int
+        :rtype: int
         """
         # request
         success, response = self._client_api.gen_request(
@@ -382,10 +408,14 @@ class Executions:
 
     def rerun(self, execution: entities.Execution, sync: bool = False):
         """
-        Increment attempts
-        :param execution:
-        :param sync:
-        :return: int
+        Rerun execution
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a service.
+
+        :param dtlpy.entities.execution.Execution execution:
+        :param bool sync: wait for the execution to finish
+        :return: Execution object
+        :rtype: dtlpy.entities.execution.Execution
         """
 
         url_path = "/executions/{}/rerun".format(execution.id)
@@ -407,14 +437,18 @@ class Executions:
                 service=self._service
             )
 
-    def wait(self, execution_id, timeout=None):
+    def wait(self,
+             execution_id: str,
+             timeout: int = None):
         """
-        Get Service execution object
+        Get Service execution object.
 
-        :param execution_id:
-        :param timeout: int, seconds to wait until TimeoutError is raised. if <=0 - wait until done -
-         by default wait take the service timeout
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a service.
+
+        :param str execution_id: execution id
+        :param int timeout: seconds to wait until TimeoutError is raised. if <=0 - wait until done - by default wait take the service timeout
         :return: Service execution object
+        :rtype: dtlpy.entities.execution.Execution
         """
         url_path = "/executions/{}".format(execution_id)
         elapsed = 0
@@ -454,8 +488,13 @@ class Executions:
     def terminate(self, execution: entities.Execution):
         """
         Terminate Execution
-        :param execution:
-        :return:
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a service.
+
+        :param dtlpy.entities.execution.Execution execution:
+        :return: execution object
+        :rtype: dtlpy.entities.execution.Execution
+
         """
         # request
         success, response = self._client_api.gen_request(req_type='post',
@@ -473,8 +512,12 @@ class Executions:
     def update(self, execution: entities.Execution) -> entities.Execution:
         """
         Update execution changes to platform
-        :param execution: execution entity
-        :return: execution entity
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a service.
+
+        :param dtlpy.entities.execution.Execution execution: execution entity
+        :return: Service execution object
+        :rtype: dtlpy.entities.execution.Execution
         """
         # payload
         payload = execution.to_json()
@@ -515,15 +558,18 @@ class Executions:
             service_version: str = None
     ):
         """
-        Update Execution Progress
+        Update Execution Progress.
 
-        :param execution_id:
-        :param status: ExecutionStatus
-        :param percent_complete:
-        :param message:
-        :param output:
-        :param service_version:
-        :return:
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a service.
+
+        :param str execution_id: execution id
+        :param str status: ExecutionStatus
+        :param int percent_complete: percent work done
+        :param str message: message
+        :param str output: the output of the execution
+        :param str service_version: service version
+        :return: Service execution object
+        :rtype: dtlpy.entities.execution.Execution
         """
         # create payload
         payload = dict()

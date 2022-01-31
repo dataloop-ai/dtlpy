@@ -13,6 +13,12 @@ FUNCTION_END_LINE = '[Done] Executing function.'
 
 
 class Services:
+    """
+    Services Repository
+
+    The Services class allows the user to manage services and their properties. Services are created from the packages users create. See our documentation for more information about `services <https://dataloop.ai/docs/faas-service>`_.
+    """
+
     def __init__(self,
                  client_api: ApiClient,
                  project: entities.Project = None,
@@ -73,11 +79,18 @@ class Services:
     def platform_url(self):
         return self._client_api._get_resource_url("projects/{}/services".format(self.project.id))
 
-    def open_in_web(self, service=None, service_id=None, service_name=None):
+    def open_in_web(self,
+                    service: entities.Service = None,
+                    service_id: str = None,
+                    service_name: str = None):
         """
-        :param service_name:
-        :param service_id:
-        :param service:
+        Open the service in web platform
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a package.
+
+        :param str service_name: service name
+        :param str service_id: service id
+        :param dtlpy.entities.service.Service service:
         """
         if service_name is not None:
             service = self.get(service_name=service_name)
@@ -97,13 +110,18 @@ class Services:
                                                  package=self._package)
         return service
 
-    def checkout(self, service: entities.Service = None, service_name=None, service_id=None):
+    def checkout(self,
+                 service: entities.Service = None,
+                 service_name: str = None,
+                 service_id: str = None):
         """
-        Check-out a service
-        :param service: Service entity
-        :param service_name:
-        :param service_id:
-        :return:
+        Checkout (switch) to a service.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a package.
+
+        :param dtlpy.entities.service.Service service: Service entity
+        :param str service_name: service name
+        :param str service_id: service id
         """
         if service is None:
             service = self.get(service_name=service_name, service_id=service_id)
@@ -113,12 +131,18 @@ class Services:
     ###########
     # methods #
     ###########
-    def revisions(self, service: entities.Service = None, service_id=None):
+    def revisions(self,
+                  service: entities.Service = None,
+                  service_id: str = None):
         """
-        Get service revisions history
+        Get service revisions history.
 
-        :param service: Package entity
-        :param service_id: package id
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a package.
+
+        You must provide at leats ONE of the following params: service, service_id
+
+        :param dtlpy.entities.service.Service service: Service entity
+        :param str service_id: service id
         """
         if service is None and service_id is None:
             raise exceptions.PlatformException(
@@ -134,16 +158,23 @@ class Services:
             raise exceptions.PlatformException(response)
         return response.json()
 
-    def get(self, service_name=None, service_id=None, checkout=False, fetch=None) -> entities.Service:
+    def get(self,
+            service_name=None,
+            service_id=None,
+            checkout=False,
+            fetch=None
+            ) -> entities.Service:
         """
-        Get service
+        Get service to use in your code.
 
-        :param checkout:
-        :param service_name: optional - search by name
-        :param service_id: optional - search by id
-        :param checkout:
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a package.
+
+        :param str service_name: optional - search by name
+        :param str service_id: optional - search by id
+        :param bool checkout: if true, checkout (switch) to service
         :param fetch: optional - fetch entity from platform, default taken from cookie
         :return: Service object
+        :rtype: dtlpy.entities.service.Service
         """
         if fetch is None:
             fetch = self._client_api.fetch_entities
@@ -238,9 +269,13 @@ class Services:
 
     def list(self, filters: entities.Filters = None) -> entities.PagedEntities:
         """
-        List project services
-        :param filters:
-        :return:
+        List all services (services can be listed for a package or for a project).
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a package.
+
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
+        :return: Paged entity
+        :rtype: dtlpy.entities.paged_entities.PagedEntities
         """
         # default filters
         if filters is None:
@@ -274,10 +309,16 @@ class Services:
 
     def status(self, service_name=None, service_id=None):
         """
+        Get service status.
 
-        :param service_name:
-        :param service_id:
-        :return:
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a package.
+
+        You must provide at least ONE of the following params: service_id, service_name
+
+        :param str service_name: service name
+        :param str service_id: service id
+        :return: status json
+        :rtype: dict
         """
         if service_id is None:
             if service_name is None:
@@ -292,13 +333,22 @@ class Services:
             raise exceptions.PlatformException(response)
         return response.json()
 
-    def pause(self, service_name=None, service_id=None, force=False):
+    def pause(self,
+              service_name: str = None,
+              service_id: str = None,
+              force: bool = False):
         """
+        Pause service.
 
-        :param service_name:
-        :param service_id:
-        :param force: optional - terminate old replicas immediately
-        :return:
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a package.
+
+        You must provide at least ONE of the following params: service_id, service_name
+
+        :param str service_name: service name
+        :param str service_id: service id
+        :param bool force: optional - terminate old replicas immediately
+        :return: True if success
+        :rtype: bool
         """
         if service_id is None:
             if service_name is None:
@@ -316,13 +366,22 @@ class Services:
             raise exceptions.PlatformException(response)
         return success
 
-    def resume(self, service_name=None, service_id=None, force=False):
+    def resume(self,
+               service_name: str = None,
+               service_id: str = None,
+               force: bool = False):
         """
+        Resume service.
 
-        :param service_name:
-        :param service_id:
-        :param force: optional - terminate old replicas immediately
-        :return:
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a package.
+
+        You must provide at least ONE of the following params: service_id, service_name.
+
+        :param str service_name: service name
+        :param str service_id: service id
+        :param bool force: optional - terminate old replicas immediately
+        :return: json of the service
+        :rtype: dict
         """
         if service_id is None:
             if service_name is None:
@@ -388,7 +447,12 @@ class Services:
 
     def name_validation(self, name: str):
         """
-        :param name:
+        Validation service name.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param str name: service name
+    
         """
         url = '/piper-misc/naming/services/{}'.format(name)
 
@@ -398,33 +462,54 @@ class Services:
         if not success:
             raise exceptions.PlatformException(response)
 
-    def _create(self, service_name=None, package=None, module_name=None, bot=None, revision=None, init_input=None,
-                runtime=None, pod_type=None, project_id=None, sdk_version=None, agent_versions=None, verify=True,
-                driver_id=None, run_execution_as_process=None, execution_timeout=None, drain_time=None, on_reset=None,
-                max_attempts=None, secrets=None, **kwargs) -> entities.Service:
+    def _create(self,
+                service_name: str = None,
+                package: entities.Package = None,
+                module_name: str = None,
+                bot: Union[entities.Bot, str] = None,
+                revision: str or int = None,
+                init_input: Union[List[entities.FunctionIO], entities.FunctionIO, dict] = None,
+                runtime: Union[entities.KubernetesRuntime, dict] = None,
+                pod_type: entities.InstanceCatalog = None,
+                project_id: str = None,
+                sdk_version: str = None,
+                agent_versions: dict = None,
+                verify: bool = True,
+                driver_id: str = None,
+                run_execution_as_process: bool = None,
+                execution_timeout: int = None,
+                drain_time: int = None,
+                on_reset: str = None,
+                max_attempts: int = None,
+                secrets=None, **kwargs
+                ) -> entities.Service:
         """
-        Create service entity
-        :param service_name:
-        :param package:
-        :param module_name:
-        :param bot: bot user that weill run the package
-        :param revision: optional - int - package revision - default=latest
-        :param init_input:
-        :param runtime:
-        :param pod_type:
-        :param project_id:
-        :param sdk_version:
-        :param agent_versions:
-        :param verify:
-        :param driver_id:
-        :param run_execution_as_process:
-        :param execution_timeout:
-        :param drain_time:
-        :param on_reset:
-        :param max_attempts:
-        :param secrets: list of the integrations ids
+        Create service entity.
+
+        
+        :param str service_name: service name
+        :param dtlpy.entities.package.Package package: package entity
+        :param str module_name: module name
+        :param str bot: bot email
+        :param str revision: package revision - default=latest
+        :param init_input: config to run at startup
+        :param dict runtime: runtime resources
+        :param str pod_type: pod type dl.InstanceCatalog
+        :param str project_id: project id
+        :param str sdk_version:  - optional - string - sdk version
+        :param dict agent_versions: - dictionary - - optional -versions of sdk, agent runner and agent proxy
+        :param bool verify: verify the inputs
+        :param str driver_id: driver id
+        :param bool run_execution_as_process: run execution as process
+        :param int execution_timeout: execution timeout
+        :param int drain_time: drain time
+        :param str on_reset: on reset
+        :param int max_attempts: Maximum execution retries in-case of a service reset
+        :param bool force: optional - terminate old replicas immediately
+        :param list secrets: list of the integrations ids
         :param kwargs:
-        :return:
+        :return: Service object
+        :rtype: dtlpy.entities.service.Service
         """
         if package is None:
             if self._package is None:
@@ -540,12 +625,18 @@ class Services:
                                           package=package,
                                           project=self._project)
 
-    def delete(self, service_name=None, service_id=None):
+    def delete(self, service_name: str = None, service_id: str = None):
         """
         Delete Service object
-        :param service_name: by name
-        :param service_id: by id
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a package.
+
+        You must provide at least ONE of the following params: service_id, service_name.
+
+        :param str service_name: by name
+        :param str service_id: by id
         :return: True
+        :rtype: bool
         """
         # get bby name
         if service_id is None:
@@ -563,12 +654,16 @@ class Services:
             raise exceptions.PlatformException(response)
         return True
 
-    def update(self, service: entities.Service, force=False) -> entities.Service:
+    def update(self, service: entities.Service, force: bool = False) -> entities.Service:
         """
-        Update Service changes to platform
-        :param service: Service entity
-        :param force: optional - terminate old replicas immediately
+        Update service changes to platform.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a package.
+
+        :param dtlpy.entities.service.Service service: Service entity
+        :param bool force: optional - terminate old replicas immediately
         :return: Service entity
+        :rtype: dtlpy.entities.service.Service
         """
         assert isinstance(service, entities.Service)
 
@@ -704,32 +799,48 @@ class Services:
 
         return settings
 
-    def log(self, service, size=None, checkpoint=None, start=None, end=None, follow=False, text=None,
-            execution_id=None, function_name=None, replica_id=None, system=False, view=True, until_completed=True):
+    def log(self,
+            service,
+            size=None,
+            checkpoint=None,
+            start=None,
+            end=None,
+            follow=False,
+            text=None,
+            execution_id=None,
+            function_name=None,
+            replica_id=None,
+            system=False,
+            view=True,
+            until_completed=True):
         """
-        Get service logs
+        Get service logs.
 
-        :param service:
-        :param size:
-        :param checkpoint:
-        :param start: iso format time
-        :param end: iso format time
-        :param follow: keep stream future logs
-        :param text:
-        :param execution_id:
-        :param function_name:
-        :param replica_id:
-        :param system:
-        :param view:
-        :param until_completed:
-        :return: Service entity
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a package.
+
+        :param dtlpy.entities.service.Service service: service object
+        :param int size: size
+        :param dict checkpoint: the information from the lst point checked in the service 
+        :param str start: iso format time
+        :param str end: iso format time
+        :param bool follow: if true, keep stream future logs
+        :param str text: text
+        :param str execution_id: execution id
+        :param str function_name: function name
+        :param str replica_id: replica id
+        :param bool system: system
+        :param bool view: if true, print out all the logs
+        :param bool until_completed: wait until completed
+        :return: ServiceLog entity
+        :rtype: ServiceLog 
         """
         assert isinstance(service, entities.Service)
 
         payload = {
             'direction': 'asc',
             'follow': follow,
-            'system': system
+            'system': system,
+            'serviceId': service.id
         }
 
         if size is not None:
@@ -802,21 +913,24 @@ class Services:
                 project_id=None,
                 ) -> entities.Execution:
         """
-        Execute a function on an existing service
+        Execute a function on an existing service.
 
-        :param service: dl.Service -  service entity
-        :param service_id: str -  service id
-        :param service_name: str - service name
-        :param sync: bool -  wait for function to end
-        :param function_name: str -  function name to run
-        :param stream_logs: bool - prints logs of the new execution. only works with sync=True
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a package.
+
+        :param dtlpy.entities.service.Service service:  service entity
+        :param str service_id:  service id
+        :param str service_name: service name
+        :param bool sync: wait for function to end
+        :param str function_name: function name to run
+        :param bool stream_logs: prints logs of the new execution. only works with sync=True
         :param execution_input: input dictionary or list of FunctionIO entities
-        :param resource: dl.PackageInputType - input type.
-        :param item_id: str - optional - input to function
-        :param dataset_id: str - optional - input to function
-        :param annotation_id: str - optional - input to function
-        :param project_id: str - resource's project
-        :return entities.Execution:
+        :param str resource: dl.PackageInputType - input type.
+        :param str item_id: str - optional - input to function
+        :param str dataset_id: str - optional - input to function
+        :param str annotation_id: str - optional - input to function
+        :param str project_id: str - resource's project
+        :return: entities.Execution
+        :rtype: dtlpy.entities.execution.Execution
         """
         if service is None:
             service = self.get(service_id=service_id, service_name=service_name)
@@ -836,12 +950,15 @@ class Services:
 
     def set_service_config(self, module_name, agent_versions, runtime, pod_type, service_config):
         """
-        set service defaults
-        :param module_name:
-        :param runtime:
-        :param pod_type:
-        :param agent_versions:
-        :param service_config:
+        Set service default configuration.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a package.
+
+        :param str module_name: module name
+        :param dict runtime: runtime dict of service config
+        :param str pod_type: pod_type
+        :param dict agent_versions: agent versions
+        :param dict service_config: service config
         :return:
         """
         if module_name is None:
@@ -861,7 +978,7 @@ class Services:
                revision: str or int = None,
                init_input: Union[List[entities.FunctionIO], entities.FunctionIO, dict] = None,
                runtime: Union[entities.KubernetesRuntime, dict] = None,
-               pod_type: str = None,
+               pod_type: entities.InstanceCatalog = None,
                sdk_version: str = None,
                agent_versions: dict = None,
                verify: bool = True,
@@ -879,32 +996,35 @@ class Services:
                secrets: list = None,
                **kwargs) -> entities.Service:
         """
-        Deploy service
+        Deploy service.
 
-        :param service_name: name
-        :param package: package entity
-        :param bot: bot email
-        :param revision: version
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a package.
+
+        :param str service_name: name
+        :param dtlpy.entities.package.Package package: package entity
+        :param str bot: bot email
+        :param str revision: package revision of version
         :param init_input: config to run at startup
-        :param runtime: runtime resources
-        :param pod_type:
-        :param sdk_version:  - optional - string - sdk version
-        :param agent_versions: - dictionary - - optional -versions of sdk, agent runner and agent proxy
-        :param verify:
-        :param checkout:
-        :param module_name:
-        :param project_id:
-        :param driver_id:
-        :param func:
-        :param run_execution_as_process:
-        :param execution_timeout:
-        :param drain_time:
-        :param max_attempts: Maximum execution retries in-case of a service reset
-        :param on_reset:
-        :param force: optional - terminate old replicas immediately
-        :param secrets: list of the integrations ids
-        :param kwargs:
-        :return:
+        :param dict runtime: runtime resources
+        :param str pod_type: pod type dl.InstanceCatalog
+        :param str sdk_version:  - optional - string - sdk version
+        :param str agent_versions: - dictionary - - optional -versions of sdk, agent runner and agent proxy
+        :param bool verify: if true, verify the inputs
+        :param bool checkout: if true, checkout (switch) to service
+        :param str module_name: module name
+        :param str project_id: project id
+        :param str driver_id: driver id
+        :param Callable func: function to deploy
+        :param bool run_execution_as_process: if true, run execution as process
+        :param int execution_timeout: execution timeout in seconds
+        :param int drain_time: drain time in seconds
+        :param int max_attempts: maximum execution retries in-case of a service reset
+        :param str on_reset: what happens on reset
+        :param bool force: optional - if true, terminate old replicas immediately
+        :param list secrets: list of the integrations ids
+        :param kwargs: list of additional arguments
+        :return: Service object
+        :rtype: dtlpy.entities.service.Service
         """
         package = package if package is not None else self._package
         if service_name is None:
@@ -1052,16 +1172,25 @@ class Services:
                              checkout=True,
                              modules=[module])
 
-    def deploy_from_local_folder(self, cwd=None, service_file=None, bot=None, checkout=False,
-                                 force=False) -> entities.Service:
+    def deploy_from_local_folder(self,
+                                 cwd=None,
+                                 service_file=None,
+                                 bot=None,
+                                 checkout=False,
+                                 force=False
+                                 ) -> entities.Service:
         """
-        Deploy from local folder
-        :param cwd: optional - package working directory. Default=cwd
-        :param service_file: optional - service file. Default=None
-        :param bot:
-        :param checkout:
-        :param force: optional - terminate old replicas immediately
-        :return:
+        Deploy from local folder in local environment.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a package.
+
+        :param str cwd: optional - package working directory. Default=cwd
+        :param str service_file: optional - service file. Default=None
+        :param str bot: bot
+        :param checkout: checkout
+        :param bool force: optional - terminate old replicas immediately
+        :return: Service object
+        :rtype: dtlpy.entities.service.Service
         """
         # get cwd and service.json path
         if cwd is None:
@@ -1149,14 +1278,22 @@ class Services:
         logging.info('Successfully deployed!')
         return service
 
-    def deploy_pipeline(self, service_json_path=None, project=None, bot=None, force=False):
+    def deploy_pipeline(self,
+                        service_json_path: str = None,
+                        project: entities.Project = None,
+                        bot: str = None,
+                        force: bool = False):
         """
-        Deploy pipeline
-        :param service_json_path:
-        :param project:
-        :param bot:
-        :param force:
-        :return: True
+        Deploy pipeline.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param str service_json_path: path to service file
+        :param dtlpy.entities.project.Project project: project entity
+        :param str bot: user bot to run the service
+        :param bool force: optional - force to deploy
+        :return: True if success
+        :rtype: bool
         """
         # project
         if project is None:
@@ -1261,12 +1398,16 @@ class Services:
         print('File deployed successfully!')
         return True
 
-    def tear_down(self, service_json_path=None, project=None):
+    def tear_down(self, service_json_path: str = None, project: entities.Project = None):
         """
-        Tear down a pipeline
-        :param service_json_path:
-        :param project:
-        :return:
+        Delete a pipeline.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a package.
+
+        :param str service_json_path: path to the service file
+        :param dtlpy.entities.project.Project project: project entity
+        :return: True if success
+        :rtype: bool
         """
         # project
         if project is None:
@@ -1351,6 +1492,8 @@ class ServiceLog:
 
     def view(self, until_completed):
         """
+        View logs
+
         :param until_completed:
         """
         try:

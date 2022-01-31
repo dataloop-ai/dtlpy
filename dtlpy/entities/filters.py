@@ -132,6 +132,7 @@ class Filters:
     def add(self, field, values, operator: FiltersOperations = None, method: FiltersMethod = None):
         """
         Add filter
+
         :param field: Metadata field / attribute
         :param values: field values
         :param operator: optional - in, gt, lt, eq, ne
@@ -160,7 +161,9 @@ class Filters:
 
     def generate_url_query_params(self, url):
         """
-        :param url"
+        generate url query params
+
+        :param url:
         """
         url = '{}?'.format(url)
         for f in self.and_filter_list:
@@ -172,7 +175,11 @@ class Filters:
 
     def has_field(self, field):
         """
-        :param field:
+        is filter has field
+
+        :param field: field to check
+        :return: Ture is have it
+        :rtype: bool
         """
         for single_filter in self.or_filter_list:
             if single_filter.field == field:
@@ -186,7 +193,9 @@ class Filters:
 
     def pop(self, field):
         """
-        :param field:
+        Pop filed
+
+        :param field: field to pop
         """
         for single_filter in self.or_filter_list:
             if single_filter.field == field:
@@ -198,7 +207,9 @@ class Filters:
 
     def pop_join(self, field):
         """
-        :param field:
+        Pop join
+
+        :param field: field to pop
         """
         if self.join is not None:
             for single_filter in self.join['filter']['$and']:
@@ -212,8 +223,9 @@ class Filters:
                  ):
         """
         join a query to the filter
-        :param field:
-        :param values:
+
+        :param field: field to add
+        :param values: values
         :param operator: optional - in, gt, lt, eq, ne
         :param method: optional - str - FiltersMethod.AND, FiltersMethod.OR
         """
@@ -312,12 +324,14 @@ class Filters:
     def prepare(self, operation=None, update=None, query_only=False, system_update=None, system_metadata=False):
         """
         To dictionary for platform call
-        :param operation:
-        :param update:
-        :param query_only:
-        :param system_update:
+
+        :param operation: operation
+        :param update: update
+        :param query_only: query only
+        :param system_update: system update
         :param system_metadata: True, if you want to change metadata system
-        :return: dict
+        :return: dict of the filter
+        :rtype: dict
         """
         ########
         # json #
@@ -380,7 +394,9 @@ class Filters:
 
     def sort_by(self, field, value: FiltersOrderByDirection = FiltersOrderByDirection.ASCENDING):
         """
-        :param field:
+        sort the filter
+
+        :param field: field to sort by it
         :param value: FiltersOrderByDirection.ASCENDING, FiltersOrderByDirection.DESCENDING
         """
         if value not in [FiltersOrderByDirection.ASCENDING, FiltersOrderByDirection.DESCENDING]:
@@ -405,7 +421,9 @@ class SingleFilter:
 
     def prepare(self, recursive=False):
         """
-        :param recursive:
+        To dictionary for platform call
+
+        :param recursive:recursive
         """
         _json = dict()
         values = self.values

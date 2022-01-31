@@ -30,7 +30,7 @@ class SuperModelAdapter(BaseModelAdapter):
 
         :param data_path: `str` directory path to use as the root to the data from Dataloop platform
         :param partitions: `dl.SnapshotPartitionType` or list of partitions, defaults for all partitions
-        :param filters: `dl.Filter` in order to select only part of the data
+        :param dtlpy.entities.filters.Filters filters: `dl.Filter` in order to select only part of the data
         """
         if partitions is None:
             partitions = list(entities.SnapshotPartitionType)

@@ -122,7 +122,7 @@ class ModelAdapter(dl.BaseModelAdapter):
 
         :param data_path: `str` directory path to use as the root to the data from Dataloop platform
         :param partitions: `dl.SnapshotPartitionType` or list of partitions, defaults for all partitions
-        :param filters: `dl.Filter` in order to select only part of the data
+        :param dtlpy.entities.filters.Filters filters: `dl.Filter` in order to select only part of the data
         """
         return super(ModelAdapter, self).prepare_trainset(data_path=data_path,
                                                           partitions=partitions,

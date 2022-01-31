@@ -45,6 +45,8 @@ class Bucket:
                   client_api: services.ApiClient,
                   project: entities.Project):
         """
+        Build a Bucket entity object from a json
+
         :param _json: platform json
         :param client_api: ApiClient entity
         :param project: project entity

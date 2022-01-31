@@ -38,7 +38,9 @@ class FeatureSets:
     def list(self):
         """
         List of features
-        :return:
+
+        :return: List of features
+        :rtype: list
         """
 
         # request
@@ -52,12 +54,12 @@ class FeatureSets:
                                        response.json()])
         return features
 
-    def get(self, feature_set_name=None, feature_set_id=None) -> entities.Feature:
+    def get(self, feature_set_name: str = None, feature_set_id: str = None) -> entities.Feature:
         """
         Get Feature Set object
 
-        :param feature_set_name: name of the feature set
-        :param feature_set_id: id of the feature set
+        :param str feature_set_name: name of the feature set
+        :param str feature_set_id: id of the feature set
         :return: Feature object
         """
         if feature_set_id is not None:
@@ -95,9 +97,9 @@ class FeatureSets:
                size: int,
                set_type: str,
                entity_type: entities.FeatureEntityType,
-               project_id=None,
-               tags=None,
-               org_id=None):
+               project_id: str = None,
+               tags: list = None,
+               org_id: str = None):
         """
         Create a new Feature Set
 
@@ -106,9 +108,9 @@ class FeatureSets:
         :param set_type: str - the Feature type
         :param entity_type: entities.FeatureEntityType
         :param project_id: project id
-        :param tags:
+        :param list tags: Feature tags
         :param org_id: org id
-        :return:
+        :return: Feature Set object
         """
         if tags is None:
             tags = list()
@@ -138,12 +140,13 @@ class FeatureSets:
         return entities.FeatureSet.from_json(client_api=self._client_api,
                                              _json=response.json()[0])
 
-    def delete(self, feature_set_id):
+    def delete(self, feature_set_id: str):
         """
         Delete feature vector
-        :param feature_set_id: feature set id to delete
 
-        return success: bool
+        :param str feature_set_id: feature set id to delete
+        :return: success
+        :rtype: bool
         """
 
         success, response = self._client_api.gen_request(req_type="delete",

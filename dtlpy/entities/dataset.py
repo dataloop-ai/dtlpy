@@ -28,7 +28,7 @@ class ExpirationOptions:
         return _json
 
     @classmethod
-    def from_json(cls, _json):
+    def from_json(cls, _json: dict):
         item_max_days = _json.get('itemMaxDays', None)
         if item_max_days:
             return cls(item_max_days=item_max_days)
@@ -89,6 +89,7 @@ class Dataset(entities.BaseEntity):
                              is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
+
         :param project: dataset's project
         :param _json: _json response from host
         :param client_api: ApiClient entity
@@ -119,11 +120,12 @@ class Dataset(entities.BaseEntity):
         Build a Dataset entity object from a json
 
         :param project: dataset's project
-        :param _json: _json response from host
+        :param dict _json: _json response from host
         :param client_api: ApiClient entity
         :param datasets: Datasets repository
-        :param is_fetched: is Entity fetched from Platform
+        :param bool is_fetched: is Entity fetched from Platform
         :return: Dataset object
+        :rtype: dtlpy.entities.dataset.Dataset
         """
         projects = _json.get('projects', None)
         if project is not None and projects is not None:
@@ -162,6 +164,7 @@ class Dataset(entities.BaseEntity):
         Returns platform _json format of object
 
         :return: platform json format of object
+        :rtype: dict
         """
         _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(Dataset)._client_api,
                                                               attr.fields(Dataset)._project,
@@ -235,6 +238,7 @@ class Dataset(entities.BaseEntity):
     def instance_map(self, value: dict):
         """
         instance mapping for creating instance mask
+
         :param value: dictionary {label: map_id}
         """
         if not isinstance(value, dict):
@@ -396,8 +400,8 @@ class Dataset(entities.BaseEntity):
         """
         Switch the recipe that linked to the dataset with the given one
 
-        :param: recipe_id
-        :param: recipe
+        :param recipe_id: recipe id
+        :param recipe: recipe entity
         :return:
         """
         if recipe is None and recipe_id is None:
@@ -420,9 +424,10 @@ class Dataset(entities.BaseEntity):
         """
         Delete a dataset forever!
 
-        :param sure: are you sure you want to delete?
-        :param really: really really?
-        :return:
+        :param bool sure: are you sure you want to delete?
+        :param bool really: really really?
+        :return: True is success
+        :rtype: bool
         """
         return self.datasets.delete(dataset_id=self.id,
                                     sure=sure,
@@ -432,8 +437,9 @@ class Dataset(entities.BaseEntity):
         """
         Update dataset field
 
-        :param system_metadata: bool - True, if you want to change metadata system
-        :return:
+        :param bool system_metadata: bool - True, if you want to change metadata system
+        :return: Dataset object
+        :rtype: dtlpy.entities.dataset.Dataset
         """
         return self.datasets.update(dataset=self,
                                     system_metadata=system_metadata)
@@ -441,8 +447,8 @@ class Dataset(entities.BaseEntity):
     def set_readonly(self, state: bool):
         """
         Set dataset readonly mode
-        :param state:
-        :return:
+
+        :param bool state: state
         """
         if not isinstance(state, bool):
             raise exceptions.PlatformException(
@@ -456,11 +462,12 @@ class Dataset(entities.BaseEntity):
         Clone dataset
 
         :param clone_name: new dataset name
-        :param filters: Filters entity or a query dict
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a query dict
         :param with_items_annotations: clone all item's annotations
         :param with_metadata: clone metadata
         :param with_task_annotations_status: clone task annotations status
-        :return:
+        :return: dataset object
+        :rtype: dtlpy.entities.dataset.Dataset
         """
         return self.datasets.clone(dataset_id=self.id,
                                    filters=filters,
@@ -472,8 +479,10 @@ class Dataset(entities.BaseEntity):
     def sync(self, wait=True):
         """
         Sync dataset with external storage
+
         :param wait: wait the command to finish
-        :return:
+        :return: True if success
+        :rtype: bool
         """
         return self.datasets.sync(dataset_id=self.id, wait=wait)
 
@@ -497,7 +506,7 @@ class Dataset(entities.BaseEntity):
         Optional - also download annotation, mask, instance and image mask of the item
 
         :param local_path: local folder or filename to save to.
-        :param filters: Filters entity or a dictionary containing filters parameters
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :param annotation_options: download annotations options: list(dl.ViewAnnotationOptions)
         :param annotation_filters: Filters entity to filter annotations for download
         :param overwrite: optional - default = False
@@ -505,7 +514,7 @@ class Dataset(entities.BaseEntity):
         :param with_text: optional - add text to annotations, default = False
         :param remote_path: DEPRECATED and ignored. use filters
         :param include_annotations_in_output: default - False , if export should contain annotations
-        :param export_png_files: default - True, if semantic annotations should exported as png files
+        :param export_png_files: default - if True, semantic annotations should be exported as png files
         :param filter_output_annotations: default - False, given an export by filter - determine if to filter out annotations
         :param alpha: opacity value [0 1], default 1
         :return: `List` of local_path per each downloaded item
@@ -537,11 +546,11 @@ class Dataset(entities.BaseEntity):
         Upload annotations to dataset.
 
         :param local_path: str - local folder where the annotations files is.
-        :param filters: Filters entity or a dictionary containing filters parameters
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :param clean: bool - if True it remove the old annotations
         :param remote_root_path: str - the remote root path to match remote and local items
+
         For example, if the item filepath is a/b/item and remote_root_path is /a the start folder will be b instead of a
-        :return:
         """
 
         return self.datasets.upload_annotations(
@@ -556,7 +565,6 @@ class Dataset(entities.BaseEntity):
         """
         Checkout the dataset
 
-        :return:
         """
         self.datasets.checkout(dataset=self)
 
@@ -564,7 +572,6 @@ class Dataset(entities.BaseEntity):
         """
         Open the dataset in web platform
 
-        :return:
         """
         self._client_api._open_in_web(url=self.platform_url)
 
@@ -574,13 +581,13 @@ class Dataset(entities.BaseEntity):
         Add single label to dataset
 
         :param label_name: str - label name
-        :param color:
-        :param children:
-        :param attributes:
-        :param display_label:
-        :param label:
-        :param recipe_id: optional
-        :param ontology_id: optional
+        :param color: color
+        :param children: children (sub labels)
+        :param attributes: attributes
+        :param display_label: display_label
+        :param label: label
+        :param recipe_id: optional recipe id
+        :param ontology_id: optional ontology id
         :param icon_path: path to image to be display on label
         :return: label entity
         """
@@ -611,9 +618,9 @@ class Dataset(entities.BaseEntity):
         """
         Add labels to dataset
 
-        :param label_list:
-        :param ontology_id: optional
-        :param recipe_id: optional
+        :param label_list: label list
+        :param ontology_id: optional ontology id
+        :param recipe_id: optional recipe id
         :return: label entities
         """
         # get recipe
@@ -636,14 +643,14 @@ class Dataset(entities.BaseEntity):
         """
         Add single label to dataset
 
-        :param label_name:
-        :param color:
-        :param children:
-        :param attributes:
-        :param display_label:
-        :param label:
-        :param recipe_id: optional
-        :param ontology_id: optional
+        :param label_name: label name
+        :param color: color
+        :param children: children (sub labels)
+        :param attributes: attributes
+        :param display_label: display label
+        :param label: label
+        :param recipe_id: optional recipe id
+        :param ontology_id: optional ontology id
         :param upsert: if True will add in case it does not existing
         :param icon_path: path to image to be display on label
 
@@ -677,9 +684,9 @@ class Dataset(entities.BaseEntity):
         """
         Add labels to dataset
 
-        :param label_list:
-        :param ontology_id: optional
-        :param recipe_id: optional
+        :param label_list: label list
+        :param ontology_id: optional ontology id
+        :param recipe_id: optional recipe id
         :param upsert: if True will add in case it does not existing
 
         :return: label entities
@@ -718,7 +725,7 @@ class Dataset(entities.BaseEntity):
         Filtering the dataset for items and save them local
         Optional - also download annotation, mask, instance and image mask of the item
 
-        :param filters: Filters entity or a dictionary containing filters parameters
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :param local_path: local folder or filename to save to.
         :param file_types: a list of file type to download. e.g ['video/webm', 'video/mp4', 'image/jpeg', 'image/png']
         :param annotation_options: download annotations options: list(dl.ViewAnnotationOptions)                                                                                        not relevant for JSON option
@@ -762,7 +769,7 @@ class Dataset(entities.BaseEntity):
 
         :param partition: `dl.SnapshotPartitionType` name of the partition
         :param local_path: local path directory to download the data
-        :param filters:  dl.entities.Filters to add the specific partitions constraint to
+        :param dtlpy.entities.filters.Filters filters:  dl.entities.Filters to add the specific partitions constraint to
 
         :return List `str` of the new downloaded path of each item
         """
@@ -787,7 +794,7 @@ class Dataset(entities.BaseEntity):
         Updates all items returned by filters in the dataset to specific partition
 
         :param partition:  `dl.entities.SnapshotPartitionType` to set to
-        :param filters:  dl.entities.Filters to add the specific partitions constraint to
+        :param dtlpy.entities.filters.Filters filters:  dl.entities.Filters to add the specific partitions constraint to
         :return:  dl.PagedEntities
         """
         if filters is None:
@@ -802,7 +809,7 @@ class Dataset(entities.BaseEntity):
         Returns PagedEntity of items from one or more partitions
 
         :param partitions: `dl.entities.SnapshotPartitionType` or a list. Name of the partitions
-        :param filters:  dl.Filters to add the specific partitions constraint to
+        :param dtlpy.entities.filters.Filters filters:  dl.Filters to add the specific partitions constraint to
         :param batch_size: `int` how many items per page
         :return: `dl.PagedEntities` of `dl.Item`  preforms items.list()
         """

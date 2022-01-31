@@ -64,6 +64,7 @@ class Driver(entities.BaseEntity):
         Returns platform _json format of object
 
         :return: platform json format of object
+        :rtype: dict
         """
         output_dict = attr.asdict(self,
                                   filter=attr.filters.exclude(attr.fields(Driver)._client_api,

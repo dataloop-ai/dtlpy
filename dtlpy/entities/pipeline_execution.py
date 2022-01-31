@@ -141,6 +141,7 @@ class PipelineExecution(entities.BaseEntity):
         Turn Package entity into a platform representation of Package
 
         :return: platform json of package
+        :rtype: dict
         """
         _json = attr.asdict(self,
                             filter=attr.filters.exclude(attr.fields(PipelineExecution)._repositories,

@@ -162,8 +162,10 @@ class Snapshots:
     def list(self, filters: entities.Filters = None) -> entities.PagedEntities:
         """
         List project snapshots
-        :param filters:
-        :return:
+
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
+        :return: Paged entity
+        :rtype: dtlpy.entities.paged_entities.PagedEntities
         """
         # default filters
         if filters is None:
@@ -207,20 +209,20 @@ class Snapshots:
             status: str = None,
     ) -> entities.Snapshot:
         """
-            Create a Snapshot entity
+        Create a Snapshot entity
 
-        :param snapshot_name: name of the snapshot
-        :param dataset_id: dataset id
-        :param labels: list of labels from ontology (must mach ontology id) can be a subset
-        :param ontology_id: ontology to connect to the snapshot
-        :param description: description
+        :param str snapshot_name: name of the snapshot
+        :param str dataset_id: dataset id
+        :param list labels: list of labels from ontology (must mach ontology id) can be a subset
+        :param str ontology_id: ontology to connect to the snapshot
+        :param str description: description
         :param bucket: optional dl.Bucket.  If None - creates a local bucket at the current working dir
-        :param project_id: project that owns the snapshot
-        :param is_global: bool
-        :param tags: list of string tags
+        :param str project_id: project that owns the snapshot
+        :param bool is_global: is global
+        :param list tags: list of string tags
         :param model: optional - Model object
-        :param configuration: optional - snapshot configuration - dict
-        :param status: `str` of the optional values of
+        :param dict configuration: optional - snapshot configuration - dict
+        :param str status: `str` of the optional values of
         :return: Snapshot Entity
         """
 
@@ -323,19 +325,18 @@ class Snapshots:
               tags: list = None,
               ) -> entities.Snapshot:
         """
-            Clones and creates a new snapshot out of existing one
+        Clones and creates a new snapshot out of existing one
 
         :param from_snapshot: existing snapshot to clone from
-        :param snapshot_name: `str` new snapshot name
+        :param str snapshot_name: `str` new snapshot name
         :param bucket: `dl.Bucket` (optional) if passed replaces the current bucket
-        :param dataset_id: dataset_id for the cloned snapshot
-        :param configuration: `dict` (optional) if passed replaces the current configuration
-        :param status: `str` (optional) set the new status
-        :param project_id: `str` specify the project id to create the new snapshot on (if other the the source snapshot)
-        :param labels:  `list` of `str` - label of the snapshot
-        :param description: `str` description of the new snapshot
-        :param tags:  `list` of `str` - label of the snapshot
-
+        :param str dataset_id: dataset_id for the cloned snapshot
+        :param dict configuration: `dict` (optional) if passed replaces the current configuration
+        :param str status: `str` (optional) set the new status
+        :param str project_id: `str` specify the project id to create the new snapshot on (if other the the source snapshot)
+        :param list labels:  `list` of `str` - label of the snapshot
+        :param str description: `str` description of the new snapshot
+        :param list tags:  `list` of `str` - label of the snapshot
         :return: dl.Snapshot which is a clone version of the existing snapshot
         """
         # FIXME: replace the clone with a Backend clone
@@ -405,9 +406,9 @@ class Snapshots:
         """
         Uploads bucket to remote server
 
-        :param local_path: path of files to upload
+        :param str local_path: path of files to upload
         :param snapshot: Snapshot entity
-        :param overwrite: overwrite the remote files (if same name exists)
+        :param bool overwrite: overwrite the remote files (if same name exists)
         :return: Snapshot Entity
         """
 
@@ -426,9 +427,9 @@ class Snapshots:
         """
         Download files from a remote bucket
 
-        :param snapshot_id: `str` specific snapshot id
+        :param str snapshot_id: `str` specific snapshot id
         :param snapshot: `dl.Snapshot` specific snapshot
-        :param local_path: `str` directory path to load the bucket content to
+        :param str local_path: `str` directory path to load the bucket content to
         :return: list of something - TBD
         """
         if snapshot is None:
@@ -459,8 +460,10 @@ class Snapshots:
 
     def open_in_web(self, snapshot=None, snapshot_id=None):
         """
-        :param snapshot:
-        :param snapshot_id:
+        Open the snapshot in web platform
+
+        :param snapshot: snapshot entity
+        :param str snapshot_id: snapshot id
         """
         if snapshot is not None:
             snapshot.open_in_web()
@@ -474,9 +477,10 @@ class Snapshots:
         Delete Snapshot object
 
         :param snapshot: Snapshot entity to delete
-        :param snapshot_name: delete by snapshot name
-        :param snapshot_id: delete by snapshot id
+        :param str snapshot_name: delete by snapshot name
+        :param str snapshot_id: delete by snapshot id
         :return: True
+        :rtype: bool
         """
         # get id and name
         if snapshot_id is None:
@@ -506,7 +510,7 @@ class Snapshots:
         """
         Update Snapshot changes to platform
 
-        :param snapshot:
+        :param snapshot: Snapshot entity
         :return: Snapshot entity
         """
         # payload

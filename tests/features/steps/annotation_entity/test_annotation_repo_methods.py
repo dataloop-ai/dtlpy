@@ -149,6 +149,8 @@ def step_impl(context):
 def step_impl(context):
     context.item = context.item.update()
     annotation = context.item.annotations.list()[0]
+    if 'coordinateVersion' in annotation.metadata['system']:
+        annotation.metadata['system'].pop('coordinateVersion')
     assert annotation.to_json()['metadata'] == context.annotation.to_json()['metadata']
     assert annotation.type == context.annotation.type
     assert annotation.label == context.annotation.label

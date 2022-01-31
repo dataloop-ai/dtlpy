@@ -134,6 +134,7 @@ class Assignment(entities.BaseEntity):
         Returns platform _json format of object
 
         :return: platform json format of object
+        :rtype: dict
         """
         _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(Assignment)._client_api,
                                                               attr.fields(Assignment)._project,
@@ -152,8 +153,11 @@ class Assignment(entities.BaseEntity):
 
     def update(self, system_metadata=False):
         """
-        :param system_metadata: bool - True, if you want to change metadata system
-        :return:
+        Update an assignment
+
+        :param bool system_metadata: True, if you want to change metadata system
+        :return: Assignment object
+        :rtype: dtlpy.entities.assignment.Assignment assignment
         """
         return self.assignments.update(assignment=self, system_metadata=system_metadata)
 
@@ -167,9 +171,12 @@ class Assignment(entities.BaseEntity):
 
     def get_items(self, dataset=None, filters=None):
         """
-        :param dataset: dataset entity
-        :param filters: Filters entity or a dictionary containing filters parameters
-        :return:
+        Get all the items in the assignment
+
+        :param dtlpy.entities.dataset.Dataset dataset: dataset entity
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
+        :return: pages of the items
+        :rtype: dtlpy.entities.paged_entities.PagedEntities
         """
         if dataset is None:
             dataset = self.dataset
@@ -179,9 +186,11 @@ class Assignment(entities.BaseEntity):
     def reassign(self, assignee_id, wait=True):
         """
         Reassign an assignment
-        :param assignee_id:
-        :param wait: wait the command to finish
+
+        :param str assignee_id: the user that assignee the assignment to it
+        :param bool wait: wait the command to finish
         :return: Assignment object
+        :rtype: dtlpy.entities.assignment.Assignment
         """
         return self.assignments.reassign(assignment=self,
                                          task=self._task,
@@ -192,9 +201,11 @@ class Assignment(entities.BaseEntity):
     def redistribute(self, workload, wait=True):
         """
         Redistribute an assignment
-        :param workload:
-        :param wait: wait the command to finish
+
+        :param dtlpy.entities.assignment.Workload workload: workload object that contain the assignees and the work load
+        :param bool wait: wait the command to finish
         :return: Assignment object
+        :rtype: dtlpy.entities.assignment.Assignment assignment
         """
         return self.assignments.redistribute(assignment=self,
                                              task=self._task,
@@ -204,14 +215,13 @@ class Assignment(entities.BaseEntity):
 
     def set_status(self, status: str, operation: str, item_id: str):
         """
-        Update item status within task
+        Set item status within assignment
 
-        :param status: str - string the describes the status
-        :param operation: str -  'create' or 'delete'
-        :param item_id: str
-
-        :return : Boolean
-
+        :param str status: status
+        :param str operation: created/deleted
+        :param str item_id: item id
+        :return: True id success
+        :rtype: bool
         """
         return self.assignments.set_status(status=status, operation=operation, item_id=item_id, assignment_id=self.id)
 
@@ -324,6 +334,7 @@ class Workload:
     def add(self, assignee_id):
         """
         add a assignee
+
         :param assignee_id:
         """
         self.workload.append(WorkloadUnit(assignee_id=assignee_id))

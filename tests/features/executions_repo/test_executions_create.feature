@@ -55,6 +55,7 @@ Feature: Executions repository create service testing
 
   @services.delete
   @packages.delete
+  @testrail-C4523101
   Scenario: Created Item Execution - with sync true
     Given There is a package (pushed from "executions/item") by the name of "execution-create"
     And There is a service by the name of "executions-create" with module name "default_module" saved to context "service"

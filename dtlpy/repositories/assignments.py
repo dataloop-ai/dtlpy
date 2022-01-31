@@ -7,7 +7,9 @@ logger = logging.getLogger(name='dtlpy')
 
 class Assignments:
     """
-    Assignments repository
+    Assignments Repository
+
+    The Assignments class allows users to manage assignments and their properties. Read more about `Task Assignment <https://dataloop.ai/docs/sdk-task-assigment>`_ in our SDK documentation.
     """
 
     def __init__(self,
@@ -70,19 +72,29 @@ class Assignments:
     ###########
     # methods #
     ###########
-    def list(self, project_ids=None, status=None, assignment_name=None, assignee_id=None, pages_size=None,
-             page_offset=None, task_id=None) -> miscellaneous.List[entities.Assignment]:
+    def list(self,
+             project_ids: list = None,
+             status: str = None,
+             assignment_name: str = None,
+             assignee_id: str = None,
+             pages_size: int = None,
+             page_offset: int = None,
+             task_id: int = None
+             ) -> miscellaneous.List[entities.Assignment]:
         """
-        Get Assignments list
+        Get Assignment list to be able to use it in your code.
 
-        :param project_ids: list of project ids
-        :param status:
-        :param assignment_name:
-        :param assignee_id:
-        :param pages_size:
-        :param page_offset:
-        :param task_id:
+        **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned as *owner* of the annotation task.
+
+        :param list project_ids: list of project ids
+        :param str status: assignment status
+        :param str assignment_name: assignment name
+        :param str assignee_id: the user that assignee the assignment to it
+        :param int pages_size: pages size
+        :param int page_offset: page offset
+        :param str task_id: task id
         :return: List of Assignment objects
+        :rtype: miscellaneous.List[dtlpy.entities.assignment.Assignment]
         """
 
         # url
@@ -137,13 +149,16 @@ class Assignments:
             raise exceptions.PlatformException(response)
         return assignments
 
-    def get(self, assignment_name=None, assignment_id=None):
+    def get(self,
+            assignment_name: str = None,
+            assignment_id: str = None):
         """
-        Get a Project object
-        :param assignment_name: optional - search by name
-        :param assignment_id: optional - search by id
-        :return: Project object
+        Get Assignment object to use it in your code.
 
+        :param str assignment_name: optional - search by name
+        :param str assignment_id: optional - search by id
+        :return: Assignment object
+        :rtype: dtlpy.entities.assignment.Assignment
         """
 
         if assignment_id is not None:
@@ -189,11 +204,18 @@ class Assignments:
         return self._client_api._get_resource_url(
             "projects/{}/tasks/{}/assignments".format(self.project_id, self.task.id))
 
-    def open_in_web(self, assignment_name=None, assignment_id=None, assignment=None):
+    def open_in_web(self,
+                    assignment_name: str = None,
+                    assignment_id: str = None,
+                    assignment: str = None):
         """
-        :param assignment_name:
-        :param assignment_id:
-        :param assignment:
+        Open the assignment in the platform.
+
+        **Prerequisites**: All users.
+
+        :param str assignment_name: assignment name
+        :param str assignment_id: assignment id
+        :param dtlpy.entities.assignment.Assignment assignment: assignment object
         """
         if assignment_name is not None:
             assignment = self.get(assignment_name=assignment_name)
@@ -204,16 +226,26 @@ class Assignments:
         else:
             self._client_api._open_in_web(url=self.platform_url)
 
-    def reassign(self, assignee_id, assignment=None, assignment_id=None, task=None, task_id=None, wait=True):
+    def reassign(self,
+                 assignee_id: str,
+                 assignment: entities.Assignment = None,
+                 assignment_id: str = None,
+                 task: entities.Task = None,
+                 task_id: str = None,
+                 wait: bool = True):
         """
-        Reassign an assignment
-        :param assignee_id:
-        :param assignment:
-        :param assignment_id:
-        :param task:
-        :param task_id:
-        :param wait: wait the command to finish
+        Reassign an assignment.
+
+        **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned as *owner* of the annotation task.
+
+        :param str assignee_id: the id of the user whom you want to assign the assignment to
+        :param dtlpy.entities.assignment.Assignment assignment: assignment object
+        :param assignment_id: assignment id
+        :param dtlpy.entities.task.Task task: task object
+        :param str task_id: task id
+        :param bool wait: wait the command to finish
         :return: Assignment object
+        :rtype: dtlpy.entities.assignment.Assignment
         """
         if assignment_id is None and assignment is None:
             raise exceptions.PlatformException('400', 'Must provide either assignment or assignment_id')
@@ -250,16 +282,26 @@ class Assignments:
         else:
             raise exceptions.PlatformException(response)
 
-    def redistribute(self, workload, assignment=None, assignment_id=None, task=None, task_id=None, wait=True):
+    def redistribute(self,
+                     workload: entities.Workload,
+                     assignment: entities.Assignment = None,
+                     assignment_id: str = None,
+                     task: entities.Task = None,
+                     task_id: str = None,
+                     wait: bool = True):
         """
-        Redistribute an assignment
-        :param workload:
-        :param assignment:
-        :param assignment_id:
-        :param task:
-        :param task_id:
-        :param wait: wait the command to finish
+        Redistribute an assignment.
+
+        **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned as *owner* of the annotation task.
+
+        :param dtlpy.entities.assignment.Workload workload: workload object that contain the assignees and the work load
+        :param dtlpy.entities.assignment.Assignment assignment: assignment object
+        :param str assignment_id: assignment id
+        :param dtlpy.entities.task.Task task: task object
+        :param str task_id: task id
+        :param bool wait: wait the command to finish
         :return: Assignment object
+        :rtype: dtlpy.entities.assignment.Assignment assignment
         """
         if assignment_id is None and assignment is None:
             raise exceptions.PlatformException('400', 'Must provide either assignment or assignment_id')
@@ -315,12 +357,19 @@ class Assignments:
         else:
             raise exceptions.PlatformException(response)
 
-    def update(self, assignment: entities.Assignment = None, system_metadata=False) -> entities.Assignment:
+    def update(self,
+               assignment: entities.Assignment = None,
+               system_metadata: bool = False
+               ) -> entities.Assignment:
         """
-        Update an assignment
-        :param assignment: assignment entity
-        :param system_metadata: bool - True, if you want to change metadata system
+        Update an assignment.
+
+        **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned as *owner* of the annotation task.
+
+        :param dtlpy.entities.assignment.Assignment assignment assignment: assignment entity
+        :param bool system_metadata: True, if you want to change metadata system
         :return: Assignment object
+        :rtype: dtlpy.entities.assignment.Assignment assignment
         """
         url = '/assignments/{}'.format(assignment.id)
 
@@ -337,14 +386,22 @@ class Assignments:
         else:
             raise exceptions.PlatformException(response)
 
-    def create(self, assignee_id, task=None, filters=None, items=None) -> entities.Assignment:
+    def create(self,
+               assignee_id: str,
+               task: entities.Task = None,
+               filters: entities.Filters = None,
+               items: list = None) -> entities.Assignment:
         """
-        Create a new assignment
-        :param assignee_id: the assignee for the assignment
-        :param task: task entity
-        :param filters: Filters entity or a dictionary containing filters parameters
-        :param items: list of items
+        Create a new assignment.
+
+        **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned as *owner* of the annotation task.
+
+        :param str assignee_id: the assignee for the assignment
+        :param dtlpy.entities.task.Task task: task entity
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
+        :param list items: list of items
         :return: Assignment object
+        :rtype: dtlpy.entities.assignment.Assignment assignment
         """
         return self._create_in_task(assignee_id=assignee_id, task=task, filters=filters, items=items)
 
@@ -398,16 +455,25 @@ class Assignments:
             if filters is not None:
                 filters._nullify_refs()
 
-    def get_items(self, assignment: entities.Assignment = None,
-                  assignment_id=None, assignment_name=None, dataset=None, filters=None) -> entities.PagedEntities:
+    def get_items(self,
+                  assignment: entities.Assignment = None,
+                  assignment_id=None,
+                  assignment_name=None,
+                  dataset=None,
+                  filters=None
+                  ) -> entities.PagedEntities:
         """
-        Get all the items in the assignment
-        :param assignment: assignment entity
-        :param assignment_id: assignment id
-        :param assignment_name: assignment name
-        :param dataset: dataset entity
-        :param filters: Filters entity or a dictionary containing filters parameters
-        :return:
+        Get all the items in the assignment.
+
+        **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned as *owner* of the annotation task.
+
+        :param dtlpy.entities.assignment.Assignment assignment: assignment entity
+        :param str assignment_id: assignment id
+        :param str assignment_name: assignment name
+        :param dtlpy.entities.dataset.Dataset dataset: dataset entity
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
+        :return: pages of the items
+        :rtype: dtlpy.entities.paged_entities.PagedEntities
         """
         if assignment is None and assignment_id is None and assignment_name is None:
             raise exceptions.PlatformException('400',
@@ -434,14 +500,23 @@ class Assignments:
 
         return dataset.items.list(filters=filters)
 
-    def set_status(self, status: str, operation: str, item_id: str, assignment_id: str):
+    def set_status(self,
+                   status: str,
+                   operation: str,
+                   item_id: str,
+                   assignment_id: str
+                   ) -> bool:
         """
-        Set item status within assignment
-        @param status: str
-        @param operation: created/deleted
-        @param item_id: str
-        @param assignment_id: str
-        @return: Boolean
+        Set item status within assignment.
+
+        **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned as *owner* of the annotation task.
+
+        :param str status: status
+        :param str operation: created/deleted
+        :param str item_id: item id
+        :param str assignment_id: assignment id
+        :return: True id success
+        :rtype: bool
         """
         url = '/assignments/{assignment_id}/items/{item_id}/status'.format(assignment_id=assignment_id, item_id=item_id)
         payload = {

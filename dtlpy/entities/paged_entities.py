@@ -93,8 +93,10 @@ class PagedEntities:
 
     def return_page(self, page_offset=None, page_size=None):
         """
-        :param page_offset:
-        :param page_size:
+        Return page
+
+        :param page_offset: page offset
+        :param page_size: page size
         """
         if page_size is None:
             page_size = self.page_size
@@ -113,8 +115,10 @@ class PagedEntities:
 
     def get_page(self, page_offset=None, page_size=None):
         """
-        :param page_offset:
-        :param page_size:
+        Get page
+
+        :param page_offset: page offset
+        :param page_size: page size
         """
         items = self.return_page(page_offset=page_offset,
                                  page_size=page_size)

@@ -53,6 +53,8 @@ class PackageCatalog:
 class Packages:
     """
     Packages Repository
+
+    The Packages class allows users to manage packages (code used for running in Dataloop's FaaS) and their properties. Read more about `Packages <https://dataloop.ai/docs/faas-package>`_.
     """
 
     def __init__(self, client_api: services.ApiClient, project: entities.Project = None):
@@ -87,11 +89,18 @@ class Packages:
     def platform_url(self):
         return self._client_api._get_resource_url("projects/{}/packages".format(self.project.id))
 
-    def open_in_web(self, package=None, package_id=None, package_name=None):
+    def open_in_web(self,
+                    package: entities.Package = None,
+                    package_id: str = None,
+                    package_name: str = None):
         """
-        :param package:
-        :param package_id:
-        :param package_name:
+        Open the package in the web platform.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param dtlpy.entities.package.Package package: package entity
+        :param str package_id: package id
+        :param str package_name: package name
         """
         if package_name is not None:
             package = self.get(package_name=package_name)
@@ -102,12 +111,14 @@ class Packages:
         else:
             self._client_api._open_in_web(url=self.platform_url)
 
-    def revisions(self, package: entities.Package = None, package_id=None):
+    def revisions(self, package: entities.Package = None, package_id: str = None):
         """
-        Get package revisions history
+        Get the package revisions history.
 
-        :param package: Package entity
-        :param package_id: package id
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param dtlpy.entities.package.Package package: package entity
+        :param str package_id: package id
         """
         if package is None and package_id is None:
             raise exceptions.PlatformException(
@@ -123,14 +134,22 @@ class Packages:
             raise exceptions.PlatformException(response)
         return response.json()
 
-    def get(self, package_name=None, package_id=None, checkout=False, fetch=None) -> entities.Package:
+    def get(self,
+            package_name: str = None,
+            package_id: str = None,
+            checkout: bool = False,
+            fetch=None) -> entities.Package:
         """
-        Get Package object
-        :param package_name:
-        :param package_id:
-        :param checkout: bool
+        Get Package object to use in your code.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param str package_id: package id
+        :param str package_name: package name
+        :param bool checkout: checkout
         :param fetch: optional - fetch entity from platform, default taken from cookie
         :return: Package object
+        :rtype: dtlpy.entities.package.Package
         """
         if fetch is None:
             fetch = self._client_api.fetch_entities
@@ -218,12 +237,16 @@ class Packages:
             raise exceptions.PlatformException(response)
         return response.json()
 
-    def list(self, filters: entities.Filters = None, project_id=None) -> entities.PagedEntities:
+    def list(self, filters: entities.Filters = None, project_id: str = None) -> entities.PagedEntities:
         """
-        List project packages
-        :param filters:
-        :param project_id:
-        :return:
+        List project packages.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
+        :param str project_id: project id
+        :return: Paged entity
+        :rtype: dtlpy.entities.paged_entities.PagedEntities
         """
         if filters is None:
             filters = entities.Filters(resource=entities.FiltersResource.PACKAGE)
@@ -253,11 +276,16 @@ class Packages:
 
     def pull(self, package: entities.Package, version=None, local_path=None, project_id=None):
         """
-        :param package:
+        Pull (download) the package to a local path.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param dtlpy.entities.package.Package package: package entity
         :param version:
         :param local_path:
         :param project_id:
-        :return:
+        :return: local path where the package pull
+        :rtype: str
         """
         if isinstance(version, int):
             logger.warning('Deprecation Warning - Package/service versions have been refactored'
@@ -325,9 +353,13 @@ class Packages:
 
     def build_requirements(self, filepath) -> list:
         """
-        build a requirements list from file path
+        Build a requirement list (list of packages your code requires to run) from a file path. **The file listing the requirements MUST BE a txt file**.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
         :param filepath: path of the requirements file
         :return: a list of dl.PackageRequirement
+        :rtype: list
         """
         try:
             import pkg_resources
@@ -375,27 +407,31 @@ class Packages:
              requirements: List[entities.PackageRequirement] = None
              ) -> entities.Package:
         """
-        Push local package.
+        Push your local package to the UI.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
         Project will be taken in the following hierarchy:
         project(input) -> project_id(input) -> self.project(context) -> checked out
 
-        :param project: optional - project entity to deploy to. default from context or checked-out
-        :param project_id: optional - project id to deploy to. default from context or checked-out
-        :param package_name: package name
-        :param src_path: path to package codebase
-        :param codebase:
-        :param modules: list of modules PackageModules of the package
-        :param is_global:
-        :param checkout: checkout package to local dir
-        :param revision_increment: optional - str - version bumping method - major/minor/patch - default = None
-        :param version: semver version f the package
-        :param ignore_sanity_check: NOT RECOMMENDED - skip code sanity check before pushing
-        :param  service_update: optional - bool - update the service
-        :param  service_config: json of service - a service that have config from the main service if wanted
-        :param  slots: optional - list of slots PackageSlot of the package
-        :param requirements: requirements - list of package requirements
+        :param dtlpy.entities.project.Project project: optional - project entity to deploy to. default from context or checked-out
+        :param str project_id: optional - project id to deploy to. default from context or checked-out
+        :param str package_name: package name
+        :param str src_path: path to package codebase
+        :param dtlpy.entities.codebase.Codebase codebase: codebase object
+        :param list modules: list of modules PackageModules of the package
+        :param bool is_global: is package is global or local
+        :param bool checkout: checkout package to local dir
+        :param str revision_increment: optional - str - version bumping method - major/minor/patch - default = None
+        :param str version: semver version f the package
+        :param bool ignore_sanity_check: NOT RECOMMENDED - skip code sanity check before pushing
+        :param bool service_update: optional - bool - update the service
+        :param dict service_config: json of service - a service that have config from the main service if wanted
+        :param list slots: optional - list of slots PackageSlot of the package
+        :param list requirements: requirements - list of package requirements
 
-        :return:
+        :return: Package object
+        :rtype: dtlpy.entities.package.Package
         """
         # get project
         project_to_deploy = None
@@ -547,10 +583,10 @@ class Packages:
                 requirements: List[entities.PackageRequirement] = None
                 ) -> entities.Package:
         """
-        Create a package in platform
+        Create a package in platform.
 
         :param project_to_deploy:
-        :param codebase:
+        :param dtlpy.entities.codebase.Codebase codebase: codebase object
         :param is_global:
         :param package_name: optional - default: 'default package'
         :param modules: optional - PackageModules Entity
@@ -558,7 +594,8 @@ class Packages:
         :param  service_config : json of service - a service that have config from the main service if wanted
         :param slots: optional - list of slots PackageSlot of the package
         :param slots: requirements - list of package requirements
-        :return: Package Entity
+        :return: Package object
+        :rtype: dtlpy.entities.package.Package
         """
         # if is dtlpy entity convert to dict
         if modules and isinstance(modules[0], entities.PackageModule):
@@ -607,12 +644,15 @@ class Packages:
 
     def delete(self, package: entities.Package = None, package_name=None, package_id=None):
         """
-        Delete Package object
+        Delete a Package object.
 
-        :param package:
-        :param package_name:
-        :param package_id:
-        :return: True
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param dtlpy.entities.package.Package package: package entity
+        :param str package_id: package id
+        :param str package_name: package name
+        :return: True if success
+        :rtype: bool
         """
         # get id and name
         if package_name is None or package_id is None:
@@ -660,10 +700,14 @@ class Packages:
 
     def update(self, package: entities.Package, revision_increment: str = None) -> entities.Package:
         """
-        Update Package changes to platform
-        :param package:
+        Update Package changes to the platform.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param dtlpy.entities.package.Package package:
         :param revision_increment: optional - str - version bumping method - major/minor/patch - default = None
-        :return: Package entity
+        :return: Package object
+        :rtype: dtlpy.entities.package.Package
         """
 
         if revision_increment is not None and isinstance(package.version, str) and len(package.version.split('.')) == 3:
@@ -694,52 +738,56 @@ class Packages:
                                           project=self._project)
 
     def deploy(self,
-               package_id=None,
-               package_name=None,
-               package=None,
-               service_name=None,
-               project_id=None,
-               revision=None,
-               init_input=None,
-               runtime=None,
-               sdk_version=None,
-               agent_versions=None,
-               bot=None,
-               pod_type=None,
-               verify=True,
-               checkout=False,
-               module_name=None,
-               run_execution_as_process=None,
-               execution_timeout=None,
-               drain_time=None,
-               on_reset=None,
-               max_attempts=None,
-               force=False,
+               package_id: str = None,
+               package_name: str = None,
+               package: entities.Package = None,
+               service_name: str = None,
+               project_id: str = None,
+               revision: str or int = None,
+               init_input: Union[List[entities.FunctionIO], entities.FunctionIO, dict] = None,
+               runtime: Union[entities.KubernetesRuntime, dict] = None,
+               sdk_version: str = None,
+               agent_versions: dict = None,
+               bot: Union[entities.Bot, str] = None,
+               pod_type: entities.InstanceCatalog = None,
+               verify: bool = True,
+               checkout: bool = False,
+               module_name: str = None,
+               run_execution_as_process: bool = None,
+               execution_timeout: int = None,
+               drain_time: int = None,
+               on_reset: str = None,
+               max_attempts: int = None,
+               force: bool = False,
                **kwargs) -> entities.Service:
         """
-        Deploy package
-        :param package_id:
-        :param package_name:
-        :param package:
-        :param service_name:
-        :param project_id:
-        :param revision:
-        :param init_input:
-        :param runtime:
-        :param sdk_version:  - optional - string - sdk version
-        :param agent_versions: - dictionary - - optional -versions of sdk, agent runner and agent proxy
-        :param bot:
-        :param pod_type:
-        :param verify:
-        :param checkout:
-        :param module_name:
-        :param run_execution_as_process:
-        :param execution_timeout:
-        :param drain_time:
-        :param on_reset:
-        :param max_attempts: Maximum execution retries in-case of a service reset
-        :param force: optional - terminate old replicas immediately
-        :return:
+        Deploy a package. A service is required to run the code in your package.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param str package_id: package id
+        :param str package_name: package name
+        :param dtlpy.entities.package.Package package: package entity
+        :param str service_name: service name
+        :param str project_id: project id
+        :param str revision: package revision - default=latest
+        :param init_input: config to run at startup
+        :param dict runtime: runtime resources
+        :param str sdk_version:  - optional - string - sdk version
+        :param dict agent_versions: - dictionary - - optional -versions of sdk, agent runner and agent proxy
+        :param str bot: bot email
+        :param str pod_type: pod type dl.InstanceCatalog
+        :param bool verify: verify the inputs
+        :param bool checkout: checkout
+        :param str module_name: module name
+        :param bool run_execution_as_process: run execution as process
+        :param int execution_timeout: execution timeout
+        :param int drain_time: drain time
+        :param str on_reset: on reset
+        :param int max_attempts: Maximum execution retries in-case of a service reset
+        :param bool force: optional - terminate old replicas immediately
+        :return: Service object
+        :rtype: dtlpy.entities.service.Service
         """
 
         if package is None:
@@ -770,8 +818,13 @@ class Packages:
 
     def deploy_from_file(self, project, json_filepath):
         """
-        :param project:
-        :param json_filepath:
+        Deploy package and service from a JSON file.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param dtlpy.entities.project.Project project: project entity
+        :param str json_filepath: path of the file to deploy
+        :return: the package and the services
         """
         with open(json_filepath, 'r') as f:
             data = json.load(f)
@@ -804,7 +857,7 @@ class Packages:
                     self.__compare_and_upload_artifacts(artifacts, package)
                 deployed_services.append(service)
         else:
-            logger.warning(msg='Package JSON do not have services.')
+            logger.warning(msg='Package JSON does not have services.')
         return deployed_services, package
 
     def __update_dict_recursive(self, d, u):
@@ -1014,16 +1067,25 @@ class Packages:
         return _json
 
     @staticmethod
-    def build_trigger_dict(actions, name='default_module', filters=None, function='run',
-                           execution_mode='Once', type_t="Event"):
+    def build_trigger_dict(actions,
+                           name='default_module',
+                           filters=None,
+                           function='run',
+                           execution_mode: entities.TriggerExecutionMode = 'Once',
+                           type_t: entities.TriggerType = "Event"):
         """
-        build trigger dict
-        :param actions:
-        :param name:
-        :param filters:
-        :param function:
-        :param execution_mode:
-        :param type_t:
+        Build a trigger dictionary to trigger FaaS. Read more about `FaaS Triggers <https://dataloop.ai/docs/faas-trigger>`_.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param actions: list of dl.TriggerAction
+        :param str name: trigger name
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
+        :param str function: function name
+        :param str execution_mode: execution mode dl.TriggerExecutionMode
+        :param str type_t: trigger type dl.TriggerType
+        :return: trigger dict
+        :rtype: dict
         """
         if not isinstance(actions, list):
             actions = [actions]
@@ -1101,14 +1163,20 @@ class Packages:
         return service_json
 
     @staticmethod
-    def generate(name=None, src_path=None, service_name=None, package_type=PackageCatalog.DEFAULT_PACKAGE_TYPE):
+    def generate(name=None,
+                 src_path: str = None,
+                 service_name: str = None,
+                 package_type=PackageCatalog.DEFAULT_PACKAGE_TYPE):
         """
-        Generate new package environment
-        :param name:
-        :param src_path:
-        :param service_name:
-        :param package_type:
-        :return:
+        Generate a new package. Provide a file path to a JSON file with all the details of the package and service to generate the package. 
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param str name: name
+        :param str src_path: source file path
+        :param str service_name: service name
+        :param str package_type: package type from PackageCatalog
+        
         """
         # name
         if name is None:
@@ -1245,25 +1313,29 @@ class Packages:
         return is_multi
 
     def test_local_package(self,
-                           cwd=None,
-                           concurrency=None,
+                           cwd: str = None,
+                           concurrency: int = None,
                            package: entities.Package = None,
-                           module_name=entities.package_defaults.DEFAULT_PACKAGE_MODULE_NAME,
-                           function_name=entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME,
-                           class_name=entities.package_defaults.DEFAULT_PACKAGE_CLASS_NAME,
-                           entry_point=entities.package_defaults.DEFAULT_PACKAGE_ENTRY_POINT,
-                           mock_file_path=None):
+                           module_name: str = entities.package_defaults.DEFAULT_PACKAGE_MODULE_NAME,
+                           function_name: str = entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME,
+                           class_name: str = entities.package_defaults.DEFAULT_PACKAGE_CLASS_NAME,
+                           entry_point: str = entities.package_defaults.DEFAULT_PACKAGE_ENTRY_POINT,
+                           mock_file_path: str = None):
         """
-        Test local package
-        :param cwd: str - path to the file
-        :param concurrency: int -the concurrency of the test
-        :param package: entities.package
-        :param module_name: str - module name
-        :param function_name: str - function name
-        :param class_name: str - class name
-        :param entry_point: str - the file to run like main.py
-        :param mock_file_path: str - the mock file that have the inputs
-        :return:
+        Test local package in local environment.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param str cwd: path to the file
+        :param int concurrency: the concurrency of the test
+        :param dtlpy.entities.package.Package package: entities.package
+        :param str module_name: module name
+        :param str function_name: function name
+        :param str class_name: class name
+        :param str entry_point: the file to run like main.py
+        :param str mock_file_path: the mock file that have the inputs
+        :return: list created by the function that tested the output
+        :rtype: list
         """
         if cwd is None:
             cwd = os.getcwd()
@@ -1301,13 +1373,19 @@ class Packages:
             package = entities.Package.from_json(_json=package, client_api=self._client_api, project=self._project)
         return package
 
-    def checkout(self, package=None, package_id=None, package_name=None):
+    def checkout(self,
+                 package: entities.Package = None,
+                 package_id: str = None,
+                 package_name: str = None):
         """
-        Checkout as package
-        :param package:
-        :param package_id:
-        :param package_name:
-        :return:
+        Checkout (switch) to a package.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param dtlpy.entities.package.Package package: package entity
+        :param str package_id: package id
+        :param str package_name: package name
+        
         """
         if package is None:
             package = self.get(package_id=package_id, package_name=package_name)
@@ -1317,10 +1395,14 @@ class Packages:
     @staticmethod
     def check_cls_arguments(cls, missing, function_name, function_inputs):
         """
-        :param cls:
-        :param missing:
-        :param function_name:
-        :param function_inputs:
+        Check class arguments. This method checks that the package function is correct.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param cls: packages class
+        :param list missing: list of the missing params
+        :param str function_name: name of function
+        :param list function_inputs: list of function inputs
         """
         # input to function and inputs definitions match
         func = getattr(cls, function_name)
@@ -1480,6 +1562,7 @@ class LocalServiceRunner:
     def get_mainpy_run_service(self):
         """
         Get mainpy run service
+
         :return:
         """
         entry_point = os.path.join(self.cwd, self.entry_point)
@@ -1499,7 +1582,9 @@ class LocalServiceRunner:
 
     def run_local_project(self, project=None):
         """
-        :param project:
+        Run local project
+
+        :param project: project entity
         """
         package_runner = self.get_mainpy_run_service()
 
@@ -1585,12 +1670,13 @@ class LocalServiceRunner:
 
     def get_field(self, field_name, field_type, mock_json, project=None, mock_inputs=None):
         """
-        Get field in mock json
-        :param field_name:
-        :param field_type:
-        :param mock_json:
-        :param project:
-        :param mock_inputs:
+        Get field in mock json.
+
+        :param field_name: field name
+        :param field_type: field type
+        :param mock_json: mock json
+        :param project: project
+        :param mock_inputs: mock inputs
         :return:
         """
         if mock_inputs is None:

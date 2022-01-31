@@ -86,6 +86,7 @@ class Recipe(entities.BaseEntity):
     def _protected_from_json(_json, client_api, project=None, dataset=None, is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
+
         :param _json: platform json
         :param client_api: ApiClient entity
         :param project: project entity
@@ -146,6 +147,7 @@ class Recipe(entities.BaseEntity):
         Returns platform _json format of object
 
         :return: platform json format of object
+        :rtype: dict
         """
         _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(Recipe)._client_api,
                                                               attr.fields(Recipe)._dataset,
@@ -174,13 +176,15 @@ class Recipe(entities.BaseEntity):
         """
         self._client_api._open_in_web(url=self.platform_url)
 
-    def delete(self):
+    def delete(self, force: bool = False):
         """
         Delete recipe from platform
 
+        :param bool force: force delete recipe
+
         :return: True
         """
-        return self.recipes.delete(self.id)
+        return self.recipes.delete(self.id, force=force)
 
     def update(self, system_metadata=False):
         """

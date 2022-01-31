@@ -6,7 +6,9 @@ logger = logging.getLogger(name='dtlpy')
 
 class Bots:
     """
-    Bots repository
+    Bots Repository
+
+    The Bots class allows the user to manage bots and their properties. See our documentation for more information on `bots <https://dataloop.ai/docs/faas-bot>`_.
     """
 
     def __init__(self, client_api: services.ApiClient, project: entities.Project):
@@ -33,8 +35,12 @@ class Bots:
     ###########
     def list(self) -> miscellaneous.List[entities.Bot]:
         """
-        Get project's bots list.
+        Get a project or package bots list.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a service.
+
         :return: List of Bots objects
+        :rtype: list
         """
         success, response = self._client_api.gen_request(req_type='get',
                                                          path='/projects/{}/bots'.format(self.project.id))
@@ -62,14 +68,20 @@ class Bots:
             raise exceptions.PlatformException(response)
         return bots
 
-    def get(self, bot_email=None, bot_id=None, bot_name=None):
+    def get(self,
+            bot_email: str = None,
+            bot_id: str = None,
+            bot_name: str = None):
         """
-        Get a Bot object
-        :param bot_email: get bot by email
-        :param bot_id: get bot by id
-        :param bot_name: get bot by name
-        :return: Bot object
+        Get a Bot object.
 
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a service.
+
+        :param str bot_email: get bot by email
+        :param str bot_id: get bot by id
+        :param str bot_name: get bot by name
+        :return: Bot object
+        :rtype: dtlpy.entities.bot.Bot
         """
         if bot_id is None:
             if bot_name is not None:
@@ -117,12 +129,20 @@ class Bots:
         assert isinstance(bot, entities.Bot)
         return bot
 
-    def delete(self, bot_id=None, bot_email=None):
+    def delete(self,
+               bot_id: str = None,
+               bot_email: str = None):
         """
-        Delete a Bot
-        :param bot_id: bot id to delete
-        :param bot_email: bot email to delete
-        :return: True
+        Delete a Bot.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a service.
+
+        You must provide at least ONE of the following params: bot_id, bot_email
+
+        :param str bot_id: bot id to delete
+        :param str bot_email: bot email to delete
+        :return: True if successful
+        :rtype: bool
         """
         if bot_id is None:
             if bot_email is None:
@@ -138,12 +158,18 @@ class Bots:
         logger.info('Bot {} deleted successfully'.format(bot_id))
         return True
 
-    def create(self, name, return_credentials: bool = False):
+    def create(self,
+               name: str,
+               return_credentials: bool = False):
         """
-        Create a new Bot
-        :param name:
-        :param return_credentials: with True well return the password when create
+        Create a new Bot.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a service.
+
+        :param str name: bot name
+        :param str return_credentials: True will return the password when created
         :return: Bot object
+        :rtype: dtlpy.entities.bot.Bot
         """
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/projects/{}/bots'.format(self.project.id),

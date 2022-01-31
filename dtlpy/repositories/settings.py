@@ -147,6 +147,13 @@ class Settings:
         return response.json()
 
     def list(self, filters: entities.Filters) -> entities.PagedEntities:
+        """
+        List settings
+
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
+        :return: Paged entity
+        :rtype: dtlpy.entities.paged_entities.PagedEntities
+        """
         if filters.resource != entities.FiltersResource.SETTINGS:
             raise exceptions.PlatformException(
                 error='400',

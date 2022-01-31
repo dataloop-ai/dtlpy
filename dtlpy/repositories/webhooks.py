@@ -46,6 +46,7 @@ class Webhooks:
                project: entities.Project = None) -> entities.Webhook:
         """
         Create web hook entity
+
         :param name:
         :param project_id:
         :param http_method:
@@ -87,8 +88,10 @@ class Webhooks:
     def list(self, filters: entities.Filters = None) -> entities.PagedEntities:
         """
         List web hooks
-        :param filters:
-        :return:
+
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
+        :return: Paged entity
+        :rtype: dtlpy.entities.paged_entities.PagedEntities
         """
         if filters is None:
             filters = entities.Filters(resource=entities.FiltersResource.WEBHOOK)
@@ -130,6 +133,7 @@ class Webhooks:
     def _list(self, filters: entities.Filters):
         """
         List web hooks
+
         :return:
         """
 
@@ -153,6 +157,7 @@ class Webhooks:
     def get(self, webhook_id=None, webhook_name=None) -> entities.Webhook:
         """
         Get Web hook
+
         :param webhook_id:
         :param webhook_name:
         :return: Web hook execution object
@@ -196,6 +201,7 @@ class Webhooks:
     def delete(self, webhook_id=None, webhook_name=None):
         """
         Delete Trigger object
+
         :param webhook_id:
         :param webhook_name:
         :return: True

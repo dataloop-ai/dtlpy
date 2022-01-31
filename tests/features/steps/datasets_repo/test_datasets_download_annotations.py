@@ -53,17 +53,32 @@ def step_impl(context):
     context.dataset.attributes = ['attr1', 'attr2']
     context.project.datasets.update(dataset=context.dataset, system_metadata=True)
     annotation1 = {'attributes': ['attr1'],
-                   'coordinates': [{'x': 100, 'y': 100},
-                                   {'x': 320, 'y': 100},
-                                   {'x': 320, 'y': 250},
-                                   {'x': 100, 'y': 250}],
+                   'coordinates': [
+                       {
+                           "x": 330,
+                           "y": 100,
+                           "z": 0
+                       },
+                       {
+                           "x": 460,
+                           "y": 208,
+                           "z": 0
+                       }],
                    'label': 'dog',
                    'type': 'box'}
+
     annotation2 = {'attributes': ['attr2'],
-                   'coordinates': [{'x': 400, 'y': 300},
-                                   {'x': 700, 'y': 300},
-                                   {'x': 700, 'y': 400},
-                                   {'x': 400, 'y': 400}],
+                   'coordinates': [
+                       {
+                           "x": 400,
+                           "y": 170,
+                           "z": 0
+                       },
+                       {
+                           "x": 560,
+                           "y": 270,
+                           "z": 0
+                       }],
                    'label': 'cat',
                    'type': 'box'}
     context.annotations = [annotation1, annotation2]

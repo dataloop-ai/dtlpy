@@ -6,6 +6,7 @@ logger = logging.getLogger(name='dtlpy')
 class DirectoryTree:
     """
     Dataset DirectoryTree
+
     """
 
     def __init__(self, _json):
@@ -22,6 +23,7 @@ class DirectoryTree:
 class SingleDirectory:
     """
     DirectoryTree single directory
+
     """
 
     def __init__(self, value, directory_tree, children=None):

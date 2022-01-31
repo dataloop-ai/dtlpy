@@ -125,6 +125,7 @@ class Package(entities.BaseEntity):
     def _protected_from_json(_json, client_api, project, is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
+
         :param _json:  platform json
         :param client_api: ApiClient entity
         :return:
@@ -199,6 +200,7 @@ class Package(entities.BaseEntity):
         Turn Package entity into a platform representation of Package
 
         :return: platform json of package
+        :rtype: dict
         """
         _json = attr.asdict(self,
                             filter=attr.filters.exclude(attr.fields(Package)._project,
@@ -377,23 +379,23 @@ class Package(entities.BaseEntity):
         """
         Deploy package
 
-        :param max_attempts: Maximum execution retries in-case of a service reset
-        :param on_reset:
-        :param drain_time:
-        :param execution_timeout:
-        :param run_execution_as_process:
-        :param module_name:
-        :param pod_type:
-        :param bot:
-        :param verify:
-        :param force: optional - terminate old replicas immediately
-        :param agent_versions:
-        :param sdk_version:
-        :param runtime:
-        :param init_input:
-        :param revision:
-        :param service_name:
-        :return:
+        :param str service_name: service name
+        :param str revision: package revision - default=latest
+        :param init_input: config to run at startup
+        :param dict runtime: runtime resources
+        :param str sdk_version:  - optional - string - sdk version
+        :param dict agent_versions: - dictionary - - optional -versions of sdk, agent runner and agent proxy
+        :param str bot: bot email
+        :param str pod_type: pod type dl.InstanceCatalog
+        :param bool verify: verify the inputs
+        :param str module_name: module name
+        :param bool run_execution_as_process: run execution as process
+        :param int execution_timeout: execution timeout
+        :param int drain_time: drain time
+        :param str on_reset: on reset
+        :param int max_attempts: Maximum execution retries in-case of a service reset
+        :param bool force: optional - terminate old replicas immediately
+        :return: Service object
         """
         return self.project.packages.deploy(package=self,
                                             service_name=service_name,
@@ -445,7 +447,7 @@ class Package(entities.BaseEntity):
         """
          Push local package
 
-        :param codebase: PackageCode object - defines how to store the package code
+        :param dtlpy.entities.codebase.Codebase codebase: PackageCode object - defines how to store the package code
         :param checkout: save package to local checkout
         :param src_path: location of pacjage codebase folder to zip
         :param package_name: name of package
@@ -472,8 +474,8 @@ class Package(entities.BaseEntity):
         """
         Push local package
 
-        :param version:
-        :param local_path:
+        :param version: version
+        :param local_path: local path
         :return:
         """
         return self.packages.pull(package=self,

@@ -55,6 +55,7 @@ class TimeSeries(entities.BaseEntity):
         Returns platform _json format of object
 
         :return: platform json format of object
+        :rtype: dict
         """
         _json = attr.asdict(self,
                             filter=attr.filters.exclude(attr.fields(TimeSeries)._project,
@@ -71,6 +72,7 @@ class TimeSeries(entities.BaseEntity):
     def delete(self):
         """
         delete the time series
+
         :return:
         """
         return self.project.times_series.delete(series=self)
@@ -81,7 +83,8 @@ class TimeSeries(entities.BaseEntity):
     def samples(self, filters=None):
         """
         get the time table according to filters
-        :param filters: Filters entity or a dictionary containing filters parameters
+
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :return:
         """
         return self.project.times_series.get_samples(series_id=self.id, filters=filters)
@@ -89,7 +92,8 @@ class TimeSeries(entities.BaseEntity):
     def add_samples(self, data):
         """
         add data to time series table
-        :param data:
+
+        :param data: data
         :return:
         """
         return self.project.times_series.add_samples(series_id=self.id, data=data)
@@ -97,7 +101,8 @@ class TimeSeries(entities.BaseEntity):
     def delete_samples(self, filters):
         """
         add data to time series table
-        :param filters: Filters entity or a dictionary containing filters parameters
+
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :return:
         """
         return self.project.times_series.delete_samples(series_id=self.id, filters=filters)
@@ -108,7 +113,8 @@ class TimeSeries(entities.BaseEntity):
     def sample(self, sample_id):
         """
         get a sample line by id
-        :param sample_id:
+
+        :param sample_id: sample id
         :return:
         """
         return self.project.times_series.get_sample(series_id=self.id,
@@ -117,8 +123,9 @@ class TimeSeries(entities.BaseEntity):
     def update_sample(self, sample_id, data):
         """
         Update a sample line by id
-        :param sample_id:
-        :param data:
+
+        :param sample_id: sample id
+        :param data: data
         :return:
         """
         return self.project.times_series.update_sample(series_id=self.id,
@@ -128,7 +135,8 @@ class TimeSeries(entities.BaseEntity):
     def delete_sample(self, sample_id):
         """
         Delete a single sample line from time series
-        :param sample_id:
+
+        :param sample_id:sample id
         :return:
         """
         return self.project.times_series.delete_sample(series_id=self.id,

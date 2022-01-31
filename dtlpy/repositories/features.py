@@ -54,7 +54,7 @@ class Features:
         Get dataset items list This is a browsing endpoint, for any given path item count will be returned,
         user is expected to perform another request then for every folder item to actually get the its item list.
 
-        :param filters: Filters entity or a dictionary containing filters parameters
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :return: json response
         """
         # prepare request
@@ -69,8 +69,9 @@ class Features:
         """
         List of features
 
-        :param filters: Filters to query the features data
+        :param dtlpy.entities.filters.Filters filters: Filters to query the features data
         :return: Pages object
+        :rtype: dtlpy.entities.paged_entities.PagedEntities
         """
         # default filters
         if filters is None:
@@ -95,11 +96,11 @@ class Features:
         paged.get_page()
         return paged
 
-    def get(self, feature_id) -> entities.Feature:
+    def get(self, feature_id: str) -> entities.Feature:
         """
         Get Feature object
 
-        :param feature_id:
+        :param str feature_id: feature id
         :return: Feature object
         """
 
@@ -114,24 +115,25 @@ class Features:
         return entities.Feature.from_json(client_api=self._client_api,
                                           _json=response.json())
 
-    def create(self, value,
-               project_id=None,
-               feature_set_id=None,
-               entity_id=None,
-               version=None,
-               parent_id=None,
-               org_id=None):
+    def create(self,
+               value,
+               project_id: str = None,
+               feature_set_id: str = None,
+               entity_id: str = None,
+               version: str = None,
+               parent_id: str = None,
+               org_id: str = None):
         """
         Create a new Feature vector
 
-        :param value: the vector (list of floats)
-        :param project_id: project id
-        :param feature_set_id: FeatureSet id
-        :param entity_id: id of the entity the feature vector is linked to (item.id, annotation.id etc)
-        :param version:
-        :param parent_id: optional: parent FeatureSet id
-        :param org_id: org id
-        :return:
+        :param str value: the vector (list of floats)
+        :param str project_id: project id
+        :param str feature_set_id: FeatureSet id
+        :param str entity_id: id of the entity the feature vector is linked to (item.id, annotation.id etc)
+        :param str version: version
+        :param str parent_id: optional: parent FeatureSet id
+        :param str org_id: org id
+        :return: Feature vector
         """
         if project_id is None:
             if self._project is None:
@@ -166,12 +168,13 @@ class Features:
         return entities.Feature.from_json(client_api=self._client_api,
                                           _json=response.json()[0])
 
-    def delete(self, feature_id):
+    def delete(self, feature_id: str):
         """
         Delete feature vector
-        :param feature_id: feature id to delete
 
-        return success: bool
+        :param str feature_id: feature id to delete
+        :return: success
+        :rtype: bool
         """
 
         success, response = self._client_api.gen_request(req_type="delete",

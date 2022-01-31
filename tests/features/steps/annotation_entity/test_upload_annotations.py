@@ -34,6 +34,10 @@ def step_impl(context, annotations_path):
                'label': ann.label,
                'coordinates': ann.coordinates,
                'metadata': metadata}
+
+        if 'coordinateVersion' in ann['metadata']['system']:
+            ann['metadata']['system'].pop('coordinateVersion')
+
         assert ann in context.annotations
 
 
@@ -91,7 +95,7 @@ def step_impl(context, annotation_format, im_path):
     filters.sort_by(field='createdAt', value=dl.FiltersOrderByDirection.DESCENDING)
     annotations_get = context.item.annotations.list(filters=filters)
     context.item = context.dataset.items.get(item_id=context.item.id)
-    
+
     # make sure we have height and width 
     if context.item.height is None:
         context.item.height = 768

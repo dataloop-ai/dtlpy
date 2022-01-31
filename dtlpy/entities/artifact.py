@@ -12,15 +12,21 @@ logger = logging.getLogger(name='dtlpy')
 class Artifact(entities.Item):
 
     @staticmethod
-    def _protected_from_json(_json, client_api, dataset=None, project=None, is_fetched=True):
+    def _protected_from_json(
+            _json: dict,
+            client_api,
+            dataset=None,
+            project=None,
+            is_fetched: bool = True):
         """
         Same as from_json but with try-except to catch if error
-        :param _json: platform json
+
+        :param dict _json: platform json
         :param client_api: ApiClient entity
-        :param dataset: dataset entity
-        :param project: project entity
-        :param is_fetched: is Entity fetched from Platform
-        :return:
+        :param dtlpy.entities.dataset.Dataset dataset: dataset entity
+        :param dtlpy.entities.project.Project project: project entity
+        :param bool is_fetched: is Entity fetched from Platform
+        :return: status and the artifact object
         """
         try:
             artifact = Artifact.from_json(_json=_json,
@@ -35,15 +41,22 @@ class Artifact(entities.Item):
         return status, artifact
 
     @classmethod
-    def from_json(cls, _json, client_api, dataset=None, project=None, is_fetched=True):
+    def from_json(cls,
+                  _json: dict,
+                  client_api,
+                  dataset=None,
+                  project=None,
+                  is_fetched: bool = True):
         """
         Build an Artifact entity object from a json
-        :param _json: _json response from host
+
+        :param dict _json: platform json
         :param client_api: ApiClient entity
-        :param dataset: Artifact's dataset
-        :param project: project entity
-        :param is_fetched: is Entity fetched from Platform
+        :param dtlpy.entities.dataset.Dataset dataset: dataset entity
+        :param dtlpy.entities.project.Project project: project entity
+        :param bool is_fetched: is Entity fetched from Platform
         :return: Artifact object
+        :rtype: dtlpy.entities.artifact.Artifact
         """
 
         inst = cls(

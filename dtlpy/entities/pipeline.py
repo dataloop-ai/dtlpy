@@ -106,6 +106,7 @@ class Pipeline(entities.BaseEntity):
         Turn Package entity into a platform representation of Package
 
         :return: platform json of package
+        :rtype: dict
         """
         _json = attr.asdict(self,
                             filter=attr.filters.exclude(attr.fields(Pipeline)._project,
@@ -247,6 +248,7 @@ class Pipeline(entities.BaseEntity):
     def execute(self, execution_input=None):
         """
         execute a pipeline and return the execute
+
         :param execution_input: list of the dl.FunctionIO or dict of pipeline input - example {'item': 'item_id'}
         :return: entities.PipelineExecution object
         """

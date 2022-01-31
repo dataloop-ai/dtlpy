@@ -7,7 +7,9 @@ logger = logging.getLogger(name='dtlpy')
 
 class Triggers:
     """
-    Triggers repository
+    Triggers Repository
+
+    The Triggers class allows users to manage triggers and their properties. Triggers activate services. See our documentation for more information on `triggers <https://dataloop.ai/docs/faas-trigger>`_.
     """
 
     def __init__(self,
@@ -81,7 +83,9 @@ class Triggers:
 
     def name_validation(self, name: str):
         """
-        :param name:
+        This method validates the trigger name. If name is not valid, this method will return an error. Otherwise, it will not return anything.
+
+        :param str name: trigger name
         """
         url = '/piper-misc/naming/triggers/{}'.format(name)
 
@@ -119,33 +123,36 @@ class Triggers:
         Create a Trigger. Can create two types: a cron trigger or an event trigger.
         Inputs are different for each type
 
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a service.
+
         Inputs for all types:
 
-        :param service_id: Id of services to be triggered
-        :param trigger_type: can be cron or event. use enum dl.TriggerType for the full list
-        :param name: name of the trigger
-        :param webhook_id: id for webhook to be called
-        :param function_name: the function name to be called when triggered. must be defined in the package
-        :param project_id: project id where trigger will work
-        :param active: optional - True/False, default = True
+        :param str service_id: Id of services to be triggered
+        :param str trigger_type: can be cron or event. use enum dl.TriggerType for the full list
+        :param str name: name of the trigger
+        :param str webhook_id: id for webhook to be called
+        :param str  function_name: the function name to be called when triggered (must be defined in the package)
+        :param str  project_id: project id where trigger will work
+        :param bool active: optional - True/False, default = True, if true trigger is active
 
         Inputs for event trigger:
-        :param filters: optional - Item/Annotation metadata filters, default = none
-        :param resource: optional - Dataset/Item/Annotation/ItemStatus, default = Item
-        :param actions: optional - Created/Updated/Deleted, default = create
-        :param execution_mode: how many time trigger should be activate. default is "Once". enum dl.TriggerExecutionMode
+        :param dtlpy.entities.filters.Filters filters: optional - Item/Annotation metadata filters, default = none
+        :param str resource: optional - Dataset/Item/Annotation/ItemStatus, default = Item
+        :param str actions: optional - Created/Updated/Deleted, default = create
+        :param str execution_mode: how many times trigger should be activated; default is "Once". enum dl.TriggerExecutionMode
 
         Inputs for cron trigger:
         :param start_at: iso format date string to start activating the cron trigger
         :param end_at: iso format date string to end the cron activation
         :param inputs: dictionary "name":"val" of inputs to the function
-        :param cron: cron spec specifying when it should run. more information: https://en.wikipedia.org/wiki/Cron
-        :param pipeline_id: Id of pipeline to be triggered
+        :param str cron: cron spec specifying when it should run. more information: https://en.wikipedia.org/wiki/Cron
+        :param str pipeline_id: Id of pipeline to be triggered
         :param pipeline: pipeline entity to be triggered
-        :param pipeline_node_id: Id of pipeline root node to be triggered
+        :param str pipeline_node_id: Id of pipeline root node to be triggered
         :param root_node_namespace: namespace of pipeline root node to be triggered
 
         :return: Trigger entity
+        :rtype: dtlpy.entities.trigger.Trigger
         """
         scope = kwargs.get('scope', None)
 
@@ -271,9 +278,13 @@ class Triggers:
     def get(self, trigger_id=None, trigger_name=None) -> entities.BaseTrigger:
         """
         Get Trigger object
-        :param trigger_id:
-        :param trigger_name:
-        :return: Trigger object
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a service.
+
+        :param str trigger_id: trigger id
+        :param str  trigger_name: trigger name
+        :return: Trigger entity
+        :rtype: dtlpy.entities.trigger.Trigger
         """
         # request
         if trigger_id is not None:
@@ -318,9 +329,12 @@ class Triggers:
         """
         Delete Trigger object
 
-        :param trigger_id:
-        :param trigger_name:
-        :return: True
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a service.
+
+        :param str trigger_id: trigger id
+        :param str trigger_name: trigger name
+        :return: True is successful error if not
+        :rtype: bool
         """
         if trigger_id is None:
             if trigger_name is None:
@@ -339,9 +353,13 @@ class Triggers:
 
     def update(self, trigger: entities.BaseTrigger) -> entities.BaseTrigger:
         """
+        Update trigger
 
-        :param trigger: Trigger entity
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a service.
+
+        :param dtlpy.entities.trigger.Trigger trigger: Trigger entity
         :return: Trigger entity
+        :rtype: dtlpy.entities.trigger.Trigger
         """
         # payload
         payload = trigger.to_json()
@@ -396,9 +414,13 @@ class Triggers:
 
     def list(self, filters: entities.Filters = None) -> entities.PagedEntities:
         """
-        List project packages
-        :param filters:
-        :return:
+        List triggers of a project, package, or service.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a service.
+
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
+        :return: Paged entity
+        :rtype: dtlpy.entities.paged_entities.PagedEntities
         """
         if filters is None:
             filters = entities.Filters(resource=entities.FiltersResource.TRIGGER)
@@ -426,7 +448,9 @@ class Triggers:
 
     def resource_information(self, resource, resource_type, action='Created'):
         """
-        return which function should run on a item (based on global triggers)
+        Returns which function should run on an item (based on global triggers).
+
+        **Prerequisites**: You must be a **superuser** to run this method.
 
         :param resource: 'Item' / 'Dataset' / etc
         :param resource_type: dictionary of the resource object

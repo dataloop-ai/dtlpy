@@ -64,6 +64,7 @@ class FeatureSet(entities.BaseEntity):
     def _protected_from_json(_json, client_api, is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
+
         :param _json: entity's object json
         :param client_api:
         :return:
@@ -111,6 +112,7 @@ class FeatureSet(entities.BaseEntity):
         Returns platform _json format of object
 
         :return: platform json format of object
+        :rtype: dict
         """
 
         _json = {'id': self.id,
@@ -132,5 +134,8 @@ class FeatureSet(entities.BaseEntity):
     def delete(self):
         """
         Delete the feature set
+
+        :return: success
+        :rtype: bool
         """
         return self.feature_sets.delete(feature_set_id=self.id)

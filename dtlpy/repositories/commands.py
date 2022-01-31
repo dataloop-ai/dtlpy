@@ -23,7 +23,8 @@ class Commands:
     def list(self):
         """
         List of commands
-        :return:
+
+        :return: list of commands
         """
         url = '/commands'
 
@@ -38,12 +39,15 @@ class Commands:
                                        response.json()])
         return commands
 
-    def get(self, command_id=None, url=None) -> entities.Command:
+    def get(self,
+            command_id: str = None,
+            url: str = None
+            ) -> entities.Command:
         """
         Get Service command object
 
-        :param command_id:
-        :param url: command url
+        :param str command_id:
+        :param str url: command url
         :return: Command object
         """
         if url is None:
@@ -100,11 +104,11 @@ class Commands:
                                                message="Command {}: '{}'".format(command.status, command.error))
         return command
 
-    def abort(self, command_id):
+    def abort(self, command_id: str):
         """
         Abort Command
 
-        :param command_id
+        :param str command_id: command id
         :return:
         """
         # request

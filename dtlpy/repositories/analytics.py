@@ -36,13 +36,15 @@ class Analytics:
     ############
     #  methods #
     ############
-    def get_samples(self, query=None, return_field='samples', return_raw=False) -> pd.DataFrame:
+    def get_samples(self, query=None, return_field: str = 'samples', return_raw: bool = False) -> pd.DataFrame:
         """
         Get Analytics table
-        :param query: match filters to get specific data from series
-        :param return_field: name of field to return from response. default: "samples"
-        :param return_raw: return the response with out converting
-        :return:
+
+        :param dict query: match filters to get specific data from series
+        :param str return_field: name of field to return from response. default: "samples"
+        :param bool return_raw: return the response with out converting
+        :return: Analytics table
+        :rtype: pd.DataFrame
         """
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/projects/{}/analytics/itemQuery'.format(

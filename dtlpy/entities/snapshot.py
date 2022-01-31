@@ -166,6 +166,7 @@ class Snapshot(entities.BaseEntity):
         Turn Snapshot entity into a platform representation of Snapshot
 
         :return: platform json of snapshot
+        :rtype: dict
         """
         _json = attr.asdict(self,
                             filter=attr.filters.exclude(attr.fields(Snapshot)._project,
@@ -350,8 +351,8 @@ class Snapshot(entities.BaseEntity):
                              overwrite=False,
                              ):
         """
-
         Download binary file from bucket.
+
         :param local_path: local binary file or folder to upload
         :param overwrite: optional - default = False
         :return:
@@ -369,6 +370,7 @@ class Snapshot(entities.BaseEntity):
         Upload binary file to bucket. get by name, id or type.
         If bucket exists - overwriting binary
         Else and if create==True a new bucket will be created and uploaded
+
         :param local_path: local binary file or folder to upload
         :param overwrite: optional - default = False
         :return:
@@ -387,7 +389,7 @@ class Snapshot(entities.BaseEntity):
               tags: list = None,
               ):
         """
-            Clones and creates a new snapshot out of existing one
+        Clones and creates a new snapshot out of existing one
 
         :param snapshot_name: `str` new snapshot name
         :param bucket: optional - `dl.Bucket` if passed replaces the current bucket
@@ -418,7 +420,7 @@ class Snapshot(entities.BaseEntity):
 
         :param partition: `dl.SnapshotPartitionType` name of the partition
         :param local_path: local path directory to download the data
-        :param filters:  dl.entities.Filters to add the specific partitions constraint to
+        :param dtlpy.entities.filters.Filters filters:  dl.entities.Filters to add the specific partitions constraint to
 
         :return List `str` of the new downloaded path of each item
         """
@@ -432,7 +434,7 @@ class Snapshot(entities.BaseEntity):
         Updates all items returned by filters in the dataset to specific partition
 
         :param partition:  `dl.entities.SnapshotPartitionType` to set to
-        :param filters:  dl.entities.Filters to add the specific partitions constraint to
+        :param dtlpy.entities.filters.Filters filters:  dl.entities.Filters to add the specific partitions constraint to
         :return:  dl.PagedEntities
         """
         self.dataset.set_partition(partition, filters=filters)
@@ -442,7 +444,7 @@ class Snapshot(entities.BaseEntity):
         Returns PagedEntity of items from one or more partitions
 
         :param partitions: `dl.entities.SnapshotPartitionType` or a list. Name of the partitions
-        :param filters:  dl.Filters to add the specific partitions constraint to
+        :param dtlpy.entities.filters.Filters filters:  dl.Filters to add the specific partitions constraint to
         :param batch_size: `int` how many items per page
         :return: `dl.PagedEntities` of `dl.Item`  preforms items.list()
         """
@@ -451,6 +453,7 @@ class Snapshot(entities.BaseEntity):
     def add_metric_samples(self, samples):
         """
         Adds samples to the `TimeSeries` DB to be used for metric performance
+
         :param samples: list of dict - must contain: `item_id`, `gt_id`, `prd_id`, and 'score`
         :return:
         """

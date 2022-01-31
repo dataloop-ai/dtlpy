@@ -5,7 +5,7 @@ Feature: Snapshot repository query testing
         And There is a project by the name of "models_list"
         And There is a dataset by the name of "snapshots_dataset"
 
-
+    @testrail-C4525320
     Scenario: List by model name
         Given I create "1" models
         And I create "6" snapshots

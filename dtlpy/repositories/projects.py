@@ -9,7 +9,11 @@ logger = logging.getLogger(name='dtlpy')
 
 class Projects:
     """
-    Projects repository
+    Projects Repository
+
+    The Projects class allows the user to manage projects and their properties.
+
+    For more information on Projects see the `Dataloop documentation <https://dataloop.ai/docs/project#>`_  and `SDK documentation <https://dataloop.ai/docs/sdk-projects>`_.
     """
 
     def __init__(self, client_api: services.ApiClient, org=None):
@@ -68,11 +72,18 @@ class Projects:
     def platform_url(self):
         return self._client_api._get_resource_url("projects")
 
-    def open_in_web(self, project_name: str = None, project_id: str = None, project: entities.Project = None):
+    def open_in_web(self,
+                    project_name: str = None,
+                    project_id: str = None,
+                    project: entities.Project = None):
         """
-        :param project_name:
-        :param project_id:
-        :param project:
+        Open the project in our web platform.
+
+        **Prerequisites**: All users can open a project in the web.
+
+        :param str project_name: project name
+        :param str project_id: project id
+        :param dtlpy.entities.project.Project project: project entity
         """
         if project_name is not None:
             project = self.get(project_name=project_name)
@@ -89,12 +100,16 @@ class Projects:
                  project_id: str = None,
                  project: entities.Project = None):
         """
-        Check-out a project
-        :param identifier: project name or partial id
-        :param project_name:
-        :param project_id:
-        :param project:
-        :return:
+        Checkout (switch) to a project to work on it.
+
+        **Prerequisites**: All users can open a project in the web.
+
+        You must provide at least ONE of the following params: project_id, project_name.
+
+        :param str identifier: project name or partial id
+        :param str project_name: project name
+        :param str project_id: project id
+        :param dtlpy.entities.project.Project project: project entity
         """
         if project is None:
             if project_id is not None or project_name is not None:
@@ -137,9 +152,15 @@ class Projects:
 
     def add_member(self, email: str, project_id: str, role: entities.MemberRole = entities.MemberRole.DEVELOPER):
         """
-        :param email:
-        :param project_id:
-        :param role: "owner" ,"engineer" ,"annotator" ,"annotationManager"
+        Add a member to the project.
+
+        **Prerequisites**: You must be in the role of an *owner* to add a member to a project.
+
+        :param str email: member email
+        :param str project_id: project id
+        :param role: "owner", "engineer", "annotator", "annotationManager"
+        :return: dict that represent the user
+        :rtype: dict
         """
         url_path = '/projects/{}/members/{}'.format(project_id, email)
         payload = dict(role=role)
@@ -158,9 +179,15 @@ class Projects:
 
     def update_member(self, email: str, project_id: str, role: entities.MemberRole = entities.MemberRole.DEVELOPER):
         """
-        :param email:
-        :param project_id:
-        :param role: "owner" ,"engineer" ,"annotator" ,"annotationManager"
+        Update member's information/details in the project.
+
+        **Prerequisites**: You must be in the role of an *owner* to update a member.
+
+        :param str email: member email
+        :param str project_id: project id
+        :param role: "owner", "engineer", "annotator", "annotationManager"
+        :return: dict that represent the user
+        :rtype: dict
         """
         url_path = '/projects/{}/members/{}'.format(project_id, email)
         payload = dict(role=role)
@@ -179,8 +206,14 @@ class Projects:
 
     def remove_member(self, email: str, project_id: str):
         """
-        :param email:
-        :param project_id:
+        Remove a member from the project.
+
+        **Prerequisites**: You must be in the role of an *owner* to delete a member from a project.
+
+        :param str email: member email
+        :param str project_id: project id
+        :return: dict that represents the user
+        :rtype: dict
         """
         url_path = '/projects/{}/members/{}'.format(project_id, email)
         success, response = self._client_api.gen_request(req_type='delete',
@@ -192,8 +225,14 @@ class Projects:
 
     def list_members(self, project: entities.Project, role: entities.MemberRole = None):
         """
-        :param project:
+        List the project members.
+
+        **Prerequisites**: You must be in the role of an *owner* to list project members.
+
+        :param dtlpy.entities.project.Project project: project entity
         :param role: "owner" ,"engineer" ,"annotator" ,"annotationManager"
+        :return: list of the project members
+        :rtype: list
         """
         url_path = '/projects/{}/members'.format(project.id)
 
@@ -217,7 +256,10 @@ class Projects:
 
     def list(self) -> miscellaneous.List[entities.Project]:
         """
-        Get users project's list.
+        Get users' project list.
+
+        **Prerequisites**: You must be a **superuser** to list all users' projects.
+
         :return: List of Project objects
         """
         if self._org is None:
@@ -254,13 +296,18 @@ class Projects:
             checkout: bool = False,
             fetch: bool = None) -> entities.Project:
         """
-        Get a Project object
-        :param project_name: optional - search by name
-        :param project_id: optional - search by id
-        :param checkout:
-        :param fetch: optional - fetch entity from platform, default taken from cookie
-        :return: Project object
+        Get a Project object.
 
+        **Prerequisites**: You must be in the role of an *owner* to get a project object.
+
+        You must check out to a project or provide at least one of the following params: project_id, project_name
+
+        :param str project_name: optional - search by name
+        :param str project_id: optional - search by id
+        :param bool checkout: checkout
+        :param bool fetch: optional - fetch entity from platform, default taken from cookie
+        :return: Project object
+        :rtype: dtlpy.entities.project.Project
         """
         if fetch is None:
             fetch = self._client_api.fetch_entities
@@ -270,7 +317,7 @@ class Projects:
             if project is None:
                 raise exceptions.PlatformException(
                     error='400',
-                    message='No checked-out Project was found, must checkout or provide an identifier in inputs')
+                    message='No checked-out Project was found. You must checkout to a project or provide an identifier in inputs')
         elif fetch:
             if project_id is not None:
                 if not isinstance(project_id, str):
@@ -321,12 +368,15 @@ class Projects:
                really: bool = False) -> bool:
         """
         Delete a project forever!
-        :param project_name: optional - search by name
-        :param project_id: optional - search by id
-        :param sure: are you sure you want to delete?
-        :param really: really really?
 
-        :return: True
+        **Prerequisites**: You must be in the role of an *owner* to delete a project.
+
+        :param str project_name: optional - search by name
+        :param str project_id: optional - search by id
+        :param bool sure: Are you sure you want to delete?
+        :param boll really: Really really sure?
+        :return: True if sucess error if not
+        :rtype: bool
         """
         if sure and really:
             if project_id is None:
@@ -347,10 +397,14 @@ class Projects:
                project: entities.Project,
                system_metadata: bool = False) -> entities.Project:
         """
-        Update a project
-        :param project:
-        :param system_metadata: True, if you want to change metadata system
+        Update a project information (e.g., name, member roles, etc.).
+
+        **Prerequisites**: You must be in the role of an *owner* to add a member to a project.
+
+        :param dtlpy.entities.project.Project project: project entity
+        :param bool system_metadata: True, if you want to change metadata system
         :return: Project object
+        :rtype: dtlpy.entities.project.Project
         """
         url_path = '/projects/{}'.format(project.id)
         if system_metadata:
@@ -367,10 +421,14 @@ class Projects:
                project_name: str,
                checkout: bool = False) -> entities.Project:
         """
-        Create a new project
-        :param project_name:
-        :param checkout:
+        Create a new project.
+
+        **Prerequisites**: Any user can create a project.
+
+        :param str project_name: project name
+        :param checkout: checkout
         :return: Project object
+        :rtype: dtlpy.entities.project.Project
         """
         payload = {'name': project_name}
         success, response = self._client_api.gen_request(req_type='post',

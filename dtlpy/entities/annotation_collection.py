@@ -159,7 +159,7 @@ class AnnotationCollection(entities.BaseEntity):
              color=None,
              alpha=None):
         """
-            Show annotations according to annotation_format
+        Show annotations according to annotation_format
 
         :param image: empty or image to draw on
         :param height: height
@@ -216,6 +216,7 @@ class AnnotationCollection(entities.BaseEntity):
                      alpha=None):
         """
         create a video from frames
+
         :param input_filepath: str - input file path
         :param output_filepath: str - out put file path
         :param thickness: int - thickness of the annotations
@@ -306,7 +307,7 @@ class AnnotationCollection(entities.BaseEntity):
                  orientation=0,
                  alpha=None):
         """
-            Save annotations to file
+        Save annotations to file
 
         :param filepath: path to save annotation
         :param img_filepath: img file path - needed for img_mask
@@ -562,7 +563,12 @@ class AnnotationCollection(entities.BaseEntity):
             self.add(annotation_definition=entities.Segmentation(geo=class_mask, label=label))
 
     def to_json(self):
+        """
+        Convert annotation object to a platform json representation
 
+        :return: platform json
+        :rtype: dict
+        """
         if self.item is None:
             item_id = None
             item_name = None
@@ -590,7 +596,9 @@ class AnnotationCollection(entities.BaseEntity):
     #########################
     def get_frame(self, frame_num):
         """
-        :param frame_num:
+        Get frame
+
+        :param frame_num: frame num
         :return: AnnotationCollection
         """
         frame_collection = AnnotationCollection(item=self.item)

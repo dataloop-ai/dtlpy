@@ -85,6 +85,7 @@ class Bot(entities.User):
         Returns platform _json format of object
 
         :return: platform json format of object
+        :rtype: dict
         """
         _json = attr.asdict(self,
                             filter=attr.filters.exclude(attr.fields(Bot)._project,
@@ -107,5 +108,6 @@ class Bot(entities.User):
         Delete the bot
 
         :return: True
+        :rtype: bool
         """
         return self.bots.delete(bot_id=self.id)

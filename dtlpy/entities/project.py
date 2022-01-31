@@ -236,6 +236,7 @@ class Project(entities.BaseEntity):
     def _protected_from_json(_json, client_api):
         """
         Same as from_json but with try-except to catch if error
+
         :param _json: platform json
         :param client_api: ApiClient entity
         :return:
@@ -279,6 +280,7 @@ class Project(entities.BaseEntity):
         Returns platform _json format of object
 
         :return: platform json format of object
+        :rtype: dict
         """
         output_dict = attr.asdict(self,
                                   filter=attr.filters.exclude(attr.fields(Project)._client_api,
@@ -301,9 +303,10 @@ class Project(entities.BaseEntity):
         """
         Delete the project forever!
 
-        :param sure: are you sure you want to delete?
-        :param really: really really?
+        :param bool sure: are you sure you want to delete?
+        :param bool really: really really?
         :return: True
+        :rtype: bool
         """
         return self.projects.delete(project_id=self.id,
                                     sure=sure,
@@ -313,7 +316,9 @@ class Project(entities.BaseEntity):
         """
         Update the project
 
+        :param bool system_metadata: to update system metadata
         :return: Project object
+        :rtype: dtlpy.entities.project.Project
         """
         return self.projects.update(project=self, system_metadata=system_metadata)
 
@@ -321,7 +326,6 @@ class Project(entities.BaseEntity):
         """
         Checkout the project
 
-        :return:
         """
         self.projects.checkout(project=self)
 
@@ -329,18 +333,47 @@ class Project(entities.BaseEntity):
         """
         Open the project in web platform
 
-        :return:
         """
         self._client_api._open_in_web(url=self.platform_url)
 
     def add_member(self, email, role: MemberRole = MemberRole.DEVELOPER):
+        """
+        Add a member to the project.
+
+        :param str email: member email
+        :param role: "owner" ,"engineer" ,"annotator" ,"annotationManager"
+        :return: dict that represent the user
+        :rtype: dict
+        """
         return self.projects.add_member(email=email, role=role, project_id=self.id)
 
     def update_member(self, email, role: MemberRole = MemberRole.DEVELOPER):
+        """
+        Update member's information/details from the project.
+
+        :param str email: member email
+        :param role: "owner" ,"engineer" ,"annotator" ,"annotationManager"
+        :return: dict that represent the user
+        :rtype: dict
+        """
         return self.projects.update_member(email=email, role=role, project_id=self.id)
 
     def remove_member(self, email):
+        """
+        Remove a member from the project.
+
+        :param str email: member email
+        :return: dict that represent the user
+        :rtype: dict
+        """
         return self.projects.remove_member(email=email, project_id=self.id)
 
     def list_members(self, role: MemberRole = None):
+        """
+        List the project members.
+
+        :param role: "owner" ,"engineer" ,"annotator" ,"annotationManager"
+        :return: list of the project members
+        :rtype: list
+        """
         return self.projects.list_members(project=self, role=role)

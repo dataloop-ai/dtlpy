@@ -89,6 +89,12 @@ class Webhook(entities.BaseEntity):
         return self._webhooks
 
     def to_json(self):
+        """
+        Returns platform _json format of object
+
+        :return: platform json format of object
+        :rtype: dict
+        """
         _json = attr.asdict(
             self,
             filter=attr.filters.exclude(

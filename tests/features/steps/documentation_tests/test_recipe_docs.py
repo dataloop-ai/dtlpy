@@ -19,7 +19,7 @@ def step_impl(context):
 
 @behave.then(u'Delete Recipe')
 def step_impl(context):
-    context.dataset.recipes.get(recipe_id=context.recipe.id).delete()
+    context.dataset.recipes.get(recipe_id=context.recipe.id).delete(force=True)
 
 @behave.then(u'Recipe Switch')
 def step_impl(context):

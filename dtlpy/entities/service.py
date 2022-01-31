@@ -6,7 +6,6 @@ from typing import List
 import attr
 from .. import services, repositories, entities
 
-
 logger = logging.getLogger(name='dtlpy')
 
 
@@ -72,6 +71,7 @@ class Service(entities.BaseEntity):
     def _protected_from_json(_json: dict, client_api: services.ApiClient, package=None, project=None, is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
+
         :param _json: platform json
         :param client_api: ApiClient entity
         :param package:
@@ -94,10 +94,11 @@ class Service(entities.BaseEntity):
     @classmethod
     def from_json(cls, _json: dict, client_api: services.ApiClient, package=None, project=None, is_fetched=True):
         """
+        Build a service entity object from a json
 
         :param _json: platform json
         :param client_api: ApiClient entity
-        :param package:
+        :param package: package entity
         :param project: project entity
         :param is_fetched: is Entity fetched from Platform
         :return:
@@ -232,6 +233,12 @@ class Service(entities.BaseEntity):
     # methods #
     ###########
     def to_json(self):
+        """
+        Returns platform _json format of object
+
+        :return: platform json format of object
+        :rtype: dict
+        """
         _json = attr.asdict(
             self,
             filter=attr.filters.exclude(
@@ -295,7 +302,8 @@ class Service(entities.BaseEntity):
     def update(self, force=False):
         """
         Update Service changes to platform
-        :param force:
+
+        :param force: force update
         :return: Service entity
         """
         return self.services.update(service=self, force=force)
@@ -320,19 +328,20 @@ class Service(entities.BaseEntity):
             execution_id=None, function_name=None, replica_id=None, system=False, view=True, until_completed=True):
         """
         Get service logs
-        :param size:
+
+        :param int size: size
         :param checkpoint:
         :param start: iso format time
         :param end: iso format time
-        :param follow: filters
-        :param text:
-        :param execution_id:
-        :param function_name:
-        :param replica_id:
-        :param system:
-        :param view:
-        :param until_completed:
-        :return: Service entity
+        :param follow: keep stream future logs
+        :param text: text
+        :param str execution_id: execution id
+        :param str function_name: function name
+        :param str replica_id: replica id
+        :param system: system
+        :param view: view
+        :param bool until_completed: wait until completed
+        :return: ServiceLog entity
         """
         return self.services.log(service=self,
                                  size=size,
@@ -435,19 +444,20 @@ class Service(entities.BaseEntity):
             **kwargs
     ) -> object:
         """
-        @rtype: List[UserSetting]
-        @param project_id: str
-        @param task_id: str
-        @param dataset_id: str
-        @param org_id: str
-        @param user_email: str
-        @param slots: List[PackageSlot]
-        @param role: Role
-        @param prevent_override: bool
-        @param visible: bool
-        @param icon: str
-        @param kwargs: system
-        @return: List of user setting for activated slots
+        Activate service slots
+
+        :param str project_id: project id
+        :param str task_id: task id
+        :param str dataset_id: dataset id
+        :param str org_id: org id
+        :param str user_email: user email
+        :param list slots: list of entities.PackageSlot
+        :param str role: user role MemberOrgRole.ADMIN, MemberOrgRole.OWNER, MemberOrgRole.MEMBER
+        :param bool prevent_override: prevent override
+        :param bool visible: visible
+        :param str icon: icon
+        :param kwargs:
+        :return: List of user setting for activated slots
         """
         return self.services.activate_slots(
             service=self,

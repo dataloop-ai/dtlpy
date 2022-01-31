@@ -144,7 +144,7 @@ class BaseModelAdapter:
         :param output_path: `str` save everything to this folder. default <root_path>/"output"
 
         :param partitions: `dl.SnapshotPartitionType` or list of partitions, defaults for all partitions
-        :param filters: `dl.Filter` in order to select only part of the data
+        :param dtlpy.entities.filters.Filters filters: `dl.Filter` in order to select only part of the data
         """
         if partitions is None:
             partitions = list(entities.SnapshotPartitionType)

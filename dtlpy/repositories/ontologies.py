@@ -8,7 +8,9 @@ logger = logging.getLogger(name='dtlpy')
 
 class Ontologies:
     """
-    Ontologies repository
+    Ontologies Repository
+
+    The Ontologies class allows users to manage ontologies and their properties. Read more about ontology in our `SDK docs <https://dataloop.ai/docs/sdk-ontology>`_.
     """
 
     def __init__(self, client_api: services.ApiClient,
@@ -83,15 +85,23 @@ class Ontologies:
     ###########
     # methods #
     ###########
-    def create(self, labels, title=None, project_ids=None, attributes=None) -> entities.Ontology:
+    def create(self,
+               labels,
+               title=None,
+               project_ids=None,
+               attributes=None
+               ) -> entities.Ontology:
         """
-        Create a new ontology
+        Create a new ontology.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
 
         :param labels: recipe tags
-        :param title: ontology title, name
-        :param project_ids: recipe project/s
-        :param attributes: recipe attributes
+        :param str title: ontology title, name
+        :param list project_ids: recipe project/s
+        :param list attributes: recipe attributes
         :return: Ontology object
+        :rtype: dtlpy.entities.ontology.Ontology
         """
         project_ids = self.__get_project_ids(project_ids=project_ids)
         if attributes is None:
@@ -168,8 +178,9 @@ class Ontologies:
 
     def __list(self, filters: entities.Filters) -> entities.PagedEntities:
         """
-        List project ontologies
-        :param filters: Filters entity or a dictionary containing filters parameters
+        List project ontologies.
+        
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :return:
         """
         paged = entities.PagedEntities(items_repository=self,
@@ -183,8 +194,11 @@ class Ontologies:
     def list(self, project_ids=None) -> miscellaneous.List[entities.Ontology]:
         """
         List ontologies for recipe
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
         :param project_ids:
-        :return:
+        :return: list of all the ontologies
         """
         if self._recipe is not None:
             ontologies = [ontology_id for ontology_id in self.recipe.ontology_ids]
@@ -229,12 +243,15 @@ class Ontologies:
             status = False
         return status, ontology
 
-    def get(self, ontology_id) -> entities.Ontology:
+    def get(self, ontology_id: str) -> entities.Ontology:
         """
-        Get Ontology object
+        Get Ontology object to use in your code.
 
-        :param ontology_id: ontology id
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param str ontology_id: ontology id
         :return: Ontology object
+        :rtype: dtlpy.entities.ontology.Ontology
         """
         success, response = self._client_api.gen_request(req_type="get",
                                                          path="/ontologies/{}".format(ontology_id))
@@ -250,10 +267,13 @@ class Ontologies:
 
     def delete(self, ontology_id):
         """
-        Delete Ontology from platform
+        Delete Ontology from the platform.
 
-        :param ontology_id: ontology_id id
-        :return: True
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param ontology_id: ontology id
+        :return: True if success
+        :rtype: bool
         """
         success, response = self._client_api.gen_request(req_type="delete",
                                                          path="/ontologies/%s" % ontology_id)
@@ -265,11 +285,14 @@ class Ontologies:
 
     def update(self, ontology: entities.Ontology, system_metadata=False) -> entities.Ontology:
         """
-        Update Ontology metadata
+        Update the Ontology metadata.
 
-       :param ontology: Ontology object
-       :param system_metadata: bool - True, if you want to change metadata system
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+       :param dtlpy.entities.ontology.Ontology ontology: Ontology object
+       :param bool system_metadata: bool - True, if you want to change metadata system
        :return: Ontology object
+       :rtype: dtlpy.entities.ontology.Ontology
        """
         url_path = "/ontologies/%s" % ontology.id
         if system_metadata:
@@ -293,9 +316,9 @@ class Ontologies:
     @staticmethod
     def labels_to_roots(labels):
         """
-        Converts labels dict to a list of platform representation of labels
+        Converts labels dictionary to a list of platform representation of labels.
 
-        :param labels: labels dict
+        :param dict labels: labels dict
         :return: platform representation of labels
         """
         roots = list()

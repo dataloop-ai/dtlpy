@@ -117,6 +117,7 @@ class BaseTrigger(entities.BaseEntity):
     def _protected_from_json(_json, client_api, project, service=None):
         """
         Same as from_json but with try-except to catch if error
+
         :param _json: platform json
         :param client_api: ApiClient entity
         :param project: project entity
@@ -137,6 +138,8 @@ class BaseTrigger(entities.BaseEntity):
     @classmethod
     def from_json(cls, _json, client_api, project, service=None):
         """
+        Build a trigger entity object from a json
+
         :param _json: platform json
         :param client_api: ApiClient entity
         :param project: project entity
@@ -218,6 +221,7 @@ class BaseTrigger(entities.BaseEntity):
         Returns platform _json format of object
 
         :return: platform json format of object
+        :rtype: dict
         """
         # get excluded
         _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(BaseTrigger)._client_api,
@@ -255,6 +259,7 @@ class BaseTrigger(entities.BaseEntity):
 
     def update(self):
         """
+        Update Trigger object
 
         :return: Trigger entity
         """
@@ -272,6 +277,12 @@ class Trigger(BaseTrigger):
     resource = attr.ib(default=TriggerResource.ITEM, repr=False)
 
     def to_json(self):
+        """
+        Returns platform _json format of object
+
+        :return: platform json format of object
+        :rtype: dict
+        """
         _json = super().to_json()
 
         operation = {
@@ -296,6 +307,8 @@ class Trigger(BaseTrigger):
     @classmethod
     def from_json(cls, _json, client_api, project, service=None):
         """
+        Build a trigger entity object from a json
+
         :param _json: platform json
         :param client_api: ApiClient entity
         :param project: project entity
@@ -344,6 +357,12 @@ class CronTrigger(BaseTrigger):
     cron = attr.ib(default=None)
 
     def to_json(self):
+        """
+        Returns platform _json format of object
+
+        :return: platform json format of object
+        :rtype: dict
+        """
         _json = super().to_json()
         operation = {
             'type': self._op_type,
@@ -366,6 +385,8 @@ class CronTrigger(BaseTrigger):
     @classmethod
     def from_json(cls, _json, client_api, project, service=None):
         """
+        Build a trigger entity object from a json
+
         :param _json: platform json
         :param client_api: ApiClient entity
         :param project: project entity
