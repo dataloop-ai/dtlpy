@@ -26,6 +26,14 @@ with open('requirements.txt') as f:
     requirements = f.read()
 
 setup(name='dtlpy',
+      classifiers=[
+          'Programming Language :: Python',
+          'Programming Language :: Python :: 3',
+          'Programming Language :: Python :: 3 :: Only',
+          'Programming Language :: Python :: 3.6',
+          'Programming Language :: Python :: 3.7',
+          'Programming Language :: Python :: 3.8',
+      ],
       version='1.49.20',
       description='SDK and CLI for Dataloop platform',
       author='Or Shabtay',
@@ -38,7 +46,7 @@ setup(name='dtlpy',
       setup_requires=['wheel'],
       install_requires=requirements,
       test_suite='tests',
-      python_requires='>=3.5.4',
+      python_requires='>=3.6.11',
       scripts=['dtlpy/dlp/dlp.py', 'dtlpy/dlp/dlp.bat', 'dtlpy/dlp/dlp'],
       include_package_data=True,
       entry_points={
