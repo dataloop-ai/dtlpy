@@ -7,9 +7,13 @@ import copy
 import os
 
 from .. import repositories, entities, services, exceptions
-from .annotation import ViewAnnotationOptions
+from .annotation import ViewAnnotationOptions, ExportVersion
 
 logger = logging.getLogger(name='dtlpy')
+
+
+class ExportMetadata(Enum):
+    FORM_JSON = 'from_json'
 
 
 class ItemStatus(str, Enum):
@@ -387,6 +391,7 @@ class Item(entities.BaseEntity):
             with_text=False,
             annotation_filters=None,
             alpha=None,
+            export_version=ExportVersion.V1
     ):
         """
         Download dataset by filters.
@@ -404,6 +409,8 @@ class Item(entities.BaseEntity):
         :param with_text: optional - add text to annotations, default = False
         :param annotation_filters: Filters entity to filter annotations for download
         :param alpha: opacity value [0 1], default 1
+        :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
+
         :return: Output (list)
         """
         # if dir - concatenate local path and item name
@@ -428,7 +435,8 @@ class Item(entities.BaseEntity):
                                    annotation_filters=annotation_filters,
                                    thickness=thickness,
                                    alpha=alpha,
-                                   with_text=with_text)
+                                   with_text=with_text,
+                                   export_version=export_version)
 
     def delete(self):
         """

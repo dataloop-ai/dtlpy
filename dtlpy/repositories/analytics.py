@@ -63,3 +63,12 @@ class Analytics:
         else:
             raise exceptions.PlatformException(response)
         return df
+
+    def report_metrics(self, samples):
+        if not isinstance(samples, list):
+            samples = [samples]
+
+        success, response = self._client_api.gen_request(req_type='post',
+                                                         path='/analytics/metric',
+                                                         json_req=samples)
+        return success

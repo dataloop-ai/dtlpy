@@ -304,6 +304,7 @@ def measure_items(ref_items, ref_project, ref_dataset, ref_name,
                 line['{}_attributes_score'.format(tool_type)] = res['mean_attributes_scores']
                 line['{}_ref_number'.format(tool_type)] = res['n_annotations_set_one']
                 line['{}_test_number'.format(tool_type)] = res['n_annotations_set_two']
+                line['{}_match_number'.format(tool_type)] = res['n_annotations_matched_total']
         summary.append(line)
     df = pd.DataFrame(summary)
     # Drop column only if all the values are None

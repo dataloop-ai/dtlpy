@@ -462,27 +462,29 @@ class Services:
         if not success:
             raise exceptions.PlatformException(response)
 
-    def _create(self,
-                service_name: str = None,
-                package: entities.Package = None,
-                module_name: str = None,
-                bot: Union[entities.Bot, str] = None,
-                revision: str or int = None,
-                init_input: Union[List[entities.FunctionIO], entities.FunctionIO, dict] = None,
-                runtime: Union[entities.KubernetesRuntime, dict] = None,
-                pod_type: entities.InstanceCatalog = None,
-                project_id: str = None,
-                sdk_version: str = None,
-                agent_versions: dict = None,
-                verify: bool = True,
-                driver_id: str = None,
-                run_execution_as_process: bool = None,
-                execution_timeout: int = None,
-                drain_time: int = None,
-                on_reset: str = None,
-                max_attempts: int = None,
-                secrets=None, **kwargs
-                ) -> entities.Service:
+    def _create(
+        self,
+        service_name: str = None,
+        package: entities.Package = None,
+        module_name: str = None,
+        bot: Union[entities.Bot, str] = None,
+        revision: str or int = None,
+        init_input: Union[List[entities.FunctionIO], entities.FunctionIO, dict] = None,
+        runtime: Union[entities.KubernetesRuntime, dict] = None,
+        pod_type: entities.InstanceCatalog = None,
+        project_id: str = None,
+        sdk_version: str = None,
+        agent_versions: dict = None,
+        verify: bool = True,
+        driver_id: str = None,
+        run_execution_as_process: bool = None,
+        execution_timeout: int = None,
+        drain_time: int = None,
+        on_reset: str = None,
+        max_attempts: int = None,
+        secrets=None, 
+        **kwargs
+        ) -> entities.Service:
         """
         Create service entity.
 
@@ -516,24 +518,27 @@ class Services:
                 raise exceptions.PlatformException('400', 'Please provide param package')
             package = self._package
 
-        if package is not None and package.service_config is not None:
-            module_name, agent_versions, runtime, pod_type = self.set_service_config(module_name,
-                                                                                     agent_versions,
-                                                                                     runtime, pod_type,
-                                                                                     package.service_config)
+        if verify is not None:
+            logger.warning('verify attribute has been deprecated and will be ignored')
+
         is_global = kwargs.get('is_global', None)
         jwt_forward = kwargs.get('jwt_forward', None)
+
         if is_global is not None or jwt_forward is not None:
             logger.warning(
                 'Params jwt_forward and is_global are restricted to superuser. '
-                'If you are not a superuser this action will not work')
+                'If you are not a superuser this action will not work'
+            )
+
+        service_config = dict()
+        if package is not None and package.service_config is not None:
+            service_config = package.service_config
 
         if agent_versions is None:
             if sdk_version is None:
-                sdk_version = __version__
+                sdk_version = service_config.get('versions', dict()).get('dtlpy', __version__)
             agent_versions = {
-                "dtlpy": sdk_version,
-                "verify": verify
+                "dtlpy": sdk_version
             }
 
         if project_id is None:
@@ -544,8 +549,6 @@ class Services:
             elif self._project is not None:
                 project_id = self._project.id
 
-        if module_name is None:
-            module_name = entities.package_defaults.DEFAULT_PACKAGE_MODULE_NAME
         if service_name is None:
             service_name = 'default-service'
 
@@ -557,7 +560,6 @@ class Services:
             'initParams': self._parse_init_input(init_input=init_input),
             'botUserName': self._get_bot_email(bot=bot),
             'versions': agent_versions,
-            'moduleName': module_name,
             'packageRevision': revision if revision is not None else package.version,
             'driverId': driver_id,
         }
@@ -570,21 +572,18 @@ class Services:
         if runtime is not None:
             if isinstance(runtime, entities.KubernetesRuntime):
                 runtime = runtime.to_json()
-            payload['runtime'] = runtime
-        else:
-            payload['runtime'] = {'gpu': False,
-                                  'numReplicas': 1}
 
-        if pod_type is None:
-            if 'gpu' in payload['runtime'] and payload['runtime']['gpu']:
-                pod_type = 'gpu-k80-s'
+        if pod_type is not None:
+            if runtime is None:
+                runtime = {'podType': pod_type}
             else:
-                pod_type = 'regular-s'
-        elif 'podType' not in payload['runtime'] and payload['runtime']['podType'] != pod_type:
-            raise exceptions.PlatformException('400', 'Different pod_types given in param and in runtime.\n'
-                                                      'pod_type param = {}\n'
-                                                      'pod_type in runtime = {}'.format(pod_type,
-                                                                                        payload['runtime']['podType']))
+                runtime['podType'] = pod_type
+
+        if runtime is not None:
+            payload['runtime'] = runtime
+
+        if module_name is not None:
+            payload['moduleName'] = module_name
 
         if is_global is not None:
             payload['global'] = is_global
@@ -594,9 +593,6 @@ class Services:
 
         if jwt_forward is not None:
             payload['useUserJwt'] = jwt_forward
-
-        if 'podType' not in payload['runtime']:
-            payload['runtime']['podType'] = pod_type
 
         if run_execution_as_process is not None:
             payload['runExecutionAsProcess'] = run_execution_as_process
@@ -611,19 +607,23 @@ class Services:
             payload['executionTimeout'] = execution_timeout
 
         # request
-        success, response = self._client_api.gen_request(req_type='post',
-                                                         path='/services',
-                                                         json_req=payload)
+        success, response = self._client_api.gen_request(
+            req_type='post',
+            path='/services',
+            json_req=payload
+        )
 
         # exception handling
         if not success:
             raise exceptions.PlatformException(response)
 
         # return entity
-        return entities.Service.from_json(_json=response.json(),
-                                          client_api=self._client_api,
-                                          package=package,
-                                          project=self._project)
+        return entities.Service.from_json(
+            _json=response.json(),
+            client_api=self._client_api,
+            package=package,
+            project=self._project
+        )
 
     def delete(self, service_name: str = None, service_id: str = None):
         """
@@ -948,29 +948,6 @@ class Services:
                                                                           stream_logs=stream_logs)
         return execution
 
-    def set_service_config(self, module_name, agent_versions, runtime, pod_type, service_config):
-        """
-        Set service default configuration.
-
-        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a package.
-
-        :param str module_name: module name
-        :param dict runtime: runtime dict of service config
-        :param str pod_type: pod_type
-        :param dict agent_versions: agent versions
-        :param dict service_config: service config
-        :return:
-        """
-        if module_name is None:
-            module_name = service_config.get('moduleName', None)
-        if agent_versions is None:
-            agent_versions = service_config.get('versions', None)
-        if runtime is None:
-            runtime = service_config.get('runtime', None)
-        if pod_type is None:
-            pod_type = service_config.get('podType', None)
-        return module_name, agent_versions, runtime, pod_type
-
     def deploy(self,
                service_name: str = None,
                package: entities.Package = None,
@@ -1008,7 +985,7 @@ class Services:
         :param dict runtime: runtime resources
         :param str pod_type: pod type dl.InstanceCatalog
         :param str sdk_version:  - optional - string - sdk version
-        :param str agent_versions: - dictionary - - optional -versions of sdk, agent runner and agent proxy
+        :param str agent_versions: - dictionary - - optional -versions of sdk
         :param bool verify: if true, verify the inputs
         :param bool checkout: if true, checkout (switch) to service
         :param str module_name: module name
@@ -1062,7 +1039,8 @@ class Services:
             else:
                 raise exceptions.PlatformException(
                     error='400',
-                    message='Unknown init_input type. expecting list or dict, got: {}'.format(type(init_input)))
+                    message='Unknown init_input type. expecting list or dict, got: {}'.format(type(init_input))
+                )
 
         if project_id is None:
             if self._project is not None:
@@ -1089,6 +1067,8 @@ class Services:
                 service.package_revision = revision
             if agent_versions is not None:
                 service.versions = agent_versions
+            elif sdk_version:
+                service.versions = {'dtlpy': sdk_version}
             if driver_id is not None:
                 service.driver_id = driver_id
             if secrets is not None:

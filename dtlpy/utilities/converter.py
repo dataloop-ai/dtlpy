@@ -115,6 +115,12 @@ class Converter:
         self.return_error_filepath = return_error_filepath
 
     def attach_agent_progress(self, progress: Progress, progress_update_frequency: int = None):
+        """
+        Attach agent progress.
+
+        :param Progress progress: the progress object that follows the work
+        :param int progress_update_frequency: progress update frequency in percentages
+        """
         self._progress = progress
         self._progress_update_frequency = progress_update_frequency if progress_update_frequency is not None \
             else self._progress_update_frequency
@@ -134,7 +140,7 @@ class Converter:
                     with self._checkpoint_lock:
                         self._progress_checkpoint = progress
             except Exception:
-                logger.warning('[Converter] Failed to update agent progress')
+                logger.warning('[Converter] Failed to update agent progress.')
 
     def _get_labels(self):
         self.labels = dict()
@@ -146,22 +152,24 @@ class Converter:
     def convert_dataset(
             self,
             dataset,
-            to_format,
-            local_path,
+            to_format: str,
+            local_path: str,
             conversion_func=None,
             filters=None,
             annotation_filter=None
     ):
         """
-        Convert entire dataset
+        Convert entire dataset.
 
-        :param annotation_filter:
-        :param dataset:
-        :param to_format:
-        :param local_path:
-        :param conversion_func: Custom conversion service
-        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
-        :return:
+        **Prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param dtlpy.entities.dataet.Dataset dataset: dataset entity
+        :param str to_format: AnnotationFormat to convert to – AnnotationFormat.COCO, AnnotationFormat.YOLO, AnnotationFormat.VOC, AnnotationFormat.DATALOOP
+        :param str local_path: path to save the result to
+        :param Callable conversion_func: Custom conversion service
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filter parameters
+        :param dtlpy.entities.filters.Filters annotation_filter: Filter entity
+        :return: the error log file path if there are errors and the coco json if the format is coco
         """
         if to_format.lower() == AnnotationFormat.COCO:
             coco_json, has_errors, log_filepath = self.__convert_dataset_to_coco(
@@ -737,7 +745,7 @@ class Converter:
 
     def _upload_directory(self, local_items_path, local_annotations_path, from_format, conversion_func=None, **kwargs):
         """
-        Convert annotation files in entire directory
+        Convert annotation files in entire directory.
 
         :param local_items_path:
         :param local_annotations_path:
@@ -866,29 +874,31 @@ class Converter:
                                    ref=report_ref)
 
     def upload_local_dataset(self,
-                             from_format,
+                             from_format: AnnotationFormat,
                              dataset,
-                             local_items_path=None,
-                             local_labels_path=None,
-                             local_annotations_path=None,
-                             only_bbox=False,
+                             local_items_path: str = None,
+                             local_labels_path: str = None,
+                             local_annotations_path: str = None,
+                             only_bbox: bool = False,
                              filters=None,
                              remote_items=None
                              ):
         """
-        Convert and Upload local dataset to dataloop platform
+        Convert and upload local dataset to dataloop platform.
 
-        :param remote_items:
-        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
-        :param only_bbox: only for coco datasets
-        :param from_format:
-        :param dataset:
-        :param local_items_path:
-        :param local_annotations_path:
-        :param local_labels_path:
-        :param local_items_path:
-        :return:
+        **Prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param str from_format: AnnotationFormat to convert to – AnnotationFormat.COCO, AnnotationFormat.YOLO, AnnotationFormat.VOC, AnnotationFormat.DATALOOP
+        :param dtlpy.entities.dataset.Dataset dataset: dataset entity
+        :param str local_items_path: path to items to upload
+        :param str local_annotations_path: path to annotations to upload
+        :param str local_labels_path: path to labels to upload
+        :param bool only_bbox: only for coco datasets, if True upload only bbox
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filter parameters
+        :param list remote_items: list of the items to upload
+        :return: the error log file path if there are errors
         """
+
         if remote_items is None:
             remote_items = local_items_path is None
 
@@ -919,16 +929,23 @@ class Converter:
                 remote_items=remote_items
             )
 
-    def convert_directory(self, local_path, to_format, from_format, dataset, conversion_func=None):
+    def convert_directory(self,
+                          local_path: str,
+                          to_format: AnnotationFormat,
+                          from_format: AnnotationFormat,
+                          dataset,
+                          conversion_func=None):
         """
-        Convert annotation files in entire directory
+        Convert annotation files in entire directory.
 
-        :param local_path:
-        :param to_format:
-        :param from_format:
-        :param conversion_func:
-        :param dataset:
-        :return:
+        **Prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param str local_path: path to the directory
+        :param str to_format: AnnotationFormat to convert to – AnnotationFormat.COCO, AnnotationFormat.YOLO, AnnotationFormat.VOC, AnnotationFormat.DATALOOP
+        :param str from_format: AnnotationFormat to convert from – AnnotationFormat.COCO, AnnotationFormat.YOLO, AnnotationFormat.VOC, AnnotationFormat.DATALOOP
+        :param dtlpy.entities.dataset.Dataset dataset: dataset entity
+        :param Callable conversion_func: Custom conversion service
+        :return: the error log file path if there are errors
         """
         file_count = sum(len(files) for _, _, files in os.walk(local_path))
         reporter = Reporter(
@@ -1028,21 +1045,32 @@ class Converter:
 
         return item_id, annotations
 
-    def convert_file(self, to_format, from_format, file_path, save_locally=False, save_to=None, conversion_func=None,
-                     item=None, pbar=None, upload=False, **_):
+    def convert_file(self,
+                     to_format: str,
+                     from_format: str,
+                     file_path: str,
+                     save_locally: bool = False,
+                     save_to: str = None,
+                     conversion_func=None,
+                     item=None,
+                     pbar=None,
+                     upload: bool = False,
+                     **_):
         """
-        Convert file containing annotations
+        Convert file containing annotations.
 
-        :param to_format:
-        :param from_format:
-        :param file_path:
-        :param pbar:
-        :param upload:
-        :param save_locally:
-        :param save_to:
-        :param conversion_func:
-        :param item:
-        :return:
+        **Prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param str to_format: AnnotationFormat to convert to – AnnotationFormat.COCO, AnnotationFormat.YOLO, AnnotationFormat.VOC, AnnotationFormat.DATALOOP
+        :param str from_format: AnnotationFormat to convert from – AnnotationFormat.COCO, AnnotationFormat.YOLO, AnnotationFormat.VOC, AnnotationFormat.DATALOOP
+        :param str file_path: path of the file to convert
+        :param tqdm pbar: tqdm object that follows the work (progress bar)
+        :param bool upload: if True upload
+        :param bool save_locally: If True, save locally
+        :param str save_to: path to save the result to
+        :param Callable conversion_func: Custom conversion service
+        :param dtlpy.entities.item.Item item: item entity
+        :return: annotation list, errors
         """
         item_id, annotations = self._extract_annotations_from_file(
             from_format=from_format,
@@ -1091,13 +1119,14 @@ class Converter:
 
     def save_to_file(self, save_to, to_format, annotations, item=None):
         """
-        Save annotations to a file
+        Save annotations to a file.
 
-        :param save_to:
-        :param to_format:
-        :param annotations:
-        :param item:
-        :return:
+        **Prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param str save_to: path to save the result to
+        :param to_format: AnnotationFormat to convert to – AnnotationFormat.COCO, AnnotationFormat.YOLO, AnnotationFormat.VOC, AnnotationFormat.DATALOOP
+        :param list annotations: annotation list to convert
+        :param dtlpy.entities.item.Item item: item entity
         """
         # what file format
         if self.save_to_format is None:
@@ -1166,16 +1195,23 @@ class Converter:
                 ),
             )
 
-    def convert(self, annotations, from_format, to_format, conversion_func=None, item=None):
+    def convert(self,
+                annotations,
+                from_format: str,
+                to_format: str,
+                conversion_func=None,
+                item=None):
         """
-        Convert annotations list or single annotation
+        Convert annotation list or single annotation.
 
-        :param item:
-        :param annotations:
-        :param from_format:
-        :param to_format:
-        :param conversion_func:
-        :return:
+        **Prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param dtlpy.entities.item.Item item: item entity
+        :param list or AnnotationCollection annotations: annotations list to convert
+        :param str from_format: AnnotationFormat to convert to – AnnotationFormat.COCO, AnnotationFormat.YOLO, AnnotationFormat.VOC, AnnotationFormat.DATALOOP
+        :param str to_format: AnnotationFormat to convert to – AnnotationFormat.COCO, AnnotationFormat.YOLO, AnnotationFormat.VOC, AnnotationFormat.DATALOOP
+        :param Callable conversion_func: Custom conversion service
+        :return: the annotations
         """
         # check known format
         self._check_formats(from_format=from_format, to_format=to_format, conversion_func=conversion_func)
@@ -1229,6 +1265,15 @@ class Converter:
 
     @staticmethod
     def from_voc(annotation, **_):
+        """
+        Convert from VOC format to DATALOOP format. Use this as conversion_func for functions that ask for this param.
+
+        **Prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param annotation: annotations to convert
+        :return: converted Annotation entity
+        :rtype: dtlpy.entities.annotation.Annotation
+        """
         bndbox = annotation.find('bndbox')
 
         if bndbox is None:
@@ -1257,6 +1302,17 @@ class Converter:
         return entities.Annotation.new(annotation_definition=ann_def)
 
     def from_yolo(self, annotation, item=None, **kwargs):
+        """
+        Convert from YOLO format to DATALOOP format. Use this as conversion_func param for functions that ask for this param.
+
+        **Prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param annotation: annotations to convert
+        :param dtlpy.entities.item.Item item: item entity
+        :param kwargs: additional params
+        :return: converted Annotation entity
+        :rtype: dtlpy.entities.annotation.Annotation
+        """
         (label_id, x, y, w, h) = annotation
         label_id = int(label_id)
 
@@ -1286,6 +1342,17 @@ class Converter:
         return entities.Annotation.new(annotation_definition=ann_def, item=item)
 
     def to_yolo(self, annotation, item=None, **_):
+        """
+        Convert from DATALOOP format to YOLO format. Use this as conversion_func param for functions that ask for this param.
+
+        **Prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param dtlpy.entities.annotation.Annotation or dict annotation: annotations to convert
+        :param dtlpy.entities.item.Item item: item entity
+        :param **_: additional params
+        :return: converted Annotation
+        :rtype: tuple
+        """
         if not isinstance(annotation, entities.Annotation):
             if item is None:
                 item = self.dataset.items.get(item_id=annotation['itemId'])
@@ -1329,6 +1396,16 @@ class Converter:
         raise Exception('label category id not found: {}'.format(category_id))
 
     def from_coco(self, annotation, **kwargs):
+        """
+        Convert from COCO format to DATALOOP format. Use this as conversion_func param for functions that ask for this param.
+
+        **Prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param annotation: annotations to convert
+        :param kwargs: additional params
+        :return: converted Annotation entity
+        :rtype: dtlpy.entities.annotation.Annotation
+        """
         item = kwargs.get('item', None)
         _id = annotation.get('id', None)
         category_id = annotation.get('category_id', None)
@@ -1375,6 +1452,17 @@ class Converter:
 
     @staticmethod
     def to_coco(annotation, item=None, **_):
+        """
+        Convert from DATALOOP format to COCO format. Use this as conversion_func param for functions that ask for this param.
+
+        **Prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param dtlpy.entities.annotation.Annotation or dict annotation: annotations to convert
+        :param dtlpy.entities.item.Item item: item entity
+        :param **_: additional params
+        :return: converted Annotation
+        :rtype: dict
+        """
         item = Converter.__get_item_shape(item=item)
         height = item.height if item is not None else None
         width = item.width if item is not None else None
@@ -1442,6 +1530,17 @@ class Converter:
 
     @staticmethod
     def to_voc(annotation, item=None, **_):
+        """
+        Convert from DATALOOP format to VOC format. Use this as conversion_func param for functions that ask for this param.
+
+        **Prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param dtlpy.entities.annotation.Annotation or dict annotation: annotations to convert
+        :param dtlpy.entities.item.Item item: item entity
+        :param **_: additional params
+        :return: converted Annotation
+        :rtype: dict
+        """
         if not isinstance(annotation, entities.Annotation):
             annotation = entities.Annotation.from_json(annotation, item=item)
 
@@ -1472,8 +1571,25 @@ class Converter:
         return ann
 
     @staticmethod
-    def custom_format(annotation, conversion_func, i_annotation=None, annotations=None, from_format=None,
+    def custom_format(annotation,
+                      conversion_func,
+                      i_annotation=None,
+                      annotations=None,
+                      from_format=None,
                       item=None, **_):
+        """
+        Custom convert function.
+
+        **Prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param dtlpy.entities.annotation.Annotation or dict annotation: annotations to convert
+        :param Callable conversion_func: Custom conversion service
+        :param int i_annotation: annotation index
+        :param list annotations: list of annotations
+        param str from_format: AnnotationFormat to convert to – AnnotationFormat.COCO, AnnotationFormat.YOLO, AnnotationFormat.VOC, AnnotationFormat.DATALOOP
+        :param dtlpy.entities.item.Item item: item entity
+        :return: converted Annotation
+        """
         if from_format == AnnotationFormat.DATALOOP and isinstance(annotation, dict):
             annotation = entities.Annotation.from_json(_json=annotation, item=item)
 

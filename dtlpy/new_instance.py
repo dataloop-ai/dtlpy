@@ -123,7 +123,6 @@ class Dtlpy:
         NOT_EQUAL = 'ne'
         EQUAL = 'eq'
         GREATER_THAN = 'gt'
-        GLOB = 'glob'
         LESS_THAN = 'lt'
 
     class FiltersMethod:

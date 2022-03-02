@@ -289,14 +289,43 @@ class Task:
         """
         return self.tasks.update(task=self, system_metadata=system_metadata)
 
-    def create_qa_task(self, due_date, assignee_ids):
+    def create_qa_task(self,
+                       due_date,
+                       assignee_ids,
+                       filters=None,
+                       items=None,
+                       query=None,
+                       workload=None,
+                       metadata=None,
+                       available_actions=None,
+                       wait=True,
+                       ):
         """
         Create a new QA Task
 
         :param float due_date: date to when finish the task
         :param list assignee_ids: list of assignee
+        :param entities.Filters filters: filter to the task
+        :param List[entities.Item] items: item to insert to the task
+        :param entities.Filters query: filter to the task
+        :param List[WorkloadUnit] workload: list WorkloadUnit for the task assignee
+        :param dict metadata: metadata for the task
+        :param list available_actions: list of available actions to the task
+        :param bool wait: wait for the command to finish
+        :return: task object
+        :rtype: dtlpy.entities.task.Task
         """
-        return self.tasks.create_qa_task(task=self, due_date=due_date, assignee_ids=assignee_ids)
+        return self.tasks.create_qa_task(task=self,
+                                         due_date=due_date,
+                                         assignee_ids=assignee_ids,
+                                         filters=filters,
+                                         items=items,
+                                         query=query,
+                                         workload=workload,
+                                         metadata=metadata,
+                                         available_actions=available_actions,
+                                         wait=wait,
+                                         )
 
     def create_assignment(self, assignment_name, assignee_id, items=None, filters=None):
         """

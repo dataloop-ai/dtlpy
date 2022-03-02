@@ -251,14 +251,11 @@ class CommandExecutor:
                 remote_path = [t.strip() for t in args.remote_path.split(",")]
                 if len(remote_path) == 1:
                     remote_path = remote_path[0]
-                    if '*' in remote_path:
-                        filters.add(field="filename", values=remote_path, operator='glob')
-                    else:
-                        filters.add(field="filename", values=remote_path)
+                    filters.add(field="filename", values=remote_path)
                 elif len(remote_path) > 1:
                     for item in remote_path:
                         if '*' in item:
-                            filters.add(field="dir", values=item, operator='glob', method='or')
+                            filters.add(field="dir", values=item, method='or')
                             remote_path.pop(remote_path.index(item))
                     filters.add(field="dir", values=remote_path, operator=entities.FiltersOperations.IN, method='or')
 

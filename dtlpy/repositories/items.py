@@ -60,7 +60,7 @@ class Items:
     ###########
     # methods #
     ###########
-    
+
     def set_items_entity(self, entity):
         """
         Set the item entity type to `Artifact <https://dataloop.ai/docs/auto-annotation-service?#uploading-model-weights-as-artifacts>`_, Item, or Codebase.
@@ -72,8 +72,6 @@ class Items:
         else:
             raise exceptions.PlatformException(error="403",
                                                message="Unable to set given entity. Entity give: {}".format(entity))
-
-
 
     def get_all_items(self, filters: entities.Filters = None) -> [entities.Item]:
         """
@@ -452,7 +450,8 @@ class Items:
             include_annotations_in_output: bool = True,
             export_png_files: bool = False,
             filter_output_annotations: bool = False,
-            alpha: float = None
+            alpha: float = None,
+            export_version=entities.ExportVersion.V1
     ):
         """
         Download dataset items by filters.
@@ -481,6 +480,7 @@ class Items:
         :param bool export_png_files: default - if True, semantic annotations should be exported as png files
         :param bool filter_output_annotations: default - False, given an export by filter - determine if to filter out annotations
         :param float alpha: opacity value [0 1], default 1
+        :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
         :return: generator of local_path per each downloaded item
         :rtype: generator or single item
         """
@@ -503,7 +503,8 @@ class Items:
             avoid_unnecessary_annotation_download=avoid_unnecessary_annotation_download,
             include_annotations_in_output=include_annotations_in_output,
             export_png_files=export_png_files,
-            filter_output_annotations=filter_output_annotations
+            filter_output_annotations=filter_output_annotations,
+            export_version=export_version
         )
 
     def upload(
@@ -518,7 +519,8 @@ class Items:
             overwrite: bool = False,
             item_metadata: dict = None,
             output_entity=entities.Item,
-            no_output: bool = False
+            no_output: bool = False,
+            export_version: str = entities.ExportVersion.V1
     ):
         """
         Upload local file to dataset.
@@ -536,6 +538,7 @@ class Items:
         :param bool overwrite: optional - default = False
         :param output_entity: output type
         :param bool no_output: do not return the items after upload
+        :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
         :return: Output (generator/single item)
         :rtype: generator or single item
         """
@@ -556,7 +559,8 @@ class Items:
             # config
             overwrite=overwrite,
             # metadata to upload with items
-            item_metadata=item_metadata
+            item_metadata=item_metadata,
+            export_version=export_version
         )
 
     @property

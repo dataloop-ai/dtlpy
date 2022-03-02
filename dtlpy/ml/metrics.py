@@ -27,6 +27,8 @@ class Results:
         matched_set_two = total_set_two - unmatched_set_two
         # sanity
         assert matched_set_one == matched_set_two, 'matched numbers are not the same'
+        assert df['annotation_score'].shape[0] == (unmatched_set_one + unmatched_set_two + matched_set_one), \
+            'mis-match number if scores and annotations'
         return {
             'annotation_type': self.annotation_type,
             'mean_annotations_scores': df['annotation_score'].mean(),

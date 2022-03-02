@@ -16,7 +16,7 @@
 from . import package_defaults
 from .annotation_definitions import BaseAnnotationDefinition
 from .base_entity import BaseEntity
-from .item import Item, ItemStatus, Modality, ModalityTypeEnum, ModalityRefTypeEnum
+from .item import Item, ItemStatus, Modality, ModalityTypeEnum, ModalityRefTypeEnum, ExportMetadata
 from .links import Link, ItemLink, UrlLink, LinkTypeEnum
 from .trigger import Trigger, TriggerResource, TriggerAction, TriggerExecutionMode, BaseTrigger, CronTrigger, \
     TriggerType
@@ -24,7 +24,7 @@ from .project import Project, MemberRole
 from .artifact import Artifact
 from .dataset import Dataset, ExpirationOptions
 from .codebase import Codebase
-from .annotation import Annotation, FrameAnnotation, ViewAnnotationOptions, AnnotationStatus, AnnotationType
+from .annotation import Annotation, FrameAnnotation, ViewAnnotationOptions, AnnotationStatus, AnnotationType, ExportVersion
 from .annotation_collection import AnnotationCollection
 from .paged_entities import PagedEntities
 from .filters import Filters, FiltersKnownFields, FiltersResource, FiltersOperations, FiltersMethod, \
@@ -57,12 +57,13 @@ from .snapshot import Snapshot, OntologySpec, SnapshotPartitionType
 from .bucket import BucketType, Bucket, ItemBucket, GCSBucket, LocalBucket
 from .driver import Driver
 from .pipeline import Pipeline
-from .node import PipelineConnection, PipelineNode, PipelineConnectionPort, PipelineNodeIO, TaskNode,\
+from .node import PipelineConnection, PipelineNode, PipelineConnectionPort, PipelineNodeIO, TaskNode, \
     CodeNode, FunctionNode, PipelineNodeType, PipelineNameSpace, DatasetNode
 from .pipeline_execution import PipelineExecution, PipelineExecutionNode
 from .feature import Feature
 from .feature_set import FeatureSet, FeatureEntityType
 from .organization import Organization, OrganizationsPlans, MemberOrgRole
+from .analytic import ServiceSample, ExecutionSample, PipelineExecutionSample
 from .integration import Integration
 from .driver import Driver, ExternalStorage
 from .setting import Role, PlatformEntityType, SettingsValueTypes, SettingsTypes, SettingsSectionNames, SettingScope, \

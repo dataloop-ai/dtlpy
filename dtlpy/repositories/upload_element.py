@@ -22,6 +22,7 @@ class BaseUploadElement:
         self.link_dataset_id = None
         self.root = all_upload_elements['root']
         self.filename = all_upload_elements['filename']
+        self.export_version = all_upload_elements['export_version']
 
 
 class BinaryUploadElement(BaseUploadElement):
@@ -58,7 +59,8 @@ class DirUploadElement(BaseUploadElement):
             annotations_filepath = filepath.replace(self.upload_item_element,
                                                     self.upload_annotations_element)
             # remove image extension
-            annotations_filepath, _ = os.path.splitext(annotations_filepath)
+            if self.export_version == entities.ExportVersion.V1:
+                annotations_filepath, _ = os.path.splitext(annotations_filepath)
             # add json extension
             annotations_filepath += ".json"
         else:
@@ -91,7 +93,8 @@ class ExternalItemUploadElement(BaseUploadElement):
             # change path to annotations
             annotations_filepath = filepath.replace(self.upload_item_element, self.upload_annotations_element)
             # remove image extension
-            annotations_filepath, _ = os.path.splitext(annotations_filepath)
+            if self.export_version == entities.ExportVersion.V1:
+                annotations_filepath, _ = os.path.splitext(annotations_filepath)
             # add json extension
             annotations_filepath += ".json"
         else:
@@ -120,7 +123,8 @@ class FileUploadElement(BaseUploadElement):
             # change path to annotations
             annotations_filepath = filepath.replace(self.upload_item_element, self.upload_annotations_element)
             # remove image extension
-            annotations_filepath, _ = os.path.splitext(annotations_filepath)
+            if self.export_version == entities.ExportVersion.V1:
+                annotations_filepath, _ = os.path.splitext(annotations_filepath)
             # add json extension
             annotations_filepath += ".json"
         else:

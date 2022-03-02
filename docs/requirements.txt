@@ -8,7 +8,7 @@ tabulate==0.8.3
 tqdm==4.32.2
 Pillow<=9.1
 PyJWT==1.7.1
-jinja2==2.11.3
+jinja2>=2.11.3, <3.0.2
 attrs==19.1.0
 #attr==0.3.1
 prompt_toolkit==2.0.9
@@ -22,5 +22,6 @@ sphinx-rtd-theme==0.5.1
 nbsphinx==0.4.2
 webvtt-py==0.4.3
 flask
-filelock==3.0.12
+filelock>=3.0.12, <3.5.0
 diskcache==5.2.1
+redis==4.1.3

@@ -13,6 +13,7 @@ Dataloop's SDK and CLI documentation
    cli.rst
    repositories.rst
    entities.rst
+   utilities.rst
 
 
 

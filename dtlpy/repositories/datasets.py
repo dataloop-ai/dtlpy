@@ -493,7 +493,8 @@ class Datasets:
                driver: entities.Driver = None,
                driver_id: str = None,
                checkout: bool = False,
-               expiration_options: entities.ExpirationOptions = None) -> entities.Dataset:
+               expiration_options: entities.ExpirationOptions = None,
+               ) -> entities.Dataset:
         """
         Create a new dataset
 
@@ -506,7 +507,7 @@ class Datasets:
         :param dtlpy.entities.driver.Driver driver: optional - storage driver Driver object or driver name
         :param str driver_id: optional - driver id
         :param bool checkout: bool. cache the dataset to work locally
-        :param expiration_options: dl.ExpirationOptions object that contain definitions for dataset like MaxItemDays
+        :param ExpirationOptions expiration_options: dl.ExpirationOptions object that contain definitions for dataset like MaxItemDays
         :return: Dataset object
         :rtype: dtlpy.entities.dataset.Dataset
         """
@@ -577,7 +578,8 @@ class Datasets:
                         thickness,
                         with_text,
                         progress,
-                        alpha):
+                        alpha,
+                        export_version):
         # this is to convert the downloaded json files to any other annotation type
         try:
             downloader._download_img_annotations(item=item,
@@ -588,7 +590,9 @@ class Datasets:
                                                  annotation_filters=annotation_filters,
                                                  thickness=thickness,
                                                  alpha=alpha,
-                                                 with_text=with_text)
+                                                 with_text=with_text,
+                                                 export_version=export_version
+                                                 )
         except Exception:
             logger.error('Failed to download annotation for item: {!r}'.format(item.name))
         progress.update()
@@ -606,7 +610,8 @@ class Datasets:
                              include_annotations_in_output: bool = True,
                              export_png_files: bool = False,
                              filter_output_annotations: bool = False,
-                             alpha: float = None
+                             alpha: float = None,
+                             export_version=entities.ExportVersion.V1
                              ) -> str:
         """
         Download dataset's annotations by filters.
@@ -630,6 +635,7 @@ class Datasets:
         :param bool export_png_files: default - if True, semantic annotations should be exported as png files
         :param bool filter_output_annotations: default - False, given an export by filter - determine if to filter out annotations
         :param float alpha: opacity value [0 1], default 1
+        :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
         :return: local_path of the directory where all the downloaded item
         :rtype: str
         """
@@ -676,7 +682,8 @@ class Datasets:
                                         overwrite=overwrite,
                                         include_annotations_in_output=include_annotations_in_output,
                                         export_png_files=export_png_files,
-                                        filter_output_annotations=filter_output_annotations
+                                        filter_output_annotations=filter_output_annotations,
+                                        export_version=export_version
                                         )
         if annotation_options is not None:
             pages = dataset.items.list(filters=filters)
@@ -702,7 +709,8 @@ class Datasets:
                             'thickness': thickness,
                             'with_text': with_text,
                             'progress': progress,
-                            'alpha': alpha
+                            'alpha': alpha,
+                            'export_version': export_version
                         }
                     )
                     i_item += 1
@@ -724,7 +732,8 @@ class Datasets:
                            local_path,
                            filters: entities.Filters = None,
                            clean=False,
-                           remote_root_path='/'
+                           remote_root_path='/',
+                           export_version=entities.ExportVersion.V1
                            ):
         """
         Upload annotations to dataset. 
@@ -739,6 +748,7 @@ class Datasets:
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :param bool clean: True to remove the old annotations
         :param str remote_root_path: the remote root path to match remote and local items
+        :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
         """
         if filters is None:
             filters = entities.Filters()
@@ -748,8 +758,11 @@ class Datasets:
         pool = self._client_api.thread_pools('annotation.upload')
         annotations_uploaded_count = 0
         for item in pages.all():
-            _, ext = os.path.splitext(item.filename)
-            filepath = item.filename.replace(ext, '.json')
+            if export_version == entities.ExportVersion.V1:
+                _, ext = os.path.splitext(item.filename)
+                filepath = item.filename.replace(ext, '.json')
+            else:
+                filepath = item.filename + '.json'
             # make the file path ignore the hierarchy of the files that in remote_root_path
             filepath = os.path.relpath(filepath, remote_root_path)
             json_file = os.path.join(local_path, filepath)

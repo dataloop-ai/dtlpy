@@ -24,7 +24,8 @@ from . import repositories, exceptions, entities, examples
 from .__version__ import version as __version__
 from .entities import (
     # main entities
-    Project, Dataset, ExpirationOptions, Trigger, Item, Execution, AnnotationCollection, Annotation, Recipe,
+    Project, Dataset, ExpirationOptions, ExportVersion, Trigger, Item, Execution, AnnotationCollection, Annotation,
+    Recipe,
     Ontology, Label, Task, Assignment, Service, Package, Codebase, Model, Snapshot, PackageModule, PackageFunction,
     # annotations
     Box, Cube, Cube3d, Point, Note, Segmentation, Ellipse, Classification, Subtitle, Polyline, Pose, Description,
@@ -49,7 +50,7 @@ from .entities import (
     MemberRole, FeatureEntityType, MemberOrgRole,
     Webhook, HttpMethod,
     ViewAnnotationOptions, AnnotationStatus, AnnotationType,
-    ItemStatus, ExecutionStatus,
+    ItemStatus, ExecutionStatus, ExportMetadata,
     Similarity, SimilarityTypeEnum, MultiView,
     ItemLink, UrlLink, LinkTypeEnum,
     Modality, ModalityTypeEnum, ModalityRefTypeEnum,
@@ -57,9 +58,10 @@ from .entities import (
     PipelineExecution, PipelineExecutionNode, Pipeline, PipelineConnection,
     PipelineNode, TaskNode, CodeNode,
     PipelineNodeType, PipelineNameSpace,
-    FunctionNode, DatasetNode, PipelineConnectionPort, PipelineNodeIO, Organization, OrganizationsPlans, Integration, Driver,
+    FunctionNode, DatasetNode, PipelineConnectionPort, PipelineNodeIO, Organization, OrganizationsPlans, Integration,
+    Driver,
     ExternalStorage, Role, PlatformEntityType, SettingsValueTypes, SettingsTypes, SettingsSectionNames, SettingScope, \
-    BaseSetting, FeatureFlag, UserSetting
+    BaseSetting, FeatureFlag, UserSetting, ServiceSample, ExecutionSample, PipelineExecutionSample
 )
 from .ml import BaseModelAdapter, SuperModelAdapter
 from .utilities import Converter, BaseServiceRunner, Progress, Context, AnnotationFormat
@@ -142,6 +144,7 @@ pipeline_executions = repositories.PipelineExecutions(client_api=client_api)
 feature_sets = repositories.FeatureSets(client_api=client_api)
 features = repositories.Features(client_api=client_api)
 organizations = repositories.Organizations(client_api=client_api)
+analytics = repositories.Analytics(client_api=client_api)
 integrations = repositories.Integrations(client_api=client_api)
 drivers = repositories.Drivers(client_api=client_api)
 settings = repositories.Settings(client_api=client_api)
@@ -250,6 +253,11 @@ ANNOTATION_STATUS_CLEAR = AnnotationStatus.CLEAR
 
 ORGANIZATION_PLAN_FREEMIUM = OrganizationsPlans.FREEMIUM
 ORGANIZATION_PLAN_PREMIUM = OrganizationsPlans.PREMIUM
+
+EXPORT_METADATA_FROM_JSON = ExportMetadata.FORM_JSON
+
+EXPORT_VERSION_V1 = ExportVersion.V1
+EXPORT_VERSION_V2 = ExportVersion.V2
 
 # class
 ANNOTATION_TYPE_BOX = AnnotationType.BOX
@@ -368,6 +376,30 @@ PACKAGE_INPUT_TYPE_PROJECT = PackageInputType.PROJECT
 PACKAGE_INPUT_TYPE_EXECUTION = PackageInputType.EXECUTION
 PACKAGE_INPUT_TYPE_TASK = PackageInputType.TASK
 PACKAGE_INPUT_TYPE_ASSIGNMENT = PackageInputType.ASSIGNMENT
+PACKAGE_INPUT_TYPE_RECIPE = PackageInputType.RECIPE
+PACKAGE_INPUT_TYPE_STRING = PackageInputType.STRING
+PACKAGE_INPUT_TYPE_NUMBER = PackageInputType.NUMBER
+PACKAGE_INPUT_TYPE_INT = PackageInputType.INT
+PACKAGE_INPUT_TYPE_FLOAT = PackageInputType.FLOAT
+PACKAGE_INPUT_TYPE_BOOLEAN = PackageInputType.BOOLEAN
+PACKAGE_INPUT_TYPE_DATASETS = PackageInputType.DATASETS
+PACKAGE_INPUT_TYPE_ITEMS = PackageInputType.ITEMS
+PACKAGE_INPUT_TYPE_ANNOTATIONS = PackageInputType.ANNOTATIONS
+PACKAGE_INPUT_TYPE_EXECUTIONS = PackageInputType.EXECUTIONS
+PACKAGE_INPUT_TYPE_TASKS = PackageInputType.TASKS
+PACKAGE_INPUT_TYPE_ASSIGNMENTS = PackageInputType.ASSIGNMENTS
+PACKAGE_INPUT_TYPE_SERVICES = PackageInputType.SERVICES
+PACKAGE_INPUT_TYPE_PACKAGES = PackageInputType.PACKAGES
+PACKAGE_INPUT_TYPE_PROJECTS = PackageInputType.PROJECTS
+PACKAGE_INPUT_TYPE_JSONS = PackageInputType.JSONS
+PACKAGE_INPUT_TYPE_STRINGS = PackageInputType.STRINGS
+PACKAGE_INPUT_TYPE_NUMBERS = PackageInputType.NUMBERS
+PACKAGE_INPUT_TYPE_INTS = PackageInputType.INTS
+PACKAGE_INPUT_TYPE_FLOATS = PackageInputType.FLOATS
+PACKAGE_INPUT_TYPE_BOOLEANS = PackageInputType.BOOLEANS
+PACKAGE_INPUT_TYPE_MODELS = PackageInputType.MODELS
+PACKAGE_INPUT_TYPE_SNAPSHOTS = PackageInputType.SNAPSHOTS
+PACKAGE_INPUT_TYPE_RECIPES = PackageInputType.RECIPES
 
 FUNCTION_POST_ACTION_TYPE_DOWNLOAD = SlotPostActionType.DOWNLOAD
 FUNCTION_POST_ACTION_TYPE_DRAW_ANNOTATION = SlotPostActionType.DRAW_ANNOTATION
@@ -403,3 +435,4 @@ PACKAGE_REQUIREMENT_OP_GREATER_THAN = RequirementOperator.GREATER_THAN
 PACKAGE_REQUIREMENT_OP_LESS_THAN = RequirementOperator.LESS_THAN
 PACKAGE_REQUIREMENT_OP_EQUAL_OR_LESS_THAN = RequirementOperator.EQUAL_OR_LESS_THAN
 PACKAGE_REQUIREMENT_OP_EQUAL_OR_GREATER_THAN = RequirementOperator.EQUAL_OR_GREATER_THAN
+

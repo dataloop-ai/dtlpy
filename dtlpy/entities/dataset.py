@@ -1,13 +1,16 @@
 from collections import namedtuple
 import traceback
 import logging
+from enum import Enum
+
 import attr
 import os
 
 from .. import repositories, entities, services, exceptions
-from .annotation import ViewAnnotationOptions, AnnotationType
+from .annotation import ViewAnnotationOptions, AnnotationType, ExportVersion
 
 logger = logging.getLogger(name='dtlpy')
+
 
 
 class ExpirationOptions:
@@ -498,7 +501,8 @@ class Dataset(entities.BaseEntity):
                              include_annotations_in_output=True,
                              export_png_files=False,
                              filter_output_annotations=False,
-                             alpha=None
+                             alpha=None,
+                             export_version=ExportVersion.V1
                              ):
         """
         Download dataset by filters.
@@ -517,7 +521,9 @@ class Dataset(entities.BaseEntity):
         :param export_png_files: default - if True, semantic annotations should be exported as png files
         :param filter_output_annotations: default - False, given an export by filter - determine if to filter out annotations
         :param alpha: opacity value [0 1], default 1
-        :return: `List` of local_path per each downloaded item
+        :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
+        :return: local_path of the directory where all the downloaded item
+        :rtype: str
         """
 
         return self.datasets.download_annotations(
@@ -533,14 +539,16 @@ class Dataset(entities.BaseEntity):
             include_annotations_in_output=include_annotations_in_output,
             export_png_files=export_png_files,
             filter_output_annotations=filter_output_annotations,
-            alpha=alpha
+            alpha=alpha,
+            export_version=export_version
         )
 
     def upload_annotations(self,
                            local_path,
                            filters=None,
                            clean=False,
-                           remote_root_path='/'
+                           remote_root_path='/',
+                           export_version=ExportVersion.V1
                            ):
         """
         Upload annotations to dataset.
@@ -549,6 +557,7 @@ class Dataset(entities.BaseEntity):
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :param clean: bool - if True it remove the old annotations
         :param remote_root_path: str - the remote root path to match remote and local items
+        :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
 
         For example, if the item filepath is a/b/item and remote_root_path is /a the start folder will be b instead of a
         """
@@ -558,7 +567,8 @@ class Dataset(entities.BaseEntity):
             local_path=local_path,
             filters=filters,
             clean=clean,
-            remote_root_path=remote_root_path
+            remote_root_path=remote_root_path,
+            export_version=export_version
         )
 
     def checkout(self):
@@ -718,7 +728,8 @@ class Dataset(entities.BaseEntity):
             thickness=1,
             with_text=False,
             without_relative_path=None,
-            alpha=None
+            alpha=None,
+            export_version=ExportVersion.V1
     ):
         """
         Download dataset by filters.
@@ -736,6 +747,7 @@ class Dataset(entities.BaseEntity):
         :param with_text: optional - add text to annotations, default = False
         :param without_relative_path: string - remote path - download items without the relative path from platform
         :param alpha: opacity value [0 1], default 1
+        :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
         :return: `List` of local_path per each downloaded item
         """
         return self.items.download(filters=filters,
@@ -748,7 +760,8 @@ class Dataset(entities.BaseEntity):
                                    thickness=thickness,
                                    with_text=with_text,
                                    without_relative_path=without_relative_path,
-                                   alpha=alpha)
+                                   alpha=alpha,
+                                   export_version=export_version)
 
     def delete_labels(self, label_names):
         """

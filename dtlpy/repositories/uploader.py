@@ -54,7 +54,8 @@ class Uploader:
             remote_name=None,
             file_types=None,
             overwrite=False,
-            item_metadata=None
+            item_metadata=None,
+            export_version: str = entities.ExportVersion.V1
     ):
         """
         Upload local file to dataset.
@@ -68,6 +69,7 @@ class Uploader:
         :param file_types: list of file type to upload. e.g ['.jpg', '.png']. default is all
         :param overwrite: optional - default = False
         :param item_metadata: upload the items with the metadata dictionary
+        :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
 
         :return: Output (list)
         """
@@ -85,7 +87,8 @@ class Uploader:
                                                        remote_path=remote_path,
                                                        remote_name=remote_name,
                                                        file_types=file_types,
-                                                       item_metadata=item_metadata)
+                                                       item_metadata=item_metadata,
+                                                       export_version=export_version)
         num_files = len(futures)
         while futures:
             futures.popleft().result()
@@ -121,7 +124,8 @@ class Uploader:
                                     remote_path,
                                     file_types,
                                     remote_name,
-                                    item_metadata):
+                                    item_metadata,
+                                    export_version: str = entities.ExportVersion.V1):
 
         if remote_path is None:
             remote_path = '/'
@@ -131,7 +135,7 @@ class Uploader:
             msg = '"file_types" should be a list of file extension. e.g [".jpg", ".png"]'
             raise PlatformException(error="400", message=msg)
         if item_metadata is not None:
-            if not isinstance(item_metadata, dict):
+            if not isinstance(item_metadata, dict) and not isinstance(item_metadata, entities.ExportMetadata):
                 msg = '"item_metadata" should be a metadata dictionary. Got type: {}'.format(type(item_metadata))
                 raise PlatformException(error="400", message=msg)
 
@@ -219,7 +223,8 @@ class Uploader:
                 'annotations_filepath': None,
                 'with_head_folder': None,
                 'filename': None,
-                'root': None
+                'root': None,
+                'export_version': export_version
             }
             if isinstance(upload_item_element, str):
                 with_head_folder = True
@@ -457,6 +462,13 @@ class Uploader:
                     if element.type == 'external_file':
                         item, action = await self.__single_external_sync(element)
                     else:
+                        if element.annotations_filepath is not None and \
+                                element.item_metadata == entities.ExportMetadata.FORM_JSON:
+                            element.item_metadata = {}
+                            with open(element.annotations_filepath) as ann_f:
+                                item_metadata = json.load(ann_f)
+                            if 'metadata' in item_metadata and 'user' in item_metadata['metadata']:
+                                element.item_metadata['user'] = item_metadata['metadata']['user']
                         item, action = await self.__single_async_upload(filepath=element.buffer,
                                                                         mode=mode,
                                                                         item_metadata=element.item_metadata,

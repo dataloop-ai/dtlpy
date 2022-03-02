@@ -65,7 +65,8 @@ def test_feature_file(w_feature_filename):
                     '--no-capture']
             # need to run a new process to avoid collisions
             p = subprocess.Popen(cmds)
-            p.communicate()
+            p.communicate(timeout=700)
+
             if p.returncode == 0:
                 break
         toc = time.time() - tic
@@ -94,7 +95,13 @@ def test_feature_file(w_feature_filename):
                                                'log_file': new_log_filepath,
                                                'try': w_i_try,
                                                'avgTime': '{:.2f}[s]'.format(toc / (1 + w_i_try))}
-    except:
+    except subprocess.TimeoutExpired:
+        results[w_feature_filename] = {'status': False,
+                                       'log_file': log_filepath,
+                                       'try': w_i_try,
+                                       'avgTime': '{:.2f}[s]'.format(-1),
+                                       'timeout': True}
+    except Exception:
         print(traceback.format_exc())
         results[w_feature_filename] = {'status': False,
                                        'log_file': log_filepath,
@@ -242,7 +249,10 @@ if __name__ == '__main__':
             log_filename = result['log_file']
             i_try = result['try']
             avg_time = result['avgTime']
-            print('{}\t in try: {}\tavg time: {}\tfeature: {}'.format(status, i_try, avg_time, feature))
+            res_msg = '{}\t in try: {}\tavg time: {}\tfeature: {}'.format(status, i_try, avg_time, feature)
+            if 'timeout' in result:
+                res_msg += '  timeout'
+            print(res_msg)
 
     # print passes
     for feature, result in results.items():
@@ -251,7 +261,10 @@ if __name__ == '__main__':
             log_filename = result['log_file']
             i_try = result['try']
             avg_time = result['avgTime']
-            print('{}\t in try: {}\tavg time: {}\tfeature: {}'.format(status, i_try, avg_time, feature))
+            res_msg = '{}\t in try: {}\tavg time: {}\tfeature: {}'.format(status, i_try, avg_time, feature)
+            if 'timeout' in result:
+                res_msg += '  timeout'
+            print(res_msg)
 
     # delete projects
     delete_projects()

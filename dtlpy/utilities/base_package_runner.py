@@ -43,6 +43,9 @@ class Progress:
 
 class ItemStatusEvent:
     def __init__(self, _json: dict):
+        if _json is None:
+            _json = dict()
+
         self.pipeline_id = _json.get('pipelineId', None)
         self.node_id = _json.get('nodeId', None)
         self.action = _json.get('action', None)
@@ -55,6 +58,9 @@ class ItemStatusEvent:
 
 class ExecutionEventContext:
     def __init__(self, _json: dict):
+        if _json is None:
+            _json = dict()
+
         self.resource = _json.get('resource', None)
         self.source = _json.get('source', None)
         self.action = _json.get('action', None)

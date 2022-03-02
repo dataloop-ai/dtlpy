@@ -67,8 +67,8 @@ def step_impl(context, input_type):
         context.execution = context.service.executions.create(
             service_id=context.service.id,
             sync=sync,
-            execution_input=execution_inputs
-        )
+            execution_input=execution_inputs,
+            timeout=300)
     else:
         if inputs:
             resource = inputs[0]

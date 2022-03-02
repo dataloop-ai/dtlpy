@@ -46,6 +46,7 @@ class Downloader:
                  export_png_files=False,
                  filter_output_annotations=False,
                  alpha=None,
+                 export_version=entities.ExportVersion.V1
                  ):
         """
         Download dataset by filters.
@@ -70,6 +71,7 @@ class Downloader:
         :param export_png_files: default - True, if semantic annotations should be exported as png files
         :param filter_output_annotations: default - False, given an export by filter - determine if to filter out annotations
         :param alpha: opacity value [0 1], default 1
+        :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
         :return: Output (list)
         """
 
@@ -186,7 +188,8 @@ class Downloader:
                 'overwrite': overwrite,
                 'include_annotations_in_output': include_annotations_in_output,
                 'export_png_files': export_png_files,
-                'filter_output_annotations': filter_output_annotations
+                'filter_output_annotations': filter_output_annotations,
+                'export_version': export_version
             })
         ###############
         # downloading #
@@ -235,7 +238,8 @@ class Downloader:
                                         "local_path": local_path,
                                         "thickness": thickness,
                                         "alpha": alpha,
-                                        "with_text": with_text
+                                        "with_text": with_text,
+                                        "export_version": export_version,
                                     },
                                 )
                             i_item += 1
@@ -261,7 +265,8 @@ class Downloader:
                             "overwrite": overwrite,
                             "thickness": thickness,
                             "alpha": alpha,
-                            "with_text": with_text
+                            "with_text": with_text,
+                            "export_version": export_version
                         },
                     )
                     i_item += 1
@@ -297,7 +302,7 @@ class Downloader:
                                   # annotations params
                                   annotation_options, annotation_filters, with_text, thickness,
                                   # threading params
-                                  reporter, pbar, alpha):
+                                  reporter, pbar, alpha, export_version):
 
         download = None
         err = None
@@ -317,7 +322,8 @@ class Downloader:
                                                   overwrite=overwrite,
                                                   thickness=thickness,
                                                   alpha=alpha,
-                                                  with_text=with_text)
+                                                  with_text=with_text,
+                                                  export_version=export_version)
                 logger.debug("Download item: {path}. Try {i}/{n}. Success. Item id: {id}".format(path=item.filename,
                                                                                                  i=i_try + 1,
                                                                                                  n=NUM_TRIES,
@@ -347,7 +353,8 @@ class Downloader:
                              overwrite=False,
                              include_annotations_in_output=True,
                              export_png_files=False,
-                             filter_output_annotations=False
+                             filter_output_annotations=False,
+                             export_version=entities.ExportVersion.V1
                              ):
         """
         Download annotations json for entire dataset
@@ -360,6 +367,7 @@ class Downloader:
         :param include_annotations_in_output: default - True , if export should contain annotations
         :param export_png_files: default - if True, semantic annotations should be exported as png files
         :param filter_output_annotations: default - False, given an export by filter - determine if to filter out annotations
+        :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
         :return:
         """
         local_path = os.path.join(local_path, "json")
@@ -378,6 +386,7 @@ class Downloader:
                 "include": include_annotations_in_output,
                 "convertSemantic": export_png_files
             }
+            payload['exportVersion'] = export_version
             if annotation_filters is not None:
                 payload['annotationsQuery'] = annotation_filters.prepare()
                 payload['annotations']['filter'] = filter_output_annotations
@@ -395,7 +404,7 @@ class Downloader:
                     error='400',
                     message="outputItemId key is missing in command response: {}".format(response))
             annotation_zip_item = dataset.items.get(item_id=command.spec['outputItemId'])
-            zip_filepath = annotation_zip_item.download(local_path=local_path)
+            zip_filepath = annotation_zip_item.download(local_path=local_path, export_version=export_version)
             # unzipping annotations to directory
             if isinstance(zip_filepath, list) or not os.path.isfile(zip_filepath):
                 raise exceptions.PlatformException(
@@ -418,7 +427,9 @@ class Downloader:
                                   annotation_filters,
                                   thickness=1,
                                   with_text=False,
-                                  alpha=None):
+                                  alpha=None,
+                                  export_version=entities.ExportVersion.V1
+                                  ):
 
         # check if local_path is a file name
         _, ext = os.path.splitext(local_path)
@@ -438,10 +449,13 @@ class Downloader:
 
         # find annotations json
         annotations_json_filepath = os.path.join(local_path, "json", annotation_rel_path)
-        name, _ = os.path.splitext(annotations_json_filepath)
+        if export_version == entities.ExportVersion.V1:
+            name, _ = os.path.splitext(annotations_json_filepath)
+        else:
+            name = annotations_json_filepath
         annotations_json_filepath = name + ".json"
 
-        if os.path.isfile(annotations_json_filepath):
+        if os.path.isfile(annotations_json_filepath) and annotation_filters is None:
             # if exists take from json file
             with open(annotations_json_filepath, "r", encoding="utf8") as f:
                 data = json.load(f)
@@ -481,7 +495,11 @@ class Downloader:
             annotation_filepath = os.path.join(local_path, option, annotation_rel_path)
             if not os.path.isdir(os.path.dirname(annotation_filepath)):
                 os.makedirs(os.path.dirname(annotation_filepath), exist_ok=True)
-            temp_path, ext = os.path.splitext(annotation_filepath)
+
+            if export_version == entities.ExportVersion.V1:
+                temp_path, ext = os.path.splitext(annotation_filepath)
+            else:
+                temp_path = annotation_filepath
 
             if option == entities.ViewAnnotationOptions.JSON:
                 if not os.path.isfile(annotations_json_filepath):
@@ -591,7 +609,8 @@ class Downloader:
                           chunk_size=8192,
                           thickness=1,
                           with_text=False,
-                          alpha=None
+                          alpha=None,
+                          export_version=entities.ExportVersion.V1
                           ):
         """
         Get a single item's binary data
@@ -609,6 +628,7 @@ class Downloader:
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :param with_text: optional - add text to annotations, default = False
         :param alpha: opacity value [0 1], default 1
+        :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
         :return:
         """
         # check if need to download image binary from platform
@@ -676,7 +696,8 @@ class Downloader:
                                                    overwrite=overwrite,
                                                    thickness=thickness,
                                                    alpha=alpha,
-                                                   with_text=with_text
+                                                   with_text=with_text,
+                                                   export_version=export_version
                                                    )
             else:
                 # save as byte stream

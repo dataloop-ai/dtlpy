@@ -76,7 +76,7 @@ class Filters:
         self.and_filter_list = list()
         self._unique_fields = list()
         self.custom_filter = custom_filter
-        self.known_operators = ['or', 'and', 'in', 'ne', 'eq', 'gt', 'glob', 'lt', 'exists']
+        self.known_operators = ['or', 'and', 'in', 'ne', 'eq', 'gt', 'lt', 'exists']
         self._resource = resource
         self.page = 0
         self.page_size = 1000

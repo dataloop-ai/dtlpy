@@ -13,6 +13,11 @@ from .. import entities, PlatformException, repositories, ApiClient, exceptions
 logger = logging.getLogger(name='dtlpy')
 
 
+class ExportVersion(str, Enum):
+    V1 = "V1"
+    V2 = "V2"
+
+
 class AnnotationStatus(str, Enum):
     ISSUE = "issue"
     APPROVED = "approved"
@@ -344,11 +349,11 @@ class Annotation(entities.BaseEntity):
     def attributes(self, attributes):
         if self._use_attributes_2:
             if not isinstance(attributes, dict):
-                raise ValueError('Attributes must be a dict')
+                raise ValueError('Attributes must be a dict. If you are using v1 attributes please use dl.use_attributes_2(False)')
             self._recipe_2_attributes = attributes
         else:
             if not isinstance(attributes, list):
-                raise ValueError('Attributes must be a list')
+                raise ValueError('Attributes must be a list. If you are using v2 attributes please use dl.use_attributes_2(True)')
             self.annotation_definition.attributes = attributes
 
     @property
@@ -823,9 +828,6 @@ class Annotation(entities.BaseEntity):
                 metadata['system'] = dict()
             metadata['system']['status'] = annotation_definition.status
 
-        # frames
-        frames = entities.ReflectDict(value_type=FrameAnnotation, on_access=Annotation.on_access)
-
         # handle fps
         fps = None
         if item is not None:
@@ -855,10 +857,17 @@ class Annotation(entities.BaseEntity):
         if frame_num is None:
             frame_num = 0
 
-        return cls(
+        # frames
+        frames = entities.ReflectDict(
+            value_type=FrameAnnotation,
+            on_access=Annotation.on_access,
+            start=frame_num,
+            end=frame_num
+        )
+
+        res = cls(
             # annotation_definition
             annotation_definition=annotation_definition,
-
             # platform
             id=None,
             url=None,
@@ -895,6 +904,10 @@ class Annotation(entities.BaseEntity):
             platform_dict=dict(),
             source='sdk'
         )
+
+        if annotation_definition and annotation_definition.attributes:
+            res.attributes = annotation_definition.attributes
+        return res
 
     def add_frames(self,
                    annotation_definition,
@@ -1200,7 +1213,12 @@ class Annotation(entities.BaseEntity):
                         'attributes': attributes}
             annotation_definition = FrameAnnotation.json_to_annotation_definition(def_dict)
 
-        frames = entities.ReflectDict(value_type=FrameAnnotation, on_access=Annotation.on_access)
+        frames = entities.ReflectDict(
+            value_type=FrameAnnotation,
+            on_access=Annotation.on_access,
+            start=start_frame,
+            end=end_frame
+        )
 
         # init annotation
         annotation = cls(
