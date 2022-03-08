@@ -26,7 +26,7 @@ author = 'Or Shabtay'
 # The short X.Y version
 version = ''
 # The full version, including alpha/beta/rc tags
-release = '1.50.16'
+release = '1.50.17'
 
 add_module_names = False
 
@@ -55,6 +55,7 @@ extensions = [
     'nbsphinx',
     'sphinx_rtd_theme',
     # 'sphinxcontrib.lunrsearch',
+    'myst_parser'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -220,3 +221,8 @@ intersphinx_mapping = {'https://docs.python.org/': None}
 todo_include_todos = True
 
 autodoc_mock_imports = ["tensorflow", "torch", "imgaug", "torchvision"]
+
+############################
+############################
+from docs import build_tutorials
+build_tutorials.main()

@@ -7,7 +7,7 @@ Repositories
    :maxdepth: 6
 
 Organizations
-------------
+-------------
 
 .. automodule:: dtlpy.repositories.organizations
   :members:

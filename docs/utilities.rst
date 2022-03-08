@@ -1,5 +1,5 @@
 Utilities
-============
+=========
 
 
 .. toctree::
@@ -7,7 +7,7 @@ Utilities
    :maxdepth: 6
 
 converter
-------------
+---------
 
 .. automodule:: dtlpy.utilities.converter
   :members:
