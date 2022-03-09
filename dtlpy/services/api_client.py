@@ -299,7 +299,7 @@ class ApiClient:
 
         # create a global thread pool to run multi threading
         if num_processes is None:
-            num_processes = 4 * multiprocessing.cpu_count()
+            num_processes = 3 * multiprocessing.cpu_count()
         self._num_processes = num_processes
         self._thread_pools_names = {'item.download': num_processes,
                                     'item.status_update': num_processes,

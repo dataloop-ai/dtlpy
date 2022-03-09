@@ -217,8 +217,8 @@ class PipelineNode:
     def position(self, position):
         self.metadata['position'] = \
             {
-                "x": position[0] * 1.5 * NODE_SIZE[0],
-                "y": position[1] * 1.5 * NODE_SIZE[1],
+                "x": position[0] * 1.7 * NODE_SIZE[0] + NODE_SIZE[0]/2,
+                "y": position[1] * 1.5 * NODE_SIZE[1] + NODE_SIZE[1],
                 "z": 0
             }
 

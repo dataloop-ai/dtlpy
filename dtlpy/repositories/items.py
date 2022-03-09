@@ -534,7 +534,7 @@ class Items:
         :param str remote_path: remote path to save.
         :param str remote_name: remote base name to save. when upload numpy.ndarray as local path, remote_name with .jpg or .png ext is mandatory
         :param list file_types: list of file type to upload. e.g ['.jpg', '.png']. default is all
-        :param dict item_metadata: metadata to item
+        :param dict item_metadata: metadata dict to upload to item or ExportMetadata option to export metadata from annotation file
         :param bool overwrite: optional - default = False
         :param output_entity: output type
         :param bool no_output: do not return the items after upload

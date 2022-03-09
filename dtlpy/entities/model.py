@@ -338,7 +338,7 @@ class Model(entities.BaseEntity):
                                  local_path=local_path,
                                  from_local=from_local)
 
-    def generate_adapter(self, local_path=None, overwrite=False):
+    def generate(self, local_path=None, overwrite=False):
         """
         Creates a local model_adapter file with virtual functions to be implemented
 

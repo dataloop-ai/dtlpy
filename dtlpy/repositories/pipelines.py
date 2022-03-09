@@ -15,7 +15,7 @@ class Pipelines:
     """
     Pipelines Repository
 
-    The Pipelines class allows users to manage pipelines and their properties. See our documentation for more information on `pipelines <https://dataloop.ai/docs/pipelines-introduction>`_.
+    The Pipelines class allows users to manage pipelines and their properties. See our documentation for more information on `pipelines <https://dataloop.ai/docs/pipelines-overview>`_.
     """
 
     def __init__(self, client_api: services.ApiClient, project: entities.Project = None):

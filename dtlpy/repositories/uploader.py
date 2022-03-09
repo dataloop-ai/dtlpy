@@ -463,7 +463,7 @@ class Uploader:
                         item, action = await self.__single_external_sync(element)
                     else:
                         if element.annotations_filepath is not None and \
-                                element.item_metadata == entities.ExportMetadata.FORM_JSON:
+                                element.item_metadata == entities.ExportMetadata.FROM_JSON:
                             element.item_metadata = {}
                             with open(element.annotations_filepath) as ann_f:
                                 item_metadata = json.load(ann_f)

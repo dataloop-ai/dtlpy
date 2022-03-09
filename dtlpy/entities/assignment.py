@@ -188,7 +188,7 @@ class Assignment(entities.BaseEntity):
         Reassign an assignment
 
         :param str assignee_id: the user that assignee the assignment to it
-        :param bool wait: wait the command to finish
+        :param bool wait: wait for the command to finish
         :return: Assignment object
         :rtype: dtlpy.entities.assignment.Assignment
         """
@@ -203,7 +203,7 @@ class Assignment(entities.BaseEntity):
         Redistribute an assignment
 
         :param dtlpy.entities.assignment.Workload workload: workload object that contain the assignees and the work load
-        :param bool wait: wait the command to finish
+        :param bool wait: wait for the command to finish
         :return: Assignment object
         :rtype: dtlpy.entities.assignment.Assignment assignment
         """

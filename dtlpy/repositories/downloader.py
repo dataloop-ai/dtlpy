@@ -628,7 +628,7 @@ class Downloader:
         :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :param with_text: optional - add text to annotations, default = False
         :param alpha: opacity value [0 1], default 1
-        :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
+        :param ExportVersion export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
         :return:
         """
         # check if need to download image binary from platform
@@ -676,12 +676,17 @@ class Downloader:
                     logger.debug('Cant decide downloaded file length, bar will not be presented: {}'.format(err))
 
                 # start download
-                with open(local_filepath, "wb") as f:
-                    for chunk in response.iter_content(chunk_size=chunk_size):
-                        if chunk:  # filter out keep-alive new chunks
-                            f.write(chunk)
-                            if one_file_progress_bar:
-                                one_file_pbar.update(len(chunk))
+                try:
+                    with open(local_filepath, "wb") as f:
+                        for chunk in response.iter_content(chunk_size=chunk_size):
+                            if chunk:  # filter out keep-alive new chunks
+                                f.write(chunk)
+                                if one_file_progress_bar:
+                                    one_file_pbar.update(len(chunk))
+                except Exception as err:
+                    if os.path.isfile(local_filepath):
+                        os.remove(local_filepath)
+                    raise err
                 if one_file_progress_bar:
                     one_file_pbar.close()
                 # save to output variable
@@ -702,9 +707,12 @@ class Downloader:
             else:
                 # save as byte stream
                 data = io.BytesIO()
-                for chunk in response.iter_content(chunk_size=chunk_size):
-                    if chunk:  # filter out keep-alive new chunks
-                        data.write(chunk)
+                try:
+                    for chunk in response.iter_content(chunk_size=chunk_size):
+                        if chunk:  # filter out keep-alive new chunks
+                            data.write(chunk)
+                except Exception as err:
+                    raise err
                 # go back to the beginning of the stream
                 data.seek(0)
                 data.name = item.name

@@ -48,6 +48,16 @@ class Match:
     def __init__(self, first_annotation_id, second_annotation_id,
                  # defaults
                  annotation_score=0, attributes_score=0, geometry_score=0, label_score=0):
+        """
+        Save a match between two annotations with all relevant scores
+
+        :param first_annotation_id:
+        :param second_annotation_id:
+        :param annotation_score:
+        :param attributes_score:
+        :param geometry_score:
+        :param label_score:
+        """
         self.first_annotation_id = first_annotation_id
         self.second_annotation_id = second_annotation_id
         self.annotation_score = annotation_score
@@ -57,13 +67,14 @@ class Match:
         self.label_score = label_score
 
     def __repr__(self):
-        return 'annotation: {:.2f}, attributes: {:.2f}, geomtry: {:.2f}, label: {:.2f}'.format(
+        return 'annotation: {:.2f}, attributes: {:.2f}, geometry: {:.2f}, label: {:.2f}'.format(
             self.annotation_score, self.attributes_score, self.geometry_score, self.label_score)
 
 
 class Matches:
     def __init__(self):
         self.matches = list()
+        self._annotations_raw_df = list()
 
     def __len__(self):
         return len(self.matches)
@@ -238,7 +249,7 @@ class Matchers:
         """
         height = config.get('height', 500)
         width = config.get('width', 500)
-        diag = np.sqrt(height ** 2 + width**2)
+        diag = np.sqrt(height ** 2 + width ** 2)
         # 20% of the image diagonal tolerance (empirically). need to
         return np.exp(-1 / diag * 20 * np.linalg.norm(np.asarray(pt1) - np.asarray(pt2)))
 
@@ -276,7 +287,24 @@ class Matchers:
         return int(label1 in label2 or label2 in label1)
 
     @staticmethod
-    def general_match(matches, first_set, second_set, match_type, match_threshold):
+    def general_match(matches: Matches,
+                      first_set: entities.AnnotationCollection,
+                      second_set: entities.AnnotationCollection,
+                      match_type,
+                      match_threshold: float,
+                      ignore_attributes=False,
+                      ignore_labels=False):
+        """
+
+        :param matches:
+        :param first_set:
+        :param second_set:
+        :param match_type:
+        :param match_threshold:
+        :param ignore_attributes:
+        :param ignore_labels:
+        :return:
+        """
         annotation_type_to_func = {
             entities.AnnotationType.BOX: Matchers.calculate_iou_box,
             entities.AnnotationType.CLASSIFICATION: Matchers.calculate_iou_classification,
@@ -304,26 +332,35 @@ class Matchers:
                             'Found annotations with area=0!: annotations ids: {!r}, {!r}'.format(annotation_one.id,
                                                                                                  annotation_two.id))
                         df[annotation_one.id][annotation_two.id] = 0
+        # for debug - save the annotations scoring matrix
+        matches._annotations_raw_df.append(df.copy())
 
+        # go over all matches
         while True:
             # take max IoU score, list the match and remove annotations' ids from columns and rows
             # keep doing that until no more matches or lower than match threshold
             max_cell = df.max().max()
             if max_cell < match_threshold or np.isnan(max_cell):
                 break
-            loc = df.where(df == max_cell).dropna(how='all').dropna(axis=1)
-            first_annotation_id = loc.columns[0]
-            second_annotation_id = loc.index[0]
+            row_index, col_index = np.where(df == max_cell)
+            row_index = row_index[0]
+            col_index = col_index[0]
+            first_annotation_id = df.columns[col_index]
+            second_annotation_id = df.index[row_index]
             first_annotation = [a for a in first_set if a.id == first_annotation_id][0]
             second_annotation = [a for a in second_set if a.id == second_annotation_id][0]
-            val = loc.values[0][0]
+            geometry_score = df.iloc[row_index, col_index]
             labels_score = Matchers.match_labels(label1=first_annotation.label,
                                                  label2=second_annotation.label)
             attribute_score = Matchers.match_attributes(attributes1=first_annotation.attributes,
                                                         attributes2=second_annotation.attributes)
+
+            # TODO use ignores for final score
+            annotation_score = (geometry_score + attribute_score + labels_score) / 3
             matches.add(Match(first_annotation_id=first_annotation_id,
                               second_annotation_id=second_annotation_id,
-                              annotation_score=val,
+                              geometry_score=geometry_score,
+                              annotation_score=annotation_score,
                               label_score=labels_score,
                               attributes_score=attribute_score))
             df.drop(index=second_annotation_id, inplace=True)

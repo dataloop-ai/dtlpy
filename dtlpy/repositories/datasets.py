@@ -423,7 +423,7 @@ class Datasets:
         :param bool with_items_annotations: with items annotations
         :param bool with_metadata: with metadata
         :param bool with_task_annotations_status: with task annotations status
-        :param bool wait: wait the command to finish
+        :param bool wait: wait for the command to finish
         :return: True if success
         :rtype: bool
         """
@@ -463,7 +463,7 @@ class Datasets:
         **Prerequisites**: You must be in the role of an *owner* or *developer*.
 
         :param str dataset_id: to sync dataset
-        :param bool wait: wait the command to finish
+        :param bool wait: wait for the command to finish
         :return: True if success
         :rtype: bool
         """

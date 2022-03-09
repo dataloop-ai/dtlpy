@@ -237,3 +237,23 @@ def step_impl(context, local_path, remote_name):
 @behave.then(u'Item mimetype is the item type "{item_type}"')
 def step_impl(context, item_type):
     assert context.item.metadata['system']['mimetype'].split('/')[1] == item_type
+
+
+@behave.when(u'There are "{item_count}" items')
+def step_impl(context, item_count):
+    filepath = "0000000162.jpg"
+    filepath = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], filepath)
+
+    filename = 'file'
+    counter = 0
+    while counter < int(item_count):
+        uploaded_filename = filename + str(counter) + '.jpg'
+        import io
+        with open(filepath, 'rb') as f:
+            buffer = io.BytesIO(f.read())
+            buffer.name = uploaded_filename
+        context.dataset.items.upload(
+            local_path=buffer,
+            remote_path=None
+        )
+        counter += 1

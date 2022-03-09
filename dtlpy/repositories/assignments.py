@@ -243,7 +243,7 @@ class Assignments:
         :param assignment_id: assignment id
         :param dtlpy.entities.task.Task task: task object
         :param str task_id: task id
-        :param bool wait: wait the command to finish
+        :param bool wait: wait for the command to finish
         :return: Assignment object
         :rtype: dtlpy.entities.assignment.Assignment
         """
@@ -299,7 +299,7 @@ class Assignments:
         :param str assignment_id: assignment id
         :param dtlpy.entities.task.Task task: task object
         :param str task_id: task id
-        :param bool wait: wait the command to finish
+        :param bool wait: wait for the command to finish
         :return: Assignment object
         :rtype: dtlpy.entities.assignment.Assignment assignment
         """

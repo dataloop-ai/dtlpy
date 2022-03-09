@@ -32,7 +32,7 @@ class DataItem(dict):
 
 
 class BaseGenerator:
-    IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.bmp']
+    IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'bmp']
 
     def __init__(self,
                  dataset_entity: entities.Dataset,
@@ -70,6 +70,14 @@ class BaseGenerator:
         :param ignore_empty: bool - If True, generator will NOT collect items without annotations
         """
 
+        self._dataset_entity = dataset_entity
+        if label_to_id_map is None:
+            label_to_id_map = dataset_entity.instance_map
+        else:
+            dataset_entity.instance_map = label_to_id_map
+        self.id_to_label_map = {v: k for k, v in label_to_id_map.items()}
+        self.label_to_id_map = label_to_id_map
+
         if data_path is None:
             data_path = os.path.join(os.path.expanduser('~'),
                                      '.dataloop',
@@ -97,15 +105,8 @@ class BaseGenerator:
         self._json_path = Path(self.root_dir).joinpath('json')
         self._mask_path = Path(self.root_dir).joinpath('instance')
         self._transforms = transforms
-        self._dataset_entity = dataset_entity
-        if label_to_id_map is None:
-            labels = [label for label in dataset_entity.labels_flat_dict]
-            labels.sort()
-            label_to_id_map = {label: i_label for i_label, label in enumerate(labels)}
-        self.id_to_label_map = {v: k for k, v in label_to_id_map.items()}
-        self.label_to_id_map = label_to_id_map
+
         self.annotation_type = annotation_type
-        self.imgaug_ann_type = self._type_to_var_name()
         self.num_workers = num_workers
         self.to_categorical = to_categorical
         self.num_classes = len(label_to_id_map)
@@ -129,7 +130,7 @@ class BaseGenerator:
             item_info = DataItem()
             # add image path
             item_info.image_filepath = str(image_filepath)
-            if os.stat(image_filepath).st_size <  5:
+            if os.stat(image_filepath).st_size < 5:
                 logger.exception('Corrupted Image: {!r}'.format(image_filepath))
                 return None, True
             # get "platform" path
@@ -214,7 +215,9 @@ class BaseGenerator:
         logger.info(f"Collecting items with the following extensions: {self.IMAGE_EXTENSIONS}")
         files = list()
         for ext in self.IMAGE_EXTENSIONS:
-            files.extend(self._items_path.rglob(f'*{ext}'))
+            # build regex to ignore extension case
+            regex = '*.{}'.format(''.join(['[{}{}]'.format(letter.lower(), letter.upper()) for letter in ext]))
+            files.extend(self._items_path.rglob(regex))
 
         pool = ThreadPoolExecutor(max_workers=32)
         jobs = list()
@@ -268,7 +271,7 @@ class BaseGenerator:
 
         if self.shuffle:
             if self.seed is None:
-                self.seed = 42
+                self.seed = 256
             np.random.seed(self.seed)
             np.random.shuffle(self.data_items)
 
@@ -284,16 +287,6 @@ class BaseGenerator:
 
     def __len__(self):
         return len(self.data_items)
-
-    def _type_to_var_name(self):
-        if self.annotation_type == entities.AnnotationType.BOX:
-            return 'bounding_boxes'
-        elif self.annotation_type == entities.AnnotationType.SEGMENTATION:
-            return 'segmentation_maps'
-        elif self.annotation_type == entities.AnnotationType.POLYGON:
-            return 'polygons'
-        else:
-            return None
 
     def transform(self, image, target=None):
         if isinstance(self._transforms, torchvision.transforms.Compose):
@@ -312,13 +305,26 @@ class BaseGenerator:
         for t in ts:
             if isinstance(t, imgaug.augmenters.meta.Sequential):
                 # handle imgaug calls
-                if target is not None and self.imgaug_ann_type is not None:
+                if target is not None and self.annotation_type is not None:
                     # works for batch but running on a single image
-                    image, target = t(images=[image], **{self.imgaug_ann_type: [target]})
-                    target = target[0]
+                    if self.annotation_type == entities.AnnotationType.BOX:
+                        image, target = t(images=[image], bounding_boxes=[target])
+                        target = target[0]
+                    elif self.annotation_type == entities.AnnotationType.SEGMENTATION:
+                        # expending to HxWx1 for the imgaug function to work
+                        target = target[..., None]
+                        image, target = t(images=[image], segmentation_maps=[target])
+                        target = target[0][:, :, 0]
+                    elif self.annotation_type == entities.AnnotationType.POLYGON:
+                        image, target = t(images=[image], polygons=[target])
+                        target = target[0]
+                    else:
+                        raise ValueError(
+                            'unsupported annotations type for image augmentations: {}'.format(self.annotation_type))
+                    image = image[0]
                 else:
                     image = t(images=[image])
-                image = image[0]
+                    image = image[0]
             else:
                 # all other function in the Compose
                 image = t(image)

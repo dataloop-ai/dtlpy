@@ -189,7 +189,11 @@ def step_impl(context):
 @behave.when(u"I annotate item")
 def step_impl(context):
     time.sleep(3)
-    annotation = context.dl.Annotation.new(annotation_definition=context.dl.Point(y=200, x=200, label='dog'),
-                                           item=context.uploaded_item_with_trigger)
+    if hasattr(context, 'uploaded_item_with_trigger'):
+        annotation = context.dl.Annotation.new(annotation_definition=context.dl.Point(y=200, x=200, label='dog'),
+                                               item=context.uploaded_item_with_trigger)
+    else:
+        annotation = context.dl.Annotation.new(annotation_definition=context.dl.Point(y=200, x=200, label='dog'),
+                                               item=context.item)
     context.annotation = annotation.upload()
     assert isinstance(context.annotation, context.dl.entities.Annotation)

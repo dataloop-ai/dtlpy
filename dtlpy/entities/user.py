@@ -106,7 +106,7 @@ class User(entities.BaseEntity):
                             filter=attr.filters.exclude(attr.fields(User)._project,
                                                         attr.fields(User).name,
                                                         attr.fields(User)._client_api,
-                                                        attr.fields(User).users,
+                                                        attr.fields(User)._users,
                                                         attr.fields(User).last_name,
                                                         attr.fields(User).created_at,
                                                         attr.fields(User).updated_at,

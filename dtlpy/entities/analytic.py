@@ -81,7 +81,7 @@ class ServiceSample(BaseSample):
                 'podType': self.pod_type
             },
             'eventType': self.event_type,
-            'EntityType': self.entity_type,
+            'entityType': self.entity_type,
             'action': self.action,
             'data': {
                 'status': self.status,
@@ -92,7 +92,9 @@ class ServiceSample(BaseSample):
                 'numExecutions': self.num_executions
             }
         }
-        return _json
+        _json['context'] = {k: v for k, v in _json['context'].items() if v is not None}
+        _json['data'] = {k: v for k, v in _json['data'].items() if v is not None}
+        return {k: v for k, v in _json.items() if v is not None}
 
     @classmethod
     def from_json(cls, _json):

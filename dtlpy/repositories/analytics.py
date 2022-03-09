@@ -68,6 +68,8 @@ class Analytics:
         if not isinstance(samples, list):
             samples = [samples]
 
+        samples = [s.to_json() if not isinstance(s, dict) else s for s in samples]
+
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/analytics/metric',
                                                          json_req=samples)

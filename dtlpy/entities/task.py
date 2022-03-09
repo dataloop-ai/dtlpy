@@ -276,7 +276,7 @@ class Task:
         """
         Delete task from platform
 
-        :param wait: wait the command to finish
+        :param wait: wait for the command to finish
         :return: True
         """
         return self.tasks.delete(task_id=self.id, wait=wait)
@@ -357,7 +357,7 @@ class Task:
         :param assignee_ids: list of assignee for the assignment
         :param workload: the load of work
         :param limit: limit
-        :param wait: wait the command to finish
+        :param wait: wait for the command to finish
         :return:
         """
         return self.tasks.add_items(task=self,

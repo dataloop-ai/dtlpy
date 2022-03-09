@@ -425,7 +425,7 @@ class Tasks:
 
         :param dtlpy.entities.task.Task task: parent task
         :param list assignee_ids: list of assignee
-        :param float due_date: date by which the task should be finished
+        :param float due_date: date by which the task should be finished; for example, due_date = datetime.datetime(day= 1, month= 1, year= 2029).timestamp()
         :param entities.Filters filters: filter to the task
         :param List[entities.Item] items: item to insert to the task
         :param entities.Filters query: filter to the task
@@ -462,9 +462,10 @@ class Tasks:
                 query['filter']['$and'] = [source_filter.prepare()]
 
         else:
-            if filters is None:
+            if filters is None and items is None:
                 filters = entities.Filters()
-            filters.and_filter_list.append(source_filter)
+            if filters:
+                filters.and_filter_list.append(source_filter)
 
         return self.create(task_name='{}_qa'.format(task.name),
                            task_type='qa',
@@ -508,7 +509,7 @@ class Tasks:
         **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned to be *owner* of the annotation task.
 
         :param str task_name: task name
-        :param float due_date: date by which the task should be finished
+        :param float due_date: date by which the task should be finished; for example, due_date = datetime.datetime(day= 1, month= 1, year= 2029).timestamp()
         :param list assignee_ids: list of assignee
         :param List[WorkloadUnit] workload: list WorkloadUnit for the task assignee
         :param entities.Dataset dataset: dataset entity

@@ -143,7 +143,8 @@ def measure_annotations(
         annotations_set_one: entities.AnnotationCollection,
         annotations_set_two: entities.AnnotationCollection,
         match_threshold=0.5,
-        geometry_only=False,
+        ignore_labels=False,
+        ignore_attributes=False,
         compare_types=None):
     """
     Compares list (or collections) of annotations
@@ -151,7 +152,8 @@ def measure_annotations(
     :param annotations_set_one: dl.AnnotationCollection entity with a list of annotations to compare
     :param annotations_set_two: dl.AnnotationCollection entity with a list of annotations to compare
     :param match_threshold: IoU threshold to count as a match
-    :param geometry_only: ignore label when comparing - measure only geometry
+    :param ignore_labels: ignore label when comparing - measure only geometry
+    :param ignore_attributes: ignore attribute score for final annotation score
     :param compare_types: list of type to compare. enum dl.AnnotationType
 
     Returns a dictionary of all the compare data
@@ -177,17 +179,21 @@ def measure_annotations(
     # start comparing
     for compare_type in compare_types:
         matches = metrics.Matches()
-        annotation_subset_one = [a for a in annotations_set_one if
+        annotation_subset_one = entities.AnnotationCollection()
+        annotation_subset_two = entities.AnnotationCollection()
+        annotation_subset_one.annotations = [a for a in annotations_set_one if
                                  a.type == compare_type and not a.metadata.get('system', dict()).get('system', False)]
-        annotation_subset_two = [a for a in annotations_set_two if
+        annotation_subset_two.annotations = [a for a in annotations_set_two if
                                  a.type == compare_type and not a.metadata.get('system', dict()).get('system', False)]
         # create 2d dataframe with annotation id as names and set all to -1 -> not calculated
-        if geometry_only:
+        if ignore_labels:
             matches = metrics.Matchers.general_match(matches=matches,
                                                      first_set=annotation_subset_one,
                                                      second_set=annotation_subset_two,
                                                      match_type=compare_type,
-                                                     match_threshold=match_threshold)
+                                                     match_threshold=match_threshold,
+                                                     ignore_labels=ignore_labels,
+                                                     ignore_attributes=ignore_attributes)
         else:
             unique_labels = np.unique([a.label for a in annotation_subset_one] +
                                       [a.label for a in annotation_subset_two])
@@ -198,7 +204,10 @@ def measure_annotations(
                                                          first_set=first_set,
                                                          second_set=second_set,
                                                          match_type=compare_type,
-                                                         match_threshold=match_threshold)
+                                                         match_threshold=match_threshold,
+                                                         ignore_labels=ignore_labels,
+                                                         ignore_attributes=ignore_attributes
+                                                         )
         if len(matches) == 0:
             continue
         all_scores.extend(matches.to_df()['annotation_score'])
@@ -212,12 +221,31 @@ def measure_item(ref_item: entities.Item,
                  test_item: entities.Item,
                  ref_project: entities.Project = None,
                  test_project: entities.Project = None,
+                 ignore_labels=False,
+                 ignore_attributes=False,
+                 match_threshold=0.5,
                  pbar=None):
+    """
+    Compare annotations sets between two items
+
+    :param ref_item:
+    :param test_item:
+    :param ref_project:
+    :param test_project:
+    :param ignore_labels:
+    :param ignore_attributes:
+    :param match_threshold:
+    :param pbar:
+    :return:
+    """
     try:
         annotations_set_one = ref_item.annotations.list()
         annotations_set_two = test_item.annotations.list()
         final = measure_annotations(annotations_set_one=annotations_set_one,
-                                    annotations_set_two=annotations_set_two)
+                                    annotations_set_two=annotations_set_two,
+                                    ignore_labels=ignore_labels,
+                                    ignore_attributes=ignore_attributes,
+                                    match_threshold=match_threshold)
 
         # get times
         try:

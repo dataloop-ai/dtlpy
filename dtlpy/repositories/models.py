@@ -425,17 +425,19 @@ class Models:
             src_path = os.getcwd()
 
         local_path = os.path.join(src_path, entry_point)
+        to_copy = True
         if os.path.exists(local_path):
             if overwrite:
-                logger.warning("Overwriting {} with a blank template".format(local_path))
+                logger.warning("Overwriting {} with a blank Model Adapter template".format(local_path))
             else:
-                logger.error("can not overwrite existing model adapter at {}".format(local_path))
-                return None
-
-        if not os.path.isfile(os.path.join(src_path, '.gitignore')):
-            copyfile(assets.paths.ASSETS_GITIGNORE_FILEPATH, os.path.join(src_path, '.gitignore'))
-        copyfile(assets.paths.ASSETS_MODEL_ADAPTER_FILEPATH, local_path)
-        logger.info('Successfully generated model adapter at {}'.format(local_path))
+                logger.warning(
+                    "Model Adapter already exists at {}. If you want to overwrite use the flag.".format(local_path))
+                to_copy = False
+        if to_copy:
+            if not os.path.isfile(os.path.join(src_path, '.gitignore')):
+                copyfile(assets.paths.ASSETS_GITIGNORE_FILEPATH, os.path.join(src_path, '.gitignore'))
+            copyfile(assets.paths.ASSETS_MODEL_ADAPTER_FILEPATH, local_path)
+            logger.info('Successfully generated model adapter at {}'.format(local_path))
         return local_path
 
     def __get_from_cache(self):

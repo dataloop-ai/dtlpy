@@ -245,7 +245,7 @@ class Dataset(entities.BaseEntity):
         :param value: dictionary {label: map_id}
         """
         if not isinstance(value, dict):
-            raise ValueError('input must be a dictionary of {lable_name: instance_id}')
+            raise ValueError('input must be a dictionary of {label_name: instance_id}')
         self._instance_map = value
 
     @property
@@ -483,7 +483,7 @@ class Dataset(entities.BaseEntity):
         """
         Sync dataset with external storage
 
-        :param wait: wait the command to finish
+        :param wait: wait for the command to finish
         :return: True if success
         :rtype: bool
         """

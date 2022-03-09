@@ -124,32 +124,46 @@ class Buckets:
             # fetch: False does not use an API call but created the dataset entity (with id)
             dataset = bucket_dir_item.datasets.get(dataset_id=bucket_dir_item.dataset_id, fetch=False)
             bucket_filter = entities.Filters(field='dir', values=bucket_dir_item.filename + '*')
-            # 1. download to temp folder
-            temp_dir = tempfile.mkdtemp()
-            local_temp_files = list(dataset.items.download(
-                filters=bucket_filter,
-                local_path=temp_dir,
-                overwrite=overwrite,
-                to_items_folder=False,
-            ))
-            # 2. move to local_path without remote path prefix
-            for item in bucket.list_content().all():
-                for filepath in local_temp_files:
-                    if os.path.join(temp_dir, item.filename[1:]) == filepath:
-                        src = filepath
-                        # remove the prefix with relpath
-                        dst = os.path.join(local_path,
-                                           os.path.relpath(item.filename, bucket_dir_item.filename))
-                        os.makedirs(os.path.dirname(dst), exist_ok=True)
-                        shutil.move(src=src, dst=dst)
-            # clean temo dir
-            if os.path.isdir(temp_dir):
-                shutil.rmtree(temp_dir)
 
-            if len(local_temp_files) == 0:
-                logger.warning("Bucket {} was empty".format(bucket))
-            else:
-                logger.info('Bucket artifacts was unpacked to: {}'.format(local_path))
+            bucket_content_list = list(bucket.list_content().all())
+            need_to_download = overwrite
+
+            # 1. check if local item exists
+            for item in bucket_content_list:
+                # remove the prefix with relpath
+                local_dst = os.path.join(local_path, os.path.relpath(item.filename, bucket_dir_item.filename))
+                if not os.path.isfile(local_dst):
+                    need_to_download = True
+                if need_to_download:
+                    break
+
+            if need_to_download:
+                # 1. download to temp folder
+                temp_dir = tempfile.mkdtemp()
+                local_temp_files = list(dataset.items.download(
+                    filters=bucket_filter,
+                    local_path=temp_dir,
+                    overwrite=overwrite,
+                    to_items_folder=False,
+                ))
+                # 2. move to local_path without remote path prefix
+                for item in bucket_content_list:
+                    for filepath in local_temp_files:
+                        if os.path.join(temp_dir, item.filename[1:]) == filepath:
+                            src = filepath
+                            # remove the prefix with relpath
+                            dst = os.path.join(local_path,
+                                               os.path.relpath(item.filename, bucket_dir_item.filename))
+                            os.makedirs(os.path.dirname(dst), exist_ok=True)
+                            shutil.move(src=src, dst=dst)
+                # clean temp dir
+                if os.path.isdir(temp_dir):
+                    shutil.rmtree(temp_dir)
+
+                if len(local_temp_files) == 0:
+                    logger.warning("Bucket {} was empty".format(bucket))
+                else:
+                    logger.info('Bucket artifacts was unpacked to: {}'.format(local_path))
 
         elif isinstance(bucket, entities.GCSBucket):
             blobs = list(bucket._bucket.list_blobs(prefix=bucket._gcs_prefix))
@@ -158,6 +172,8 @@ class Buckets:
                     # ignore folders
                     continue
                 filename = os.path.join(local_path, blob.name.replace(bucket._gcs_prefix, ''))
+                if os.path.isfile(filename) and not overwrite:
+                    continue
                 if not os.path.isdir(os.path.dirname(filename)):
                     os.makedirs(os.path.dirname(filename))
                 blob.download_to_filename(filename=filename,

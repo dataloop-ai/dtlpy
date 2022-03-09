@@ -151,3 +151,92 @@ def step_impl(context):
 def step_impl(context):
     assert len(context.pipeline.nodes) == 2
     assert len(context.pipeline.connections) == 1
+
+
+@behave.then(u'verify pipeline sanity result')
+def step_impl(context):
+    assert context.dataset_finish.items.list().item_count != 0, "No items in dataset finished - Pipeline failed"
+
+    for task in context.project.tasks.list():
+        task.item_status
+
+
+@behave.when(u'I create a pipeline from pipeline-sanity')
+def step_impl(context):
+    t = time.localtime()
+    current_time = time.strftime("%H-%M-%S", t)
+
+    context.dataset_finish = context.project.datasets.create(dataset_name='dataset-' + current_time + "-finish")
+    context.pipeline = context.project.pipelines.create(pipeline_name='sdk-pipeline-sanity')
+
+    task_node_1 = dl.TaskNode(
+        name='My Task-fix-label' + current_time,
+        recipe_id=context.recipe.id,
+        recipe_title=context.recipe.title,
+        task_owner="nirrozmarin@dataloop.ai",
+        workload=[dl.WorkloadUnit(assignee_id=dl.info()['user_email'], load=50), dl.WorkloadUnit(assignee_id="annotator1@dataloop.ai", load=50)],
+        position=(1, 1),
+        project_id=context.project_id,
+        dataset_id=context.dataset.id,
+        actions=('complete', 'discard', 'fix-label')
+    )
+
+    task_node_2 = dl.TaskNode(
+        name='My Task-completed' + current_time,
+        recipe_id=context.recipe.id,
+        recipe_title=context.recipe.title,
+        task_owner="nirrozmarin@dataloop.ai",
+        workload=[dl.WorkloadUnit(assignee_id="oa-test-1@dataloop.ai", load=100)],
+        position=(1, 2),
+        project_id=context.project_id,
+        dataset_id=context.dataset.id
+    )
+
+    task_node_3 = dl.TaskNode(
+        name='My QA Task' + current_time,
+        recipe_id=context.recipe.id,
+        recipe_title=context.recipe.title,
+        task_owner="nirrozmarin@dataloop.ai",
+        workload=[dl.WorkloadUnit(assignee_id="nirrozmarin@dataloop.ai", load=100)],
+        position=(1, 3),
+        project_id=context.project_id,
+        dataset_id=context.dataset.id,
+        task_type='qa'
+    )
+
+    def run(item: dl.Item):
+        item.metadata['user'] = {'Hello': 'World'}
+        item.update()
+        return item
+
+    code_node = dl.CodeNode(
+        name='My Function',
+        position=(2, 2),
+        project_id=context.project_id,
+        method=run,
+        project_name=context.project.name
+    )
+
+    dataset_node = dl.DatasetNode(
+        name=context.dataset_finish.name,
+        project_id=context.project_id,
+        dataset_id=context.dataset_finish.id,
+        position=(3, 3)
+    )
+
+    function_node = dl.FunctionNode(
+        name='automate',
+        position=(4, 4),
+        service=dl.services.get(service_id=context.service.id),
+        function_name='automate'
+    )
+
+    context.pipeline.nodes.add(task_node_1).connect(node=task_node_2, source_port=task_node_1.outputs[2], target_port=task_node_2.inputs[0]).connect(node=task_node_3,
+                                                                                                                                                     source_port=task_node_2.outputs[0]) \
+        .connect(node=code_node, source_port=task_node_3.outputs[0]).connect(node=dataset_node).connect(node=function_node)
+
+    filters = dl.Filters(field='datasetId', values=context.dataset.id)
+    task_node_1.add_trigger(filters=filters)
+
+    context.pipeline.update()
+    context.pipeline.install()

@@ -39,7 +39,7 @@ class ReflectDict(dict):
             yield key, self[key]
 
     def __iter__(self):
-        return self.values()
+        return self.keys()
 
     def __contains__(self, key):
         return key in list(self.keys())

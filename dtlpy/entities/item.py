@@ -13,7 +13,7 @@ logger = logging.getLogger(name='dtlpy')
 
 
 class ExportMetadata(Enum):
-    FORM_JSON = 'from_json'
+    FROM_JSON = 'from_json'
 
 
 class ItemStatus(str, Enum):
@@ -489,7 +489,7 @@ class Item(entities.BaseEntity):
         :param with_metadata: clone metadata
         :param with_task_annotations_status: clone task annotations status
         :param allow_many: `bool` if True use multiple clones in single dataset is allowed, (default=False)
-        :param wait: wait the command to finish
+        :param wait: wait for the command to finish
 
         :return: Item
         """

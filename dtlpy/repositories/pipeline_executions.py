@@ -8,7 +8,7 @@ class PipelineExecutions:
     """
     PipelineExecutions Repository
 
-    The PipelineExecutions class allows users to manage pipeline executions. See our documentation for more information on `pipelines <https://dataloop.ai/docs/pipelines-introduction>`_.
+    The PipelineExecutions class allows users to manage pipeline executions. See our documentation for more information on `pipelines <https://dataloop.ai/docs/pipelines-overview>`_.
     """
 
     def __init__(

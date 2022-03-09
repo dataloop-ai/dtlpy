@@ -1,4 +1,4 @@
-Command Line Interafce
+Command Line Interface
 ======================
 
 Options:
