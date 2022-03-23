@@ -114,6 +114,12 @@ class Ontology(entities.BaseEntity):
 
     @property
     def instance_map(self):
+        """
+         instance mapping for creating instance mask
+
+        :return dictionary {label: map_id}
+        :rtype: dict
+        """
         if self._instance_map is None:
             labels = [label for label in self.labels_flat_dict]
             labels.sort()
@@ -147,13 +153,14 @@ class Ontology(entities.BaseEntity):
         """
         Build an Ontology entity object from a json
 
-        :param is_fetched: is Entity fetched from Platform
-        :param project: project entity
-        :param dataset: dataset entity
-        :param _json: _json response from host
-        :param recipe: ontology's recipe
-        :param client_api: ApiClient entity
+        :param bool is_fetched: is Entity fetched from Platform
+        :param dtlpy.entities.project.Project project: project entity
+        :param dtlpy.entities.dataset.Dataset dataset: dataset
+        :param dict _json: _json response from host
+        :param dtlpy.entities.recipe.Recipe recipe: ontology's recipe
+        :param dl.ApiClient client_api: ApiClient entity
         :return: Ontology object
+        :rtype: dtlpy.entities.ontology.Ontology
         """
         if "attributes" in _json:
             attributes = _json["attributes"]
@@ -210,7 +217,7 @@ class Ontology(entities.BaseEntity):
         """
         Update items metadata
 
-        :param system_metadata: bool - True, if you want to change metadata system
+        :param bool system_metadata: bool - True, if you want to change metadata system
         :return: Ontology object
         """
         return self.ontologies.update(self, system_metadata=system_metadata)
@@ -524,16 +531,23 @@ class Ontology(entities.BaseEntity):
         """
         Add a single label to ontology
 
-        :param label_name: label name
-        :param color: optional - if not given a random color will be selected
-        :param children: optional - children
-        :param attributes: optional - attributes
-        :param display_label: optional - display_label
-        :param label: label
-        :param add: to add or not
-        :param icon_path: path to image to be display on label
-        :param update_ontology: update the ontology, default = False for backward compatible
+        :param str label_name: str - label name
+        :param tuple color: color
+        :param children: children (sub labels)
+        :param list attributes: attributes
+        :param str display_label: display_label
+        :param dtlpy.entities.label.Label label: label
+        :param bool add: to add or not
+        :param str icon_path: path to image to be display on label
+        :param bool update_ontology: update the ontology, default = False for backward compatible
         :return: Label entity
+        :rtype: dtlpy.entities.label.Label
+
+        **Example**:
+
+        .. code-block:: python
+
+            ontology.add_label(label_name='person', color=(34, 6, 231), attributes=['big', 'small'])
         """
         return self._label_handler(label_name=label_name, color=color, children=children, attributes=attributes,
                                    display_label=display_label, label=label, add=add, icon_path=icon_path,
@@ -543,10 +557,16 @@ class Ontology(entities.BaseEntity):
         """
         Adds a list of labels to ontology
 
-        :param label_list: list of labels [{"value": {"tag": "tag", "displayLabel": "displayLabel",
+        :param list label_list: list of labels [{"value": {"tag": "tag", "displayLabel": "displayLabel",
                                             "color": "#color", "attributes": [attributes]}, "children": [children]}]
-        :param update_ontology: update the ontology, default = False for backward compatible
+        :param bool update_ontology: update the ontology, default = False for backward compatible
         :return: List of label entities added
+
+        **Example**:
+
+        .. code-block:: python
+
+            ontology.add_labels(label_list=label_list)
         """
         self._labels_handler(label_list=label_list, update_ontology=update_ontology, mode=LabelHandlerMode.UPSERT)
 
@@ -555,18 +575,24 @@ class Ontology(entities.BaseEntity):
         """
         Update a single label to ontology
 
-        :param label_name: label name
-        :param color: optional - if not given a random color will be selected
-        :param children: optional - children
-        :param attributes: optional - attributes
-        :param display_label: optional - display_label
-        :param label: label
-        :param add: to add or not
-        :param icon_path: path to image to be display on label
-        :param upsert: if True will add in case it does not existing
-        :param update_ontology: update the ontology, default = False for backward compatible
-
+        :param str label_name: str - label name
+        :param tuple color: color
+        :param children: children (sub labels)
+        :param list attributes: attributes
+        :param str display_label: display_label
+        :param dtlpy.entities.label.Label label: label
+        :param bool add: to add or not
+        :param str icon_path: path to image to be display on label
+        :param bool update_ontology: update the ontology, default = False for backward compatible
+        :param bool upsert: if True will add in case it does not existing
         :return: Label entity
+        :rtype: dtlpy.entities.label.Label
+
+        **Example**:
+
+        .. code-block:: python
+
+            ontology.update_label(label_name='person', color=(34, 6, 231), attributes=['big', 'small'])
         """
         if upsert:
             mode = LabelHandlerMode.UPSERT
@@ -581,11 +607,17 @@ class Ontology(entities.BaseEntity):
         """
         Update a list of labels to ontology
 
-        :param label_list: list of labels [{"value": {"tag": "tag", "displayLabel": "displayLabel", "color": "#color", "attributes": [attributes]}, "children": [children]}]
-        :param upsert: if True will add in case it does not existing
-        :param update_ontology: update the ontology, default = False for backward compatible
+        :param list label_list: list of labels [{"value": {"tag": "tag", "displayLabel": "displayLabel", "color": "#color", "attributes": [attributes]}, "children": [children]}]
+        :param bool upsert: if True will add in case it does not existing
+        :param bool update_ontology: update the ontology, default = False for backward compatible
 
         :return: List of label entities added
+
+        **Example**:
+
+        .. code-block:: python
+
+            ontology.update_labels(label_list=label_list)
         """
 
         if upsert:

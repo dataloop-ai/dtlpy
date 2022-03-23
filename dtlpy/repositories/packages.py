@@ -101,6 +101,12 @@ class Packages:
         :param dtlpy.entities.package.Package package: package entity
         :param str package_id: package id
         :param str package_name: package name
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.packages.open_in_web(package_id='package_id')
         """
         if package_name is not None:
             package = self.get(package_name=package_name)
@@ -119,6 +125,12 @@ class Packages:
 
         :param dtlpy.entities.package.Package package: package entity
         :param str package_id: package id
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.packages.revisions(package='package_entity')
         """
         if package is None and package_id is None:
             raise exceptions.PlatformException(
@@ -150,6 +162,12 @@ class Packages:
         :param fetch: optional - fetch entity from platform, default taken from cookie
         :return: Package object
         :rtype: dtlpy.entities.package.Package
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.packages.get(package_id='package_id')
         """
         if fetch is None:
             fetch = self._client_api.fetch_entities
@@ -247,6 +265,12 @@ class Packages:
         :param str project_id: project id
         :return: Paged entity
         :rtype: dtlpy.entities.paged_entities.PagedEntities
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.packages.list()
         """
         if filters is None:
             filters = entities.Filters(resource=entities.FiltersResource.PACKAGE)
@@ -286,6 +310,12 @@ class Packages:
         :param project_id:
         :return: local path where the package pull
         :rtype: str
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.packages.pull(package='package_entity', local_path='local_path')
         """
         if isinstance(version, int):
             logger.warning('Deprecation Warning - Package/service versions have been refactored'
@@ -432,6 +462,16 @@ class Packages:
 
         :return: Package object
         :rtype: dtlpy.entities.package.Package
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.packages.push(package_name='package_name',
+                                    modules=[module],
+                                    version='1.0.0',
+                                    src_path=os.getcwd()
+                                )
         """
         # get project
         project_to_deploy = None
@@ -653,6 +693,12 @@ class Packages:
         :param str package_name: package name
         :return: True if success
         :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.packages.delete(package_name='package_name')
         """
         # get id and name
         if package_name is None or package_id is None:
@@ -708,6 +754,12 @@ class Packages:
         :param revision_increment: optional - str - version bumping method - major/minor/patch - default = None
         :return: Package object
         :rtype: dtlpy.entities.package.Package
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.packages.delete(package='package_entity')
         """
 
         if revision_increment is not None and isinstance(package.version, str) and len(package.version.split('.')) == 3:
@@ -788,6 +840,24 @@ class Packages:
         :param bool force: optional - terminate old replicas immediately
         :return: Service object
         :rtype: dtlpy.entities.service.Service
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.packages.deploy(service_name=package_name,
+                                    execution_timeout=3 * 60 * 60,
+                                    module_name=module.name,
+                                    runtime=dl.KubernetesRuntime(
+                                        concurrency=10,
+                                        pod_type=dl.InstanceCatalog.REGULAR_S,
+                                        autoscaler=dl.KubernetesRabbitmqAutoscaler(
+                                            min_replicas=1,
+                                            max_replicas=20,
+                                            queue_length=20
+                                        )
+                                    )
+                                )
         """
 
         if package is None:
@@ -825,6 +895,12 @@ class Packages:
         :param dtlpy.entities.project.Project project: project entity
         :param str json_filepath: path of the file to deploy
         :return: the package and the services
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.packages.deploy_from_file(project='project_entity', json_filepath='json_filepath')
         """
         with open(json_filepath, 'r') as f:
             data = json.load(f)
@@ -1086,6 +1162,14 @@ class Packages:
         :param str type_t: trigger type dl.TriggerType
         :return: trigger dict
         :rtype: dict
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.packages.build_trigger_dict(actions=dl.TriggerAction.CREATED,
+                                              function='run',
+                                              execution_mode=dl.TriggerExecutionMode.ONCE)
         """
         if not isinstance(actions, list):
             actions = [actions]
@@ -1176,7 +1260,14 @@ class Packages:
         :param str src_path: source file path
         :param str service_name: service name
         :param str package_type: package type from PackageCatalog
-        
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.packages.generate(name='package_name',
+                                      src_path='src_path')
+
         """
         # name
         if name is None:
@@ -1336,6 +1427,14 @@ class Packages:
         :param str mock_file_path: the mock file that have the inputs
         :return: list created by the function that tested the output
         :rtype: list
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.packages.test_local_package(cwd='path_to_package',
+                                                package='package_entity',
+                                                function_name='run')
         """
         if cwd is None:
             cwd = os.getcwd()
@@ -1385,7 +1484,13 @@ class Packages:
         :param dtlpy.entities.package.Package package: package entity
         :param str package_id: package id
         :param str package_name: package name
-        
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.packages.checkout(package='package_entity')
+
         """
         if package is None:
             package = self.get(package_id=package_id, package_name=package_name)

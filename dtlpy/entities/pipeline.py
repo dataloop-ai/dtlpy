@@ -65,11 +65,12 @@ class Pipeline(entities.BaseEntity):
         """
         Turn platform representation of pipeline into a pipeline entity
 
-        :param _json: platform representation of package
-        :param client_api: ApiClient entity
-        :param project: project entity
-        :param is_fetched: is Entity fetched from Platform
-        :return: Package entity
+        :param dict _json: platform representation of package
+        :param dl.ApiClient client_api: ApiClient entity
+        :param dtlpy.entities.project.Project project: project entity
+        :param bool is_fetched: is Entity fetched from Platform
+        :return: Pipeline entity
+        :rtype: dtlpy.entities.pipeline.Pipeline
         """
         if project is not None:
             if project.id != _json.get('projectId', None):

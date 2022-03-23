@@ -96,12 +96,13 @@ class Service(entities.BaseEntity):
         """
         Build a service entity object from a json
 
-        :param _json: platform json
-        :param client_api: ApiClient entity
-        :param package: package entity
-        :param project: project entity
-        :param is_fetched: is Entity fetched from Platform
-        :return:
+        :param dict _json: platform json
+        :param dl.ApiClient client_api: ApiClient entity
+        :param dtlpy.entities.package.Package package: package entity
+        :param dtlpy.entities.project.Project project: project entity
+        :param bool is_fetched: is Entity fetched from Platform
+        :return: service object
+        :rtype: dtlpy.entities.service.Service
         """
         if project is not None:
             if project.id != _json.get('projectId', None):
@@ -303,8 +304,9 @@ class Service(entities.BaseEntity):
         """
         Update Service changes to platform
 
-        :param force: force update
+        :param bool force: force update
         :return: Service entity
+        :rtype: dtlpy.entities.service.Service
         """
         return self.services.update(service=self, force=force)
 
@@ -313,6 +315,7 @@ class Service(entities.BaseEntity):
         Delete Service object
 
         :return: True
+        :rtype: bool
         """
         return self.services.delete(service_id=self.id)
 
@@ -320,7 +323,8 @@ class Service(entities.BaseEntity):
         """
         Get Service status
 
-        :return: True
+        :return: status json
+        :rtype: dict
         """
         return self.services.status(service_id=self.id)
 
@@ -330,18 +334,25 @@ class Service(entities.BaseEntity):
         Get service logs
 
         :param int size: size
-        :param checkpoint:
-        :param start: iso format time
-        :param end: iso format time
-        :param follow: keep stream future logs
-        :param text: text
+        :param dict checkpoint: the information from the lst point checked in the service
+        :param str start: iso format time
+        :param str end: iso format time
+        :param bool follow: if true, keep stream future logs
+        :param str text: text
         :param str execution_id: execution id
         :param str function_name: function name
         :param str replica_id: replica id
-        :param system: system
-        :param view: view
+        :param bool system: system
+        :param bool view: if true, print out all the logs
         :param bool until_completed: wait until completed
         :return: ServiceLog entity
+        :rtype: ServiceLog
+
+        **Example**:
+
+        .. code-block:: python
+
+            service.log()
         """
         return self.services.log(service=self,
                                  size=size,
@@ -405,17 +416,24 @@ class Service(entities.BaseEntity):
         """
         Execute a function on an existing service
 
-        :param execution_input: input dictionary or list of FunctionIO entities
-        :param function_name: str - function name to run
-        :param resource:dl.PackageInputType -  input type.
-        :param item_id:str - optional - input to function
-        :param dataset_id:str - optional - input to function
-        :param annotation_id:str - optional - input to function
-        :param project_id:str - resource's project
-        :param sync: bool - wait for function to end
-        :param stream_logs: bool - prints logs of the new execution. only works with sync=True
-        :param return_output: bool - if True and sync is True - will return the output directly
-        :return:
+        :param List[FunctionIO] or dict execution_input: input dictionary or list of FunctionIO entities
+        :param str function_name: function name to run
+        :param str resource: input type.
+        :param str item_id: optional - item id as input to function
+        :param str dataset_id: optional - dataset id as input to function
+        :param str annotation_id: optional - annotation id as input to function
+        :param str project_id: resource's project
+        :param bool sync: if true, wait for function to end
+        :param bool stream_logs: prints logs of the new execution. only works with sync=True
+        :param bool return_output: if True and sync is True - will return the output directly
+        :return: execution object
+        :rtype: dtlpy.entities.execution.Execution
+
+        **Example**:
+
+        .. code-block:: python
+
+            service.execute(function_name='function_name', item_id='item_id', project_id='project_id')
         """
         execution = self.executions.create(sync=sync,
                                            execution_input=execution_input,
@@ -452,12 +470,21 @@ class Service(entities.BaseEntity):
         :param str org_id: org id
         :param str user_email: user email
         :param list slots: list of entities.PackageSlot
-        :param str role: user role MemberOrgRole.ADMIN, MemberOrgRole.OWNER, MemberOrgRole.MEMBER
-        :param bool prevent_override: prevent override
+        :param str role: user role MemberOrgRole.ADMIN, MemberOrgRole.owner, MemberOrgRole.MEMBER
+        :param bool prevent_override: True to prevent override
         :param bool visible: visible
         :param str icon: icon
-        :param kwargs:
-        :return: List of user setting for activated slots
+        :param kwargs: all additional arguments
+        :return: list of user setting for activated slots
+        :rtype: list
+
+        **Example**:
+
+        .. code-block:: python
+
+            service.activate_slots(project_id='project_id',
+                                    slots=List[entities.PackageSlot],
+                                    icon='fas fa-magic')
         """
         return self.services.activate_slots(
             service=self,

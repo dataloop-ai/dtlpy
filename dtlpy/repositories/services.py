@@ -90,7 +90,13 @@ class Services:
 
         :param str service_name: service name
         :param str service_id: service id
-        :param dtlpy.entities.service.Service service:
+        :param dtlpy.entities.service.Service service: service entity
+
+        **Example**:
+
+        .. code-block:: python
+
+            package.services.open_in_web(service_id='service_id')
         """
         if service_name is not None:
             service = self.get(service_name=service_name)
@@ -122,6 +128,12 @@ class Services:
         :param dtlpy.entities.service.Service service: Service entity
         :param str service_name: service name
         :param str service_id: service id
+
+        **Example**:
+
+        .. code-block:: python
+
+            package.services.checkout(service_id='service_id')
         """
         if service is None:
             service = self.get(service_name=service_name, service_id=service_id)
@@ -143,6 +155,12 @@ class Services:
 
         :param dtlpy.entities.service.Service service: Service entity
         :param str service_id: service id
+
+        **Example**:
+
+        .. code-block:: python
+
+            package.services.revisions(service_id='service_id')
         """
         if service is None and service_id is None:
             raise exceptions.PlatformException(
@@ -175,6 +193,12 @@ class Services:
         :param fetch: optional - fetch entity from platform, default taken from cookie
         :return: Service object
         :rtype: dtlpy.entities.service.Service
+
+        **Example**:
+
+        .. code-block:: python
+
+            package.services.get(service_id='service_id')
         """
         if fetch is None:
             fetch = self._client_api.fetch_entities
@@ -276,6 +300,12 @@ class Services:
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :return: Paged entity
         :rtype: dtlpy.entities.paged_entities.PagedEntities
+
+        **Example**:
+
+        .. code-block:: python
+
+            package.services.list()
         """
         # default filters
         if filters is None:
@@ -319,6 +349,12 @@ class Services:
         :param str service_id: service id
         :return: status json
         :rtype: dict
+
+        **Example**:
+
+        .. code-block:: python
+
+            package.services.status(service_id='service_id')
         """
         if service_id is None:
             if service_name is None:
@@ -349,6 +385,12 @@ class Services:
         :param bool force: optional - terminate old replicas immediately
         :return: True if success
         :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            package.services.pause(service_id='service_id')
         """
         if service_id is None:
             if service_name is None:
@@ -382,6 +424,12 @@ class Services:
         :param bool force: optional - terminate old replicas immediately
         :return: json of the service
         :rtype: dict
+
+        **Example**:
+
+        .. code-block:: python
+
+            package.services.resume(service_id='service_id')
         """
         if service_id is None:
             if service_name is None:
@@ -452,7 +500,12 @@ class Services:
         **Prerequisites**: You must be in the role of an *owner* or *developer*.
 
         :param str name: service name
-    
+
+        **Example**:
+
+        .. code-block:: python
+
+            package.services.name_validation(name='name')
         """
         url = '/piper-misc/naming/services/{}'.format(name)
 
@@ -637,6 +690,12 @@ class Services:
         :param str service_id: by id
         :return: True
         :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            package.services.delete(service_id='service_id')
         """
         # get bby name
         if service_id is None:
@@ -664,6 +723,12 @@ class Services:
         :param bool force: optional - terminate old replicas immediately
         :return: Service entity
         :rtype: dtlpy.entities.service.Service
+
+        **Example**:
+
+        .. code-block:: python
+
+            package.services.update(service='service_entity')
         """
         assert isinstance(service, entities.Service)
 
@@ -727,6 +792,15 @@ class Services:
         :param kwargs: all additional arguments
         :return: list of user setting for activated slots
         :rtype: list
+
+        **Example**:
+
+        .. code-block:: python
+
+            package.services.activate_slots(service='service_entity',
+                                            project_id='project_id',
+                                            slots=List[entities.PackageSlot],
+                                            icon='fas fa-magic')
         """
         package = service.package
         if not isinstance(package.slots, list) or len(package.slots) == 0:
@@ -833,6 +907,12 @@ class Services:
         :param bool until_completed: wait until completed
         :return: ServiceLog entity
         :rtype: ServiceLog 
+
+        **Example**:
+
+        .. code-block:: python
+
+            package.services.log(service='service_entity')
         """
         assert isinstance(service, entities.Service)
 
@@ -931,6 +1011,15 @@ class Services:
         :param str project_id: str - resource's project
         :return: entities.Execution
         :rtype: dtlpy.entities.execution.Execution
+
+        **Example**:
+
+        .. code-block:: python
+
+            package.services.execute(service='service_entity',
+                                    function_name='run',
+                                    item_id='item_id',
+                                    project_id='project_id')
         """
         if service is None:
             service = self.get(service_id=service_id, service_name=service_name)
@@ -1002,6 +1091,24 @@ class Services:
         :param kwargs: list of additional arguments
         :return: Service object
         :rtype: dtlpy.entities.service.Service
+
+        **Example**:
+
+        .. code-block:: python
+
+            package.services.deploy(service_name=package_name,
+                                    execution_timeout=3 * 60 * 60,
+                                    module_name=module.name,
+                                    runtime=dl.KubernetesRuntime(
+                                        concurrency=10,
+                                        pod_type=dl.InstanceCatalog.REGULAR_S,
+                                        autoscaler=dl.KubernetesRabbitmqAutoscaler(
+                                            min_replicas=1,
+                                            max_replicas=20,
+                                            queue_length=20
+                                        )
+                                    )
+                                )
         """
         package = package if package is not None else self._package
         if service_name is None:
@@ -1171,6 +1278,13 @@ class Services:
         :param bool force: optional - terminate old replicas immediately
         :return: Service object
         :rtype: dtlpy.entities.service.Service
+
+        **Example**:
+
+        .. code-block:: python
+
+            package.services.deploy_from_local_folder(cwd='file_path',
+                                                      service_file='service_file')
         """
         # get cwd and service.json path
         if cwd is None:

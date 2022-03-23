@@ -435,8 +435,16 @@ class Annotation(entities.BaseEntity):
         """
         Remove an annotation from item
 
+        **Prerequisites**: You must have an item that has been annotated. You must have the role of an *owner* or *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*.
+
         :return: True if success
         :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            annotation.delete()
         """
         return self.annotations.delete(annotation_id=self.id)
 
@@ -444,9 +452,17 @@ class Annotation(entities.BaseEntity):
         """
         Update an existing annotation in host.
 
+        **Prerequisites**: You must have an item that has been annotated. You must have the role of an *owner* or *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*.
+
         :param system_metadata: True, if you want to change metadata system
         :return: Annotation object
         :rtype: dtlpy.entities.annotation.Annotation
+
+        **Example**:
+
+        .. code-block:: python
+
+            annotation.update()
         """
         return self.annotations.update(annotations=self,
                                        system_metadata=system_metadata)[0]
@@ -454,6 +470,8 @@ class Annotation(entities.BaseEntity):
     def upload(self):
         """
         Create a new annotation in host
+
+        **Prerequisites**: Any user can upload annotations.
 
         :return: Annotation entity
         :rtype: dtlpy.entities.annotation.Annotation
@@ -471,6 +489,8 @@ class Annotation(entities.BaseEntity):
         """
         Save annotation to file
 
+        **Prerequisites**: Any user can upload annotations.
+
         :param str filepath: local path to where annotation will be downloaded to
         :param list annotation_format: options: list(dl.ViewAnnotationOptions)
         :param float height: image height
@@ -480,6 +500,12 @@ class Annotation(entities.BaseEntity):
         :param float alpha: opacity value [0 1], default 1
         :return: filepath
         :rtype: str
+
+        **Example**:
+
+        .. code-block:: python
+
+            annotation.download(filepath='filepath', annotation_format=dl.ViewAnnotationOptions.MASK)
         """
         if annotation_format == ViewAnnotationOptions.JSON:
             with open(filepath, 'w') as f:
@@ -499,9 +525,17 @@ class Annotation(entities.BaseEntity):
         """
         Set annotation to frame state
 
+        **Prerequisites**: Any user can upload annotations.
+
         :param int frame: frame number
         :return: True if success
         :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            annotation.set_frame(frame=10)
         """
         if frame in self.frames:
             self.current_frame = frame
@@ -528,16 +562,28 @@ class Annotation(entities.BaseEntity):
         Show annotations
         mark the annotation of the image array and return it
 
+        **Prerequisites**: Any user can upload annotations.
+
         :param image: empty or image to draw on
         :param int thickness: line thickness
         :param bool with_text: add label to annotation
         :param float height: height
         :param float width: width
-        :param annotation_format: list(dl.ViewAnnotationOptions)
+        :param dl.ViewAnnotationOptions annotation_format: list(dl.ViewAnnotationOptions)
         :param tuple color: optional - color tuple
         :param label_instance_dict: the instance labels
         :param float alpha: opacity value [0 1], default 1
+        :param int frame_num: for video annotation, show specific fame
         :return: list or single ndarray of the annotations
+
+        **Exampls**:
+
+        .. code-block:: python
+
+            annotation.show(image='ndarray',
+                            thickness=1,
+                            annotation_format=dl.VIEW_ANNOTATION_OPTIONS_MASK,
+                            )
         """
         try:
             import cv2
@@ -790,6 +836,8 @@ class Annotation(entities.BaseEntity):
         """
         Create a new annotation object annotations
 
+        **Prerequisites**: Any user can upload annotations.
+
         :param dtlpy.entities.item.Items item: item to annotate
         :param annotation_definition: annotation type object
         :param str object_id: object_id
@@ -802,6 +850,14 @@ class Annotation(entities.BaseEntity):
         :param float item_width: annotation item's width
         :return: annotation object
         :rtype: dtlpy.entities.annotation.Annotation
+
+        **Example**:
+
+        .. code-block:: python
+
+            annotation.new(item='item_entity,
+                            annotation_definition=dl.Box(top=10,left=10,bottom=100, right=100,label='labelName'))
+                            )
         """
         if frame_num is None:
             frame_num = 0
@@ -920,6 +976,8 @@ class Annotation(entities.BaseEntity):
         """
         Add a frames state to annotation
 
+        **Prerequisites**: Any user can upload annotations.
+
         :param annotation_definition: annotation type object - must be same type as annotation
         :param int frame_num: first frame number
         :param int end_frame_num: last frame number
@@ -928,6 +986,14 @@ class Annotation(entities.BaseEntity):
         :param bool fixed: is fixed
         :param bool object_visible: does the annotated object is visible
         :return:
+
+        **Example**:
+
+        .. code-block:: python
+
+            annotation.add_frames(frame_num=10,
+                            annotation_definition=dl.Box(top=10,left=10,bottom=100, right=100,label='labelName'))
+                            )
         """
         # handle fps
         if self.fps is None:
@@ -968,6 +1034,14 @@ class Annotation(entities.BaseEntity):
         :param bool object_visible: does the annotated object is visible
         :return: True if success
         :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            annotation.add_frame(frame_num=10,
+                            annotation_definition=dl.Box(top=10,left=10,bottom=100, right=100,label='labelName'))
+                            )
         """
         # handle fps
         if self.fps is None:
@@ -1335,7 +1409,7 @@ class Annotation(entities.BaseEntity):
 
     def to_json(self):
         """
-        Convert annotation object to a platform json representation
+        Convert annotation object to a platform json representatio
 
         :return: platform json
         :rtype: dict

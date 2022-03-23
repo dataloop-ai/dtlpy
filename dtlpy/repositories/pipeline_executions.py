@@ -68,6 +68,12 @@ class PipelineExecutions:
         :param str pipeline_id: pipeline id
         :return: PipelineExecution object
         :rtype: dtlpy.entities.pipeline_execution.PipelineExecution
+
+        **Example**:
+
+        .. code-block:: python
+
+            pipeline.pipeline_executions.get(pipeline_id='pipeline_id')
         """
 
         if pipeline_id is None and self._pipeline is None:
@@ -138,6 +144,12 @@ class PipelineExecutions:
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :return: Paged entity
         :rtype: dtlpy.entities.paged_entities.PagedEntities
+
+        **Example**:
+
+        .. code-block:: python
+
+            pipeline.pipeline_executions.list()
         """
         if filters is None:
             filters = entities.Filters(resource=entities.FiltersResource.PIPELINE_EXECUTION)
@@ -185,6 +197,12 @@ class PipelineExecutions:
         :param execution_input: list of the dl.FunctionIO or dict of pipeline input - example {'item': 'item_id'}
         :return: entities.PipelineExecution object
         :rtype: dtlpy.entities.pipeline_execution.PipelineExecution
+
+        **Example**:
+
+        .. code-block:: python
+
+            pipeline.pipeline_executions.create(pipeline_id='pipeline_id', execution_input={'item': 'item_id'})
         """
         if pipeline_id is None:
             if self._pipeline is None:

@@ -84,6 +84,12 @@ class Projects:
         :param str project_name: project name
         :param str project_id: project id
         :param dtlpy.entities.project.Project project: project entity
+
+        **Example**:
+
+        .. code-block:: python
+
+            dl.projects.open_in_web(project_id='project_id')
         """
         if project_name is not None:
             project = self.get(project_name=project_name)
@@ -110,6 +116,12 @@ class Projects:
         :param str project_name: project name
         :param str project_id: project id
         :param dtlpy.entities.project.Project project: project entity
+
+        **Example**:
+
+        .. code-block:: python
+
+            dl.projects.checkout(project_id='project_id')
         """
         if project is None:
             if project_id is not None or project_name is not None:
@@ -158,9 +170,15 @@ class Projects:
 
         :param str email: member email
         :param str project_id: project id
-        :param role: "owner", "engineer", "annotator", "annotationManager"
+        :param role: dl.MemberRole.OWNER, dl.MemberRole.DEVELOPER, dl.MemberRole.ANNOTATOR, dl.MemberRole.ANNOTATION_MANAGER
         :return: dict that represent the user
         :rtype: dict
+
+        **Example**:
+
+        .. code-block:: python
+
+            dl.projects.add_member(project_id='project_id', email='user@dataloop.ai', role=dl.MemberRole.DEVELOPER)
         """
         url_path = '/projects/{}/members/{}'.format(project_id, email)
         payload = dict(role=role)
@@ -185,9 +203,15 @@ class Projects:
 
         :param str email: member email
         :param str project_id: project id
-        :param role: "owner", "engineer", "annotator", "annotationManager"
+        :param role: dl.MemberRole.OWNER, dl.MemberRole.DEVELOPER, dl.MemberRole.ANNOTATOR, dl.MemberRole.ANNOTATION_MANAGER
         :return: dict that represent the user
         :rtype: dict
+
+        **Example**:
+
+        .. code-block:: python
+
+            dl.projects.update_member(project_id='project_id', email='user@dataloop.ai', role=dl.MemberRole.DEVELOPER)
         """
         url_path = '/projects/{}/members/{}'.format(project_id, email)
         payload = dict(role=role)
@@ -214,6 +238,12 @@ class Projects:
         :param str project_id: project id
         :return: dict that represents the user
         :rtype: dict
+
+        **Example**:
+
+        .. code-block:: python
+
+            dl.projects.remove_member(project_id='project_id', email='user@dataloop.ai')
         """
         url_path = '/projects/{}/members/{}'.format(project_id, email)
         success, response = self._client_api.gen_request(req_type='delete',
@@ -230,9 +260,15 @@ class Projects:
         **Prerequisites**: You must be in the role of an *owner* to list project members.
 
         :param dtlpy.entities.project.Project project: project entity
-        :param role: "owner" ,"engineer" ,"annotator" ,"annotationManager"
+        :param role: dl.MemberRole.OWNER, dl.MemberRole.DEVELOPER, dl.MemberRole.ANNOTATOR, dl.MemberRole.ANNOTATION_MANAGER
         :return: list of the project members
         :rtype: list
+
+        **Example**:
+
+        .. code-block:: python
+
+            dl.projects.list_members(project_id='project_id', role=dl.MemberRole.DEVELOPER)
         """
         url_path = '/projects/{}/members'.format(project.id)
 
@@ -261,6 +297,12 @@ class Projects:
         **Prerequisites**: You must be a **superuser** to list all users' projects.
 
         :return: List of Project objects
+
+        **Example**:
+
+        .. code-block:: python
+
+            dl.projects.list()
         """
         if self._org is None:
             url_path = '/projects'
@@ -308,6 +350,12 @@ class Projects:
         :param bool fetch: optional - fetch entity from platform, default taken from cookie
         :return: Project object
         :rtype: dtlpy.entities.project.Project
+
+        **Example**:
+
+        .. code-block:: python
+
+            dl.projects.get(project_id='project_id')
         """
         if fetch is None:
             fetch = self._client_api.fetch_entities
@@ -377,6 +425,12 @@ class Projects:
         :param boll really: Really really sure?
         :return: True if sucess error if not
         :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            dl.projects.delete(project_id='project_id', sure=True, really=True)
         """
         if sure and really:
             if project_id is None:
@@ -405,6 +459,12 @@ class Projects:
         :param bool system_metadata: True, if you want to change metadata system
         :return: Project object
         :rtype: dtlpy.entities.project.Project
+
+        **Example**:
+
+        .. code-block:: python
+
+            dl.projects.delete(project='project_entity')
         """
         url_path = '/projects/{}'.format(project.id)
         if system_metadata:
@@ -429,6 +489,12 @@ class Projects:
         :param checkout: checkout
         :return: Project object
         :rtype: dtlpy.entities.project.Project
+
+        **Example**:
+
+        .. code-block:: python
+
+            dl.projects.create(project_name='project_name')
         """
         payload = {'name': project_name}
         success, response = self._client_api.gen_request(req_type='post',

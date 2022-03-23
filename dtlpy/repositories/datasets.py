@@ -99,6 +99,12 @@ class Datasets:
         :param str dataset_name: dataset name
         :param str dataset_id: dataset id
         :param dtlpy.entities.dataset.Dataset dataset: dataset object
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.datasets.open_in_web(dataset_id='dataset_id')
         """
         if dataset_name is not None:
             dataset = self.get(dataset_name=dataset_name)
@@ -125,6 +131,12 @@ class Datasets:
         :param str dataset_name: dataset name
         :param str dataset_id: dataset id
         :param dtlpy.entities.dataset.Dataset dataset: dataset object
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.datasets.checkout(dataset_id='dataset_id')
         """
         if dataset is None:
             if dataset_id is not None or dataset_name is not None:
@@ -150,6 +162,12 @@ class Datasets:
         :param str creator: list by creator
         :return: List of datasets
         :rtype: list
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.datasets.list(name='name')
         """
         url = '/datasets'
 
@@ -206,6 +224,12 @@ class Datasets:
         :param bool fetch: optional - fetch entity from platform, default taken from cookie
         :return: Dataset object
         :rtype: dtlpy.entities.dataset.Dataset
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.datasets.get(dataset_id='dataset_id')
         """
         if fetch is None:
             fetch = self._client_api.fetch_entities
@@ -262,6 +286,12 @@ class Datasets:
 
         **Prerequisites**: You must be an *owner* or *developer* to use this method.
 
+        **Example**:
+
+        .. code-block:: python
+
+            project.datasets.delete(dataset_id='dataset_id', sure=True, really=True)
+
         :param str dataset_name: optional - search by name
         :param str dataset_id: optional - search by id
         :param bool sure: Are you sure you want to delete?
@@ -297,6 +327,12 @@ class Datasets:
         :param dict patch: Specific patch request
         :return: Dataset object
         :rtype: dtlpy.entities.dataset.Dataset
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.datasets.update(dataset='dataset_entity')
         """
         url_path = '/datasets/{}'.format(dataset.id)
         if system_metadata:
@@ -329,6 +365,12 @@ class Datasets:
         :param str dataset_name: dataset name
         :param str dataset_id: dataset id
         :return: DirectoryTree
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.datasets.directory_tree(dataset='dataset_entity')
         """
         if dataset is None and dataset_name is None and dataset_id is None:
             raise exceptions.PlatformException('400', 'Must provide dataset, dataset name or dataset id')
@@ -359,7 +401,6 @@ class Datasets:
 
         **Prerequisites**: You must be in the role of an *owner* or *developer*.
 
-
         :param str dataset_id: id of the dataset you wish to clone
         :param str clone_name: new dataset name
         :param dtlpy.entities.filters.Filters filters: Filters entity or a query dict
@@ -368,6 +409,16 @@ class Datasets:
         :param bool with_task_annotations_status: true to clone with task annotations' status
         :return: dataset object
         :rtype: dtlpy.entities.dataset.Dataset
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.datasets.clone(dataset_id='dataset_id',
+                                  clone_name='dataset_clone_name',
+                                  with_metadata=True,
+                                  with_items_annotations=False,
+                                  with_task_annotations_status=False)
         """
         if filters is None:
             filters = entities.Filters().prepare()
@@ -426,6 +477,16 @@ class Datasets:
         :param bool wait: wait for the command to finish
         :return: True if success
         :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.datasets.clone(dataset_ids=['dataset_id1','dataset_id2'],
+                                  merge_name='dataset_merge_name',
+                                  with_metadata=True,
+                                  with_items_annotations=False,
+                                  with_task_annotations_status=False)
         """
         payload = {
             "name": merge_name,
@@ -466,6 +527,12 @@ class Datasets:
         :param bool wait: wait for the command to finish
         :return: True if success
         :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.datasets.sync(dataset_id='dataset_id')
         """
 
         success, response = self._client_api.gen_request(req_type='post',
@@ -494,6 +561,7 @@ class Datasets:
                driver_id: str = None,
                checkout: bool = False,
                expiration_options: entities.ExpirationOptions = None,
+               index_driver: entities.IndexDriver = entities.IndexDriver.V1
                ) -> entities.Dataset:
         """
         Create a new dataset
@@ -508,8 +576,15 @@ class Datasets:
         :param str driver_id: optional - driver id
         :param bool checkout: bool. cache the dataset to work locally
         :param ExpirationOptions expiration_options: dl.ExpirationOptions object that contain definitions for dataset like MaxItemDays
+        :param str index_driver: dl.IndexDriver, dataset driver version
         :return: Dataset object
         :rtype: dtlpy.entities.dataset.Dataset
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.datasets.create(dataset_name='dataset_name', ontology_ids='ontology_ids')
         """
         create_default_recipe = True
         if labels is not None or attributes is not None or ontology_ids is not None:
@@ -527,7 +602,8 @@ class Datasets:
         # get creator from token
         payload = {'name': dataset_name,
                    'projects': [self.project.id],
-                   'createDefaultRecipe': create_default_recipe}
+                   'createDefaultRecipe': create_default_recipe,
+                   'indexDriver': index_driver}
 
         if driver_id is None and driver is not None:
             if isinstance(driver, entities.Driver):
@@ -638,6 +714,19 @@ class Datasets:
         :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
         :return: local_path of the directory where all the downloaded item
         :rtype: str
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.datasets.download_annotations(dataset='dataset_entity',
+                                                 local_path='local_path',
+                                                 annotation_options=dl.ViewAnnotationOptions,
+                                                 overwrite=False,
+                                                 thickness=1,
+                                                 with_text=False,
+                                                 alpha=1
+                                                 )
         """
         if remote_path is not None:
             logger.warning(
@@ -749,6 +838,16 @@ class Datasets:
         :param bool clean: True to remove the old annotations
         :param str remote_root_path: the remote root path to match remote and local items
         :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.datasets.upload_annotations(dataset='dataset_entity',
+                                                 local_path='local_path',
+                                                 clean=False,
+                                                 export_version=dl.ExportVersion.V1
+                                                 )
         """
         if filters is None:
             filters = entities.Filters()
@@ -789,6 +888,12 @@ class Datasets:
 
         :param bool state: state to update readonly mode
         :param dtlpy.entities.dataset.Dataset dataset: dataset object
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.datasets.set_readonly(dataset='dataset_entity', state=True)
         """
         if dataset.readonly != state:
             patch = {'readonly': state}

@@ -22,7 +22,7 @@ from .trigger import Trigger, TriggerResource, TriggerAction, TriggerExecutionMo
     TriggerType
 from .project import Project, MemberRole
 from .artifact import Artifact
-from .dataset import Dataset, ExpirationOptions
+from .dataset import Dataset, ExpirationOptions, IndexDriver
 from .codebase import Codebase
 from .annotation import Annotation, FrameAnnotation, ViewAnnotationOptions, AnnotationStatus, AnnotationType, ExportVersion
 from .annotation_collection import AnnotationCollection

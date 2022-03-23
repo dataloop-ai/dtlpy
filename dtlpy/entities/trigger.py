@@ -140,10 +140,10 @@ class BaseTrigger(entities.BaseEntity):
         """
         Build a trigger entity object from a json
 
-        :param _json: platform json
-        :param client_api: ApiClient entity
-        :param project: project entity
-        :param service: service entity
+        :param dict _json: platform json
+        :param dl.ApiClient client_api: ApiClient entity
+        :param dtlpy.entities.project.Project project: project entity
+        :param dtlpy.entities.service.Service service: service entity
         :return:
         """
         if project is not None:
@@ -311,8 +311,8 @@ class Trigger(BaseTrigger):
 
         :param _json: platform json
         :param client_api: ApiClient entity
-        :param project: project entity
-        :param service: service entity
+        :param dtlpy.entities.project.Project project: project entity
+        :param dtlpy.entities.service.Service service: service entity
         :return:
         """
         spec = _json.get('spec', dict())

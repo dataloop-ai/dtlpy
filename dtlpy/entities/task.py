@@ -276,8 +276,9 @@ class Task:
         """
         Delete task from platform
 
-        :param wait: wait for the command to finish
+        :param bool wait: wait for the command to finish
         :return: True
+        :rtype: bool
         """
         return self.tasks.delete(task_id=self.id, wait=wait)
 
@@ -285,7 +286,7 @@ class Task:
         """
         Update an Annotation Task
 
-        :param system_metadata: True, if you want to change metadata system
+        :param bool system_metadata: True, if you want to change metadata system
         """
         return self.tasks.update(task=self, system_metadata=system_metadata)
 
@@ -314,6 +315,13 @@ class Task:
         :param bool wait: wait for the command to finish
         :return: task object
         :rtype: dtlpy.entities.task.Task
+
+        **Example**:
+
+        .. code-block:: python
+
+            task.create_qa_task(due_date = datetime.datetime(day= 1, month= 1, year= 2029).timestamp(),
+                                assignee_ids =[ 'annotator1@dataloop.ai', 'annotator2@dataloop.ai'])
         """
         return self.tasks.create_qa_task(task=self,
                                          due_date=due_date,
@@ -331,11 +339,18 @@ class Task:
         """
         Create a new assignment
 
-        :param assignment_name: assignment name
-        :param assignee_id: list of assignee for the assignment
-        :param items: items list for the assignment
+        :param str assignment_name: assignment name
+        :param list assignee_id: list of assignee for the assignment
+        :param list items: items list for the assignment
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
-        :return:
+        :return: Assignment object
+        :rtype: dtlpy.entities.assignment.Assignment assignment
+
+        **Example**:
+
+        .. code-block:: python
+
+            task.create_assignment(assignee_id='annotator1@dataloop.ai')
         """
         assignment = self.assignments.create(assignee_id=assignee_id,
                                              filters=filters,
@@ -353,12 +368,13 @@ class Task:
         Add items to Task
 
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
-        :param items: items list for the assignment
-        :param assignee_ids: list of assignee for the assignment
-        :param workload: the load of work
-        :param limit: limit
-        :param wait: wait for the command to finish
-        :return:
+        :param list items: list of items to add to the task
+        :param list assignee_ids: list to assignee who works in the task
+        :param list workload: list of the work load ber assignee and work load
+        :param int limit: task limit
+        :param bool wait: wait for the command to finish
+        :return: task entity
+        :rtype: dtlpy.entities.task.Task
         """
         return self.tasks.add_items(task=self,
                                     filters=filters,
@@ -373,7 +389,8 @@ class Task:
         Get the task items
 
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
-        :return:
+        :return: list of the items or PagedEntity output of items
+        :rtype: list or dtlpy.entities.paged_entities.PagedEntities
         """
         return self.tasks.get_items(task_id=self.id, dataset=self.dataset, filters=filters)
 
@@ -381,11 +398,11 @@ class Task:
         """
         Update item status within task
 
-        :param status: str - string the describes the status
-        :param operation: str -  'create' or 'delete'
-        :param item_ids: List[str]
+        :param str status: string the describes the status
+        :param str operation:  'create' or 'delete'
+        :param list item_ids: List[str] id items ids
 
-        :return : Boolean
-
+        :return: True if success
+        :rtype: bool
         """
         return self.tasks.set_status(status=status, operation=operation, item_ids=item_ids, task_id=self.id)

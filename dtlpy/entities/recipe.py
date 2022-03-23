@@ -50,11 +50,11 @@ class Recipe(entities.BaseEntity):
         """
         Build a Recipe entity object from a json
 
-        :param _json: _json response from host
-        :param dataset: recipe's dataset
-        :param project: recipe's project
-        :param client_api: ApiClient entity
-        :param is_fetched: is Entity fetched from Platform
+        :param dict _json: _json response from host
+        :param dtlpy.entities.dataset.Dataset Dataset: Dataset entity
+        :param dtlpy.entities.project.Project project: project entity
+        :param dl.ApiClient client_api: ApiClient entity
+        :param bool is_fetched: is Entity fetched from Platform
         :return: Recipe object
         """
         project_ids = _json.get('projectIds', None)
@@ -183,6 +183,7 @@ class Recipe(entities.BaseEntity):
         :param bool force: force delete recipe
 
         :return: True
+        :rtype: bool
         """
         return self.recipes.delete(self.id, force=force)
 
@@ -190,8 +191,9 @@ class Recipe(entities.BaseEntity):
         """
         Update Recipe
 
-        :param system_metadata: bool - True, if you want to change metadata system
+        :param bool system_metadata: bool - True, if you want to change metadata system
         :return: Recipe object
+        :rtype: dtlpy.entities.recipe.Recipe
         """
         return self.recipes.update(recipe=self, system_metadata=system_metadata)
 
@@ -199,8 +201,9 @@ class Recipe(entities.BaseEntity):
         """
         Clone Recipe
 
-       :param shallow: If True, link ot existing ontology, clones all ontology that are link to the recipe as well
+       :param bool shallow: If True, link ot existing ontology, clones all ontology that are link to the recipe as well
        :return: Cloned ontology object
+       :rtype: dtlpy.entities.recipe.Recipe
         """
         return self.recipes.clone(recipe=self,
                                   shallow=shallow)
@@ -209,7 +212,7 @@ class Recipe(entities.BaseEntity):
         """
         Get annotation template id by template name
 
-       :param template_name:
+       :param str template_name:
        :return: template id or None if does not exist
         """
         collection_templates = list()

@@ -122,6 +122,12 @@ class Tasks:
         :param list project_ids: list of project ids
         :return: Paged entity
         :rtype: dtlpy.entities.paged_entities.PagedEntities
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.tasks.query(project_ids='project_ids')
         """
         if project_ids is None:
             if self._project_id is not None:
@@ -189,6 +195,12 @@ class Tasks:
         :param double max_date: double max date
         :param dtlpy.entities.filters.Filters filters: dl.Filters entity to filters items
         :return: List of Annotation Task objects
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.tasks.list(project_ids='project_ids',pages_size=100, page_offset=0)
         """
         # url
         url = URL_PATH + '/query'
@@ -265,6 +277,12 @@ class Tasks:
         :param str task_id: optional - search by id
         :return: task object
         :rtype: dtlpy.entities.task.Task
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.tasks.get(task_id='task_id')
         """
 
         # url
@@ -320,6 +338,12 @@ class Tasks:
         :param str task_name: task name
         :param str task_id: task id
         :param dtlpy.entities.task.Task task: task entity
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.tasks.open_in_web(task_id='task_id')
         """
         if task_name is not None:
             task = self.get(task_name=task_name)
@@ -346,6 +370,12 @@ class Tasks:
         :param bool wait: wait for the command to finish
         :return: True is success
         :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.tasks.delete(task_id='task_id')
         """
         if task_id is None:
             if task is None:
@@ -390,6 +420,12 @@ class Tasks:
         :param bool system_metadata: True, if you want to change metadata system
         :return: Annotation Task object
         :rtype: dtlpy.entities.task.Task
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.tasks.update(task='task_entity')
         """
         url = URL_PATH
         url = '{}/{}'.format(url, task.id)
@@ -435,6 +471,14 @@ class Tasks:
         :param bool wait: wait for the command to finish
         :return: task object
         :rtype: dtlpy.entities.task.Task
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.tasks.create_qa_task(task= 'task_entity',
+                                        due_date = datetime.datetime(day= 1, month= 1, year= 2029).timestamp(),
+                                        assignee_ids =[ 'annotator1@dataloop.ai', 'annotator2@dataloop.ai'])
         """
         source_filter = entities.filters.SingleFilter(
             field='metadata.system.refs',
@@ -528,6 +572,14 @@ class Tasks:
         :param entities.Filters check_if_exist: dl.Filters check if task exist according to filter
         :return: Annotation Task object
         :rtype: dtlpy.entities.task.Task
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.tasks.create(task= 'task_entity',
+                                due_date = datetime.datetime(day= 1, month= 1, year= 2029).timestamp(),
+                                assignee_ids =[ 'annotator1@dataloop.ai', 'annotator2@dataloop.ai'])
         """
 
         if dataset is None and self._dataset is None:
@@ -691,6 +743,13 @@ class Tasks:
         :param bool wait: wait for the command to finish
         :return: task entity
         :rtype: dtlpy.entities.task.Task
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.tasks.add_items(task= 'task_entity',
+                                items = [items])
         """
         if filters is None and items is None and query is None:
             raise exceptions.PlatformException('400', 'Must provide either filters, query or items list')
@@ -767,7 +826,13 @@ class Tasks:
         :param dtlpy.entities.dataset.Dataset dataset: dataset entity
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :return: list of the items or PagedEntity output of items
-        :rtype: list or dtlpy.entities.paged_entities.PagedEntities 
+        :rtype: list or dtlpy.entities.paged_entities.PagedEntities
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.tasks.get_items(task_id= 'task_id')
         """
         if task_id is None and task_name is None:
             raise exceptions.PlatformException('400', 'Please provide either task_id or task_name')
@@ -797,6 +862,12 @@ class Tasks:
         :param list item_ids: List[str] id items ids
         :return: True if success
         :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.tasks.set_status(task_id= 'task_id', status='complete', operation='create')
         """
         url = '/assignments/items/tasks/{task_id}/status'.format(task_id=task_id)
         payload = {

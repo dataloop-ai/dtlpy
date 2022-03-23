@@ -28,7 +28,7 @@ class Organization(entities.BaseEntity):
 
     members = attr.ib(type=list)
     groups = attr.ib(type=list)
-    accounts = attr.ib(type=list)
+    account = attr.ib(type=dict)
     created_at = attr.ib()
     updated_at = attr.ib()
     id = attr.ib(repr=False)
@@ -72,6 +72,10 @@ class Organization(entities.BaseEntity):
         return self._client_api._get_resource_url("iam/{}/members".format(self.id))
 
     @property
+    def accounts(self):
+        return [self.account]
+
+    @property
     def projects(self):
         assert isinstance(self._repositories.projects, repositories.Projects)
         return self._repositories.projects
@@ -110,15 +114,15 @@ class Organization(entities.BaseEntity):
         """
         Build a Project entity object from a json
 
-        :param is_fetched: is Entity fetched from Platform
-        :param _json: _json response from host
-        :param client_api: ApiClient entity
-
-        :return: Project object
+        :param bool is_fetched: is Entity fetched from Platform
+        :param dict _json: _json response from host
+        :param dl.ApiClient client_api: ApiClient entity
+        :return: Organization object
+        :rtype: dtlpy.entities.organization.Organization
         """
         inst = cls(members=_json.get('members', None),
                    groups=_json.get('groups', None),
-                   accounts=_json.get('accounts', None),
+                   account=_json.get('account', None),
                    created_at=_json.get('createdAt', None),
                    updated_at=_json.get('updatedAt', None),
                    id=_json.get('id', None),
@@ -147,6 +151,7 @@ class Organization(entities.BaseEntity):
                                                               ))
         output_dict['members'] = self.members
         output_dict['groups'] = self.groups
+        output_dict['account'] = self.account
         output_dict['accounts'] = self.accounts
         output_dict['createdAt'] = self.created_at
         output_dict['updatedAt'] = self.updated_at

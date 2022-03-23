@@ -69,11 +69,17 @@ class Annotations:
         """
         Get a single annotation.
 
-        **Prerequisites**: You must have an item that has been annotated. You must have the role of an *owner* or *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*. 
+        **Prerequisites**: You must have an item that has been annotated. You must have the role of an *owner* or *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*.
 
         :param str annotation_id: annotation id
         :return: Annotation object or None
         :rtype: dtlpy.entities.annotation.Annotation
+
+        **Example**:
+
+        .. code-block:: python
+
+            item.annotations.get(annotation_id='annotation_id')
         """
         success, response = self._client_api.gen_request(req_type='get',
                                                          path='/annotations/{}'.format(annotation_id))
@@ -135,6 +141,17 @@ class Annotations:
         :param int page_size: size of page
         :return: Pages object
         :rtype: dtlpy.entities.paged_entities.PagedEntities
+
+        **Example**:
+
+        .. code-block:: python
+
+            item.annotations.list(filters=dl.Filters(
+                                         resource=dl.FiltersResource.ANNOTATION,
+                                         field='type',
+                                         values='box'),
+                      page_size=100,
+                      page_offset=0)
         """
         if self._dataset_id is not None:
             if filters is None:
@@ -211,6 +228,18 @@ class Annotations:
         :param float alpha: opacity value [0 1], default 1
         :return: ndarray of the annotations
         :rtype: ndarray
+
+        **Example**:
+
+        .. code-block:: python
+
+            item.annotations.show(image='nd array',
+                      thickness=1,
+                      with_text=False,
+                      height=100,
+                      width=100,
+                      annotation_format=dl.ViewAnnotationOptions.MASK,
+                      alpha=1)
         """
         # get item's annotations
         annotations = self.list()
@@ -247,6 +276,20 @@ class Annotations:
         :param float alpha: opacity value [0 1], default 1
         :return: file path to where save the annotations
         :rtype: str
+
+        **Example**:
+
+        .. code-block:: python
+
+            item.annotations.download(
+                          filepath='file_path',
+                          annotation_format=dl.ViewAnnotationOptions.MASK,
+                          img_filepath='img_filepath',
+                          height=100,
+                          width=100,
+                          thickness=1,
+                          with_text=False,
+                          alpha=1)
         """
         # get item's annotations
         annotations = self.list()
@@ -301,6 +344,12 @@ class Annotations:
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :return: True/False
         :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            item.annotations.delete(annotation_id='annotation_id')
         """
         if annotation is not None:
             if isinstance(annotation, entities.Annotation):
@@ -445,6 +494,12 @@ class Annotations:
 
         :return: True if successful or error if unsuccessful
         :rtype: bool
+
+         **Example**:
+
+        .. code-block:: python
+
+            item.annotations.update(annotation='annotation')
         """
         pool = self._client_api.thread_pools(pool_name='annotation.update')
         if not isinstance(annotations, list):
@@ -532,6 +587,12 @@ class Annotations:
         :param List[dtlpy.entities.annotation.Annotation] or dtlpy.entities.annotation.Annotation annotations: list or single annotation of type Annotation
         :return: list of annotation objects
         :rtype: list
+
+        **Example**:
+
+        .. code-block:: python
+
+            item.annotations.upload(annotations='builder')
         """
         # make list if not list
         if isinstance(annotations, entities.AnnotationCollection):
@@ -566,6 +627,12 @@ class Annotations:
         :param str status: can be AnnotationStatus.ISSUE, AnnotationStatus.APPROVED, AnnotationStatus.REVIEW, AnnotationStatus.CLEAR
         :return: Annotation object
         :rtype: dtlpy.entities.annotation.Annotation
+
+        **Example**:
+
+        .. code-block:: python
+
+            item.annotations.update_status(annotation_id='annotation_id', status=dl.AnnotationStatus.ISSUE)
         """
         if annotation is None:
             if annotation_id is None:
@@ -580,10 +647,16 @@ class Annotations:
         """
         Create Annotation collection.
 
-        **Prerequisites**: You must have an item to be annotated. You must have the role of an *owner* or *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*. 
+        **Prerequisites**: You must have an item to be annotated. You must have the role of an *owner* or *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*.
 
         :return: Annotation collection object
         :rtype: dtlpy.entities.annotation_collection.AnnotationCollection
+
+        **Example**:
+
+        .. code-block:: python
+
+            item.annotations.builder()
         """
         return entities.AnnotationCollection(item=self.item)
 

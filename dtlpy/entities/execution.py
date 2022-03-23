@@ -136,10 +136,10 @@ class Execution(entities.BaseEntity):
     @classmethod
     def from_json(cls, _json, client_api, project=None, service=None, is_fetched=True):
         """
-        :param _json: platform json
-        :param client_api: ApiClient entity
-        :param project: project entity
-        :param service:
+        :param dict _json: platform json
+        :param dl.ApiClient client_api: ApiClient entity
+        :param dtlpy.entities.project.Project project: project entity
+        :param dtlpy.entities.service.Service service:
         :param is_fetched: is Entity fetched from Platform
         """
         if project is not None:

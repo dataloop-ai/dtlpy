@@ -95,6 +95,12 @@ class Assignments:
         :param str task_id: task id
         :return: List of Assignment objects
         :rtype: miscellaneous.List[dtlpy.entities.assignment.Assignment]
+
+        **Example**:
+
+        .. code-block:: python
+
+            task.assignments.list(status='complete', assignee_id='user@dataloop.ai', pages_size=100, page_offset=0)
         """
 
         # url
@@ -159,6 +165,12 @@ class Assignments:
         :param str assignment_id: optional - search by id
         :return: Assignment object
         :rtype: dtlpy.entities.assignment.Assignment
+
+        **Example**:
+
+        .. code-block:: python
+
+            task.assignments.get(assignment_id='assignment_id')
         """
 
         if assignment_id is not None:
@@ -216,6 +228,12 @@ class Assignments:
         :param str assignment_name: assignment name
         :param str assignment_id: assignment id
         :param dtlpy.entities.assignment.Assignment assignment: assignment object
+
+        **Example**:
+
+        .. code-block:: python
+
+            task.assignments.open_in_web(assignment_id='assignment_id')
         """
         if assignment_name is not None:
             assignment = self.get(assignment_name=assignment_name)
@@ -246,6 +264,12 @@ class Assignments:
         :param bool wait: wait for the command to finish
         :return: Assignment object
         :rtype: dtlpy.entities.assignment.Assignment
+
+        **Example**:
+
+        .. code-block:: python
+
+            task.assignments.reassign(assignee_ids='annotator1@dataloop.ai')
         """
         if assignment_id is None and assignment is None:
             raise exceptions.PlatformException('400', 'Must provide either assignment or assignment_id')
@@ -294,6 +318,8 @@ class Assignments:
 
         **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned as *owner* of the annotation task.
 
+        **Example**:
+
         :param dtlpy.entities.assignment.Workload workload: workload object that contain the assignees and the work load
         :param dtlpy.entities.assignment.Assignment assignment: assignment object
         :param str assignment_id: assignment id
@@ -302,6 +328,11 @@ class Assignments:
         :param bool wait: wait for the command to finish
         :return: Assignment object
         :rtype: dtlpy.entities.assignment.Assignment assignment
+
+        .. code-block:: python
+
+            task.assignments.redistribute(workload=dl.Workload([dl.WorkloadUnit(assignee_id="annotator1@dataloop.ai", load=50),
+                                                                dl.WorkloadUnit(assignee_id="annotator2@dataloop.ai", load=50)]))
         """
         if assignment_id is None and assignment is None:
             raise exceptions.PlatformException('400', 'Must provide either assignment or assignment_id')
@@ -370,6 +401,12 @@ class Assignments:
         :param bool system_metadata: True, if you want to change metadata system
         :return: Assignment object
         :rtype: dtlpy.entities.assignment.Assignment assignment
+
+        **Example**:
+
+        .. code-block:: python
+
+            task.assignments.update(assignment='assignment_entity', system_metadata=False)
         """
         url = '/assignments/{}'.format(assignment.id)
 
@@ -402,6 +439,12 @@ class Assignments:
         :param list items: list of items
         :return: Assignment object
         :rtype: dtlpy.entities.assignment.Assignment assignment
+
+        **Example**:
+
+        .. code-block:: python
+
+            task.assignments.create(assignee_id='annotator1@dataloop.ai')
         """
         return self._create_in_task(assignee_id=assignee_id, task=task, filters=filters, items=items)
 
@@ -474,6 +517,12 @@ class Assignments:
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :return: pages of the items
         :rtype: dtlpy.entities.paged_entities.PagedEntities
+
+        **Example**:
+
+        .. code-block:: python
+
+            task.assignments.get_items(assignment_id='assignment_id')
         """
         if assignment is None and assignment_id is None and assignment_name is None:
             raise exceptions.PlatformException('400',
@@ -517,6 +566,15 @@ class Assignments:
         :param str assignment_id: assignment id
         :return: True id success
         :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            task.assignments.set_status(assignment_id='assignment_id',
+                                        status='complete',
+                                        operation='created',
+                                        item_id='item_id')
         """
         url = '/assignments/{assignment_id}/items/{item_id}/status'.format(assignment_id=assignment_id, item_id=item_id)
         payload = {

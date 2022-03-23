@@ -133,11 +133,16 @@ class Filters:
         """
         Add filter
 
-        :param field: Metadata field / attribute
-        :param values: field values
-        :param operator: optional - in, gt, lt, eq, ne
-        :param method: Optional - or/and
-        :return:
+        :param str field: Metadata field / attribute
+        :param str or list values: field values
+        :param dl.FiltersOperations operator: optional - in, gt, lt, eq, ne
+        :param dl.FiltersMethod method: Optional - or/and
+
+        **Example**:
+
+        .. code-block:: python
+
+            filter.add(field='metadata.user', values=['1','2'], operator=dl.FiltersOperations.IN)
         """
         if method is None:
             method = self.method
@@ -163,7 +168,7 @@ class Filters:
         """
         generate url query params
 
-        :param url:
+        :param str url:
         """
         url = '{}?'.format(url)
         for f in self.and_filter_list:
@@ -177,7 +182,7 @@ class Filters:
         """
         is filter has field
 
-        :param field: field to check
+        :param str field: field to check
         :return: Ture is have it
         :rtype: bool
         """
@@ -195,7 +200,7 @@ class Filters:
         """
         Pop filed
 
-        :param field: field to pop
+        :param str field: field to pop
         """
         for single_filter in self.or_filter_list:
             if single_filter.field == field:
@@ -209,7 +214,7 @@ class Filters:
         """
         Pop join
 
-        :param field: field to pop
+        :param str field: field to pop
         """
         if self.join is not None:
             for single_filter in self.join['filter']['$and']:
@@ -224,10 +229,16 @@ class Filters:
         """
         join a query to the filter
 
-        :param field: field to add
-        :param values: values
-        :param operator: optional - in, gt, lt, eq, ne
+        :param str field: Metadata field / attribute
+        :param str or list values: field values
+        :param dl.FiltersOperations operator: optional - in, gt, lt, eq, ne
         :param method: optional - str - FiltersMethod.AND, FiltersMethod.OR
+
+        **Example**:
+
+        .. code-block:: python
+
+            filter.add_join(field='metadata.user', values=['1','2'], operator=dl.FiltersOperations.IN)
         """
         if self.resource not in [FiltersResource.ITEM, FiltersResource.ANNOTATION]:
             raise PlatformException('400', 'Cannot join to {} filters'.format(self.resource))
@@ -325,9 +336,9 @@ class Filters:
         """
         To dictionary for platform call
 
-        :param operation: operation
+        :param str operation: operation
         :param update: update
-        :param query_only: query only
+        :param bool query_only: query only
         :param system_update: system update
         :param system_metadata: True, if you want to change metadata system
         :return: dict of the filter
@@ -396,8 +407,14 @@ class Filters:
         """
         sort the filter
 
-        :param field: field to sort by it
-        :param value: FiltersOrderByDirection.ASCENDING, FiltersOrderByDirection.DESCENDING
+        :param str field: field to sort by it
+        :param dl.FiltersOrderByDirection value: FiltersOrderByDirection.ASCENDING, FiltersOrderByDirection.DESCENDING
+
+        **Example**:
+
+        .. code-block:: python
+
+            filter.sort_by(field='metadata.user', values=dl.FiltersOrderByDirection.ASCENDING)
         """
         if value not in [FiltersOrderByDirection.ASCENDING, FiltersOrderByDirection.DESCENDING]:
             raise PlatformException(error='400', message='Sort can be by ascending or descending order only')

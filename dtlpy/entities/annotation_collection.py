@@ -161,16 +161,28 @@ class AnnotationCollection(entities.BaseEntity):
         """
         Show annotations according to annotation_format
 
-        :param image: empty or image to draw on
-        :param height: height
-        :param width: width
-        :param thickness: line thickness
-        :param with_text: add label to annotation
-        :param annotation_format: how to show thw annotations. options: list(dl.ViewAnnotationOptions)
-        :param label_instance_dict: instance label map {'Label': 1, 'More': 2}
-        :param color: optional - color tuple
-        :param alpha: opacity value [0 1], default 1
+        **Prerequisites**: Any user can upload annotations.
+
+        :param ndarray image: empty or image to draw on
+        :param int height: height
+        :param int width: width
+        :param int thickness: line thickness
+        :param bool with_text: add label to annotation
+        :param dl.ViewAnnotationOptions annotation_format: how to show thw annotations. options: list(dl.ViewAnnotationOptions)
+        :param dict label_instance_dict: instance label map {'Label': 1, 'More': 2}
+        :param tuple color: optional - color tuple
+        :param float alpha: opacity value [0 1], default 1
+        :param int frame_num: for video annotation, show specific frame
         :return: ndarray of the annotations
+
+        **Example**:
+
+        .. code-block:: python
+
+            builder.show(image='ndarray',
+                        thickness=1,
+                        annotation_format=dl.VIEW_ANNOTATION_OPTIONS_MASK,
+                        )
         """
         # if 'video' in self.item.mimetype and (annotation_format != 'json' or annotation_format != ['json']):
         #     raise PlatformException('400', 'Cannot show mask or instance of video item')
@@ -309,16 +321,25 @@ class AnnotationCollection(entities.BaseEntity):
         """
         Save annotations to file
 
-        :param filepath: path to save annotation
-        :param img_filepath: img file path - needed for img_mask
-        :param annotation_format: how to show thw annotations. options: list(dl.ViewAnnotationOptions)
-        :param height: height
-        :param width: width
-        :param thickness: thickness
-        :param with_text: add a text to the image
-        :param orientation: the image orientation
-        :param alpha: opacity value [0 1], default 1
-        :return:
+        **Prerequisites**: Any user can upload annotations.
+
+        :param str filepath: path to save annotation
+        :param str img_filepath: img file path - needed for img_mask
+        :param dl.ViewAnnotationOptions annotation_format: how to show thw annotations. options: list(dl.ViewAnnotationOptions)
+        :param int height: height
+        :param int width: width
+        :param int thickness: thickness
+        :param bool with_text: add a text to the image
+        :param int orientation: the image orientation
+        :param float alpha: opacity value [0 1], default 1
+        :return: file path of the downlaod annotation
+        :rtype: str
+
+        **Example**:
+
+        .. code-block:: python
+
+            builder.download(filepath='filepath', annotation_format=dl.ViewAnnotationOptions.MASK)
         """
         dir_name, ex = os.path.splitext(filepath)
         if annotation_format == entities.ViewAnnotationOptions.JSON:
@@ -412,16 +433,59 @@ class AnnotationCollection(entities.BaseEntity):
     # Platform #
     ############
     def update(self, system_metadata=True):
+        """
+        Update an existing annotation in host.
+
+        **Prerequisites**: You must have an item that has been annotated. You must have the role of an *owner* or *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*.
+
+        :param system_metadata: True, if you want to change metadata system
+        :return: Annotation object
+        :rtype: dtlpy.entities.annotation.Annotation
+
+        **Example**:
+
+        .. code-block:: python
+
+            builder.update()
+        """
         if self.item is None:
             raise PlatformException('400', 'missing item to perform platform update')
         return self.item.annotations.update(annotations=self.annotations, system_metadata=system_metadata)
 
     def delete(self):
+        """
+        Remove an annotation from item
+
+        **Prerequisites**: You must have an item that has been annotated. You must have the role of an *owner* or *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*.
+
+        :return: True if success
+        :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            builder.delete()
+        """
         if self.item is None:
             raise PlatformException('400', 'missing item to perform platform delete')
         return [self.item.annotations.delete(annotation_id=annotation.id) for annotation in self.annotations]
 
     def upload(self):
+        """
+        Create a new annotation in host
+
+        **Prerequisites**: Any user can upload annotations.
+
+        :return: Annotation entity
+        :rtype: dtlpy.entities.annotation.Annotation
+
+        **Example**:
+
+        .. code-block:: python
+
+            builder.upload()
+        """
         if self.item is None:
             raise PlatformException('400', 'missing item to perform platform upload')
         return self.item.annotations.upload(self.annotations)
@@ -445,6 +509,20 @@ class AnnotationCollection(entities.BaseEntity):
     @classmethod
     def from_json(cls, _json: list, item=None, is_video=None, fps=25, height=None, width=None,
                   client_api=None, is_audio=None):
+        """
+        Create an annotation collection object from platform json
+
+        :param dict _json: platform json
+        :param dtlpy.entities.item.Item item: item
+        :param client_api: ApiClient entity
+        :param bool is_video: is video
+        :param fps: video fps
+        :param float height: height
+        :param float width: width
+        :param bool is_audio: is audio
+        :return: annotation object
+        :rtype: dtlpy.entities.annotation.Annotation
+        """
         if item is None:
             if isinstance(_json, dict):
                 metadata = _json.get('metadata', dict())
@@ -521,8 +599,9 @@ class AnnotationCollection(entities.BaseEntity):
 
     def from_vtt_file(self, filepath):
         """
-            convert annotation from vtt format
-            :param filepath: path to the file
+        convert annotation from vtt format
+
+        :param str filepath: path to the file
         """
         for caption in webvtt.read(filepath):
             h, m, s = caption.start.split(':')
@@ -547,9 +626,10 @@ class AnnotationCollection(entities.BaseEntity):
 
     def from_instance_mask(self, mask, instance_map=None):
         """
-            convert annotation from instance mask format
-            :param mask: the mask annotation
-            :param instance_map: labels
+        convert annotation from instance mask format
+
+        :param mask: the mask annotation
+        :param instance_map: labels
         """
         if instance_map is None:
             instance_map = self.item.dataset.instance_map
@@ -586,6 +666,7 @@ class AnnotationCollection(entities.BaseEntity):
 
     def print(self, to_return=False, columns=None):
         """
+
         :param to_return:
         :param columns:
         """
@@ -598,7 +679,7 @@ class AnnotationCollection(entities.BaseEntity):
         """
         Get frame
 
-        :param frame_num: frame num
+        :param int frame_num: frame num
         :return: AnnotationCollection
         """
         frame_collection = AnnotationCollection(item=self.item)

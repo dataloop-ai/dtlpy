@@ -115,6 +115,12 @@ class Artifacts:
         :param str snapshot_name: snapshot name
         :return: list of artifacts
         :rtype: miscellaneous.List[dtlpy.entities.artifact.Artifact]
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.artifacts.list(package_name='package_name')
         """
         if self._model is not None:
             model_name = self._model.name
@@ -156,6 +162,12 @@ class Artifacts:
         :param str package_name: package name
         :return: Artifact object
         :rtype: dtlpy.entities.artifact.Artifact
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.artifacts.get(artifact_id='artifact_id')
         """
         if self._model is not None:
             model_name = self._model.name
@@ -219,6 +231,15 @@ class Artifacts:
         :param bool save_locally: to save the file local
         :return: file path
         :rtype: str
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.artifacts.download(artifact_id='artifact_id',
+                                        local_path='your_path',
+                                        overwrite=True,
+                                        save_locally=True)
         """
         if self._model is not None:
             model_name = self._model.name
@@ -289,6 +310,13 @@ class Artifacts:
         :param bool overwrite: optional - default = False to overwrite an existing object
         :return: Artifact Object
         :rtype: dtlpy.entities.artifact.Artifact
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.artifacts.upload(filepath='filepath',
+                                    package_name='package_name')
         """
         if self._model is not None:
             model_name = self._model.name
@@ -331,6 +359,13 @@ class Artifacts:
         :param str package_name: package name
         :return: True if success
         :rtype: bool
+
+         **Example**:
+
+        .. code-block:: python
+
+            project.artifacts.delete(artifact_id='artifact_id',
+                                    package_name='package_name')
         """
         if self._model is not None:
             model_name = self._model.name

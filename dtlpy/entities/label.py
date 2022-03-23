@@ -46,7 +46,7 @@ class Label:
         """
         Build a Label entity object from a json
 
-        :param root: _json representation of a label as it is in host
+        :param dict root: _json representation of a label as it is in host
         :return: Label object
         """
         children = list()

@@ -41,6 +41,13 @@ class Bots:
 
         :return: List of Bots objects
         :rtype: list
+
+        **Example**:
+
+        .. code-block:: python
+
+            service.bots.list()
+
         """
         success, response = self._client_api.gen_request(req_type='get',
                                                          path='/projects/{}/bots'.format(self.project.id))
@@ -82,6 +89,13 @@ class Bots:
         :param str bot_name: get bot by name
         :return: Bot object
         :rtype: dtlpy.entities.bot.Bot
+
+        **Example**:
+
+        .. code-block:: python
+
+            service.bots.get(bot_id='bot_id')
+
         """
         if bot_id is None:
             if bot_name is not None:
@@ -143,6 +157,13 @@ class Bots:
         :param str bot_email: bot email to delete
         :return: True if successful
         :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            service.bots.delete(bot_id='bot_id')
+
         """
         if bot_id is None:
             if bot_email is None:
@@ -170,6 +191,12 @@ class Bots:
         :param str return_credentials: True will return the password when created
         :return: Bot object
         :rtype: dtlpy.entities.bot.Bot
+
+        **Example**:
+
+        .. code-block:: python
+
+            service.bots.delete(name='bot', return_credentials=False)
         """
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/projects/{}/bots'.format(self.project.id),

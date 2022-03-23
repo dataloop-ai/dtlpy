@@ -153,6 +153,19 @@ class Triggers:
 
         :return: Trigger entity
         :rtype: dtlpy.entities.trigger.Trigger
+
+        **Example**:
+
+        .. code-block:: python
+
+            service.triggers.create(name='triggername',
+                                  execution_mode=dl.TriggerExecutionMode.ONCE,
+                                  resource='Item',
+                                  actions='Created',
+                                  function_name='run',
+                                  filters={'$and': [{'hidden': False},
+                                                    {'type': 'file'}]}
+                                  )
         """
         scope = kwargs.get('scope', None)
 
@@ -285,6 +298,12 @@ class Triggers:
         :param str  trigger_name: trigger name
         :return: Trigger entity
         :rtype: dtlpy.entities.trigger.Trigger
+
+        **Example**:
+
+        .. code-block:: python
+
+            service.triggers.get(trigger_id='trigger_id')
         """
         # request
         if trigger_id is not None:
@@ -335,6 +354,12 @@ class Triggers:
         :param str trigger_name: trigger name
         :return: True is successful error if not
         :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            service.triggers.delete(trigger_id='trigger_id')
         """
         if trigger_id is None:
             if trigger_name is None:
@@ -360,6 +385,12 @@ class Triggers:
         :param dtlpy.entities.trigger.Trigger trigger: Trigger entity
         :return: Trigger entity
         :rtype: dtlpy.entities.trigger.Trigger
+
+        **Example**:
+
+        .. code-block:: python
+
+            service.triggers.update(trigger='trigger_entity')
         """
         # payload
         payload = trigger.to_json()
@@ -421,6 +452,12 @@ class Triggers:
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :return: Paged entity
         :rtype: dtlpy.entities.paged_entities.PagedEntities
+
+        **Example**:
+
+        .. code-block:: python
+
+            service.triggers.list()
         """
         if filters is None:
             filters = entities.Filters(resource=entities.FiltersResource.TRIGGER)
@@ -456,6 +493,11 @@ class Triggers:
         :param resource_type: dictionary of the resource object
         :param action: 'Created' / 'Updated' / etc.
 
+        **Example**:
+
+        .. code-block:: python
+
+            service.triggers.resource_information(resource='Item', resource_type=item_object, action='Created')
         """
         url = '/trigger-resource-information'
 

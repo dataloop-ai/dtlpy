@@ -61,6 +61,12 @@ class Pipelines:
         :param dtlpy.entities.pipeline.Pipeline pipeline: pipeline entity
         :param str pipeline_id: pipeline id
         :param str pipeline_name: pipeline name
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.pipelines.open_in_web(pipeline_id='pipeline_id')
         """
         if pipeline_name is not None:
             pipeline = self.get(pipeline_name=pipeline_name)
@@ -88,6 +94,12 @@ class Pipelines:
         :param fetch: optional - fetch entity from platform, default taken from cookie
         :return: Pipeline object
         :rtype: dtlpy.entities.pipeline.Pipeline
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.pipelines.get(pipeline_id='pipeline_id')
         """
         if fetch is None:
             fetch = self._client_api.fetch_entities
@@ -200,6 +212,12 @@ class Pipelines:
         :param str project_id: project id
         :return: Paged entity
         :rtype: dtlpy.entities.paged_entities.PagedEntities
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.pipelines.get()
         """
         if filters is None:
             filters = entities.Filters(resource=entities.FiltersResource.PIPELINE)
@@ -250,6 +268,12 @@ class Pipelines:
        :param str pipeline_name: pipeline name
        :return: True if success
        :rtype: bool
+
+       **Example**:
+
+        .. code-block:: python
+
+            project.pipelines.delete(pipeline_id='pipeline_id')
        """
         # get id and name
         if pipeline_id is None:
@@ -281,6 +305,12 @@ class Pipelines:
         :param dtlpy.entities.pipeline.Pipeline pipeline: pipeline entity
         :return: Pipeline object
         :rtype: dtlpy.entities.pipeline.Pipeline
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.pipelines.update(pipeline='pipeline_entity')
         """
 
         # payload
@@ -318,6 +348,12 @@ class Pipelines:
         :param dict pipeline_json: json containing the pipeline fields
         :return: Pipeline object
         :rtype: dtlpy.entities.pipeline.Pipeline
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.pipelines.create(name='pipeline_name')
         """
         if pipeline_json is None:
             pipeline_json = BASIC_PIPELINE
@@ -351,6 +387,12 @@ class Pipelines:
 
         :param dtlpy.entities.pipeline.Pipeline pipeline: pipeline entity
         :return: Composition object
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.pipelines.install(pipeline='pipeline_entity')
         """
 
         success, response = self._client_api.gen_request(req_type='post',
@@ -368,6 +410,12 @@ class Pipelines:
 
         :param dtlpy.entities.pipeline.Pipeline pipeline: pipeline entity
         :return: Composition object
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.pipelines.pause(pipeline='pipeline_entity')
         """
 
         success, response = self._client_api.gen_request(req_type='post',
@@ -393,6 +441,12 @@ class Pipelines:
         :param execution_input: list of the dl.FunctionIO or dict of pipeline input - example {'item': 'item_id'}
         :return: entities.PipelineExecution object
         :rtype: dtlpy.entities.pipeline_execution.PipelineExecution
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.pipelines.execute(pipeline='pipeline_entity', execution_input= {'item': 'item_id'} )
         """
         if pipeline is None:
             pipeline = self.get(pipeline_id=pipeline_id, pipeline_name=pipeline_name)

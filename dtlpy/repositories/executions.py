@@ -170,6 +170,12 @@ class Executions:
          by default wait take the service timeout
         :return: execution object
         :rtype: dtlpy.entities.execution.Execution
+
+        **Example**:
+
+        .. code-block:: python
+
+            service.executions.create(function_name='function_name', item_id='item_id', project_id='project_id')
         """
         if service_id is None:
             if self._service is None:
@@ -286,6 +292,12 @@ class Executions:
         :param dtlpy.entities.filters.Filters filters: dl.Filters entity to filters items
         :return: Paged entity
         :rtype: dtlpy.entities.paged_entities.PagedEntities
+
+        **Example**:
+
+        .. code-block:: python
+
+            service.executions.list()
         """
         # default filtersf
         if filters is None:
@@ -343,6 +355,12 @@ class Executions:
         :param bool sync: if true, wait for the execution to finish
         :return: Service execution object
         :rtype: dtlpy.entities.execution.Execution
+
+        **Example**:
+
+        .. code-block:: python
+
+            service.executions.get(execution_id='execution_id')
         """
         url_path = "/executions/{}".format(execution_id)
         if sync:
@@ -374,6 +392,12 @@ class Executions:
         :param bool follow: if true, keep stream future logs
         :param bool until_completed: if true, wait until completed
         :return: executions logs
+
+        **Example**:
+
+        .. code-block:: python
+
+            service.executions.logs(execution_id='execution_id')
         """
         return self.service.log(execution_id=execution_id,
                                 follow=follow,
@@ -389,6 +413,12 @@ class Executions:
         :param dtlpy.entities.execution.Execution execution:
         :return: int
         :rtype: int
+
+        **Example**:
+
+        .. code-block:: python
+
+            service.executions.increment(execution='execution_entity')
         """
         # request
         success, response = self._client_api.gen_request(
@@ -416,6 +446,12 @@ class Executions:
         :param bool sync: wait for the execution to finish
         :return: Execution object
         :rtype: dtlpy.entities.execution.Execution
+
+        **Example**:
+
+        .. code-block:: python
+
+            service.executions.rerun(execution='execution_entity')
         """
 
         url_path = "/executions/{}/rerun".format(execution.id)
@@ -449,6 +485,12 @@ class Executions:
         :param int timeout: seconds to wait until TimeoutError is raised. if <=0 - wait until done - by default wait take the service timeout
         :return: Service execution object
         :rtype: dtlpy.entities.execution.Execution
+
+        **Example**:
+
+        .. code-block:: python
+
+            service.executions.wait(execution_id='execution_id')
         """
         url_path = "/executions/{}".format(execution_id)
         elapsed = 0
@@ -495,6 +537,11 @@ class Executions:
         :return: execution object
         :rtype: dtlpy.entities.execution.Execution
 
+        **Example**:
+
+        .. code-block:: python
+
+            service.executions.terminate(execution='execution_entity')
         """
         # request
         success, response = self._client_api.gen_request(req_type='post',
@@ -518,6 +565,12 @@ class Executions:
         :param dtlpy.entities.execution.Execution execution: execution entity
         :return: Service execution object
         :rtype: dtlpy.entities.execution.Execution
+
+        **Example**:
+
+        .. code-block:: python
+
+            service.executions.update(execution='execution_entity')
         """
         # payload
         payload = execution.to_json()
@@ -570,6 +623,12 @@ class Executions:
         :param str service_version: service version
         :return: Service execution object
         :rtype: dtlpy.entities.execution.Execution
+
+        **Example**:
+
+        .. code-block:: python
+
+            service.executions.progress_update(execution_id='execution_id', status='complete', percent_complete=100)
         """
         # create payload
         payload = dict()

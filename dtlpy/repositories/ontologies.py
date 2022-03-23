@@ -102,6 +102,14 @@ class Ontologies:
         :param list attributes: recipe attributes
         :return: Ontology object
         :rtype: dtlpy.entities.ontology.Ontology
+
+        **Example**:
+
+        .. code-block:: python
+
+            recipe.ontologies.create(labels='labels_entity',
+                                  title='new_ontology',
+                                  project_ids='project_ids')
         """
         project_ids = self.__get_project_ids(project_ids=project_ids)
         if attributes is None:
@@ -199,6 +207,12 @@ class Ontologies:
 
         :param project_ids:
         :return: list of all the ontologies
+
+        **Example**:
+
+        .. code-block:: python
+
+            recipe.ontologies.list(project_ids='project_ids')
         """
         if self._recipe is not None:
             ontologies = [ontology_id for ontology_id in self.recipe.ontology_ids]
@@ -252,6 +266,12 @@ class Ontologies:
         :param str ontology_id: ontology id
         :return: Ontology object
         :rtype: dtlpy.entities.ontology.Ontology
+
+        **Example**:
+
+        .. code-block:: python
+
+            recipe.ontologies.get(ontology_id='ontology_id')
         """
         success, response = self._client_api.gen_request(req_type="get",
                                                          path="/ontologies/{}".format(ontology_id))
@@ -274,6 +294,12 @@ class Ontologies:
         :param ontology_id: ontology id
         :return: True if success
         :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            recipe.ontologies.delete(ontology_id='ontology_id')
         """
         success, response = self._client_api.gen_request(req_type="delete",
                                                          path="/ontologies/%s" % ontology_id)
@@ -293,6 +319,12 @@ class Ontologies:
        :param bool system_metadata: bool - True, if you want to change metadata system
        :return: Ontology object
        :rtype: dtlpy.entities.ontology.Ontology
+
+       **Example**:
+
+        .. code-block:: python
+
+            recipe.ontologies.delete(ontology='ontology_entity')
        """
         url_path = "/ontologies/%s" % ontology.id
         if system_metadata:

@@ -53,6 +53,12 @@ class Organizations:
         :param str organization_name: Organization name
         :return: groups list
         :rtype: list
+
+        **Example**:
+
+        .. code-block:: python
+
+            dl.organizations.list_groups(organization_id='organization_id')
         """
         if organization is None and organization_id is None and organization_name is None:
             raise exceptions.PlatformException(
@@ -89,6 +95,13 @@ class Organizations:
         :param bool only_available: if True list only the available integrations
         :return: integrations list
         :rtype: list
+
+        **Example**:
+
+        .. code-block:: python
+
+            dl.organizations.list_integrations(organization='organization-entity',
+                                                only_available=True)
         """
         if organization is None and organization_id is None and organization_name is None:
             raise exceptions.PlatformException(
@@ -128,6 +141,13 @@ class Organizations:
         :param entities.MemberOrgRole role: MemberOrgRole.ADMIN, MemberOrgRole.OWNER, MemberOrgRole.MEMBER
         :return: projects list
         :rtype: list
+
+        **Example**:
+
+        .. code-block:: python
+
+            dl.organizations.list_members(organization='organization-entity',
+                                        role=dl.MemberOrgRole.MEMBER)
         """
         if organization is None and organization_id is None and organization_name is None:
             raise exceptions.PlatformException(
@@ -166,6 +186,12 @@ class Organizations:
 
         :return: List of Organization objects
         :rtype: list
+
+        **Example**:
+
+        .. code-block:: python
+
+            dl.organizations.list()
         """
         success, response = self._client_api.gen_request(req_type='get',
                                                          path='/orgs')
@@ -207,6 +233,12 @@ class Organizations:
         :param fetch: optional - fetch entity from platform, default taken from cookie
         :return: Organization object
         :rtype: dtlpy.entities.organization.Organization
+
+        **Example**:
+
+        .. code-block:: python
+
+            dl.organizations.get(organization_id='organization_id')
         """
         if organization_name is None and organization_id is None:
             raise exceptions.PlatformException(
@@ -268,6 +300,13 @@ class Organizations:
         :param str organization_name: Organization name
         :return: organization object
         :rtype: dtlpy.entities.organization.Organization
+
+        **Example**:
+
+        .. code-block:: python
+
+            dl.organizations.update(organization='organization-entity',
+                                    plan=dl.OrganizationsPlans.FREEMIUM)
         """
         if organization is None and organization_id is None and organization_name is None:
             raise exceptions.PlatformException(
@@ -310,6 +349,14 @@ class Organizations:
         :param entities.Organization organization: Organization object
         :return: True if successful or error if unsuccessful
         :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            dl.organizations.add_member(email='user@domain.com',
+                                        organization_id='organization_id',
+                                        role=dl.MemberOrgRole.MEMBER)
         """
 
         if organization is None and organization_id is None and organization_name is None:
@@ -359,6 +406,15 @@ class Organizations:
         :param bool really: Really really sure?
         :return: True if success and error if not
         :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            dl.organizations.delete_member(user_id='user_id',
+                                            organization_id='organization_id',
+                                            sure=True,
+                                            really=True)
         """
         if sure and really:
             if organization is None and organization_id is None and organization_name is None:
@@ -400,6 +456,14 @@ class Organizations:
         :param entities.Organization organization: Organization object
         :return: json of the member fields
         :rtype: dict
+
+        **Example**:
+
+        .. code-block:: python
+
+            dl.organizations.update_member(email='user@domain.com',
+                                            organization_id='organization_id',
+                                             role=dl.MemberOrgRole.MEMBER)
         """
         if organization is None and organization_id is None and organization_name is None:
             raise exceptions.PlatformException(

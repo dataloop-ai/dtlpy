@@ -61,6 +61,13 @@ class Drivers:
 
         :return: List of Drivers objects
         :rtype: list
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.drivers.list()
+
         """
 
         success, response = self._client_api.gen_request(req_type='get',
@@ -86,6 +93,12 @@ class Drivers:
         :param str driver_id: optional - search by id
         :return: Driver object
         :rtype: dtlpy.entities.driver.Driver
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.drivers.get(driver_id='driver_id')
         """
         if driver_id is not None:
             driver = self.__get_by_id(driver_id)
@@ -136,6 +149,17 @@ class Drivers:
         :param str path: Optional. By default path is the root folder. Path is case sensitive integration
         :return: driver object
         :rtype: dtlpy.entities.driver.Driver
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.drivers.create(name='driver_name',
+                       driver_type=dl.ExternalStorage.S3,
+                       integration_id='integration_id',
+                       bucket_name='bucket_name',
+                       project_id='project_id',
+                       region='ey-west-1')
         """
         if driver_type == entities.ExternalStorage.S3:
             bucket_payload = 'bucketName'

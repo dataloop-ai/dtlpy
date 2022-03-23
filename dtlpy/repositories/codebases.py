@@ -89,6 +89,12 @@ class Codebases:
 
         **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a package.
 
+        **Example**:
+
+        .. code-block:: python
+
+            package.codebases.list_versions(codebase_name='codebase_name')
+
         :param str codebase_name: code base name
         :return: list of versions
         :rtype: list
@@ -103,6 +109,12 @@ class Codebases:
         List all codebases.
 
         **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a package.
+
+        **Example**:
+
+        .. code-block:: python
+
+            package.codebases.list()
 
         :return: Paged entity
         :rtype: dtlpy.entities.paged_entities.PagedEntities
@@ -121,6 +133,12 @@ class Codebases:
         Get a Codebase object to use in your code.
 
         **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a package.
+
+        **Example**:
+
+        .. code-block:: python
+
+            package.codebases.get(codebase_name='codebase_name')
 
         :param str codebase_name: optional - search by name
         :param str codebase_id: optional - search by id
@@ -198,6 +216,12 @@ class Codebases:
         :param zip_md: zipped file of codebase
         :return: current version and all versions found of codebase
         :rtype: int, int
+
+        **Example**:
+
+        .. code-block:: python
+
+            package.codebases.get_current_version(all_versions_pages='codebase_entity', zip_md='path')
         """
         latest_version = 0
         same_version_found = None
@@ -226,6 +250,12 @@ class Codebases:
         :param dtr description: codebase description
         :return: Codebase object
         :rtype: dtlpy.entities.codebase.Codebase
+
+        **Example**:
+
+        .. code-block:: python
+
+            package.codebases.pack(directory='path_dir', name='codebase_name')
         """
         # create/get .dataloop dir
         cwd = os.getcwd()
@@ -366,6 +396,12 @@ class Codebases:
         :param str local_path: local path
         :return: path where the clone will be
         :rtype: str
+
+         **Example**:
+
+        .. code-block:: python
+
+            package.codebases.clone_git(codebase='codebase_entity', local_path='local_path')
         """
         if not isinstance(codebase, entities.GitCodebase):
             raise RuntimeError('only support Git Codebase')
@@ -388,6 +424,12 @@ class Codebases:
         :param str local_path: local path
         :return: path where the Pull will be
         :rtype: str
+
+        **Example**:
+
+        .. code-block:: python
+
+            package.codebases.pull_git(codebase='codebase_entity', local_path='local_path')
         """
         pull_cmd = 'git pull'
         if not codebase.is_git_repo(local_path):
@@ -421,6 +463,12 @@ class Codebases:
         :param str version: codebase version to unpack. default - latest
         :return: String (dirpath)
         :rtype: str
+
+        **Example**:
+
+        .. code-block:: python
+
+            package.codebases.unpack(codebase='codebase_entity', local_path='local_path')
         """
         # get the codebase / multiple codebase
         if codebase is None:

@@ -25,7 +25,7 @@ from .__version__ import version as __version__
 from .entities import (
     # main entities
     Project, Dataset, ExpirationOptions, ExportVersion, Trigger, Item, Execution, AnnotationCollection, Annotation,
-    Recipe,
+    Recipe, IndexDriver,
     Ontology, Label, Task, Assignment, Service, Package, Codebase, Model, Snapshot, PackageModule, PackageFunction,
     # annotations
     Box, Cube, Cube3d, Point, Note, Segmentation, Ellipse, Classification, Subtitle, Polyline, Pose, Description,
@@ -436,3 +436,5 @@ PACKAGE_REQUIREMENT_OP_LESS_THAN = RequirementOperator.LESS_THAN
 PACKAGE_REQUIREMENT_OP_EQUAL_OR_LESS_THAN = RequirementOperator.EQUAL_OR_LESS_THAN
 PACKAGE_REQUIREMENT_OP_EQUAL_OR_GREATER_THAN = RequirementOperator.EQUAL_OR_GREATER_THAN
 
+INDEX_DRIVER_V1 = IndexDriver.V1
+INDEX_DRIVER_V2 = IndexDriver.V2

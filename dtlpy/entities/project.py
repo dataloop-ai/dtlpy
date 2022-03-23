@@ -237,8 +237,8 @@ class Project(entities.BaseEntity):
         """
         Same as from_json but with try-except to catch if error
 
-        :param _json: platform json
-        :param client_api: ApiClient entity
+        :param dict _json: platform json
+        :param dl.ApiClient client_api: ApiClient entity
         :return:
         """
         try:
@@ -255,10 +255,11 @@ class Project(entities.BaseEntity):
         """
         Build a Project entity object from a json
 
-        :param is_fetched: is Entity fetched from Platform
-        :param _json: _json response from host
-        :param client_api: ApiClient entity
+        :param bool is_fetched: is Entity fetched from Platform
+        :param dict _json: _json response from host
+        :param dl.ApiClient client_api: ApiClient entity
         :return: Project object
+        :rtype: dtlpy.entities.project.Project
         """
         inst = cls(feature_constraints=_json.get('featureConstraints', None),
                    contributors=_json.get('contributors', None),
@@ -341,7 +342,7 @@ class Project(entities.BaseEntity):
         Add a member to the project.
 
         :param str email: member email
-        :param role: "owner" ,"engineer" ,"annotator" ,"annotationManager"
+        ::param role: dl.MemberRole.OWNER, dl.MemberRole.DEVELOPER, dl.MemberRole.ANNOTATOR, dl.MemberRole.ANNOTATION_MANAGER
         :return: dict that represent the user
         :rtype: dict
         """
@@ -352,7 +353,7 @@ class Project(entities.BaseEntity):
         Update member's information/details from the project.
 
         :param str email: member email
-        :param role: "owner" ,"engineer" ,"annotator" ,"annotationManager"
+        :param role: dl.MemberRole.OWNER, dl.MemberRole.DEVELOPER, dl.MemberRole.ANNOTATOR, dl.MemberRole.ANNOTATION_MANAGER
         :return: dict that represent the user
         :rtype: dict
         """
@@ -372,7 +373,7 @@ class Project(entities.BaseEntity):
         """
         List the project members.
 
-        :param role: "owner" ,"engineer" ,"annotator" ,"annotationManager"
+        :param role: dl.MemberRole.OWNER, dl.MemberRole.DEVELOPER, dl.MemberRole.ANNOTATOR, dl.MemberRole.ANNOTATION_MANAGER
         :return: list of the project members
         :rtype: list
         """

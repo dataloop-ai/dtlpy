@@ -92,12 +92,13 @@ class Item(entities.BaseEntity):
         """
         Build an item entity object from a json
 
-        :param project: project entity
-        :param _json: _json response from host
-        :param dataset: dataset in which the annotation's item is located
-        :param client_api: ApiClient entity
-        :param is_fetched: is Entity fetched from Platform
+        :param dtlpy.entities.project.Project project: project entity
+        :param dict _json: _json response from host
+        :param dtlpy.entities.dataset.Dataset dataset: dataset in which the annotation's item is located
+        :param dlApiClient .client_api: ApiClient entity
+        :param bool is_fetched: is Entity fetched from Platform
         :return: Item object
+        :rtype: dtlpy.entities.item.Item
         """
         dataset_id = None
         if dataset is not None:
@@ -398,20 +399,33 @@ class Item(entities.BaseEntity):
         Filtering the dataset for items and save them local
         Optional - also download annotation, mask, instance and image mask of the item
 
-        :param local_path: local folder or filename to save to disk or returns BytelsIO
-        :param file_types: a list of file type to download. e.g ['video/webm', 'video/mp4', 'image/jpeg', 'image/png']
-        :param save_locally: bool. save to disk or return a buffer
-        :param to_array: returns Ndarray when True and local_path = False
-        :param annotation_options: download annotations options: list(dl.ViewAnnotationOptions)
-        :param overwrite: optional - default = False
-        :param to_items_folder: Create 'items' folder and download items to it
-        :param thickness: optional - line thickness, if -1 annotation will be filled, default =1
-        :param with_text: optional - add text to annotations, default = False
-        :param annotation_filters: Filters entity to filter annotations for download
-        :param alpha: opacity value [0 1], default 1
+        :param str local_path: local folder or filename to save to.
+        :param list file_types: a list of file type to download. e.g ['video/webm', 'video/mp4', 'image/jpeg', 'image/png']
+        :param bool save_locally: bool. save to disk or return a buffer
+        :param bool to_array: returns Ndarray when True and local_path = False
+        :param list annotation_options: download annotations options:  list(dl.ViewAnnotationOptions)
+        :param dtlpy.entities.filters.Filters annotation_filters: Filters entity to filter annotations for download
+        :param bool overwrite: optional - default = False
+        :param bool to_items_folder: Create 'items' folder and download items to it
+        :param int thickness: optional - line thickness, if -1 annotation will be filled, default =1
+        :param bool with_text: optional - add text to annotations, default = False
+        :param float alpha: opacity value [0 1], default 1
         :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
+        :return: generator of local_path per each downloaded item
+        :rtype: generator or single item
 
-        :return: Output (list)
+        **Example**:
+
+        .. code-block:: python
+
+            item.download(local_path='local_path',
+                         annotation_options=dl.ViewAnnotationOptions.MASK,
+                         overwrite=False,
+                         thickness=1,
+                         with_text=False,
+                         alpha=1,
+                         save_locally=True
+                         )
         """
         # if dir - concatenate local path and item name
         if local_path is not None:
@@ -443,6 +457,7 @@ class Item(entities.BaseEntity):
         Delete item from platform
 
         :return: True
+        :rtype: bool
         """
         return self.items.delete(item_id=self.id)
 
@@ -450,8 +465,9 @@ class Item(entities.BaseEntity):
         """
         Update items metadata
 
-        :param system_metadata: bool - True, if you want to change metadata system
+        :param bool system_metadata: bool - True, if you want to change metadata system
         :return: Item object
+        :rtype: dtlpy.entities.item.Item
         """
         return self.items.update(item=self, system_metadata=system_metadata)
 
@@ -460,8 +476,9 @@ class Item(entities.BaseEntity):
         Move item from one folder to another in Platform
         If the directory doesn't exist it will be created
 
-        :param new_path: new full path to move item to.
+        :param str new_path: new full path to move item to.
         :return: True if update successfully
+        :rtype: bool
         """
         assert isinstance(new_path, str)
         if not new_path.startswith('/'):
@@ -482,16 +499,26 @@ class Item(entities.BaseEntity):
         """
         Clone item
 
-        :param dst_dataset_id: destination dataset id
-        :param remote_filepath: complete filepath
-        :param metadata: new metadata to add
-        :param with_annotations: clone annotations
-        :param with_metadata: clone metadata
-        :param with_task_annotations_status: clone task annotations status
-        :param allow_many: `bool` if True use multiple clones in single dataset is allowed, (default=False)
-        :param wait: wait for the command to finish
+        :param str dst_dataset_id: destination dataset id
+        :param str remote_filepath: complete filepath
+        :param dict metadata: new metadata to add
+        :param bool with_annotations: clone annotations
+        :param bool with_metadata: clone metadata
+        :param bool with_task_annotations_status: clone task annotations status
+        :param bool allow_many: `bool` if True, using multiple clones in single dataset is allowed, (default=False)
+        :param bool wait: wait for the command to finish
+        :return: Item object
+        :rtype: dtlpy.entities.item.Item
 
-        :return: Item
+        **Example**:
+
+        .. code-block:: python
+
+            item.clone(item_id='item_id',
+                    dst_dataset_id='dist_dataset_id',
+                    with_metadata=True,
+                    with_task_annotations_status=False,
+                    with_annotations=False)
         """
         if remote_filepath is None:
             remote_filepath = self.filename
@@ -556,6 +583,16 @@ class Item(entities.BaseEntity):
         :param str task_id: task id
 
         :return :True/False
+        :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            item.update_status(status='complete',
+                               operation='created',
+                               task_id='task_id')
+
         """
         if not assignment_id and not task_id:
             system_metadata = self.metadata.get('system', dict())
@@ -580,7 +617,7 @@ class Item(entities.BaseEntity):
         """
         Update Item description
 
-        :param text: if None or "" description will be deleted
+        :param str text: if None or "" description will be deleted
 
         :return
         """

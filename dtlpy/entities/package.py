@@ -146,11 +146,12 @@ class Package(entities.BaseEntity):
         """
         Turn platform representation of package into a package entity
 
-        :param _json: platform representation of package
-        :param client_api: ApiClient entity
-        :param project: project entity
+        :param dict _json: platform representation of package
+        :param dl.ApiClient client_api: ApiClient entity
+        :param dtlpy.entities.project.Project project: project entity
         :param is_fetched: is Entity fetched from Platform
         :return: Package entity
+        :rtype: dtlpy.entities.package.Package
         """
         if project is not None:
             if project.id != _json.get('projectId', None):
@@ -396,6 +397,25 @@ class Package(entities.BaseEntity):
         :param int max_attempts: Maximum execution retries in-case of a service reset
         :param bool force: optional - terminate old replicas immediately
         :return: Service object
+        :rtype: dtlpy.entities.service.Service
+
+        **Example**:
+
+        .. code-block:: python
+
+            package.deploy(service_name=package_name,
+                            execution_timeout=3 * 60 * 60,
+                            module_name=module.name,
+                            runtime=dl.KubernetesRuntime(
+                                concurrency=10,
+                                pod_type=dl.InstanceCatalog.REGULAR_S,
+                                autoscaler=dl.KubernetesRabbitmqAutoscaler(
+                                    min_replicas=1,
+                                    max_replicas=20,
+                                    queue_length=20
+                                )
+                            )
+                        )
         """
         return self.project.packages.deploy(package=self,
                                             service_name=service_name,
@@ -448,15 +468,25 @@ class Package(entities.BaseEntity):
          Push local package
 
         :param dtlpy.entities.codebase.Codebase codebase: PackageCode object - defines how to store the package code
-        :param checkout: save package to local checkout
-        :param src_path: location of pacjage codebase folder to zip
-        :param package_name: name of package
-        :param modules: list of PackageModule
-        :param revision_increment: optional - str - version bumping method - major/minor/patch - default = None
-        :param  service_update: optional - bool - update the service
-        :param  service_config: optional - json of service - a service that have config from the main service if wanted
+        :param bool checkout: save package to local checkout
+        :param str src_path: location of pacjage codebase folder to zip
+        :param str package_name: name of package
+        :param list modules: list of PackageModule
+        :param str revision_increment: optional - str - version bumping method - major/minor/patch - default = None
+        :param  bool service_update: optional - bool - update the service
+        :param  dict service_config: optional - json of service - a service that have config from the main service if wanted
+        :return: package entity
+        :rtype: dtlpy.entities.package.Package
 
-        :return:
+        **Example**:
+
+        .. code-block:: python
+
+            packages.push(package_name='package_name',
+                        modules=[module],
+                        version='1.0.0',
+                        src_path=os.getcwd()
+                    )
         """
         return self.project.packages.push(
             package_name=package_name if package_name is not None else self.name,
@@ -472,11 +502,16 @@ class Package(entities.BaseEntity):
 
     def pull(self, version=None, local_path=None):
         """
-        Push local package
+        Pull local package
 
-        :param version: version
-        :param local_path: local path
-        :return:
+        :param str version: version
+        :param str local_path: local path
+
+        **Example**:
+
+        .. code-block:: python
+
+            package.pull(local_path='local_path')
         """
         return self.packages.pull(package=self,
                                   version=version,
@@ -486,7 +521,6 @@ class Package(entities.BaseEntity):
         """
         Open the package in web platform
 
-        :return:
         """
         self._client_api._open_in_web(url=self.platform_url)
 
@@ -498,6 +532,25 @@ class Package(entities.BaseEntity):
              class_name=entities.package_defaults.DEFAULT_PACKAGE_CLASS_NAME,
              entry_point=entities.package_defaults.DEFAULT_PACKAGE_ENTRY_POINT
              ):
+        """
+        Test local package in local environment.
+
+        :param str cwd: path to the file
+        :param int concurrency: the concurrency of the test
+        :param str module_name: module name
+        :param str function_name: function name
+        :param str class_name: class name
+        :param str entry_point: the file to run like main.py
+        :return: list created by the function that tested the output
+        :rtype: list
+
+        **Example**:
+
+        .. code-block:: python
+
+            package.test(cwd='path_to_package',
+                        function_name='run')
+        """
         return self.project.packages.test_local_package(
             cwd=cwd,
             concurrency=concurrency,

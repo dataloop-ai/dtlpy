@@ -74,6 +74,12 @@ class Recipes:
         :param attributes: attributes
         :return: Recipe entity
         :rtype: dtlpy.entities.recipe.Recipe
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.recipes.create(recipe_name='My Recipe', labels=labels))
         """
         if labels is None:
             labels = list()
@@ -126,6 +132,12 @@ class Recipes:
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :return: list of all recipes
         :retype: list
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.recipes.list()
         """
         if self._dataset is not None:
             try:
@@ -222,6 +234,12 @@ class Recipes:
         :param str recipe_id: recipe id
         :return: Recipe object
         :rtype: dtlpy.entities.recipe.Recipe
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.recipes.get(recipe_id='recipe_id')
         """
         success, response = self._client_api.gen_request(req_type='get',
                                                          path='/recipes/%s' % recipe_id)
@@ -246,6 +264,12 @@ class Recipes:
 
         :param dtlpy.entities.recipe.Recipe recipe: recipe entity
         :param str recipe_id: recipe id
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.recipes.open_in_web(recipe_id='recipe_id')
         """
         if recipe is not None:
             recipe.open_in_web()
@@ -264,6 +288,12 @@ class Recipes:
         :param bool force: force delete recipe
         :return: True if success
         :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.recipes.delete(recipe_id='recipe_id')
         """
         path = '/recipes/{}'.format(recipe_id)
         if force:
@@ -285,6 +315,12 @@ class Recipes:
         :param bool system_metadata: True, if you want to change metadata system
         :return: Recipe object
         :rtype: dtlpy.entities.recipe.Recipe
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.recipes.delete(recipe='recipe_entity')
         """
         url_path = '/recipes/%s' % recipe.id
         if system_metadata:
@@ -312,6 +348,12 @@ class Recipes:
        :param bool shallow: If True, link to existing ontology, clones all ontologies that are linked to the recipe as well
        :return: Cloned ontology object
        :rtype: dtlpy.entities.recipe.Recipe
+
+       **Example**:
+
+        .. code-block:: python
+
+            dataset.recipes.clone(recipe_id='recipe_id')
        """
         if recipe is None and recipe_id is None:
             raise exceptions.PlatformException('400', 'Must provide recipe or recipe_id')

@@ -26,7 +26,7 @@ author = 'Or Shabtay'
 # The short X.Y version
 version = ''
 # The full version, including alpha/beta/rc tags
-release = '1.51.18'
+release = '1.52.10'
 
 add_module_names = False
 
@@ -55,7 +55,8 @@ extensions = [
     'nbsphinx',
     'sphinx_rtd_theme',
     # 'sphinxcontrib.lunrsearch',
-    'myst_parser'
+    'myst_parser',
+    'sphinx_copybutton'
 ]
 
 # Add any paths that contain templates here, relative to this directory.

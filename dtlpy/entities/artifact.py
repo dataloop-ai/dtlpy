@@ -51,7 +51,7 @@ class Artifact(entities.Item):
         Build an Artifact entity object from a json
 
         :param dict _json: platform json
-        :param client_api: ApiClient entity
+        :param dl.ApiClient client_api: ApiClient entity
         :param dtlpy.entities.dataset.Dataset dataset: dataset entity
         :param dtlpy.entities.project.Project project: project entity
         :param bool is_fetched: is Entity fetched from Platform

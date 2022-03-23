@@ -61,6 +61,12 @@ class Integrations:
         :param bool really: Really really sure?
         :return: success
         :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.integrations.delete(integrations_id='integrations_id', sure=True, really=True)
         """
         if sure and really:
             if self.project is None and self.org is None:
@@ -105,6 +111,14 @@ class Integrations:
         :param dict options: dict of storage secrets
         :return: success
         :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.integrations.create(integrations_type=dl.ExternalStorage.S3,
+                            name='S3ntegration',
+                            options={key: "Access key ID", secret: "Secret access key"})
         """
 
         if self.project is None and self.org is None:
@@ -139,6 +153,12 @@ class Integrations:
         :param str integrations_id: integrations id
         :return: Integration object
         :rtype: dtlpy.entities.integration.Integration
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.integrations.update(integrations_id='integrations_id', new_name="new_integration_name")
         """
         if self.project is None and self.org is None:
             raise exceptions.PlatformException(
@@ -170,6 +190,12 @@ class Integrations:
         :param str integrations_id: integrations id
         :return: Integration object
         :rtype: dtlpy.entities.integration.Integration
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.integrations.get(integrations_id='integrations_id')
         """
         if self.project is None and self.org is None:
             raise exceptions.PlatformException(
@@ -198,6 +224,12 @@ class Integrations:
         :param bool only_available: if True list only the available integrations.
         :return: groups list
         :rtype: list
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.integrations.list(only_available=True)
         """
         if self.project is None and self.org is None:
             raise exceptions.PlatformException(

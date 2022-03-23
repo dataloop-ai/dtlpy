@@ -82,6 +82,13 @@ class Items:
         :param dtlpy.entities.filters.Filters filters: dl.Filters entity to filters items
         :return: list of all items
         :rtype: list
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.items.get_all_items()
+
         """
         if filters is None:
             filters = entities.Filters()
@@ -142,6 +149,12 @@ class Items:
         :param int page_size: page size
         :return: Pages object
         :rtype: dtlpy.entities.paged_entities.PagedEntities
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.items.list(page_offset=0, page_size=100)
         """
         # default filters
         if filters is None:
@@ -200,6 +213,12 @@ class Items:
         :param bool is_dir: True if you want to get an item from dir type
         :return: Item object
         :rtype: dtlpy.entities.item.Item
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.items.get(item_id='item_id')
         """
         if fetch is None:
             fetch = self._client_api.fetch_entities
@@ -276,6 +295,16 @@ class Items:
         :param bool wait: wait for the command to finish
         :return: Item object
         :rtype: dtlpy.entities.item.Item
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.items.clone(item_id='item_id',
+                    dst_dataset_id='dist_dataset_id',
+                    with_metadata=True,
+                    with_task_annotations_status=False,
+                    with_annotations=False)
         """
         if metadata is None:
             metadata = dict()
@@ -324,6 +353,12 @@ class Items:
         :param dtlpy.entities.filters.Filters filters: optional - delete items by filter
         :return: True if success
         :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.items.delete(item_id='item_id')
         """
         if item_id is not None:
             success, response = self._client_api.gen_request(req_type="delete",
@@ -378,6 +413,12 @@ class Items:
         :param bool system_metadata: True, if you want to update the metadata system
         :return: Item object
         :rtype: dtlpy.entities.item.Item
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.items.update(item='item_entity')
         """
         ref = filters is not None and (filters._ref_task or filters._ref_assignment)
 
@@ -483,6 +524,19 @@ class Items:
         :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
         :return: generator of local_path per each downloaded item
         :rtype: generator or single item
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.items.download(local_path='local_path',
+                                 annotation_options=dl.ViewAnnotationOptions,
+                                 overwrite=False,
+                                 thickness=1,
+                                 with_text=False,
+                                 alpha=1,
+                                 save_locally=True
+                                 )
         """
         downloader = repositories.Downloader(self)
         return downloader.download(
@@ -541,6 +595,16 @@ class Items:
         :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
         :return: Output (generator/single item)
         :rtype: generator or single item
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.items.upload(local_path='local_path',
+                                 local_annotations_path='local_annotations_path',
+                                 overwrite=True,
+                                 item_metadata={'Hellow': 'Word'}
+                                 )
         """
         # fix remote path
         if remote_path is not None:
@@ -572,11 +636,18 @@ class Items:
         """
         Open the item in web platform
 
-        **Prerequisites**: You must be in the role of an *owner* or *developer* or be an *annotation manager*/*annotator* with access to that item through task. 
+        **Prerequisites**: You must be in the role of an *owner* or *developer* or be an *annotation manager*/*annotator* with access to that item through task.
 
         :param str filepath: item file path
         :param str item_id: item id
         :param dtlpy.entities.item.Item item: item entity
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.items.open_in_web(item_id='item_id')
+
         """
         if filepath is not None:
             item = self.get(filepath=filepath)
@@ -607,6 +678,13 @@ class Items:
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :param dtlpy.entities.dataset.Dataset dataset: dataset object
         :param bool clear: to delete status
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.items.update_status(item_ids='item_id', status=dl.ItemStatus.COMPLETED)
+
         """
         if items is None and item_ids is None and filters is None:
             raise exceptions.PlatformException('400', 'Must provide either items, item_ids or filters')
@@ -662,6 +740,12 @@ class Items:
         :param dtlpy.entities.dataset.Dataset dataset: dataset object
         :return: Item object
         :rtype: dtlpy.entities.item.Item
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.items.make_dir(directory='directory_name')
         """
         if self._dataset_id is None and dataset is None:
             raise exceptions.PlatformException('400', 'Please provide parameter dataset')
@@ -702,6 +786,12 @@ class Items:
         :param dtlpy.entities.dataset.Dataset dataset: dataset object
         :return: True if success
         :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.items.move_items(destination='directory_name')
         """
         if filters is None and items is None:
             raise exceptions.PlatformException('400', 'Must provide either filters or items')

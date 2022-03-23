@@ -6,6 +6,7 @@ import io
 import random
 from multiprocessing.pool import ThreadPool
 import logging
+import datetime
 
 
 @behave.given(u'There are items, path = "{item_path}"')
@@ -414,11 +415,25 @@ def step_impl(context, field, values, operator):
         values = True
     elif values == 'False':
         values = False
+    elif values == "timestamp":
+        if not hasattr(context, 'start_date'):
+            assert False, "Need to create timestamp before"
+        if operator == 'gt':
+            values = context.start_date
+        else:
+            values = context.end_date
     elif values.startswith('{'):
         values = json.loads(values)
 
     if field.startswith('{'):
         field = json.loads(field)
+    elif field == "metadata.system.size":
+        values = int(values)
+
+    if operator == "in":
+        if values == "task.id":
+            values = context.task.id
+        values = values.split(",")
 
     context.filters.add(field=field, values=values, operator=operator)
 
@@ -437,6 +452,9 @@ def step_impl(context, field, values, operator):
 
     if field.startswith('{'):
         field = json.loads(field)
+
+    if operator == "in":
+        values = values.split(",")
 
     context.filters.add_join(field=field, values=values, operator=operator)
 
@@ -470,3 +488,32 @@ def step_impl(context, field):
 @behave.when(u'I delete items with filters')
 def step_impl(context):
     context.dataset.items.delete(filters=context.filters)
+
+
+@behave.when(u'I convert "{date_time}" days ago to timestamp')
+def step_impl(context, date_time):
+    num = int(date_time)
+    context.start_date = (datetime.date.today() - datetime.timedelta(days=num)).isoformat()
+    context.end_date = (datetime.date.today() + datetime.timedelta(days=3)).isoformat()
+
+
+@behave.when(u'I use custom filter for Specific task and status from today')
+def step_impl(context):
+
+    if not hasattr(context, 'start_date'):
+        assert False, "Need to create timestamp before"
+
+    field = 'metadata.system.refs'
+    values = {
+        "id": context.task.id,
+        "type": "task",
+        "metadata":
+            {
+                "status": {'${}'.format(context.dl.FiltersOperations.EQUAL): "completed"},
+                "timestamp": {'${}'.format(context.dl.FiltersOperations.GREATER_THAN): context.start_date}
+            }
+    }
+
+    operator = context.dl.FiltersOperations.MATCH
+
+    context.filters.add(field=field, values=values, operator=operator)

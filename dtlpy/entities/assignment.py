@@ -155,9 +155,17 @@ class Assignment(entities.BaseEntity):
         """
         Update an assignment
 
+        **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned as *owner* of the annotation task.
+
         :param bool system_metadata: True, if you want to change metadata system
         :return: Assignment object
         :rtype: dtlpy.entities.assignment.Assignment assignment
+
+        **Example**:
+
+        .. code-block:: python
+
+            assignment.update(system_metadata=False)
         """
         return self.assignments.update(assignment=self, system_metadata=system_metadata)
 
@@ -165,7 +173,15 @@ class Assignment(entities.BaseEntity):
         """
         Open the assignment in web platform
 
+        **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned as *owner* of the annotation task.
+
         :return:
+
+        **Example**:
+
+        .. code-block:: python
+
+            assignment.open_in_web()
         """
         self._client_api._open_in_web(url=self.platform_url)
 
@@ -173,10 +189,18 @@ class Assignment(entities.BaseEntity):
         """
         Get all the items in the assignment
 
+        **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned as *owner* of the annotation task.
+
         :param dtlpy.entities.dataset.Dataset dataset: dataset entity
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :return: pages of the items
         :rtype: dtlpy.entities.paged_entities.PagedEntities
+
+        **Example**:
+
+        .. code-block:: python
+
+            task.assignments.get_items()
         """
         if dataset is None:
             dataset = self.dataset
@@ -187,10 +211,18 @@ class Assignment(entities.BaseEntity):
         """
         Reassign an assignment
 
+        **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned as *owner* of the annotation task.
+
         :param str assignee_id: the user that assignee the assignment to it
         :param bool wait: wait for the command to finish
         :return: Assignment object
         :rtype: dtlpy.entities.assignment.Assignment
+
+        **Example**:
+
+        .. code-block:: python
+
+            assignment.reassign(assignee_ids='annotator1@dataloop.ai')
         """
         return self.assignments.reassign(assignment=self,
                                          task=self._task,
@@ -202,10 +234,19 @@ class Assignment(entities.BaseEntity):
         """
         Redistribute an assignment
 
+        **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned as *owner* of the annotation task.
+
         :param dtlpy.entities.assignment.Workload workload: workload object that contain the assignees and the work load
         :param bool wait: wait for the command to finish
         :return: Assignment object
         :rtype: dtlpy.entities.assignment.Assignment assignment
+
+        **Example**:
+
+        .. code-block:: python
+
+            assignment.redistribute(workload=dl.Workload([dl.WorkloadUnit(assignee_id="annotator1@dataloop.ai", load=50),
+                                                         dl.WorkloadUnit(assignee_id="annotator2@dataloop.ai", load=50)]))
         """
         return self.assignments.redistribute(assignment=self,
                                              task=self._task,
@@ -217,11 +258,21 @@ class Assignment(entities.BaseEntity):
         """
         Set item status within assignment
 
+        **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned as *owner* of the annotation task.
+
         :param str status: status
         :param str operation: created/deleted
         :param str item_id: item id
         :return: True id success
         :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            assignment.set_status(status='complete',
+                                    operation='created',
+                                    item_id='item_id')
         """
         return self.assignments.set_status(status=status, operation=operation, item_id=item_id, assignment_id=self.id)
 
