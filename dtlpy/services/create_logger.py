@@ -23,18 +23,21 @@ class DataloopLogger(logging.handlers.BaseRotatingHandler):
         DataloopLogger.clean_dataloop_cache()
 
     @staticmethod
-    def clean_dataloop_cache():
+    def clean_dataloop_cache(cache_path=DATALOOP_PATH, max_param=None):
         try:
             async_clean = True
-            dir_list = [os.path.join(DATALOOP_PATH, d) for d in os.listdir(DATALOOP_PATH)
-                        if os.path.isdir(os.path.join(DATALOOP_PATH, d))]
+            dir_list = [os.path.join(cache_path, d) for d in os.listdir(cache_path)
+                        if os.path.isdir(os.path.join(cache_path, d))]
             for path in dir_list:
-                if async_clean:
-                    worker = threading.Thread(target=DataloopLogger.clean_dataloop_cache_thread, kwargs={'path': path})
-                    worker.daemon = True
-                    worker.start()
-                else:
-                    DataloopLogger.clean_dataloop_cache_thread(path)
+                if 'cache' not in path:
+                    if async_clean:
+                        worker = threading.Thread(target=DataloopLogger.clean_dataloop_cache_thread,
+                                                  kwargs={'path': path,
+                                                          'max_param': max_param})
+                        worker.daemon = True
+                        worker.start()
+                    else:
+                        DataloopLogger.clean_dataloop_cache_thread(path=path, max_param=max_param)
         except Exception as err:
             logger.exception(err)
 

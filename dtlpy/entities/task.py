@@ -10,7 +10,11 @@ logger = logging.getLogger(name='dtlpy')
 
 class ItemAction:
     def __init__(self, action, display_name=None, color='#FFFFFF', icon=None):
+        if not action or not isinstance(action, str):
+            raise ValueError('action should be a non-empty string')
         self.action = action
+        if not display_name:
+            display_name = action
         self.display_name = display_name
         self.color = color
         self.icon = icon
@@ -363,7 +367,7 @@ class Task:
         self.add_items(filters=filters, items=items)
         return assignment
 
-    def add_items(self, filters=None, items=None, assignee_ids=None, workload=None, limit=0, wait=True):
+    def add_items(self, filters=None, items=None, assignee_ids=None, workload=None, limit=0, wait=True, query=None):
         """
         Add items to Task
 
@@ -373,6 +377,7 @@ class Task:
         :param list workload: list of the work load ber assignee and work load
         :param int limit: task limit
         :param bool wait: wait for the command to finish
+        :param dict query: query to filter the items use it
         :return: task entity
         :rtype: dtlpy.entities.task.Task
         """
@@ -382,7 +387,31 @@ class Task:
                                     assignee_ids=assignee_ids,
                                     workload=workload,
                                     limit=limit,
-                                    wait=wait)
+                                    wait=wait,
+                                    query=query)
+
+    def remove_items(self,
+                     filters: entities.Filters = None,
+                     query=None,
+                     items=None,
+                     wait=True):
+        """
+        remove items from Task.
+
+        **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned to be *owner* of the annotation task.
+
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
+        :param dict query: query yo filter the items use it
+        :param list items: list of items to add to the task
+        :param bool wait: wait for the command to finish
+        :return: task entity
+        :rtype: dtlpy.entities.task.Task
+        """
+        return self.tasks.remove_items(task=self,
+                                       query=query,
+                                       filters=filters,
+                                       items=items,
+                                       wait=wait)
 
     def get_items(self, filters=None):
         """

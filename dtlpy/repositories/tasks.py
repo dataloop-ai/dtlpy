@@ -152,6 +152,9 @@ class Tasks:
         if self._project_id is not None:
             filters.add(field='projectId', values=self._project_id)
 
+        if self._dataset is not None:
+            filters.add(field='datasetId', values=self._dataset.id)
+
         paged = entities.PagedEntities(items_repository=self,
                                        filters=filters,
                                        page_offset=filters.page,
@@ -211,7 +214,7 @@ class Tasks:
             return self.query(filters=filters, project_ids=project_ids)
 
         if self._dataset is not None:
-            filters.add(field='datasetId', values=[self._dataset.id], operator=entities.FiltersOperations.IN)
+            filters.add(field='datasetId', values=self._dataset.id)
 
         if project_ids is not None:
             if not isinstance(project_ids, list):
@@ -545,7 +548,8 @@ class Tasks:
                query=None,
                available_actions=None,
                wait=True,
-               check_if_exist: entities.Filters = False
+               check_if_exist: entities.Filters = False,
+               limit=None
                ) -> entities.Task:
         """
         Create a new Annotation Task.
@@ -570,6 +574,7 @@ class Tasks:
         :param list available_actions: list of available actions to the task
         :param bool wait: wait for the command to finish
         :param entities.Filters check_if_exist: dl.Filters check if task exist according to filter
+        :param int limit: task limit
         :return: Annotation Task object
         :rtype: dtlpy.entities.task.Task
 
@@ -645,6 +650,9 @@ class Tasks:
 
         if workload:
             payload['workload'] = workload.to_json()
+
+        if limit:
+            payload['limit'] = limit
 
         if available_actions is not None:
             payload['availableActions'] = [action.to_json() for action in available_actions]
@@ -737,9 +745,9 @@ class Tasks:
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :param list items: list of items to add to the task
         :param list assignee_ids: list to assignee who works in the task
-        :param dict query: query yo filter the items use it
+        :param dict query: query to filter the items use it
         :param list workload: list of the work load ber assignee and work load
-        :param limit: task limit
+        :param int limit: task limit
         :param bool wait: wait for the command to finish
         :return: task entity
         :rtype: dtlpy.entities.task.Task
@@ -808,6 +816,77 @@ class Tasks:
 
         assert isinstance(task, entities.Task)
         return task
+
+    def remove_items(self,
+                     task: entities.Task = None,
+                     task_id=None,
+                     filters: entities.Filters = None,
+                     query=None,
+                     items=None,
+                     wait=True):
+        """
+        remove items from Task.
+
+        **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned to be *owner* of the annotation task.
+
+        :param dtlpy.entities.task.Task task: task entity
+        :param str task_id: task id
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
+        :param dict query: query yo filter the items use it
+        :param list items: list of items to add to the task
+        :param bool wait: wait for the command to finish
+        :return: True if success and an error if failed
+        :rtype: bool
+
+        **Examples**:
+
+        .. code-block:: python
+
+            dataset.tasks.remove_items(task= 'task_entity',
+                                        items = [items])
+
+        """
+        if filters is None and items is None and query is None:
+            raise exceptions.PlatformException('400', 'Must provide either filters, query or items list')
+
+        if task is None and task_id is None:
+            raise exceptions.PlatformException('400', 'Must provide either task or task_id')
+
+        if query is None:
+            if filters is None:
+                if not isinstance(items, list):
+                    items = [items]
+                filters = entities.Filters(field='id',
+                                           values=[item.id for item in items],
+                                           operator=entities.FiltersOperations.IN,
+                                           use_defaults=False)
+            query = filters.prepare()
+
+        if task_id is None:
+            task_id = task.id
+
+        payload = {"query": "{}".format(json.dumps(query).replace("'", '"')), 'asynced': wait}
+
+        url = '{}/{}/removeFromTask'.format(URL_PATH, task_id)
+
+        success, response = self._client_api.gen_request(req_type='post',
+                                                         path=url,
+                                                         json_req=payload)
+
+        if success:
+            command = entities.Command.from_json(_json=response.json(),
+                                                 client_api=self._client_api)
+            if not wait:
+                return command
+            command = command.wait(timeout=0)
+
+            if 'removeFromTaskId' not in command.spec:
+                raise exceptions.PlatformException(error='400',
+                                                   message="removeFromTaskId key is missing in command response: {}"
+                                                   .format(response))
+        else:
+            raise exceptions.PlatformException(response)
+        return True
 
     def get_items(self,
                   task_id: str = None,

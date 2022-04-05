@@ -71,7 +71,6 @@ class Dataset(entities.BaseEntity):
 
     # api
     _client_api = attr.ib(type=services.ApiClient, repr=False)
-    _instance_map = attr.ib(default=None, repr=False)
 
     # entities
     _project = attr.ib(default=None, repr=False)
@@ -84,6 +83,8 @@ class Dataset(entities.BaseEntity):
     _ontology_ids = attr.ib(default=None, repr=False)
     _labels = attr.ib(default=None, repr=False)
     _directory_tree = attr.ib(default=None, repr=False)
+    _recipe = attr.ib(default=None, repr=False)
+    _ontology = attr.ib(default=None, repr=False)
 
     @property
     def itemsCount(self):
@@ -182,8 +183,9 @@ class Dataset(entities.BaseEntity):
                                                               attr.fields(Dataset)._repositories,
                                                               attr.fields(Dataset)._ontology_ids,
                                                               attr.fields(Dataset)._labels,
+                                                              attr.fields(Dataset)._recipe,
+                                                              attr.fields(Dataset)._ontology,
                                                               attr.fields(Dataset)._directory_tree,
-                                                              attr.fields(Dataset)._instance_map,
                                                               attr.fields(Dataset).access_level,
                                                               attr.fields(Dataset).readable_type,
                                                               attr.fields(Dataset).created_at,
@@ -206,7 +208,7 @@ class Dataset(entities.BaseEntity):
     @property
     def labels(self):
         if self._labels is None:
-            self._labels = self.recipes.list()[0].ontologies.list()[0].labels
+            self._labels = self._get_ontology().labels
         return self._labels
 
     @property
@@ -225,25 +227,11 @@ class Dataset(entities.BaseEntity):
 
     @property
     def labels_flat_dict(self):
-        flatten_dict = dict()
-
-        def add_to_dict(tag: str, father: entities.Label):
-            flatten_dict[tag] = father
-            for child in father.children:
-                add_to_dict('{}.{}'.format(tag, child.tag), child)
-
-        for label in self.labels:
-            add_to_dict(label.tag, label)
-        return flatten_dict
+        return self._get_ontology().labels_flat_dict
 
     @property
-    def instance_map(self):
-        if self._instance_map is None:
-            labels = [label for label in self.labels_flat_dict]
-            labels.sort()
-            # each label gets index as instance id
-            self._instance_map = {label: (i_label + 1) for i_label, label in enumerate(labels)}
-        return self._instance_map
+    def instance_map(self) -> dict:
+        return self._get_ontology().instance_map
 
     @instance_map.setter
     def instance_map(self, value: dict):
@@ -254,7 +242,7 @@ class Dataset(entities.BaseEntity):
         """
         if not isinstance(value, dict):
             raise ValueError('input must be a dictionary of {label_name: instance_id}')
-        self._instance_map = value
+        self._get_ontology().instance_map = value
 
     @property
     def ontology_ids(self):
@@ -385,6 +373,11 @@ class Dataset(entities.BaseEntity):
                                       'datasets',
                                       '%s_%s' % (self.name, self.id))
         return local_path
+
+    def _get_ontology(self):
+        if self._ontology is None:
+            self._ontology = self.recipes.list()[0].ontologies.list()[0]
+        return self._ontology
 
     @staticmethod
     def serialize_labels(labels_dict):
@@ -559,7 +552,7 @@ class Dataset(entities.BaseEntity):
                              include_annotations_in_output=True,
                              export_png_files=False,
                              filter_output_annotations=False,
-                             alpha=None,
+                             alpha=1,
                              export_version=ExportVersion.V1
                              ):
         """
@@ -847,7 +840,7 @@ class Dataset(entities.BaseEntity):
             thickness=1,
             with_text=False,
             without_relative_path=None,
-            alpha=None,
+            alpha=1,
             export_version=ExportVersion.V1
     ):
         """

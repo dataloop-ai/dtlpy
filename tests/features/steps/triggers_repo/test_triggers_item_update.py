@@ -13,12 +13,9 @@ def step_impl(context, resource_type):
         time.sleep(interval)
         if resource_type == 'item':
             item = context.dataset.items.get(item_id=context.uploaded_item_with_trigger.id)
-            if 'executionLogs' in item.system:
-                if context.service.name in item.system['executionLogs']:
-                    service_execution_log = item.system['executionLogs'][context.service.name]
-                    if len(service_execution_log[context.service.module_name][context.trigger.function_name]) == 2:
-                        triggered = True
-                        break
+            if item.executions.list().items_count == 3:
+                triggered = True
+                break
         elif resource_type == 'annotation':
             item = context.annotation.item.annotations.get(annotation_id=context.annotation.id)
             if item.label == "Edited":

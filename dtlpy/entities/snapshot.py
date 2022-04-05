@@ -295,16 +295,6 @@ class Snapshot(entities.BaseEntity):
         return self._repositories.ontologies
 
     @property
-    def label_map(self):
-        logger.warning('Deprecation warning: Please use id_to_label_map')
-        return self.id_to_label_map
-
-    @label_map.setter
-    def label_map(self, mapping: dict):
-        logger.warning('Deprecation warning: Please use id_to_label_map')
-        self.configuration['id_to_label_map'] = mapping
-
-    @property
     def id_to_label_map(self):
         if 'id_to_label_map' not in self.configuration:
             # default

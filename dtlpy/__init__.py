@@ -13,12 +13,15 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with DTLPY.  If not, see <http://www.gnu.org/licenses/>.
+import json
+
 import logging
 import sys
 import os
 
 from . import services as dtlpy_services
 from .services import DataloopLogger, DtlpyFilter, ApiClient, check_sdk, Reporter, VerboseLoggingLevel, service_defaults
+from .caches.cache import CacheConfig, CacheType
 from .exceptions import PlatformException
 from . import repositories, exceptions, entities, examples
 from .__version__ import version as __version__
@@ -166,6 +169,7 @@ token_expired = client_api.token_expired
 info = client_api.info
 cache_state = client_api.cache_state
 attributes_mode = client_api.attributes_mode
+sdk_cache = client_api.sdk_cache
 
 
 def get_secret(secret):

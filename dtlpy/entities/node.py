@@ -6,7 +6,7 @@ from collections import Callable
 from enum import Enum
 from typing import List
 
-from .. import entities, assets
+from .. import entities, assets, repositories
 
 NODE_SIZE = (200, 87)
 
@@ -217,7 +217,7 @@ class PipelineNode:
     def position(self, position):
         self.metadata['position'] = \
             {
-                "x": position[0] * 1.7 * NODE_SIZE[0] + NODE_SIZE[0]/2,
+                "x": position[0] * 1.7 * NODE_SIZE[0] + NODE_SIZE[0] / 2,
                 "y": position[1] * 1.5 * NODE_SIZE[1] + NODE_SIZE[1],
                 "z": 0
             }
@@ -620,6 +620,8 @@ class FunctionNode(PipelineNode):
                  service: entities.Service,
                  function_name,
                  position: tuple = (1, 1),
+                 project_id=None,
+                 project_name=None
                  ):
         """
         :param str name: node name
@@ -629,6 +631,21 @@ class FunctionNode(PipelineNode):
         """
         self.service = service
 
+        if project_id is None:
+            project_id = service.project_id
+        if project_id != service.project_id:
+            logger.warning("the project id that provide different from the service project id")
+
+        if project_name is None:
+            try:
+                project = repositories.Projects(client_api=self.service._client_api).get(project_id=project_id,
+                                                                                         log_error=False)
+                project_name = project.name
+            except:
+                logger.warning(
+                    'Service project not found using DataloopTasks project.'
+                    ' If this is incorrect please provide project_name param.')
+                project_name = 'DataloopTasks'
         inputs = []
         outputs = []
         package = self.service.package
@@ -644,7 +661,7 @@ class FunctionNode(PipelineNode):
             service_name=self.service.name,
             module_name=self.service.module_name,
             package_name=self.service.package.name,
-            project_name=self.service.project.name
+            project_name=project_name
         )
         super().__init__(name=name,
                          node_id=str(uuid.uuid4()),

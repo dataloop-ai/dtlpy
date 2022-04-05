@@ -293,11 +293,18 @@ class UserSetting(BaseSetting):
 
     def to_json(self):
         _json = super().to_json()
-        _json['description'] = self.description
-        _json['inputs'] = self.inputs
-        _json['icon'] = self.icon
-        _json['sectionName'] = self.section_name
-        _json['hint'] = self.hint
-        _json['subSectionName'] = self.sub_section_name
-        _json['id'] = self.id
+        if self.description is not None:
+            _json['description'] = self.description
+        if self.inputs is not None:
+            _json['inputs'] = self.inputs
+        if self.icon is not None:
+            _json['icon'] = self.icon
+        if self.section_name is not None:
+            _json['sectionName'] = self.section_name
+        if self.hint is not None:
+            _json['hint'] = self.hint
+        if self.sub_section_name is not None:
+            _json['subSectionName'] = self.sub_section_name
+        if self.id is not None:
+            _json['id'] = self.id
         return _json

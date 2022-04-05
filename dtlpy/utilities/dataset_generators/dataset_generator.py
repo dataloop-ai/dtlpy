@@ -1,18 +1,16 @@
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from PIL import Image
-import torchvision
+import collections.abc
 import numpy as np
 import collections
-import traceback
 import logging
-import imgaug
 import shutil
 import json
 import copy
 import tqdm
 import os
-
+import re
 from ... import entities
 
 logger = logging.getLogger('dtlpy')
@@ -31,7 +29,7 @@ class DataItem(dict):
         self['image_filepath'] = val
 
 
-class BaseGenerator:
+class DatasetGenerator:
     IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'bmp']
 
     def __init__(self,
@@ -40,9 +38,12 @@ class BaseGenerator:
                  filters: entities.Filters = None,
                  data_path=None,
                  overwrite=False,
-                 label_to_id_map=None,
+                 id_to_label_map=None,
                  transforms=None,
+                 transforms_callback=None,
                  num_workers=0,
+                 batch_size=None,
+                 collate_fn=None,
                  shuffle=True,
                  seed=None,
                  to_categorical=False,
@@ -59,9 +60,13 @@ class BaseGenerator:
         :param filters: dl.Filters - filtering entity to filter the dataset items
         :param data_path: Path to Dataloop annotations (root to "item" and "json").
         :param overwrite:
-        :param label_to_id_map: dict - {label_string: id} dictionary
-        :param transforms: Optional transform to be applied on a sample. list or torchvision.Transform
-        :param num_workers:
+        :param id_to_label_map: dict - {id: label_string} dictionary
+        :param transforms: Optional transform to be applied on a sample. list, imgaug.Sequence or torchvision.transforms.Compose
+        :param transforms_callback: Optional function to handle the callback of each batch.
+        look at default_transforms_callback for more information. available: imgaug_transforms_callback, torchvision_transforms_callback
+        :param num_workers: Optional - number of separate threads to load the images
+        :param batch_size: (int, optional): how many samples per batch to load, if not none - items will always be a list
+        :param collate_fn: Optional - merges a list of samples to form a mini-batch of Tensor(s).
         :param shuffle: Whether to shuffle the data (default: True) If set to False, sorts the data in alphanumeric order.
         :param seed: Optional random seed for shuffling and transformations.
         :param to_categorical: convert label id to categorical format
@@ -71,11 +76,14 @@ class BaseGenerator:
         """
 
         self._dataset_entity = dataset_entity
-        if label_to_id_map is None:
+        if id_to_label_map is None:
             label_to_id_map = dataset_entity.instance_map
+            id_to_label_map = {v: k for k, v in label_to_id_map.items()}
         else:
-            dataset_entity.instance_map = label_to_id_map
-        self.id_to_label_map = {v: k for k, v in label_to_id_map.items()}
+            # id_to_label_map is not None
+            label_to_id_map = {v: k for k, v in id_to_label_map.items()}
+            dataset_entity._get_ontology().instance_map = label_to_id_map
+        self.id_to_label_map = id_to_label_map
         self.label_to_id_map = label_to_id_map
 
         if data_path is None:
@@ -93,10 +101,9 @@ class BaseGenerator:
         else:
             download = True
         if download:
+            annotation_options = [entities.ViewAnnotationOptions.JSON]
             if annotation_type in [entities.AnnotationType.SEGMENTATION]:
-                annotation_options = entities.ViewAnnotationOptions.INSTANCE
-            else:
-                annotation_options = entities.ViewAnnotationOptions.JSON
+                annotation_options.append(entities.ViewAnnotationOptions.INSTANCE)
             _ = dataset_entity.items.download(filters=filters,
                                               local_path=data_path,
                                               annotation_options=annotation_options)
@@ -105,6 +112,10 @@ class BaseGenerator:
         self._json_path = Path(self.root_dir).joinpath('json')
         self._mask_path = Path(self.root_dir).joinpath('instance')
         self._transforms = transforms
+        self._transforms_callback = transforms_callback
+        if self._transforms is not None and self._transforms_callback is None:
+            # use default callback
+            self._transforms_callback = default_transforms_callback
 
         self.annotation_type = annotation_type
         self.num_workers = num_workers
@@ -112,6 +123,8 @@ class BaseGenerator:
         self.num_classes = len(label_to_id_map)
         self.shuffle = shuffle
         self.seed = seed
+        self.batch_size = batch_size
+        self.collate_fn = collate_fn
         self.class_balancing = class_balancing
         # inits
         self.data_items = list()
@@ -123,6 +136,20 @@ class BaseGenerator:
         # Load annotations #
         ####################
         self.load_annotations()
+
+    @property
+    def dataset_entity(self):
+        assert isinstance(self._dataset_entity, entities.Dataset)
+        return self._dataset_entity
+
+    @dataset_entity.setter
+    def dataset_entity(self, val):
+        assert isinstance(val, entities.Dataset)
+        self._dataset_entity = val
+
+    @property
+    def n_items(self):
+        return len(self.data_items)
 
     def _load_single(self, image_filepath, pbar=None):
         try:
@@ -154,7 +181,6 @@ class BaseGenerator:
             item_info.update(item_id=item_id)
             if self.annotation_type is not None:
                 # add item id from json
-
                 box_coordinates = list()
                 classes_ids = list()
                 labels = list()
@@ -246,7 +272,10 @@ class BaseGenerator:
             data_items = [data_item for data_item, is_empty in outputs]
 
         self.data_items = data_items
-        logger.info(output_msg)
+        if len(self.data_items) == 0:
+            logger.warning(output_msg)
+        else:
+            logger.info(output_msg)
         ###################
         # class balancing #
         ###################
@@ -257,7 +286,7 @@ class BaseGenerator:
                 from imblearn.over_sampling import RandomOverSampler
             except Exception:
                 logger.error(
-                    'Class balancing is on but missing "imbalanced-learn". run "pip install -U imbalanced-learn" and try again')
+                    'Class balancing is ON but missing "imbalanced-learn". run "pip install -U imbalanced-learn" and try again')
                 raise
             logger.info('Class balance is on!')
             class_ids = [class_id for item in self.data_items for class_id in item['class']]
@@ -275,59 +304,12 @@ class BaseGenerator:
             np.random.seed(self.seed)
             np.random.shuffle(self.data_items)
 
-    @property
-    def dataset_entity(self):
-        assert isinstance(self._dataset_entity, entities.Dataset)
-        return self._dataset_entity
-
-    @dataset_entity.setter
-    def dataset_entity(self, val):
-        assert isinstance(val, entities.Dataset)
-        self._dataset_entity = val
-
-    def __len__(self):
-        return len(self.data_items)
-
     def transform(self, image, target=None):
-        if isinstance(self._transforms, torchvision.transforms.Compose):
-            # use torchvision compose
-            ts = self._transforms.transforms
-        elif isinstance(self._transforms, imgaug.augmenters.meta.Sequential):
-            # use imgaug
-            ts = list(self._transforms)
-        elif isinstance(self._transforms, list):
-            # use list of functions
-            ts = self._transforms
-        else:
-            raise ValueError('unknown transformers type')
-
-        # go over transformation in list
-        for t in ts:
-            if isinstance(t, imgaug.augmenters.meta.Sequential):
-                # handle imgaug calls
-                if target is not None and self.annotation_type is not None:
-                    # works for batch but running on a single image
-                    if self.annotation_type == entities.AnnotationType.BOX:
-                        image, target = t(images=[image], bounding_boxes=[target])
-                        target = target[0]
-                    elif self.annotation_type == entities.AnnotationType.SEGMENTATION:
-                        # expending to HxWx1 for the imgaug function to work
-                        target = target[..., None]
-                        image, target = t(images=[image], segmentation_maps=[target])
-                        target = target[0][:, :, 0]
-                    elif self.annotation_type == entities.AnnotationType.POLYGON:
-                        image, target = t(images=[image], polygons=[target])
-                        target = target[0]
-                    else:
-                        raise ValueError(
-                            'unsupported annotations type for image augmentations: {}'.format(self.annotation_type))
-                    image = image[0]
-                else:
-                    image = t(images=[image])
-                    image = image[0]
-            else:
-                # all other function in the Compose
-                image = t(image)
+        if self._transforms is not None:
+            image, target = self._transforms_callback(transforms=self._transforms,
+                                                      image=image,
+                                                      target=target,
+                                                      annotation_type=self.annotation_type)
         return image, target
 
     def _to_dtlpy(self, targets, labels=None):
@@ -362,16 +344,18 @@ class BaseGenerator:
         import matplotlib.pyplot as plt
         if idx is None:
             idx = np.random.randint(self.__len__())
+        if self.batch_size is not None:
+            raise ValueError('can visualize only of batch_size in None')
         data_item = self.__getitem__(idx)
-        image = data_item.get('image')
+        image = Image.fromarray(data_item.get('image'))
         labels = data_item.get('labels')
         targets = data_item.get('annotations')
         annotations = self._to_dtlpy(targets=targets, labels=labels)
-        marked_image = annotations.show(image=image,
-                                        height=image.shape[0],
-                                        width=image.shape[1],
-                                        alpha=0.8,
-                                        with_text=False)
+        mask = Image.fromarray(annotations.show(height=image.size[1],
+                                                width=image.size[0],
+                                                alpha=0.8))
+        image.paste(mask, (0, 0), mask)
+        marked_image = np.asarray(image)
         if plot:
             plt.figure()
             plt.imshow(marked_image)
@@ -390,32 +374,54 @@ class BaseGenerator:
             # if segmentation - read from file
             mask_filepath = annotations
             annotations = np.asarray(Image.open(mask_filepath).convert('L'))
+        if self.to_categorical:
+            onehot = np.zeros((annotations.size, self.num_classes + 1))
+            onehot[np.arange(annotations.size), annotations] = 1
+            annotations = onehot
         data_item.update({'annotations': annotations})
 
-        if self.return_originals:
-            annotations = data_item.get('annotations')
+        if self.return_originals is True:
+            annotations = []
+            if self.annotation_type is not None:
+                annotations = data_item.get('annotations')
             data_item.update({'orig_image': image.copy(),
                               'orig_annotations': annotations.copy()})
 
         ###########################
         # perform transformations #
         ###########################
-        if self._transforms:
+        if self._transforms is not None:
             annotations = data_item.get('annotations')
             image, annotations = self.transform(image, annotations)
             data_item.update({'image': image,
                               'annotations': annotations})
         return data_item
 
+    def __iter__(self):
+        """Create a generator that iterate over the Sequence."""
+        for item in (self[i] for i in range(len(self))):
+            yield item
+
+    def __len__(self):
+        factor = self.batch_size
+        if factor is None:
+            factor = 1
+        return int(np.ceil(self.n_items / factor))
+
     def __getitem__(self, idx):
         """
             Support single index or a slice.
             Uses ThreadPoolExecutor is num_workers != 0
         """
+        to_return = None
         if isinstance(idx, int):
-            to_return = self.__getsingleitem__(idx)
+            if self.batch_size is None:
+                to_return = self.__getsingleitem__(idx)
+            else:
+                # if batch_size is define, convert idx to batches
+                idx = slice(idx * self.batch_size, min((idx + 1) * self.batch_size, len(self.data_items)))
 
-        elif isinstance(idx, slice):
+        if isinstance(idx, slice):
             to_return = list()
             idxs = list(range(idx.start, idx.stop,
                               idx.step if idx.step else 1))
@@ -426,6 +432,177 @@ class BaseGenerator:
                 with ThreadPoolExecutor(max_workers=self.num_workers) as executor:
                     for sample in executor.map(lambda i: self.__getsingleitem__(i), idxs):
                         to_return.append(sample)
-        else:
-            raise TypeError('list indices must be integers or slices, not {}'.format(type(idx)))
+
+        if to_return is None:
+            raise TypeError('unsupported indexing: list indices must be integers or slices, not {}'.format(type(idx)))
+
+        if self.collate_fn is not None:
+            to_return = self.collate_fn(to_return)
         return to_return
+
+
+np_str_obj_array_pattern = re.compile(r'[SaUO]')
+
+default_collate_err_msg_format = (
+    "default_collate: batch must contain tensors, numpy arrays, numbers, "
+    "dicts or lists; found {}")
+
+
+def default_transforms_callback(transforms, image, target, annotation_type):
+    """
+    Recursive call to perform the augmentations in "transforms"
+
+    :param transforms:
+    :param image:
+    :param target:
+    :param annotation_type:
+    :return:
+    """
+    # get the type string without importing any other package
+    transforms_type = type(transforms)
+
+    ############
+    # Handle compositions and lists of augmentations with a recursive call
+    if transforms_type.__module__ == 'torchvision.transforms.transforms' and transforms_type.__name__ == 'Compose':
+        # use torchvision compose
+        image, target = default_transforms_callback(transforms.transforms, image, target, annotation_type)
+
+    if transforms_type.__module__ == 'imgaug.augmenters.meta' and transforms_type.__name__ == 'Sequential':
+        image, target = default_transforms_callback(list(transforms), image, target, annotation_type)
+
+    if isinstance(transforms, list):
+        for t in transforms:
+            image, target = default_transforms_callback(t, image, target, annotation_type)
+        return image, target
+
+    ##############
+    # Handle single annotations
+    if 'imgaug.augmenters' in transforms_type.__module__:
+        # handle single imgaug augmentation
+        if target is not None and annotation_type is not None:
+            # works for batch but running on a single image
+            if annotation_type == entities.AnnotationType.BOX:
+                image, target = transforms(images=[image], bounding_boxes=[target])
+                target = target[0]
+            elif annotation_type == entities.AnnotationType.SEGMENTATION:
+                # expending to HxWx1 for the imgaug function to work
+                target = target[..., None]
+                image, target = transforms(images=[image], segmentation_maps=[target])
+                target = target[0][:, :, 0]
+            elif annotation_type == entities.AnnotationType.POLYGON:
+                image, target = transforms(images=[image], polygons=[target])
+                target = target[0]
+            elif annotation_type == entities.AnnotationType.CLASSIFICATION:
+                image = transforms(images=[image])
+            else:
+                raise ValueError('unsupported annotations type for image augmentations: {}'.format(annotation_type))
+            image = image[0]
+        else:
+            image = transforms(images=[image])
+            image = image[0]
+    else:
+        image = transforms(image)
+
+    return image, target
+
+
+def collate_default(batch):
+    r"""Puts each data field into a tensor with outer dimension batch size"""
+    elem = batch[0]
+    elem_type = type(elem)
+    if isinstance(elem, np.ndarray):
+        return np.stack(batch, axis=0)
+    elif elem_type.__module__ == 'numpy' and elem_type.__name__ != 'str_' and elem_type.__name__ != 'string_':
+        if elem_type.__name__ == 'ndarray' or elem_type.__name__ == 'memmap':
+            # array of string classes and object
+            if np_str_obj_array_pattern.search(elem.dtype.str) is not None:
+                raise TypeError(default_collate_err_msg_format.format(elem.dtype))
+            return batch
+            # return [tf.convert_to_tensor(b) for b in batch]
+        elif elem.shape == ():  # scalars
+            return batch
+    elif isinstance(elem, float):
+        return batch
+    elif isinstance(elem, int):
+        return batch
+    elif isinstance(elem, str) or isinstance(elem, bytes) or elem is None:
+        return batch
+    elif isinstance(elem, collections.abc.Mapping):
+        return {key: collate_default([d[key] for d in batch]) for key in elem}
+    elif isinstance(elem, tuple) and hasattr(elem, '_fields'):  # namedtuple
+        return elem_type(*(collate_default(samples) for samples in zip(*batch)))
+    elif isinstance(elem, collections.abc.Sequence):
+        transposed = zip(*batch)
+        return transposed
+    raise TypeError(default_collate_err_msg_format.format(elem_type))
+
+
+def collate_torch(batch):
+    r"""Puts each data field into a tensor with outer dimension batch size"""
+    import torch
+    elem = batch[0]
+    elem_type = type(elem)
+    if isinstance(elem, torch.Tensor):
+        out = None
+        if torch.utils.data.get_worker_info() is not None:
+            # If we're in a background process, concatenate directly into a
+            # shared memory tensor to avoid an extra copy
+            numel = sum(x.numel() for x in batch)
+            storage = elem.storage()._new_shared(numel)
+            out = elem.new(storage)
+        return torch.stack(batch, 0, out=out)
+    elif elem_type.__module__ == 'numpy' and elem_type.__name__ != 'str_' and elem_type.__name__ != 'string_':
+        if elem_type.__name__ == 'ndarray' or elem_type.__name__ == 'memmap':
+            # array of string classes and object
+            if np_str_obj_array_pattern.search(elem.dtype.str) is not None:
+                raise TypeError(default_collate_err_msg_format.format(elem.dtype))
+            return [torch.as_tensor(b) for b in batch]
+        elif elem.shape == ():  # scalars
+            return torch.as_tensor(batch)
+    elif isinstance(elem, float):
+        return torch.tensor(batch, dtype=torch.float64)
+    elif isinstance(elem, int):
+        return torch.tensor(batch)
+    elif isinstance(elem, str) or isinstance(elem, bytes) or elem is None:
+        return batch
+    elif isinstance(elem, collections.abc.Mapping):
+        return {key: collate_torch([d[key] for d in batch]) for key in elem}
+    elif isinstance(elem, tuple) and hasattr(elem, '_fields'):  # namedtuple
+        return elem_type(*(collate_torch(samples) for samples in zip(*batch)))
+    elif isinstance(elem, collections.abc.Sequence):
+        transposed = zip(*batch)
+        return transposed
+
+    raise TypeError(default_collate_err_msg_format.format(elem_type))
+
+
+def collate_tf(batch):
+    r"""Puts each data field into a tensor with outer dimension batch size"""
+    import tensorflow as tf
+    elem = batch[0]
+    elem_type = type(elem)
+    if isinstance(elem, tf.Tensor):
+        return tf.stack(batch, axis=0)
+    elif elem_type.__module__ == 'numpy' and elem_type.__name__ != 'str_' and elem_type.__name__ != 'string_':
+        if elem_type.__name__ == 'ndarray' or elem_type.__name__ == 'memmap':
+            # array of string classes and object
+            if np_str_obj_array_pattern.search(elem.dtype.str) is not None:
+                raise TypeError(default_collate_err_msg_format.format(elem.dtype))
+            return tf.convert_to_tensor(batch)
+            # return [tf.convert_to_tensor(b) for b in batch]
+        elif elem.shape == ():  # scalars
+            return tf.convert_to_tensor(batch)
+    elif isinstance(elem, float):
+        return tf.convert_to_tensor(batch, dtype=tf.float64)
+    elif isinstance(elem, int):
+        return tf.convert_to_tensor(batch)
+    elif isinstance(elem, str) or isinstance(elem, bytes) or elem is None:
+        return batch
+    elif isinstance(elem, collections.abc.Mapping):
+        return {key: collate_tf([d[key] for d in batch]) for key in elem}
+    elif isinstance(elem, tuple) and hasattr(elem, '_fields'):  # namedtuple
+        return elem_type(*(collate_tf(samples) for samples in zip(*batch)))
+    elif isinstance(elem, collections.abc.Sequence):
+        transposed = zip(*batch)
+        return transposed
+    raise TypeError(default_collate_err_msg_format.format(elem_type))

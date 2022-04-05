@@ -171,7 +171,7 @@ class Item(entities.BaseEntity):
     def set_repositories(self):
         reps = namedtuple('repositories',
                           field_names=['annotations', 'datasets', 'items', 'codebases', 'artifacts', 'modalities',
-                                       'features', 'assignments', 'tasks'])
+                                       'features', 'assignments', 'tasks', 'executions'])
         reps.__new__.__defaults__ = (None, None, None, None, None, None, None, None, None)
 
         if self._dataset is None:
@@ -213,6 +213,11 @@ class Item(entities.BaseEntity):
                 client_api=self._client_api,
                 project=self._project,
                 dataset=self._dataset
+            ),
+            executions=repositories.Executions(
+                client_api=self._client_api,
+                project=self._project,
+                resource=self
             )
         )
         return r
@@ -241,6 +246,11 @@ class Item(entities.BaseEntity):
     def tasks(self):
         assert isinstance(self._repositories.tasks, repositories.Tasks)
         return self._repositories.tasks
+
+    @property
+    def executions(self):
+        assert isinstance(self._repositories.executions, repositories.Executions)
+        return self._repositories.executions
 
     @property
     def items(self):
@@ -391,7 +401,7 @@ class Item(entities.BaseEntity):
             thickness=1,
             with_text=False,
             annotation_filters=None,
-            alpha=None,
+            alpha=1,
             export_version=ExportVersion.V1
     ):
         """

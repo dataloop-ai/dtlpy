@@ -349,23 +349,25 @@ class Annotation(entities.BaseEntity):
     def attributes(self, attributes):
         if self._use_attributes_2:
             if not isinstance(attributes, dict):
-                raise ValueError('Attributes must be a dict. If you are using v1 attributes please use dl.use_attributes_2(False)')
+                raise ValueError(
+                    'Attributes must be a dict. If you are using v1 attributes please use dl.use_attributes_2(False)')
             self._recipe_2_attributes = attributes
         else:
             if not isinstance(attributes, list):
-                raise ValueError('Attributes must be a list. If you are using v2 attributes please use dl.use_attributes_2(True)')
+                raise ValueError(
+                    'Attributes must be a list. If you are using v2 attributes please use dl.use_attributes_2(True)')
             self.annotation_definition.attributes = attributes
 
     @property
     def color(self):
         # if "dataset" is not in self - this will always get the dataset
         try:
-            all_colors_lower = {k.lower(): v for k, v in self.dataset.labels_flat_dict.items()}
+            colors = self.dataset._get_ontology().color_map
         except exceptions.BadRequest:
-            all_colors_lower = None
+            colors = None
             logger.warning('Cant get dataset for annotation color. using default.')
-        if all_colors_lower is not None and self.label.lower() in all_colors_lower:
-            color = all_colors_lower[self.label.lower()].rgb
+        if colors is not None and self.label in colors:
+            color = colors[self.label]
         else:
             color = (255, 255, 255)
         return color
@@ -425,9 +427,17 @@ class Annotation(entities.BaseEntity):
         """
         Set status on annotation
 
+        **Prerequisites**: You must have an item that has been annotated. You must have the role of an *owner* or *developer* or be assigned a task that includes that item as an *annotation manager*.
+
         :param str status: can be AnnotationStatus.ISSUE, AnnotationStatus.APPROVED, AnnotationStatus.REVIEW, AnnotationStatus.CLEAR
         :return: Annotation object
         :rtype: dtlpy.entities.annotation.Annotation
+
+        **Example**:
+
+        .. code-block:: python
+
+            annotation.update_status(status=dl.AnnotationStatus.ISSUE)
         """
         return self.annotations.update_status(annotation=self, status=status)
 
@@ -485,7 +495,7 @@ class Annotation(entities.BaseEntity):
                  width: float = None,
                  thickness: int = 1,
                  with_text: bool = False,
-                 alpha: float = None):
+                 alpha: float = 1):
         """
         Save annotation to file
 
@@ -556,7 +566,8 @@ class Annotation(entities.BaseEntity):
              annotation_format: ViewAnnotationOptions = ViewAnnotationOptions.MASK,
              color=None,
              label_instance_dict=None,
-             alpha=None,
+             alpha=1,
+             frame_num=None
              ):
         """
         Show annotations
@@ -591,7 +602,10 @@ class Annotation(entities.BaseEntity):
             logger.error(
                 'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
             raise
-
+        # sanity check for alpha
+        if alpha > 1 or alpha < 0:
+            raise ValueError(
+                'input variable alpha in annotation.show() should be between 0 and 1. got: {!r}'.format(alpha))
         if height is None:
             if self._item is None or self._item.height is None:
                 if image is None:
@@ -608,80 +622,31 @@ class Annotation(entities.BaseEntity):
                     width = image.shape[1]
             else:
                 width = self._item.width
-        # s_frame and n_frame display the start and end frames, get them from the metadata
-        if self.metadata:
-            s_frame = self.metadata.get('system', dict()).get('frame', 0)
-            e_frame = self.metadata.get('system', dict()).get('endFrame', 0)
-        elif isinstance(image, list):
-            e_frame = len(image) - 1
-            s_frame = 0
-        else:
-            e_frame = 0
-            s_frame = 0
-        # in case the end frame is > 0 then it a video, otherwise is image
-        if e_frame > 1:
-            is_video = True
-        else:
-            is_video = False
 
-        # we enter to video mode if this an annotation for video and (we get a list of frames or None)
-        if is_video and (isinstance(image, list) or image is None):
-            # is the image empty make a zeros one
-            if image is None:
-                nb_frames = self.item.system.get('nb_frames', 0)
-                if nb_frames > 0:
-                    image = [None] * nb_frames
-                else:
-                    raise exceptions.PlatformException(404, "can not show video annotations with out nb_frames")
-            frames = list()
-            i_frame = 0
+        # try getting instance map from dataset, otherwise set to default
+        if annotation_format in [entities.ViewAnnotationOptions.INSTANCE, entities.ViewAnnotationOptions.OBJECT_ID] and \
+                label_instance_dict is None:
+            if self._dataset is not None:
+                label_instance_dict = self._dataset.instance_map
+            else:
+                if self._item is not None and self._item._dataset is not None:
+                    label_instance_dict = self._item._dataset.instance_map
+            if label_instance_dict is None:
+                logger.warning("Couldn't set label_instance_dict in annotation.show(). All labels will be mapped to 1")
+                label_instance_dict = dict()
 
-            for frame in image:
-                # go over all the frames if it in the annotation frames mark it else move it with no changes
-                if s_frame <= i_frame <= e_frame:
-                    annotation = self
-                    if self.metadata['system'].get('snapshots_', []):
-                        # if we have a snapshot make an annotation with the coordinates of the snapshots
-                        snapshots = self.metadata['system'].get('snapshots_', [])
-                        item = self.item
-                        ann_json = self.to_json()
-                        if i_frame > s_frame + len(snapshots) - 1:
-                            ann_json['coordinates'] = snapshots[-1]['data']
-                        elif i_frame > s_frame:
-                            ann_json['coordinates'] = snapshots[i_frame - s_frame - 1]['data']
-                        annotation = self.from_json(ann_json)
-                        annotation._item = item
-                    try:
-                        if annotation_format in [entities.ViewAnnotationOptions.INSTANCE,
-                                                 entities.ViewAnnotationOptions.OBJECT_ID]:
-                            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-                        frame = annotation._show_single_frame(image=frame,
-                                                              color=self.color,
-                                                              annotation_format=annotation_format,
-                                                              thickness=thickness,
-                                                              alpha=alpha,
-                                                              with_text=with_text,
-                                                              height=height,
-                                                              width=width,
-                                                              label_instance_dict=label_instance_dict)
-                    except Exception as e:
-                        raise ValueError(e)
-                if annotation_format == entities.ViewAnnotationOptions.MASK:
-                    frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2BGR)
-
-                frames.append(frame)
-                i_frame += 1
-            return frames
-        else:
-            return self._show_single_frame(image=image,
-                                           thickness=thickness,
-                                           alpha=alpha,
-                                           with_text=with_text,
-                                           height=height,
-                                           width=width,
-                                           annotation_format=annotation_format,
-                                           color=color,
-                                           label_instance_dict=label_instance_dict)
+        if frame_num is not None:
+            self.set_frame(frame_num)
+        image = self._show_single_frame(image=image,
+                                        thickness=thickness,
+                                        alpha=alpha,
+                                        with_text=with_text,
+                                        height=height,
+                                        width=width,
+                                        annotation_format=annotation_format,
+                                        color=color,
+                                        label_instance_dict=label_instance_dict)
+        return image
 
     def _show_single_frame(self,
                            image=None,
@@ -713,22 +678,17 @@ class Annotation(entities.BaseEntity):
             logger.error(
                 'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
             raise
-        if alpha is None:
-            alpha = 1
-        elif alpha > 1 or alpha < 0:
-            raise PlatformException(
-                error='1001',
-                message='alpha should be between 0 and 1')
-
         # height/width
         if self.annotation_definition.type == 'cube_3d':
             logger.warning('the show for 3d_cube is not supported.')
             return image
-
         if annotation_format == entities.ViewAnnotationOptions.MASK:
             # create an empty mask
             if image is None:
-                image = np.zeros((height, width, 4), dtype=np.uint8)
+                image = self._get_default_mask(annotation_format=annotation_format,
+                                               width=width,
+                                               height=height,
+                                               label_instance_dict=label_instance_dict)
             else:
                 if len(image.shape) == 2:
                     # image is gray
@@ -745,40 +705,26 @@ class Annotation(entities.BaseEntity):
             if image is None:
                 raise PlatformException(error='1001',
                                         message='Must input image with ANNOTATION_ON_IMAGE view option.')
-        elif annotation_format == entities.ViewAnnotationOptions.INSTANCE:
+        elif annotation_format in [entities.ViewAnnotationOptions.INSTANCE, entities.ViewAnnotationOptions.OBJECT_ID]:
             if image is None:
                 # create an empty mask
-                image = np.zeros((height, width), dtype=np.uint8)
+                image = self._get_default_mask(annotation_format=annotation_format,
+                                               width=width,
+                                               height=height,
+                                               label_instance_dict=label_instance_dict)
             else:
                 if len(image.shape) != 2:
                     raise PlatformException(
                         error='1001',
                         message='Image shape must be 2d array when trying to draw instance on image')
             # create a dictionary of labels and ids
-            if label_instance_dict is None:
-                if self._dataset is not None:
-                    label_instance_dict = self._dataset.instance_map
-                else:
-                    if self._item is not None and self._item._dataset is not None:
-                        label_instance_dict = self._item._dataset.instance_map
-                if label_instance_dict is None:
-                    label_instance_dict = dict()
-
-        elif annotation_format == entities.ViewAnnotationOptions.OBJECT_ID:
-            if image is None:
-                # create an empty mask
-                image = np.zeros((height, width), dtype=np.uint8)
-            else:
-                if len(image.shape) != 2:
-                    raise PlatformException(
-                        error='1001',
-                        message='Image shape must be 2d array when trying to draw instance on image')
         else:
             raise PlatformException(error='1001',
                                     message='unknown annotations format: "{}". known formats: "{}"'.format(
                                         annotation_format, '", "'.join(list(entities.ViewAnnotationOptions))))
 
         # show annotation
+        # TODO Why is this here? cannot reach this line with image is None
         if image is None:
             image = np.zeros((height, width, len(color)), dtype=np.uint8)
             if image.shape[2] == 1:
@@ -786,27 +732,15 @@ class Annotation(entities.BaseEntity):
 
         # color
         if color is None:
-            if annotation_format == entities.ViewAnnotationOptions.MASK:
-                color = self.color
-                if len(color) == 3:
-                    if alpha == 0:
-                        channel = 1
-                    else:
-                        channel = (255 / alpha)
-                    color = color + (channel,)
-            elif annotation_format == entities.ViewAnnotationOptions.INSTANCE:
-                # if label not in dataset label - put it as background
-                color = label_instance_dict.get(self.label, 1)
-            elif annotation_format == entities.ViewAnnotationOptions.OBJECT_ID:
-                if self.object_id is None:
-                    logger.warning(
-                        'Try to show object_id but annotation has no value. annotation id: {}'.format(self.id)
-                    )
-                    return image
-                color = int(self.object_id)
+            if annotation_format in [entities.ViewAnnotationOptions.MASK,
+                                     entities.ViewAnnotationOptions.INSTANCE,
+                                     entities.ViewAnnotationOptions.OBJECT_ID]:
+                color = self._get_color_for_show(annotation_format=annotation_format,
+                                                 alpha=alpha,
+                                                 label_instance_dict=label_instance_dict)
             else:
-                raise PlatformException('404',
-                                        'unknown annotations format: {}. known formats: "{}"'.format(
+                raise PlatformException(error='1001',
+                                        message='unknown annotations format: {}. known formats: "{}"'.format(
                                             annotation_format, '", "'.join(list(entities.ViewAnnotationOptions))))
 
         return self.annotation_definition.show(image=image,
@@ -817,6 +751,58 @@ class Annotation(entities.BaseEntity):
                                                annotation_format=annotation_format,
                                                color=color,
                                                alpha=alpha)
+
+    def _get_color_for_show(self, annotation_format, alpha=1, label_instance_dict=None):
+        if annotation_format == entities.ViewAnnotationOptions.MASK:
+            color = self.color
+            if len(color) == 3:
+                color = color + (int(alpha * 255),)
+        elif annotation_format == entities.ViewAnnotationOptions.INSTANCE:
+            color = label_instance_dict.get(self.label, 1)
+        elif annotation_format == entities.ViewAnnotationOptions.OBJECT_ID:
+            if self.object_id is None:
+                raise ValueError('Try to show object_id but annotation has no value. annotation id: {}'.format(self.id))
+            color = int(self.object_id)
+        else:
+            raise ValueError('cant find color for the annotation format: {}'.format(annotation_format))
+        return color
+
+    def _get_default_mask(self, annotation_format, height, width, label_instance_dict):
+        """
+        Create a default mask take from the colors or instance map. tag should '$default'.
+        Default value is zeros
+
+        :param annotation_format: dl.AnnotationOptions to show
+        :param height: item height
+        :param width: item width
+        :return:
+        """
+        if annotation_format == entities.ViewAnnotationOptions.MASK:
+            try:
+                colors = self.dataset._get_ontology().color_map
+            except exceptions.BadRequest:
+                colors = None
+                logger.warning('Cant get dataset for annotation color. using default.')
+            if colors is not None and '$default' in colors:
+                default_color = colors['$default']
+            else:
+                default_color = None
+            if default_color is None:
+                default_color = (0, 0, 0, 0)
+            if len(default_color) == 3:
+                default_color += (255,)
+            if len(default_color) != 4:
+                raise ValueError('default color for show() mask should be with len 3 or 4 (RGB/RGBA)')
+            image = np.full(shape=(height, width, 4), fill_value=default_color, dtype=np.uint8)
+        elif annotation_format in [entities.ViewAnnotationOptions.INSTANCE,
+                                   entities.ViewAnnotationOptions.OBJECT_ID]:
+            default_color = 0
+            if '$default' in label_instance_dict:
+                default_color = label_instance_dict['$default']
+            image = np.full(shape=(height, width), fill_value=default_color, dtype=np.uint8)
+        else:
+            raise ValueError('cant create default mask for annotation_format: {}'.format(annotation_format))
+        return image
 
     #######
     # I/O #

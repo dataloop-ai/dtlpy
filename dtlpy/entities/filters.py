@@ -1,7 +1,10 @@
+import urllib.parse
 import logging
-from enum import Enum
-from ..exceptions import PlatformException
+import json
 import os
+from enum import Enum
+
+from .. import exceptions, entities
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -40,6 +43,7 @@ class FiltersResource(str, Enum):
     ORGANIZATIONS = 'organizations'
     DRIVERS = 'drivers'
     SETTINGS = 'setting'
+    RESOURCE_EXECUTION = 'resourceExecution'
 
 
 class FiltersOperations(str, Enum):
@@ -153,7 +157,8 @@ class Filters:
         elif method == FiltersMethod.AND:
             self.__override(field=field, values=values, operator=operator)
         else:
-            raise PlatformException('400', 'Unknown method {}, please select from: or/and'.format(method))
+            raise exceptions.PlatformException(error='400',
+                                               message='Unknown method {}, please select from: or/and'.format(method))
 
     def __override(self, field, values, operator=None):
         if field in self._unique_fields:
@@ -241,7 +246,8 @@ class Filters:
             filter.add_join(field='metadata.user', values=['1','2'], operator=dl.FiltersOperations.IN)
         """
         if self.resource not in [FiltersResource.ITEM, FiltersResource.ANNOTATION]:
-            raise PlatformException('400', 'Cannot join to {} filters'.format(self.resource))
+            raise exceptions.PlatformException(error='400',
+                                               message='Cannot join to {} filters'.format(self.resource))
 
         if self.join is None:
             self.join = dict()
@@ -395,8 +401,8 @@ class Filters:
                     _json.pop('page', None)
                     _json.pop('pageSize', None)
             else:
-                raise PlatformException(error='400',
-                                        message='Unknown operation: {}'.format(operation))
+                raise exceptions.PlatformException(error='400',
+                                                   message='Unknown operation: {}'.format(operation))
 
         if self.context is not None:
             _json['context'] = self.context
@@ -417,8 +423,43 @@ class Filters:
             filter.sort_by(field='metadata.user', values=dl.FiltersOrderByDirection.ASCENDING)
         """
         if value not in [FiltersOrderByDirection.ASCENDING, FiltersOrderByDirection.DESCENDING]:
-            raise PlatformException(error='400', message='Sort can be by ascending or descending order only')
+            raise exceptions.PlatformException(error='400', message='Sort can be by ascending or descending order only')
         self.sort[field] = value
+
+    def platform_url(self, resource) -> str:
+        """
+        Build a url with filters param to open in web browser
+
+        :param str resource: dl entity to apply filter on. currently only supports dl.Dataset
+        :return: url string
+        :rtype: str
+        """
+        _json = self.prepare()
+        # add the view option
+        _json['view'] = 'icons'
+        # convert from enum to string
+        _json["resource"] = '{}'.format(_json['resource'])
+        # convert the dictionary to a json string
+        _json['dqlFilter'] = json.dumps({'filter': _json.pop('filter')})
+        # set the page size as the UI default
+        _json['pageSize'] = 100
+        # build the url for the dataset data browser
+        if isinstance(resource, entities.Dataset):
+            url = resource.platform_url + '/items?{}'.format(urllib.parse.urlencode(_json))
+        else:
+            raise NotImplementedError('Not implemented for resource type: {}'.format(type(resource)))
+        return url
+
+    def open_in_web(self, resource):
+        """
+        Open the filter in the platform data browser (in a new web browser)
+
+        :param str resource: dl entity to apply filter on. currently only supports dl.Dataset
+        """
+        if isinstance(resource, entities.Dataset):
+            resource._client_api._open_in_web(url=self.platform_url(resource=resource))
+        else:
+            raise NotImplementedError('Not implemented for resource type: {}'.format(type(resource)))
 
 
 class SingleFilter:

@@ -282,6 +282,8 @@ class Models:
                src_path: str = None,
                entry_point: str = DEFAULT_ENTRY_POINT,
                class_name: str = DEFAULT_CLASS_NAME,
+               default_configuration: dict = None,
+               default_runtime: entities.KubernetesRuntime = None
                ) -> entities.Model:
         """
         Create and return a Model entity in platform
@@ -302,6 +304,8 @@ class Models:
         :param str src_path: codebase location. if None no codebase will be pushed
         :param str entry_point: location of the model adapter class
         :param str class_name: Name of the model adapter class, default is ModelAdapter
+        :param dl.KubernetesRuntime default_runtime: entity to set the default run env of the model (docker image, machine type etc)
+        :param dict default_configuration: the configuration and default values that can be used for a snapshot configuration
         :return: Model Entity
         """
 
@@ -332,6 +336,12 @@ class Models:
             if src_path is None:
                 src_path = os.getcwd()
             codebase = entities.LocalCodebase(local_path=src_path)
+
+        if default_runtime is not None:
+            payload['defaultRuntime'] = default_runtime.to_json()
+
+        if default_configuration is not None:
+            payload['defaultConfiguration'] = default_configuration
 
         payload['codebase'] = codebase.to_json()
         payload['entryPoint'] = entry_point

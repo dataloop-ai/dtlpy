@@ -44,17 +44,32 @@ class Nodes(list):
         :param str node_name: the node name
         :return: True if success
         """
+        if not isinstance(node_name, str):
+            raise ValueError('node name must be string')
+
+        # get the wanted node
         node = self.get(node_name=node_name)
         if node:
             copy_conn = self._pipeline.connections.copy()
+            # remove all node connections
             for conn in copy_conn:
                 if node.node_id == conn.source.node_id or node.node_id == conn.target.node_id:
                     self._pipeline.connections.remove(conn)
+            # remove the node
             for node_index in range(len(self)):
-                if self[node_index] == node:
+                if self[node_index].node_id == node.node_id:
                     self.pop(node_index)
-                    if self._pipeline.start_nodes[0]['nodeId'] == node.node_id:
-                        if self:
-                            self._pipeline.set_start_node(self[0])
+                    # remove the node from the start_nodes if it exists
+                    # if the node is the root node set the first node as the start node
+                    for n in self._pipeline.start_nodes:
+                        if n['nodeId'] == node.node_id:
+                            # check if still have nodes in the pipeline nodes list
+                            if self:
+                                if n['type'] == 'root':
+                                    self._pipeline.set_start_node(self[0])
+                                else:
+                                    self._pipeline.start_nodes.remove(n)
+                            else:
+                                self._pipeline.start_nodes = []
                     return True
         return False

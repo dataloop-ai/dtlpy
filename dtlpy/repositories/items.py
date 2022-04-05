@@ -491,7 +491,7 @@ class Items:
             include_annotations_in_output: bool = True,
             export_png_files: bool = False,
             filter_output_annotations: bool = False,
-            alpha: float = None,
+            alpha: float = 1,
             export_version=entities.ExportVersion.V1
     ):
         """

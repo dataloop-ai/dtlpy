@@ -515,29 +515,28 @@ class Services:
         if not success:
             raise exceptions.PlatformException(response)
 
-    def _create(
-        self,
-        service_name: str = None,
-        package: entities.Package = None,
-        module_name: str = None,
-        bot: Union[entities.Bot, str] = None,
-        revision: str or int = None,
-        init_input: Union[List[entities.FunctionIO], entities.FunctionIO, dict] = None,
-        runtime: Union[entities.KubernetesRuntime, dict] = None,
-        pod_type: entities.InstanceCatalog = None,
-        project_id: str = None,
-        sdk_version: str = None,
-        agent_versions: dict = None,
-        verify: bool = True,
-        driver_id: str = None,
-        run_execution_as_process: bool = None,
-        execution_timeout: int = None,
-        drain_time: int = None,
-        on_reset: str = None,
-        max_attempts: int = None,
-        secrets=None, 
-        **kwargs
-        ) -> entities.Service:
+    def _create(self,
+                service_name: str = None,
+                package: entities.Package = None,
+                module_name: str = None,
+                bot: Union[entities.Bot, str] = None,
+                revision: str or int = None,
+                init_input: Union[List[entities.FunctionIO], entities.FunctionIO, dict] = None,
+                runtime: Union[entities.KubernetesRuntime, dict] = None,
+                pod_type: entities.InstanceCatalog = None,
+                project_id: str = None,
+                sdk_version: str = None,
+                agent_versions: dict = None,
+                verify: bool = True,
+                driver_id: str = None,
+                run_execution_as_process: bool = None,
+                execution_timeout: int = None,
+                drain_time: int = None,
+                on_reset: str = None,
+                max_attempts: int = None,
+                secrets=None,
+                **kwargs
+                ) -> entities.Service:
         """
         Create service entity.
 
@@ -1371,174 +1370,6 @@ class Services:
 
         logging.info('Successfully deployed!')
         return service
-
-    def deploy_pipeline(self,
-                        service_json_path: str = None,
-                        project: entities.Project = None,
-                        bot: str = None,
-                        force: bool = False):
-        """
-        Deploy pipeline.
-
-        **Prerequisites**: You must be in the role of an *owner* or *developer*.
-
-        :param str service_json_path: path to service file
-        :param dtlpy.entities.project.Project project: project entity
-        :param str bot: user bot to run the service
-        :param bool force: optional - force to deploy
-        :return: True if success
-        :rtype: bool
-        """
-        # project
-        if project is None:
-            project = self._project
-
-        # get service file
-        if service_json_path is None:
-            service_json_path = os.getcwd()
-
-        if not service_json_path.endswith('.json'):
-            service_json_path = os.path.join(service_json_path, 'service.json')
-            if not os.path.isfile(service_json_path):
-                raise exceptions.PlatformException('404', 'File not exist: {}'.format(service_json_path))
-
-        # get existing project's services and triggers
-        project_triggers = {trigger.name: trigger for trigger in project.triggers.list()}
-        project_services = {service.name: service for service in project.services.list()}
-        project_packages = {package.name: package for package in project.packages.list()}
-
-        # load file
-        with open(service_json_path, 'r') as f:
-            service_json = json.load(f)
-
-        # build
-        for service_input in service_json:
-            # get package
-            if service_input['package'] in project_packages:
-                package = project_packages[service_input['package']]
-            else:
-                raise exceptions.PlatformException('404', 'Package not found, package name: {}'.format(
-                    service_input['package']))
-
-            sdk_version = service_json.get('version', None)
-            agent_versions = service_json.get('versions', None)
-            verify = service_json.get('verify', True)
-            runtime = service_input.get('runtime', None)
-            init_input = service_input.get('initParams', None)
-            module_name = service_input.get('module_name', None)
-            driver_id = service_input.get('driverId', None)
-            run_execution_as_process = service_json.get('run_execution_as_process', None)
-            execution_timeout = service_json.get('execution_timeout', None)
-            drain_time = service_json.get('drain_time', None)
-            max_attempts = service_json.get('maxAttempts', None)
-            on_reset = service_json.get('on_reset', None)
-            # create or update service
-            if service_input['name'] in project_services:
-                service = project_services[service_input['name']]
-                service.runtime = runtime
-                service.init_input = init_input
-                service.version = sdk_version
-                service.versions = agent_versions
-                service.verify = verify
-                service.max_attempts = max_attempts
-                service.driver_id = driver_id
-                service = project.services.update(service=service, force=force)
-                project_services[service.name] = service
-
-            else:
-                service = self._create(package=package,
-                                       bot=bot,
-                                       service_name=service_input['name'],
-                                       runtime=runtime,
-                                       init_input=init_input,
-                                       agent_versions=agent_versions,
-                                       sdk_version=sdk_version,
-                                       max_attempts=max_attempts,
-                                       verify=verify,
-                                       module_name=module_name,
-                                       run_execution_as_process=run_execution_as_process,
-                                       execution_timeout=execution_timeout,
-                                       drain_time=drain_time,
-                                       on_reset=on_reset,
-                                       driver_id=driver_id)
-                project_services[service.name] = service
-
-            service_triggers = {trigger: project_triggers[trigger] for trigger in project_triggers if
-                                project_triggers[trigger].service_id == service.id}
-
-            # create or update triggers
-            if 'triggers' in service_input:
-                for trigger_input in service_input['triggers']:
-                    if trigger_input['name'] in service_triggers:
-                        trigger = project_triggers[trigger_input['name']]
-                        trigger.resource = trigger_input.get('resource', trigger.resource)
-                        trigger.active = trigger_input.get('active', trigger.active)
-                        trigger.actions = trigger_input.get('actions', trigger.actions)
-                        trigger.filters = trigger_input.get('filters', trigger.filters)
-                        trigger.execution_mode = trigger_input.get('executionMode', trigger.execution_mode)
-                        trigger.function_name = trigger_input.get('function', None)
-                        trigger = trigger.update()
-                        project_triggers[trigger.name] = trigger
-                    else:
-                        trigger = project.triggers.create(service_ids=[service.id],
-                                                          resource=trigger_input.get('resource', None),
-                                                          active=trigger_input.get('active', None),
-                                                          actions=trigger_input.get('actions', None),
-                                                          filters=trigger_input.get('filters', None),
-                                                          function_name=trigger_input.get('function', None),
-                                                          execution_mode=trigger_input.get('executionMode', None))
-                        project_triggers[trigger.name] = trigger
-
-        print('File deployed successfully!')
-        return True
-
-    def tear_down(self, service_json_path: str = None, project: entities.Project = None):
-        """
-        Delete a pipeline.
-
-        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a package.
-
-        :param str service_json_path: path to the service file
-        :param dtlpy.entities.project.Project project: project entity
-        :return: True if success
-        :rtype: bool
-        """
-        # project
-        if project is None:
-            project = self._project
-
-        # get service file
-        if service_json_path is None:
-            service_json_path = os.getcwd()
-
-        if not service_json_path.endswith('.json'):
-            service_json_path = os.path.join(service_json_path, 'service.json')
-            if not os.path.isfile(service_json_path):
-                raise exceptions.PlatformException('404', 'File not exist: {}'.format(service_json_path))
-
-        # get existing project's services and triggers
-        project_triggers = {trigger.name: trigger for trigger in project.triggers.list()}
-        project_services = {service.name: service for service in project.services.list()}
-
-        with open(service_json_path, 'r') as f:
-            service_json = json.load(f)
-
-        # tear down
-        for service_input in service_json:
-            # delete service
-            if service_input['name'] in project_services:
-                service = project_services[service_input['name']]
-                service.delete()
-
-            # delete triggers
-            if 'triggers' in service_input:
-                for trigger_input in service_input['triggers']:
-                    if trigger_input['name'] in project_triggers:
-                        trigger = project_triggers[trigger_input['name']]
-                        trigger.delete()
-
-        print('File torn down successfully!')
-        return True
 
 
 class ServiceLog:

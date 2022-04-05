@@ -16,10 +16,6 @@ logger = logging.getLogger('dtlpy')
 
 
 class BaseModelAdapter:
-    configuration = {
-        'label_map': None,  # {'label_name' : `int`, ...}
-    }
-
     def __init__(self, model_entity):
         if not isinstance(model_entity, entities.Model):
             raise TypeError("model_entity must be of type dl.Model")

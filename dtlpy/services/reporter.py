@@ -4,7 +4,7 @@ import json
 import threading
 from .. import exceptions
 import logging
-from . import dl_cache
+from ..caches import dl_cache
 
 logger = logging.getLogger(name='dtlpy')
 CHUNK = 200000

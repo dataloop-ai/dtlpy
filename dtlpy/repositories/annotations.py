@@ -213,7 +213,7 @@ class Annotations:
              height: float = None,
              width: float = None,
              annotation_format: entities.ViewAnnotationOptions = entities.ViewAnnotationOptions.MASK,
-             alpha: float = None):
+             alpha: float = 1):
         """
         Show annotations. To use this method, you must get the item first and then show the annotations with the desired filters. The method returns an array showing all the annotations. 
 
@@ -260,7 +260,7 @@ class Annotations:
                  width: float = None,
                  thickness: int = 1,
                  with_text: bool = False,
-                 alpha: float = None):
+                 alpha: float = 1):
         """
         Save annotation to file.
 

@@ -26,7 +26,8 @@ from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 from functools import wraps
 import numpy as np
-
+from requests.models import Response
+from dtlpy.caches.cache import CacheManger, CacheConfig
 from .calls_counter import CallsCounter
 from .cookie import CookieIO
 from .logins import login, logout, login_secret, login_m2m, gate_url_from_host
@@ -181,6 +182,97 @@ class CacheMode:
         self.to_cookie()
 
 
+class SDKCache:
+    __DEFAULT_USE_CACHE = False
+    __DEFAULT_CACHE_PATH = os.path.join(os.path.expanduser('~'), '.dataloop', 'obj_cache')
+    __DEFAULT_CACHE_PATH_BIN = os.path.join(os.path.expanduser('~'), '.dataloop')
+    __DEFAULT_CONFIGS_CACHE = CacheConfig().to_string()
+    __DEFAULT_BINARY_CACHE_SIZE = 1000
+
+    def __init__(self, cookie):
+        self.cookie = cookie
+        dictionary = self.cookie.get('cache_configs')
+        if isinstance(dictionary, dict):
+            self.from_cookie(dictionary)
+        else:
+            self._cache_path = self.__DEFAULT_CACHE_PATH
+            self._cache_path_bin = self.__DEFAULT_CACHE_PATH_BIN
+            self._configs = self.__DEFAULT_CONFIGS_CACHE
+            self._bin_size = self.__DEFAULT_BINARY_CACHE_SIZE
+            self._use_cache = self.__DEFAULT_USE_CACHE
+            self.to_cookie()
+
+    def to_cookie(self):
+        dictionary = {'cache_path': self._cache_path,
+                      'cache_path_bin': self._cache_path_bin,
+                      'configs': self._configs,
+                      'bin_size': self._bin_size,
+                      'use_cache': self._use_cache}
+        self.cookie.put(key='cache_configs', value=dictionary)
+
+    def from_cookie(self, dictionary):
+        self._cache_path = dictionary.get('cache_path', self.__DEFAULT_CACHE_PATH)
+        self._cache_path_bin = dictionary.get('cache_path_bin', self.__DEFAULT_CACHE_PATH_BIN)
+        self._configs = dictionary.get('configs', self.__DEFAULT_CONFIGS_CACHE)
+        self._bin_size = dictionary.get('bin_size', self.__DEFAULT_BINARY_CACHE_SIZE)
+        self._use_cache = dictionary.get('use_cache', self.__DEFAULT_USE_CACHE)
+
+    @property
+    def cache_path(self):
+        return self._cache_path
+
+    @property
+    def cache_path_bin(self):
+        return self._cache_path_bin
+
+    @cache_path_bin.setter
+    def cache_path_bin(self, val: str):
+        if not isinstance(val, str):
+            raise exceptions.PlatformException(error=400,
+                                               message="input must be of type str")
+        self._cache_path_bin = val
+        os.environ['DEFAULT_CACHE_PATH_BIN'] = val
+        self.to_cookie()
+
+    @property
+    def use_cache(self):
+        return self._use_cache
+
+    @use_cache.setter
+    def use_cache(self, val: bool):
+        if not isinstance(val, bool):
+            raise exceptions.PlatformException(error=400,
+                                               message="input must be of type bool")
+        self._use_cache = val
+        self.to_cookie()
+
+    @property
+    def configs(self):
+        return self._configs
+
+    @configs.setter
+    def configs(self, val):
+        if isinstance(val, CacheConfig):
+            val = val.to_string()
+        if not isinstance(val, str):
+            raise exceptions.PlatformException(error=400,
+                                               message="input must be of type str or CacheConfig")
+        self._configs = val
+        self.to_cookie()
+
+    @property
+    def bin_size(self):
+        return self._bin_size
+
+    @bin_size.setter
+    def bin_size(self, val: int):
+        if not isinstance(val, int):
+            raise exceptions.PlatformException(error=400,
+                                               message="input must be of type int")
+        self._bin_size = val
+        self.to_cookie()
+
+
 class Attributes2:
     __DEFAULT_USE_ATTRIBUTE = False
 
@@ -255,6 +347,8 @@ class ApiClient:
         self._verbose = None
         self._cache_state = None
         self._attributes_mode = None
+        self._cache_configs = None
+        self._sdk_cache = None
         self._fetch_entities = None
         # define other params
         self.last_response = None
@@ -312,6 +406,45 @@ class ApiClient:
         # set logging level
         logging.getLogger('dtlpy').handlers[0].setLevel(logging._nameToLevel[self.verbose.logging_level.upper()])
         os.environ["USE_ATTRIBUTE_2"] = json.dumps(self.attributes_mode.use_attributes_2)
+
+        self.cache = None
+
+    def build_cache(self, cache_config=None):
+        if cache_config is None:
+            cache_config_json = os.environ.get('CACHE_CONFIG', None)
+            if cache_config_json is None:
+                if self.sdk_cache.use_cache:
+                    cache_config = CacheConfig.from_string(cls=CacheConfig, base64_string=self.sdk_cache.configs)
+            else:
+                cache_config = CacheConfig.from_string(cls=CacheConfig, base64_string=cache_config_json)
+
+        if cache_config:
+            self.sdk_cache.use_cache = True
+
+            # cache paths
+            if os.environ.get('DEFAULT_CACHE_PATH', None) is None:
+                os.environ['DEFAULT_CACHE_PATH_BIN'] = self.sdk_cache.cache_path_bin
+            else:
+                os.environ['DEFAULT_CACHE_PATH_BIN'] = os.environ.get('DEFAULT_CACHE_PATH', None)
+                self.sdk_cache.cache_path_bin = os.environ['DEFAULT_CACHE_PATH_BIN']
+
+            if not os.path.isdir(self.sdk_cache.cache_path_bin):
+                os.makedirs(self.sdk_cache.cache_path_bin, exist_ok=True)
+
+            if not os.path.isfile(os.path.join(self.sdk_cache.cache_path_bin, 'cacheConfig.json')):
+                os.makedirs(self.sdk_cache.cache_path_bin, exist_ok=True)
+
+            if isinstance(cache_config, str):
+                self.sdk_cache.configs = cache_config
+                cache_config = CacheConfig.from_string(cls=CacheConfig, base64_string=cache_config)
+            elif isinstance(cache_config, CacheConfig):
+                self.sdk_cache.configs = cache_config.to_string()
+            else:
+                raise Exception("config should be of type str or CacheConfig")
+            try:
+                self.cache = CacheManger(cache_configs=[cache_config], bin_cache_size=self.sdk_cache.bin_size)
+            except:
+                self.cache = None
 
     def __del__(self):
         for name, pool in self._thread_pools.items():
@@ -481,6 +614,13 @@ class ApiClient:
         return self._attributes_mode
 
     @property
+    def sdk_cache(self):
+        if self._sdk_cache is None:
+            self._sdk_cache = SDKCache(cookie=self.cookie_io)
+        assert isinstance(self._sdk_cache, SDKCache)
+        return self._sdk_cache
+
+    @property
     def token(self):
         _token = self._token
         if _token is None:
@@ -601,9 +741,101 @@ class ApiClient:
         curl = command.format(method=method, headers=headers, data=data, uri=uri)
         return curl, prepared
 
+    def _convert_json_to_response(self, response_json):
+        the_response = Response()
+        the_response._content = json.dumps(response_json).encode('utf-8')
+        return the_response
+
+    def _cache_on(self, request):
+        if self.cache is not None and self.sdk_cache.use_cache:
+            pure_request = request.split('?')[0]
+            valid_req = ['annotation', 'item', 'dataset', 'project', 'task', 'assignment']
+            for req_type in valid_req:
+                if req_type in pure_request:
+                    return True
+        return False
+
     @Decorators.token_expired_decorator
     def gen_request(self, req_type, path, data=None, json_req=None, files=None, stream=False, headers=None,
-                    log_error=True):
+                    log_error=True, dataset_id=None):
+        """
+        Generic request from platform
+        :param req_type: type of the request: GET, POST etc
+        :param path: url (without host header - take from environment)
+        :param data: data to pass to request
+        :param json_req: json to pass to request
+        :param files: files to pass to request
+        :param stream: stream to pass the request
+        :param headers: headers to pass to request. auth will be added to it
+        :param log_error: if true - print the error log of the request
+        :param dataset_id: dataset id needed in stream True
+        :return:
+        """
+        success, resp, cache_values = False, None, []
+        if self.cache is None and 'sdk' not in path:
+            self.build_cache()
+
+        if req_type.lower() not in ['patch', 'put', 'post', 'delete'] and self._cache_on(request=path):
+            try:
+                if stream:
+                    if dataset_id is None:
+                        raise ValueError("must provide a dataset id")
+                    success, cache_values = self.cache.read_stream(request_path=path, dataset_id=dataset_id)
+
+                else:
+                    success, cache_values = self.cache.read(request_path=path)
+                if success:
+                    resp = self._convert_json_to_response(cache_values)
+            except Exception as e:
+                logger.warning("Cache error {}".format(e))
+                success, resp = False, None
+
+        if not success and not resp:
+            success, resp = self._gen_request(req_type=req_type,
+                                              path=path,
+                                              data=data,
+                                              json_req=json_req,
+                                              files=files,
+                                              stream=stream,
+                                              headers=headers,
+                                              log_error=log_error)
+
+            if success and self._cache_on(request=path):
+                try:
+                    if stream:
+                        res = self.cache.write_stream(request_path=path,
+                                                      response=resp,
+                                                      dataset_id=dataset_id)
+                        if res != '':
+                            resp = self._convert_json_to_response(res)
+                    else:
+                        if req_type == 'delete':
+                            self.cache.invalidate(path=path)
+                        else:
+                            try:
+                                resp_list = resp.json()
+                                write = True
+                                if isinstance(resp_list, list):
+                                    pass
+                                elif isinstance(resp_list, dict):
+                                    if 'hasNextPage' in resp_list:
+                                        resp_list = resp_list['items']
+                                    elif 'id' in resp_list:
+                                        resp_list = [resp_list]
+                                    else:
+                                        write = False
+                                else:
+                                    raise exceptions.PlatformException(error='400', message="unsupported return type")
+                                if write:
+                                    self.cache.write(list_entities_json=resp_list)
+                            except:
+                                raise exceptions.PlatformException(error='400', message="failed to set cache")
+                except Exception as e:
+                    logger.warning("Cache error {}".format(e))
+        return success, resp
+
+    def _gen_request(self, req_type, path, data=None, json_req=None, files=None, stream=False, headers=None,
+                     log_error=True):
         """
         Generic request from platform
         :param req_type: type of the request: GET, POST etc
@@ -835,6 +1067,14 @@ class ApiClient:
                     pbar.close()
                 with threadLock:
                     self.calls_counter.add()
+        if response.ok and self.cache is not None:
+            self.cache.write(list_entities_json=[response.json()])
+            dataset_id = url.split('/')[-2]
+            self.cache.write_stream(request_path=url,
+                                    buffer=to_upload,
+                                    file_name=uploaded_filename,
+                                    entity_id=response.json()['id'],
+                                    dataset_id=dataset_id)
         return response
 
     def __get_pbar(self, pbar, total_length):
@@ -878,6 +1118,7 @@ class ApiClient:
 
         with threadLock:
             self.calls_counter.add()
+
         return resp
 
     @staticmethod

@@ -169,3 +169,5 @@ from tests.features.steps.documentation_tests import test_projects_docs
 from tests.features.steps.documentation_tests import test_contributor_docs
 from tests.features.steps.documentation_tests import test_recipe_docs
 from tests.features.steps.documentation_tests import test_dataset_docs
+
+from tests.features.steps.test_cache import test_cache

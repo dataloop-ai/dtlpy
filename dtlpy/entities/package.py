@@ -465,7 +465,7 @@ class Package(entities.BaseEntity):
              service_config: dict = None,
              ):
         """
-         Push local package
+        Push local package
 
         :param dtlpy.entities.codebase.Codebase codebase: PackageCode object - defines how to store the package code
         :param bool checkout: save package to local checkout
@@ -477,7 +477,7 @@ class Package(entities.BaseEntity):
         :param  dict service_config: optional - json of service - a service that have config from the main service if wanted
         :return: package entity
         :rtype: dtlpy.entities.package.Package
-
+        
         **Example**:
 
         .. code-block:: python

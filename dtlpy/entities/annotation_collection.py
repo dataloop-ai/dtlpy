@@ -157,7 +157,8 @@ class AnnotationCollection(entities.BaseEntity):
              annotation_format: entities.ViewAnnotationOptions = entities.ViewAnnotationOptions.MASK,
              label_instance_dict=None,
              color=None,
-             alpha=None):
+             alpha=1,
+             frame_num=None):
         """
         Show annotations according to annotation_format
 
@@ -203,7 +204,6 @@ class AnnotationCollection(entities.BaseEntity):
             else:
                 rest_annotations.append(annotation)
         all_annotations = segment_annotations + rest_annotations
-
         # gor over all annotations and put the id where the annotations is
         for annotation in all_annotations:
             # get the mask of the annotation
@@ -215,8 +215,8 @@ class AnnotationCollection(entities.BaseEntity):
                                     annotation_format=annotation_format,
                                     image=image,
                                     alpha=alpha,
-                                    color=color)
-
+                                    color=color,
+                                    frame_num=frame_num)
         return image
 
     def _video_maker(self,
@@ -225,7 +225,7 @@ class AnnotationCollection(entities.BaseEntity):
                      thickness=1,
                      annotation_format=entities.ViewAnnotationOptions.ANNOTATION_ON_IMAGE,
                      with_text=False,
-                     alpha=None):
+                     alpha=1):
         """
         create a video from frames
 
@@ -242,51 +242,45 @@ class AnnotationCollection(entities.BaseEntity):
                 'Import Error! Cant import cv2. Annotations operations will be limited. import manually and fix errors')
             raise
 
-        nd_array = True
-        if annotation_format in [entities.ViewAnnotationOptions.INSTANCE, entities.ViewAnnotationOptions.OBJECT_ID]:
-            nd_array = False
-
+        is_color = True
+        if annotation_format in [entities.ViewAnnotationOptions.INSTANCE,
+                                 entities.ViewAnnotationOptions.OBJECT_ID]:
+            is_color = False
         # read input video
-        try:
-            if input_filepath is not None:
-                reader = cv2.VideoCapture(input_filepath)
-                width = int(reader.get(cv2.CAP_PROP_FRAME_WIDTH))
-                height = int(reader.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                fps = reader.get(cv2.CAP_PROP_FPS)
-                writer = cv2.VideoWriter(output_filepath,
-                                         cv2.VideoWriter_fourcc(*"mp4v"),
-                                         fps,
-                                         (width, height),
-                                         nd_array)
-                frames = list()
-                while reader.isOpened():
-                    ret, frame = reader.read()
-                    if not ret:
-                        break
-                    frames.append(frame)
-                reader.release()
+        fps = self.item.system.get('fps', 0)
+        height = self.item.system.get('height', 0)
+        width = self.item.system.get('width', 0)
+        nb_frames = self.item.system.get('nb_frames')
+        writer = cv2.VideoWriter(filename=output_filepath,
+                                 fourcc=cv2.VideoWriter_fourcc(*"mp4v"),
+                                 fps=fps,
+                                 frameSize=(width, height),
+                                 isColor=is_color)
+        if input_filepath is not None and is_color:
+            reader = cv2.VideoCapture(input_filepath)
+        else:
+            reader = None
+
+        for frame_num in range(nb_frames):
+            if reader is not None:
+                ret, frame = reader.read()
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
             else:
-                fps = self.item.system.get('fps', 0)
-                height = self.item.system.get('height', 0)
-                width = self.item.system.get('width', 0)
-                writer = cv2.VideoWriter(output_filepath,
-                                         cv2.VideoWriter_fourcc(*"mp4v"),
-                                         fps,
-                                         (width, height),
-                                         nd_array)
-                frames = None
-            frames = self.show(image=frames,
-                               annotation_format=annotation_format,
-                               thickness=thickness,
-                               alpha=alpha,
-                               height=height,
-                               width=width,
-                               with_text=with_text)
-            for ann_frame in frames:
-                writer.write(ann_frame.astype(np.uint8))
-            writer.release()
-        except Exception as e:
-            raise ValueError(e)
+                frame = None
+            frame = self.show(image=frame,
+                              annotation_format=annotation_format,
+                              thickness=thickness,
+                              alpha=alpha,
+                              height=height,
+                              width=width,
+                              with_text=with_text,
+                              frame_num=frame_num)
+            if is_color:
+                frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2BGR)
+            writer.write(frame)
+        writer.release()
+        if reader is not None:
+            reader.release()
 
     def _set_flip_args(self, orientation):
         try:
@@ -317,7 +311,7 @@ class AnnotationCollection(entities.BaseEntity):
                  thickness=1,
                  with_text=False,
                  orientation=0,
-                 alpha=None):
+                 alpha=1):
         """
         Save annotations to file
 
@@ -344,7 +338,7 @@ class AnnotationCollection(entities.BaseEntity):
         dir_name, ex = os.path.splitext(filepath)
         if annotation_format == entities.ViewAnnotationOptions.JSON:
             if not ex:
-                filepath = '{}/{}.json'.format(dir_name, os.path.splitext(self.item.name)[0])
+                filepath = os.path.join(dir_name, '{}.json'.format(os.path.splitext(self.item.name)[0]))
             _json = dict()
             if self.item is not None:
                 _json = {'_id': self.item.id,
@@ -363,11 +357,15 @@ class AnnotationCollection(entities.BaseEntity):
                                    entities.ViewAnnotationOptions.ANNOTATION_ON_IMAGE]:
             if not ex:
                 if 'video' in self.item.mimetype:
-                    filepath = '{}/{}.mp4'.format(dir_name, os.path.splitext(self.item.name)[0])
+                    filepath = os.path.join(dir_name, '{}.mp4'.format(os.path.splitext(self.item.name)[0]))
                 else:
-                    filepath = '{}/{}.png'.format(dir_name, os.path.splitext(self.item.name)[0])
+                    filepath = os.path.join(dir_name, '{}.png'.format(os.path.splitext(self.item.name)[0]))
             image = None
             if 'video' in self.item.mimetype:
+                if annotation_format == entities.ViewAnnotationOptions.ANNOTATION_ON_IMAGE:
+                    if img_filepath is None:
+                        img_filepath = self.item.download()
+                    annotation_format = entities.ViewAnnotationOptions.MASK
                 self._video_maker(input_filepath=img_filepath,
                                   output_filepath=filepath,
                                   thickness=thickness,
@@ -377,6 +375,8 @@ class AnnotationCollection(entities.BaseEntity):
                                   )
                 return filepath
             if annotation_format == entities.ViewAnnotationOptions.ANNOTATION_ON_IMAGE:
+                if img_filepath is None:
+                    img_filepath = self.item.download()
                 annotation_format = entities.ViewAnnotationOptions.MASK
                 image = np.asarray(Image.open(img_filepath))
             if orientation in [3, 4, 5, 6, 7, 8]:
@@ -592,10 +592,10 @@ class AnnotationCollection(entities.BaseEntity):
         return cls(annotations=annotations, item=item)
 
     @classmethod
-    def from_json_file(cls, filepath):
+    def from_json_file(cls, filepath, item=None):
         with open(filepath, 'r') as f:
             data = json.load(f)
-        return cls.from_json(data)
+        return cls.from_json(_json=data, item=item)
 
     def from_vtt_file(self, filepath):
         """

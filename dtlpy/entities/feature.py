@@ -112,3 +112,19 @@ class Feature(entities.BaseEntity):
         if self.org_id is not None:
             _json['org'] = self.org_id
         return _json
+
+    def update(self):
+        """
+        Update Feature Vector changes to platform
+
+        :return: Feature entity
+        """
+        return self.features.update(feature=self)
+
+    def delete(self):
+        """
+        Delete Feature Vector object
+
+        :return: True
+        """
+        return self.features.delete(feature_id=self.id)

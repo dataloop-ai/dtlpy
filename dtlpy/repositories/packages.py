@@ -532,7 +532,6 @@ class Packages:
                 'Pushing a package without sanity check can cause errors when trying to deploy, '
                 'trigger and execute functions.\n'
                 'We highly recommend to not use the ignore_sanity_check flag')
-
         elif codebase is None:
             modules = self._sanity_before_push(src_path=src_path, modules=modules)
 
@@ -1267,7 +1266,7 @@ class Packages:
 
             project.packages.generate(name='package_name',
                                       src_path='src_path')
-
+        
         """
         # name
         if name is None:
@@ -1490,7 +1489,7 @@ class Packages:
         .. code-block:: python
 
             project.packages.checkout(package='package_entity')
-
+        
         """
         if package is None:
             package = self.get(package_id=package_id, package_name=package_name)

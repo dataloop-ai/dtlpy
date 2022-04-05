@@ -42,6 +42,8 @@ class Model(entities.BaseEntity):
     url = attr.ib(repr=False)
     codebase = attr.ib(type=entities.Codebase)
     description = attr.ib()
+    default_runtime = attr.ib(repr=False, type=entities.KubernetesRuntime)
+    default_configuration = attr.ib(repr=False, type=dict)
     version = attr.ib()
     tags = attr.ib()
 
@@ -120,6 +122,10 @@ class Model(entities.BaseEntity):
                                                    client_api=client_api)
         else:
             codebase = None
+        if 'defaultRuntime' in _json and _json['defaultRuntime'] is not None:
+            default_runtime = entities.KubernetesRuntime(**_json['defaultRuntime'])
+        else:
+            default_runtime = None
 
         inst = cls(
             project_id=_json.get('projectId', None),
@@ -140,7 +146,9 @@ class Model(entities.BaseEntity):
             input_type=_json.get('inputType', None),
             is_global=_json.get('global', None),
             revisions=_json.get('revisions', None),
-            tags=_json.get('tags', None)
+            default_runtime=default_runtime,
+            default_configuration=_json.get('defaultConfiguration', None),
+            tags=_json.get('tags', None),
         )
         inst.is_fetched = is_fetched
         return inst
@@ -168,6 +176,8 @@ class Model(entities.BaseEntity):
                                                         attr.fields(Model).project_id,
                                                         attr.fields(Model).created_at,
                                                         attr.fields(Model).updated_at,
+                                                        attr.fields(Model).default_configuration,
+                                                        attr.fields(Model).default_runtime,
                                                         ))
 
         _json['global'] = self.is_global
@@ -179,6 +189,11 @@ class Model(entities.BaseEntity):
         _json['codebase'] = self.codebase.to_json()
         _json['createdAt'] = self.created_at
         _json['updatedAt'] = self.updated_at
+        _json['defaultConfiguration'] = self.default_configuration
+        if isinstance(self.default_runtime, entities.KubernetesRuntime):
+            _json['defaultRuntime'] = self.default_runtime.to_json()
+        else:
+            _json['defaultRuntime'] = self.default_runtime
 
         return _json
 

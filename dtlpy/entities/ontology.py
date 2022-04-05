@@ -44,6 +44,7 @@ class Ontology(entities.BaseEntity):
 
     # defaults
     _instance_map = attr.ib(default=None, repr=False)
+    _color_map = attr.ib(default=None, repr=False)
 
     @_repositories.default
     def set_repositories(self):
@@ -127,6 +128,42 @@ class Ontology(entities.BaseEntity):
             self._instance_map = {label: (i_label + 1) for i_label, label in enumerate(labels)}
         return self._instance_map
 
+    @instance_map.setter
+    def instance_map(self, value: dict):
+        """
+        instance mapping for creating instance mask
+
+        :param value: dictionary {label: map_id}
+        :rtype: dict
+        """
+        if not isinstance(value, dict):
+            raise ValueError('input must be a dictionary of {label_name: instance_id}')
+        self._instance_map = value
+
+    @property
+    def color_map(self):
+        """
+        Color mapping of labels, {label: rgb}
+
+        :return: dict
+        :rtype: dict
+        """
+        if self._color_map is None:
+            self._color_map = {k: v.rgb for k, v in self.labels_flat_dict.items()}
+        return self._color_map
+
+    @color_map.setter
+    def color_map(self, values):
+        """
+        Color mapping of labels, {label: rgb}
+
+        :param values: dict {label: rgb}
+        :return:
+        """
+        if not isinstance(values, dict):
+            raise ValueError('input must be a dict. got: {}'.format(type(values)))
+        self._color_map = values
+
     @staticmethod
     def _protected_from_json(_json, client_api, recipe, dataset, project, is_fetched=True):
         """
@@ -201,6 +238,7 @@ class Ontology(entities.BaseEntity):
                                                               attr.fields(Ontology)._project,
                                                               attr.fields(Ontology)._dataset,
                                                               attr.fields(Ontology)._instance_map,
+                                                              attr.fields(Ontology)._color_map,
                                                               attr.fields(Ontology)._repositories))
         _json["roots"] = roots
         return _json

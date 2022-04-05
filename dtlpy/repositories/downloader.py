@@ -1,3 +1,4 @@
+import shutil
 import threading
 import traceback
 import requests
@@ -45,7 +46,7 @@ class Downloader:
                  include_annotations_in_output=True,
                  export_png_files=False,
                  filter_output_annotations=False,
-                 alpha=None,
+                 alpha=1,
                  export_version=entities.ExportVersion.V1
                  ):
         """
@@ -154,6 +155,7 @@ class Downloader:
         if os.path.isdir(local_path):
             logger.info('Local folder already exists:{}. merge/overwrite according to "overwrite option"'.format(
                 local_path))
+            is_folder = True
         else:
             # check if filename
             _, ext = os.path.splitext(local_path)
@@ -411,8 +413,12 @@ class Downloader:
                     error='404',
                     message='error downloading annotation zip file. see above for more information. item id: {!r}'.format(
                         annotation_zip_item.id))
-            miscellaneous.Zipping.unzip_directory(zip_filename=zip_filepath,
-                                                  to_directory=local_path)
+            try:
+                miscellaneous.Zipping.unzip_directory(zip_filename=zip_filepath,
+                                                      to_directory=local_path)
+            except Exception as e:
+                logger.warning("Failed to extract zip file error: {}".format(e))
+
         finally:
             # cleanup
             if isinstance(zip_filepath, str) and os.path.isfile(zip_filepath):
@@ -427,7 +433,7 @@ class Downloader:
                                   annotation_filters,
                                   thickness=1,
                                   with_text=False,
-                                  alpha=None,
+                                  alpha=1,
                                   export_version=entities.ExportVersion.V1
                                   ):
 
@@ -609,7 +615,7 @@ class Downloader:
                           chunk_size=8192,
                           thickness=1,
                           with_text=False,
-                          alpha=None,
+                          alpha=1,
                           export_version=entities.ExportVersion.V1
                           ):
         """
@@ -645,7 +651,8 @@ class Downloader:
                                                                                  headers=headers,
                                                                                  path="/items/{}/stream".format(
                                                                                      item.id),
-                                                                                 stream=True)
+                                                                                 stream=True,
+                                                                                 dataset_id=item.dataset_id)
                 if not result:
                     raise PlatformException(response)
             else:
@@ -676,17 +683,27 @@ class Downloader:
                     logger.debug('Cant decide downloaded file length, bar will not be presented: {}'.format(err))
 
                 # start download
-                try:
-                    with open(local_filepath, "wb") as f:
-                        for chunk in response.iter_content(chunk_size=chunk_size):
-                            if chunk:  # filter out keep-alive new chunks
-                                f.write(chunk)
-                                if one_file_progress_bar:
-                                    one_file_pbar.update(len(chunk))
-                except Exception as err:
-                    if os.path.isfile(local_filepath):
-                        os.remove(local_filepath)
-                    raise err
+                if self.items_repository._client_api.sdk_cache.use_cache:
+                    response_output = os.path.normpath(response.content)
+                    if isinstance(response_output, bytes):
+                        response_output = response_output.decode('utf-8')[1:-1]
+
+                    if os.path.isfile(os.path.normpath(response_output)):
+                        if response_output != local_path:
+                            source_path = os.path.normpath(response_output)
+                            shutil.copyfile(source_path, local_filepath)
+                else:
+                    try:
+                        with open(local_filepath, "wb") as f:
+                            for chunk in response.iter_content(chunk_size=chunk_size):
+                                if chunk:  # filter out keep-alive new chunks
+                                    f.write(chunk)
+                                    if one_file_progress_bar:
+                                        one_file_pbar.update(len(chunk))
+                    except Exception as err:
+                        if os.path.isfile(local_filepath):
+                            os.remove(local_filepath)
+                        raise err
                 if one_file_progress_bar:
                     one_file_pbar.close()
                 # save to output variable
@@ -707,12 +724,22 @@ class Downloader:
             else:
                 # save as byte stream
                 data = io.BytesIO()
-                try:
-                    for chunk in response.iter_content(chunk_size=chunk_size):
-                        if chunk:  # filter out keep-alive new chunks
-                            data.write(chunk)
-                except Exception as err:
-                    raise err
+                if self.items_repository._client_api.sdk_cache.use_cache:
+                    response_output = os.path.normpath(response.content)
+                    if isinstance(response_output, bytes):
+                        response_output = response_output.decode('utf-8')[1:-1]
+
+                    if os.path.isfile(response_output):
+                        source_file = response_output
+                        with open(source_file, 'wb') as f:
+                            data = f.read()
+                else:
+                    try:
+                        for chunk in response.iter_content(chunk_size=chunk_size):
+                            if chunk:  # filter out keep-alive new chunks
+                                data.write(chunk)
+                    except Exception as err:
+                        raise err
                 # go back to the beginning of the stream
                 data.seek(0)
                 data.name = item.name
@@ -733,21 +760,21 @@ class Downloader:
         # create default local path
         if self.items_repository._dataset is None:
             local_path = os.path.join(
-                dtlpy_services.service_defaults.DATALOOP_PATH,
+                self.items_repository._client_api.sdk_cache.cache_path_bin,
                 "items",
             )
         else:
             if self.items_repository.dataset._project is None:
                 # by dataset name
                 local_path = os.path.join(
-                    dtlpy_services.service_defaults.DATALOOP_PATH,
+                    self.items_repository._client_api.sdk_cache.cache_path_bin,
                     "datasets",
                     "{}_{}".format(self.items_repository.dataset.name, self.items_repository.dataset.id),
                 )
             else:
                 # by dataset and project name
                 local_path = os.path.join(
-                    dtlpy_services.service_defaults.DATALOOP_PATH,
+                    self.items_repository._client_api.sdk_cache.cache_path_bin,
                     "projects",
                     self.items_repository.dataset.project.name,
                     "datasets",

@@ -26,12 +26,12 @@ class Projects:
             project = entities.Project.from_json(_json=project, client_api=self._client_api)
         return project
 
-    def __get_by_id(self, project_id: str) -> entities.Project:
+    def __get_by_id(self, project_id: str, log_error: bool) -> entities.Project:
         """
         :param project_id:
         """
         success, response = self._client_api.gen_request(req_type='get',
-                                                         path='/projects/{}'.format(project_id))
+                                                         path='/projects/{}'.format(project_id), log_error=log_error)
         if success:
             project = entities.Project.from_json(client_api=self._client_api,
                                                  _json=response.json())
@@ -336,7 +336,8 @@ class Projects:
             project_name: str = None,
             project_id: str = None,
             checkout: bool = False,
-            fetch: bool = None) -> entities.Project:
+            fetch: bool = None,
+            log_error=True) -> entities.Project:
         """
         Get a Project object.
 
@@ -348,6 +349,7 @@ class Projects:
         :param str project_id: optional - search by id
         :param bool checkout: checkout
         :param bool fetch: optional - fetch entity from platform, default taken from cookie
+        :param bool log_error: optional - show the logs errors
         :return: Project object
         :rtype: dtlpy.entities.project.Project
 
@@ -373,7 +375,7 @@ class Projects:
                         error='400',
                         message='project_id must be strings')
 
-                project = self.__get_by_id(project_id)
+                project = self.__get_by_id(project_id, log_error=log_error)
                 # verify input project name is same as the given id
                 if project_name is not None and project.name != project_name:
                     logger.warning(

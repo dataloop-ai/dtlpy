@@ -608,6 +608,7 @@ class KubernetesRuntime(ServiceRuntime):
         self.runner_image = kwargs.get('runnerImage', runner_image)
         self._proxy_image = kwargs.get('proxyImage', None)
         self.single_agent = kwargs.get('singleAgent', False)
+        self.preemptible = kwargs.get('preemptible', None)
 
         self.autoscaler = kwargs.get('autoscaler', autoscaler)
         if self.autoscaler is not None and isinstance(self.autoscaler, dict):
@@ -631,5 +632,8 @@ class KubernetesRuntime(ServiceRuntime):
 
         if self._proxy_image is not None:
             _json['proxyImage'] = self._proxy_image
+
+        if self.preemptible is not None:
+            _json['preemptible'] = self.preemptible
 
         return _json

@@ -1,18 +1,27 @@
+import json
+import sqlite3
+import re
+
 from diskcache import Cache
 import os
+from .base_cache import BaseCache
 
 
-class DiskCache:
-    def __init__(self, name, level=1, options=None, enable_stats=False):
+class DiskCache(BaseCache):
+    def __init__(self, name, level=1, options=None, enable_stats=False, ttl=1000):
         if options is None:
             options = dict()
         self.name = name
         self.level = level
+        self.ttl = ttl
         self.cache_dir = options.get(
             "cachePath", os.path.join(self.dataloop_path, "cache", name)
         )
         self.cache = Cache(directory=self.cache_dir)
         self.cache.stats(enable=enable_stats)
+
+        self.conn = sqlite3.connect(os.path.join(self.cache_dir, 'cache.db'), check_same_thread=False)
+        self.cursor = self.conn.cursor()
 
     @property
     def dataloop_path(self):
@@ -29,7 +38,35 @@ class DiskCache:
         if not isinstance(key, str) and not isinstance(key, int):
             raise ValueError("key must be string or int")
         with Cache(self.cache.directory) as reference:
-            reference.set(key=key, value=value)
+            reference.set(key=key, value=value, expire=self.ttl)
+
+    def _key_fix(self, key):
+        if '**' in key:
+            key = key.replace('**', '%')
+        if '*' in key:
+            key = key.replace('*', '%')
+        return key
+
+    def list(self, pattern):
+        """
+        list the keys py pattern from the cache
+
+        :param pattern: str or int type of key
+        :return: the value of the key
+        """
+        self.cache.close()
+
+        key = self._key_fix(pattern)
+
+        try:
+            self.cursor.execute("SELECT key FROM Cache WHERE key LIKE '{}'".format(key))
+
+            rows = self.cursor.fetchall()
+            for row in rows:
+                for key in row:
+                    yield key
+        except:
+            return None
 
     def get(self, key):
         """
@@ -38,7 +75,12 @@ class DiskCache:
         :return: the value of the key
         """
         self.cache.close()
-        return self.cache.get(key)  # Automatically opens, but slower.
+        res = self.cache.get(key=key)
+        if res is not None:
+            try:
+                return json.loads(res)
+            except:
+                return res
 
     def delete(self, key):
         """
@@ -47,7 +89,7 @@ class DiskCache:
         :return:
         """
         self.cache.close()
-        self.cache.delete(key)
+        self.cache.delete(key=key)
 
     def add(self, key, value):
         """
@@ -59,7 +101,7 @@ class DiskCache:
         if not isinstance(key, str) and not isinstance(key, int):
             raise ValueError("key must be string or int")
         self.cache.close()
-        return self.cache.add(key=key, value=value)
+        return self.cache.add(key=key, value=value, expire=self.ttl)
 
     def push(self, value):
         """
@@ -68,7 +110,7 @@ class DiskCache:
         :return: bool: True if add False if not
         """
         self.cache.close()
-        return self.cache.push(value=value)
+        return self.cache.push(value=value, expire=self.ttl)
 
     def incr(self, key, value=1):
         """
