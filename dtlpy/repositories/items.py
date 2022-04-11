@@ -16,11 +16,14 @@ class Items:
                  client_api: services.ApiClient,
                  datasets: repositories.Datasets = None,
                  dataset: entities.Dataset = None,
-                 dataset_id=None, items_entity=None):
+                 dataset_id=None,
+                 items_entity=None,
+                 project=None):
         self._client_api = client_api
         self._dataset = dataset
         self._dataset_id = dataset_id
         self._datasets = datasets
+        self._project = project
         # set items entity to represent the item (Item, Codebase, Artifact etc...)
         if items_entity is None:
             self.items_entity = entities.Item
@@ -46,6 +49,21 @@ class Items:
         if not isinstance(dataset, entities.Dataset):
             raise ValueError('Must input a valid Dataset entity')
         self._dataset = dataset
+
+    @property
+    def project(self) -> entities.Project:
+        if self._project is None:
+            raise exceptions.PlatformException(
+                error='400',
+                message='Cannot perform action WITHOUT Project entity in Items repository. Please set a project')
+        assert isinstance(self._dataset, entities.Dataset)
+        return self._project
+
+    @project.setter
+    def project(self, project: entities.Project):
+        if not isinstance(project, entities.Project):
+            raise ValueError('Must input a valid Dataset entity')
+        self._project = project
 
     ################
     # repositories #
@@ -230,7 +248,8 @@ class Items:
                 if success:
                     item = self.items_entity.from_json(client_api=self._client_api,
                                                        _json=response.json(),
-                                                       dataset=self._dataset)
+                                                       dataset=self._dataset,
+                                                       project=self._project)
                     # verify input filepath is same as the given id
                     if filepath is not None and item.filename != filepath:
                         logger.warning(
@@ -265,7 +284,8 @@ class Items:
                                                   'filename': filepath},
                                            client_api=self._client_api,
                                            dataset=self._dataset,
-                                           is_fetched=False)
+                                           is_fetched=False,
+                                           project=self._project)
         assert isinstance(item, entities.Item)
         return item
 

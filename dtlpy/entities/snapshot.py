@@ -61,6 +61,11 @@ class Snapshot(entities.BaseEntity):
     tags = attr.ib()
     configuration = attr.ib()
 
+    url = attr.ib()
+    scope = attr.ib()
+    version = attr.ib()
+    context = attr.ib()
+
     # name change
     model_id = attr.ib(repr=False)
     project_id = attr.ib()
@@ -119,7 +124,7 @@ class Snapshot(entities.BaseEntity):
         :return: Snapshot entity
         """
         if project is not None:
-            if project.id != _json.get('projectId', None):
+            if project.id != _json.get('context', {}).get('project', None):
                 logger.warning('Snapshot has been fetched from a project that is not in it projects list')
                 project = None
 
@@ -142,7 +147,7 @@ class Snapshot(entities.BaseEntity):
             description=_json.get('description', None),
             status=_json.get('status', None),
             tags=_json.get('tags', None),
-            project_id=_json.get('projectId', None),
+            project_id=_json.get('context', {}).get('project', None),
             dataset_id=_json.get('datasetId', None),
             model_id=_json.get('modelId', None),
             bucket=bucket,
@@ -150,13 +155,17 @@ class Snapshot(entities.BaseEntity):
             labels=ontology_spec.labels,
             created_at=_json.get('createdAt', None),
             updated_at=_json.get('updatedAt', None),
-            creator=_json.get('creator', None),
+            creator=_json.get('context', {}).get('creator', None),
             client_api=client_api,
             name=_json.get('name', None),
             project=project,
             model=model,
             dataset=None,
-            id=_json.get('id', None)
+            id=_json.get('id', None),
+            url=_json.get('url', None),
+            scope=_json.get('scope', entities.EntityScopeLevel.PROJECT),
+            version=_json.get('version', '1.0.0'),
+            context=_json.get('context', {})
         )
         inst.is_fetched = is_fetched
         return inst

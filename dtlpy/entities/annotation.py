@@ -1371,7 +1371,7 @@ class Annotation(entities.BaseEntity):
                 annotation.annotation_definition = frame.annotation_definition
 
                 # put snapshots if there are any
-                for snapshot in _json['metadata']['system']['snapshots_']:
+                for snapshot in _json['metadata']['system'].get('snapshots_', []):
                     frame = FrameAnnotation.from_snapshot(
                         _json=snapshot,
                         annotation=annotation,

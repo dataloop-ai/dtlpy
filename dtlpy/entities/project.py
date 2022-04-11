@@ -66,7 +66,7 @@ class Project(entities.BaseEntity):
         return reps(
             projects=repositories.Projects(client_api=self._client_api),
             webhooks=repositories.Webhooks(client_api=self._client_api, project=self),
-            items=repositories.Items(client_api=self._client_api, datasets=datasets),
+            items=repositories.Items(client_api=self._client_api, datasets=datasets, project=self),
             recipes=repositories.Recipes(client_api=self._client_api, project=self, project_id=self.id),
             datasets=datasets,
             executions=repositories.Executions(client_api=self._client_api, project=self),

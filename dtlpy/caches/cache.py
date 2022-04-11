@@ -405,7 +405,11 @@ class CacheManger:
                         os.remove(filepath)
                     return ''
             else:
-                shutil.copyfile(buffer.name, filepath)
+                if os.path.isfile(buffer.name):
+                    shutil.copyfile(buffer.name, filepath)
+                else:
+                    with open(filepath, "wb") as f:
+                        f.write(buffer.getbuffer())
         self._update_config_file(filepath=filepath, update=False, size=(Path(filepath).stat().st_size / 1000000))
         if (Path(filepath).stat().st_size / 1000000) + self._current_bin_cache_size > self.bin_cache_size:
             self._lru_cache()

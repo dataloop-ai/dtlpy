@@ -18,12 +18,10 @@ class Executions:
     def __init__(self,
                  client_api: services.ApiClient,
                  service: entities.Service = None,
-                 project: entities.Project = None,
-                 resource = None):
+                 project: entities.Project = None):
         self._client_api = client_api
         self._service = service
         self._project = project
-        self._resource = resource
 
     ############
     # entities #
@@ -42,21 +40,6 @@ class Executions:
         if not isinstance(service, entities.Service):
             raise ValueError('Must input a valid Service entity')
         self._service = service
-
-    @property
-    def resource(self):
-        if self._resource is None:
-            raise exceptions.PlatformException(
-                error='2001',
-                message='Missing "resource". need to set a entity or use resource.executions repository')
-        assert hasattr(entities, self._resource.__class__.__name__)
-        return self._resource
-
-    @resource.setter
-    def resource(self, resource):
-        if not hasattr(entities, self._resource.__class__.__name__):
-            raise ValueError('Must input a valid entity')
-        self._resource = resource
 
     @property
     def project(self) -> entities.Project:
@@ -289,10 +272,7 @@ class Executions:
         :param dtlpy.entities.filters.Filters filters: dl.Filters entity to filters items
         :return:
         """
-        if filters.resource == entities.FiltersResource.RESOURCE_EXECUTION:
-            url = "/executions/resource/query"
-        else:
-            url = '/query/faas'
+        url = '/query/faas'
 
         # request
         success, response = self._client_api.gen_request(req_type='POST',
@@ -327,20 +307,14 @@ class Executions:
             raise exceptions.PlatformException(
                 error='400',
                 message='Unknown filters type: {!r}'.format(type(filters)))
-        if filters.resource != entities.FiltersResource.EXECUTION and \
-                filters.resource != entities.FiltersResource.RESOURCE_EXECUTION:
+        if filters.resource != entities.FiltersResource.EXECUTION:
             raise exceptions.PlatformException(
                 error='400',
-                message='Filters resource must to be FiltersResource.EXECUTION or FiltersResource.RESOURCE_EXECUTION. '
-                        'Got: {!r}'.format(filters.resource))
+                message='Filters resource must to be FiltersResource.EXECUTION. Got: {!r}'.format(filters.resource))
         if self._project is not None:
             filters.add(field='projectId', values=self._project.id)
         if self._service is not None:
             filters.add(field='serviceId', values=self._service.id)
-        if self._resource is not None:
-            filters.resource = entities.FiltersResource.RESOURCE_EXECUTION
-            filters.add(field='resourceType', values=self.resource.__class__.__name__)
-            filters.add(field='resourceId', values=self._resource.id)
 
         paged = entities.PagedEntities(items_repository=self,
                                        filters=filters,

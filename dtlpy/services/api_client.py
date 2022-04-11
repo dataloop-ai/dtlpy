@@ -26,12 +26,14 @@ from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 from functools import wraps
 import numpy as np
+import inspect
 from requests.models import Response
 from dtlpy.caches.cache import CacheManger, CacheConfig
 from .calls_counter import CallsCounter
 from .cookie import CookieIO
 from .logins import login, logout, login_secret, login_m2m, gate_url_from_host
 from .async_utils import AsyncResponse, AsyncUploadStream, AsyncResponseError, AsyncThreadEventLoop
+from .events import Events
 from .service_defaults import DEFAULT_ENVIRONMENTS, DEFAULT_ENVIRONMENT
 from .aihttp_retry import RetryClient
 from .. import miscellaneous, exceptions, __version__
@@ -311,7 +313,11 @@ class Decorators:
     def token_expired_decorator(method):
         @wraps(method)
         def decorated_method(inst, *args, **kwargs):
+            # save event
+            frm = inspect.stack()[1]
+
             # before the method call
+            kwargs.update({'stack': frm})
             if inst.token_expired():
                 if inst.renew_token_method() is False:
                     raise exceptions.PlatformException('600', 'Token expired, Please login.'
@@ -408,6 +414,11 @@ class ApiClient:
         os.environ["USE_ATTRIBUTE_2"] = json.dumps(self.attributes_mode.use_attributes_2)
 
         self.cache = None
+        #######################
+        # start event tracker #
+        self.event_tracker = Events(client_api=self)
+        self.event_tracker.daemon = True
+        self.event_tracker.start()
 
     def build_cache(self, cache_config=None):
         if cache_config is None:
@@ -757,7 +768,7 @@ class ApiClient:
 
     @Decorators.token_expired_decorator
     def gen_request(self, req_type, path, data=None, json_req=None, files=None, stream=False, headers=None,
-                    log_error=True, dataset_id=None):
+                    log_error=True, dataset_id=None, **kwargs):
         """
         Generic request from platform
         :param req_type: type of the request: GET, POST etc
@@ -769,6 +780,7 @@ class ApiClient:
         :param headers: headers to pass to request. auth will be added to it
         :param log_error: if true - print the error log of the request
         :param dataset_id: dataset id needed in stream True
+        :param kwargs: kwargs
         :return:
         """
         success, resp, cache_values = False, None, []
@@ -832,6 +844,10 @@ class ApiClient:
                                 raise exceptions.PlatformException(error='400', message="failed to set cache")
                 except Exception as e:
                     logger.warning("Cache error {}".format(e))
+        # only for projects events
+        if success:
+            if 'stack' in kwargs:
+                self.event_tracker.put(event=kwargs.get('stack'), resp=resp, path=path)
         return success, resp
 
     def _gen_request(self, req_type, path, data=None, json_req=None, files=None, stream=False, headers=None,
@@ -891,7 +907,8 @@ class ApiClient:
                                 filepath=None,
                                 chunk_size=8192,
                                 pbar=None,
-                                is_dataloop=True):
+                                is_dataloop=True,
+                                **kwargs):
         req_type = req_type.upper()
         valid_request_type = ['GET', 'DELETE', 'POST', 'PUT', 'PATCH']
         assert req_type in valid_request_type, '[ERROR] type: %s NOT in valid requests' % req_type
@@ -1068,13 +1085,16 @@ class ApiClient:
                 with threadLock:
                     self.calls_counter.add()
         if response.ok and self.cache is not None:
-            self.cache.write(list_entities_json=[response.json()])
-            dataset_id = url.split('/')[-2]
-            self.cache.write_stream(request_path=url,
-                                    buffer=to_upload,
-                                    file_name=uploaded_filename,
-                                    entity_id=response.json()['id'],
-                                    dataset_id=dataset_id)
+            try:
+                self.cache.write(list_entities_json=[response.json()])
+                dataset_id = url.split('/')[-2]
+                self.cache.write_stream(request_path=url,
+                                        buffer=to_upload,
+                                        file_name=uploaded_filename,
+                                        entity_id=response.json()['id'],
+                                        dataset_id=dataset_id)
+            except:
+                logger.warning("Failed to add the file to the cache")
         return response
 
     def __get_pbar(self, pbar, total_length):
@@ -1360,12 +1380,15 @@ class ApiClient:
         :param force: force login. in case login with same user but want to get a new JWT
         :return:
         """
-        return login_m2m(api_client=self,
-                         email=email,
-                         password=password,
-                         client_id=client_id,
-                         client_secret=client_secret,
-                         force=force)
+        res = login_m2m(api_client=self,
+                        email=email,
+                        password=password,
+                        client_id=client_id,
+                        client_secret=client_secret,
+                        force=force)
+        if res:
+            self._send_login_event(user_type='human', login_type='m2m')
+        return res
 
     def login_token(self, token):
         """
@@ -1380,10 +1403,23 @@ class ApiClient:
         Login using Auth0.
         :return:
         """
-        return login(api_client=self,
-                     audience=audience,
-                     auth0_url=auth0_url,
-                     client_id=client_id)
+        res = login(api_client=self,
+                    audience=audience,
+                    auth0_url=auth0_url,
+                    client_id=client_id)
+        if res:
+            self._send_login_event(user_type='human', login_type='interactive')
+        return res
+
+    def _send_login_event(self, user_type, login_type):
+        event_payload = {
+            'event': 'dtlpy:login',
+            'properties': {
+                'login_type': login_type,
+                'user_type': user_type
+            }
+        }
+        self.event_tracker.put(event_payload)
 
     def logout(self):
         """
@@ -1410,8 +1446,12 @@ class ApiClient:
     def renew_token(self):
         refresh_method = os.environ.get('DTLPY_REFRESH_TOKEN_METHOD', None)
         if refresh_method is not None and refresh_method == 'proxy':
-            return self._renew_token_in_dual_agent()
-        return self._renew_token_with_refresh_token()
+            res = self._renew_token_in_dual_agent()
+        else:
+            res = self._renew_token_with_refresh_token()
+        if res:
+            self._send_login_event(user_type='human', login_type='refresh')
+        return res
 
     def _renew_token_with_refresh_token(self):
         renewed = False

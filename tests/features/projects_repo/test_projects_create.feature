@@ -14,5 +14,5 @@ Feature: Projects repository create service testing
     Scenario: Create project with an existing project name
         Given I create a project by the name of "to-delete-test-project_create_same_name"
         When I try to create a project by the name of "to-delete-test-project_create_same_name"
-        Then "InternalServerError" exception should be raised
+        Then "BadRequest" exception should be raised
         And Error message includes "Failed to create project"

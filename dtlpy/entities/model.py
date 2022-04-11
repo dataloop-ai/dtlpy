@@ -16,6 +16,13 @@ class ModelInputType(str, Enum):
     AUDIO = 'audio'
 
 
+class EntityScopeLevel(str, Enum):
+    PRIVATE = 'private',
+    PROJECT = 'project',
+    ORG = 'org',
+    PUBLIC = 'public'
+
+
 class ModelOutputType(str, Enum):
     BOX = entities.Box.type
     CLASSIFICATION = entities.Classification.type
@@ -54,6 +61,9 @@ class Model(entities.BaseEntity):
     class_name = attr.ib()
     input_type = attr.ib()
     output_type = attr.ib()
+    snapshots_count = attr.ib()
+    scope = attr.ib()
+    context = attr.ib()
 
     # revisions
     _revisions = attr.ib()
@@ -113,7 +123,8 @@ class Model(entities.BaseEntity):
         :return: Model entity
         """
         if project is not None:
-            if project.id != _json.get('projectId', None):
+            json_project_id = _json.get('context', {}).get('project', None)
+            if json_project_id and project.id != json_project_id:
                 logger.warning('Model has been fetched from a project that is not in it projects list')
                 project = None
 
@@ -128,13 +139,13 @@ class Model(entities.BaseEntity):
             default_runtime = None
 
         inst = cls(
-            project_id=_json.get('projectId', None),
+            project_id=_json.get('context', {}).get('project', None),
             codebase=codebase,
             created_at=_json.get('createdAt', None),
             updated_at=_json.get('updatedAt', None),
             version=_json.get('version', None),
             description=_json.get('description', None),
-            creator=_json.get('creator', None),
+            creator=_json.get('context', {}).get('creator', None),
             entry_point=_json.get('entryPoint', None),
             class_name=_json.get('className', 'ModelAdapter'),
             client_api=client_api,
@@ -149,6 +160,9 @@ class Model(entities.BaseEntity):
             default_runtime=default_runtime,
             default_configuration=_json.get('defaultConfiguration', None),
             tags=_json.get('tags', None),
+            snapshots_count=_json.get('snapshotsCount', 0),
+            scope=_json.get('scope', EntityScopeLevel.PROJECT),
+            context=_json.get('context', {})
         )
         inst.is_fetched = is_fetched
         return inst
@@ -178,6 +192,7 @@ class Model(entities.BaseEntity):
                                                         attr.fields(Model).updated_at,
                                                         attr.fields(Model).default_configuration,
                                                         attr.fields(Model).default_runtime,
+                                                        attr.fields(Model).snapshots_count,
                                                         ))
 
         _json['global'] = self.is_global
@@ -190,6 +205,7 @@ class Model(entities.BaseEntity):
         _json['createdAt'] = self.created_at
         _json['updatedAt'] = self.updated_at
         _json['defaultConfiguration'] = self.default_configuration
+        _json['snapshotsCount'] = self.snapshots_count
         if isinstance(self.default_runtime, entities.KubernetesRuntime):
             _json['defaultRuntime'] = self.default_runtime.to_json()
         else:

@@ -151,9 +151,7 @@ class Execution(entities.BaseEntity):
             if service.id != _json.get('serviceId', None):
                 logger.warning('Execution has been fetched from a service that is not belong to it')
                 service = None
-        execution_id = _json.get('id', None)
-        if execution_id is None:
-            execution_id = _json.get('executionId', None)
+
         inst = cls(
             feedback_queue=_json.get('feedbackQueue', None),
             service_id=_json.get('serviceId', None),
@@ -173,7 +171,7 @@ class Execution(entities.BaseEntity):
             function_name=_json.get('functionName', entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME),
             input=_json.get('input', None),
             url=_json.get('url', None),
-            id=execution_id,
+            id=_json.get('id', None),
             to_terminate=_json.get('toTerminate', False),
             client_api=client_api,
             project=project,

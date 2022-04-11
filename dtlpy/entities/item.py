@@ -171,7 +171,7 @@ class Item(entities.BaseEntity):
     def set_repositories(self):
         reps = namedtuple('repositories',
                           field_names=['annotations', 'datasets', 'items', 'codebases', 'artifacts', 'modalities',
-                                       'features', 'assignments', 'tasks', 'executions'])
+                                       'features', 'assignments', 'tasks', 'resource_executions'])
         reps.__new__.__defaults__ = (None, None, None, None, None, None, None, None, None)
 
         if self._dataset is None:
@@ -214,7 +214,7 @@ class Item(entities.BaseEntity):
                 project=self._project,
                 dataset=self._dataset
             ),
-            executions=repositories.Executions(
+            resource_executions=repositories.ResourceExecutions(
                 client_api=self._client_api,
                 project=self._project,
                 resource=self
@@ -248,9 +248,9 @@ class Item(entities.BaseEntity):
         return self._repositories.tasks
 
     @property
-    def executions(self):
-        assert isinstance(self._repositories.executions, repositories.Executions)
-        return self._repositories.executions
+    def resource_executions(self):
+        assert isinstance(self._repositories.resource_executions, repositories.ResourceExecutions)
+        return self._repositories.resource_executions
 
     @property
     def items(self):

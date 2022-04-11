@@ -44,7 +44,7 @@ from .entities import (
     PackageSlot, SlotPostAction, SlotPostActionType, SlotDisplayScope, SlotDisplayScopeResource,
     # roberto
     SnapshotPartitionType, BucketType, Bucket, ItemBucket, GCSBucket, LocalBucket, ModelOutputType,
-    ModelInputType,
+    ModelInputType, EntityScopeLevel,
     #
     RequirementOperator, PackageRequirement,
     Command, CommandsStatus,
@@ -64,7 +64,7 @@ from .entities import (
     FunctionNode, DatasetNode, PipelineConnectionPort, PipelineNodeIO, Organization, OrganizationsPlans, Integration,
     Driver,
     ExternalStorage, Role, PlatformEntityType, SettingsValueTypes, SettingsTypes, SettingsSectionNames, SettingScope, \
-    BaseSetting, FeatureFlag, UserSetting, ServiceSample, ExecutionSample, PipelineExecutionSample
+    BaseSetting, FeatureFlag, UserSetting, ServiceSample, ExecutionSample, PipelineExecutionSample, ResourceExecution
 )
 from .ml import BaseModelAdapter, SuperModelAdapter
 from .utilities import Converter, BaseServiceRunner, Progress, Context, AnnotationFormat

@@ -283,7 +283,8 @@ class Models:
                entry_point: str = DEFAULT_ENTRY_POINT,
                class_name: str = DEFAULT_CLASS_NAME,
                default_configuration: dict = None,
-               default_runtime: entities.KubernetesRuntime = None
+               default_runtime: entities.KubernetesRuntime = None,
+               scope: entities.EntityScopeLevel = entities.EntityScopeLevel.PROJECT
                ) -> entities.Model:
         """
         Create and return a Model entity in platform
@@ -306,6 +307,7 @@ class Models:
         :param str class_name: Name of the model adapter class, default is ModelAdapter
         :param dl.KubernetesRuntime default_runtime: entity to set the default run env of the model (docker image, machine type etc)
         :param dict default_configuration: the configuration and default values that can be used for a snapshot configuration
+        :param str scope: the scope level of the model dl.EntityScopeLevel
         :return: Model Entity
         """
 
@@ -346,6 +348,7 @@ class Models:
         payload['codebase'] = codebase.to_json()
         payload['entryPoint'] = entry_point
         payload['className'] = class_name
+        payload['scope'] = scope
 
         # request
         success, response = self._client_api.gen_request(req_type='post',

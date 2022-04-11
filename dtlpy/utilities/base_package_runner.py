@@ -1,4 +1,6 @@
+import datetime
 import threading
+
 from .. import entities
 
 
@@ -36,7 +38,6 @@ class BaseServiceRunner:
 
 
 class Progress:
-
     def update(self, status=None, progress=0, message=None, output=None):
         pass
 

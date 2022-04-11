@@ -192,24 +192,21 @@ class DatasetGenerator:
                             # Do not use prediction annotations in the data generator
                             continue
                         if annotation.type == self.annotation_type:
-                            classes_ids.append(self.label_to_id_map[annotation.label])
-                            labels.append(annotation.label)
-
-                            if annotation.type == entities.AnnotationType.BOX:
-                                # [x1, y1, x2, y2]
-                                annotation: entities.Box
-                                box_coordinates.append(np.asarray([annotation.left,
-                                                                   annotation.top,
-                                                                   annotation.right,
-                                                                   annotation.bottom]))
-                                classes_ids.append(self.label_to_id_map[annotation.label])
-                                labels.append(annotation.label)
-                            elif annotation.type in [entities.AnnotationType.CLASSIFICATION,
-                                                     entities.AnnotationType.SEGMENTATION]:
-                                ...
+                            if annotation.label not in self.label_to_id_map:
+                                logger.warning(
+                                    'Missing label {!r} in label_to_id_map. Skipping.. Use label_to_id_map for other behaviour'.format(annotation.label))
                             else:
-                                raise ValueError(
-                                    'unsupported annotation type: {}'.format(annotation.type))
+                                classes_ids.append(self.label_to_id_map[annotation.label])
+                            labels.append(annotation.label)
+                            box_coordinates.append(np.asarray([annotation.left,
+                                                               annotation.top,
+                                                               annotation.right,
+                                                               annotation.bottom]))
+
+                            if annotation.type not in [entities.AnnotationType.CLASSIFICATION,
+                                                       entities.AnnotationType.SEGMENTATION,
+                                                       entities.AnnotationType.BOX]:
+                                raise ValueError('unsupported annotation type: {}'.format(annotation.type))
                 # reorder for output
                 item_info.update({entities.AnnotationType.BOX.value: np.asarray(box_coordinates).astype(float),
                                   entities.AnnotationType.CLASSIFICATION.value: np.asarray(classes_ids),
@@ -556,7 +553,10 @@ def collate_torch(batch):
             # array of string classes and object
             if np_str_obj_array_pattern.search(elem.dtype.str) is not None:
                 raise TypeError(default_collate_err_msg_format.format(elem.dtype))
-            return [torch.as_tensor(b) for b in batch]
+            try:
+                return torch.stack([torch.as_tensor(b) for b in batch])
+            except RuntimeError:
+                return batch
         elif elem.shape == ():  # scalars
             return torch.as_tensor(batch)
     elif isinstance(elem, float):

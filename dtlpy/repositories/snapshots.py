@@ -207,6 +207,8 @@ class Snapshots:
             model: entities.Model = None,
             configuration: dict = None,
             status: str = None,
+            scope: entities.EntityScopeLevel = entities.EntityScopeLevel.PROJECT,
+            version: str = '1.0.0',
     ) -> entities.Snapshot:
         """
         Create a Snapshot entity
@@ -223,6 +225,8 @@ class Snapshots:
         :param model: optional - Model object
         :param dict configuration: optional - snapshot configuration - dict
         :param str status: `str` of the optional values of
+        :param str scope: the scope level of the model dl.EntityScopeLevel
+        :param str version: version of the snapshot
         :return: Snapshot Entity
         """
 
@@ -270,7 +274,9 @@ class Snapshots:
             'projectId': project_id,
             'datasetId': dataset_id,
             'ontologySpec': ontology_spec.to_json(),
-            'bucket': bucket.to_json()
+            'bucket': bucket.to_json(),
+            'scope': scope,
+            'version': version
         }
 
         if configuration is not None:

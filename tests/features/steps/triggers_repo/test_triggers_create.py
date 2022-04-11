@@ -116,7 +116,7 @@ def step_impl(context, resource_type):
         time.sleep(interval)
         if resource_type == 'item':
             item = context.dataset.items.get(item_id=context.uploaded_item_with_trigger.id)
-            if item.executions.list().items_count == 2:
+            if item.resource_executions.list().items_count == 2:
                 triggered = True
                 break
         elif resource_type == 'annotation':

@@ -52,7 +52,7 @@ from .similarity import Similarity, MultiView, SimilarityItem, MultiViewItem, Si
 from .user import User
 from .bot import Bot
 from .webhook import Webhook, HttpMethod
-from .model import Model, ModelOutputType, ModelInputType
+from .model import Model, ModelOutputType, ModelInputType, EntityScopeLevel
 from .snapshot import Snapshot, OntologySpec, SnapshotPartitionType
 from .bucket import BucketType, Bucket, ItemBucket, GCSBucket, LocalBucket
 from .driver import Driver
@@ -69,3 +69,4 @@ from .driver import Driver, ExternalStorage
 from .setting import Role, PlatformEntityType, SettingsValueTypes, SettingsTypes, SettingsSectionNames, SettingScope, \
     BaseSetting, FeatureFlag, UserSetting
 from .reflect_dict import ReflectDict
+from .resource_execution import ResourceExecution

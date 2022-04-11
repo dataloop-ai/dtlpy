@@ -9,12 +9,12 @@ logger = logging.getLogger(name='dtlpy')
 
 
 def login_m2m(api_client, email, password, client_id=None, client_secret=None, force=False):
-    login_secret(api_client=api_client,
-                 email=email,
-                 password=password,
-                 client_id=client_id,
-                 client_secret=client_secret,
-                 force=force)
+    return login_secret(api_client=api_client,
+                        email=email,
+                        password=password,
+                        client_id=client_id,
+                        client_secret=client_secret,
+                        force=force)
 
 
 def login_secret(api_client, email, password, client_id, client_secret=None, force=False):
