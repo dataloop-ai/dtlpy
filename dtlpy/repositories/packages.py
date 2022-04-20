@@ -1522,7 +1522,7 @@ class Packages:
                 args_with_values[func_inspect.args[i_value]] = func_inspect.defaults[i_value]
 
         for input_name in func_inspect.args:
-            if input_name in ['self', 'progress']:
+            if input_name in ['self', 'progress', 'context']:
                 continue
             if input_name not in defined_input_names:
                 logger.warning('missing input name: "{}" in function definition: "{}"'.format(input_name,

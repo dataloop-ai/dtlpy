@@ -3,7 +3,7 @@ import os
 import json
 
 LOCAL = None  # or path to local doc repo
-LEVELS = ['+', '<', '>', '"', '@']
+LEVELS = ['-', '~', '~', '<', '@']
 
 
 def get_file(filepath):
@@ -56,7 +56,7 @@ def main():
     filename = 'index.json'
     rst_string = ''
     rst_string += '{}\n'.format('Tutorials')
-    rst_string += '{}\n'.format('*********')
+    rst_string += '{}\n'.format('=========')
     rst_string += '\n'
     rst_string = extract_index_rec(root=root,
                                    filename=filename,

@@ -1487,6 +1487,7 @@ class Converter:
             y = annotation.top
             w = annotation.right - x
             h = annotation.bottom - y
+            area = h * w
             if annotation.type == 'binary':
                 # segmentation = COCOUtils.binary_mask_to_rle(binary_mask=annotation.geo, height=height, width=width)
                 segmentation = COCOUtils.binary_mask_to_rle_encode(binary_mask=annotation.geo)
@@ -1515,7 +1516,10 @@ class Converter:
                             keypoints.append(2)
                         else:
                             keypoints.append(0)
-
+                x_points = keypoints[0::3]
+                y_points = keypoints[1::3]
+                x0, x1, y0, y1 = np.min(x_points), np.max(x_points), np.min(y_points), np.max(y_points)
+                area = (x1 - x0) * (y1 - y0)
         else:
             raise Exception('Unable to convert annotation of type {} to coco'.format(annotation.type))
 

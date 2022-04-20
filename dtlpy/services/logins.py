@@ -62,6 +62,7 @@ def login_secret(api_client, email, password, client_id, client_secret=None, for
                             headers=headers,
                             verify=env_params.get('verify_ssl', True))
     if not resp.ok:
+        logout(api_client=api_client)
         api_client.print_bad_response(resp)
         return False
     else:
@@ -187,9 +188,11 @@ def login(api_client, auth0_url=None, audience=None, client_id=None):
 
             return True
         else:
+            logout(api_client=api_client)
             logger.error('Login failed: no tokens obtained')
             return False
     except Exception as err:
+        logout(api_client=api_client)
         logger.exception('Login failed: error while getting token', err)
         return False
     finally:

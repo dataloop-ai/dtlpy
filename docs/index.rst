@@ -1,4 +1,4 @@
-``Dataloop's SDK and CLI documentation
+Dataloop's SDK and CLI documentation
 ====================================
 
 .. toctree::

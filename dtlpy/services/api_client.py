@@ -682,7 +682,8 @@ class ApiClient:
                         refresh_token=None,
                         alias=None,
                         use_ssl_context=False,
-                        gate_url=None
+                        gate_url=None,
+                        url=None
                         ):
         environments = self.environments
         if environment in environments:
@@ -699,7 +700,8 @@ class ApiClient:
                                      'gate_url': gate_url,
                                      'refresh_token': refresh_token,
                                      'verify_ssl': verify_ssl,
-                                     'use_ssl_context': use_ssl_context}
+                                     'use_ssl_context': use_ssl_context,
+                                     'url': url}
         self.environments = environments
 
     def info(self, with_token=True):
@@ -1511,18 +1513,20 @@ class ApiClient:
     def _get_resource_url(self, url):
 
         env = self._environments[self._environment]['alias']
-        if env == 'prod':
-            head = 'https://console.dataloop.ai/'
-        elif env == 'dev':
-            head = 'https://dev-con.dataloop.ai/'
-        elif env == 'rc':
-            head = 'https://rc-con.dataloop.ai/'
-        elif env in ['local', 'minikube_local_mac']:
-            head = 'https://localhost:8443/'
-        elif env == 'new-dev':
-            head = 'https://custom0-gate.dataloop.ai/'
-        else:
-            raise exceptions.PlatformException(error='400', message='Unknown environment: {}'.format(env))
+        head = self._environments[self._environment].get('url', None)
+        if head is None:
+            if env == 'prod':
+                head = 'https://console.dataloop.ai/'
+            elif env == 'dev':
+                head = 'https://dev-con.dataloop.ai/'
+            elif env == 'rc':
+                head = 'https://rc-con.dataloop.ai/'
+            elif env in ['local', 'minikube_local_mac']:
+                head = 'https://localhost:8443/'
+            elif env == 'new-dev':
+                head = 'https://custom0-gate.dataloop.ai/'
+            else:
+                raise exceptions.PlatformException(error='400', message='Unknown environment: {}'.format(env))
 
         return head + url
 

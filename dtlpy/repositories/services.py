@@ -874,7 +874,7 @@ class Services:
 
     def log(self,
             service,
-            size=None,
+            size=100,
             checkpoint=None,
             start=None,
             end=None,

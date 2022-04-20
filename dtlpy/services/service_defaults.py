@@ -12,7 +12,8 @@ DEFAULT_ENVIRONMENTS = {
          'gate_url': 'https://dev-gate.dataloop.ai',
          'token': None,
          'refresh_token': None,
-         'verify_ssl': True},
+         'verify_ssl': True,
+         'url': 'https://dev-con.dataloop.ai/'},
     'https://rc-gate.dataloop.ai/api/v1':
         {'alias': 'rc',
          'audience': 'https://dataloop-development.auth0.com/api/v2/',
@@ -21,7 +22,8 @@ DEFAULT_ENVIRONMENTS = {
          'gate_url': 'https://rc-gate.dataloop.ai',
          'token': None,
          'refresh_token': None,
-         'verify_ssl': True},
+         'verify_ssl': True,
+         'url': 'https://rc-con.dataloop.ai/'},
     'https://custom1-gate.dataloop.ai/api/v1': {
         'gate_url': 'https://custom1-gate.dataloop.ai',
         'auth0_url': 'https://dataloop-development.auth0.com',
@@ -39,7 +41,8 @@ DEFAULT_ENVIRONMENTS = {
         'gate_url': 'https://gate.dataloop.ai',
         'token': None,
         'refresh_token': None,
-        'verify_ssl': True},
+        'verify_ssl': True,
+        'url': 'https://console.dataloop.ai/'},
     'https://localhost:8443/api/v1': {
         'alias': 'local',
         'audience': 'https://dataloop-local.auth0.com/userinfo',

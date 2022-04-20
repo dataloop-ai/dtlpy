@@ -73,9 +73,24 @@ class Filters:
     Filters entity to filter items from pages in platform
     """
 
-    def __init__(self, field=None, values=None, operator: FiltersOperations = None,
-                 method: FiltersMethod = None, custom_filter=None,
-                 resource: FiltersResource = FiltersResource.ITEM, use_defaults=True, context=None):
+    def __init__(
+            self,
+            field=None,
+            values=None,
+            operator: FiltersOperations = None,
+            method: FiltersMethod = None,
+            custom_filter=None,
+            resource: FiltersResource = FiltersResource.ITEM,
+            use_defaults=True,
+            context=None,
+            page_size=None
+    ):
+        if page_size is None:
+            if resource in [FiltersResource.EXECUTION, FiltersResource.PIPELINE_EXECUTION]:
+                page_size = 100
+            else:
+                page_size = 1000
+
         self.or_filter_list = list()
         self.and_filter_list = list()
         self._unique_fields = list()
@@ -83,7 +98,7 @@ class Filters:
         self.known_operators = ['or', 'and', 'in', 'ne', 'eq', 'gt', 'lt', 'exists']
         self._resource = resource
         self.page = 0
-        self.page_size = 1000
+        self.page_size = page_size
         self.method = FiltersMethod.AND
         self.sort = dict()
         self.join = None
@@ -102,6 +117,21 @@ class Filters:
 
         if field is not None:
             self.add(field=field, values=values, operator=operator, method=method)
+
+    def __validate_page_size(self):
+        max_page_size = self.__max_page_size
+        if self.page_size > max_page_size:
+            logger.warning('Cannot list {} with page size greater than {}. Changing page_size to {}.'.format(
+                self.resource, max_page_size, max_page_size
+            ))
+            self.page_size = max_page_size
+
+    @property
+    def __max_page_size(self):
+        page_size = 1000
+        if self.resource in [FiltersResource.EXECUTION, FiltersResource.PIPELINE_EXECUTION]:
+            page_size = 100
+        return page_size
 
     @property
     def resource(self):
@@ -366,6 +396,9 @@ class Filters:
         if not query_only:
             if len(self.sort) > 0:
                 _json['sort'] = self.sort
+
+            self.__validate_page_size()
+
             _json['page'] = self.page
             _json['pageSize'] = self.page_size
             _json['resource'] = self.resource

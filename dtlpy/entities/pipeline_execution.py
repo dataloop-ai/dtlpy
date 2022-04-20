@@ -55,14 +55,14 @@ class PipelineExecution(entities.BaseEntity):
     """
     # platform
     id = attr.ib()
-    nodes = attr.ib()
-    executions = attr.ib()
-
+    nodes = attr.ib(repr=False)
+    executions = attr.ib(repr=False)
+    status = attr.ib()
     # name change
     created_at = attr.ib()
     updated_at = attr.ib(repr=False)
     pipeline_id = attr.ib()
-    pipeline_execution_id = attr.ib()
+    max_attempts = attr.ib()
 
     # sdk
     _pipeline = attr.ib(repr=False)
@@ -112,28 +112,25 @@ class PipelineExecution(entities.BaseEntity):
         nodes = [PipelineExecutionNode.from_json(_json=node) for node in _json.get('nodes', list())]
 
         executions = _json.get('executions', dict())
-        if len(executions) > 0:
-            for node_id, executions_list in executions.items():
-                if len(executions_list) > 0 and isinstance(executions_list[0], dict):
-                    executions[node_id] = [
-                        entities.Execution.from_json(
-                            _json=execution,
-                            client_api=client_api
-                        ) for execution in executions_list
-                    ]
+        for node_id, executions_list in executions.items():
+            if len(executions_list) > 0 and isinstance(executions_list[0], dict):
+                executions[node_id] = [entities.Execution.from_json(_json=execution,
+                                                                    client_api=client_api
+                                                                    )
+                                       for execution in executions_list]
 
         inst = cls(
+            id=_json.get('id', None),
             created_at=_json.get('createdAt', None),
             updated_at=_json.get('updatedAt', None),
             pipeline_id=_json.get('pipelineId', None),
-            pipeline_execution_id=_json.get('pipelineExecutionId', None),
-            client_api=client_api,
-            id=_json.get('id', None),
+            status=_json.get('status', None),
+            max_attempts=_json.get('maxAttempts', None),
             nodes=nodes,
             executions=executions,
-            pipeline=pipeline
+            pipeline=pipeline,
+            client_api=client_api,
         )
-
         inst.is_fetched = is_fetched
         return inst
 
@@ -153,15 +150,8 @@ class PipelineExecution(entities.BaseEntity):
                                                         attr.fields(PipelineExecution).updated_at,
                                                         attr.fields(PipelineExecution).pipeline_id,
                                                         attr.fields(PipelineExecution).executions,
-                                                        attr.fields(PipelineExecution).pipeline_execution_id,
+                                                        attr.fields(PipelineExecution).max_attempts,
                                                         ))
-
-        _json['pipelineId'] = self.pipeline_id
-        _json['pipelineExecutionId'] = self.pipeline_execution_id
-        _json['createdAt'] = self.created_at
-        _json['updatedAt'] = self.updated_at
-        _json['nodes'] = [node.to_json() for node in self.nodes]
-
         executions = dict()
         for node_id, executions_list in self.executions.items():
             if len(executions_list) > 0 and isinstance(executions_list[0], entities.Execution):
@@ -169,14 +159,17 @@ class PipelineExecution(entities.BaseEntity):
             else:
                 executions[node_id] = executions_list
 
+        _json['pipelineId'] = self.pipeline_id
+        _json['maxAttempts'] = self.max_attempts
+        _json['createdAt'] = self.created_at
+        _json['updatedAt'] = self.updated_at
+        _json['nodes'] = [node.to_json() for node in self.nodes]
         _json['executions'] = executions
-
         return _json
 
     #########
     # Props #
     #########
-
     @property
     def pipeline(self):
         if self._pipeline is None:

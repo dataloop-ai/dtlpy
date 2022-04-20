@@ -202,3 +202,28 @@ def step_impl(context):
     assert context.annotation_get.coordinates == context.annotation.coordinates
     # can check frames since the video decoder
     # assert len(context.annotation_get.frames) == len(context.annotation.frames)
+
+
+@behave.when(u"I create a false fixed annotation in video")
+def step_impl(context):
+
+    system = context.item.metadata.get('system', dict())
+    nb_frames = system.get('nb_frames', None)
+    if not nb_frames:
+        nb_frames = system.get('ffmpeg', dict()).get('nb_read_frames', None)
+        if nb_frames:
+            nb_frames = int(nb_frames)
+
+    ann = context.annotation
+    label = context.dataset.labels[0]
+    for frame in range(nb_frames):
+        annotation_definition = context.dl.Box(
+            top=100, left=100, right=500, bottom=500, label=label.tag
+        )
+        frame_num = frame
+        ann.add_frame(annotation_definition=annotation_definition, frame_num=frame_num, fixed=False)
+
+
+@behave.then(u"Video has annotation without snapshots")
+def step_impl(context):
+    assert context.item.annotations.list()[0].metadata['system']['snapshots_'] == []

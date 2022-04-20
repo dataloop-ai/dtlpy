@@ -14,3 +14,12 @@ Feature: Annotation Entity create video annotation from blank
         And I upload annotation created
         Then Item in host has video annotation added
 
+    @testrail-C4523045
+    Scenario: Video - Add annotation to video with fix frame false
+        Given Classes in file: "video_classes.json" are uploaded to test Dataset
+        And Item in path "sample_video.mp4" is uploaded to "Dataset"
+        When I create a blank annotation to item
+        And I create a false fixed annotation in video
+        And I upload annotation created
+        Then Video has annotation without snapshots
+

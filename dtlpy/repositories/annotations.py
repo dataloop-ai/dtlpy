@@ -426,8 +426,6 @@ class Annotations:
                     i += 1
         return update, origin_snapshots
 
-
-
     def _update_single_annotation(self, w_annotation, system_metadata):
         try:
             if isinstance(w_annotation, entities.Annotation):
@@ -523,14 +521,22 @@ class Annotations:
 
     @staticmethod
     def _annotation_encoding(annotation):
-        last_frame = dict()
         metadata = annotation.get('metadata', dict())
         system = metadata.get('system', dict())
-        snapshots = system.get('snapshots_', dict())
+        snapshots = system.get('snapshots_', list())
+        last_frame = {
+            'label': annotation.get('label', None),
+            'attributes': annotation.get('attributes', None),
+            'type': annotation.get('type', None),
+            'data': annotation.get('coordinates', None),
+            'fixed': snapshots[0].get('fixed', None) if (isinstance(snapshots, list) and len(snapshots) > 0) else None,
+            'objectVisible': snapshots[0].get('objectVisible', None) if (isinstance(snapshots, list) and len(snapshots) > 0) else None,
+        }
+
         offset = 0
         for idx, frame in enumerate(deepcopy(snapshots)):
             frame.pop("frame", None)
-            if frame == last_frame:
+            if frame == last_frame and not frame['fixed']:
                 del snapshots[idx - offset]
                 offset += 1
             else:

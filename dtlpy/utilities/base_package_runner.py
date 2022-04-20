@@ -50,11 +50,16 @@ class ItemStatusEvent:
         self.pipeline_id = _json.get('pipelineId', None)
         self.node_id = _json.get('nodeId', None)
         self.action = _json.get('action', None)
-        self.task_id = _json.get('status', dict()).get('taskId', None)
-        self.assignment_id = _json.get('status', dict()).get('assignmentId', None)
-        self.status = _json.get('status', dict()).get('status', None)
-        self.creator = _json.get('status', dict()).get('creator', None)
-        self.timestamp = _json.get('status', dict()).get('timestamp', None)
+
+        status = _json.get('status', dict())
+        if status is None:
+            status = dict()
+
+        self.task_id = status.get('taskId', None)
+        self.assignment_id = status.get('assignmentId', None)
+        self.status = status.get('status', None)
+        self.creator = status.get('creator', None)
+        self.timestamp = status.get('timestamp', None)
 
 
 class ExecutionEventContext:
@@ -101,10 +106,15 @@ class Context:
 
         # ids
         self.trigger_id = execution_dict.get('trigger_id', None)
-        self.pipeline_id = execution_dict.get('pipeline', dict()).get('id')
-        self.node_id = execution_dict.get('pipeline', dict()).get('nodeId')
-        self.pipeline_execution_id = execution_dict.get('pipeline', dict()).get('executionId', None)
         self.execution_id = execution_dict['id']
+
+        # pipeline
+        pipeline = execution_dict.get('pipeline', dict())
+        if pipeline is None:
+            pipeline = dict()
+        self.pipeline_id = pipeline.get('id', None)
+        self.node_id = pipeline.get('nodeId', None)
+        self.pipeline_execution_id = pipeline.get('executionId', None)
 
         # props
         self._task = None
