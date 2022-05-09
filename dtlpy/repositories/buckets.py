@@ -140,12 +140,18 @@ class Buckets:
             if need_to_download:
                 # 1. download to temp folder
                 temp_dir = tempfile.mkdtemp()
-                local_temp_files = list(dataset.items.download(
+                local_temp_files = dataset.items.download(
                     filters=bucket_filter,
                     local_path=temp_dir,
                     overwrite=overwrite,
                     to_items_folder=False,
-                ))
+                )
+                if isinstance(local_temp_files, str):
+                    # only 1 file downloaded
+                    local_temp_files = [local_temp_files]
+                else:
+                    # should be generator - multiple files downloaded
+                    local_temp_files = list(local_temp_files)
                 # 2. move to local_path without remote path prefix
                 for item in bucket_content_list:
                     for filepath in local_temp_files:

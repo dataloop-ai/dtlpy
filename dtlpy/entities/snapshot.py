@@ -311,12 +311,21 @@ class Snapshot(entities.BaseEntity):
                 self.configuration['id_to_label_map'] = {idx: lbl for idx, lbl in enumerate(self.labels)}
             else:
                 self.configuration['id_to_label_map'] = {idx: lbl.tag for idx, lbl in enumerate(self.ontology.labels)}
-
         return self.configuration['id_to_label_map']
 
     @id_to_label_map.setter
     def id_to_label_map(self, mapping: dict):
         self.configuration['id_to_label_map'] = mapping
+
+    @property
+    def label_to_id_map(self):
+        if 'label_to_id_map' not in self.configuration:
+            self.configuration['label_to_id_map'] = {v: k for k, v in self.id_to_label_map.items()}
+        return self.configuration['label_to_id_map']
+
+    @label_to_id_map.setter
+    def label_to_id_map(self, mapping: dict):
+        self.configuration['label_to_id_map'] = mapping
 
     ###########
     # methods #

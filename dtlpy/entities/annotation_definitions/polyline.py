@@ -39,7 +39,7 @@ class Polyline(BaseAnnotationDefinition):
         return np.max(self.y)
 
     def to_coordinates(self, color):
-        return [{"x": float(x), "y": float(y)} for x, y in self.geo]
+        return [[{"x": float(x), "y": float(y)} for x, y in self.geo]]
 
     @staticmethod
     def from_coordinates(coordinates):
@@ -99,9 +99,9 @@ class Polyline(BaseAnnotationDefinition):
     @classmethod
     def from_json(cls, _json):
         if "coordinates" in _json:
-            geo = cls.from_coordinates(coordinates=_json["coordinates"])
+            geo = cls.from_coordinates(coordinates=_json["coordinates"][0])
         elif "data" in _json:
-            geo = cls.from_coordinates(coordinates=_json["data"])
+            geo = cls.from_coordinates(coordinates=_json["data"][0])
         else:
             raise ValueError('can not find "coordinates" or "data" in annotation. id: {}'.format(_json["id"]))
         return cls(

@@ -810,6 +810,7 @@ class Packages:
                on_reset: str = None,
                max_attempts: int = None,
                force: bool = False,
+               secrets: list = None,
                **kwargs) -> entities.Service:
         """
         Deploy a package. A service is required to run the code in your package.
@@ -837,6 +838,7 @@ class Packages:
         :param str on_reset: on reset
         :param int max_attempts: Maximum execution retries in-case of a service reset
         :param bool force: optional - terminate old replicas immediately
+        :param list secrets: list of the integrations ids
         :return: Service object
         :rtype: dtlpy.entities.service.Service
 
@@ -882,7 +884,8 @@ class Packages:
                                        drain_time=drain_time,
                                        on_reset=on_reset,
                                        max_attempts=max_attempts,
-                                       force=force
+                                       force=force,
+                                       secrets=secrets
                                        )
 
     def deploy_from_file(self, project, json_filepath):

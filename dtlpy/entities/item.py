@@ -139,10 +139,19 @@ class Item(entities.BaseEntity):
         inst.is_fetched = is_fetched
         return inst
 
+    def __getstate__(self):
+        # dump state to json
+        return self.to_json()
+
+    def __setstate__(self, state):
+        # create a new item, and update the current one with the same state
+        # this way we can have _client_api, and all the repositories and entities which are not picklable
+        self.__dict__.update(entities.Item.from_json(_json=state,
+                                                     client_api=services.ApiClient()).__dict__)
+
     ############
     # entities #
     ############
-
     @property
     def dataset(self):
         if self._dataset is None:

@@ -376,6 +376,7 @@ class Package(entities.BaseEntity):
                on_reset=None,
                max_attempts=None,
                force=False,
+               secrets: list = None,
                **kwargs):
         """
         Deploy package
@@ -396,6 +397,7 @@ class Package(entities.BaseEntity):
         :param str on_reset: on reset
         :param int max_attempts: Maximum execution retries in-case of a service reset
         :param bool force: optional - terminate old replicas immediately
+        :param list secrets: list of the integrations ids
         :return: Service object
         :rtype: dtlpy.entities.service.Service
 
@@ -436,7 +438,8 @@ class Package(entities.BaseEntity):
                                             max_attempts=max_attempts,
                                             force=force,
                                             jwt_forward=kwargs.get('jwt_forward', None),
-                                            is_global=kwargs.get('is_global', None))
+                                            is_global=kwargs.get('is_global', None),
+                                            secrets=secrets)
 
     def checkout(self):
         """

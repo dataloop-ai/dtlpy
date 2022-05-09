@@ -26,7 +26,7 @@ author = 'Or Shabtay'
 # The short X.Y version
 version = ''
 # The full version, including alpha/beta/rc tags
-release = '1.55.10'
+release = '1.56.9'
 
 add_module_names = False
 
@@ -55,7 +55,6 @@ extensions = [
     'nbsphinx',
     'sphinx_rtd_theme',
     # 'sphinxcontrib.lunrsearch',
-    'myst_parser',
     'sphinx_copybutton'
 ]
 
@@ -92,18 +91,13 @@ pygments_style = None
 # a list of builtin themes.
 #
 html_theme = 'sphinx_rtd_theme'
+html_logo = '_static/logo.svg'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
 html_theme_options = {
-    'logo_name': True,
-    'description': "SDK and CLI for Dataloop platform",
-    'code_font_family': 'Montserrat',
-    'caption_font_family': 'Montserrat',
-    'font_family': 'Montserrat',
-    'head_font_family': 'Montserrat',
     'canonical_url': '',
     'analytics_id': 'UA-XXXXXXX-1',  # Provided by Google in your dashboard
     'logo_only': True,
@@ -112,7 +106,7 @@ html_theme_options = {
     'style_external_links': False,
     'vcs_pageview_mode': '',
     # Toc options
-    'collapse_navigation': True,
+    'collapse_navigation': False,
     'sticky_navigation': True,
     'navigation_depth': 4,
     'includehidden': True,
@@ -136,8 +130,7 @@ html_css_files = [
 # default: ``['localtoc.html', 'relations.html', 'sourcelink.html',
 # 'searchbox.html']``.
 #
-# html_sidebars = {}
-
+html_sidebars = {}
 
 # -- Options for HTMLHelp output ---------------------------------------------
 

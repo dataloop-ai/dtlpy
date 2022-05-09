@@ -39,6 +39,7 @@ class DatasetGenerator:
                  data_path=None,
                  overwrite=False,
                  id_to_label_map=None,
+                 label_to_id_map=None,
                  transforms=None,
                  transforms_callback=None,
                  num_workers=0,
@@ -60,7 +61,8 @@ class DatasetGenerator:
         :param filters: dl.Filters - filtering entity to filter the dataset items
         :param data_path: Path to Dataloop annotations (root to "item" and "json").
         :param overwrite:
-        :param id_to_label_map: dict - {id: label_string} dictionary
+        :param dict id_to_label_map: Optional, {id: label_string} dictionary, default taken from dataset
+        :param dict label_to_id_map: Optional, {label_string: id} dictionary
         :param transforms: Optional transform to be applied on a sample. list, imgaug.Sequence or torchvision.transforms.Compose
         :param transforms_callback: Optional function to handle the callback of each batch.
         look at default_transforms_callback for more information. available: imgaug_transforms_callback, torchvision_transforms_callback
@@ -76,12 +78,19 @@ class DatasetGenerator:
         """
 
         self._dataset_entity = dataset_entity
-        if id_to_label_map is None:
+        if label_to_id_map is None and id_to_label_map is None:
+            # if both are None - take from dataset
             label_to_id_map = dataset_entity.instance_map
             id_to_label_map = {v: k for k, v in label_to_id_map.items()}
         else:
-            # id_to_label_map is not None
-            label_to_id_map = {v: k for k, v in id_to_label_map.items()}
+            # one or both is NOT None
+            if label_to_id_map is None:
+                # set label_to_id_map from the other
+                label_to_id_map = {v: k for k, v in id_to_label_map.items()}
+            if id_to_label_map is None:
+                # set id_to_label_map from the other
+                id_to_label_map = {v: k for k, v in label_to_id_map.items()}
+            # put it on the local ontology for the annotations download
             dataset_entity._get_ontology().instance_map = label_to_id_map
         self.id_to_label_map = id_to_label_map
         self.label_to_id_map = label_to_id_map
@@ -194,7 +203,8 @@ class DatasetGenerator:
                         if annotation.type == self.annotation_type:
                             if annotation.label not in self.label_to_id_map:
                                 logger.warning(
-                                    'Missing label {!r} in label_to_id_map. Skipping.. Use label_to_id_map for other behaviour'.format(annotation.label))
+                                    'Missing label {!r} in label_to_id_map. Skipping.. Use label_to_id_map for other behaviour'.format(
+                                        annotation.label))
                             else:
                                 classes_ids.append(self.label_to_id_map[annotation.label])
                             labels.append(annotation.label)
@@ -338,6 +348,8 @@ class DatasetGenerator:
         return annotations
 
     def visualize(self, idx=None, return_output=False, plot=True):
+        if not self.__len__():
+            raise ValueError('no items selected, cannot preform visualization')
         import matplotlib.pyplot as plt
         if idx is None:
             idx = np.random.randint(self.__len__())

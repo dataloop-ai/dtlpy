@@ -327,7 +327,7 @@ class Matchers:
                             annotation_one.geo,
                             annotation_two.geo,
                             config)
-                    except np.ZeroDivisionError:
+                    except ZeroDivisionError:
                         logger.warning(
                             'Found annotations with area=0!: annotations ids: {!r}, {!r}'.format(annotation_one.id,
                                                                                                  annotation_two.id))

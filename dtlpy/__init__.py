@@ -70,6 +70,9 @@ from .ml import BaseModelAdapter, SuperModelAdapter
 from .utilities import Converter, BaseServiceRunner, Progress, Context, AnnotationFormat
 from .repositories.packages import PackageCatalog
 from .repositories import FUNCTION_END_LINE
+import warnings
+
+warnings.simplefilter('once', DeprecationWarning)
 
 # check python version
 if sys.version_info.major != 3:

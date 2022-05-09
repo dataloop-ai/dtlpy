@@ -1,9 +1,11 @@
+from m2r import parse_from_file, save_to_file
 from urllib.request import urlretrieve
 import os
 import json
 
 LOCAL = None  # or path to local doc repo
-LEVELS = ['-', '~', '~', '<', '@']
+# LEVELS = ['-', '~', '~', '<', '@']
+LEVELS = ['-', '^', '~', '"', '#', ]
 
 
 def get_file(filepath):
@@ -13,9 +15,10 @@ def get_file(filepath):
         else:
             print('getting: {}'.format(filepath))
             os.makedirs(os.path.dirname(filepath), exist_ok=True)
-            urlretrieve(url="https://raw.githubusercontent.com/dataloop-ai/dtlpy-documentation/main/{}".format(filepath),
-                        filename=filepath)
-    except:
+            urlretrieve(
+                url="https://raw.githubusercontent.com/dataloop-ai/dtlpy-documentation/main/{}".format(filepath),
+                filename=filepath)
+    except Exception:
         print('Failed getting: {}'.format(filepath))
     return filepath
 
@@ -27,12 +30,17 @@ def extract_index_rec(root, filename, rst_string, level):
         index = json.load(f)
     for content in index['content']:
         name, ext = os.path.splitext(content['location'])
+        rst_string += '\n'
+        rst_string += '{}\n'.format(content['displayName'])
+        rst_string += '{}\n'.format(LEVELS[level] * len(content['displayName']))
+        rst_string += '{}\n'.format(content['description'])
+        rst_string += '\n'
+        rst_string += '.. toctree::\n'
+        rst_string += '   :numbered: \n'
+        rst_string += '   :caption: {}\n'.format(content['displayName'])
+        rst_string += '   :maxdepth: 6\n'
+        rst_string += '\n'
         if ext == '.json':
-            rst_string += '{}\n'.format(content['displayName'])
-            rst_string += '{}\n'.format(LEVELS[level] * len(content['displayName']))
-            rst_string += '\n'
-            rst_string += '{}\n'.format(content['description'])
-            rst_string += '\n'
             rst_string = extract_index_rec(root=root,
                                            filename=content['location'],
                                            rst_string=rst_string,
@@ -40,14 +48,18 @@ def extract_index_rec(root, filename, rst_string, level):
         else:
             filepath = root + '/' + content['location']
             get_file(filepath=filepath)
-            rst_string += '{}\n'.format(content['displayName'])
-            rst_string += '{}\n'.format(LEVELS[level + 1] * len(content['displayName']))
-            rst_string += '\n'
-            rst_string += '{}\n'.format(content['description'])
-            rst_string += '\n'
-            rst_string += '.. include:: {}\n'.format(filepath)
-            rst_string += '  :parser: myst_parser.sphinx_\n'
-            rst_string += '\n'
+
+            output = parse_from_file(filepath)
+            save_to_file(filepath.replace('.md', '.rst'), output)
+            os.remove(filepath)
+            # rst_string += '{}\n'.format(content['displayName'])
+            # rst_string += '{}\n'.format(LEVELS[level + 1] * len(content['displayName']))
+            # rst_string += '\n'
+            # rst_string += '{}\n'.format(content['description'])
+            # rst_string += '\n'
+            rst_string += '   {}\n'.format(filepath.replace('.md', '.rst'))
+            # rst_string += '  :parser: #myst_parser.sphinx_\n'
+            # rst_string += '\n'
     return rst_string
 
 

@@ -167,8 +167,9 @@ class PipelineExecutions:
         if self._project is not None:
             project_id = self._project.id
 
-        if self._project is not None:
-            filters.add(field='projectId', values=self.project.id)
+        # TODO - uncomment this after DAT-24496 is done and cycles have projectId
+        # if self._project is not None:
+        #     filters.add(field='projectId', values=self.project.id)
 
         if self._pipeline is not None:
             filters.add(field='pipelineId', values=self.pipeline.id)
