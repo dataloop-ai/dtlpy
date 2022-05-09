@@ -50,7 +50,10 @@ def extract_index_rec(root, filename, rst_string, level):
             get_file(filepath=filepath)
 
             output = parse_from_file(filepath)
-            save_to_file(filepath.replace('.md', '.rst'), output)
+            rst_filepath = filepath.replace('.md', '.rst')
+            if os.path.isfile(rst_filepath):
+                os.remove(rst_filepath)
+            save_to_file(rst_filepath, output)
             os.remove(filepath)
             # rst_string += '{}\n'.format(content['displayName'])
             # rst_string += '{}\n'.format(LEVELS[level + 1] * len(content['displayName']))
