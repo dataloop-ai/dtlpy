@@ -56,6 +56,7 @@ class Item(entities.BaseEntity):
     # entities
     _dataset = attr.ib(repr=False)
     _project = attr.ib(repr=False)
+    _project_id = attr.ib(repr=False)
 
     # repositories
     _repositories = attr.ib(repr=False)
@@ -134,7 +135,8 @@ class Item(entities.BaseEntity):
             url=_json.get('url', None),
             id=_json.get('id', None),
             spec=_json.get('spec', None),
-            creator=_json.get('creator', None)
+            creator=_json.get('creator', None),
+            project_id=project.id if project else None
         )
         inst.is_fetched = is_fetched
         return inst
@@ -163,8 +165,7 @@ class Item(entities.BaseEntity):
     def project(self):
         if self._project is None:
             if self._dataset is None:
-                if self._dataset is None:
-                    self._dataset = self.datasets.get(dataset_id=self.dataset_id, fetch=None)
+                self._dataset = self.datasets.get(dataset_id=self.dataset_id, fetch=None)
             self._project = self._dataset.project
             if self._project is None:
                 raise exceptions.PlatformException(error='2001',
@@ -172,6 +173,13 @@ class Item(entities.BaseEntity):
         assert isinstance(self._project, entities.Project)
         return self._project
 
+    @property
+    def project_id(self):
+        if self._project_id is None:
+            if self._dataset is None:
+                self._dataset = self.datasets.get(dataset_id=self.dataset_id, fetch=None)
+            self._project_id = self._dataset.project.id
+        return self._project_id
     ################
     # repositories #
     ################
@@ -383,6 +391,7 @@ class Item(entities.BaseEntity):
                                                         attr.fields(Item).creator,
                                                         attr.fields(Item).created_at,
                                                         attr.fields(Item).dataset_id,
+                                                        attr.fields(Item)._project_id,
                                                         ))
 
         _json.update({'annotations': self.annotations_link,

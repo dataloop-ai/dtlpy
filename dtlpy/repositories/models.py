@@ -96,7 +96,7 @@ class Models:
                 elif models.items_count > 1:
                     raise exceptions.PlatformException(
                         error='400',
-                        message='More than one file found by the name of: {}'.format(model_name))
+                        message='More than one Model found by the name of: {}. Try "get" by id or "list".'.format(model_name))
                 model = models.items[0]
             else:
                 raise exceptions.PlatformException(

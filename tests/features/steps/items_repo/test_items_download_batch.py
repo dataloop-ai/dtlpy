@@ -60,6 +60,7 @@ def step_impl(context, local_path):
         save_locally=True,
         local_path=local_path,
         annotation_options=None,
+        overwrite=True
     )
 
 

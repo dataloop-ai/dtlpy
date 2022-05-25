@@ -24,8 +24,7 @@ def step_impl(context):
         project_name=context.project.name,
         outputs=[dl.PipelineNodeIO(input_type=dl.PackageInputType.ITEMS,
                                    name='items',
-                                   display_name='items',
-                                   action='item')]
+                                   display_name='items')]
     )
 
     task_node = dl.TaskNode(

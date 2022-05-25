@@ -488,3 +488,41 @@ class Organizations:
             raise exceptions.PlatformException(response)
 
         return response.json()
+
+    def cache_action(self,
+                     organization_id: str = None,
+                     organization_name: str = None,
+                     organization: entities.Organization = None,
+                     mode=entities.CacheAction.APPLY,
+                     pod_type=entities.PodType.SMALL):
+        """
+        Add or remove Cache for the org
+
+        **Prerequisites**: You must be an organization *owner*
+
+        You must provide at least ONE of the following params: organization, organization_name, or organization_id.
+
+        :param str organization_id: Organization id
+        :param str organization_name: Organization name
+        :param entities.Organization organization: Organization object
+        :param str mode: dl.CacheAction.APPLY or dl.CacheAction.DESTROY
+        :param entities.PodType pod_type:  dl.PodType.SMALL, dl.PodType.MEDIUM, dl.PodType.HIGH
+        :return: True if success
+        :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            dl.organizations.enable_cache(organization_id='organization_id',
+                                          mode=dl.CacheAction.APPLY)
+        """
+        if organization is None and organization_id is None and organization_name is None:
+            raise exceptions.PlatformException(
+                error='400',
+                message='Must provide an identifier in inputs')
+
+        if organization is None:
+            organization = self.get(organization_id=organization_id, organization_name=organization_name)
+
+        return organization.cache_action(mode=mode, pod_type=pod_type)

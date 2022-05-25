@@ -309,16 +309,17 @@ class Tasks:
                         task_name,
                         task.name))
         elif task_name is not None:
-            tasks = [task for task in self.list() if
-                     task.name == task_name]
-            if len(tasks) == 0:
+            tasks = self.list(filters=entities.Filters(field='name',
+                                                       values=task_name,
+                                                       resource=entities.FiltersResource.TASK))
+            if tasks.items_count == 0:
                 raise exceptions.PlatformException('404', 'Annotation task not found')
-            elif len(tasks) > 1:
+            elif tasks.items_count > 1:
                 raise exceptions.PlatformException('404',
                                                    'More than one Annotation task exist with the same name: {}'.format(
                                                        task_name))
             else:
-                task = tasks[0]
+                task = tasks[0][0]
         else:
             raise exceptions.PlatformException('400', 'Must provide either Annotation task name or Annotation task id')
 
@@ -636,7 +637,7 @@ class Tasks:
                    'projectId': project_id,
                    'assignmentIds': assignments_ids,
                    'recipeId': recipe_id,
-                   'dueDate': due_date,
+                   'dueDate': due_date * 1000,
                    'asynced': wait}
 
         if check_if_exist:

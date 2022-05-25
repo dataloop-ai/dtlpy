@@ -22,12 +22,8 @@ class Codebases:
                  dataset: entities.Dataset = None,
                  project_id: str = None):
         self._client_api = client_api
-        if project is None and dataset is None:
-            if project_id is None:
-                raise PlatformException('400', 'at least one must be not None: dataset, project or project_id')
-            else:
-                project = repositories.Projects(client_api=client_api).get(project_id=project_id)
         self._project = project
+        self._project_id = project_id
         self._dataset = dataset
         self._items_repository = None
         self.git_utils = miscellaneous.GitUtils()
@@ -42,7 +38,17 @@ class Codebases:
     @property
     def project(self) -> entities.Project:
         if self._project is None:
-            self._project = self.dataset.project
+            # project is None - try dataset
+            if self._dataset is None:
+                # dataset is None - try from project id
+                if self._project_id is None:
+                    raise PlatformException(error='400',
+                                            message='Cannot perform this action without a project')
+                else:
+                    self._project = repositories.Projects(client_api=self._client_api).get(project_id=self._project_id)
+            else:
+                # dataset is not None - take project from there
+                self._project = self.dataset.project
         assert isinstance(self._project, entities.Project)
         return self._project
 

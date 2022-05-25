@@ -15,7 +15,7 @@ def check_in_thread(version, client_api):
             time.sleep(120)
         # check for a valid token again
         if client_api.token_expired():
-            # return if vant fine a valid token
+            # return if cant find a valid token
             logger.debug('Cant check_sdk without a valid token.')
             return
 
@@ -47,8 +47,9 @@ def check_in_thread(version, client_api):
 
 
 def check(version, client_api):
-    worker = threading.Thread(target=check_in_thread, kwargs={'version': version,
-                                                              'client_api': client_api})
+    worker = threading.Thread(target=check_in_thread,
+                              kwargs={'version': version,
+                                      'client_api': client_api})
     worker.daemon = True
     worker.start()
     status = client_api.cookie_io.get('check_version_status')
@@ -65,3 +66,33 @@ def check(version, client_api):
             logger.error(msg=msg)
         else:
             logger.debug(msg='unknown')
+
+
+def resolve_platform_settings_in_thread(settings, client_api):
+    try:
+        # check for a valid token
+        if client_api.token_expired():
+            # wait for user to maybe login in the next 2 minutes
+            time.sleep(120)
+        # check for a valid token again
+        if client_api.token_expired():
+            # return if cant find a valid token
+            logger.debug('Cant check_sdk without a valid token.')
+            return
+        settings_list = settings.resolve(user_email=client_api.info()['user_email'])
+        settings_dict = {s.name: {s.scope.id: s.value,
+                                  "default": s.default_value}
+                         for s in settings_list}
+        client_api.platform_settings.settings.update(settings_dict)
+        client_api.platform_settings.to_cookie()
+
+    except Exception:
+        logger.debug(traceback.format_exc())
+        logger.debug('Error in add settings.')
+
+
+def resolve_platform_settings(client_api, settings):
+    worker = threading.Thread(target=resolve_platform_settings_in_thread,
+                              kwargs={'client_api': client_api, 'settings': settings})
+    worker.daemon = True
+    worker.start()

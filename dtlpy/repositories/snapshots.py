@@ -121,7 +121,7 @@ class Snapshots:
             elif snapshots.items_count > 1:
                 raise exceptions.PlatformException(
                     error='400',
-                    message='More than one file found by the name of: {}'.format(snapshot_name))
+                    message='More than one Snapshot found by the name of: {}. Try "get" by id or list.'.format(snapshot_name))
             snapshot = snapshots.items[0]
         else:
             raise exceptions.PlatformException(

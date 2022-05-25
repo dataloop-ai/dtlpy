@@ -193,9 +193,7 @@ class Snapshot(entities.BaseEntity):
                                                         attr.fields(Snapshot).created_at,
                                                         attr.fields(Snapshot).updated_at,
                                                         ))
-
         _json['modelId'] = self.model_id
-        _json['projectId'] = self.project_id
         _json['datasetId'] = self.dataset_id
         _json['createdAt'] = self.created_at
         _json['updatedAt'] = self.updated_at
@@ -308,24 +306,26 @@ class Snapshot(entities.BaseEntity):
         if 'id_to_label_map' not in self.configuration:
             # default
             if self.ontology_id == 'null' or self.ontology_id is None:
-                self.configuration['id_to_label_map'] = {idx: lbl for idx, lbl in enumerate(self.labels)}
+                self.configuration['id_to_label_map'] = {int(idx): lbl for idx, lbl in enumerate(self.labels)}
             else:
-                self.configuration['id_to_label_map'] = {idx: lbl.tag for idx, lbl in enumerate(self.ontology.labels)}
+                self.configuration['id_to_label_map'] = {int(idx): lbl.tag for idx, lbl in enumerate(self.ontology.labels)}
+        else:
+            self.configuration['id_to_label_map'] = {int(idx): lbl for idx, lbl in self.configuration['id_to_label_map'].items()}
         return self.configuration['id_to_label_map']
 
     @id_to_label_map.setter
     def id_to_label_map(self, mapping: dict):
-        self.configuration['id_to_label_map'] = mapping
+        self.configuration['id_to_label_map'] = {int(idx): lbl for idx, lbl in mapping.items()}
 
     @property
     def label_to_id_map(self):
         if 'label_to_id_map' not in self.configuration:
-            self.configuration['label_to_id_map'] = {v: k for k, v in self.id_to_label_map.items()}
+            self.configuration['label_to_id_map'] = {v: int(k) for k, v in self.id_to_label_map.items()}
         return self.configuration['label_to_id_map']
 
     @label_to_id_map.setter
     def label_to_id_map(self, mapping: dict):
-        self.configuration['label_to_id_map'] = mapping
+        self.configuration['label_to_id_map'] = {v: int(k) for k, v in mapping.items()}
 
     ###########
     # methods #

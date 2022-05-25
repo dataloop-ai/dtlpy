@@ -68,8 +68,7 @@ def step_impl(context, on_reset):
         for stat in execution.status:
             if on_reset == 'rerun' \
                     and stat['status'] == 'rerun' \
-                    and 'Rerun due to runner timeout' in stat['message'] \
-                    and execution.attempts > 1:
+                    and 'Rerun due to runner timeout' in stat['message']:
                 reset = True
             elif on_reset == 'failed' \
                     and stat['status'] == 'failed' \

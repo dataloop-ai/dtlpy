@@ -140,7 +140,7 @@ class CacheManger:
         self.cache_levels = dict()
         self._max_level = 1
         self.bin_cache_size = bin_cache_size
-        self.bin_cache_path = os.environ['DEFAULT_CACHE_PATH_BIN']
+        self.bin_cache_path = os.environ['DEFAULT_CACHE_PATH']
         self._current_bin_cache_size = 0
         for config in cache_configs:
             try:
@@ -201,6 +201,17 @@ class CacheManger:
                 success = True
                 break
         return success, res
+
+    def ping(self):
+        """
+        Cache ping check if connection is working
+        """
+        try:
+            for i in range(1, self._max_level + 1):
+                self.cache_levels[i].ping()
+        except Exception as e:
+            raise Exception('cache connection failed ')
+
 
     def set(self, key: str, value):
         """
@@ -396,13 +407,15 @@ class CacheManger:
             os.makedirs(os.path.dirname(filepath), exist_ok=True)
             if buffer is None:
                 try:
-                    with open(filepath, "wb") as f:
+                    temp_file_path = filepath + '.download'
+                    with open(temp_file_path, "wb") as f:
                         for chunk in response.iter_content(chunk_size=8192):
                             if chunk:  # filter out keep-alive new chunks
                                 f.write(chunk)
+                    os.rename(temp_file_path, filepath)
                 except:
-                    if os.path.isfile(filepath):
-                        os.remove(filepath)
+                    if os.path.isfile(temp_file_path):
+                        os.remove(temp_file_path)
                     return ''
             else:
                 if os.path.isfile(buffer.name):

@@ -4,12 +4,14 @@ import logging
 import json
 import os
 import tempfile
+import time
 from typing import Union, List, Callable
 from .. import miscellaneous, exceptions, entities, repositories, assets, ApiClient
 from ..__version__ import version as __version__
 
 logger = logging.getLogger(name='dtlpy')
 FUNCTION_END_LINE = '[Done] Executing function.'
+MAX_WAIT_TIME = 8
 
 
 class Services:
@@ -842,7 +844,7 @@ class Services:
             else:
                 raise exceptions.PlatformException('400', "Unknown resource id")
 
-            setting = entities.UserSetting(
+            setting = entities.Setting(
                 default_value=True,
                 value=True,
                 inputs=None,
@@ -1243,11 +1245,16 @@ class Services:
         with open(assets.paths.PARTIAL_MAIN_FILEPATH, 'r') as f:
             main_string = f.read()
         lines = inspect.getsourcelines(func)
+        tabs_diff = lines[0][0].count('    ') - 1
+        for line_index in range(len(lines[0])):
+            line_tabs = lines[0][line_index].count('    ') - tabs_diff
+            lines[0][line_index] = ('    ' * line_tabs) + lines[0][line_index].strip() + '\n'
+
         method_func_string = "".join(lines[0])
 
         with open(main_file, 'w') as f:
-            f.write('{}\n{}\n    @staticmethod\n    {}'.format(imports_string, main_string,
-                                                               method_func_string.replace('\n', '\n    ')))
+            f.write('{}\n{}\n    @staticmethod\n{}'.format(imports_string, main_string,
+                                                           method_func_string))
 
         function = entities.PackageFunction(name=func.__name__, inputs=self.__get_inputs(func=func))
         module = entities.PackageModule(functions=[function],
@@ -1370,6 +1377,81 @@ class Services:
 
         logging.info('Successfully deployed!')
         return service
+
+    def __enable_cache(self,
+                       url,
+                       organization: entities.Organization,
+                       pod_type=entities.PodType.SMALL):
+        payload = {
+            "org": {
+                "name": organization.name,
+                "id": organization.id
+            },
+            "runner": {
+                "podType": pod_type  # small, medium, high
+            }
+        }
+
+        return self._client_api.gen_request(req_type='post',
+                                            path=url,
+                                            json_req=payload)
+
+    def __polling_wait(self, organization, pod_type, backoff_factor=0.1):
+        fs_url_path = '/services/fs-cache?mode={}'.format('get')
+        i = 1
+        while True:
+            success, response = self.__enable_cache(url=fs_url_path, organization=organization, pod_type=pod_type)
+            if response.json().get('state', None) == 'READY':
+                break
+            sleep_time = min(backoff_factor * (2 ** (i - 1)), MAX_WAIT_TIME)
+            time.sleep(sleep_time)
+            i += 1
+        return success
+
+    def _cache_action(self,
+                      organization: entities.Organization = None,
+                      mode=entities.CacheAction.APPLY,
+                      pod_type=entities.PodType.SMALL):
+        """
+        Add or remove Cache for the org
+
+        **Prerequisites**: You must be an organization *owner*
+
+        You must provide at least ONE of the following params: organization, organization_name, or organization_id.
+
+        :param entities.Organization organization: Organization object
+        :param str mode: dl.CacheAction.APPLY or dl.CacheAction.DESTROY
+        :param entities.PodType pod_type:  dl.PodType.SMALL, dl.PodType.MEDIUM, dl.PodType.HIGH
+        :return: True if success
+        :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            dl.organizations.enable_cache(organization='organization',
+                                          mode=dl.CacheAction.APPLY)
+        """
+        if organization is None:
+            raise exceptions.PlatformException(
+                error='400',
+                message='Must provide an identifier in inputs')
+
+        fs_url_path = '/services/fs-cache?mode={}'.format(mode)
+        url_path = '/services/cache?mode={}'.format(mode)
+
+        success, response = self.__enable_cache(url=fs_url_path, organization=organization, pod_type=pod_type)
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        if mode == entities.CacheAction.APPLY:
+            self.__polling_wait(organization=organization, pod_type=pod_type)
+
+        success, response = self.__enable_cache(url=url_path, organization=organization, pod_type=pod_type)
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        return True
 
 
 class ServiceLog:

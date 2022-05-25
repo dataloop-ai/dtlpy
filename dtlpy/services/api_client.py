@@ -1,6 +1,8 @@
 """
 Dataloop platform calls
 """
+import sys
+
 import aiohttp.client_exceptions
 import requests_toolbelt
 import multiprocessing
@@ -233,7 +235,7 @@ class SDKCache:
             raise exceptions.PlatformException(error=400,
                                                message="input must be of type str")
         self._cache_path_bin = val
-        os.environ['DEFAULT_CACHE_PATH_BIN'] = val
+        os.environ['DEFAULT_CACHE_PATH'] = val
         self.to_cookie()
 
     @property
@@ -308,6 +310,68 @@ class Attributes2:
         self.to_cookie()
 
 
+class PlatformSettings:
+
+    def __init__(self, cookie):
+        self.cookie = cookie
+        setting_str = self.cookie.get('settings')
+        if setting_str is None:
+            dictionary = dict()
+            self._settings = dictionary
+            self.to_cookie()
+        elif isinstance(setting_str, str):
+            dictionary = self.from_string(setting_str)
+        elif isinstance(setting_str, dict):
+            dictionary = setting_str
+        else:
+            raise ValueError('unknown setting type: {}'.format(type(setting_str)))
+
+        self._settings = dictionary
+
+    def to_cookie(self):
+        setting_str = self.to_string(self._settings)
+        self.cookie.put(key='settings', value=setting_str)
+
+    def to_string(self, settings_dict):
+        """
+        convert object to base 64 string
+        """
+        base64_bytes = base64.b64encode(json.dumps(settings_dict).encode("ascii"))
+        base64_string = base64_bytes.decode("ascii")
+        return base64_string
+
+    def from_string(self, base64_string):
+        """
+        convert from base 64 string to the class object
+
+        :param str base64_string: string in base64 the have a json configs
+        """
+        base64_bytes = base64_string.encode("ascii")
+        sample_string_bytes = base64.b64decode(base64_bytes)
+        _json = json.loads(sample_string_bytes.decode("ascii"))
+        return _json
+
+    @property
+    def settings(self) -> dict:
+        return self._settings
+
+    @settings.setter
+    def settings(self, val: dict):
+        if not isinstance(val, dict):
+            raise exceptions.PlatformException(error=400,
+                                               message="input must be of type dict")
+
+        self._settings = val
+        self.to_cookie()
+
+    def add(self, setting_name: str, setting: dict):
+        if setting_name in self.settings:
+            self._settings[setting_name].update(setting)
+        else:
+            self._settings[setting_name] = setting
+        self.to_cookie()
+
+
 class Decorators:
     @staticmethod
     def token_expired_decorator(method):
@@ -353,6 +417,7 @@ class ApiClient:
         self._verbose = None
         self._cache_state = None
         self._attributes_mode = None
+        self._platform_settings = None
         self._cache_configs = None
         self._sdk_cache = None
         self._fetch_entities = None
@@ -428,16 +493,12 @@ class ApiClient:
                     cache_config = CacheConfig.from_string(cls=CacheConfig, base64_string=self.sdk_cache.configs)
             else:
                 cache_config = CacheConfig.from_string(cls=CacheConfig, base64_string=cache_config_json)
-
         if cache_config:
-            self.sdk_cache.use_cache = True
-
             # cache paths
             if os.environ.get('DEFAULT_CACHE_PATH', None) is None:
-                os.environ['DEFAULT_CACHE_PATH_BIN'] = self.sdk_cache.cache_path_bin
+                os.environ['DEFAULT_CACHE_PATH'] = self.sdk_cache.cache_path_bin
             else:
-                os.environ['DEFAULT_CACHE_PATH_BIN'] = os.environ.get('DEFAULT_CACHE_PATH', None)
-                self.sdk_cache.cache_path_bin = os.environ['DEFAULT_CACHE_PATH_BIN']
+                self.sdk_cache.cache_path_bin = os.environ['DEFAULT_CACHE_PATH']
 
             if not os.path.isdir(self.sdk_cache.cache_path_bin):
                 os.makedirs(self.sdk_cache.cache_path_bin, exist_ok=True)
@@ -454,7 +515,9 @@ class ApiClient:
                 raise Exception("config should be of type str or CacheConfig")
             try:
                 self.cache = CacheManger(cache_configs=[cache_config], bin_cache_size=self.sdk_cache.bin_size)
-            except:
+                self.cache.ping()
+                self.sdk_cache.use_cache = True
+            except Exception as e:
                 self.cache = None
 
     def __del__(self):
@@ -625,6 +688,13 @@ class ApiClient:
         return self._attributes_mode
 
     @property
+    def platform_settings(self):
+        if self._platform_settings is None:
+            self._platform_settings = PlatformSettings(cookie=self.cookie_io)
+        assert isinstance(self._platform_settings, PlatformSettings)
+        return self._platform_settings
+
+    @property
     def sdk_cache(self):
         if self._sdk_cache is None:
             self._sdk_cache = SDKCache(cookie=self.cookie_io)
@@ -788,7 +858,6 @@ class ApiClient:
         success, resp, cache_values = False, None, []
         if self.cache is None and 'sdk' not in path:
             self.build_cache()
-
         if req_type.lower() not in ['patch', 'put', 'post', 'delete'] and self._cache_on(request=path):
             try:
                 if stream:
@@ -846,6 +915,7 @@ class ApiClient:
                                 raise exceptions.PlatformException(error='400', message="failed to set cache")
                 except Exception as e:
                     logger.warning("Cache error {}".format(e))
+                    self.cache = None
         # only for projects events
         if success:
             if 'stack' in kwargs:
@@ -1035,6 +1105,7 @@ class ApiClient:
                                  unit_scale=True,
                                  unit_divisor=1024,
                                  position=1,
+                                 file=sys.stdout,
                                  disable=self.verbose.disable_progress_bar)
 
                 def callback(bytes_read):
@@ -1109,6 +1180,7 @@ class ApiClient:
                                      unit_scale=True,
                                      unit_divisor=1024,
                                      position=1,
+                                     file=sys.stdout,
                                      disable=self.verbose.disable_progress_bar)
                 else:
                     pbar = None

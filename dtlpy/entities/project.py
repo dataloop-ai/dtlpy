@@ -89,7 +89,10 @@ class Project(entities.BaseEntity):
             feature_sets=repositories.FeatureSets(client_api=self._client_api, project=self),
             features=repositories.Features(client_api=self._client_api, project=self),
             integrations=repositories.Integrations(client_api=self._client_api, project=self),
-            settings=repositories.Settings(client_api=self._client_api, project=self)
+            settings=repositories.Settings(client_api=self._client_api,
+                                           project=self,
+                                           resource=self,
+                                           resource_type=entities.PlatformEntityType.PROJECT)
         )
 
     @property
@@ -378,3 +381,4 @@ class Project(entities.BaseEntity):
         :rtype: list
         """
         return self.projects.list_members(project=self, role=role)
+

@@ -9,6 +9,17 @@ from .. import repositories, services, entities
 logger = logging.getLogger(name='dtlpy')
 
 
+class PodType(str, Enum):
+    SMALL = "small"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+class CacheAction(str, Enum):
+    APPLY = "apply"
+    DESTROY = "destroy"
+
+
 class OrganizationsPlans(str, Enum):
     PREMIUM = "premium"
     FREEMIUM = "freemium"
@@ -59,11 +70,16 @@ class Organization(entities.BaseEntity):
     @_repositories.default
     def set_repositories(self):
         reps = namedtuple('repositories',
-                          field_names=['organizations', 'projects', 'integrations'])
+                          field_names=['organizations', 'projects', 'integrations', 'services', 'settings'])
 
         r = reps(projects=repositories.Projects(client_api=self._client_api, org=self),
                  organizations=repositories.Organizations(client_api=self._client_api),
-                 integrations=repositories.Integrations(client_api=self._client_api, org=self)
+                 integrations=repositories.Integrations(client_api=self._client_api, org=self),
+                 services=repositories.Services(client_api=self._client_api),
+                 settings=repositories.Settings(client_api=self._client_api,
+                                                org=self,
+                                                resource=self,
+                                                resource_type=entities.PlatformEntityType.ORG)
                  )
         return r
 
@@ -79,6 +95,16 @@ class Organization(entities.BaseEntity):
     def projects(self):
         assert isinstance(self._repositories.projects, repositories.Projects)
         return self._repositories.projects
+
+    @property
+    def services(self):
+        assert isinstance(self._repositories.services, repositories.Services)
+        return self._repositories.services
+
+    @property
+    def settings(self):
+        assert isinstance(self._repositories.settings, repositories.Settings)
+        return self._repositories.settings
 
     @property
     def organizations(self):
@@ -246,3 +272,14 @@ class Organization(entities.BaseEntity):
 
         """
         self._client_api._open_in_web(url=self.platform_url)
+
+    def cache_action(self, mode=CacheAction.APPLY, pod_type=PodType.SMALL):
+        """
+        Open the organizations in web platform
+
+        :param str mode: dl.CacheAction.APPLY or dl.CacheAction.DESTROY
+        :param dl.PodType pod_type:  dl.PodType.SMALL, dl.PodType.MEDIUM, dl.PodType.HIGH
+        :return: True if success
+        :rtype: bool
+        """
+        return self.services._cache_action(organization=self, mode=mode, pod_type=pod_type)

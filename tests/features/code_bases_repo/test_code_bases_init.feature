@@ -19,10 +19,10 @@ Feature: Codebases repository Init
         And Codebases project are equal
         And Codebases dataset has name "Binaries"
 
-    @testrail-C4523074
-    Scenario: Init code bases with param: client_api
-        When I try to init code bases with params: client_api
-        Then "BadRequest" exception should be raised
+#    @testrail-C4523074
+#    Scenario: Init code bases with param: client_api
+#        When I try to init code bases with params: client_api
+#        Then "BadRequest" exception should be raised
 
     @testrail-C4523074
     Scenario: Init code bases with param: dataset, client_api

@@ -3,6 +3,7 @@ import copy
 import numpy as np
 from . import BaseAnnotationDefinition
 from .polygon import Polygon
+import warnings
 
 
 class Box(BaseAnnotationDefinition):
@@ -44,6 +45,10 @@ class Box(BaseAnnotationDefinition):
         self.bottom_left = [left, bottom]
         self.bottom_right = [right, bottom]
         self.label = label
+        self._four_points = self._rotate_around_point() if self.is_rotated else [self.top_left,
+                                                                                 self.bottom_left,
+                                                                                 self.bottom_right,
+                                                                                 self.top_right]
 
     @property
     def is_rotated(self):
@@ -51,18 +56,45 @@ class Box(BaseAnnotationDefinition):
 
     @property
     def x(self):
+        if self.box_points_setting():
+            return [x_point[0] for x_point in self._four_points]
         return [self.left, self.right]
 
     @property
     def y(self):
+        if self.box_points_setting():
+            return [y_point[1] for y_point in self._four_points]
         return [self.top, self.bottom]
 
     @property
     def geo(self):
-        return [
-            [self.left, self.top],
-            [self.right, self.bottom]
-        ]
+        if self.box_points_setting():
+            res = self._four_points
+        else:
+            # warnings.warn(
+            #     message='annotation.geo() for box representation will be changed from 2 points to 4 points, '
+            #             'starting from version 1.62.0. '
+            #             'We recommend switching to the new format before the deprecation. '
+            #             'For more info: https://dataloop.ai/docs/SDK/sdk-annotationgeo-deprecation ',
+            #     category=DeprecationWarning)
+            res = [
+                [self.left, self.top],
+                [self.right, self.bottom]
+            ]
+        return res
+
+    def box_points_setting(self):
+        res = False
+        if self._annotation and self._annotation.item:
+            item = self._annotation.item
+            project_id = item.project_id if item.project_id else item.project.id
+            settings_dict = item._client_api.platform_settings.settings.get('4ptBox', {})
+            if settings_dict:
+                if project_id in settings_dict:
+                    res = settings_dict.get(project_id, None)
+                elif 'default' in settings_dict:
+                    res = settings_dict.get('default', None)
+        return res
 
     def _rotate_points(self, points):
         angle = np.radians(self.angle)
@@ -150,8 +182,11 @@ class Box(BaseAnnotationDefinition):
         return image
 
     def to_coordinates(self, color):
-
-        pts = [{"x": float(x), "y": float(y), "z": 0} for x, y in self.geo]
+        points = [
+            [self.left, self.top],
+            [self.right, self.bottom]
+        ]
+        pts = [{"x": float(x), "y": float(y), "z": 0} for x, y in points]
 
         if self.angle is not None and self.angle != 0:
             pts.append(self.angle)

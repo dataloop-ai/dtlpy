@@ -14,13 +14,17 @@ class Settings:
             project: entities.Project = None,
             dataset: entities.Dataset = None,
             org: entities.Organization = None,
-            task: entities.Task = None
+            task: entities.Task = None,
+            resource=None,
+            resource_type=None
     ):
         self._client_api = client_api
         self._org = org
         self._project = project
         self._dataset = dataset
         self._task = task
+        self._resource = resource
+        self._resource_type = resource_type
 
     ###########
     # methods #
@@ -28,11 +32,7 @@ class Settings:
 
     @staticmethod
     def get_constructor(res: dict):
-        if res['settingType'] == entities.SettingsTypes.USER_SETTINGS:
-            constructor = entities.UserSetting.from_json
-        else:
-            constructor = entities.FeatureFlag.from_json
-
+        constructor = entities.Setting.from_json
         return constructor
 
     def _build_entities_from_response(self, response_items):
@@ -48,9 +48,56 @@ class Settings:
 
         return settings
 
-    def create(self, setting: Union[entities.FeatureFlag, entities.UserSetting]) -> Union[
-        entities.FeatureFlag, entities.UserSetting
-    ]:
+    def _build_settings(self,
+                        setting_name: str = None,
+                        setting_value: entities.SettingsTypes = None,
+                        setting_value_type: entities.SettingsValueTypes = None,
+                        setting_default_value=None
+                        ):
+        if self._resource is None:
+            raise exceptions.PlatformException('400', 'Must have resource')
+        setting = entities.Setting(
+            name=setting_name,
+            value=setting_value,
+            value_type=setting_value_type,
+            section_name=entities.SettingsSectionNames.SDK,
+            default_value=setting_default_value,
+            scope=entities.SettingScope(type=self._resource_type,
+                                        id=self._resource.id,
+                                        role=entities.Role.ALL,
+                                        prevent_override=False,
+                                        visible=True),
+        )
+        return setting
+
+    def create(self,
+               setting: entities.Setting = None,
+               setting_name: str = None,
+               setting_value=None,
+               setting_value_type: entities.SettingsValueTypes = None,
+               setting_default_value=None,
+               ) -> entities.Setting:
+        """
+        Create a new setting
+
+        :param Setting setting: setting entity
+        :param str setting_name: the setting name
+        :param setting_value: the setting value
+        :param SettingsValueTypes setting_value_type: the setting type dl.SettingsValueTypes
+        :param setting_default_value: the setting default value
+        :return: setting entity
+        """
+        if sum([1 for param in [setting_name, setting_value, setting_value_type] if param is None]) > 0 \
+                and setting is None:
+            raise exceptions.PlatformException('400', 'Must provide setting object or'
+                                                      'setting_name, setting_value and setting_value_type')
+
+        if setting is None:
+            setting = self._build_settings(setting_name=setting_name,
+                                           setting_value=setting_value,
+                                           setting_value_type=setting_value_type,
+                                           setting_default_value=setting_default_value)
+
         success, response = self._client_api.gen_request(
             req_type='post',
             path='{}'.format(
@@ -65,6 +112,13 @@ class Settings:
         else:
             raise exceptions.PlatformException(response)
 
+        # add settings to cookies
+        self._client_api.platform_settings.add(setting.name,
+                                               {
+                                                   setting.scope.id: setting.value,
+                                                   "default": setting.default_value
+                                               }
+                                               )
         return constructor(
             _json=_json,
             client_api=self._client_api,
@@ -72,9 +126,35 @@ class Settings:
             org=self._org
         )
 
-    def update(self, setting: entities.BaseSetting) -> Union[
-        entities.FeatureFlag, entities.UserSetting
-    ]:
+    def update(self,
+               setting: entities.BaseSetting = None,
+               setting_id: str = None,
+               setting_name: str = None,
+               setting_value=None,
+               setting_default_value=None,
+               ) -> entities.Setting:
+        """
+        Update a setting
+
+        :param Setting setting: setting entity
+        :param str setting_id: the setting id
+        :param str setting_name: the setting name
+        :param setting_value: the setting value
+        :param setting_default_value: the setting default value
+        :return: setting entity
+        """
+        if sum([1 for param in [setting_name, setting_value] if param is None]) > 0 \
+                and setting is None:
+            raise exceptions.PlatformException('400', 'Must provide setting object or'
+                                                      'setting_name, setting_value and setting_value_type')
+
+        if setting is None:
+            setting = self.get(setting_id=setting_id)
+            setting.name = setting_name
+            setting.value = setting_value
+            if setting_default_value is not None:
+                setting.default_value = setting_default_value
+
         patch = setting.to_json()
         patch.pop('id')
         patch.pop('name')
@@ -93,6 +173,14 @@ class Settings:
         else:
             raise exceptions.PlatformException(response)
 
+        # add settings to cookies
+        self._client_api.platform_settings.add(setting.name,
+                                               {
+                                                   setting.scope.id: setting.value,
+                                                   "default": setting.default_value
+                                               }
+                                               )
+
         return constructor(
             _json=_json,
             client_api=self._client_api,
@@ -101,6 +189,12 @@ class Settings:
         )
 
     def delete(self, setting_id: str) -> bool:
+        """
+        Delete a setting
+
+        :param str setting_id: the setting id
+        :return: True if success exceptions if not
+        """
         success, response = self._client_api.gen_request(
             req_type='delete',
             path='{}/{}'.format(
@@ -114,7 +208,13 @@ class Settings:
         else:
             raise exceptions.PlatformException(response)
 
-    def get(self, setting_id: str) -> Union[entities.FeatureFlag, entities.UserSetting]:
+    def get(self, setting_id: str) -> entities.Setting:
+        """
+        Get a setting by id
+
+        :param str setting_id: the setting id
+        :return: setting entity
+        """
         success, response = self._client_api.gen_request(
             req_type='get',
             path='{}/{}'.format(
@@ -138,7 +238,7 @@ class Settings:
 
     def _list(self, filters: entities.Filters):
         success, response = self._client_api.gen_request(
-            req_type='get',
+            req_type='post',
             path='{}/query'.format(BASE_URL),
             json_req=filters.prepare()
         )
@@ -180,6 +280,15 @@ class Settings:
             dataset_id: str = None,
             task_id: str = None,
     ):
+        """
+        return all the settings that relevant to the provider params
+
+        :param str user_email: user email
+        :param str org_id: org id
+        :param str project_id: project id
+        :param str dataset_id: dataset id
+        :param str task_id: task id
+        """
         payload = {
             'userId': user_email
         }

@@ -461,7 +461,7 @@ class Assignments:
             raise exceptions.PlatformException('400', 'Must provide either filters or items list')
 
         workload = entities.Workload.generate(assignee_ids=[assignee_id])
-        task = task.add_items(filters=filters, items=items, workload=workload, limit=0)
+        task = task.add_items(filters=filters, items=items, workload=workload, limit=None)
         assignments = [ass for ass in task.assignments.list() if ass.id not in assignments_before]
 
         if len(assignments) < 1:

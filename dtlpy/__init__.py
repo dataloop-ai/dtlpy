@@ -41,7 +41,7 @@ from .entities import (
     # faas
     FunctionIO, KubernetesAutuscalerType, KubernetesRabbitmqAutoscaler, KubernetesAutoscaler, KubernetesRuntime,
     InstanceCatalog, PackageInputType,
-    PackageSlot, SlotPostAction, SlotPostActionType, SlotDisplayScope, SlotDisplayScopeResource,
+    PackageSlot, SlotPostAction, SlotPostActionType, SlotDisplayScope, SlotDisplayScopeResource, UiBindingPanel,
     # roberto
     SnapshotPartitionType, BucketType, Bucket, ItemBucket, GCSBucket, LocalBucket, ModelOutputType,
     ModelInputType, EntityScopeLevel,
@@ -62,9 +62,9 @@ from .entities import (
     PipelineNode, TaskNode, CodeNode,
     PipelineNodeType, PipelineNameSpace,
     FunctionNode, DatasetNode, PipelineConnectionPort, PipelineNodeIO, Organization, OrganizationsPlans, Integration,
-    Driver,
+    Driver, CacheAction, PodType,
     ExternalStorage, Role, PlatformEntityType, SettingsValueTypes, SettingsTypes, SettingsSectionNames, SettingScope, \
-    BaseSetting, FeatureFlag, UserSetting, ServiceSample, ExecutionSample, PipelineExecutionSample, ResourceExecution
+    BaseSetting, UserSetting, Setting, ServiceSample, ExecutionSample, PipelineExecutionSample, ResourceExecution
 )
 from .ml import BaseModelAdapter, SuperModelAdapter
 from .utilities import Converter, BaseServiceRunner, Progress, Context, AnnotationFormat
@@ -160,6 +160,11 @@ try:
 except Exception:
     logger.debug("Failed to check SDK! Continue without")
 
+# try:
+#     check_sdk.resolve_platform_settings(client_api=client_api, settings=settings)
+# except Exception:
+#     pass
+
 verbose = client_api.verbose
 login = client_api.login
 logout = client_api.logout
@@ -173,6 +178,7 @@ info = client_api.info
 cache_state = client_api.cache_state
 attributes_mode = client_api.attributes_mode
 sdk_cache = client_api.sdk_cache
+platform_settings = client_api.platform_settings
 
 
 def get_secret(secret):
@@ -417,6 +423,11 @@ FUNCTION_DISPLAY_SCOPE_RESOURCE_ITEM = SlotDisplayScopeResource.ITEM
 FUNCTION_DISPLAY_SCOPE_RESOURCE_DATASET = SlotDisplayScopeResource.DATASET
 FUNCTION_DISPLAY_SCOPE_RESOURCE_DATASET_QUERY = SlotDisplayScopeResource.DATASET_QUERY
 
+UI_BINDING_PANEL_ALL = UiBindingPanel.ALL
+UI_BINDING_PANEL_TABLE = UiBindingPanel.TABLE
+UI_BINDING_PANEL_STUDIO = UiBindingPanel.STUDIO
+UI_BINDING_PANEL_BROWSER = UiBindingPanel.BROWSER
+
 COMMANDS_STATUS_CREATED = CommandsStatus.CREATED
 COMMANDS_STATUS_MAKING_CHILDREN = CommandsStatus.MAKING_CHILDREN
 COMMANDS_STATUS_WAITING_CHILDREN = CommandsStatus.WAITING_CHILDREN
@@ -445,3 +456,10 @@ PACKAGE_REQUIREMENT_OP_EQUAL_OR_GREATER_THAN = RequirementOperator.EQUAL_OR_GREA
 
 INDEX_DRIVER_V1 = IndexDriver.V1
 INDEX_DRIVER_V2 = IndexDriver.V2
+
+CACHE_ACTION_APPLY = CacheAction.APPLY
+CACHE_ACTION_DESTROY = CacheAction.DESTROY
+
+POD_TYPE_SMALL = PodType.SMALL
+POD_TYPE_MEDIUM = PodType.MEDIUM
+POD_TYPE_HIGH = PodType.HIGH

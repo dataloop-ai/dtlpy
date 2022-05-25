@@ -11,6 +11,7 @@ class BaseAnnotationDefinition:
         self._left = 0
         self._bottom = 0
         self._right = 0
+        self._annotation = None
 
         if attributes is None:
             attributes = list()

@@ -1,3 +1,5 @@
+import sys
+
 from jinja2 import Environment, PackageLoader
 from multiprocessing.pool import ThreadPool
 from multiprocessing import Lock
@@ -207,7 +209,7 @@ class Converter:
                 for label in labels:
                     fp.write("{}\n".format(label))
 
-        pbar = tqdm.tqdm(total=pages.items_count)
+        pbar = tqdm.tqdm(total=pages.items_count, file=sys.stdout)
         reporter = Reporter(
             num_workers=pages.items_count,
             resource=Reporter.CONVERTER,
@@ -355,7 +357,7 @@ class Converter:
         converted_annotations = [None for _ in range(pages.items_count)]
         item_id_counter = 0
         pool = ThreadPool(processes=6)
-        pbar = tqdm.tqdm(total=pages.items_count)
+        pbar = tqdm.tqdm(total=pages.items_count, file=sys.stdout)
         reporter = Reporter(
             num_workers=pages.items_count,
             resource=Reporter.CONVERTER,
@@ -1487,7 +1489,7 @@ class Converter:
             y = annotation.top
             w = annotation.right - x
             h = annotation.bottom - y
-            area = h * w
+            area = float(h * w)
             if annotation.type == 'binary':
                 # segmentation = COCOUtils.binary_mask_to_rle(binary_mask=annotation.geo, height=height, width=width)
                 segmentation = COCOUtils.binary_mask_to_rle_encode(binary_mask=annotation.geo)
@@ -1519,7 +1521,7 @@ class Converter:
                 x_points = keypoints[0::3]
                 y_points = keypoints[1::3]
                 x0, x1, y0, y1 = np.min(x_points), np.max(x_points), np.min(y_points), np.max(y_points)
-                area = (x1 - x0) * (y1 - y0)
+                area = float((x1 - x0) * (y1 - y0))
         else:
             raise Exception('Unable to convert annotation of type {} to coco'.format(annotation.type))
 

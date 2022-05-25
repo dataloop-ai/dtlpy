@@ -28,6 +28,26 @@ class BaseModelAdapter:
         self.bucket_path = None
         self.logger = logger
 
+    ##################
+    # Configurations #
+    ##################
+
+    @property
+    def configuration(self) -> dict:
+        if self._snapshot is not None:
+            configuration = self.snapshot.configuration
+        else:
+            configuration = self.model_entity.default_configuration
+        return configuration
+
+    @configuration.setter
+    def configuration(self, d):
+        assert isinstance(d, dict)
+        if self._snapshot is not None:
+            self.snapshot.configuration = d
+        else:
+            self.model_entity.default_configuration = d
+
     ############
     # Entities #
     ############
@@ -130,6 +150,7 @@ class BaseModelAdapter:
                          #
                          partitions=None,
                          filters=None,
+                         overwrite=False,
                          **kwargs):
         """
         Prepares dataset locally before training.
@@ -141,6 +162,7 @@ class BaseModelAdapter:
 
         :param partitions: `dl.SnapshotPartitionType` or list of partitions, defaults for all partitions
         :param dtlpy.entities.filters.Filters filters: `dl.Filter` in order to select only part of the data
+        :param bool overwrite: overwrite the data path (download again). default is False
         """
         if partitions is None:
             partitions = list(entities.SnapshotPartitionType)
@@ -157,7 +179,7 @@ class BaseModelAdapter:
                                      now.strftime('%Y-%m-%d-%H%M%S'),
                                      )
         if data_path is None:
-            data_path = os.path.join(dataloop_path, 'datasets', self.snapshot.dataset.id)
+            data_path = os.path.join(root_path, 'datasets', self.snapshot.dataset.id)
             os.makedirs(data_path, exist_ok=True)
         if output_path is None:
             output_path = os.path.join(root_path, 'output')
@@ -178,15 +200,17 @@ class BaseModelAdapter:
 
         # Download the partitions items
         for partition in partitions:
-            self.logger.debug("Downloading {!r} SnapshotPartition (DataPartition) of {}".format(partition.value,
-                                                                                                self.snapshot.dataset.name))
-            data_partiion_base_path = os.path.join(data_path, partition)
-            ret_list = self.snapshot.download_partition(partition=partition,
-                                                        local_path=data_partiion_base_path,
-                                                        annotation_options=annotation_options,
-                                                        filters=filters)
-            self.logger.info("Downloaded {!r} SnapshotPartition complete. {} total items".format(partition.value,
-                                                                                                 len(list(ret_list))))
+            data_partition_base_path = os.path.join(data_path, partition)
+            if os.path.isdir(data_partition_base_path) and not overwrite:
+                # existing and dont overwrite
+                self.logger.debug("Partition {!r} Existing (and overwrite=False). Skipping.".format(partition.value))
+            else:
+                self.logger.debug("Downloading {!r} SnapshotPartition (DataPartition) of {}".format(partition.value,
+                                                                                                    self.snapshot.dataset.name))
+                ret_list = self.snapshot.download_partition(partition=partition,
+                                                            local_path=data_partition_base_path,
+                                                            annotation_options=annotation_options,
+                                                            filters=filters)
 
         self.convert_from_dtlpy(data_path=data_path, **kwargs)
         return root_path, data_path, output_path
@@ -205,7 +229,9 @@ class BaseModelAdapter:
         if local_path is None:
             local_path = os.path.join(dtlpy_services.service_defaults.DATALOOP_PATH, "snapshots", self.snapshot.name)
         # update adapter instance
-        self.configuration.update(snapshot.configuration)
+        _configuration = self.model_entity.default_configuration
+        _configuration.update(snapshot.configuration)
+        self.configuration = _configuration
         # Download
         if self.snapshot.bucket.is_remote:
             self.logger.debug("Found a remote bucket - downloading to: {!r}".format(local_path))
@@ -254,7 +280,6 @@ class BaseModelAdapter:
             shutil.rmtree(path=local_path, ignore_errors=True)
             self.logger.info("Clean-up. deleting {}".format(local_path))
         self.snapshot.status = 'trained'
-        self.snapshot.configuration = self.configuration
         self.snapshot = self.snapshot.update()
 
     def predict_items(self, items: list, with_upload=True, cleanup=False, batch_size=16, output_shape=None, **kwargs):

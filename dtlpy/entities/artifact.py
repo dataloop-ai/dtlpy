@@ -32,7 +32,7 @@ class Artifact(entities.Item):
             artifact = Artifact.from_json(_json=_json,
                                           client_api=client_api,
                                           dataset=dataset,
-                                          project=None,
+                                          project=project,
                                           is_fetched=True)
             status = True
         except Exception:
@@ -83,6 +83,7 @@ class Artifact(entities.Item):
             url=_json.get('url', None),
             id=_json['id'],
             spec=_json.get('spec', None),
-            creator=_json.get('creator', None))
+            creator=_json.get('creator', None),
+            project_id=project.id if project else None)
         inst.is_fetched = is_fetched
         return inst

@@ -1,4 +1,5 @@
 import json
+import warnings
 from enum import Enum
 from .. import repositories
 
@@ -40,6 +41,7 @@ class SettingsSectionNames(str, Enum):
     APPLICATIONS = "Applications",
     STUDIO = "Studio",
     PLATFORM = "Platform"
+    SDK = "SDK"
 
 
 class SettingScope:
@@ -143,7 +145,7 @@ class BaseSetting:
                         display_scope['filter'] = json.dumps(display_scope['filter'])
 
     def to_json(self):
-        if 'slots' in self.metadata and isinstance(self.metadata['slots'], list):
+        if self.metadata is not None and 'slots' in self.metadata and isinstance(self.metadata['slots'], list):
             for slot in self.metadata['slots']:
                 self.__slot_to_db_slot(slot)
 
@@ -151,10 +153,12 @@ class BaseSetting:
             'name': self.name,
             'valueType': self.value_type,
             'scope': self.scope.to_json(),
-            'metadata': self.metadata,
             'settingType': self.setting_type,
             'id': self.id
         }
+
+        if self.metadata is not None:
+            _json['metadata'] = self.metadata
 
         if self.value is not None:
             _json['value'] = self.value
@@ -165,83 +169,35 @@ class BaseSetting:
         return _json
 
     def delete(self):
+        """
+        Delete a setting
+
+        :return: True if success exceptions if not
+        """
         return self.settings.delete(setting_id=self.id)
 
     def update(self):
+        """
+        Update a setting
+
+        :return: setting entity
+        """
         return self.settings.update(setting=self)
 
 
-class FeatureFlag(BaseSetting):
+class Setting(BaseSetting):
     def __init__(
             self,
-            default_value,
             value,
             name: str,
             value_type: SettingsValueTypes,
             scope: SettingScope,
-            metadata: dict,
-            expired_at: str,
-            expired: bool,
-            id: str = None,
-            client_api=None,
-            project=None,
-            org=None
-    ):
-        super().__init__(
-            default_value=default_value,
-            value=value,
-            name=name,
-            value_type=value_type,
-            scope=scope,
-            metadata=metadata,
-            setting_type=SettingsTypes.FEATURE_FLAG,
-            client_api=client_api,
-            project=project,
-            org=org,
-            id=id
-        )
-        self.expired_at = expired_at
-        self.expired = expired
-
-    @staticmethod
-    def from_json(_json: dict, client_api, project=None, org=None):
-        scope = SettingScope.from_json(_json.get('scope', None))
-        return FeatureFlag(
-            default_value=_json.get('defaultValue', None),
-            name=_json.get('name', None),
-            value=_json.get('value', None),
-            value_type=_json.get('valueType', None),
-            scope=scope,
-            metadata=_json.get('metadata', None),
-            expired_at=_json.get('expiredAt', None),
-            expired=_json.get('expired', None),
-            id=_json.get('id', None),
-            client_api=client_api,
-            project=project,
-            org=org
-        )
-
-    def to_json(self):
-        _json = super().to_json()
-        _json['expiredAt'] = self.expired_at
-        _json['expired'] = self.expired
-        _json['id'] = self.id
-        return _json
-
-
-class UserSetting(BaseSetting):
-    def __init__(
-            self,
-            default_value,
-            value,
-            inputs,
-            name: str,
-            value_type: SettingsValueTypes,
-            scope: SettingScope,
-            metadata: dict,
-            description: str,
-            icon: str,
             section_name: SettingsSectionNames,
+            default_value=None,
+            inputs=None,
+            metadata: dict = None,
+            description: str = None,
+            icon: str = None,
             id: str = None,
             sub_section_name: str = None,
             hint=None,
@@ -272,7 +228,7 @@ class UserSetting(BaseSetting):
     @staticmethod
     def from_json(_json: dict, client_api, project=None, org=None):
         scope = SettingScope.from_json(_json.get('scope', None))
-        return UserSetting(
+        return Setting(
             default_value=_json.get('defaultValue', None),
             name=_json.get('name', None),
             value=_json.get('value', None),
@@ -308,3 +264,46 @@ class UserSetting(BaseSetting):
         if self.id is not None:
             _json['id'] = self.id
         return _json
+
+
+class UserSetting(Setting):
+    def __init__(
+            self,
+            default_value,
+            value,
+            name: str,
+            value_type: SettingsValueTypes,
+            scope: SettingScope,
+            section_name: SettingsSectionNames,
+            inputs=None,
+            metadata: dict = None,
+            description: str = None,
+            icon: str = None,
+            id: str = None,
+            sub_section_name: str = None,
+            hint=None,
+            client_api=None,
+            project=None,
+            org=None
+    ):
+        warnings.warn(
+            message='UserSetting will be Deprecation from version 1.62 use Setting',
+            category=DeprecationWarning)
+        super().__init__(
+            default_value=default_value,
+            value=value,
+            name=name,
+            value_type=value_type,
+            scope=scope,
+            metadata=metadata,
+            client_api=client_api,
+            project=project,
+            org=org,
+            id=id,
+            section_name=section_name,
+            inputs=inputs,
+            description=description,
+            icon=icon,
+            sub_section_name=sub_section_name,
+            hint=hint
+        )

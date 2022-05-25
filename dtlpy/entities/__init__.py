@@ -24,7 +24,8 @@ from .project import Project, MemberRole
 from .artifact import Artifact
 from .dataset import Dataset, ExpirationOptions, IndexDriver
 from .codebase import Codebase
-from .annotation import Annotation, FrameAnnotation, ViewAnnotationOptions, AnnotationStatus, AnnotationType, ExportVersion
+from .annotation import Annotation, FrameAnnotation, ViewAnnotationOptions, AnnotationStatus, AnnotationType, \
+    ExportVersion
 from .annotation_collection import AnnotationCollection
 from .paged_entities import PagedEntities
 from .filters import Filters, FiltersKnownFields, FiltersResource, FiltersOperations, FiltersMethod, \
@@ -38,7 +39,8 @@ from .label import Label
 from .codebase import Codebase, PackageCodebaseType, ItemCodebase, GitCodebase, FilesystemCodebase, LocalCodebase
 from .package import Package, RequirementOperator, PackageRequirement
 from .package_module import PackageModule
-from .package_slot import PackageSlot, SlotPostAction, SlotPostActionType, SlotDisplayScope, SlotDisplayScopeResource
+from .package_slot import PackageSlot, SlotPostAction, SlotPostActionType, SlotDisplayScope, SlotDisplayScopeResource, \
+    UiBindingPanel
 from .package_function import PackageFunction, FunctionIO, PackageInputType
 from .time_series import TimeSeries
 from .service import Service, KubernetesAutuscalerType, KubernetesRabbitmqAutoscaler, KubernetesAutoscaler, \
@@ -62,11 +64,11 @@ from .node import PipelineConnection, PipelineNode, PipelineConnectionPort, Pipe
 from .pipeline_execution import PipelineExecution, PipelineExecutionNode
 from .feature import Feature
 from .feature_set import FeatureSet, FeatureEntityType
-from .organization import Organization, OrganizationsPlans, MemberOrgRole
+from .organization import Organization, OrganizationsPlans, MemberOrgRole, CacheAction, PodType
 from .analytic import ServiceSample, ExecutionSample, PipelineExecutionSample
 from .integration import Integration
 from .driver import Driver, ExternalStorage
 from .setting import Role, PlatformEntityType, SettingsValueTypes, SettingsTypes, SettingsSectionNames, SettingScope, \
-    BaseSetting, FeatureFlag, UserSetting
+    BaseSetting, UserSetting, Setting
 from .reflect_dict import ReflectDict
 from .resource_execution import ResourceExecution

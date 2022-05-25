@@ -44,11 +44,11 @@ def step_impl(context, param, value):
         project_ids.append(context.second_project.id)
         kwargs['project_ids'] = project_ids
         if value == '2_days_from_now':
-            value = datetime.datetime.today().timestamp() + (2 * 24 * 60 * 60)
+            value = (datetime.datetime.today().timestamp() + (2 * 24 * 60 * 60)) * 1000
         elif value == '2_weeks_from_now':
-            value = datetime.datetime.today().timestamp() + (2 * 7 * 24 * 60 * 60)
+            value = (datetime.datetime.today().timestamp() + (2 * 7 * 24 * 60 * 60)) * 1000
         elif value == 'today':
-            value = datetime.datetime.today().timestamp() + (60 * 60)
+            value = (datetime.datetime.today().timestamp() + (60 * 60)) * 1000
         kwargs[param] = value
     else:
         kwargs[param] = value

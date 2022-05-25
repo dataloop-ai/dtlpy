@@ -1,6 +1,8 @@
 import logging
 import math
 import copy
+import sys
+
 import attr
 from .. import services, miscellaneous
 import tqdm
@@ -66,7 +68,8 @@ class PagedEntities:
         return self.items_count
 
     def __iter__(self):
-        pbar = tqdm.tqdm(total=self.total_pages_count, disable=self._client_api.verbose.disable_progress_bar)
+        pbar = tqdm.tqdm(total=self.total_pages_count, disable=self._client_api.verbose.disable_progress_bar,
+                         file=sys.stdout)
         if self.page_offset != 0:
             # reset the count for page 0
             self.page_offset = 0
@@ -155,7 +158,7 @@ class PagedEntities:
     def all(self):
         page_offset = 0
         page_size = 100
-        pbar = tqdm.tqdm(total=self.items_count, disable=self._client_api.verbose.disable_progress_bar)
+        pbar = tqdm.tqdm(total=self.items_count, disable=self._client_api.verbose.disable_progress_bar, file=sys.stdout)
         total_pages = math.ceil(self.items_count / page_size)
         jobs = list()
         pool = self._client_api.thread_pools('item.page')

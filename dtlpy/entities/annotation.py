@@ -56,9 +56,6 @@ class Annotation(entities.BaseEntity):
     """
     Annotations object
     """
-    # annotation definition
-    annotation_definition = attr.ib(repr=False, type=entities.BaseAnnotationDefinition)
-
     # platform
     id = attr.ib()
     url = attr.ib(repr=False)
@@ -87,6 +84,9 @@ class Annotation(entities.BaseEntity):
     item_width = attr.ib(default=None)
     label_suggestions = attr.ib(default=None)
 
+    # annotation definition
+    _annotation_definition = attr.ib(default=None, repr=False, type=entities.BaseAnnotationDefinition)
+
     # snapshots
     frames = attr.ib(default=None, repr=False)
     current_frame = attr.ib(default=0, repr=False)
@@ -110,6 +110,16 @@ class Annotation(entities.BaseEntity):
     ############
     # Platform #
     ############
+
+    @property
+    def annotation_definition(self):
+        return self._annotation_definition
+
+    @annotation_definition.setter
+    def annotation_definition(self, ann_def):
+        if ann_def is not None:
+            ann_def._annotation = self
+        self._annotation_definition = ann_def
 
     @property
     def createdAt(self):
@@ -908,8 +918,6 @@ class Annotation(entities.BaseEntity):
         )
 
         res = cls(
-            # annotation_definition
-            annotation_definition=annotation_definition,
             # platform
             id=None,
             url=None,
@@ -947,8 +955,12 @@ class Annotation(entities.BaseEntity):
             source='sdk'
         )
 
+        if annotation_definition:
+            res.annotation_definition = annotation_definition
+
         if annotation_definition and annotation_definition.attributes:
             res.attributes = annotation_definition.attributes
+
         return res
 
     def add_frames(self,
@@ -1162,7 +1174,10 @@ class Annotation(entities.BaseEntity):
 
         if is_video is None:
             if item is None:
-                is_video = False
+                if _json['metadata'].get('system', {}).get('endFrame', 0) > 0:
+                    is_video = True
+                else:
+                    is_video = False
             else:
                 # get item type
                 if item.mimetype is not None and 'video' in item.mimetype:
@@ -1284,8 +1299,6 @@ class Annotation(entities.BaseEntity):
         annotation = cls(
             # temp
             platform_dict=copy.deepcopy(_json),
-            # annotation definition
-            annotation_definition=annotation_definition,
             # platform
             id=annotation_id,
             url=_json.get('url', None),
@@ -1321,6 +1334,7 @@ class Annotation(entities.BaseEntity):
             label_suggestions=_json.get('labelSuggestions', None),
             source=_json.get('source', None)
         )
+        annotation.annotation_definition = annotation_definition
         annotation.__client_api = client_api
 
         #################

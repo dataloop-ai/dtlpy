@@ -26,6 +26,12 @@ class RedisCache(BaseCache):
             raise ValueError("key must be string")
         self.cache.setex(name=key, value=value, time=self.ttl)
 
+    def ping(self):
+        """
+        Cache ping check if connection is working
+        """
+        self.cache.ping()
+
     def list(self, pattern):
         """
         get the value of the key from the cache

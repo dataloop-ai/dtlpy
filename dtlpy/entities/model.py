@@ -158,7 +158,7 @@ class Model(entities.BaseEntity):
             is_global=_json.get('global', None),
             revisions=_json.get('revisions', None),
             default_runtime=default_runtime,
-            default_configuration=_json.get('defaultConfiguration', None),
+            default_configuration=_json.get('defaultConfiguration', dict()),
             tags=_json.get('tags', None),
             snapshots_count=_json.get('snapshotsCount', 0),
             scope=_json.get('scope', EntityScopeLevel.PROJECT),

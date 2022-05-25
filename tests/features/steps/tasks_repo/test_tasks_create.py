@@ -49,7 +49,7 @@ def step_impl(context):
             task_assignments = [assignment.annotator for assignment in context.task.assignments.list()]
             assert compare_items_list(items_a=task_assignments, items_b=[w_l.assignee_id for w_l in val])
         elif key == 'due_date':
-            assert context.task.due_date == val
+            assert context.task.due_date == val * 1000
         elif key == 'task_name':
             assert context.task.name == val
         elif key == 'dataset':

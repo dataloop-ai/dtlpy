@@ -81,15 +81,15 @@ class DatasetGenerator:
         if label_to_id_map is None and id_to_label_map is None:
             # if both are None - take from dataset
             label_to_id_map = dataset_entity.instance_map
-            id_to_label_map = {v: k for k, v in label_to_id_map.items()}
+            id_to_label_map = {int(v): k for k, v in label_to_id_map.items()}
         else:
             # one or both is NOT None
             if label_to_id_map is None:
                 # set label_to_id_map from the other
-                label_to_id_map = {v: k for k, v in id_to_label_map.items()}
+                label_to_id_map = {v: int(k) for k, v in id_to_label_map.items()}
             if id_to_label_map is None:
                 # set id_to_label_map from the other
-                id_to_label_map = {v: k for k, v in label_to_id_map.items()}
+                id_to_label_map = {int(v): k for k, v in label_to_id_map.items()}
             # put it on the local ontology for the annotations download
             dataset_entity._get_ontology().instance_map = label_to_id_map
         self.id_to_label_map = id_to_label_map
@@ -167,7 +167,7 @@ class DatasetGenerator:
             # add image path
             item_info.image_filepath = str(image_filepath)
             if os.stat(image_filepath).st_size < 5:
-                logger.exception('Corrupted Image: {!r}'.format(image_filepath))
+                logger.warning('IGNORING corrupted image: {!r}'.format(image_filepath))
                 return None, True
             # get "platform" path
             rel_path = image_filepath.relative_to(self._items_path)
@@ -473,11 +473,14 @@ def default_transforms_callback(transforms, image, target, annotation_type):
     ############
     # Handle compositions and lists of augmentations with a recursive call
     if transforms_type.__module__ == 'torchvision.transforms.transforms' and transforms_type.__name__ == 'Compose':
-        # use torchvision compose
+        # torchvision compose - convert to list
         image, target = default_transforms_callback(transforms.transforms, image, target, annotation_type)
+        return image, target
 
     if transforms_type.__module__ == 'imgaug.augmenters.meta' and transforms_type.__name__ == 'Sequential':
+        # imgaug sequential - convert to list
         image, target = default_transforms_callback(list(transforms), image, target, annotation_type)
+        return image, target
 
     if isinstance(transforms, list):
         for t in transforms:
@@ -600,8 +603,12 @@ def collate_tf(batch):
             # array of string classes and object
             if np_str_obj_array_pattern.search(elem.dtype.str) is not None:
                 raise TypeError(default_collate_err_msg_format.format(elem.dtype))
-            return tf.convert_to_tensor(batch)
-            # return [tf.convert_to_tensor(b) for b in batch]
+            try:
+                return tf.convert_to_tensor(batch)
+            except ValueError:
+                # failed on orig_image because of a mismatch in the shape (not resizing all the images so cannot stack)
+                return batch
+                # return [tf.convert_to_tensor(b) for b in batch]
         elif elem.shape == ():  # scalars
             return tf.convert_to_tensor(batch)
     elif isinstance(elem, float):

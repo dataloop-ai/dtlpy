@@ -26,7 +26,7 @@ author = 'Or Shabtay'
 # The short X.Y version
 version = ''
 # The full version, including alpha/beta/rc tags
-release = '1.56.9'
+release = '1.57.31'
 
 add_module_names = False
 
@@ -91,7 +91,7 @@ pygments_style = None
 # a list of builtin themes.
 #
 html_theme = 'sphinx_rtd_theme'
-html_logo = '_static/logo.svg'
+html_logo = '_static/logo-white.png'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the

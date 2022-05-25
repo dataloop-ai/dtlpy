@@ -3,6 +3,8 @@ Datasets Repository
 """
 
 import os
+import sys
+
 import tqdm
 import logging
 from urllib.parse import urlencode
@@ -853,7 +855,7 @@ class Datasets:
             filters = entities.Filters()
         pages = dataset.items.list(filters=filters)
         total_items = pages.items_count
-        pbar = tqdm.tqdm(total=total_items)
+        pbar = tqdm.tqdm(total=total_items, file=sys.stdout)
         pool = self._client_api.thread_pools('annotation.upload')
         annotations_uploaded_count = 0
         for item in pages.all():

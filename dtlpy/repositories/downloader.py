@@ -1,4 +1,5 @@
 import shutil
+import sys
 import threading
 import traceback
 import requests
@@ -207,7 +208,7 @@ class Downloader:
         # pool
         pool = client_api.thread_pools(pool_name='item.download')
         # download
-        pbar = tqdm.tqdm(total=num_items, disable=client_api.verbose.disable_progress_bar)
+        pbar = tqdm.tqdm(total=num_items, disable=client_api.verbose.disable_progress_bar, file=sys.stdout)
         try:
             i_item = 0
             for page in items_to_download:
@@ -656,7 +657,8 @@ class Downloader:
                 if not result:
                     raise PlatformException(response)
             else:
-                local_filepath = os.path.normpath(local_filepath.split('_link.json')[0])
+                _, ext = os.path.splitext(item.metadata['system']['shebang']['linkInfo']['ref'].split('?')[0])
+                local_filepath += ext
                 response = self.get_url_stream(url=url)
 
             if save_locally:
@@ -677,13 +679,15 @@ class Downloader:
                                                   unit_scale=True,
                                                   unit_divisor=1024,
                                                   position=1,
+                                                  file=sys.stdout,
                                                   disable=self.items_repository._client_api.verbose.disable_progress_bar)
                 except Exception as err:
                     one_file_progress_bar = False
                     logger.debug('Cant decide downloaded file length, bar will not be presented: {}'.format(err))
 
                 # start download
-                if self.items_repository._client_api.sdk_cache.use_cache:
+                if self.items_repository._client_api.sdk_cache.use_cache and \
+                        self.items_repository._client_api.cache is not None:
                     response_output = os.path.normpath(response.content)
                     if isinstance(response_output, bytes):
                         response_output = response_output.decode('utf-8')[1:-1]
@@ -694,15 +698,17 @@ class Downloader:
                             shutil.copyfile(source_path, local_filepath)
                 else:
                     try:
-                        with open(local_filepath, "wb") as f:
+                        temp_file_path = local_filepath + '.download'
+                        with open(temp_file_path, "wb") as f:
                             for chunk in response.iter_content(chunk_size=chunk_size):
                                 if chunk:  # filter out keep-alive new chunks
                                     f.write(chunk)
                                     if one_file_progress_bar:
                                         one_file_pbar.update(len(chunk))
+                        os.rename(temp_file_path, local_filepath)
                     except Exception as err:
-                        if os.path.isfile(local_filepath):
-                            os.remove(local_filepath)
+                        if os.path.isfile(temp_file_path):
+                            os.remove(temp_file_path)
                         raise err
                 if one_file_progress_bar:
                     one_file_pbar.close()

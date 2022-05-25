@@ -1,4 +1,5 @@
 import logging
+import sys
 import time
 import numpy as np
 import tqdm
@@ -96,7 +97,7 @@ class Commands:
             timeout = np.inf
 
         command = None
-        pbar = tqdm.tqdm(total=100, disable=self._client_api.verbose.disable_progress_bar)
+        pbar = tqdm.tqdm(total=100, disable=self._client_api.verbose.disable_progress_bar, file=sys.stdout)
         num_tries = 1
         while elapsed < timeout:
             command = self.get(command_id=command_id, url=url)
@@ -106,9 +107,9 @@ class Commands:
             elapsed = int(time.time()) - start
             sleep_time = np.min([timeout - elapsed, backoff_factor * (2 ** (num_tries - 1)), MAX_SLEEP_TIME])
             num_tries += 1
-            logger.debug(
-                "Command {!r} is running for {:.2f}[s] and now Going to sleep {:.2f}[s]".format(command.id, elapsed,
-                                                                                                sleep_time))
+            logger.debug("Command {!r} is running for {:.2f}[s] and now Going to sleep {:.2f}[s]".format(command.id,
+                                                                                                         elapsed,
+                                                                                                         sleep_time))
             time.sleep(sleep_time)
         pbar.close()
         if command is None:

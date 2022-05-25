@@ -54,7 +54,7 @@ class CookieIO:
                 with open(self.COOKIE, 'r') as f:
                     json.load(f)
         except ValueError:
-            print('{} is corrupted'.format(self.COOKIE))
+            print('FATAL ERROR: COOKIE {!r} is corrupted. please fix or delete the file.'.format(self.COOKIE))
             raise SystemExit
 
     def read_json(self, create=False):

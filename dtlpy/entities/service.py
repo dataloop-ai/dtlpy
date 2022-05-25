@@ -149,7 +149,7 @@ class Service(entities.BaseEntity):
             client_api=client_api,
             package=package,
             project=project,
-            secrets=("secrets", None)
+            secrets=_json.get("secrets", None)
         )
         inst.is_fetched = is_fetched
         return inst
@@ -264,9 +264,9 @@ class Service(entities.BaseEntity):
                 attr.fields(Service).queue_length_limit,
                 attr.fields(Service).max_attempts,
                 attr.fields(Service).on_reset,
-                attr.fields(Service).secrets,
                 attr.fields(Service).created_at,
                 attr.fields(Service).updated_at,
+                attr.fields(Service).secrets,
             )
         )
 
@@ -297,6 +297,9 @@ class Service(entities.BaseEntity):
 
         if self.queue_length_limit is not None:
             _json['queueLengthLimit'] = self.queue_length_limit
+
+        if self.secrets is not None:
+            _json['secrets'] = self.secrets
 
         return _json
 

@@ -68,6 +68,15 @@ class DiskCache(BaseCache):
         except:
             return None
 
+    def ping(self):
+        """
+        Cache ping check if connection is working
+        """
+        if os.path.exists(os.path.join(self.cache_dir, 'cache.db')):
+            return True
+        else:
+            raise Exception('cache db not fond')
+
     def get(self, key):
         """
         get the value of the key from the cache

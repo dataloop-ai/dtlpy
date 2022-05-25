@@ -43,24 +43,26 @@ def prepare_dataset(dataset: entities.Dataset,
     cloned_dataset = dataset.clone(clone_name=clone_name,
                                    filters=filters)
     toc = time.time()
+
+    orig_recipe = dataset.recipes.list()[0]
+    cloned_recipe = orig_recipe.clone(shallow=True)
+    cloned_dataset.metadata['system']['recipes'] = [cloned_recipe.id]
+
     logger.info("clone complete: {!r} in {:1.1f}[s]".format(cloned_dataset.name, toc - tic))
 
     assert cloned_dataset.name is not None, ('unable to get new ds {}'.format(clone_name))
     cloned_dataset.metadata['system']['clone_info'] = {'date': now,
-                                                       'originalDatasetId': dataset.id,
-                                                       }
+                                                       'originalDatasetId': dataset.id}
     if filters is not None:
         cloned_dataset.metadata['system']['clone_info'].update({'filters': json.dumps(filters.prepare())})
-
-    cloned_dataset._ontology_ids = dataset.ontology_ids
     cloned_dataset.update(system_metadata=True)
 
     # set partitions
-    create_dataset_partition(dataset=dataset, partitions=partitions)
+    create_dataset_partition(dataset=cloned_dataset, partitions=partitions)
 
     # https://dataloop.atlassian.net/browse/DAT-13390
-    # cloned_dataset.set_readonly(True)
     return cloned_dataset
+    # cloned_dataset.set_readonly(True)
 
 
 def create_dataset_partition(dataset: entities.Dataset,
@@ -73,7 +75,6 @@ def create_dataset_partition(dataset: entities.Dataset,
         partition needs to be one of dl.SnapshotPartition
     :return: None
     """
-
 
     has_partitions = dataset.get_partitions(list(entities.SnapshotPartitionType)).items_count > 0
     if has_partitions:

@@ -367,7 +367,7 @@ class Task:
         self.add_items(filters=filters, items=items)
         return assignment
 
-    def add_items(self, filters=None, items=None, assignee_ids=None, workload=None, limit=0, wait=True, query=None):
+    def add_items(self, filters=None, items=None, assignee_ids=None, workload=None, limit=None, wait=True, query=None):
         """
         Add items to Task
 

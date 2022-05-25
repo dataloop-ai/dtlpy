@@ -9,6 +9,8 @@ import dtlpy as dl
 import numpy as np
 from behave_testrail_reporter import TestrailReporter
 
+dl.verbose.disable_progress_bar = True
+
 try:
     # for local import
     from tests.env_from_git_branch import get_env_from_git_branch

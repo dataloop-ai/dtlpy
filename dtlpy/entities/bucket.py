@@ -201,7 +201,7 @@ class GCSBucket(Bucket):
         try:
             from google.cloud import storage
         except (ModuleNotFoundError, ImportError) as err:
-            raise RuntimeError('dtlpy requires external package. Please install and re-run') from err
+            raise Exception('dtlpy requires external package. to install run: "pip install google-cloud-storage"')
 
         super().__init__(bucket_type=BucketType.GCS, buckets=buckets)
         self._gcs_project_name = gcs_project_name

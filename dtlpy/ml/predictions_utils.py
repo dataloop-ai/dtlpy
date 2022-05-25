@@ -1,3 +1,5 @@
+import sys
+
 import pandas as pd
 import numpy as np
 import traceback
@@ -182,9 +184,11 @@ def measure_annotations(
         annotation_subset_one = entities.AnnotationCollection()
         annotation_subset_two = entities.AnnotationCollection()
         annotation_subset_one.annotations = [a for a in annotations_set_one if
-                                 a.type == compare_type and not a.metadata.get('system', dict()).get('system', False)]
+                                             a.type == compare_type and not a.metadata.get('system', dict()).get(
+                                                 'system', False)]
         annotation_subset_two.annotations = [a for a in annotations_set_two if
-                                 a.type == compare_type and not a.metadata.get('system', dict()).get('system', False)]
+                                             a.type == compare_type and not a.metadata.get('system', dict()).get(
+                                                 'system', False)]
         # create 2d dataframe with annotation id as names and set all to -1 -> not calculated
         if ignore_labels:
             matches = metrics.Matchers.general_match(matches=matches,
@@ -289,7 +293,7 @@ def measure_items(ref_items, ref_project, ref_dataset, ref_name,
     ref_items_filepath_dict = {item.filename: item for page in ref_items for item in page}
     test_items_filepath_dict = {item.filename: item for page in test_items for item in page}
     pool = ThreadPool(processes=32)
-    pbar = tqdm.tqdm(total=len(ref_items_filepath_dict))
+    pbar = tqdm.tqdm(total=len(ref_items_filepath_dict), file=sys.stdout)
     jobs = dict()
     for filepath, ref_item in ref_items_filepath_dict.items():
         if filepath in test_items_filepath_dict:
