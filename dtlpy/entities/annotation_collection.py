@@ -250,7 +250,7 @@ class AnnotationCollection(entities.BaseEntity):
         fps = self.item.system.get('fps', 0)
         height = self.item.system.get('height', 0)
         width = self.item.system.get('width', 0)
-        nb_frames = int(self.item.system.get('ffmpeg', {}).get('nb_read_frames'))
+        nb_frames = self.item.system.get('nb_frames')
         writer = cv2.VideoWriter(filename=output_filepath,
                                  fourcc=cv2.VideoWriter_fourcc(*"mp4v"),
                                  fps=fps,

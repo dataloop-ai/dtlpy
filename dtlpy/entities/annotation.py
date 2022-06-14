@@ -1,6 +1,4 @@
 import os
-import warnings
-
 import numpy as np
 import traceback
 import logging
@@ -551,9 +549,6 @@ class Annotation(entities.BaseEntity):
 
             annotation.download(filepath='filepath', annotation_format=dl.ViewAnnotationOptions.MASK)
         """
-        warnings.warn(
-            message='Downloading annotations default format will change from Mask to Json starting version 1.60.0',
-            category=DeprecationWarning)
         if annotation_format == ViewAnnotationOptions.JSON:
             with open(filepath, 'w') as f:
                 json.dump(self.to_json(), f, indent=2)

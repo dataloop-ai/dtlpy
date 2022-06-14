@@ -10,19 +10,6 @@ logger = logging.getLogger(name='dtlpy')
 
 
 class OnResetAction(str, Enum):
-    """ The Execution action when the service reset (RERUN, FAILED).
-
-    .. list-table::
-       :widths: 15 150
-       :header-rows: 1
-
-       * - State
-         - Description
-       * - RERUN
-         - When the service resting rerun the execution
-       * - FAILED
-         - When the service resting fail the execution
-    """
     RERUN = 'rerun'
     FAILED = 'failed'
 
@@ -519,39 +506,6 @@ class Service(entities.BaseEntity):
 
 
 class InstanceCatalog(str, Enum):
-    """ The Service Pode size.
-
-    .. list-table::
-       :widths: 15 150
-       :header-rows: 1
-
-       * - State
-         - Description
-       * - REGULAR_XS
-         - regular pod with extra small size
-       * - REGULAR_S
-         - regular pod with small size
-       * - REGULAR_M
-         - regular pod with medium size
-       * - REGULAR_L
-         - regular pod with large size
-       * - REGULAR_XL
-         - regular pod with extra large size
-       * - HIGHMEM_XS
-         - highmem pod with extra small size
-       * - HIGHMEM_S
-         - highmem pod with small size
-       * - HIGHMEM_M
-         - highmem pod with medium size
-       * - HIGHMEM_L
-         - highmem pod with large size
-       * - HIGHMEM_XL
-         - highmem pod with extra large size
-       * - GPU_K80_S
-         - GPU pod with small size
-       * - GPU_K80_M
-         - GPU pod with medium size
-    """
     REGULAR_XS = "regular-xs"
     REGULAR_S = "regular-s"
     REGULAR_M = "regular-m"
@@ -567,19 +521,6 @@ class InstanceCatalog(str, Enum):
 
 
 class KubernetesAutuscalerType(str, Enum):
-    """ The Service Autuscaler Type (RABBITMQ, CPU).
-
-    .. list-table::
-       :widths: 15 150
-       :header-rows: 1
-
-       * - State
-         - Description
-       * - RABBITMQ
-         - Service Autuscaler will be in RABBITMQ
-       * - CPU
-         - Service Autuscaler will be in in local CPU
-    """
     RABBITMQ = 'rabbitmq'
     CPU = 'cpu'
 
@@ -642,17 +583,6 @@ class KubernetesRabbitmqAutoscaler(KubernetesAutoscaler):
 
 
 class RuntimeType(str, Enum):
-    """ Service culture Runtime (KUBERNETES).
-
-    .. list-table::
-       :widths: 15 150
-       :header-rows: 1
-
-       * - State
-         - Description
-       * - KUBERNETES
-         - Service run in kubernetes culture
-    """
     KUBERNETES = 'kubernetes'
 
 

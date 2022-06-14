@@ -2,8 +2,6 @@ import shutil
 import sys
 import threading
 import traceback
-import warnings
-
 import requests
 import logging
 import json
@@ -83,9 +81,6 @@ class Downloader:
         # Default options #
         ###################
         # annotation options
-        warnings.warn(
-            message='Downloading annotations default format will change from Mask to Json starting version 1.60.0',
-            category=DeprecationWarning)
         if annotation_options is None:
             annotation_options = list()
         elif not isinstance(annotation_options, list):
