@@ -77,14 +77,10 @@ def resolve_platform_settings_in_thread(settings, client_api):
         # check for a valid token again
         if client_api.token_expired():
             # return if cant find a valid token
-            logger.debug('Cant check_sdk without a valid token.')
+            logger.debug('Cant set settings without a valid token.')
             return
         settings_list = settings.resolve(user_email=client_api.info()['user_email'])
-        settings_dict = {s.name: {s.scope.id: s.value,
-                                  "default": s.default_value}
-                         for s in settings_list}
-        client_api.platform_settings.settings.update(settings_dict)
-        client_api.platform_settings.to_cookie()
+        client_api.platform_settings.add_bulk(settings_list)
 
     except Exception:
         logger.debug(traceback.format_exc())

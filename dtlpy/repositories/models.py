@@ -271,7 +271,6 @@ class Models:
                description: str = None,
                output_type: entities.ModelOutputType = None,
                input_type: entities.ModelInputType = None,
-               is_global: bool = None,
                checkout: bool = False,
                tags: List[str] = None,
                # online mode
@@ -297,7 +296,6 @@ class Models:
         :param str description: model description
         :param str output_type: model output type (annotation type)
         :param str input_type: model input mimetype
-        :param bool is_global: is model global
         :param bool checkout: checkout model to local state
         :param list tags: list of string tags
         For online mode
@@ -330,9 +328,6 @@ class Models:
 
         if tags is not None:
             payload['tags'] = tags
-
-        if is_global is not None:
-            payload['global'] = is_global
 
         if codebase is None:
             if src_path is None:

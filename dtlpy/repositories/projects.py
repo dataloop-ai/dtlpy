@@ -1,5 +1,5 @@
 import logging
-
+from urllib.parse import quote
 import jwt
 
 from .. import entities, miscellaneous, exceptions, services
@@ -45,6 +45,7 @@ class Projects:
         """
         :param project_name:
         """
+        project_name = quote(project_name.encode("utf-8"))
         success, response = self._client_api.gen_request(req_type='get',
                                                          path='/projects/{}/name'.format(project_name))
         if success:
@@ -409,6 +410,11 @@ class Projects:
         assert isinstance(project, entities.Project)
         if checkout:
             self.checkout(project=project)
+        if project.id not in self._client_api.platform_settings.working_projects:
+            self._client_api.platform_settings.add_project(project.id)
+            settings_list = project.settings.resolve(user_email=self._client_api.info()['user_email'],
+                                                     project_id=project.id)
+            self._client_api.platform_settings.add_bulk(settings_list)
         return project
 
     def delete(self,

@@ -1,3 +1,4 @@
+import asyncio
 import time
 import types
 
@@ -44,6 +45,13 @@ class Videos:
 
     @staticmethod
     def video_snapshots_generator(item_id=None, item=None, frame_interval=30, image_ext="png"):
+        asyncio.run(Videos._async_video_snapshots_generator(item_id=item_id,
+                                                            item=item,
+                                                            frame_interval=frame_interval,
+                                                            image_ext=image_ext))
+
+    @staticmethod
+    async def _async_video_snapshots_generator(item_id=None, item=None, frame_interval=30, image_ext="png"):
         """
         Create video-snapshots
 
@@ -90,7 +98,7 @@ class Videos:
             duration = video_fps * nb_frames
 
         images_path = Videos.disassemble(filepath=video_path, frame_interval=frame_interval, image_ext=image_ext)
-        snapshots_items = None
+        snapshots_items = list()
         try:
             # rename files
             images = []
@@ -101,20 +109,35 @@ class Videos:
                 image_split_name, ext = os.path.splitext(image)
                 try:
                     frame = int(image_split_name) * frame_interval
+                    file_frame_name = "{}.frame.{}{}".format(video_basename, frame, ext)
+                    full_path = os.path.join(images_path, file_frame_name)
                     os.rename(os.path.join(images_path, image),
-                              os.path.join(images_path,
-                                           "{}.frame.{}{}".format(video_basename, frame, ext)))
+                              full_path)
                 except Exception as e:
                     logger.debug("Rename {} has been failed: {}".format(os.path.join(images_path, image), e))
 
-            remote_path = os.path.join(os.path.split(item.filename)[0], "snapshots")
-            snapshots_items = item.dataset.items.upload(local_path=images_path, remote_path=remote_path)
+                remote_path = os.path.join(os.path.split(item.filename)[0], "snapshots")
+                remote_url = '/items/{}/snapshots'.format(item.id)
+                to_upload = open(full_path, 'rb')
+                try:
+                    response = await item._client_api.upload_file_async(to_upload=to_upload,
+                                                                        item_type='file',
+                                                                        item_size=os.stat(full_path).st_size,
+                                                                        remote_url=remote_url,
+                                                                        uploaded_filename=file_frame_name,
+                                                                        remote_path=remote_path)
+                except Exception:
+                    raise
+                finally:
+                    to_upload.close()
+                if response.ok:
+                    snapshots_items.append(item.from_json(response.json(), item._client_api))
+                else:
+                    raise dl.PlatformException(response)
 
             # classification tpe annotation creation for each file
             builder = item.annotations.builder()
             annotation_itemlinks = []
-            if not isinstance(snapshots_items, types.GeneratorType):
-                snapshots_items = [snapshots_items]
 
             max_object_id = Videos().get_max_object_id(item=item)
             for snapshot_item in snapshots_items:

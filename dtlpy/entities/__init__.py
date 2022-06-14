@@ -31,7 +31,7 @@ from .paged_entities import PagedEntities
 from .filters import Filters, FiltersKnownFields, FiltersResource, FiltersOperations, FiltersMethod, \
     FiltersOrderByDirection
 from .recipe import Recipe
-from .ontology import Ontology
+from .ontology import Ontology, AttributesTypes, AttributesRange
 from .annotation_definitions import Box, Cube, Cube3d, Point, Segmentation, Polygon, Ellipse, Classification, \
     Subtitle, Text, \
     Polyline, Comparison, UndefinedAnnotationType, Note, Description, Pose
@@ -55,10 +55,10 @@ from .user import User
 from .bot import Bot
 from .webhook import Webhook, HttpMethod
 from .model import Model, ModelOutputType, ModelInputType, EntityScopeLevel
-from .snapshot import Snapshot, OntologySpec, SnapshotPartitionType
+from .snapshot import Snapshot, OntologySpec, SnapshotPartitionType, SnapshotMetricSample
 from .bucket import BucketType, Bucket, ItemBucket, GCSBucket, LocalBucket
 from .driver import Driver
-from .pipeline import Pipeline
+from .pipeline import Pipeline, PipelineStats
 from .node import PipelineConnection, PipelineNode, PipelineConnectionPort, PipelineNodeIO, TaskNode, \
     CodeNode, FunctionNode, PipelineNodeType, PipelineNameSpace, DatasetNode
 from .pipeline_execution import PipelineExecution, PipelineExecutionNode

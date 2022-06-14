@@ -1,5 +1,8 @@
 import os
 import time
+import uuid
+import random
+
 
 import dtlpy as dl
 import behave
@@ -240,3 +243,129 @@ def step_impl(context):
 
     context.pipeline.update()
     context.pipeline.install()
+
+
+@behave.when(u'I create a pipeline with dataset resources')
+def step_impl(context):
+
+    context.pipeline = context.project.pipelines.create(name='sdk-pipeline-sanity-{}'.format(random.randrange(1000, 10000)))
+
+    def run_1(item: dl.Item):
+        dataset = item.dataset
+        return dataset
+
+    code_node_1 = dl.CodeNode(
+        name='My Function',
+        position=(0, 0),
+        project_id=context.project.id,
+        method=run_1,
+        project_name=context.project.name,
+        outputs=[dl.PipelineNodeIO(port_id=str(uuid.uuid4()),
+                                   input_type=dl.PackageInputType.DATASET,
+                                   name='dataset',
+                                   display_name='dataset')]
+    )
+
+    def run_2(dataset: dl.Dataset):
+        for page in dataset.items.list():
+            for item in page:
+                break
+        return item
+
+    code_node_2 = dl.CodeNode(
+        name='My Function',
+        position=(2, 0),
+        project_id=context.project.id,
+        method=run_2,
+        project_name=context.project.name,
+        inputs=[dl.PipelineNodeIO(port_id=str(uuid.uuid4()),
+                                  input_type=context.dl.PackageInputType.DATASET,
+                                  name='dataset',
+                                  display_name='dataset')]
+    )
+
+    context.pipeline.nodes.add(code_node_1).connect(node=code_node_2, filters=context.filters)
+
+    code_node_1.add_trigger()
+    context.pipeline.update()
+    context.pipeline.install()
+
+
+@behave.then(u'I expect that pipeline execution has "{execution_number}" success executions')
+def step_impl(context, execution_number):
+    assert context.pipeline.pipeline_executions.list().items_count != 0, "Pipeline did not executed"
+    context.pipeline = context.project.pipelines.get(context.pipeline.name)
+
+    num_try = 10
+    interval = 10
+    validate = 0
+    executed = False
+
+    for i in range(num_try):
+        time.sleep(interval)
+        execution_list = context.pipeline.pipeline_executions.list()[0][0].executions
+        execution_count = 0
+        for ex in execution_list.values():
+            execution_count = execution_count + len(ex)
+        if execution_count == int(execution_number):
+            validate += 1
+            if validate == 2:
+                executed = True
+                break
+
+    assert executed
+    return executed
+
+
+@behave.when(u'I create a pipeline dataset, task "{type}" and code nodes - repeatable "{flag}"')
+def step_impl(context, type, flag):
+
+    flag = eval(flag)
+
+    t = time.localtime()
+    current_time = time.strftime("%H-%M-%S", t)
+    pipeline_name = 'pipeline-sdk-{}'.format(current_time)
+
+    context.pipeline = context.project.pipelines.create(name=pipeline_name)
+
+    dataset_node = dl.DatasetNode(
+        name=context.dataset.name,
+        project_id=context.project.id,
+        dataset_id=context.dataset.id,
+        position=(1, 1)
+    )
+
+    task_name = 'My Task-completed' + current_time
+    task_node = dl.TaskNode(
+        name=task_name,
+        recipe_id=context.recipe.id,
+        recipe_title=context.recipe.title,
+        task_owner="nirrozmarin@dataloop.ai",
+        workload=[dl.WorkloadUnit(assignee_id="oa-test-1@dataloop.ai", load=100)],
+        position=(2, 2),
+        task_type=type,
+        project_id=context.project.id,
+        dataset_id=context.dataset.id,
+        repeatable=flag
+    )
+
+    function_node = dl.FunctionNode(
+        name='automate',
+        position=(3, 3),
+        service=dl.services.get(service_id=context.service.id),
+        function_name='automate'
+    )
+
+    context.pipeline.nodes.add(dataset_node).connect(node=task_node).connect(node=function_node, source_port=task_node.outputs[0])
+    dataset_node.add_trigger()
+
+    context.pipeline.update()
+    pipeline = context.project.pipelines.get(pipeline_name=pipeline_name)
+    pipeline.install()
+
+    time.sleep(5)
+    try:
+        context.task = context.project.tasks.get(task_name=task_name + " (" + pipeline_name + ")")
+    except Exception as e:
+        assert False, "Failed to get task with the name: {}\n{}".format(task_name + " (" + pipeline_name + ")",e)
+

@@ -43,6 +43,28 @@ class AnnotationType(str, Enum):
 
 
 class ViewAnnotationOptions(str, Enum):
+    """ The Annotations file types to download (JSON, MASK, INSTANCE, ANNOTATION_ON_IMAGE, VTT, OBJECT_ID).
+
+    .. list-table::
+       :widths: 15 150
+       :header-rows: 1
+
+       * - State
+         - Description
+       * - JSON
+         - Dataloop json format
+       * - MASK
+         - PNG file that contains drawing annotations on it
+       * - INSTANCE
+         - An image file that contains 2D annotations
+       * - ANNOTATION_ON_IMAGE
+         - The source image with the annotations drawing in it
+       * - VTT
+         - An text file contains supplementary information about a web video
+       * - OBJECT_ID
+         - An image file that contains 2D annotations
+
+    """
     JSON = "json"
     MASK = "mask"
     INSTANCE = "instance"
@@ -1277,7 +1299,8 @@ class Annotation(entities.BaseEntity):
             # get coordinates
             coordinates = _json.get('coordinates', list())
             # set video only attributes
-            end_time = 0
+            if not is_audio:
+                end_time = 0
             # get automated
             if 'system' in metadata and metadata['system'] is not None:
                 automated = metadata['system'].get('automated', automated)

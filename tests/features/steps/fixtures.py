@@ -68,6 +68,12 @@ def get_value(params, context):
             val = context.project.id
         elif key == 'task_id':
             val = context.task.id
+        elif key == 'batch_size':
+            val = 5
+        elif key == 'max_batch_workload':
+            val = 7
+        elif key == 'allowed_assignees':
+            val = ['annotator1@dataloop.ai', 'annotator2@dataloop.ai']
 
     if key == 'filters' and val is not None and not isinstance(val, dict):
         filters = context.dl.Filters()
@@ -98,6 +104,10 @@ def get_value(params, context):
         for action in action_status:
             available_actions_list.append(context.dl.ItemAction(action=action, display_name=action, color='#2ef16c'))
         val = available_actions_list
+    elif key == 'batch_size':
+        val = int(val)
+    elif key == 'max_batch_workload':
+        val = int(val)
     return val
 
 

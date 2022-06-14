@@ -1,6 +1,5 @@
 import logging
 import traceback
-
 from .. import entities, miscellaneous, exceptions, services
 
 logger = logging.getLogger(name='dtlpy')
@@ -389,3 +388,113 @@ class Ontologies:
                 # noinspection PyStringFormat
                 root["value"]["color"] = "#%02x%02x%02x" % root["value"]["color"]
         return roots
+
+    def update_attributes(self,
+                          ontology_id: str,
+                          title: str,
+                          key: str,
+                          attribute_type: entities.AttributesTypes,
+                          scope: list = None,
+                          optional: bool = None,
+                          multi: bool = None,
+                          values: list = None,
+                          attribute_range: entities.AttributesRange = None):
+        """
+        ADD a new attribute or update if exist
+
+        :param str ontology_id: ontology_id
+        :param str title: attribute title
+        :param str key: the key of the attribute must br unique
+        :param AttributesTypes attribute_type: dl.AttributesTypes your attribute type
+        :param list scope: list of the labels or * for all labels
+        :param bool optional: optional attribute
+        :param bool multi: if can get multiple selection
+        :param list values: list of the attribute values ( for checkbox and radio button)
+        :param dict or AttributesRange attribute_range: dl.AttributesRange object
+        :return: true in success
+        :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            ontology.update_attributes(key='1',
+                                       title='checkbox',
+                                       attribute_type=dl.AttributesTypes.CHECKBOX,
+                                       values=[1,2,3])
+        """
+        if not title:
+            raise exceptions.PlatformException(400, "title must be provided")
+        url_path = '/ontologies/{ontology_id}/attributes'.format(ontology_id=ontology_id)
+
+        # build attribute json
+        attribute_json = {
+            'title': title,
+            'key': key,
+            'type': attribute_type,
+        }
+
+        if optional is not None:
+            attribute_json['optional'] = optional
+
+        if multi is not None:
+            attribute_json['multi'] = multi
+
+        if values is not None:
+            if not isinstance(values, list):
+                values = [values]
+            for val in values:
+                if not isinstance(val, str):
+                    raise exceptions.PlatformException(400, 'Attributes values type must be list of strings')
+            attribute_json['values'] = values
+
+        if attribute_range is not None:
+            attribute_json['range'] = attribute_range.to_json()
+
+        if scope is not None:
+            if not isinstance(scope, list):
+                scope = [scope]
+        else:
+            scope = ['*']
+        attribute_json['scope'] = scope
+
+        json_req = {
+            'items': [attribute_json],
+            'upsert': True
+        }
+
+        success, response = self._client_api.gen_request(req_type="PATCH",
+                                                         path=url_path,
+                                                         json_req=json_req)
+        if not success:
+            raise exceptions.PlatformException(response)
+        return True
+
+    def delete_attributes(self, ontology_id, keys: list):
+        """
+        Delete a bulk of attributes
+
+        :param str ontology_id: ontology id
+        :param list keys: Keys of attributes to delete
+        :return: True if success
+        :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            ontology.delete_attributes(['1'])
+        """
+
+        if not isinstance(keys, list):
+            keys = [keys]
+        url_path = '/ontologies/{ontology_id}/attributes'.format(ontology_id=ontology_id)
+        json_req = {
+            'keys': keys
+        }
+        success, response = self._client_api.gen_request(req_type="DELETE",
+                                                         path=url_path,
+                                                         json_req=json_req)
+        if not success:
+            raise exceptions.PlatformException(response)
+        return True

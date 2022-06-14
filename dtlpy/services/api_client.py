@@ -312,48 +312,17 @@ class Attributes2:
 
 class PlatformSettings:
 
-    def __init__(self, cookie):
-        self.cookie = cookie
-        setting_str = self.cookie.get('settings')
-        if setting_str is None:
-            dictionary = dict()
-            self._settings = dictionary
-            self.to_cookie()
-        elif isinstance(setting_str, str):
-            dictionary = self.from_string(setting_str)
-        elif isinstance(setting_str, dict):
-            dictionary = setting_str
-        else:
-            raise ValueError('unknown setting type: {}'.format(type(setting_str)))
-
-        self._settings = dictionary
-
-    def to_cookie(self):
-        setting_str = self.to_string(self._settings)
-        self.cookie.put(key='settings', value=setting_str)
-
-    def to_string(self, settings_dict):
-        """
-        convert object to base 64 string
-        """
-        base64_bytes = base64.b64encode(json.dumps(settings_dict).encode("ascii"))
-        base64_string = base64_bytes.decode("ascii")
-        return base64_string
-
-    def from_string(self, base64_string):
-        """
-        convert from base 64 string to the class object
-
-        :param str base64_string: string in base64 the have a json configs
-        """
-        base64_bytes = base64_string.encode("ascii")
-        sample_string_bytes = base64.b64decode(base64_bytes)
-        _json = json.loads(sample_string_bytes.decode("ascii"))
-        return _json
+    def __init__(self):
+        self._working_projects = list()
+        self._settings = dict()
 
     @property
     def settings(self) -> dict:
         return self._settings
+
+    @property
+    def working_projects(self) -> list:
+        return self._working_projects
 
     @settings.setter
     def settings(self, val: dict):
@@ -362,14 +331,27 @@ class PlatformSettings:
                                                message="input must be of type dict")
 
         self._settings = val
-        self.to_cookie()
 
     def add(self, setting_name: str, setting: dict):
         if setting_name in self.settings:
             self._settings[setting_name].update(setting)
         else:
             self._settings[setting_name] = setting
-        self.to_cookie()
+
+    def add_project(self, project_id: str):
+        if not isinstance(project_id, str):
+            raise exceptions.PlatformException(error=400,
+                                               message="input must be of type str")
+        self._working_projects.append(project_id)
+
+    def add_bulk(self, settings_list):
+        settings_dict = {s.name: {s.scope.id: s.value}
+                         for s in settings_list}
+        for setting_name, settings_val in settings_dict.items():
+            if setting_name in self._settings:
+                self._settings[setting_name].update(settings_val)
+            else:
+                self._settings[setting_name] = settings_val
 
 
 class Decorators:
@@ -690,7 +672,7 @@ class ApiClient:
     @property
     def platform_settings(self):
         if self._platform_settings is None:
-            self._platform_settings = PlatformSettings(cookie=self.cookie_io)
+            self._platform_settings = PlatformSettings()
         assert isinstance(self._platform_settings, PlatformSettings)
         return self._platform_settings
 
@@ -1198,7 +1180,7 @@ class ApiClient:
                 connect=5,
                 backoff_factor=0.3,
                 # use on any request type
-                method_whitelist=False,
+                allowed_methods=False,
                 # force retry on those status responses
                 status_forcelist=(501, 502, 503, 504, 505, 506, 507, 508, 510, 511),
                 raise_on_status=False

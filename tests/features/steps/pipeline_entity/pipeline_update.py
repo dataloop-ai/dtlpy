@@ -11,3 +11,9 @@ def step_impl(context):
 @then(u'Pipeline received equals Pipeline changed except for "description"')
 def step_impl(context):
     assert context.pipeline.description == "up"
+
+
+@then(u'I pause pipeline in context')
+def step_impl(context):
+    context.pipeline.pause()
+

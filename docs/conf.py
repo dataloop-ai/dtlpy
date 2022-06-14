@@ -14,19 +14,20 @@
 #
 import os
 import sys
+import datetime
 
 sys.path.insert(0, os.path.abspath('../'))
 
 # -- Project information -----------------------------------------------------
 
 project = 'dtlpy'
-copyright = '2019, Or Shabtay'
-author = 'Or Shabtay'
+copyright = '{}, Dataloop Team'.format(datetime.datetime.now().year)
+author = 'Dataloop Team'
 
 # The short X.Y version
 version = ''
 # The full version, including alpha/beta/rc tags
-release = '1.57.31'
+release = '1.58.28'
 
 add_module_names = False
 
@@ -161,8 +162,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'dtlpy.tex', 'dtlpy Documentation',
-     'Or Shabtay', 'manual'),
+    (master_doc, 'dtlpy.tex', 'dtlpy Documentation', 'Dataloop Team', 'manual'),
 ]
 
 # -- Options for manual page output ------------------------------------------
@@ -219,4 +219,5 @@ autodoc_mock_imports = ["tensorflow", "torch", "imgaug", "torchvision"]
 ############################
 ############################
 from docs import build_tutorials
+
 build_tutorials.main()

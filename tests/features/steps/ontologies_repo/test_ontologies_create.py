@@ -87,6 +87,12 @@ def step_impl(context):
         assert root in context.labels
 
 
+@behave.then(u'Dataset ontology in host have an attributes')
+def step_impl(context):
+    ontology_get = context.recipe.ontologies.get(ontology_id=context.ontology.id)
+    assert len(ontology_get.attributes) == 2
+
+
 @behave.when(u'I create a new ontology with labels and project id of "{other_project_name}" from file "{file_path}"')
 def step_impl(context, other_project_name, file_path):
     file_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], file_path)

@@ -25,9 +25,7 @@ def step_impl(context):
 @behave.then(u'It is equal to pipeline created')
 def step_impl(context):
     pipeline_json = context.pipeline.to_json()
-    pipeline_json.pop('info')
     get_pipeline_json = context.pipeline_get.to_json()
-    get_pipeline_json.pop('info')
     assert pipeline_json == get_pipeline_json
 
 

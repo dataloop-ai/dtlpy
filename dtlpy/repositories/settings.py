@@ -115,8 +115,7 @@ class Settings:
         # add settings to cookies
         self._client_api.platform_settings.add(setting.name,
                                                {
-                                                   setting.scope.id: setting.value,
-                                                   "default": setting.default_value
+                                                   setting.scope.id: setting.value
                                                }
                                                )
         return constructor(
@@ -176,8 +175,7 @@ class Settings:
         # add settings to cookies
         self._client_api.platform_settings.add(setting.name,
                                                {
-                                                   setting.scope.id: setting.value,
-                                                   "default": setting.default_value
+                                                   setting.scope.id: setting.value
                                                }
                                                )
 
@@ -208,10 +206,11 @@ class Settings:
         else:
             raise exceptions.PlatformException(response)
 
-    def get(self, setting_id: str) -> entities.Setting:
+    def get(self, setting_name: str = None, setting_id: str = None) -> entities.Setting:
         """
         Get a setting by id
 
+        :param str setting_name: the setting name
         :param str setting_id: the setting id
         :return: setting entity
         """
@@ -246,7 +245,7 @@ class Settings:
             raise exceptions.PlatformException(response)
         return response.json()
 
-    def list(self, filters: entities.Filters) -> entities.PagedEntities:
+    def list(self, filters: entities.Filters = None) -> entities.PagedEntities:
         """
         List settings
 
@@ -254,10 +253,17 @@ class Settings:
         :return: Paged entity
         :rtype: dtlpy.entities.paged_entities.PagedEntities
         """
+        if filters is None:
+            filters = entities.Filters(resource=entities.FiltersResource.SETTINGS)
+            filters.sort_by(entities.FiltersOrderByDirection.ASCENDING)
+
         if filters.resource != entities.FiltersResource.SETTINGS:
             raise exceptions.PlatformException(
                 error='400',
-                message='Filters resource must to be FiltersResource.PACKAGE. Got: {!r}'.format(filters.resource))
+                message='Filters resource must to be FiltersResource.SETTINGS . Got: {!r}'.format(filters.resource))
+
+        if self._project is not None:
+            filters.add(field='projectId', values=self._project.id)
 
         paged = entities.PagedEntities(
             items_repository=self,

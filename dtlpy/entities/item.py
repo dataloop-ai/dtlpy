@@ -111,6 +111,9 @@ class Item(entities.BaseEntity):
                 dataset_id = dataset.id
 
         metadata = _json.get('metadata', dict())
+        project_id = _json.get('projectId', None)
+        if project_id is None:
+            project_id = project.id if project else None
         inst = cls(
             # sdk
             platform_dict=copy.deepcopy(_json),
@@ -136,7 +139,7 @@ class Item(entities.BaseEntity):
             id=_json.get('id', None),
             spec=_json.get('spec', None),
             creator=_json.get('creator', None),
-            project_id=project.id if project else None
+            project_id=project_id
         )
         inst.is_fetched = is_fetched
         return inst

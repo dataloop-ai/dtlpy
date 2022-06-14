@@ -9,6 +9,7 @@ import shutil
 import json
 import copy
 import tqdm
+import sys
 import os
 import re
 from ... import entities
@@ -55,6 +56,18 @@ class DatasetGenerator:
                  ) -> None:
         """
         Base Dataset Generator to build and iterate over images and annotations
+
+        * Mapping Labels *
+        To set a label mapping from labels to id you can use the `label_to_id_map` or `id_to_label_map`.
+        NOTE: if they are not i.i.d you'll need to input both.
+        In semantic, a `$default` label should be added so that the background (and all unlabeled pixels) will be
+        mapped to the model's inputs
+
+        label_to_id_map = {'cat': 1,
+                           'dog': 1,
+                           '$default': 0}
+        id_to_label_map = {1: 'cats_and_dogs',
+                           0: 'background'}
 
         :param dataset_entity: dl.Dataset entity
         :param annotation_type: dl.AnnotationType - type of annotation to load from the annotated dataset
@@ -254,7 +267,10 @@ class DatasetGenerator:
 
         pool = ThreadPoolExecutor(max_workers=32)
         jobs = list()
-        pbar = tqdm.tqdm(total=len(files), desc='Loading Data Generator')
+        pbar = tqdm.tqdm(total=len(files),
+                         desc='Loading Data Generator',
+                         disable=self.dataset_entity._client_api.verbose.disable_progress_bar,
+                         file=sys.stdout)
         for image_filepath in files:
             jobs.append(pool.submit(self._load_single,
                                     image_filepath=image_filepath,

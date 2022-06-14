@@ -36,7 +36,8 @@ class Uploader:
         self.mode = 'skip'
         self.num_files = 0
         self.i_item = 0
-        self.pbar = tqdm.tqdm(total=0, disable=self.items_repository._client_api.verbose.disable_progress_bar,
+        self.pbar = tqdm.tqdm(total=0,
+                              disable=self.items_repository._client_api.verbose.disable_progress_bar,
                               file=sys.stdout)
         self.reporter = Reporter(num_workers=0,
                                  resource=Reporter.ITEMS_UPLOAD,
@@ -422,6 +423,11 @@ class Uploader:
                                                                                  remote_path=remote_path,
                                                                                  callback=callback,
                                                                                  mode=mode)
+            if item_size != response.json()['metadata']['system']['size']:
+                self.items_repository.delete(item_id=response.json()['id'])
+                raise PlatformException(500,
+                                        "The uploaded file is corrupted. "
+                                        "Please try again. If it happens again please contact support.")
         except Exception:
             raise
         finally:

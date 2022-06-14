@@ -260,7 +260,7 @@ def compare_attributes(attributes, obj):
     success = True
     for attr in attributes:
         suc = False
-        for elem in obj.getiterator():
+        for elem in obj.iter():
             suc = elem.tag == attr and elem.text == '1'
             suc = suc or elem.text == attr
             if suc:
@@ -282,7 +282,7 @@ def compare_xml_object(obj_a, obj_b):
                 success = success and compare_attributes(attributes=attributes, obj=obj_b)
             else:
                 success = success and e.text == obj_b.find(e.tag).text
-    except:
+    except Exception as e:
         success = False
 
     return success

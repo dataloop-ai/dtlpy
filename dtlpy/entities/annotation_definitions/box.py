@@ -56,44 +56,44 @@ class Box(BaseAnnotationDefinition):
 
     @property
     def x(self):
-        if self.box_points_setting():
+        if self._box_points_setting():
             return [x_point[0] for x_point in self._four_points]
         return [self.left, self.right]
 
     @property
     def y(self):
-        if self.box_points_setting():
+        if self._box_points_setting():
             return [y_point[1] for y_point in self._four_points]
         return [self.top, self.bottom]
 
     @property
     def geo(self):
-        if self.box_points_setting():
+        if self._box_points_setting():
             res = self._four_points
         else:
-            # warnings.warn(
-            #     message='annotation.geo() for box representation will be changed from 2 points to 4 points, '
-            #             'starting from version 1.62.0. '
-            #             'We recommend switching to the new format before the deprecation. '
-            #             'For more info: https://dataloop.ai/docs/SDK/sdk-annotationgeo-deprecation ',
-            #     category=DeprecationWarning)
+            warnings.warn(
+                message='annotation.geo() for box representation will be changed from 2 points to 4 points, '
+                        'starting from version 1.62.0. '
+                        'We recommend switching to the new format before the deprecation. '
+                        'For more info: https://dataloop.ai/docs/SDK/sdk-annotationgeo-deprecation ',
+                category=DeprecationWarning)
             res = [
                 [self.left, self.top],
                 [self.right, self.bottom]
             ]
         return res
 
-    def box_points_setting(self):
+    def _box_points_setting(self):
         res = False
         if self._annotation and self._annotation.item:
             item = self._annotation.item
             project_id = item.project_id if item.project_id else item.project.id
-            settings_dict = item._client_api.platform_settings.settings.get('4ptBox', {})
-            if settings_dict:
+            settings_dict = item._client_api.platform_settings.settings.get('4ptBox', None)
+            if settings_dict is not None:
                 if project_id in settings_dict:
                     res = settings_dict.get(project_id, None)
-                elif 'default' in settings_dict:
-                    res = settings_dict.get('default', None)
+                elif '*' in settings_dict:
+                    res = settings_dict.get('*', None)
         return res
 
     def _rotate_points(self, points):

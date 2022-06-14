@@ -60,3 +60,9 @@ def step_impl(context):
             assert context.task.recipe_id == val
         elif key == 'metadata':
             assert context.task.metadata[list(val.keys())[0]] == val[list(val.keys())[0]]
+        elif key == 'batch_size':
+            task_assignments = [assignment.total_items for assignment in context.task.assignments.list()]
+            assert all([int(val) == total for total in task_assignments])
+        elif key == 'allowed_assignees':
+            task_assignments = [assignment.annotator for assignment in context.task.assignments.list()]
+            assert compare_items_list(items_a=task_assignments, items_b=val)

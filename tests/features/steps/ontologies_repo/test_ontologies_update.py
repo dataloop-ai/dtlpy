@@ -12,6 +12,14 @@ def step_impl(context, file_path):
     context.recipe.ontologies.update(context.ontology)
 
 
+# for attr 2.0
+# @behave.when(u'I update ontology attributes to "{attribute1}", "{attribute2}"')
+# def step_impl(context, attribute1, attribute2):
+#     context.ontology.update_attributes(key='1', title=str(attribute1), attribute_type=context.dl.AttributesTypes.CHECKBOX,
+#                                        values=[1])
+#     context.ontology.update_attributes(key='2', title=str(attribute2), attribute_type=context.dl.AttributesTypes.CHECKBOX,
+#                                        values=[2])
+
 @behave.when(u'I update ontology attributes to "{attribute1}", "{attribute2}"')
 def step_impl(context, attribute1, attribute2):
     context.ontology.attributes = [attribute1, attribute2]

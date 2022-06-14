@@ -1,12 +1,98 @@
 from collections import namedtuple
 import logging
 import traceback
+from typing import List
 import attr
-
 from .node import PipelineNode, PipelineConnection
 from .. import repositories, entities, services
 
 logger = logging.getLogger(name='dtlpy')
+
+
+class PipelineAverages:
+    def __init__(
+            self,
+            avg_time_per_execution: float,
+            avg_execution_per_day: float
+    ):
+        self.avg_time_per_execution = avg_time_per_execution
+        self.avg_execution_per_day = avg_execution_per_day
+
+    @classmethod
+    def from_json(cls, _json: dict = None):
+        if _json is None:
+            _json = dict()
+        return cls(
+            avg_time_per_execution=_json.get('avgTimePerExecution', 'NA'),
+            avg_execution_per_day=_json.get('avgExecutionsPerDay', 'NA')
+        )
+
+
+class NodeAverages:
+    def __init__(
+            self,
+            node_id: str,
+            averages: PipelineAverages
+    ):
+        self.node_id = node_id
+        self.averages = averages
+
+    @classmethod
+    def from_json(cls, _json: dict):
+        return cls(
+            node_id=_json.get('nodeId', None),
+            averages=PipelineAverages.from_json(_json.get('executionStatistics'))
+        )
+
+
+class PipelineCounter:
+    def __init__(
+            self,
+            status: str,
+            count: int
+    ):
+        self.status = status
+        self.count = count
+
+
+class NodeCounters:
+    def __init__(
+            self,
+            node_id: str,
+            counters: List[PipelineCounter]
+    ):
+        self.node_id = node_id
+        self.counters = counters
+
+    @classmethod
+    def from_json(cls, _json: dict):
+        return cls(
+            node_id=_json.get('nodeId', None),
+            counters=[PipelineCounter(**c) for c in _json.get('statusCount', list())],
+        )
+
+
+class PipelineStats:
+    def __init__(
+            self,
+            pipeline_counters: List[PipelineCounter],
+            node_counters: List[NodeCounters],
+            pipeline_averages: PipelineAverages,
+            node_averages: List[NodeAverages]
+    ):
+        self.pipeline_counters = pipeline_counters
+        self.node_counters = node_counters
+        self.pipeline_averages = pipeline_averages
+        self.node_averages = node_averages
+
+    @classmethod
+    def from_json(cls, _json: dict):
+        return cls(
+            pipeline_counters=[PipelineCounter(**c) for c in _json.get('pipelineExecutionCounters', list())],
+            node_counters=[NodeCounters.from_json(_json=c) for c in _json.get('nodeExecutionsCounters', list())],
+            pipeline_averages=PipelineAverages.from_json(_json.get('pipelineExecutionStatistics', None)),
+            node_averages=[NodeAverages.from_json(_json=c) for c in _json.get('nodeExecutionStatistics', list())]
+        )
 
 
 @attr.s
@@ -31,7 +117,6 @@ class Pipeline(entities.BaseEntity):
     preview = attr.ib()
     description = attr.ib()
     revisions = attr.ib()
-    info = attr.ib()
 
     # sdk
     _project = attr.ib(repr=False)
@@ -95,7 +180,6 @@ class Pipeline(entities.BaseEntity):
             preview=_json.get('preview', None),
             description=_json.get('description', None),
             revisions=_json.get('revisions', None),
-            info=_json.get('info', None)
         )
         for node in _json.get('nodes', list()):
             inst.nodes.add(node=PipelineNode.from_json(node))
@@ -125,7 +209,6 @@ class Pipeline(entities.BaseEntity):
                                                         attr.fields(Pipeline).preview,
                                                         attr.fields(Pipeline).description,
                                                         attr.fields(Pipeline).revisions,
-                                                        attr.fields(Pipeline).info
                                                         ))
 
         _json['projectId'] = self.project_id
@@ -137,10 +220,12 @@ class Pipeline(entities.BaseEntity):
         _json['nodes'] = [node.to_json() for node in self.nodes]
         _json['connections'] = [con.to_json() for con in self.connections]
         _json['url'] = self.url
-        _json['preview'] = self.preview
-        _json['description'] = self.description
-        _json['revisions'] = self.revisions
-        _json['info'] = self.info
+        if self.preview is not None:
+            _json['preview'] = self.preview
+        if self.description is not None:
+            _json['description'] = self.description
+        if self.revisions is not None:
+            _json['revisions'] = self.revisions
 
         return _json
 
@@ -255,6 +340,24 @@ class Pipeline(entities.BaseEntity):
         """
         execution = self.pipeline_executions.create(pipeline_id=self.id, execution_input=execution_input)
         return execution
+
+    def reset(self, stop_if_running: bool = False):
+        """
+        Resets pipeline counters
+
+        :param bool stop_if_running: If the pipeline is installed it will stop the pipeline and reset the counters.
+        :return: bool
+        """
+        return self.pipelines.reset(pipeline_id=self.id, stop_if_running=stop_if_running)
+
+    def stats(self):
+        """
+        Get pipeline counters
+
+        :return: PipelineStats
+        :rtype: dtlpy.entities.pipeline.PipelineStats
+        """
+        return self.pipelines.stats(pipeline_id=self.id)
 
     def set_start_node(self, node: PipelineNode):
         """

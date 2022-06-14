@@ -6,7 +6,7 @@ import os
 import io
 import distutils.dir_util
 
-from .. import entities, services, repositories
+from .. import entities, services, repositories, service_defaults
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -107,18 +107,19 @@ class Buckets:
                  bucket: entities.Bucket,
                  local_path: str = None,
                  overwrite: bool = False,
-                 without_relative_path: bool = True
                  ):
         """
 
-        Download binary file from bucket.
+        Download binary files from bucket.
 
         :param dtlpy.entities.bucket.Bucket bucket: Bucket entity
-        :param str local_path: local binary file or folder to upload
+        :param str local_path: local binary file or folder to download to
         :param bool overwrite: optional - default = False
-        :param bool without_relative_path: download items without the relative path from platform
         :return:
         """
+        if local_path is None:
+            local_path = os.path.join(service_defaults.DATALOOP_PATH, "snapshots", self.snapshot.name)
+
         if isinstance(bucket, entities.ItemBucket):
             bucket_dir_item = self.items.get(item_id=bucket.directory_item_id)
             # fetch: False does not use an API call but created the dataset entity (with id)

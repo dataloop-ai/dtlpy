@@ -512,7 +512,8 @@ class TaskNode(PipelineNode):
                  workload: List[entities.WorkloadUnit],
                  task_type: str = 'annotation',
                  position: tuple = (1, 1),
-                 actions: list = None):
+                 actions: list = None,
+                 repeatable: bool = True):
         """
         :param str name: node name
         :param str project_id: project id
@@ -524,6 +525,7 @@ class TaskNode(PipelineNode):
         :param str task_type: 'annotation' or 'qa'
         :param tuple position: tuple of the node place
         :param list actions: list of task actions
+        :param bool repeatable: can repeat in the item
         """
 
         if actions is None:
@@ -562,6 +564,7 @@ class TaskNode(PipelineNode):
         if not isinstance(workload, list):
             workload = [workload]
         self.workload = workload
+        self.repeatable = repeatable
 
     @property
     def dataset_id(self):
@@ -570,6 +573,14 @@ class TaskNode(PipelineNode):
     @dataset_id.setter
     def dataset_id(self, dataset_id: str):
         self.metadata['datasetId'] = dataset_id
+
+    @property
+    def repeatable(self):
+        return self.metadata['repeatable']
+
+    @repeatable.setter
+    def repeatable(self, repeatable: bool):
+        self.metadata['repeatable'] = repeatable
 
     @property
     def recipe_title(self):

@@ -42,9 +42,6 @@ def step_impl(context, entity):
             response.pop('statusLog')
             entity_to_json.pop('updatedAt')
             response.pop('updatedAt')
-        elif entity == 'pipeline':
-            entity_to_json.pop('info')
-            response.pop('info')
 
         if entity_to_json != response:
             logging.error('FAILED: response json is:\n{}\n\nto_json is:\n{}'.format(json.dumps(response,
@@ -209,10 +206,19 @@ def step_impl(context):
 
     system = context.item.metadata.get('system', dict())
     nb_frames = system.get('nb_frames', None)
+
+    num_tries = 60
+    interval_time = 5
+    found_frames = False
+
     if not nb_frames:
-        nb_frames = system.get('ffmpeg', dict()).get('nb_read_frames', None)
-        if nb_frames:
-            nb_frames = int(nb_frames)
+        for i in range(num_tries):
+            time.sleep(interval_time)
+            nb_frames = system.get('ffmpeg', dict()).get('nb_read_frames', None)
+            if nb_frames:
+                nb_frames = int(nb_frames)
+                found_frames = True
+                break
 
     ann = context.annotation
     label = context.dataset.labels[0]
@@ -222,6 +228,8 @@ def step_impl(context):
         )
         frame_num = frame
         ann.add_frame(annotation_definition=annotation_definition, frame_num=frame_num, fixed=False)
+
+    return found_frames
 
 
 @behave.then(u"Video has annotation without snapshots")

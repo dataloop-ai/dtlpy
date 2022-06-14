@@ -320,7 +320,7 @@ class Recipes:
 
         .. code-block:: python
 
-            dataset.recipes.delete(recipe='recipe_entity')
+            dataset.recipes.update(recipe='recipe_entity')
         """
         url_path = '/recipes/%s' % recipe.id
         if system_metadata:

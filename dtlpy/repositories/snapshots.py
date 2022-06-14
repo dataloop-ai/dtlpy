@@ -121,7 +121,8 @@ class Snapshots:
             elif snapshots.items_count > 1:
                 raise exceptions.PlatformException(
                     error='400',
-                    message='More than one Snapshot found by the name of: {}. Try "get" by id or list.'.format(snapshot_name))
+                    message='More than one Snapshot found by the name of: {}. Try "get" by id or "list()".'.format(
+                        snapshot_name))
             snapshot = snapshots.items[0]
         else:
             raise exceptions.PlatformException(
@@ -202,7 +203,6 @@ class Snapshots:
             description: str = None,
             bucket: entities.Bucket = None,
             project_id=None,
-            is_global=None,
             tags: List[str] = None,
             model: entities.Model = None,
             configuration: dict = None,
@@ -220,7 +220,6 @@ class Snapshots:
         :param str description: description
         :param bucket: optional dl.Bucket.  If None - creates a local bucket at the current working dir
         :param str project_id: project that owns the snapshot
-        :param bool is_global: is global
         :param list tags: list of string tags
         :param model: optional - Model object
         :param dict configuration: optional - snapshot configuration - dict
@@ -284,9 +283,6 @@ class Snapshots:
 
         if tags is not None:
             payload['tags'] = tags
-
-        if is_global is not None:
-            payload['global'] = is_global
 
         if description is not None:
             payload['description'] = description
@@ -536,3 +532,31 @@ class Snapshots:
                                            client_api=self._client_api,
                                            project=self._project,
                                            model=snapshot._model)
+
+    def add_metric_samples(self, samples, snapshot_id) -> bool:
+        """
+        Add Samples for snapshot analytics and metrics
+
+        :param samples: list of dl.SnapshotMetricSample - must contain: snapshot_id, figure, legend, x, y
+        :param snapshot_id: snapshot id to save samples on
+        :return: bool: True if success
+        """
+        if not isinstance(samples, list):
+            samples = [samples]
+
+        payload = list()
+        for sample in samples:
+            _json = sample.to_json()
+            _json['snapshotId'] = snapshot_id
+            payload.append(_json)
+        # request
+        success, response = self._client_api.gen_request(req_type='post',
+                                                         path='/snapshots/metric',
+                                                         json_req=payload)
+
+        # exception handling
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        # return entity
+        return True

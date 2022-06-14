@@ -6,7 +6,7 @@ import random
 @behave.when(u'I try to create a project by the name of "{project_name}"')
 def creating_a_project(context, project_name):
     try:
-        context.project = context.dl.projects.create(project_name=context.project_name)
+        context.project = context.dl.projects.create(project_name=project_name)
         context.to_delete_projects_ids.append(context.project.id)
         time.sleep(5)  # to sleep because authorization takes time
         context.error = None

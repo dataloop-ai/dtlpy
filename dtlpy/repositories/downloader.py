@@ -604,6 +604,13 @@ class Downloader:
         else:
             return item, '', False
 
+    def __video_validation(self, item, downloaded_file):
+        res = False
+        size_diff = os.stat(downloaded_file).st_size - item.metadata['system']['size']
+        if size_diff == 0:
+            res = True
+        return res
+
     def __thread_download(self,
                           item,
                           save_locally,
@@ -705,7 +712,13 @@ class Downloader:
                                     f.write(chunk)
                                     if one_file_progress_bar:
                                         one_file_pbar.update(len(chunk))
-                        os.rename(temp_file_path, local_filepath)
+                        # TODO remove this after the BE fix
+                        if self.__video_validation(item=item,
+                                                   downloaded_file=temp_file_path) or is_url:
+                            os.rename(temp_file_path, local_filepath)
+                        else:
+                            os.remove(temp_file_path)
+                            raise PlatformException(500, 'The downloaded file is corrupted. Please try again. If the issue repeats please contact support.')
                     except Exception as err:
                         if os.path.isfile(temp_file_path):
                             os.remove(temp_file_path)
@@ -730,7 +743,8 @@ class Downloader:
             else:
                 # save as byte stream
                 data = io.BytesIO()
-                if self.items_repository._client_api.sdk_cache.use_cache:
+                if self.items_repository._client_api.sdk_cache.use_cache and \
+                        self.items_repository._client_api.cache is not None:
                     response_output = os.path.normpath(response.content)
                     if isinstance(response_output, bytes):
                         response_output = response_output.decode('utf-8')[1:-1]

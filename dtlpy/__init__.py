@@ -28,7 +28,7 @@ from .__version__ import version as __version__
 from .entities import (
     # main entities
     Project, Dataset, ExpirationOptions, ExportVersion, Trigger, Item, Execution, AnnotationCollection, Annotation,
-    Recipe, IndexDriver,
+    Recipe, IndexDriver, AttributesTypes, AttributesRange,
     Ontology, Label, Task, Assignment, Service, Package, Codebase, Model, Snapshot, PackageModule, PackageFunction,
     # annotations
     Box, Cube, Cube3d, Point, Note, Segmentation, Ellipse, Classification, Subtitle, Polyline, Pose, Description,
@@ -43,8 +43,8 @@ from .entities import (
     InstanceCatalog, PackageInputType,
     PackageSlot, SlotPostAction, SlotPostActionType, SlotDisplayScope, SlotDisplayScopeResource, UiBindingPanel,
     # roberto
-    SnapshotPartitionType, BucketType, Bucket, ItemBucket, GCSBucket, LocalBucket, ModelOutputType,
-    ModelInputType, EntityScopeLevel,
+    SnapshotPartitionType, SnapshotMetricSample, BucketType, Bucket, ItemBucket, GCSBucket, LocalBucket,
+    ModelOutputType, ModelInputType, EntityScopeLevel,
     #
     RequirementOperator, PackageRequirement,
     Command, CommandsStatus,
@@ -59,7 +59,7 @@ from .entities import (
     Modality, ModalityTypeEnum, ModalityRefTypeEnum,
     Workload, WorkloadUnit, ItemAction,
     PipelineExecution, PipelineExecutionNode, Pipeline, PipelineConnection,
-    PipelineNode, TaskNode, CodeNode,
+    PipelineNode, TaskNode, CodeNode, PipelineStats,
     PipelineNodeType, PipelineNameSpace,
     FunctionNode, DatasetNode, PipelineConnectionPort, PipelineNodeIO, Organization, OrganizationsPlans, Integration,
     Driver, CacheAction, PodType,
@@ -160,10 +160,10 @@ try:
 except Exception:
     logger.debug("Failed to check SDK! Continue without")
 
-# try:
-#     check_sdk.resolve_platform_settings(client_api=client_api, settings=settings)
-# except Exception:
-#     pass
+try:
+    check_sdk.resolve_platform_settings(client_api=client_api, settings=settings)
+except Exception:
+    pass
 
 verbose = client_api.verbose
 login = client_api.login
@@ -463,3 +463,9 @@ CACHE_ACTION_DESTROY = CacheAction.DESTROY
 POD_TYPE_SMALL = PodType.SMALL
 POD_TYPE_MEDIUM = PodType.MEDIUM
 POD_TYPE_HIGH = PodType.HIGH
+
+ATTRIBUTES_TYPES_CHECKBOX = AttributesTypes.CHECKBOX
+ATTRIBUTES_TYPES_RADIO_BUTTON = AttributesTypes.RADIO_BUTTON
+ATTRIBUTES_TYPES_YES_NO = AttributesTypes.YES_NO
+ATTRIBUTES_TYPES_SLIDER = AttributesTypes.SLIDER
+ATTRIBUTES_TYPES_FREE_TEXT = AttributesTypes.FREE_TEXT

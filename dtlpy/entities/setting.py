@@ -71,17 +71,11 @@ class SettingScope:
 
     def to_json(self):
         _json = dict()
-
-        if self.type:
-            _json['type'] = self.type
-        if self.id:
-            _json['id'] = self.id
-        if self.role:
-            _json['role'] = self.role
-        if self.prevent_override:
-            _json['preventOverride'] = self.prevent_override
-        if self.visible:
-            _json['visible'] = self.visible
+        _json['type'] = self.type
+        _json['id'] = self.id
+        _json['role'] = self.role
+        _json['preventOverride'] = self.prevent_override
+        _json['visible'] = self.visible
 
         return _json
 
@@ -154,17 +148,11 @@ class BaseSetting:
             'valueType': self.value_type,
             'scope': self.scope.to_json(),
             'settingType': self.setting_type,
-            'id': self.id
+            'id': self.id,
+            'metadata': self.metadata,
+            'value': self.value,
+            'defaultValue': self.default_value
         }
-
-        if self.metadata is not None:
-            _json['metadata'] = self.metadata
-
-        if self.value is not None:
-            _json['value'] = self.value
-
-        if self.default_value is not None:
-            _json['defaultValue'] = self.default_value
 
         return _json
 
@@ -249,20 +237,13 @@ class Setting(BaseSetting):
 
     def to_json(self):
         _json = super().to_json()
-        if self.description is not None:
-            _json['description'] = self.description
-        if self.inputs is not None:
-            _json['inputs'] = self.inputs
-        if self.icon is not None:
-            _json['icon'] = self.icon
-        if self.section_name is not None:
-            _json['sectionName'] = self.section_name
-        if self.hint is not None:
-            _json['hint'] = self.hint
-        if self.sub_section_name is not None:
-            _json['subSectionName'] = self.sub_section_name
-        if self.id is not None:
-            _json['id'] = self.id
+        _json['description'] = self.description
+        _json['inputs'] = self.inputs
+        _json['icon'] = self.icon
+        _json['sectionName'] = self.section_name
+        _json['hint'] = self.hint
+        _json['subSectionName'] = self.sub_section_name
+        _json['id'] = self.id
         return _json
 
 

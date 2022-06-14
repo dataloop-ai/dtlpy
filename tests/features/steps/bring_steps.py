@@ -97,6 +97,7 @@ from tests.features.steps.packages_repo import packages_list
 from tests.features.steps.packages_repo import test_packages_context
 from tests.features.steps.packages_repo import packages_name_validation
 from tests.features.steps.packages_flow import packages_flow
+from tests.features.steps.packages_repo import package_slot
 
 from tests.features.steps.triggers_repo import test_triggers_create
 from tests.features.steps.triggers_repo import test_triggers_get
@@ -172,3 +173,4 @@ from tests.features.steps.documentation_tests import test_recipe_docs
 from tests.features.steps.documentation_tests import test_dataset_docs
 
 from tests.features.steps.test_cache import test_cache
+from tests.features.steps.settings_context import test_settings_context

@@ -55,7 +55,6 @@ class Model(entities.BaseEntity):
     tags = attr.ib()
 
     # name change
-    is_global = attr.ib()
     project_id = attr.ib()
     entry_point = attr.ib()
     class_name = attr.ib()
@@ -155,7 +154,6 @@ class Model(entities.BaseEntity):
             id=_json.get('id', None),
             output_type=_json.get('outputType', None),
             input_type=_json.get('inputType', None),
-            is_global=_json.get('global', None),
             revisions=_json.get('revisions', None),
             default_runtime=default_runtime,
             default_configuration=_json.get('defaultConfiguration', dict()),
@@ -179,7 +177,6 @@ class Model(entities.BaseEntity):
                                                         attr.fields(Model)._repositories,
                                                         attr.fields(Model)._codebases,
                                                         attr.fields(Model)._revisions,
-                                                        attr.fields(Model).is_global,
                                                         attr.fields(Model)._artifacts,
                                                         attr.fields(Model).input_type,
                                                         attr.fields(Model).output_type,
@@ -195,7 +192,6 @@ class Model(entities.BaseEntity):
                                                         attr.fields(Model).snapshots_count,
                                                         ))
 
-        _json['global'] = self.is_global
         _json['inputType'] = self.input_type
         _json['outputType'] = self.output_type
         _json['projectId'] = self.project_id

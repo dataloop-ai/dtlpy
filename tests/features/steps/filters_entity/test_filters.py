@@ -517,3 +517,32 @@ def step_impl(context):
     operator = context.dl.FiltersOperations.MATCH
 
     context.filters.add(field=field, values=values, operator=operator)
+
+
+@behave.then(u'I add attribute to items with box annotations')
+def step_impl(context):
+    context.filters = context.dl.Filters()
+    context.filters.add_join(field='type', values='box')
+    for page in context.dataset.items.list(filters=context.dl.Filters(field='annotated', values=True)):
+        for item in page:
+            for annotation in item.annotations.list():
+                annotation.attributes = dict()
+                annotation.update(True)
+
+    for page in context.dataset.items.list(filters=context.filters):
+        for item in page:
+            for annotation in item.annotations.list():
+                annotation.attributes['1'] = "attr1"
+                annotation.update(True)
+
+
+@behave.when(u'I add "{resource}" filter with "{field}" and "{values}"')
+def step_impl(context, resource, field, values):
+    context.filters.resource = resource
+    if values == 'dataset.id':
+        try:
+            context.filters.add(field=field, values=context.dataset.id)
+        except Exception as e:
+            context.error = e
+    else:
+        context.filters.add(field=field, values=values)

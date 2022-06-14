@@ -12,7 +12,7 @@ class Label:
     tag = attr.ib()
     display_data = attr.ib()
     color = attr.ib()
-    display_label = attr.ib()
+    display_label = attr.ib(default=None)
     attributes = attr.ib()
     children = attr.ib()
 
@@ -31,10 +31,6 @@ class Label:
         color = (random.randrange(0, 255), random.randrange(0, 255), random.randrange(0, 255))
         return color
 
-    @display_label.default
-    def set_display_label(self):
-        display_label = self.tag
-        return display_label
 
     @display_data.default
     def set_display_data(self):

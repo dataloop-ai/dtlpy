@@ -16,3 +16,16 @@ Feature: Projects repository create service testing
         When I try to create a project by the name of "to-delete-test-project_create_same_name"
         Then "BadRequest" exception should be raised
         And Error message includes "Failed to create project"
+
+
+    @testrail-C4523146
+    Scenario: Create project with illegal special characters
+        When I try to create a project by the name of "¤¶§!#$%%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmnopqrstuvwxyz{|}~ÇüéâäàåçêëèïîìæÆôöòûùÿ¢£¥PƒáíóóúñÑ¿¬½¼¡«»¦ßµ±°•·²€„…†‡ˆ‰Š‹Œ‘’“”–—˜™š›œŸ¨©®¯³´¸¹¾ÀÁÂÃÄÅÈÉÊËÌÍÎÏÐÒÓÔÕÖ×ØÙÚÛÜÝÞãðõ÷øüýþ"
+        Then "BadRequest" exception should be raised
+
+
+    @testrail-C4523146
+    Scenario: Create project with legal special characters
+        When I create a project by the name of "ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-[]|.,"
+        Then Project object by the name of "ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-[]|.," should be created
+        And Project should exist in host by the name of "ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-[]|.,"

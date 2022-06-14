@@ -71,3 +71,21 @@ def step_impl(context):
     for page in pages:
         for item in page:
             assert len(item.metadata['system']['taskStatusLog']) == 1, "Failed to set status to item"
+
+
+@behave.then(u'I update item status to "{status}" with task id')
+def step_impl(context, status):
+    try:
+        context.item.update_status(status=status, task_id=context.task.id)
+
+    except context.dl.exceptions.PlatformException as e:
+        assert False, "Failed to update item_status \n".format(e)
+
+
+@behave.then(u'I remove specific "{status}" from item with task id')
+def step_impl(context, status):
+    try:
+        context.item.update_status(status=status, task_id=context.task.id, clear=True)
+
+    except context.dl.exceptions.PlatformException as e:
+        assert False, "Failed to update item_status \n".format(e)

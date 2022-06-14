@@ -8,7 +8,7 @@ import sys
 import tqdm
 import logging
 from urllib.parse import urlencode
-from .. import entities, repositories, miscellaneous, exceptions, services
+from .. import entities, repositories, miscellaneous, exceptions, services, PlatformException
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -633,7 +633,8 @@ class Datasets:
                                                  project=self.project)
             # create ontology and recipe
             if not create_default_recipe:
-                dataset = dataset.recipes.create(ontology_ids=ontology_ids, labels=labels,
+                dataset = dataset.recipes.create(ontology_ids=ontology_ids,
+                                                 labels=labels,
                                                  attributes=attributes).dataset
             # # patch recipe to dataset
             # dataset = self.update(dataset=dataset, system_metadata=True)
@@ -730,6 +731,18 @@ class Datasets:
                                                  alpha=1
                                                  )
         """
+        if annotation_options is None:
+            annotation_options = list()
+        elif not isinstance(annotation_options, list):
+            annotation_options = [annotation_options]
+        for ann_option in annotation_options:
+            if not isinstance(ann_option, entities.ViewAnnotationOptions):
+                if ann_option not in list(entities.ViewAnnotationOptions):
+                    raise PlatformException(
+                        error='400',
+                        message='Unknown annotation download option: {}, please choose from: {}'.format(
+                            ann_option, list(entities.ViewAnnotationOptions)))
+
         if remote_path is not None:
             logger.warning(
                 '"remote_path" is ignored. Use "filters=dl.Filters(field="dir, values={!r}"'.format(remote_path))

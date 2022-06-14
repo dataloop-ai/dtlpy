@@ -457,6 +457,9 @@ class Tasks:
                        metadata=None,
                        available_actions=None,
                        wait=True,
+                       batch_size=None,
+                       max_batch_workload=None,
+                       allowed_assignees=None,
                        ) -> entities.Task:
         """
         Create a new QA Task.
@@ -473,6 +476,9 @@ class Tasks:
         :param dict metadata: metadata for the task
         :param list available_actions: list of available actions to the task
         :param bool wait: wait for the command to finish
+        :param int batch_size: Pulling batch size (items) . Restrictions - Min 3, max 100
+        :param int max_batch_workload: Max items in assignment . Restrictions - Min batchSize + 2 , max batchSize * 2
+        :param list allowed_assignees:  It’s like the workload, but without percentage.
         :return: task object
         :rtype: dtlpy.entities.task.Task
 
@@ -529,7 +535,11 @@ class Tasks:
                            query=query,
                            metadata=metadata,
                            available_actions=available_actions,
-                           wait=wait)
+                           wait=wait,
+                           batch_size=batch_size,
+                           max_batch_workload=max_batch_workload,
+                           allowed_assignees=allowed_assignees,
+                           )
 
     def create(self,
                task_name,
@@ -550,7 +560,10 @@ class Tasks:
                available_actions=None,
                wait=True,
                check_if_exist: entities.Filters = False,
-               limit=None
+               limit=None,
+               batch_size=None,
+               max_batch_workload=None,
+               allowed_assignees=None,
                ) -> entities.Task:
         """
         Create a new Annotation Task.
@@ -576,6 +589,9 @@ class Tasks:
         :param bool wait: wait for the command to finish
         :param entities.Filters check_if_exist: dl.Filters check if task exist according to filter
         :param int limit: task limit
+        :param int batch_size: Pulling batch size (items) . Restrictions - Min 3, max 100
+        :param int max_batch_workload: Max items in assignment . Restrictions - Min batchSize + 2 , max batchSize * 2
+        :param list allowed_assignees:  It’s like the workload, but without percentage.
         :return: Annotation Task object
         :rtype: dtlpy.entities.task.Task
 
@@ -660,6 +676,18 @@ class Tasks:
 
         if task_parent_id is not None:
             payload['spec']['parentTaskId'] = task_parent_id
+
+        if batch_size is not None or allowed_assignees is not None or max_batch_workload is not None:
+            if metadata is None:
+                metadata = {}
+            if 'system' not in metadata:
+                metadata['system'] = {}
+            if batch_size is not None:
+                metadata['system']['batchSize'] = batch_size
+            if max_batch_workload is not None:
+                metadata['system']['maxBatchWorkload'] = max_batch_workload
+            if allowed_assignees is not None:
+                metadata['system']['allowedAssignees'] = allowed_assignees
 
         if metadata is not None:
             payload['metadata'] = metadata

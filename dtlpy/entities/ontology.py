@@ -1,3 +1,4 @@
+import os
 import traceback
 from collections import namedtuple
 import logging
@@ -9,6 +10,24 @@ from .. import entities, PlatformException, repositories, services, exceptions
 from .label import Label
 
 logger = logging.getLogger(name='dtlpy')
+
+
+class AttributesTypes:
+    CHECKBOX = "options"
+    RADIO_BUTTON = "options"
+    SLIDER = "range"
+    YES_NO = "boolean"
+    FREE_TEXT = "freeText"
+
+
+class AttributesRange:
+    def __init__(self, min_range, max_range, step):
+        self.min_range = min_range
+        self.max_range = max_range
+        self.step = step
+
+    def to_json(self):
+        return {'min': self.min_range, 'max': self.max_range, 'step': self.step}
 
 
 class LabelHandlerMode:
@@ -185,6 +204,10 @@ class Ontology(entities.BaseEntity):
             status = False
         return status, ontology
 
+    @property
+    def _use_attributes_2(self):
+        return os.environ.get("USE_ATTRIBUTE_2", 'false') == 'true'
+
     @classmethod
     def from_json(cls, _json, client_api, recipe, dataset=None, project=None, is_fetched=True):
         """
@@ -199,10 +222,10 @@ class Ontology(entities.BaseEntity):
         :return: Ontology object
         :rtype: dtlpy.entities.ontology.Ontology
         """
-        if "attributes" in _json:
-            attributes = _json["attributes"]
+        if not os.environ.get("USE_ATTRIBUTE_2", 'false') == 'true':
+            attributes = _json.get("attributes", [])
         else:
-            attributes = list()
+            attributes = _json.get('metadata', {}).get("attributes", [])
 
         labels = list()
         for root in _json["roots"]:
@@ -663,3 +686,54 @@ class Ontology(entities.BaseEntity):
         else:
             mode = LabelHandlerMode.UPDATE
         self._labels_handler(label_list=label_list, update_ontology=update_ontology, mode=mode)
+
+    def update_attributes(self,
+                          title: str,
+                          key: str,
+                          attribute_type,
+                          scope: list = None,
+                          optional: bool = None,
+                          multi: bool = None,
+                          values: list = None,
+                          attribute_range=None):
+        """
+        ADD a new attribute or update if exist
+
+        :param str title: attribute title
+        :param str key: the key of the attribute must br unique
+        :param AttributesTypes attribute_type: dl.AttributesTypes your attribute type
+        :param list scope: list of the labels or * for all labels
+        :param bool optional: optional attribute
+        :param bool multi: if can get multiple selection
+        :param list values: list of the attribute values ( for checkbox and radio button)
+        :param dict or AttributesRange attribute_range: dl.AttributesRange object
+        :return: true in success
+        :rtype: bool
+        """
+        return self.ontologies.update_attributes(
+            ontology_id=self.id,
+            title=title,
+            key=key,
+            attribute_type=attribute_type,
+            scope=scope,
+            optional=optional,
+            multi=multi,
+            values=values,
+            attribute_range=attribute_range)
+
+    def delete_attributes(self, keys: list):
+        """
+        Delete a bulk of attributes
+
+        :param list keys: Keys of attributes to delete
+        :return: True if success
+        :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            ontology.delete_attributes(['1'])
+        """
+
+        return self.ontologies.delete_attributes(ontology_id=self.id, keys=keys)

@@ -41,6 +41,30 @@ class OntologySpec:
         )
 
 
+class SnapshotMetricSample:
+    def __init__(self, figure, legend, x, y):
+        """
+        Create a single metric sample for Snapshots
+
+        :param figure: figure name identifier
+        :param legend: line name identifier
+        :param x: x value for the current sample
+        :param y: y value for the current sample
+        """
+        self.figure = figure
+        self.legend = legend
+        self.x = x
+        self.y = y
+
+    def to_json(self) -> dict:
+        _json = {'action': 'snapshotMetric',
+                 'figure': self.figure,
+                 'legend': self.legend,
+                 'measure0': self.x,
+                 'measure1': self.y}
+        return _json
+
+
 @attr.s
 class Snapshot(entities.BaseEntity):
     """
@@ -54,12 +78,12 @@ class Snapshot(entities.BaseEntity):
     bucket = attr.ib()
     name = attr.ib()
     description = attr.ib()
-    is_global = attr.ib()
     ontology_id = attr.ib(repr=False)
     labels = attr.ib()
     status = attr.ib()
     tags = attr.ib()
     configuration = attr.ib()
+    metadata = attr.ib()
 
     url = attr.ib()
     scope = attr.ib()
@@ -143,10 +167,10 @@ class Snapshot(entities.BaseEntity):
 
         inst = cls(
             configuration=_json.get('configuration', None),
-            is_global=_json.get('global', None),
             description=_json.get('description', None),
             status=_json.get('status', None),
             tags=_json.get('tags', None),
+            metadata=_json.get('metadata', dict()),
             project_id=_json.get('context', {}).get('project', None),
             dataset_id=_json.get('datasetId', None),
             model_id=_json.get('modelId', None),
@@ -458,22 +482,12 @@ class Snapshot(entities.BaseEntity):
         """
         return self.dataset.get_partitions(partitions=partitions, filters=filters, batch_size=batch_size)
 
-    def add_metric_samples(self, samples):
+    def add_metric_samples(self, samples) -> bool:
         """
-        Adds samples to the `TimeSeries` DB to be used for metric performance
+        Add Samples for snapshot analytics and metrics
 
-        :param samples: list of dict - must contain: `item_id`, `gt_id`, `prd_id`, and 'score`
-        :return:
+        :param samples: list of dl.SnapshotMetricSample - must contain: figure, legend, x, y
+        :return: bool: True if success
         """
-
-        for sample in samples:
-            _sample = {
-                'snapshotId': self.id,
-                'output_type': self.model.output_type,
-                'frozen_datasetId': self.dataset.id,
-                'frozen_itemId': sample['item_id'],
-                'prediction_id': sample['prd_id'],
-                'actual_id': sample['gt_id'],
-                'score': sample['score']  # for 'box' type it's iou
-            }
-            self.project.times_series.add_samples(_sample)
+        return self.snapshots.add_metric_samples(snapshot_id=self.id,
+                                                 samples=samples)

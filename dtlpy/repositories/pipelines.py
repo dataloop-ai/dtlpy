@@ -425,6 +425,95 @@ class Pipelines:
         if not success:
             raise exceptions.PlatformException(response)
 
+    def reset(self,
+              pipeline: entities.Pipeline = None,
+              pipeline_id: str = None,
+              pipeline_name: str = None,
+              stop_if_running: bool = False):
+        """
+        Reset pipeline counters.
+
+        **prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param dtlpy.entities.pipeline.Pipeline pipeline: pipeline entity - optional
+        :param str pipeline_id: pipeline_id -  optional
+        :param str pipeline_name: pipeline_name -  optional
+        :param bool stop_if_running: If the pipeline is installed it will stop the pipeline and reset the counters.
+        :return: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.pipelines.reset(pipeline='pipeline_entity')
+        """
+
+        if pipeline_id is None:
+            if pipeline is None:
+                if pipeline_name is not None:
+                    pipeline = self.get(pipeline_name=pipeline_name)
+                else:
+                    raise exceptions.PlatformException(
+                        '400',
+                        'Must provide one of pipeline, pipeline_id or pipeline_name'
+                    )
+            pipeline_id = pipeline.id
+
+        if stop_if_running is True:
+            if pipeline is None:
+                pipeline = self.get(pipeline_id=pipeline_id)
+            pipeline.pause()
+
+        success, response = self._client_api.gen_request(
+            req_type='post',
+            path='/pipelines/{}/reset'.format(pipeline_id)
+        )
+
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        return True
+
+    def stats(self, pipeline: entities.Pipeline = None, pipeline_id: str = None, pipeline_name: str = None):
+        """
+        Get pipeline counters.
+
+        **prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param dtlpy.entities.pipeline.Pipeline pipeline: pipeline entity - optional
+        :param str pipeline_id: pipeline_id -  optional
+        :param str pipeline_name: pipeline_name -  optional
+        :return: PipelineStats
+        :rtype: dtlpy.entities.pipeline.PipelineStats
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.pipelines.stats(pipeline='pipeline_entity')
+        """
+
+        if pipeline_id is None:
+            if pipeline is None:
+                if pipeline_name is not None:
+                    pipeline = self.get(pipeline_name=pipeline_name)
+                else:
+                    raise exceptions.PlatformException(
+                        '400',
+                        'Must provide one of pipeline, pipeline_id or pipeline_name'
+                    )
+            pipeline_id = pipeline.id
+
+        success, response = self._client_api.gen_request(
+            req_type='get',
+            path='/pipelines/{}/statistics'.format(pipeline_id)
+        )
+
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        return entities.PipelineStats.from_json(_json=response.json())
+
     def execute(self,
                 pipeline: entities.Pipeline = None,
                 pipeline_id: str = None,

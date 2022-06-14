@@ -564,7 +564,7 @@ class Dataset(entities.BaseEntity):
 
         :param str local_path: local folder or filename to save to.
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
-        :param list annotation_options: download annotations options: list(dl.ViewAnnotationOptions)
+        :param list(dtlpy.entities.annotation.ViewAnnotationOptions) annotation_options: download annotations options: list(dl.ViewAnnotationOptions)
         :param dtlpy.entities.filters.Filters annotation_filters: Filters entity to filter annotations for download
         :param bool overwrite: optional - default = False
         :param int thickness: optional - line thickness, if -1 annotation will be filled, default =1
@@ -584,7 +584,7 @@ class Dataset(entities.BaseEntity):
 
             dataset.download_annotations(dataset='dataset_entity',
                                          local_path='local_path',
-                                         annotation_options=dl.ViewAnnotationOptions,
+                                         annotation_options=[dl.ViewAnnotationOptions.JSON, dl.ViewAnnotationOptions.MASK],
                                          overwrite=False,
                                          thickness=1,
                                          with_text=False,
@@ -853,7 +853,7 @@ class Dataset(entities.BaseEntity):
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :param str local_path: local folder or filename to save to.
         :param list file_types: a list of file type to download. e.g ['video/webm', 'video/mp4', 'image/jpeg', 'image/png']
-        :param dl.ViewAnnotationOptions annotation_options: download annotations options: list(dl.ViewAnnotationOptions)                                                                                        not relevant for JSON option
+        :param list(dtlpy.entities.annotation.ViewAnnotationOptions) annotation_options: download annotations options: list(dl.ViewAnnotationOptions)                                                                                        not relevant for JSON option
         :param dtlpy.entities.filters.Filters annotation_filters: Filters entity to filter annotations for download                                                                                        not relevant for JSON option
         :param bool overwrite: optional - default = False
         :param bool to_items_folder: Create 'items' folder and download items to it
@@ -869,7 +869,7 @@ class Dataset(entities.BaseEntity):
         .. code-block:: python
 
             dataset.download(local_path='local_path',
-                             annotation_options=dl.ViewAnnotationOptions,
+                             annotation_options=[dl.ViewAnnotationOptions.JSON, dl.ViewAnnotationOptions.MASK],
                              overwrite=False,
                              thickness=1,
                              with_text=False,
@@ -973,3 +973,86 @@ class Dataset(entities.BaseEntity):
                         values=partitions,
                         operator=entities.FiltersOperations.IN)
         return self.items.list(filters=filters, page_size=batch_size)
+
+    def update_attributes(self,
+                          title: str,
+                          key: str,
+                          attribute_type,
+                          recipe_id: str = None,
+                          ontology_id: str = None,
+                          scope: list = None,
+                          optional: bool = None,
+                          multi: bool = None,
+                          values: list = None,
+                          attribute_range=None):
+        """
+        ADD a new attribute or update if exist
+
+        :param str ontology_id: ontology_id
+        :param str title: attribute title
+        :param str key: the key of the attribute must br unique
+        :param AttributesTypes attribute_type: dl.AttributesTypes your attribute type
+        :param list scope: list of the labels or * for all labels
+        :param bool optional: optional attribute
+        :param bool multi: if can get multiple selection
+        :param list values: list of the attribute values ( for checkbox and radio button)
+        :param dict or AttributesRange attribute_range: dl.AttributesRange object
+        :return: true in success
+        :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.update_attributes(ontology_id='ontology_id',
+                                      key='1',
+                                      title='checkbox',
+                                      attribute_type=dl.AttributesTypes.CHECKBOX,
+                                      values=[1,2,3])
+        """
+        # get recipe
+        if recipe_id is None:
+            recipe_id = self.get_recipe_ids()[0]
+        recipe = self.recipes.get(recipe_id=recipe_id)
+
+        # get ontology
+        if ontology_id is None:
+            ontology_id = recipe.ontology_ids[0]
+        ontology = recipe.ontologies.get(ontology_id=ontology_id)
+
+        # add attribute to ontology
+        attribute = ontology.update_attributes(
+            title=title,
+            key=key,
+            attribute_type=attribute_type,
+            scope=scope,
+            optional=optional,
+            multi=multi,
+            values=values,
+            attribute_range=attribute_range)
+
+        return attribute
+
+    def delete_attributes(self, keys: list,
+                          recipe_id: str = None,
+                          ontology_id: str = None):
+        """
+        Delete a bulk of attributes
+
+        :param str recipe_id: recipe id
+        :param str ontology_id: ontology id
+        :param list keys: Keys of attributes to delete
+        :return: True if success
+        :rtype: bool
+        """
+
+        # get recipe
+        if recipe_id is None:
+            recipe_id = self.get_recipe_ids()[0]
+        recipe = self.recipes.get(recipe_id=recipe_id)
+
+        # get ontology
+        if ontology_id is None:
+            ontology_id = recipe.ontology_ids[0]
+        ontology = recipe.ontologies.get(ontology_id=ontology_id)
+        return ontology.delete_attributes(ontology_id=ontology.id, keys=keys)

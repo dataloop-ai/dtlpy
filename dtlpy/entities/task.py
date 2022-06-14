@@ -304,6 +304,9 @@ class Task:
                        metadata=None,
                        available_actions=None,
                        wait=True,
+                       batch_size=None,
+                       max_batch_workload=None,
+                       allowed_assignees=None,
                        ):
         """
         Create a new QA Task
@@ -317,6 +320,9 @@ class Task:
         :param dict metadata: metadata for the task
         :param list available_actions: list of available actions to the task
         :param bool wait: wait for the command to finish
+        :param int batch_size: Pulling batch size (items) . Restrictions - Min 3, max 100
+        :param int max_batch_workload: Max items in assignment . Restrictions - Min batchSize + 2 , max batchSize * 2
+        :param list allowed_assignees:  It’s like the workload, but without percentage.
         :return: task object
         :rtype: dtlpy.entities.task.Task
 
@@ -337,6 +343,9 @@ class Task:
                                          metadata=metadata,
                                          available_actions=available_actions,
                                          wait=wait,
+                                         batch_size=batch_size,
+                                         max_batch_workload=max_batch_workload,
+                                         allowed_assignees=allowed_assignees,
                                          )
 
     def create_assignment(self, assignment_name, assignee_id, items=None, filters=None):
