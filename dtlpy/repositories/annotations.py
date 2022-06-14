@@ -1,3 +1,4 @@
+import warnings
 from copy import deepcopy
 import traceback
 import logging
@@ -291,6 +292,9 @@ class Annotations:
                           with_text=False,
                           alpha=1)
         """
+        warnings.warn(
+            message='Downloading annotations default format will change from Mask to Json starting version 1.60.0',
+            category=DeprecationWarning)
         # get item's annotations
         annotations = self.list()
         if 'text' in self.item.metadata.get('system').get('mimetype', ''):
