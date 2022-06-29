@@ -209,7 +209,8 @@ class Converter:
                 for label in labels:
                     fp.write("{}\n".format(label))
 
-        pbar = tqdm.tqdm(total=pages.items_count, file=sys.stdout)
+        pbar = tqdm.tqdm(total=pages.items_count, disable=dataset._client_api.verbose.disable_progress_bar,
+                         file=sys.stdout)
         reporter = Reporter(
             num_workers=pages.items_count,
             resource=Reporter.CONVERTER,
@@ -356,8 +357,9 @@ class Converter:
         images = [None for _ in range(pages.items_count)]
         converted_annotations = [None for _ in range(pages.items_count)]
         item_id_counter = 0
-        pool = ThreadPool(processes=6)
-        pbar = tqdm.tqdm(total=pages.items_count, file=sys.stdout)
+        pool = ThreadPool(processes=self.concurrency)
+        pbar = tqdm.tqdm(total=pages.items_count, disable=dataset._client_api.verbose.disable_progress_bar,
+                         file=sys.stdout)
         reporter = Reporter(
             num_workers=pages.items_count,
             resource=Reporter.CONVERTER,

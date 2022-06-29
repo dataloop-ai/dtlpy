@@ -34,8 +34,10 @@ def step_impl(context):
             found = True
             list_json = project.to_json()
             project_json = context.project.to_json()
-            list_json.pop('role')
-            project_json.pop('role')
+            list_json.pop('role', None)
+            project_json.pop('role', None)
+            list_json.pop('isBlocked', None)
+            project_json.pop('isBlocked', None)
             # remove domain from get project results contributors
             contributors = list_json.get('contributors', list())
             for contributor in contributors:

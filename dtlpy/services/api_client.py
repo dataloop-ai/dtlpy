@@ -1475,7 +1475,7 @@ class ApiClient:
                 'user_type': user_type
             }
         }
-        self.event_tracker.put(event_payload)
+        self.event_tracker.put(event=event_payload)
 
     def logout(self):
         """

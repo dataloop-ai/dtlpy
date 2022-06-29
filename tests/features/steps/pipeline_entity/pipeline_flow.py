@@ -3,7 +3,6 @@ import time
 import uuid
 import random
 
-
 import dtlpy as dl
 import behave
 import json
@@ -138,9 +137,18 @@ def step_impl(context):
         path='/assignments/{}/items/{}/status'.format(ass_id, context.item.id),
         json_req=payload
     )
-    time.sleep(30)
-    context.item = context.dataset.items.get(item_id=context.item.id)
-    assert context.item.metadata['user'] == {'Hello': 'World'}
+    current_num_of_tries = 0
+    flag = False
+    while flag is False and current_num_of_tries < 6:
+        time.sleep(10)
+        context.item = context.dataset.items.get(item_id=context.item.id)
+        try:
+            if context.item.metadata['user'] == {'Hello': 'World'}:
+                flag = True
+        except:
+            current_num_of_tries += 1
+
+    assert flag
 
 
 @behave.when(u'I update the pipeline nodes')
@@ -177,7 +185,8 @@ def step_impl(context):
         recipe_id=context.recipe.id,
         recipe_title=context.recipe.title,
         task_owner="nirrozmarin@dataloop.ai",
-        workload=[dl.WorkloadUnit(assignee_id=dl.info()['user_email'], load=50), dl.WorkloadUnit(assignee_id="annotator1@dataloop.ai", load=50)],
+        workload=[dl.WorkloadUnit(assignee_id=dl.info()['user_email'], load=50),
+                  dl.WorkloadUnit(assignee_id="annotator1@dataloop.ai", load=50)],
         position=(1, 1),
         project_id=context.project_id,
         dataset_id=context.dataset.id,
@@ -234,9 +243,12 @@ def step_impl(context):
         function_name='automate'
     )
 
-    context.pipeline.nodes.add(task_node_1).connect(node=task_node_2, source_port=task_node_1.outputs[2], target_port=task_node_2.inputs[0]).connect(node=task_node_3,
-                                                                                                                                                     source_port=task_node_2.outputs[0]) \
-        .connect(node=code_node, source_port=task_node_3.outputs[0]).connect(node=dataset_node).connect(node=function_node)
+    context.pipeline.nodes.add(task_node_1).connect(node=task_node_2, source_port=task_node_1.outputs[2],
+                                                    target_port=task_node_2.inputs[0]).connect(node=task_node_3,
+                                                                                               source_port=
+                                                                                               task_node_2.outputs[0]) \
+        .connect(node=code_node, source_port=task_node_3.outputs[0]).connect(node=dataset_node).connect(
+        node=function_node)
 
     filters = dl.Filters(field='datasetId', values=context.dataset.id)
     task_node_1.add_trigger(filters=filters)
@@ -247,8 +259,8 @@ def step_impl(context):
 
 @behave.when(u'I create a pipeline with dataset resources')
 def step_impl(context):
-
-    context.pipeline = context.project.pipelines.create(name='sdk-pipeline-sanity-{}'.format(random.randrange(1000, 10000)))
+    context.pipeline = context.project.pipelines.create(
+        name='sdk-pipeline-sanity-{}'.format(random.randrange(1000, 10000)))
 
     def run_1(item: dl.Item):
         dataset = item.dataset
@@ -319,7 +331,6 @@ def step_impl(context, execution_number):
 
 @behave.when(u'I create a pipeline dataset, task "{type}" and code nodes - repeatable "{flag}"')
 def step_impl(context, type, flag):
-
     flag = eval(flag)
 
     t = time.localtime()
@@ -356,7 +367,8 @@ def step_impl(context, type, flag):
         function_name='automate'
     )
 
-    context.pipeline.nodes.add(dataset_node).connect(node=task_node).connect(node=function_node, source_port=task_node.outputs[0])
+    context.pipeline.nodes.add(dataset_node).connect(node=task_node).connect(node=function_node,
+                                                                             source_port=task_node.outputs[0])
     dataset_node.add_trigger()
 
     context.pipeline.update()
@@ -367,5 +379,4 @@ def step_impl(context, type, flag):
     try:
         context.task = context.project.tasks.get(task_name=task_name + " (" + pipeline_name + ")")
     except Exception as e:
-        assert False, "Failed to get task with the name: {}\n{}".format(task_name + " (" + pipeline_name + ")",e)
-
+        assert False, "Failed to get task with the name: {}\n{}".format(task_name + " (" + pipeline_name + ")", e)

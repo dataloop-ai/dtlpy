@@ -15,7 +15,7 @@ Feature: Items advanced browser filters
         Given There are items, path = "filters/image.jpg"
             |directory={"/": 3, "/dir1/": 3, "/dir1/dir2/": 3}|annotated_label={"dog": 3, "cat": 3}|annotated_type={"box": 3, "polygon": 3}|name={"dog":3, "cat":3}|metadata={"user.good": 3, "user.bad": 3}|
 
-        Then I add attribute to items with box annotations
+#        Then I add attribute to items with box annotations
 
         When I create filters
         And I add field "metadata.system.size" with values "51200" and operator "gt"
@@ -46,13 +46,13 @@ Feature: Items advanced browser filters
         And I list items with filters
         Then I receive "3" items
 
-        When I create filters
-        And I join field "metadata.system.attributes" with values "{"1":"attr1"}" and operator "None"
-        And I list items with filters
-        Then I receive "3" items
-
-        When I create filters
-        And I join field "metadata.system.attributes" with values "{}" and operator "None"
-        And I list items with filters
-        Then I receive "9" items
+#        When I create filters
+#        And I join field "metadata.system.attributes" with values "{"1":"attr1"}" and operator "None"
+#        And I list items with filters
+#        Then I receive "3" items
+#
+#        When I create filters
+#        And I join field "metadata.system.attributes" with values "{}" and operator "None"
+#        And I list items with filters
+#        Then I receive "9" items
 

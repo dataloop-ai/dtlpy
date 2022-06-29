@@ -96,6 +96,7 @@ Main Platform Interface module for Dataloop
 # Logger #
 ##########
 logger = logging.getLogger(name='dtlpy')
+logging.getLogger(name='filelock').setLevel(level=logging.CRITICAL)
 if len(logger.handlers) == 0:
     logger.setLevel(logging.DEBUG)
     log_filepath = DataloopLogger.get_log_filepath()

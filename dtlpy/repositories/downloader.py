@@ -1,21 +1,19 @@
-import shutil
-import sys
-import threading
+from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
+from PIL import Image
+import numpy as np
 import traceback
+import warnings
 import requests
 import logging
+import shutil
 import json
 import tqdm
+import sys
 import os
 import io
 
-import numpy as np
-
-from PIL import Image
-from requests.adapters import HTTPAdapter
-from urllib3.util import Retry
-
-from .. import entities, miscellaneous, PlatformException, dtlpy_services, exceptions
+from .. import entities, repositories, miscellaneous, PlatformException, exceptions
 from ..services import Reporter
 
 logger = logging.getLogger(name='dtlpy')
@@ -81,6 +79,9 @@ class Downloader:
         # Default options #
         ###################
         # annotation options
+        warnings.warn(
+            message='Downloading annotations default format will change from Mask to Json starting version 1.60.0',
+            category=DeprecationWarning)
         if annotation_options is None:
             annotation_options = list()
         elif not isinstance(annotation_options, list):
@@ -406,7 +407,8 @@ class Downloader:
                 raise exceptions.PlatformException(
                     error='400',
                     message="outputItemId key is missing in command response: {}".format(response))
-            annotation_zip_item = dataset.items.get(item_id=command.spec['outputItemId'])
+            item_id = command.spec['outputItemId']
+            annotation_zip_item = repositories.Items(client_api=dataset._client_api).get(item_id=item_id)
             zip_filepath = annotation_zip_item.download(local_path=local_path, export_version=export_version)
             # unzipping annotations to directory
             if isinstance(zip_filepath, list) or not os.path.isfile(zip_filepath):
@@ -715,10 +717,12 @@ class Downloader:
                         # TODO remove this after the BE fix
                         if self.__video_validation(item=item,
                                                    downloaded_file=temp_file_path) or is_url:
-                            os.rename(temp_file_path, local_filepath)
+                            shutil.move(temp_file_path, local_filepath)
                         else:
                             os.remove(temp_file_path)
-                            raise PlatformException(500, 'The downloaded file is corrupted. Please try again. If the issue repeats please contact support.')
+                            raise PlatformException(
+                                error=500,
+                                message='The downloaded file is corrupted. Please try again. If the issue repeats please contact support.')
                     except Exception as err:
                         if os.path.isfile(temp_file_path):
                             os.remove(temp_file_path)

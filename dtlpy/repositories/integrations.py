@@ -103,6 +103,7 @@ class Integrations:
         gcs - {key: "", secret: "", content: ""};
         azureblob - {key: "", secret: "", clientId: "", tenantId: ""};
         key_value - {key: "", value: ""}
+        aws-sts - {key: "", secret: "", roleArns: ""}
 
         **Prerequisites**: You must be an *owner* in the organization.
 

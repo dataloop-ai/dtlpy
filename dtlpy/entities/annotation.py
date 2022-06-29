@@ -1,4 +1,6 @@
 import os
+import warnings
+
 import numpy as np
 import traceback
 import logging
@@ -549,6 +551,9 @@ class Annotation(entities.BaseEntity):
 
             annotation.download(filepath='filepath', annotation_format=dl.ViewAnnotationOptions.MASK)
         """
+        warnings.warn(
+            message='Downloading annotations default format will change from Mask to Json starting version 1.60.0',
+            category=DeprecationWarning)
         if annotation_format == ViewAnnotationOptions.JSON:
             with open(filepath, 'w') as f:
                 json.dump(self.to_json(), f, indent=2)
@@ -1488,6 +1493,9 @@ class Annotation(entities.BaseEntity):
         if self.status is not None:
             # if status is CLEAR need to set status to None so it will be deleted in backend
             _json['metadata']['system']['status'] = self.status if self.status != AnnotationStatus.CLEAR else None
+
+        if isinstance(self.annotation_definition, entities.Description):
+            _json['metadata']['system']['system'] = True
 
         if self._use_attributes_2:
             _json['metadata']['system']['attributes'] = self._recipe_2_attributes

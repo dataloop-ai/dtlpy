@@ -7,6 +7,7 @@ Feature: Services repository deploy service testing
         And I create a dataset with a random name
         And There is a package (pushed from "services/item") by the name of "services-deploy"
 
+
     @services.delete
     @packages.delete
     @testrail-C4523160
@@ -19,4 +20,11 @@ Feature: Services repository deploy service testing
             |service_name=services-deploy|package=services-deploy|revision=None|config={"new": "config"}|runtime=None|
         Then I receive a Service entity
         And There is only one service
-        
+
+
+    @services.delete
+    @packages.delete
+    @testrail-C4523160
+    Scenario: Deploy service from function with tabs
+        When I deploy a service from function "service-with-tabs"
+        Then I receive a Service entity

@@ -92,7 +92,7 @@ class Commands:
                 message='step param will be Deprecation from version 1.58.0 use backoff_factor',
                 category=DeprecationWarning)
         elapsed = 0
-        start = int(time.time())
+        start = time.time()
         if timeout is None or timeout <= 0:
             timeout = np.inf
 
@@ -104,7 +104,7 @@ class Commands:
             pbar.update(command.progress - pbar.n)
             if not command.in_progress():
                 break
-            elapsed = int(time.time()) - start
+            elapsed = time.time() - start
             sleep_time = np.min([timeout - elapsed, backoff_factor * (2 ** (num_tries - 1)), MAX_SLEEP_TIME])
             num_tries += 1
             logger.debug("Command {!r} is running for {:.2f}[s] and now Going to sleep {:.2f}[s]".format(command.id,

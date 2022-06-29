@@ -423,11 +423,6 @@ class Uploader:
                                                                                  remote_path=remote_path,
                                                                                  callback=callback,
                                                                                  mode=mode)
-            if item_size != response.json()['metadata']['system']['size']:
-                self.items_repository.delete(item_id=response.json()['id'])
-                raise PlatformException(500,
-                                        "The uploaded file is corrupted. "
-                                        "Please try again. If it happens again please contact support.")
         except Exception:
             raise
         finally:
@@ -435,6 +430,11 @@ class Uploader:
                 to_upload.close()
 
         if response.ok:
+            if item_size != response.json().get('metadata', {}).get('system', {}).get('size', 0):
+                self.items_repository.delete(item_id=response.json()['id'])
+                raise PlatformException(500,
+                                        "The uploaded file is corrupted. "
+                                        "Please try again. If it happens again please contact support.")
             item = self.items_repository.items_entity.from_json(client_api=self.items_repository._client_api,
                                                                 _json=response.json(),
                                                                 dataset=self.items_repository.dataset)

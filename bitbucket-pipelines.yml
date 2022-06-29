@@ -145,6 +145,22 @@ pipelines:
             - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - python tests/test_runner.py
+    "run-test-python-3.10":
+      - step:
+          image: python:3.10
+          name: Tests-3.10
+          script:
+            - python --version
+            - PYTHONPATH=$PWD
+            - pip install --upgrade pip
+            - apt-get -y update && apt-get install -y libgl1-mesa-glx
+            - pip install -r requirements.txt
+            - pip install -r tests/requirements.txt
+            - python setup.py build
+            - python setup.py install
+            - python tests/test_login.py
+            - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
+            - python tests/test_runner.py
     "run-test-python-3.5.4-on-rc":
       - step:
           image: python:3.5.4

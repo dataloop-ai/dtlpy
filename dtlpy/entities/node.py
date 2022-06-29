@@ -2,7 +2,7 @@ import inspect
 import json
 import logging
 import uuid
-from collections import Callable
+from typing import Callable
 from enum import Enum
 from typing import List
 

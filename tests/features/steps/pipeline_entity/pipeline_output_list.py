@@ -38,7 +38,7 @@ def step_impl(context):
         dataset_id=context.dataset.id,
     )
 
-    context.pipeline.nodes.add(node=code_node).connect(node=task_node,source_port=code_node.outputs[0])
+    context.pipeline.nodes.add(node=code_node).connect(node=task_node, source_port=code_node.outputs[0])
     filters = dl.Filters(field='datasetId', values=context.dataset.id)
     code_node.add_trigger(filters=filters)
     context.pipeline.update()
@@ -62,3 +62,12 @@ def step_impl(context, total_items):
             break
 
     assert finished
+
+    for items in task.get_items():
+        for item in items:
+            item.update_status(task_id=task.id, status='complete')
+
+    time.sleep(30)
+    for pipe_execution in context.pipeline.pipeline_executions.list().items:
+        assert pipe_execution.status == "success", "TEST FAILED: Pipeline execution {} is - {}".format(
+            pipe_execution.id, pipe_execution.status)

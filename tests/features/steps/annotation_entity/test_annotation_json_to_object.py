@@ -42,6 +42,9 @@ def step_impl(context, entity):
             response.pop('statusLog')
             entity_to_json.pop('updatedAt')
             response.pop('updatedAt')
+        elif entity == 'project':
+            entity_to_json.pop('isBlocked', None)
+            response.pop('isBlocked', None)
 
         if entity_to_json != response:
             logging.error('FAILED: response json is:\n{}\n\nto_json is:\n{}'.format(json.dumps(response,
@@ -220,6 +223,7 @@ def step_impl(context):
                 found_frames = True
                 break
 
+    assert isinstance(nb_frames, int), "TEST FAILED: nb_frames is not defined"
     ann = context.annotation
     label = context.dataset.labels[0]
     for frame in range(nb_frames):

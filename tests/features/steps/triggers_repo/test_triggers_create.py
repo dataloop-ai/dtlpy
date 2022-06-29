@@ -52,6 +52,7 @@ def step_impl(context):
 def step_impl(context):
     function_name = None
     name = None
+    cron = None
 
     params = context.table.headings
     for param in params:
@@ -62,19 +63,25 @@ def step_impl(context):
         elif param[0] == "function_name":
             if param[1] != "None":
                 function_name = param[1]
+        elif param[0] == "cron":
+            if param[1] != "None":
+                cron = param[1]
+            else:
+                cron = "0 5 * * *"
 
     context.trigger = context.service.triggers.create(function_name=function_name,
                                                       trigger_type="Cron",
                                                       name=name,
                                                       start_at=datetime.datetime.now().isoformat(),
                                                       end_at=datetime.datetime(2024, 8, 23).isoformat(),
-                                                      cron="0 5 * * *")
+                                                      cron=cron)
 
 
 @behave.given(u"I create a cron trigger")
 def step_impl(context):
     function_name = None
     name = None
+    cron = None
 
     params = context.table.headings
     for param in params:
@@ -85,13 +92,18 @@ def step_impl(context):
         elif param[0] == "function_name":
             if param[1] != "None":
                 function_name = param[1]
+        elif param[0] == "cron":
+            if param[1] != "None":
+                cron = param[1]
+            else:
+                cron = "* 5 * * *"
 
     context.trigger = context.service.triggers.create(function_name=function_name,
                                                       trigger_type="Cron",
                                                       name=name,
                                                       start_at=datetime.datetime.now().isoformat(),
                                                       end_at=datetime.datetime(2024, 8, 23).isoformat(),
-                                                      cron="0 5 * * *")
+                                                      cron=cron)
 
 
 @behave.then(u'I receive a Trigger entity')

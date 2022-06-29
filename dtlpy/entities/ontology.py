@@ -3,6 +3,7 @@ import traceback
 from collections import namedtuple
 import logging
 import random
+import uuid
 import attr
 
 from .. import entities, PlatformException, repositories, services, exceptions
@@ -399,7 +400,10 @@ class Ontology(entities.BaseEntity):
         else:
             raise ValueError('must have project or dataset to create with icon path')
         platform_path = "/.dataloop/ontologies/{}/labelDisplayImages/".format(self.id)
-        item = dataset.items.upload(local_path=icon_path, remote_path=platform_path)
+        basename = os.path.basename(icon_path)
+        item = dataset.items.upload(local_path=icon_path,
+                                    remote_path=platform_path,
+                                    remote_name='{}-{}'.format(uuid.uuid4().hex, basename))
         display_data['displayImage'] = dict()
         display_data['displayImage']['itemId'] = item.id
         display_data['displayImage']['datasetId'] = item.dataset_id

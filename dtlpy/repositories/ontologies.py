@@ -1,5 +1,7 @@
 import logging
 import traceback
+import warnings
+
 from .. import entities, miscellaneous, exceptions, services
 
 logger = logging.getLogger(name='dtlpy')
@@ -423,6 +425,11 @@ class Ontologies:
                                        attribute_type=dl.AttributesTypes.CHECKBOX,
                                        values=[1,2,3])
         """
+        warnings.warn(
+            message='param multi default will deprecated start from version 1.60.0 '
+                    'use dl.AttributesTypes.CHECKBOX for multiple selection '
+                    'and dl.AttributesTypes.RADIO_BUTTON for single selection',
+            category=DeprecationWarning)
         if not title:
             raise exceptions.PlatformException(400, "title must be provided")
         url_path = '/ontologies/{ontology_id}/attributes'.format(ontology_id=ontology_id)

@@ -38,7 +38,27 @@ class BaseServiceRunner:
 
 
 class Progress:
-    def update(self, status=None, progress=0, message=None, output=None):
+    """
+    Follow the event progress
+    """
+    def update(self,
+               status=None,
+               progress=0,
+               message=None,
+               output=None,
+               duration=None,
+               action=None
+               ):
+        """
+        Update the progress flow
+
+        :param str status: the progress status to display
+        :param int progress: number of finished flow
+        :param str message: the progress message to display
+        :param dict output: json serializable object to update the event output
+        :param float duration: the event duration
+        :param str action: event action
+        """
         pass
 
 
@@ -79,6 +99,9 @@ class ExecutionEventContext:
 
 
 class Context:
+    """
+    Contex of the service state
+    """
 
     def __init__(
             self,
@@ -91,7 +114,16 @@ class Context:
             logger,
             sdk
     ):
-
+        """
+        :param dict execution_dict: the current execution dict in the state
+        :param dict service: the current service entity in th state
+        :param dict package: the current package entity in th state
+        :param dict project: the current project entity in th state
+        :param dict event_context: ExecutionEventContext json display the Execution event context
+        :param dl.Progress progress: Progress object for work flow
+        :param logger: logger object
+        :param sdk: the dtlpy package
+        """
         # dtlpy
         self.logger = logger
         self.sdk = sdk

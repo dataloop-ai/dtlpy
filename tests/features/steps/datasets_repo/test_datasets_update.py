@@ -1,8 +1,8 @@
 import behave
 
 
-@behave.when(u'I update the "{original_dataset_name}" name to "{new_dataset_name}"')
-def step_impl(context, original_dataset_name, new_dataset_name):
+@behave.when(u'I update dataset name to "{new_dataset_name}"')
+def step_impl(context, new_dataset_name):
     context.dataset.name = new_dataset_name
     context.project.datasets.update(dataset=context.dataset,
                                   system_metadata=True)
@@ -10,8 +10,8 @@ def step_impl(context, original_dataset_name, new_dataset_name):
 
 @behave.then(u'There is a dataset by the name of "{new_dataset_name}" in host')
 def step_impl(context, new_dataset_name):
-    dataset_get = context.project.datasets.get(dataset_name=new_dataset_name)
-    assert dataset_get.name == new_dataset_name
+    context.dataset_get = context.project.datasets.get(dataset_name=new_dataset_name)
+    assert context.dataset_get.name == new_dataset_name
 
 
 @behave.then(u'There is no dataset by the name of "{original_dataset_name}" in host')
@@ -37,6 +37,7 @@ def step_impl(context):
         context.error = None
     except Exception as e:
         context.error = e
+    assert context.error is not None
 
 
 @behave.when(u'I try to update the "Dataset" name to "{existing_dataset_name}"')
@@ -47,3 +48,8 @@ def step_impl(context, existing_dataset_name):
         context.error = None
     except Exception as e:
         context.error = e
+
+
+@behave.given(u'I create a dataset by the name of "{original_dataset_name}"')
+def step_impl(context, original_dataset_name):
+    context.dataset = context.project.datasets.create(dataset_name=original_dataset_name)

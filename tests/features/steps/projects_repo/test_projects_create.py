@@ -60,7 +60,7 @@ def step_impl(context):
 
 @behave.then(u'I receive error with status code "{status_code}"')
 def step_impl(context, status_code):
-    assert context.error.status_code == status_code
+    assert context.error.status_code == int(status_code)
 
 
 @behave.then(u'"{error}" exception should be raised')

@@ -20,6 +20,7 @@ from tests.features.steps.datasets_repo import test_datasets_download_annotation
 from tests.features.steps.datasets_repo import test_dataset_upload_annotations
 from tests.features.steps.datasets_repo import test_datasets_download
 from tests.features.steps.datasets_repo import test_dataset_context
+from tests.features.steps.datasets_repo import tets_dataset_upload_labels
 
 from tests.features.steps.dataset_entity import test_dataset_repo_methods
 from tests.features.steps.dataset_entity import test_add_labels_methods
@@ -65,6 +66,7 @@ from tests.features.steps.ontologies_repo import test_ontologies_delete
 from tests.features.steps.ontologies_repo import test_ontologies_update
 
 from tests.features.steps.ontology_entity import test_ontology_repo_methods
+from tests.features.steps.ontology_entity import test_ontology_attributes
 
 from tests.features.steps.recipes_repo import test_recipes_create
 from tests.features.steps.recipes_repo import test_recipes_update
@@ -174,3 +176,5 @@ from tests.features.steps.documentation_tests import test_dataset_docs
 
 from tests.features.steps.test_cache import test_cache
 from tests.features.steps.settings_context import test_settings_context
+
+from tests.features.steps.pipeline_entity import pipeline_reset

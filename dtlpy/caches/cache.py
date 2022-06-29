@@ -412,7 +412,7 @@ class CacheManger:
                         for chunk in response.iter_content(chunk_size=8192):
                             if chunk:  # filter out keep-alive new chunks
                                 f.write(chunk)
-                    os.rename(temp_file_path, filepath)
+                    shutil.move(temp_file_path, filepath)
                 except:
                     if os.path.isfile(temp_file_path):
                         os.remove(temp_file_path)

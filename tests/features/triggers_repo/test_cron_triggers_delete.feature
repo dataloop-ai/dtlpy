@@ -8,7 +8,7 @@ Feature: Triggers repository delete service testing
         And There is a package (pushed from "triggers/item") by the name of "triggers-delete"
         And There is a service by the name of "triggers-delete" with module name "default_module" saved to context "service"
         And I create a cron trigger
-            |name=triggers-create|function_name=run|
+            |name=triggers-create|function_name=run| cron=None |
 
     @services.delete
     @packages.delete

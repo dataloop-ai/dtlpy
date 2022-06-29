@@ -20,7 +20,7 @@ Feature: Triggers repository list service testing
     @testrail-C4523175
     Scenario: List when 1 exist
         Given I create a cron trigger
-            |name=triggers-list|function_name=run|
+            |name=triggers-list|function_name=run| cron=None |
         When I list triggers
         Then I receive a Trigger list of "1" objects
 
@@ -29,8 +29,8 @@ Feature: Triggers repository list service testing
     @testrail-C4523175
     Scenario: List when 2 exist
         Given I create a cron trigger
-            |name=triggers-list1|function_name=run|
+            |name=triggers-list1|function_name=run| cron=None |
         Given I create a cron trigger
-            |name=triggers-list2|function_name=run|
+            |name=triggers-list2|function_name=run| cron=None |
         When I list triggers
         Then I receive a Trigger list of "2" objects

@@ -1,4 +1,5 @@
 import threading
+import time
 import traceback
 import logging
 import queue
@@ -12,6 +13,10 @@ class Events(threading.Thread):
         super(Events, self).__init__(*args, **kwargs)
         self.client_api = client_api
         self.q = queue.Queue()
+        self.mapping_events_dict = {
+            'project': {'method': ['create', 'delete'], 'route': '/projects'},
+            'task': {'method': ['create'], 'route': '/annotationtasks'},
+        }
 
     def track(self, event):
         try:
@@ -33,19 +38,44 @@ class Events(threading.Thread):
             except Exception:
                 logger.exception('failed in loop')
 
+    def _valid_events(self, path):
+        for route in self.mapping_events_dict.values():
+            if path.startswith(route['route']) and 'sdk' not in path:
+                return True
+        return False
+
+    def _add_info(self, event_payload, function, resp):
+        if function in ['create']:
+            event_source = event_payload.get('event', None)
+            resp_json = resp.json()
+            if event_source == 'dtlpy:project':
+                event_payload['properties'].update({'project_id': resp_json['id'],
+                                                    'project_name': resp_json['name']})
+            if event_source == 'dtlpy:task' and function in ['create']:
+                if 'createTaskPayload' in resp_json.get('spec', {}):
+                    task_payload = resp_json.get('spec', {}).get('createTaskPayload', {})
+                else:
+                    task_payload = resp_json
+                metadata = task_payload.get('metadata', {}).get('system', {})
+                task_type = task_payload.get('spec', {}).get('type', {})
+                allocation_method = 'Distribution'
+                if 'batchSize' in metadata and 'maxBatchWorkload' in metadata and 'allowedAssignees' in metadata:
+                    allocation_method = 'Pulling'
+                event_payload['properties'].update({'task_type': task_type,
+                                                    'allocation_method': allocation_method})
+
     def put(self, event, resp=None, path=None):
         send_event = True
-        if path is not None and ('sdk' in path or not path.startswith('/projects')):
+        if path is not None and not self._valid_events(path=path):
             send_event = False
 
         if resp is not None and send_event:
             event_source = os.path.normpath(event.filename).split('\\')[-1][:-4]
             event_payload = {'event': 'dtlpy:' + event_source,
                              'properties': {'sdk_event': event.function + '_' + event_source}}
-            if event_payload.get('event', None) == 'dtlpy:project' and event.function in ['create', 'delete']:
-                if event.function in ['create']:
-                    event_payload['properties'].update({'project_id': resp.json()['id'],
-                                                        'project_name': resp.json()['name']})
+            if event_source in self.mapping_events_dict and \
+                    event.function in self.mapping_events_dict[event_source]['method']:
+                self._add_info(event_payload=event_payload, function=event.function, resp=resp)
             else:
                 send_event = False
         else:

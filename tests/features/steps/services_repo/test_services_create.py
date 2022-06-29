@@ -1,5 +1,5 @@
 import os
-
+import dtlpy as dl
 import behave
 import json
 import time
@@ -134,3 +134,24 @@ def step_impl(context, log_message):
             break
 
     assert success
+
+
+@behave.when(u'I deploy a service from function "{service_name}"')
+def step_impl(context, service_name):
+    try:
+        def run(self, item=None, progress=None):
+            """
+            Write your main package function here
+
+            :param progress: Use this to update the progress of your package
+            :return:
+            """
+            # these lines can be removed
+            assert isinstance(progress, dl.Progress)
+            progress.update(status='inProgress', progress=0)
+
+        context.service = context.project.services.deploy(func=run,
+                                                          service_name=service_name)
+
+    except Exception as e:
+        context.error = e

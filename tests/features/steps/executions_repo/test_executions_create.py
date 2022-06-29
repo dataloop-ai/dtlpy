@@ -107,7 +107,7 @@ def step_impl(context, input_type):
             )
 
     if sync:
-        assert context.execution.status[-1]['status'] == 'success'
+        assert context.execution.latest_status['status'] == 'success'
 
 
 @behave.then(u"I receive an Execution entity")

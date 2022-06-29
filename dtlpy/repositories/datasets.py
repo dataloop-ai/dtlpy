@@ -4,7 +4,7 @@ Datasets Repository
 
 import os
 import sys
-
+import copy
 import tqdm
 import logging
 from urllib.parse import urlencode
@@ -423,17 +423,19 @@ class Datasets:
                                   with_task_annotations_status=False)
         """
         if filters is None:
-            filters = entities.Filters().prepare()
-        elif isinstance(filters, entities.Filters):
-            filters = filters.prepare()
-        else:
+            filters = entities.Filters()
+        elif not isinstance(filters, entities.Filters):
             raise exceptions.PlatformException(
                 error='400',
                 message='"filters" must be a dl.Filters entity. got: {!r}'.format(type(filters)))
 
+        copy_filters = copy.deepcopy(filters)
+        if copy_filters.has_field('hidden'):
+            copy_filters.pop('hidden')
+
         payload = {
             "name": clone_name,
-            "filter": filters,
+            "filter": copy_filters.prepare(),
             "cloneDatasetParams": {
                 "withItemsAnnotations": with_items_annotations,
                 "withMetadata": with_metadata,
@@ -563,7 +565,8 @@ class Datasets:
                driver_id: str = None,
                checkout: bool = False,
                expiration_options: entities.ExpirationOptions = None,
-               index_driver: entities.IndexDriver = entities.IndexDriver.V1
+               index_driver: entities.IndexDriver = entities.IndexDriver.V1,
+               recipe_id: str = None
                ) -> entities.Dataset:
         """
         Create a new dataset
@@ -579,6 +582,7 @@ class Datasets:
         :param bool checkout: bool. cache the dataset to work locally
         :param ExpirationOptions expiration_options: dl.ExpirationOptions object that contain definitions for dataset like MaxItemDays
         :param str index_driver: dl.IndexDriver, dataset driver version
+        :param str recipe_id: optional - recipe id
         :return: Dataset object
         :rtype: dtlpy.entities.dataset.Dataset
 
@@ -589,7 +593,7 @@ class Datasets:
             project.datasets.create(dataset_name='dataset_name', ontology_ids='ontology_ids')
         """
         create_default_recipe = True
-        if labels is not None or attributes is not None or ontology_ids is not None:
+        if any([labels, attributes, ontology_ids, recipe_id]):
             create_default_recipe = False
 
         # labels to list
@@ -633,11 +637,12 @@ class Datasets:
                                                  project=self.project)
             # create ontology and recipe
             if not create_default_recipe:
-                dataset = dataset.recipes.create(ontology_ids=ontology_ids,
-                                                 labels=labels,
-                                                 attributes=attributes).dataset
-            # # patch recipe to dataset
-            # dataset = self.update(dataset=dataset, system_metadata=True)
+                if recipe_id is not None:
+                    dataset.switch_recipe(recipe_id=recipe_id)
+                else:
+                    dataset = dataset.recipes.create(ontology_ids=ontology_ids,
+                                                     labels=labels,
+                                                     attributes=attributes).dataset
         else:
             raise exceptions.PlatformException(response)
         logger.info('Dataset was created successfully. Dataset id: {!r}'.format(dataset.id))
@@ -796,7 +801,9 @@ class Datasets:
             # convert all annotations to annotation_options
             pool = dataset._client_api.thread_pools(pool_name='dataset.download')
             jobs = [None for _ in range(pages.items_count)]
-            progress = tqdm.tqdm(total=pages.items_count)
+            progress = tqdm.tqdm(total=pages.items_count,
+                                 disable=dataset._client_api.verbose.disable_progress_bar,
+                                 file=sys.stdout)
             i_item = 0
             for page in pages:
                 for item in page:
@@ -868,7 +875,7 @@ class Datasets:
             filters = entities.Filters()
         pages = dataset.items.list(filters=filters)
         total_items = pages.items_count
-        pbar = tqdm.tqdm(total=total_items, file=sys.stdout)
+        pbar = tqdm.tqdm(total=total_items, disable=dataset._client_api.verbose.disable_progress_bar, file=sys.stdout)
         pool = self._client_api.thread_pools('annotation.upload')
         annotations_uploaded_count = 0
         for item in pages.all():
