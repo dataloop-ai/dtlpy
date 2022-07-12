@@ -1,7 +1,8 @@
 import logging
 import attr
 from enum import Enum
-from .. import services, entities
+from collections import namedtuple
+from .. import services, entities, repositories
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -28,11 +29,26 @@ class Driver(entities.BaseEntity):
     path = attr.ib()
     type = attr.ib()
     integration_id = attr.ib()
+    integration_type = attr.ib()
     metadata = attr.ib(repr=False)
     name = attr.ib()
     id = attr.ib()
     # api
     _client_api = attr.ib(type=services.ApiClient, repr=False)
+    _repositories = attr.ib(repr=False)
+
+    @_repositories.default
+    def set_repositories(self):
+        reps = namedtuple('repositories',
+                          field_names=['drivers'])
+        return reps(
+            drivers=repositories.Drivers(client_api=self._client_api),
+        )
+
+    @property
+    def drivers(self):
+        assert isinstance(self._repositories.drivers, repositories.Drivers)
+        return self._repositories.drivers
 
     @classmethod
     def from_json(cls, _json, client_api, is_fetched=True):
@@ -52,6 +68,7 @@ class Driver(entities.BaseEntity):
                    region=_json.get('region', None),
                    type=_json.get('type', None),
                    integration_id=_json.get('integrationId', None),
+                   integration_type=_json.get('integrationType', None),
                    metadata=_json.get('metadata', None),
                    name=_json.get('name', None),
                    id=_json.get('id', None),
@@ -74,6 +91,7 @@ class Driver(entities.BaseEntity):
                                                               attr.fields(Driver).allow_external_modification,
                                                               attr.fields(Driver).created_at,
                                                               attr.fields(Driver).integration_id,
+                                                              attr.fields(Driver).integration_type,
                                                               attr.fields(Driver).path,
                                                               ))
         output_dict['bucketName'] = self.bucket_name
@@ -81,7 +99,9 @@ class Driver(entities.BaseEntity):
         output_dict['allowExternalModification'] = self.allow_external_modification
         output_dict['createdAt'] = self.created_at
         output_dict['integrationId'] = self.integration_id
+        output_dict['integrationType'] = self.integration_type
         if self.path is not None:
             output_dict['path'] = self.path
 
         return output_dict
+

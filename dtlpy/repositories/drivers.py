@@ -128,6 +128,7 @@ class Drivers:
                driver_type: entities.ExternalStorage,
                integration_id: str,
                bucket_name: str,
+               integration_type:  entities.ExternalStorage,
                project_id: str = None,
                allow_external_delete: bool = True,
                region: str = None,
@@ -142,6 +143,7 @@ class Drivers:
         :param str driver_type: ExternalStorage.S3, ExternalStorage.GCS, ExternalStorage.AZUREBLOB
         :param str integration_id: the integration id
         :param str bucket_name: the external bucket name
+        :param str integration_type: ExternalStorage.S3, ExternalStorage.GCS, ExternalStorage.AZUREBLOB, ExternalStorage.AWS_STS
         :param str project_id: project id
         :param bool allow_external_delete: true to allow deleting files from external storage when files are deleted in your Dataloop storage
         :param str region: relevant only for s3 - the bucket region
@@ -161,6 +163,8 @@ class Drivers:
                        project_id='project_id',
                        region='ey-west-1')
         """
+        if integration_type is None:
+            integration_type = driver_type
         if driver_type == entities.ExternalStorage.S3:
             bucket_payload = 'bucketName'
         elif driver_type == entities.ExternalStorage.GCS:
@@ -169,6 +173,7 @@ class Drivers:
             bucket_payload = 'containerName'
         payload = {
             "integrationId": integration_id,
+            'integrationType': integration_type,
             "name": name,
             "metadata": {
                 "system": {
@@ -193,3 +198,4 @@ class Drivers:
             raise exceptions.PlatformException(response)
         else:
             return entities.Driver.from_json(_json=response.json(), client_api=self._client_api)
+

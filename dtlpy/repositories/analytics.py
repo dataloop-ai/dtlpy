@@ -36,7 +36,7 @@ class Analytics:
     ############
     #  methods #
     ############
-    def get_samples(self, query=None, return_field: str = 'samples', return_raw: bool = False) -> pd.DataFrame:
+    def get_samples(self, query=None, return_field: str = None, return_raw: bool = False) -> pd.DataFrame:
         """
         Get Analytics table
 
@@ -47,11 +47,13 @@ class Analytics:
         :rtype: pd.DataFrame
         """
         success, response = self._client_api.gen_request(req_type='post',
-                                                         path='/projects/{}/analytics/itemQuery'.format(
-                                                             self.project.id),
+                                                         path='/analytics/query',
                                                          json_req=query)
         if success:
-            res = response.json()[return_field]
+            if return_field is not None:
+                res = response.json()[return_field]
+            else:
+                res = response.json()
             if return_raw:
                 return res
             if isinstance(res, dict):

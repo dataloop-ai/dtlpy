@@ -14,8 +14,8 @@ logger = logging.getLogger(name='dtlpy')
 
 
 class AttributesTypes:
-    CHECKBOX = "options"
-    RADIO_BUTTON = "options"
+    CHECKBOX = "checkbox"
+    RADIO_BUTTON = "radio_button"
     SLIDER = "range"
     YES_NO = "boolean"
     FREE_TEXT = "freeText"
@@ -697,7 +697,6 @@ class Ontology(entities.BaseEntity):
                           attribute_type,
                           scope: list = None,
                           optional: bool = None,
-                          multi: bool = None,
                           values: list = None,
                           attribute_range=None):
         """
@@ -708,7 +707,6 @@ class Ontology(entities.BaseEntity):
         :param AttributesTypes attribute_type: dl.AttributesTypes your attribute type
         :param list scope: list of the labels or * for all labels
         :param bool optional: optional attribute
-        :param bool multi: if can get multiple selection
         :param list values: list of the attribute values ( for checkbox and radio button)
         :param dict or AttributesRange attribute_range: dl.AttributesRange object
         :return: true in success
@@ -721,7 +719,6 @@ class Ontology(entities.BaseEntity):
             attribute_type=attribute_type,
             scope=scope,
             optional=optional,
-            multi=multi,
             values=values,
             attribute_range=attribute_range)
 

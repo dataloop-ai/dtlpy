@@ -19,6 +19,7 @@ class SlotDisplayScopeResource(str, Enum):
     ITEM = 'item'
     DATASET = 'dataset'
     DATASET_QUERY = 'datasetQuery'
+    TASK = 'task'
 
 
 class UiBindingPanel(str, Enum):

@@ -14,7 +14,7 @@ Feature: Ontology Entity attributes testing
             |key=1 | title=test1 | values=['a','b','c'] |
         Then I validate attribute "checkbox" added to ontology
         When I add "radio_button" attribute to ontology
-            |key=2 | title=test2 | values=['a','b','c'] | scope=all | multi=False |
+            |key=2 | title=test2 | values=['a','b','c'] | scope=all |
         Then I validate attribute "radio_button" added to ontology
         When I add "slider" attribute to ontology
             |key=3 | title=test3 | scope=all | attribute_range=0,10,1 |
@@ -45,7 +45,7 @@ Feature: Ontology Entity attributes testing
     Scenario: Attributes Edge cases
         # I Add attribute with all params
         When I add "checkbox" attribute to ontology
-            |key=1 | title=test1 | values=['a','b','c'] | scope=['Person','Wheel'] | optional=False | multi=True |
+            |key=1 | title=test1 | values=['a','b','c'] | scope=['Person','Wheel'] | optional=False |
         Then I validate attribute "checkbox" added to ontology
         # I Add attribute with int value
         When I add "checkbox" attribute to ontology

@@ -15,7 +15,7 @@ def step_impl(context, input_type):
     elif input_type == 'free_text':
         att_type = context.dl.AttributesTypes.FREE_TEXT
 
-    scope = optional = multi = values = attribute_range = None
+    scope = optional = values = attribute_range = None
 
     params = context.table.headings
     for param in params:
@@ -32,8 +32,6 @@ def step_impl(context, input_type):
             scope = param[1]
         elif param[0] == "optional":
             optional = eval(param[1])
-        elif param[0] == "multi":
-            multi = eval(param[1])
         elif param[0] == "values":
             if param[1].startswith('['):
                 param[1] = eval(param[1])
@@ -49,7 +47,6 @@ def step_impl(context, input_type):
                                            attribute_type=att_type,
                                            scope=scope,
                                            optional=optional,
-                                           multi=multi,
                                            values=values,
                                            attribute_range=attribute_range)
         context.error = None
@@ -62,9 +59,9 @@ def step_impl(context, input_type):
     context.ontology = context.recipe.ontologies.get(ontology_id=context.recipe.ontology_ids[0])
 
     if input_type == 'checkbox':
-        att_type = context.dl.AttributesTypes.CHECKBOX
+        att_type = 'options'
     elif input_type == 'radio_button':
-        att_type = context.dl.AttributesTypes.RADIO_BUTTON
+        att_type = 'options'
     elif input_type == 'slider':
         att_type = context.dl.AttributesTypes.SLIDER
     elif input_type == 'yes_no':

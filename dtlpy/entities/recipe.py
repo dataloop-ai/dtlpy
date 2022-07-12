@@ -1,4 +1,5 @@
 import traceback
+import uuid
 from collections import namedtuple
 import logging
 import attr
@@ -224,3 +225,22 @@ class Recipe(entities.BaseEntity):
                 if template_name == template['name']:
                     return template['id']
         raise exceptions.NotFound('404', "annotation template {!r} not found".format(template_name))
+
+    def add_instruction(self, annotation_instruction_file):
+        """
+        Add instruction to recipe
+
+        :param str annotation_instruction_file: file path or url of the recipe instruction
+        """
+        for project_id in self.project_ids:
+            project = repositories.Projects(client_api=self._client_api).get(project_id=project_id)
+            dataset = project.datasets.get(dataset_name='Binaries')
+            remote_path = '/.dataloop/recipes/{}/instructions'.format(self.id)
+            instruction_item = dataset.items.upload(local_path=annotation_instruction_file,
+                                                    remote_path=remote_path,
+                                                    remote_name=str(uuid.uuid4()) + '.pdf',
+                                                    overwrite=True)
+            self.metadata['system']['instructionDocument'] = {'itemId': instruction_item.id,
+                                                              'datasetId': dataset.id,
+                                                              'name': instruction_item.name}
+            self.update(True)

@@ -707,7 +707,7 @@ class DatasetNode(PipelineNode):
                  name: str,
                  project_id: str,
                  dataset_id: str,
-                 dataset_folder: str = "/",
+                 dataset_folder: str = None,
                  position: tuple = (1, 1)):
         """
         :param str name: node name
@@ -742,10 +742,11 @@ class DatasetNode(PipelineNode):
 
     @property
     def dataset_folder(self):
-        return self.metadata['dir']
+        return self.metadata.get('dir', None)
 
     @dataset_folder.setter
     def dataset_folder(self, dataset_folder: str):
-        if not dataset_folder.startswith("/"):
-            dataset_folder = '/' + dataset_folder
-        self.metadata['dir'] = dataset_folder
+        if dataset_folder is not None:
+            if not dataset_folder.startswith("/"):
+                dataset_folder = '/' + dataset_folder
+            self.metadata['dir'] = dataset_folder

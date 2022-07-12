@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import logging
-import json
+import datetime
 
 from .. import entities
 
@@ -375,36 +375,54 @@ class Matchers:
         return matches
 
 
-def item_annotation_duration(item: entities.Item,
+def item_annotation_duration(item: entities.Item = None,
                              dataset: entities.Dataset = None,
                              project: entities.Project = None,
                              task: entities.Task = None,
-                             assignment: entities.Assignment = None,
-                             analytics_duration_df=None):
+                             assignment: entities.Assignment = None):
+    if all(ent is None for ent in [item, dataset, project, assignment, task]):
+        raise ValueError('At least one input to annotation duration must not be None')
     query = {
-        "match": {
-            "action": ["annotation.created", "annotation.updated", 'annotation.deleted'],
-            "itemId": item.id,
+        "startTime": 0,
+        "context": {
+            "accountId": [],
+            "orgId": [],
+            "projectId": [],
+            "datasetId": [],
+            "taskId": [],
+            "assignmentId": [],
+            "itemId": [],
+            "userId": [],
+            "serviceId": [],
+            "podId": [],
         },
-        "size": 10000,
-        'startTime': 0,
-        "sort": {"by": 'time',
-                 'order': 'asc'}
+        "measures": [
+            {
+                "measureType": "itemAnnotationDuration",
+                "pageSize": 1000,
+                "page": 0,
+            },
+        ]
     }
     # add context for analytics
+    created_at = list()
+    if item is not None:
+        query['context']['itemId'].append(item.id)
+        created_at.append(int(1000 * datetime.datetime.fromisoformat(item.created_at[:-1]).timestamp()))
     if task is not None:
-        query['match']['taskId'] = task.id
+        query['context']['taskId'].append(task.id)
+        created_at.append(int(1000 * datetime.datetime.fromisoformat(task.created_at[:-1]).timestamp()))
     if dataset is not None:
-        query['match']['datasetId'] = dataset.id
+        query['context']['datasetId'].append(dataset.id)
+        created_at.append(int(1000 * datetime.datetime.fromisoformat(dataset.created_at[:-1]).timestamp()))
     if assignment is not None:
-        query['match']['assignmentId'] = assignment.id
-    raw = project.analytics.get_samples(query=query, return_field='samples', return_raw=True)
-    logger.debug("query for analytics: {}".format(json.dumps(query)))
-    df = pd.DataFrame(raw)
-
-    if 'duration' in df.columns:
-        anns_duration_sec = df.loc[:, 'duration'].sum() / 1000
+        query['context']['assignmentId'].append(assignment.id)
+        # assignment doesnt have "created_at" attribute
+    query['startTime'] = int(np.min(created_at))
+    raw = project.analytics.get_samples(query=query, return_field=None, return_raw=True)
+    res = {row['itemId']: row['duration'] for row in raw[0]['response']}
+    if item.id not in res:
+        total_time_s = 0
     else:
-        anns_duration_sec = 0
-
-    return anns_duration_sec
+        total_time_s = res[item.id] / 1000
+    return total_time_s

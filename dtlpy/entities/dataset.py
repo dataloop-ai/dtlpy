@@ -982,7 +982,6 @@ class Dataset(entities.BaseEntity):
                           ontology_id: str = None,
                           scope: list = None,
                           optional: bool = None,
-                          multi: bool = None,
                           values: list = None,
                           attribute_range=None):
         """
@@ -994,7 +993,6 @@ class Dataset(entities.BaseEntity):
         :param AttributesTypes attribute_type: dl.AttributesTypes your attribute type
         :param list scope: list of the labels or * for all labels
         :param bool optional: optional attribute
-        :param bool multi: if can get multiple selection
         :param list values: list of the attribute values ( for checkbox and radio button)
         :param dict or AttributesRange attribute_range: dl.AttributesRange object
         :return: true in success
@@ -1027,7 +1025,6 @@ class Dataset(entities.BaseEntity):
             attribute_type=attribute_type,
             scope=scope,
             optional=optional,
-            multi=multi,
             values=values,
             attribute_range=attribute_range)
 

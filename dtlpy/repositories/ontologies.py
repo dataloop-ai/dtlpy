@@ -398,7 +398,6 @@ class Ontologies:
                           attribute_type: entities.AttributesTypes,
                           scope: list = None,
                           optional: bool = None,
-                          multi: bool = None,
                           values: list = None,
                           attribute_range: entities.AttributesRange = None):
         """
@@ -410,7 +409,6 @@ class Ontologies:
         :param AttributesTypes attribute_type: dl.AttributesTypes your attribute type
         :param list scope: list of the labels or * for all labels
         :param bool optional: optional attribute
-        :param bool multi: if can get multiple selection
         :param list values: list of the attribute values ( for checkbox and radio button)
         :param dict or AttributesRange attribute_range: dl.AttributesRange object
         :return: true in success
@@ -425,14 +423,17 @@ class Ontologies:
                                        attribute_type=dl.AttributesTypes.CHECKBOX,
                                        values=[1,2,3])
         """
-        warnings.warn(
-            message='param multi default will deprecated start from version 1.60.0 '
-                    'use dl.AttributesTypes.CHECKBOX for multiple selection '
-                    'and dl.AttributesTypes.RADIO_BUTTON for single selection',
-            category=DeprecationWarning)
         if not title:
             raise exceptions.PlatformException(400, "title must be provided")
         url_path = '/ontologies/{ontology_id}/attributes'.format(ontology_id=ontology_id)
+
+        multi = None
+        if attribute_type == entities.AttributesTypes.CHECKBOX:
+            attribute_type = 'options'
+            multi = True
+        elif attribute_type == entities.AttributesTypes.RADIO_BUTTON:
+            attribute_type = 'options'
+            multi = False
 
         # build attribute json
         attribute_json = {

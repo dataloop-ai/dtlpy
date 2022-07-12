@@ -59,7 +59,8 @@ class Recipes:
                ontology_ids=None,
                labels=None,
                recipe_name=None,
-               attributes=None
+               attributes=None,
+               annotation_instruction_file=None
                ) -> entities.Recipe:
         """
         Create a new Recipe.
@@ -67,11 +68,12 @@ class Recipes:
 
         **Prerequisites**: You must be in the role of an *owner* or *developer*.
 
-        :param project_ids: project ids
-        :param ontology_ids: ontology ids
+        :param str project_ids: project ids
+        :param str or list ontology_ids: ontology ids
         :param labels: labels
-        :param recipe_name: recipe name
+        :param str recipe_name: recipe name
         :param attributes: attributes
+        :param str annotation_instruction_file: file path or url of the recipe instruction
         :return: Recipe entity
         :rtype: dtlpy.entities.recipe.Recipe
 
@@ -115,6 +117,8 @@ class Recipes:
             recipe = entities.Recipe.from_json(client_api=self._client_api,
                                                _json=response.json(),
                                                dataset=self._dataset)
+            if annotation_instruction_file:
+                recipe.add_instruction(annotation_instruction_file=annotation_instruction_file)
         else:
             logger.error('Failed to create Recipe')
             raise exceptions.PlatformException(response)
