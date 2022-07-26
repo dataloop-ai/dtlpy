@@ -1,3 +1,4 @@
+import warnings
 from collections import namedtuple
 from enum import Enum
 import traceback
@@ -183,6 +184,7 @@ class Item(entities.BaseEntity):
                 self._dataset = self.datasets.get(dataset_id=self.dataset_id, fetch=None)
             self._project_id = self._dataset.project.id
         return self._project_id
+
     ################
     # repositories #
     ################
@@ -327,6 +329,11 @@ class Item(entities.BaseEntity):
 
     @property
     def description(self):
+        warnings.warn(
+            message="Starting August 8th you'll need to update to the latest SDK version in order to read/write "
+                    "to item.description, since a system wide migration is planned, to relocate item description in"
+                    " item JSON root. Read here: https://dataloop.ai/docs/itemdescription ",
+            category=DeprecationWarning)
         description = None
         if 'description' in self.metadata:
             description = self.metadata['description'].get('text', None)
@@ -652,6 +659,11 @@ class Item(entities.BaseEntity):
 
         :return
         """
+        warnings.warn(
+            message="Starting August 8th you'll need to update to the latest SDK version in order to read/write "
+                    "to item.description, since a system wide migration is planned, to relocate item description in"
+                    " item JSON root. Read here: https://dataloop.ai/docs/itemdescription ",
+            category=DeprecationWarning)
         if text is None:
             text = ""
         if not isinstance(text, str):
