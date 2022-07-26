@@ -296,7 +296,7 @@ class Tasks:
             success, response = self._client_api.gen_request(req_type='get',
                                                              path=url)
             if not success:
-                raise exceptions.PlatformException('404', 'Annotation task not found')
+                raise exceptions.PlatformException(response)
             else:
                 task = entities.Task.from_json(_json=response.json(),
                                                client_api=self._client_api, project=self._project,

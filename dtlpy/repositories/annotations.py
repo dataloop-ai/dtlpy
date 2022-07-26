@@ -15,14 +15,18 @@ class Annotations:
     """
     Annotations Repository
 
-    The Annotation class allows you to manage the annotations of data items. For information on annotations explore our documentation at `Classification SDK <https://dataloop.ai/docs/sdk-classify-item>`_, `Annotation Labels and Attributes <https://dataloop.ai/docs/sdk-annotation-ontology>`_, `Show Video with Annotations <https://dataloop.ai/docs/sdk-show-videos>`_.
+    The Annotation class allows you to manage the annotations of data items. For information on annotations explore our
+    documentation at:
+    `Classification SDK <https://dataloop.ai/docs/sdk-classify-item>`_,
+    `Annotation Labels and Attributes <https://dataloop.ai/docs/sdk-annotation-ontology>`_,
+    `Show Video with Annotations <https://dataloop.ai/docs/sdk-show-videos>`_.
     """
 
     def __init__(self, client_api: services.ApiClient, item=None, dataset=None, dataset_id=None):
         self._client_api = client_api
         self._item = item
         self._dataset = dataset
-        self._bulk_annotation = 200
+        self._upload_batch_size = 100
         if dataset_id is None:
             if dataset is not None:
                 dataset_id = dataset.id
@@ -70,7 +74,8 @@ class Annotations:
         """
         Get a single annotation.
 
-        **Prerequisites**: You must have an item that has been annotated. You must have the role of an *owner* or *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*.
+        **Prerequisites**: You must have an item that has been annotated. You must have the role of an *owner* or
+        *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*.
 
         :param str annotation_id: annotation id
         :return: Annotation object or None
@@ -135,7 +140,8 @@ class Annotations:
         """
         List Annotations of a specific item. You must get the item first and then list the annotations with the desired filters.
 
-        **Prerequisites**: You must have an item that has been annotated. You must have the role of an *owner* or *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*.
+        **Prerequisites**: You must have an item that has been annotated. You must have the role of an *owner* or
+        *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*.
 
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :param int page_offset: starting page
@@ -216,9 +222,11 @@ class Annotations:
              annotation_format: entities.ViewAnnotationOptions = entities.ViewAnnotationOptions.MASK,
              alpha: float = 1):
         """
-        Show annotations. To use this method, you must get the item first and then show the annotations with the desired filters. The method returns an array showing all the annotations. 
+        Show annotations. To use this method, you must get the item first and then show the annotations with
+        the desired filters. The method returns an array showing all the annotations.
 
-        **Prerequisites**: You must have an item that has been annotated. You must have the role of an *owner* or *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*. 
+        **Prerequisites**: You must have an item that has been annotated. You must have the role of an *owner* or
+        *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*.
 
         :param ndarray image: empty or image to draw on
         :param int thickness: line thickness
@@ -255,7 +263,7 @@ class Annotations:
 
     def download(self,
                  filepath: str,
-                 annotation_format: entities.ViewAnnotationOptions = entities.ViewAnnotationOptions.MASK,
+                 annotation_format: entities.ViewAnnotationOptions = entities.ViewAnnotationOptions.JSON,
                  img_filepath: str = None,
                  height: float = None,
                  width: float = None,
@@ -265,7 +273,8 @@ class Annotations:
         """
         Save annotation to file.
 
-        **Prerequisites**: You must have an item that has been annotated. You must have the role of an *owner* or *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*. 
+        **Prerequisites**: You must have an item that has been annotated. You must have the role of an *owner* or
+        *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*.
 
         :param str filepath: Target download directory
         :param list annotation_format: optional - list(dl.ViewAnnotationOptions)
@@ -292,9 +301,6 @@ class Annotations:
                           with_text=False,
                           alpha=1)
         """
-        warnings.warn(
-            message='Downloading annotations default format will change from Mask to Json starting version 1.60.0',
-            category=DeprecationWarning)
         # get item's annotations
         annotations = self.list()
         if 'text' in self.item.metadata.get('system').get('mimetype', ''):
@@ -341,7 +347,8 @@ class Annotations:
         """
         Remove an annotation from item.
 
-        **Prerequisites**: You must have an item that has been annotated. You must have the role of an *owner* or *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*. 
+        **Prerequisites**: You must have an item that has been annotated. You must have the role of an *owner* or
+        *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*.
 
         :param dtlpy.entities.annotation.Annotation annotation: Annotation object
         :param str annotation_id: annotation id
@@ -404,7 +411,8 @@ class Annotations:
 
         return items_repo.delete(filters=filters)
 
-    def _update_snapshots(self, origin, modified):
+    @staticmethod
+    def _update_snapshots(origin, modified):
         """
         Update the snapshots if a change occurred and return a list of the new snapshots with the flag to update.
         """
@@ -489,9 +497,10 @@ class Annotations:
         """
         Update an existing annotation. For example, you may change the annotation's label and then use the update method. 
 
-        **Prerequisites**: You must have an item that has been annotated. You must have the role of an *owner* or *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*. 
+        **Prerequisites**: You must have an item that has been annotated. You must have the role of an *owner* or
+         *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*.
 
-        :param dtlpy.entities.annotation.Annotation annotation: Annotation object
+        :param dtlpy.entities.annotation.Annotation annotations: Annotation object
         :param bool system_metadata: bool - True, if you want to change metadata system
 
         :return: True if successful or error if unsuccessful
@@ -534,7 +543,8 @@ class Annotations:
             'type': annotation.get('type', None),
             'data': annotation.get('coordinates', None),
             'fixed': snapshots[0].get('fixed', None) if (isinstance(snapshots, list) and len(snapshots) > 0) else None,
-            'objectVisible': snapshots[0].get('objectVisible', None) if (isinstance(snapshots, list) and len(snapshots) > 0) else None,
+            'objectVisible': snapshots[0].get('objectVisible', None) if (
+                    isinstance(snapshots, list) and len(snapshots) > 0) else None,
         }
 
         offset = 0
@@ -547,56 +557,119 @@ class Annotations:
                 last_frame = frame
         return annotation
 
-    def _upload_annotations(self, annotations):
-        bulk_annotations_list = list()
-        bulk_return_annotations = list()
-        annotations_list = list()
+    def _create_batches_for_upload(self, annotations):
+        """
+        receives a list of annotations and split them into batches to optimize the upload
 
+        :param annotations: list of all annotations
+        :return: batch_annotations: list of list of annotation. each batch with size self._upload_batch_size
+        """
+        annotation_batches = list()
+        single_batch = list()
         for annotation in annotations:
             if isinstance(annotation, str):
                 annotation = json.loads(annotation)
             elif isinstance(annotation, entities.Annotation):
                 annotation = annotation.to_json()
             elif isinstance(annotation, dict):
-                annotation = annotation
+                pass
             else:
                 raise exceptions.PlatformException(error='400',
                                                    message='unknown annotations type: {}'.format(type(annotation)))
             annotation = self._annotation_encoding(annotation)
-            annotations_list.append(annotation)
-            if len(annotations_list) >= self._bulk_annotation:
-                bulk_annotations_list.append(annotations_list)
-                annotations_list = list()
+            single_batch.append(annotation)
+            if len(single_batch) >= self._upload_batch_size:
+                annotation_batches.append(single_batch)
+                single_batch = list()
+        if len(single_batch) > 0:
+            annotation_batches.append(single_batch)
+        return annotation_batches
 
-        bulk_annotations_list.append(annotations_list)
-        for annotations_list in bulk_annotations_list:
+    def _upload_single_batch(self, annotation_batch):
+        try:
             suc, response = self._client_api.gen_request(req_type='post',
                                                          path='/items/{}/annotations'.format(self.item.id),
-                                                         json_req=annotations_list)
+                                                         json_req=annotation_batch)
             if suc:
                 return_annotations = response.json()
                 if not isinstance(return_annotations, list):
                     return_annotations = [return_annotations]
-                bulk_return_annotations += return_annotations
             else:
-                if len(bulk_return_annotations) > 0:
-                    logger.warning("Only {} annotations from {} annotations have been uploaded".
-                                   format(len(bulk_return_annotations), len(annotations)))
                 raise exceptions.PlatformException(response)
 
-        result = entities.AnnotationCollection.from_json(_json=bulk_return_annotations,
-                                                         item=self.item)
-        return result
+            status = True
+            result = return_annotations
+        except Exception:
+            status = False
+            result = traceback.format_exc()
 
-    def upload(self, annotations):
+        return status, result
+
+    def _upload_annotations_batches(self, annotation_batches):
+        if len(annotation_batches) == 1:
+            # no need for threads
+            status, result = self._upload_single_batch(annotation_batch=annotation_batches[0])
+            if status is False:
+                logger.error(result)
+                logger.error('Annotation/s uploaded with errors')
+                # TODO need to raise errors?
+            uploaded_annotations = result
+        else:
+            # threading
+            pool = self._client_api.thread_pools(pool_name='annotation.upload')
+            jobs = [None for _ in range(len(annotation_batches))]
+            for i_ann, annotations_batch in enumerate(annotation_batches):
+                jobs[i_ann] = pool.submit(self._upload_single_batch,
+                                          annotation_batch=annotations_batch)
+            # get all results
+            results = [j.result() for j in jobs]
+            uploaded_annotations = [ann for ann_list in results for ann in ann_list[1] if ann_list[0] is True]
+            out_errors = [r[1] for r in results if r[0] is False]
+            if len(out_errors) != 0:
+                logger.error(out_errors)
+                logger.error('Annotation/s uploaded with errors')
+                # TODO need to raise errors?
+        logger.info('Annotation/s uploaded successfully. num: {}'.format(len(uploaded_annotations)))
+        return uploaded_annotations
+
+    async def _async_upload_annotations(self, annotations):
+        """
+        Async function to run from the uploader. will use asyncio to not break the async
+        :param annotations:
+        :return:
+        """
+        async with self._client_api.event_loop.semaphore('annotations.upload'):
+            annotation_batch = self._create_batches_for_upload(annotations=annotations)
+            output_annotations = list()
+            for annotations_list in annotation_batch:
+                success, response = await self._client_api.gen_async_request(req_type='post',
+                                                                             path='/items/{}/annotations'
+                                                                             .format(self.item.id),
+                                                                             json_req=annotations_list)
+                if success:
+                    return_annotations = response.json()
+                    if not isinstance(return_annotations, list):
+                        return_annotations = [return_annotations]
+                    output_annotations.extend(return_annotations)
+                else:
+                    if len(output_annotations) > 0:
+                        logger.warning("Only {} annotations from {} annotations have been uploaded".
+                                       format(len(output_annotations), len(annotations)))
+                    raise exceptions.PlatformException(response)
+
+            result = entities.AnnotationCollection.from_json(_json=output_annotations, item=self.item)
+            return result
+
+    def upload(self, annotations) -> entities.AnnotationCollection:
         """
         Upload a new annotation/annotations. You must first create the annotation using the annotation *builder* method.
 
         **Prerequisites**: Any user can upload annotations.
 
-        :param List[dtlpy.entities.annotation.Annotation] or dtlpy.entities.annotation.Annotation annotations: list or single annotation of type Annotation
+        :param List[dtlpy.entities.annotation.Annotation] or dtlpy.entities.annotation.Annotation annotations: list or
+        single annotation of type Annotation
         :return: list of annotation objects
-        :rtype: list
+        :rtype: entities.AnnotationCollection
 
         **Example**:
 
@@ -606,20 +679,30 @@ class Annotations:
         """
         # make list if not list
         if isinstance(annotations, entities.AnnotationCollection):
+            # get the annotation from a collection
             annotations = annotations.annotations
-        if not isinstance(annotations, list):
+        elif isinstance(annotations, str) and os.path.isfile(annotations):
+            # load annotation filepath and get list of annotations
+            with open(annotations, 'r', encoding="utf8") as f:
+                annotations = json.load(f)
+            annotations = annotations.get('annotations', [])
+            # annotations = entities.AnnotationCollection.from_json_file(filepath=annotations).annotations
+        elif isinstance(annotations, entities.Annotation) or isinstance(annotations, dict):
+            # convert the single Annotation to a list
             annotations = [annotations]
-            if isinstance(annotations[0], str) and os.path.isfile(annotations[0]):
-                with open(annotations[0], 'r', encoding="utf8") as f:
-                    annotations = json.load(f)
-                if isinstance(annotations, dict):
-                    if 'annotations' in annotations:
-                        annotations = annotations['annotations']
-                    elif 'data' in annotations:
-                        annotations = annotations['data']
-                    else:
-                        exceptions.PlatformException('400', 'Unknown annotation file format')
-        out_annotations = self._upload_annotations(annotations=annotations)
+        elif isinstance(annotations, list):
+            pass
+        else:
+            exceptions.PlatformException(error='400',
+                                         message='Unknown annotation format. type: {}'.format(type(annotations)))
+        if len(annotations) == 0:
+            logger.warning('Annotation upload receives 0 annotations. Not doing anything')
+            out_annotations = list()
+        else:
+            annotation_batches = self._create_batches_for_upload(annotations=annotations)
+            out_annotations = self._upload_annotations_batches(annotation_batches=annotation_batches)
+        out_annotations = entities.AnnotationCollection.from_json(_json=out_annotations,
+                                                                  item=self.item)
         return out_annotations
 
     def update_status(self,
@@ -630,11 +713,12 @@ class Annotations:
         """
         Set status on annotation.
 
-        **Prerequisites**: You must have an item that has been annotated. You must have the role of an *owner* or *developer* or be assigned a task that includes that item as an *annotation manager*. 
+        **Prerequisites**: You must have an item that has been annotated. You must have the role of an *owner* or
+        *developer* or be assigned a task that includes that item as an *annotation manager*.
 
         :param dtlpy.entities.annotation.Annotation annotation: Annotation object
         :param str annotation_id: optional - annotation id to set status
-        :param str status: can be AnnotationStatus.ISSUE, AnnotationStatus.APPROVED, AnnotationStatus.REVIEW, AnnotationStatus.CLEAR
+        :param str status: can be AnnotationStatus.ISSUE, APPROVED, REVIEW, CLEAR
         :return: Annotation object
         :rtype: dtlpy.entities.annotation.Annotation
 
@@ -657,7 +741,8 @@ class Annotations:
         """
         Create Annotation collection.
 
-        **Prerequisites**: You must have an item to be annotated. You must have the role of an *owner* or *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*.
+        **Prerequisites**: You must have an item to be annotated. You must have the role of an *owner* or *developer*
+         or be assigned a task that includes that item as an *annotation manager* or *annotator*.
 
         :return: Annotation collection object
         :rtype: dtlpy.entities.annotation_collection.AnnotationCollection
@@ -673,45 +758,3 @@ class Annotations:
     ##################
     # async function #
     ##################
-
-    async def _async_upload_annotations(self, annotations):
-        async with self._client_api.event_loops('items.upload').semaphore('annotations.upload'):
-            bulk_annotations_list = list()
-            bulk_return_annotations = list()
-            annotations_list = list()
-
-            for annotation in annotations:
-                if isinstance(annotation, str):
-                    annotation = json.loads(annotation)
-                elif isinstance(annotation, entities.Annotation):
-                    annotation = annotation.to_json()
-                elif isinstance(annotation, dict):
-                    annotation = annotation
-                else:
-                    raise exceptions.PlatformException(error='400',
-                                                       message='unknown annotations type: {}'.format(type(annotation)))
-                annotation = self._annotation_encoding(annotation)
-                annotations_list.append(annotation)
-                if len(annotations_list) >= self._bulk_annotation:
-                    bulk_annotations_list.append(annotations_list)
-                    annotations_list = list()
-
-            bulk_annotations_list.append(annotations_list)
-            for annotations_list in bulk_annotations_list:
-                success, response = await self._client_api.gen_async_request(req_type='post',
-                                                                             path='/items/{}/annotations'
-                                                                             .format(self.item.id),
-                                                                             json_req=annotations_list)
-                if success:
-                    return_annotations = response.json()
-                    if not isinstance(return_annotations, list):
-                        return_annotations = [return_annotations]
-                    bulk_return_annotations += return_annotations
-                else:
-                    if len(bulk_return_annotations) > 0:
-                        logger.warning("Only {} annotations from {} annotations have been uploaded".
-                                       format(len(bulk_return_annotations), len(annotations)))
-                    raise exceptions.PlatformException(response)
-
-            result = entities.AnnotationCollection.from_json(_json=bulk_return_annotations, item=self.item)
-            return result

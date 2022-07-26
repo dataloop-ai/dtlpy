@@ -15,7 +15,7 @@ def step_impl(context, get_method):
         if get_method == 'name':
             context.task_get = context.project.tasks.get(task_name='randomName')
         elif get_method == 'id':
-            context.task_get = context.project.tasks.get(task_id='randomId')
+            context.task_get = context.project.tasks.get(task_id='111111111111')
         context.error = None
     except Exception as e:
         context.error = e

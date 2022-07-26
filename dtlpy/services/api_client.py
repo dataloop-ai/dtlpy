@@ -413,7 +413,7 @@ class ApiClient:
         self.refresh_token_active = True
         # event and pools
         self._thread_pools = dict()
-        self._event_loops_dict = dict()
+        self._event_loop = None
 
         # TODO- remove before release - only for debugging
         self._stopped_pools = list()
@@ -467,6 +467,16 @@ class ApiClient:
         self.event_tracker.daemon = True
         self.event_tracker.start()
 
+    @property
+    def event_loop(self):
+        if self._event_loop is None:
+            self._event_loop = self.create_event_loop_thread()
+        elif not self._event_loop.loop.is_running():
+            if self._event_loop.is_alive():
+                self._event_loop.stop()
+            self._event_loop = self.create_event_loop_thread()
+        return self._event_loop
+
     def build_cache(self, cache_config=None):
         if cache_config is None:
             cache_config_json = os.environ.get('CACHE_CONFIG', None)
@@ -500,13 +510,13 @@ class ApiClient:
                 self.cache.ping()
                 self.sdk_cache.use_cache = True
             except Exception as e:
+                logger.warning("Cache build error {}".format(e))
                 self.cache = None
 
     def __del__(self):
         for name, pool in self._thread_pools.items():
             pool.shutdown()
-        for name, thread in self._event_loops_dict.items():
-            thread.stop()
+        self.event_loop.stop()
 
     def _build_request_headers(self, headers=None):
         if headers is None:
@@ -535,29 +545,16 @@ class ApiClient:
 
         for pool in self._thread_pools:
             self._thread_pools[pool].shutdown()
-        for name, thread in self._event_loops_dict:
-            thread.cancel()
-        self._event_loops_dict = dict()
         self._thread_pools = dict()
 
-    def create_event_loop_thread(self, name):
+    def create_event_loop_thread(self):
         loop = asyncio.new_event_loop()
         event_loop = AsyncThreadEventLoop(loop=loop,
-                                          n=self._num_processes,
-                                          name=name)
+                                          n=self._num_processes)
         event_loop.daemon = True
         event_loop.start()
         time.sleep(1)
         return event_loop
-
-    def event_loops(self, name):
-        if name not in self._event_loops_dict:
-            self._event_loops_dict[name] = self.create_event_loop_thread(name=name)
-        if not self._event_loops_dict[name].loop.is_running():
-            if self._event_loops_dict[name].is_alive():
-                self._event_loops_dict[name].stop()
-            self._event_loops_dict[name] = self.create_event_loop_thread(name=name)
-        return self._event_loops_dict[name]
 
     def thread_pools(self, pool_name):
         if pool_name not in self._thread_pools_names:
@@ -726,9 +723,9 @@ class ApiClient:
         self.environments = environments
 
     def add_environment(self, environment,
-                        audience,
-                        client_id,
-                        auth0_url,
+                        audience=None,
+                        client_id=None,
+                        auth0_url=None,
                         verify_ssl=True,
                         token=None,
                         refresh_token=None,

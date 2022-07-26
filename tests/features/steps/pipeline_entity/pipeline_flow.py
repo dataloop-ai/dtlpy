@@ -88,6 +88,67 @@ def step_impl(context):
     context.to_delete_pipelines_ids.append(context.pipeline.id)
 
 
+@behave.when(u'I create a pipeline from sdk with pipeline trigger')
+def step_impl(context):
+    context.pipeline = context.project.pipelines.create(name='sdk-pipeline-test', project_id=context.project.id)
+
+    function_node = dl.FunctionNode(
+        name='automate',
+        position=(1, 1),
+        service=dl.services.get(service_id=context.service.id),
+        function_name='automate'
+    )
+
+    task_node = dl.TaskNode(
+        name='My Task',
+        recipe_id=context.recipe.id,
+        recipe_title=context.recipe.title,
+        task_owner=dl.info()['user_email'],
+        workload=[dl.WorkloadUnit(assignee_id=dl.info()['user_email'], load=100)],
+        position=(2, 2),
+        project_id=context.project.id,
+        dataset_id=context.dataset.id,
+    )
+
+    def run(item):
+        item.metadata['user'] = {'Hello': 'World'}
+        item.update()
+        return item
+
+    code_node = dl.CodeNode(
+        name='My Function',
+        position=(3, 3),
+        project_id=context.project.id,
+        method=run,
+        project_name=context.project.name
+    )
+
+    context.pipeline.nodes.add(node=function_node).connect(node=task_node) \
+        .connect(node=code_node)
+    context.pipeline.update()
+    context.pipeline.triggers.create(actions=dl.TriggerAction.CREATED, pipeline_node_id=function_node.node_id,
+                                     project_id=context.project.id)
+    context.pipeline.install()
+    context.to_delete_pipelines_ids.append(context.pipeline.id)
+
+
+@behave.when(u'I update pipeline trigger action')
+def step_impl(context):
+    context.trigger = context.pipeline.triggers.list()[0][0]
+    context.trigger.actions = [dl.TriggerAction.UPDATED]
+    context.trigger.update()
+
+
+@behave.then(u'valid trigger updated')
+def step_impl(context):
+    trigger = context.pipeline.triggers.get(trigger_id=context.trigger.id)
+    original_trigger_json = context.trigger.to_json()
+    updated_trigger_json = trigger.to_json()
+    original_trigger_json.get('spec', {}).pop('actions', None)
+    assert updated_trigger_json.get('spec', {}).pop('actions', None) == [dl.TriggerAction.UPDATED]
+    assert updated_trigger_json.get('spec') == original_trigger_json.get('spec')
+
+
 @behave.when(u'I create a pipeline from json')
 def step_impl(context):
     pipeline_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], "pipeline_flow/pipeline_flow.json")

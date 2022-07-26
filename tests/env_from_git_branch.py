@@ -17,7 +17,7 @@ def get_env_from_git_branch():
         elif branch_name == 'master':
             env_name = 'prod'
         else:
-            env_name = 'dev'
+            env_name = 'rc'
             print('unknown git branch. default is "dev"')
     print('Running on dataloop environment: {!r}'.format(env_name))
     return env_name

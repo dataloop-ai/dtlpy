@@ -168,7 +168,7 @@ class Filters:
         Add filter
 
         :param str field: Metadata field / attribute
-        :param str or list values: field values
+        :param values: field values
         :param dl.FiltersOperations operator: optional - in, gt, lt, eq, ne
         :param dl.FiltersMethod method: Optional - or/and
 

@@ -176,8 +176,11 @@ class Triggers:
                 pipeline = self._pipeline
                 pipeline_id = self._pipeline.id
 
+        if pipeline is not None:
+            pipeline_id = pipeline.id
+
         # type
-        input_num = sum(input_id is not None for input_id in [service_id, webhook_id, pipeline_id, pipeline])
+        input_num = sum(input_id is not None for input_id in [service_id, webhook_id, pipeline_id])
         if input_num != 1:
             raise exceptions.PlatformException('400',
                                                'Must provide only one of service id, webhook id, pipeline id or pipeline')
@@ -465,6 +468,8 @@ class Triggers:
                 filters.add(field='projectId', values=self._project.id)
             if self._service is not None:
                 filters.add(field='spec.operation.serviceId', values=self._service.id)
+            if self._pipeline is not None:
+                filters.add(field='spec.operation.id', values=self._pipeline.id)
         # assert type filters
         elif not isinstance(filters, entities.Filters):
             raise exceptions.PlatformException(error='400',

@@ -59,6 +59,7 @@ from tests.features.steps.items_repo import test_items_context
 from tests.features.steps.item_entity import test_item_repo_methods
 from tests.features.steps.item_entity import test_item_move
 from tests.features.steps.item_entity import test_item_update_status
+from tests.features.steps.item_entity import test_item_description
 
 from tests.features.steps.ontologies_repo import test_ontologies_create
 from tests.features.steps.ontologies_repo import test_ontologies_get
@@ -67,6 +68,7 @@ from tests.features.steps.ontologies_repo import test_ontologies_update
 
 from tests.features.steps.ontology_entity import test_ontology_repo_methods
 from tests.features.steps.ontology_entity import test_ontology_attributes
+from tests.features.steps.ontology_entity import test_ontology_bamba_icon
 
 from tests.features.steps.recipes_repo import test_recipes_create
 from tests.features.steps.recipes_repo import test_recipes_update
@@ -178,3 +180,5 @@ from tests.features.steps.test_cache import test_cache
 from tests.features.steps.settings_context import test_settings_context
 
 from tests.features.steps.pipeline_entity import pipeline_reset
+
+from tests.features.steps.items_repo import test_upload_and_download_images

@@ -305,7 +305,7 @@ class AnnotationCollection(entities.BaseEntity):
     def download(self,
                  filepath,
                  img_filepath=None,
-                 annotation_format: entities.ViewAnnotationOptions = entities.ViewAnnotationOptions.MASK,
+                 annotation_format: entities.ViewAnnotationOptions = entities.ViewAnnotationOptions.JSON,
                  height=None,
                  width=None,
                  thickness=1,
@@ -569,7 +569,7 @@ class AnnotationCollection(entities.BaseEntity):
         if 'annotations' in _json:
             _json = _json['annotations']
 
-        results = [None for _ in range(len(_json))]
+        results = list([None for _ in range(len(_json))])
         for i_json, single_json in enumerate(_json):
             results[i_json] = cls._json_to_annotation(item=item,
                                                       fps=fps,
@@ -589,7 +589,7 @@ class AnnotationCollection(entities.BaseEntity):
         else:
             annotations.sort(key=lambda x: x.label)
 
-        return cls(annotations=annotations, item=item)
+        return cls(annotations=miscellaneous.List(annotations), item=item)
 
     @classmethod
     def from_json_file(cls, filepath, item=None):

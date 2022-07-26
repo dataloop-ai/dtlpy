@@ -119,7 +119,9 @@ class Commands:
                 command.id, command.status, command.progress))
         if command.status != entities.CommandsStatus.SUCCESS:
             raise exceptions.PlatformException(error='424',
-                                               message="Command {}: '{}'".format(command.status, command.error))
+                                               message="Command {!r} {}: '{}'".format(command.id,
+                                                                                      command.status,
+                                                                                      command.error))
         return command
 
     def abort(self, command_id: str):

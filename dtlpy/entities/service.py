@@ -27,6 +27,125 @@ class OnResetAction(str, Enum):
     FAILED = 'failed'
 
 
+class InstanceCatalog(str, Enum):
+    """ The Service Pode size.
+
+    .. list-table::
+       :widths: 15 150
+       :header-rows: 1
+
+       * - State
+         - Description
+       * - REGULAR_XS
+         - regular pod with extra small size
+       * - REGULAR_S
+         - regular pod with small size
+       * - REGULAR_M
+         - regular pod with medium size
+       * - REGULAR_L
+         - regular pod with large size
+       * - REGULAR_XL
+         - regular pod with extra large size
+       * - HIGHMEM_XS
+         - highmem pod with extra small size
+       * - HIGHMEM_S
+         - highmem pod with small size
+       * - HIGHMEM_M
+         - highmem pod with medium size
+       * - HIGHMEM_L
+         - highmem pod with large size
+       * - HIGHMEM_XL
+         - highmem pod with extra large size
+       * - GPU_K80_S
+         - GPU pod with small size
+       * - GPU_K80_M
+         - GPU pod with medium size
+    """
+    REGULAR_XS = "regular-xs"
+    REGULAR_S = "regular-s"
+    REGULAR_M = "regular-m"
+    REGULAR_L = "regular-l"
+    REGULAR_XL = "regular-xl"
+    HIGHMEM_XS = "highmem-xs"
+    HIGHMEM_S = "highmem-s"
+    HIGHMEM_M = "highmem-m"
+    HIGHMEM_L = "highmem-l"
+    HIGHMEM_XL = "highmem-xl"
+    GPU_K80_S = "gpu-k80-s"
+    GPU_K80_M = "gpu-k80-m"
+
+
+class RuntimeType(str, Enum):
+    """ Service culture Runtime (KUBERNETES).
+
+    .. list-table::
+       :widths: 15 150
+       :header-rows: 1
+
+       * - State
+         - Description
+       * - KUBERNETES
+         - Service run in kubernetes culture
+    """
+    KUBERNETES = 'kubernetes'
+
+
+class ServiceRuntime(entities.BaseEntity):
+    def __init__(self, service_type: RuntimeType = RuntimeType.KUBERNETES):
+        self.service_type = service_type
+
+
+class KubernetesRuntime(ServiceRuntime):
+    DEFAULT_POD_TYPE = InstanceCatalog.REGULAR_S
+    DEFAULT_NUM_REPLICAS = 1
+    DEFAULT_CONCURRENCY = 10
+
+    def __init__(self,
+                 pod_type: InstanceCatalog = DEFAULT_POD_TYPE,
+                 num_replicas=DEFAULT_NUM_REPLICAS,
+                 concurrency=DEFAULT_CONCURRENCY,
+                 runner_image=None,
+                 autoscaler=None,
+                 **kwargs):
+
+        super().__init__(service_type=RuntimeType.KUBERNETES)
+        self.pod_type = kwargs.get('podType', pod_type)
+        self.num_replicas = kwargs.get('numReplicas', num_replicas)
+        self.concurrency = kwargs.get('concurrency', concurrency)
+        self.runner_image = kwargs.get('runnerImage', runner_image)
+        self._proxy_image = kwargs.get('proxyImage', None)
+        self.single_agent = kwargs.get('singleAgent', False)
+        self.preemptible = kwargs.get('preemptible', None)
+
+        self.autoscaler = kwargs.get('autoscaler', autoscaler)
+        if self.autoscaler is not None and isinstance(self.autoscaler, dict):
+            if self.autoscaler['type'] == KubernetesAutuscalerType.RABBITMQ:
+                self.autoscaler = KubernetesRabbitmqAutoscaler(**self.autoscaler)
+            else:
+                raise NotImplementedError(
+                    'Unknown kubernetes autoscaler type: {}'.format(self.autoscaler['type']))
+
+    def to_json(self):
+        _json = {
+            'podType': self.pod_type,
+            'numReplicas': self.num_replicas,
+            'concurrency': self.concurrency,
+            'singleAgent': self.single_agent,
+            'autoscaler': None if self.autoscaler is None else self.autoscaler.to_json()
+        }
+
+        if self.runner_image is not None:
+            _json['runnerImage'] = self.runner_image
+
+        if self._proxy_image is not None:
+            _json['proxyImage'] = self._proxy_image
+
+        if self.preemptible is not None:
+            _json['preemptible'] = self.preemptible
+
+        return _json
+
+
 @attr.s
 class Service(entities.BaseEntity):
     """
@@ -54,7 +173,7 @@ class Service(entities.BaseEntity):
     secrets = attr.ib(repr=False)
 
     # name change
-    runtime = attr.ib(repr=False)
+    runtime = attr.ib(repr=False, type=KubernetesRuntime)
     queue_length_limit = attr.ib()
     run_execution_as_process = attr.ib(type=bool)
     execution_timeout = attr.ib()
@@ -518,54 +637,6 @@ class Service(entities.BaseEntity):
         )
 
 
-class InstanceCatalog(str, Enum):
-    """ The Service Pode size.
-
-    .. list-table::
-       :widths: 15 150
-       :header-rows: 1
-
-       * - State
-         - Description
-       * - REGULAR_XS
-         - regular pod with extra small size
-       * - REGULAR_S
-         - regular pod with small size
-       * - REGULAR_M
-         - regular pod with medium size
-       * - REGULAR_L
-         - regular pod with large size
-       * - REGULAR_XL
-         - regular pod with extra large size
-       * - HIGHMEM_XS
-         - highmem pod with extra small size
-       * - HIGHMEM_S
-         - highmem pod with small size
-       * - HIGHMEM_M
-         - highmem pod with medium size
-       * - HIGHMEM_L
-         - highmem pod with large size
-       * - HIGHMEM_XL
-         - highmem pod with extra large size
-       * - GPU_K80_S
-         - GPU pod with small size
-       * - GPU_K80_M
-         - GPU pod with medium size
-    """
-    REGULAR_XS = "regular-xs"
-    REGULAR_S = "regular-s"
-    REGULAR_M = "regular-m"
-    REGULAR_L = "regular-l"
-    REGULAR_XL = "regular-xl"
-    HIGHMEM_XS = "highmem-xs"
-    HIGHMEM_S = "highmem-s"
-    HIGHMEM_M = "highmem-m"
-    HIGHMEM_L = "highmem-l"
-    HIGHMEM_XL = "highmem-xl"
-    GPU_K80_S = "gpu-k80-s"
-    GPU_K80_M = "gpu-k80-m"
-
-
 class KubernetesAutuscalerType(str, Enum):
     """ The Service Autuscaler Type (RABBITMQ, CPU).
 
@@ -638,75 +709,4 @@ class KubernetesRabbitmqAutoscaler(KubernetesAutoscaler):
     def to_json(self):
         _json = super().to_json()
         _json['queueLength'] = self.queue_length
-        return _json
-
-
-class RuntimeType(str, Enum):
-    """ Service culture Runtime (KUBERNETES).
-
-    .. list-table::
-       :widths: 15 150
-       :header-rows: 1
-
-       * - State
-         - Description
-       * - KUBERNETES
-         - Service run in kubernetes culture
-    """
-    KUBERNETES = 'kubernetes'
-
-
-class ServiceRuntime(entities.BaseEntity):
-    def __init__(self, service_type: RuntimeType = RuntimeType.KUBERNETES):
-        self.service_type = service_type
-
-
-class KubernetesRuntime(ServiceRuntime):
-    DEFAULT_POD_TYPE = InstanceCatalog.REGULAR_S
-    DEFAULT_NUM_REPLICAS = 1
-    DEFAULT_CONCURRENCY = 10
-
-    def __init__(self,
-                 pod_type: InstanceCatalog = DEFAULT_POD_TYPE,
-                 num_replicas=DEFAULT_NUM_REPLICAS,
-                 concurrency=DEFAULT_CONCURRENCY,
-                 runner_image=None,
-                 autoscaler=None,
-                 **kwargs):
-
-        super().__init__(service_type=RuntimeType.KUBERNETES)
-        self.pod_type = kwargs.get('podType', pod_type)
-        self.num_replicas = kwargs.get('numReplicas', num_replicas)
-        self.concurrency = kwargs.get('concurrency', concurrency)
-        self.runner_image = kwargs.get('runnerImage', runner_image)
-        self._proxy_image = kwargs.get('proxyImage', None)
-        self.single_agent = kwargs.get('singleAgent', False)
-        self.preemptible = kwargs.get('preemptible', None)
-
-        self.autoscaler = kwargs.get('autoscaler', autoscaler)
-        if self.autoscaler is not None and isinstance(self.autoscaler, dict):
-            if self.autoscaler['type'] == KubernetesAutuscalerType.RABBITMQ:
-                self.autoscaler = KubernetesRabbitmqAutoscaler(**self.autoscaler)
-            else:
-                raise NotImplementedError(
-                    'Unknown kubernetes autoscaler type: {}'.format(self.autoscaler['type']))
-
-    def to_json(self):
-        _json = {
-            'podType': self.pod_type,
-            'numReplicas': self.num_replicas,
-            'concurrency': self.concurrency,
-            'singleAgent': self.single_agent,
-            'autoscaler': None if self.autoscaler is None else self.autoscaler.to_json()
-        }
-
-        if self.runner_image is not None:
-            _json['runnerImage'] = self.runner_image
-
-        if self._proxy_image is not None:
-            _json['proxyImage'] = self._proxy_image
-
-        if self.preemptible is not None:
-            _json['preemptible'] = self.preemptible
-
         return _json

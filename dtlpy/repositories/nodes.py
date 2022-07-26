@@ -25,15 +25,19 @@ class Nodes(list):
                 self._pipeline.set_start_node(node=node)
         return node
 
-    def get(self, node_name: str) -> entities.PipelineNode:
+    def get(self, node_name: str = None, node_id: str = None) -> entities.PipelineNode:
         """
         Get a node from the nodes list by name
 
         :param str node_name: the node name
+        :param str node_id: the node id
         :return: the result node
         """
+        if node_id is None and node_name is None:
+            raise exceptions.PlatformException('400',
+                                               'Must provide node_id or node_name')
         for node in self:
-            if node_name == node.name:
+            if node_name == node.name or node_id == node.node_id:
                 return node
         return None
 

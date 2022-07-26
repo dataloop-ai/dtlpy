@@ -341,13 +341,13 @@ class Execution(entities.BaseEntity):
         """
         self.attempts = self.executions.increment(execution=self)
 
-    def rerun(self):
+    def rerun(self, sync: bool = False):
         """
         Re-run
 
         :return: Execution object
         """
-        return self.executions.rerun(execution=self)
+        return self.executions.rerun(execution=self, sync=sync)
 
     def terminate(self):
         """

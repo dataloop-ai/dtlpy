@@ -79,9 +79,6 @@ class Downloader:
         # Default options #
         ###################
         # annotation options
-        warnings.warn(
-            message='Downloading annotations default format will change from Mask to Json starting version 1.60.0',
-            category=DeprecationWarning)
         if annotation_options is None:
             annotation_options = list()
         elif not isinstance(annotation_options, list):
@@ -239,7 +236,7 @@ class Downloader:
                                         "overwrite": overwrite,
                                         "annotation_options": annotation_options,
                                         "annotation_filters": annotation_filters,
-                                        "local_path": local_path,
+                                        "local_path": item_local_path,
                                         "thickness": thickness,
                                         "alpha": alpha,
                                         "with_text": with_text,
@@ -565,6 +562,8 @@ class Downloader:
             # if directory - get item's filename
             if to_items_folder:
                 local_path = os.path.join(local_path, "items")
+            elif is_folder:
+                local_path = os.path.join(local_path, "")
             if without_relative_path is not None:
                 local_filepath = os.path.join(local_path, item.name)
             else:
@@ -702,7 +701,7 @@ class Downloader:
                         response_output = response_output.decode('utf-8')[1:-1]
 
                     if os.path.isfile(os.path.normpath(response_output)):
-                        if response_output != local_path:
+                        if response_output != local_filepath:
                             source_path = os.path.normpath(response_output)
                             shutil.copyfile(source_path, local_filepath)
                 else:

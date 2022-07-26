@@ -1,7 +1,6 @@
 import threading
 import asyncio
 import logging
-
 import io
 
 logger = logging.getLogger(name='dtlpy')
@@ -11,37 +10,32 @@ class AsyncThreadEventLoop(threading.Thread):
     """Thread class with a stop() method. The thread itself has to check
     regularly for the stopped() condition."""
 
-    def __init__(self, loop, n, name, *args, **kwargs):
+    def __init__(self, loop, n, *args, **kwargs):
         super(AsyncThreadEventLoop, self).__init__(*args, **kwargs)
         self.loop = loop
         self.n = n
-        self.name = name
         self._count = 0
         self._semaphores = dict()
 
     def count_up(self):
         self._count += 1
-        # logger.debug('eventloop {} with {} tasks'.format(self.name, self._count))
 
     def count_down(self):
         self._count -= 1
-        # logger.debug('eventloop {} with {} tasks'.format(self.name, self._count))
 
     def run(self):
-        logger.debug('Starting event loop "{}" with bounded semaphore to {}'.format(self.name, self.n))
-
         def exception_handler(loop, context):
             logger.debug(
-                "[Asyc] EventLoop: {} caught the following exception: {}".format(self.name, context['message']))
+                "[Asyc] EventLoop: caught the following exception: {}".format(context['message']))
 
         self.loop.set_exception_handler(exception_handler)
         asyncio.set_event_loop(self.loop)
         self.loop.run_forever()
-        logger.debug('Ended event loop "{}" with bounded semaphore to {}'.format(self.name, self.n))
+        logger.debug('Ended event loop with bounded semaphore to {}'.format(self.n))
 
     def semaphore(self, name):
         if name not in self._semaphores:
-            self._semaphores[name] = asyncio.BoundedSemaphore(self.n, loop=self.loop)
+            self._semaphores[name] = asyncio.BoundedSemaphore(self.n)
         return self._semaphores[name]
 
     def stop(self):

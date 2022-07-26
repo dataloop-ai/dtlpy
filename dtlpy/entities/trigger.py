@@ -71,6 +71,7 @@ class BaseTrigger(entities.BaseEntity):
     ##############################
     project_id = attr.ib()
     _spec = attr.ib()
+    operation = attr.ib()
 
     ##################
     # SDK attributes #
@@ -99,7 +100,7 @@ class BaseTrigger(entities.BaseEntity):
         elif op_type == 'pipeline':
             webhook_id = None
             service_id = None
-            pipeline_id = operation.get('pipeline', dict()).get('id', None)
+            pipeline_id = operation.get('id', None)
         else:
             raise exceptions.PlatformException('400', 'unknown trigger operation type: {}'.format(op_type))
 
@@ -239,6 +240,7 @@ class BaseTrigger(entities.BaseEntity):
                                                               attr.fields(BaseTrigger).is_global,
                                                               attr.fields(BaseTrigger).created_at,
                                                               attr.fields(BaseTrigger).updated_at,
+                                                              attr.fields(BaseTrigger).operation,
                                                               ))
 
         # rename
@@ -285,22 +287,13 @@ class Trigger(BaseTrigger):
         """
         _json = super().to_json()
 
-        operation = {
-            'type': self._op_type,
-            'functionName': self.function_name
-        }
-        if self._op_type == 'function':
-            operation['serviceId'] = self.service_id
-        elif self._op_type == 'webhook':
-            operation['webhookId'] = self.webhook_id
-
         _json['spec'] = {
             'filter': _json.pop('filters'),
             'executionMode': _json.pop('execution_mode'),
             'resource': _json.pop('resource'),
             'actions': _json.pop('actions'),
             'input': _json.pop('input', None),
-            'operation': operation,
+            'operation': self.operation,
         }
         return _json
 
@@ -346,7 +339,8 @@ class Trigger(BaseTrigger):
             id=_json['id'],
             op_type=operation.get('type', None),
             spec=spec,
-            pipeline_id=pipeline_id
+            pipeline_id=pipeline_id,
+            operation=operation
         )
 
 
@@ -364,21 +358,13 @@ class CronTrigger(BaseTrigger):
         :rtype: dict
         """
         _json = super().to_json()
-        operation = {
-            'type': self._op_type,
-            'functionName': self.function_name
-        }
-        if self._op_type == 'function':
-            operation['serviceId'] = self.service_id
-        elif self._op_type == 'webhook':
-            operation['webhookId'] = self.webhook_id
 
         _json['spec'] = {
             'startAt': _json.pop('start_at'),
             'endAt': _json.pop('end_at'),
             'cron': _json.pop('cron'),
             'input': _json.pop('input'),
-            'operation': operation,
+            'operation': self.operation,
         }
         return _json
 
@@ -427,5 +413,6 @@ class CronTrigger(BaseTrigger):
             id=_json['id'],
             op_type=operation.get('type', None),
             spec=spec,
-            pipeline_id=pipeline_id
+            pipeline_id=pipeline_id,
+            operation=operation
         )

@@ -304,12 +304,11 @@ class Uploader:
         self.pbar.total += 1
         self.reporter.upcount_num_workers()
         future = asyncio.run_coroutine_threadsafe(
-            self.__upload_single_item_wrapper(i_item=self.i_item,
-                                              element=elem,
+            self.__upload_single_item_wrapper(element=elem,
                                               mode=self.mode,
                                               pbar=self.pbar,
                                               reporter=self.reporter),
-            loop=self.items_repository._client_api.event_loops('items.upload').loop)
+            loop=self.items_repository._client_api.event_loop.loop)
         return future
 
     def _build_elements_from_df(self, df: pandas.DataFrame):
@@ -442,8 +441,8 @@ class Uploader:
             raise PlatformException(response)
         return item, response.headers.get('x-item-op', 'na')
 
-    async def __upload_single_item_wrapper(self, i_item, element, pbar, reporter, mode):
-        async with self.items_repository._client_api.event_loops('items.upload').semaphore('items.upload'):
+    async def __upload_single_item_wrapper(self, element, pbar, reporter, mode):
+        async with self.items_repository._client_api.event_loop.semaphore('items.upload'):
             # assert isinstance(element, UploadElement)
             item = False
             err = None

@@ -8,6 +8,7 @@ import time
 @behave.given(u'Item in path "{item_path}" is uploaded to "Dataset"')
 def step_impl(context, item_path):
     item_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], item_path)
+    context.item_path = item_path
     context.item = context.dataset.items.upload(local_path=item_path)
     # wait for platform attributes
     time.sleep(6)

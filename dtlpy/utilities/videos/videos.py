@@ -45,10 +45,20 @@ class Videos:
 
     @staticmethod
     def video_snapshots_generator(item_id=None, item=None, frame_interval=30, image_ext="png"):
-        asyncio.run(Videos._async_video_snapshots_generator(item_id=item_id,
-                                                            item=item,
-                                                            frame_interval=frame_interval,
-                                                            image_ext=image_ext))
+        futures = Videos._async_video_snapshots_generator(item_id=item_id,
+                                                          item=item,
+                                                          frame_interval=frame_interval,
+                                                          image_ext=image_ext)
+        loop = asyncio.new_event_loop()
+        try:
+            asyncio.set_event_loop(loop)
+            return loop.run_until_complete(futures)
+        finally:
+            try:
+                loop.run_until_complete(loop.shutdown_asyncgens())
+            finally:
+                asyncio.set_event_loop(None)
+                loop.close()
 
     @staticmethod
     async def _async_video_snapshots_generator(item_id=None, item=None, frame_interval=30, image_ext="png"):

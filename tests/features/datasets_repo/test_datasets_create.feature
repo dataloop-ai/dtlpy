@@ -26,7 +26,7 @@ Feature: Datasets repository create service testing
         Then "BadRequest" exception should be raised
         And No dataset was created
 
-    @testrail-C4524925
+    @testrail-C4523084
     Scenario: Create a dataset with existing recipe
         When I create a dataset with a random name
         Then Dataset object with the same name should be exist

@@ -455,9 +455,6 @@ class Executions:
         """
 
         url_path = "/executions/{}/rerun".format(execution.id)
-        if sync:
-            url_path += '?sync=true'
-
         # request
         success, response = self._client_api.gen_request(req_type='post',
                                                          path=url_path)
@@ -466,12 +463,15 @@ class Executions:
         if not success:
             raise exceptions.PlatformException(response)
         else:
-            return entities.Execution.from_json(
+            execution = entities.Execution.from_json(
                 client_api=self._client_api,
                 _json=response.json(),
                 project=self._project,
                 service=self._service
             )
+            if sync:
+                execution = self.wait(execution_id=execution.id)
+        return execution
 
     def wait(self,
              execution_id: str,
@@ -512,7 +512,7 @@ class Executions:
                                                      service=self._service)
             if timeout is None:
                 timeout = execution.service.execution_timeout + 60
-            if execution.latest_status['status'] not in ['inProgress', 'created']:
+            if execution.latest_status['status'] not in ['inProgress', 'created', 'in-progress', 'rerun']:
                 break
             elapsed = int(time.time()) - start
             sleep_time = np.minimum(timeout - elapsed, 2 ** i)

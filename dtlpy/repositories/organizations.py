@@ -27,16 +27,7 @@ class Organizations:
         :rtype: dtlpy.entities.organization.Organization
         """
 
-        success, response = self._client_api.gen_request(req_type='post',
-                                                         path='/orgs',
-                                                         json_req=organization_json)
-        if success:
-            organization = entities.Organization.from_json(client_api=self._client_api,
-                                                           _json=response.json())
-        else:
-            raise exceptions.PlatformException(response)
-        assert isinstance(organization, entities.Organization)
-        return organization
+        raise exceptions.PlatformException(error='2001', message='Method organizations.create() was removed')
 
     def list_groups(self, organization: entities.Organization = None,
                     organization_id: str = None,

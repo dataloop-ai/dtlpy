@@ -524,7 +524,7 @@ class Annotation(entities.BaseEntity):
 
     def download(self,
                  filepath: str,
-                 annotation_format: ViewAnnotationOptions = ViewAnnotationOptions.MASK,
+                 annotation_format: ViewAnnotationOptions = ViewAnnotationOptions.JSON,
                  height: float = None,
                  width: float = None,
                  thickness: int = 1,
@@ -551,9 +551,6 @@ class Annotation(entities.BaseEntity):
 
             annotation.download(filepath='filepath', annotation_format=dl.ViewAnnotationOptions.MASK)
         """
-        warnings.warn(
-            message='Downloading annotations default format will change from Mask to Json starting version 1.60.0',
-            category=DeprecationWarning)
         if annotation_format == ViewAnnotationOptions.JSON:
             with open(filepath, 'w') as f:
                 json.dump(self.to_json(), f, indent=2)
