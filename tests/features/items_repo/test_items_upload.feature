@@ -104,21 +104,11 @@ Feature: Items repository upload service testing
 #         And Upload method returned an Item object
 #         And Item object from host equals item uploaded
 
-    @testrail-C4523119
-    Scenario: Upload a single item - video
-        When I upload a file in path "sample_video.mp4"
+    @testrail-C4524925
+    Scenario: Upload a single item with description
+        When I upload the file in path "assets_split/items_upload/0000000162.jpg" with description "description"
         Then Item exist in host
         And Upload method returned an Item object
         And Item object from host equals item uploaded
-        #todo
-        # And video download from host equal video in "sample_video.mp4"
-
-    @testrail-C4523119
-    Scenario: Verify mimetype Upload item - video
-        When I upload a file in path "sample_video.mp4"
-        Then Item mimetype is the item type "mp4"
-
-    @testrail-C4523119
-    Scenario: Verify mimetype Upload item - image
-        When I upload a file in path "assets_split/items_upload/0000000162.jpg"
-        Then Item mimetype is the item type "jpeg"
+        And Item in host when downloaded to "test_items_upload_downloaded_item" equals item in "assets_split/items_upload/0000000162.jpg"
+        And I validate item.description has "description" value

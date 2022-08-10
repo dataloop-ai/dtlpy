@@ -23,3 +23,14 @@ Feature: Annotation Entity create video annotation from blank
         And I upload annotation created
         Then Video has annotation without snapshots
 
+
+    @testrail-C4523045
+    Scenario: Video - get annotation from dl
+        Given Classes in file: "video_classes.json" are uploaded to test Dataset
+        And Item in path "sample_video.mp4" is uploaded to "Dataset"
+        When I create a blank annotation to item
+        And I add frames to annotation
+        And I upload annotation created
+        And I get annotation using dl
+        Then I validate annotation have frames
+

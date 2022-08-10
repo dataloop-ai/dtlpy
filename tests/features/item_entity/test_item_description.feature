@@ -10,4 +10,4 @@ Feature: Item description testing
     @testrail-C4532161
     Scenario: Add description to item
         When  I Add description "Item description" to item
-        Then  I validate item.description annotation
+        Then  I validate item.description has "Item description" value

@@ -23,6 +23,7 @@ class BaseUploadElement:
         self.root = all_upload_elements['root']
         self.filename = all_upload_elements['filename']
         self.export_version = all_upload_elements['export_version']
+        self.item_description = all_upload_elements['item_description']
 
 
 class BinaryUploadElement(BaseUploadElement):

@@ -46,10 +46,13 @@ class PipelineConnection:
 
     @staticmethod
     def from_json(_json: dict):
+        condition = _json.get('condition', None)
+        if condition:
+            condition = json.loads(condition)
         return PipelineConnection(
             source=PipelineConnectionPort.from_json(_json=_json.get('src', None)),
             target=PipelineConnectionPort.from_json(_json=_json.get('tgt', None)),
-            filters=_json.get('condition', None),
+            filters=condition,
         )
 
     def to_json(self):

@@ -105,3 +105,23 @@ class Driver(entities.BaseEntity):
 
         return output_dict
 
+    def delete(self, sure=False, really=False):
+        """
+        Delete a driver forever!
+
+        **Prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param bool sure: are you sure you want to delete?
+        :param bool really: really really?
+        :return: True if success
+        :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            driver.delete(sure=True, really=True)
+        """
+        return self.drivers.delete(driver_id=self.id,
+                                   sure=sure,
+                                   really=really)

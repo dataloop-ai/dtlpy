@@ -4,8 +4,7 @@ import os
 import json
 
 LOCAL = None  # or path to local doc repo
-# LEVELS = ['-', '~', '~', '<', '@']
-LEVELS = ['-', '^', '~', '"', '#', ]
+LEVELS = ['-', '*', '^']
 
 
 def get_file(filepath):
@@ -30,17 +29,21 @@ def extract_index_rec(root, filename, rst_string, level):
         index = json.load(f)
     for content in index['content']:
         name, ext = os.path.splitext(content['location'])
-        rst_string += '\n'
-        rst_string += '{}\n'.format(content['displayName'])
-        rst_string += '{}\n'.format(LEVELS[level] * len(content['displayName']))
-        rst_string += '{}\n'.format(content['description'])
-        rst_string += '\n'
-        rst_string += '.. toctree::\n'
-        rst_string += '   :numbered: \n'
-        rst_string += '   :caption: {}\n'.format(content['displayName'])
-        rst_string += '   :maxdepth: 6\n'
-        rst_string += '\n'
+
         if ext == '.json':
+            if level == 0:
+                rst_string += '\n'
+                rst_string += '{}\n'.format(LEVELS[level] * len(content['displayName']))
+                rst_string += '{}\n'.format(content['displayName'])
+                rst_string += '{}\n'.format(LEVELS[level] * len(content['displayName']))
+                rst_string += '{}\n'.format(content['description'])
+                rst_string += '\n'
+                rst_string += '.. toctree::\n'
+                rst_string += '   :numbered: \n'
+                rst_string += '   :caption: {}\n'.format(content['displayName'])
+                rst_string += '   :maxdepth: 6\n'
+                # rst_string += '   :hidden:\n'
+                rst_string += '\n'
             rst_string = extract_index_rec(root=root,
                                            filename=content['location'],
                                            rst_string=rst_string,
@@ -48,21 +51,8 @@ def extract_index_rec(root, filename, rst_string, level):
         else:
             filepath = root + '/' + content['location']
             get_file(filepath=filepath)
+            rst_string += '   {}\n'.format(filepath)
 
-            output = parse_from_file(filepath)
-            rst_filepath = filepath.replace('.md', '.rst')
-            if os.path.isfile(rst_filepath):
-                os.remove(rst_filepath)
-            save_to_file(rst_filepath, output)
-            os.remove(filepath)
-            # rst_string += '{}\n'.format(content['displayName'])
-            # rst_string += '{}\n'.format(LEVELS[level + 1] * len(content['displayName']))
-            # rst_string += '\n'
-            # rst_string += '{}\n'.format(content['description'])
-            # rst_string += '\n'
-            rst_string += '   {}\n'.format(filepath.replace('.md', '.rst'))
-            # rst_string += '  :parser: #myst_parser.sphinx_\n'
-            # rst_string += '\n'
     return rst_string
 
 
@@ -77,7 +67,7 @@ def main():
                                    filename=filename,
                                    rst_string=rst_string,
                                    level=0)
-    with open('tutorials.rst', 'w')as f:
+    with open('tutorials.rst', 'w') as f:
         f.write(rst_string)
 
 

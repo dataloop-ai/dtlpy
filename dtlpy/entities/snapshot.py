@@ -293,7 +293,7 @@ class Snapshot(entities.BaseEntity):
 
     @property
     def platform_url(self):
-        return self._client_api._get_resource_url("projects/{}/snapshots/{}/main".format(self.project_id, self.id))
+        return self._client_api._get_resource_url("projects/{}/snapshots/{}".format(self.project_id, self.id))
 
     @property
     def projects(self):

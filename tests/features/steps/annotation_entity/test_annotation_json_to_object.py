@@ -129,7 +129,7 @@ def step_impl(context):
 @behave.when(u"I upload annotation created")
 def step_impl(context):
     logging.warning('item fps is: {}'.format(context.item.fps))
-    context.annotation.upload()
+    context.annotation = context.annotation.upload()
 
 
 @behave.when(u"I add some frames to annotation")
@@ -239,3 +239,18 @@ def step_impl(context):
 @behave.then(u"Video has annotation without snapshots")
 def step_impl(context):
     assert context.item.annotations.list()[0].metadata['system']['snapshots_'] == []
+
+
+@behave.when(u"I get annotation using dl")
+def step_impl(context):
+    context.dl_annotation = context.dl.annotations.get(annotation_id=context.annotation.id)
+
+
+@behave.then(u"I validate annotation have frames")
+def step_impl(context):
+    assert context.dl_annotation.start_time == 0.0
+    assert context.dl_annotation.end_time == 7.6
+    assert context.dl_annotation.start_frame == 0
+    assert context.dl_annotation.end_frame == 190
+    assert context.dl_annotation.to_json()['metadata']['system']['snapshots_'] == \
+           context.annotation.to_json()['metadata']['system']['snapshots_']

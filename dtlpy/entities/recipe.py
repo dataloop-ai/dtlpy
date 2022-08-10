@@ -1,3 +1,4 @@
+import os
 import traceback
 import uuid
 from collections import namedtuple
@@ -232,6 +233,10 @@ class Recipe(entities.BaseEntity):
 
         :param str annotation_instruction_file: file path or url of the recipe instruction
         """
+        _, ext = os.path.splitext(annotation_instruction_file)
+        if ext != '.pdf':
+            raise exceptions.PlatformException(error='400',
+                                               message='file Must be pdf')
         for project_id in self.project_ids:
             project = repositories.Projects(client_api=self._client_api).get(project_id=project_id)
             dataset = project.datasets.get(dataset_name='Binaries')

@@ -129,6 +129,15 @@ def step_impl(context, local_path, remote_name):
     )
 
 
+@behave.when(u'I upload the file in path "{local_path}" with description "{description}"')
+def step_impl(context, local_path, description):
+    local_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], local_path)
+
+    context.item = context.dataset.items.upload(
+        local_path=local_path, remote_path=None, item_description=description
+    )
+
+
 @behave.when(
     u'I upload the file from path "{local_path}" with remote name "{remote_name}" to remote path "{remote_path}"')
 def step_impl(context, local_path, remote_path, remote_name):

@@ -470,7 +470,7 @@ class Snapshots:
         if snapshot is not None:
             snapshot.open_in_web()
         elif snapshot_id is not None:
-            self._client_api._open_in_web(url=self.platform_url + '/' + str(snapshot_id) + '/main')
+            self._client_api._open_in_web(url=self.platform_url + '/' + str(snapshot_id))
         else:
             self._client_api._open_in_web(url=self.platform_url)
 

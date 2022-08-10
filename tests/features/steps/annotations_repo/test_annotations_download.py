@@ -86,6 +86,7 @@ def step_impl(context, file_type, folder_path):
         file = file_type + '.mp4'
     assert file in items
 
+
 # @behave.then(u'"{file_type}" is correctly downloaded (compared with "{file_to_compare}")')
 # def step_impl(context, file_type, file_to_compare):
 #     path = 'downloaded_annotations'
@@ -104,6 +105,18 @@ def step_impl(context, file_type, folder_path):
 #             assert False
 #     else:
 #         assert False
+
+@behave.then(u'I download the annotation to "{item_path}" with "{annotation_type}" type')
+def step_impl(context, item_path, annotation_type):
+    item_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], item_path)
+    context.annotation_filepath = context.annotation_x_get.download(filepath=item_path, annotation_format=annotation_type)
+
+
+@behave.then(u'annotation file exist in the path "{annotation_filepath}"')
+def step_impl(context, annotation_filepath):
+    files = os.listdir(os.path.join(os.environ['DATALOOP_TEST_ASSETS'],annotation_filepath))
+    assert os.path.basename(context.annotation_filepath) in files
+
 
 @behave.then(u'I download the items annotations with ViewAnnotationOptions "{file_type}" enum to find "{item_path}"')
 def step_impl(context, file_type, item_path):

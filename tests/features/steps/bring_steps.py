@@ -182,3 +182,5 @@ from tests.features.steps.settings_context import test_settings_context
 from tests.features.steps.pipeline_entity import pipeline_reset
 
 from tests.features.steps.items_repo import test_upload_and_download_images
+
+from tests.features.steps.annotations_repo import test_rotated_box_points

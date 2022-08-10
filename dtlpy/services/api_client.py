@@ -1072,8 +1072,18 @@ class ApiClient:
             return_type = True
         return return_type, response
 
-    async def upload_file_async(self, to_upload, item_type, item_size, remote_url, uploaded_filename,
-                                remote_path=None, callback=None, mode='skip', item_metadata=None, headers=None):
+    async def upload_file_async(self,
+                                to_upload,
+                                item_type,
+                                item_size,
+                                remote_url,
+                                uploaded_filename,
+                                remote_path=None,
+                                callback=None,
+                                mode='skip',
+                                item_metadata=None,
+                                headers=None,
+                                item_description=None):
         headers = self._build_request_headers(headers=headers)
         pbar = None
         if callback is None:
@@ -1101,6 +1111,8 @@ class ApiClient:
                 form.add_field('path', os.path.join(remote_path, uploaded_filename).replace('\\', '/'))
                 if item_metadata is not None:
                     form.add_field('metadata', json.dumps(item_metadata))
+                if item_description is not None:
+                    form.add_field('description', item_description)
                 form.add_field('file', AsyncUploadStream(buffer=to_upload,
                                                          callback=callback,
                                                          name=uploaded_filename))

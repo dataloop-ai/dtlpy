@@ -1,3 +1,4 @@
+import time
 import behave
 import json
 
@@ -73,3 +74,50 @@ def step_impl(context, updated_attribute):
 
     assert len(context.service_update.revisions) == len(context.service.revisions) + 1
     assert updated_to_json == origin_to_json
+
+
+@behave.given(u'I execute service')
+def step_impl(context):
+    context.execution = context.service.execute(project_id=context.service.project_id)
+
+
+@behave.given(u'Service has max_attempts of "{max_attempts}"')
+def step_impl(context, max_attempts):
+    max_attempts = int(max_attempts)
+    context.service.max_attempts = max_attempts
+    context.service = context.service.update(force=True)
+    time.sleep(10)
+
+
+@behave.given(u'Execution is running')
+def step_impl(context):
+    interval = 4
+    num_tries = 30
+    success = False
+    for i in range(num_tries):
+        time.sleep(interval)
+        if success:
+            break
+        e = context.execution = context.service.executions.get(execution_id=context.execution.id)
+        success = e.latest_status['status'] in ['in-progress', 'inProgress']
+    assert success
+
+
+@behave.when(u'I update service with force="{force}"')
+def step_impl(context, force: str):
+    force = bool(force)
+    context.service = context.service.update(force=force)
+
+
+@behave.then(u'Execution stopped immediately')
+def step_impl(context):
+    interval = 30
+    num_tries = 8
+    success = False
+    for i in range(num_tries):
+        time.sleep(interval)
+        if success:
+            break
+        e = context.execution = context.service.executions.get(execution_id=context.execution.id)
+        success = e.latest_status['status'] == 'failed'
+    assert success

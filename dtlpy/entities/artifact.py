@@ -84,6 +84,8 @@ class Artifact(entities.Item):
             id=_json['id'],
             spec=_json.get('spec', None),
             creator=_json.get('creator', None),
-            project_id=project.id if project else None)
+            project_id=project.id if project else None,
+            description=_json.get('description', None)
+        )
         inst.is_fetched = is_fetched
         return inst

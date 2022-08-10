@@ -46,6 +46,7 @@ class Item(entities.BaseEntity):
     dir = attr.ib(repr=False)
     spec = attr.ib()
     creator = attr.ib()
+    _description = attr.ib()
 
     # name change
     annotations_count = attr.ib()
@@ -140,7 +141,8 @@ class Item(entities.BaseEntity):
             id=_json.get('id', None),
             spec=_json.get('spec', None),
             creator=_json.get('creator', None),
-            project_id=project_id
+            project_id=project_id,
+            description=_json.get('description', None)
         )
         inst.is_fetched = is_fetched
         return inst
@@ -329,13 +331,10 @@ class Item(entities.BaseEntity):
 
     @property
     def description(self):
-        warnings.warn(
-            message="Starting August 8th you'll need to update to the latest SDK version in order to read/write "
-                    "to item.description, since a system wide migration is planned, to relocate item description in"
-                    " item JSON root. Read here: https://dataloop.ai/docs/itemdescription ",
-            category=DeprecationWarning)
         description = None
-        if 'description' in self.metadata:
+        if self._description is not None:
+            description = self._description
+        elif 'description' in self.metadata:
             description = self.metadata['description'].get('text', None)
         return description
 
@@ -376,7 +375,7 @@ class Item(entities.BaseEntity):
         :param text: if None or "" description will be deleted
         :return
         """
-        raise NotImplementedError("Set description update the item in platform, use set_description(text: str) instead")
+        self.set_description(text=text)
 
     ###########
     # Functions #
@@ -402,6 +401,7 @@ class Item(entities.BaseEntity):
                                                         attr.fields(Item).created_at,
                                                         attr.fields(Item).dataset_id,
                                                         attr.fields(Item)._project_id,
+                                                        attr.fields(Item)._description,
                                                         ))
 
         _json.update({'annotations': self.annotations_link,
@@ -414,6 +414,8 @@ class Item(entities.BaseEntity):
             _json['spec'] = self.spec
         if self.creator is not None:
             _json['creator'] = self.creator
+        if self._description is not None:
+            _json['description'] = self.description
         return _json
 
     def download(
@@ -659,41 +661,40 @@ class Item(entities.BaseEntity):
 
         :return
         """
-        warnings.warn(
-            message="Starting August 8th you'll need to update to the latest SDK version in order to read/write "
-                    "to item.description, since a system wide migration is planned, to relocate item description in"
-                    " item JSON root. Read here: https://dataloop.ai/docs/itemdescription ",
-            category=DeprecationWarning)
         if text is None:
             text = ""
         if not isinstance(text, str):
             raise ValueError("Description must get string")
 
-        filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION,
-                                   field='type',
-                                   values="item_description")
+        if 'description' in self.metadata and self._description is None:
+            filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION,
+                                       field='type',
+                                       values="item_description")
 
-        if text == "":
-            if self.description is not None:
-                self.metadata.pop('description', None)
+            if text == "":
+                if self.description is not None:
+                    self.metadata.pop('description', None)
+                    self._platform_dict = self.update()._platform_dict
+                    for annotation in self.annotations.list(filters=filters):
+                        annotation.delete()
+                return self
+
+            for annotation in self.annotations.list(filters=filters):
+                annotation.delete()
+            try:
+                annotation_definition = entities.Description(text=text)
+                editor = self._client_api.info()['user_email']
+                entities.Annotation.new(item=self,
+                                        annotation_definition=annotation_definition).upload(),
+                self.metadata['description'] = {'editor': editor, 'text': text}
                 self._platform_dict = self.update()._platform_dict
-                for annotation in self.annotations.list(filters=filters):
-                    annotation.delete()
-            return self
-
-        for annotation in self.annotations.list(filters=filters):
-            annotation.delete()
-        try:
-            annotation_definition = entities.Description(text=text)
-            editor = self._client_api.info()['user_email']
-            entities.Annotation.new(item=self,
-                                    annotation_definition=annotation_definition).upload(),
-            self.metadata['description'] = {'editor': editor, 'text': text}
-            self._platform_dict = self.update()._platform_dict
-            return self
-        except Exception:
-            logger.error('Error adding description. Please use platform')
-            logger.debug(traceback.format_exc())
+                return self
+            except Exception:
+                logger.error('Error adding description. Please use platform')
+                logger.debug(traceback.format_exc())
+        self._description = text
+        self._platform_dict = self.update()._platform_dict
+        return self
 
 
 class ModalityTypeEnum(str, Enum):

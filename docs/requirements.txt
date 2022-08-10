@@ -27,3 +27,4 @@ filelock>=3.0.12
 diskcache>=5.4
 redis>=4.3
 m2r==0.2.1
+recommonmark

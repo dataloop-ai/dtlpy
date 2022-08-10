@@ -15,6 +15,11 @@ class BaseServiceRunner:
     def do_reset(self):
         self._do_reset = True
 
+    @staticmethod
+    def ping(progress):
+        progress.logger.debug('received ping at: {}'.format(datetime.datetime.now().isoformat()))
+        return 'pong'
+
     def _terminate(self, tid):
         with self._threads_terminated_lock:
             self._threads_terminated.append(tid)

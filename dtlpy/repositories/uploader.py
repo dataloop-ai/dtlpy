@@ -57,7 +57,8 @@ class Uploader:
             file_types=None,
             overwrite=False,
             item_metadata=None,
-            export_version: str = entities.ExportVersion.V1
+            export_version: str = entities.ExportVersion.V1,
+            item_description=None
     ):
         """
         Upload local file to dataset.
@@ -72,6 +73,7 @@ class Uploader:
         :param overwrite: optional - default = False
         :param item_metadata: upload the items with the metadata dictionary
         :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
+        :param str item_description: add a string description to the uploaded item
 
         :return: Output (list)
         """
@@ -90,7 +92,8 @@ class Uploader:
                                                        remote_name=remote_name,
                                                        file_types=file_types,
                                                        item_metadata=item_metadata,
-                                                       export_version=export_version)
+                                                       export_version=export_version,
+                                                       item_description=item_description)
         num_files = len(futures)
         while futures:
             futures.popleft().result()
@@ -127,7 +130,8 @@ class Uploader:
                                     file_types,
                                     remote_name,
                                     item_metadata,
-                                    export_version: str = entities.ExportVersion.V1):
+                                    export_version: str = entities.ExportVersion.V1,
+                                    item_description=None):
 
         if remote_path is None:
             remote_path = '/'
@@ -139,6 +143,10 @@ class Uploader:
         if item_metadata is not None:
             if not isinstance(item_metadata, dict) and not isinstance(item_metadata, entities.ExportMetadata):
                 msg = '"item_metadata" should be a metadata dictionary. Got type: {}'.format(type(item_metadata))
+                raise PlatformException(error="400", message=msg)
+        if item_description is not None:
+            if not isinstance(item_description, str):
+                msg = '"item_description" should be a string. Got type: {}'.format(type(item_description))
                 raise PlatformException(error="400", message=msg)
 
         ##########################
@@ -226,7 +234,8 @@ class Uploader:
                 'with_head_folder': None,
                 'filename': None,
                 'root': None,
-                'export_version': export_version
+                'export_version': export_version,
+                'item_description': item_description
             }
             if isinstance(upload_item_element, str):
                 with_head_folder = True
@@ -319,7 +328,8 @@ class Uploader:
                     'remote_path': None,
                     'remote_name': None,
                     'file_types': None,
-                    'item_metadata': None}
+                    'item_metadata': None,
+                    'item_description': None}
             elem.update(row)
             future = self._build_elements_from_inputs(**elem)
             # append deque using +
@@ -358,7 +368,8 @@ class Uploader:
                                     last_try,
                                     mode,
                                     item_metadata,
-                                    callback
+                                    callback,
+                                    item_description
                                     ):
         """
         Upload an item to dataset
@@ -369,6 +380,7 @@ class Uploader:
         :param last_try: print log error only if last try
         :param mode: 'skip'  'overwrite'
         :param item_metadata: item metadata
+        :param str item_description: add a string description to the uploaded item
         :param callback:
         :return: Item object
         """
@@ -421,7 +433,8 @@ class Uploader:
                                                                                  uploaded_filename=uploaded_filename,
                                                                                  remote_path=remote_path,
                                                                                  callback=callback,
-                                                                                 mode=mode)
+                                                                                 mode=mode,
+                                                                                 item_description=item_description)
         except Exception:
             raise
         finally:
@@ -481,7 +494,8 @@ class Uploader:
                                                                         remote_path=remote_folder,
                                                                         uploaded_filename=remote_name,
                                                                         last_try=(i_try + 1) == NUM_TRIES,
-                                                                        callback=None)
+                                                                        callback=None,
+                                                                        item_description=element.item_description)
                     logger.debug("Upload item: {path}. Try {i}/{n}. Success. Item id: {id}".format(path=remote_name,
                                                                                                    i=i_try + 1,
                                                                                                    n=NUM_TRIES,

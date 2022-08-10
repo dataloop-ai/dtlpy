@@ -185,111 +185,116 @@ class Triggers:
             raise exceptions.PlatformException('400',
                                                'Must provide only one of service id, webhook id, pipeline id or pipeline')
 
-        if name is None:
-            if self._service is not None:
-                name = self._service.name
+        if pipeline_id is not None:
+            if pipeline is None:
+                pipeline = repositories.Pipelines(client_api=self._client_api).get(pipeline_id=pipeline_id)
+            if pipeline_node_id is None:
+                if pipeline.start_nodes:
+                    for pipe_node in pipeline.start_nodes:
+                        if pipe_node['type'] == 'root':
+                            pipeline_node_id = pipe_node['nodeId']
+            if pipeline_node_id is None:
+                raise exceptions.PlatformException('400', 'Must provide pipeline node id')
+            if not actions:
+                actions = [entities.TriggerAction.CREATED]
+            pipeline.nodes.get(node_id=pipeline_node_id).add_trigger(
+                trigger_type=trigger_type,
+                filters=filters,
+                resource=resource,
+                actions=actions,
+                execution_mode=execution_mode,
+                cron=cron,
+            )
+            logger.info("The trigger will not create until pipeline is install")
+            pipeline.update()
+            return True
+        else:
+            if name is None:
+                if self._service is not None:
+                    name = self._service.name
+                else:
+                    name = 'defaulttrigger'
+
+            if filters is None:
+                filters = dict()
+            elif isinstance(filters, entities.Filters):
+                filters = filters.prepare(query_only=True).get('filter', dict())
+
+            if webhook_id is not None:
+                operation = {
+                    'type': 'webhook',
+                    'webhookId': webhook_id
+                }
             else:
-                name = 'defaulttrigger'
+                operation = {
+                    'type': 'function',
+                    'serviceId': service_id,
+                    'functionName': function_name
 
-        if filters is None:
-            filters = dict()
-        elif isinstance(filters, entities.Filters):
-            filters = filters.prepare(query_only=True).get('filter', dict())
+                }
 
-        if webhook_id is not None:
-            operation = {
-                'type': 'webhook',
-                'webhookId': webhook_id
-            }
-        elif service_id is not None:
-            operation = {
-                'type': 'function',
-                'serviceId': service_id,
-                'functionName': function_name
-
-            }
-        else:
-            if not all([pipeline_node_id, root_node_namespace, pipeline_id]):
-                if pipeline is None:
-                    pipeline = repositories.Pipelines(client_api=self._client_api).get(pipeline_id=pipeline_id)
-                pipeline_id = pipeline.id
-                pipeline_node_id = pipeline.start_nodes[0]['nodeId']
-                root_node = [node for node in pipeline.nodes if node.node_id == pipeline_node_id][0]
-                root_node_namespace = root_node.namespace.to_json()
-                root_node_project_id = root_node.project_id
+            if actions is not None:
+                if not isinstance(actions, list):
+                    actions = [actions]
             else:
-                root_node_project_id = project_id
+                actions = [entities.TriggerAction.CREATED]
 
-            operation = {
-                'id': pipeline_id,
-                'nodeId': pipeline_node_id,
-                'rootNodeNamespace': root_node_namespace,
-                'rootNodeProjectId': root_node_project_id,
-                'type': 'pipeline',
+            if len(actions) == 0:
+                actions = [entities.TriggerAction.CREATED]
+
+            if trigger_type == entities.TriggerType.EVENT:
+                spec = {
+                    'filter': filters,
+                    'resource': resource,
+                    'executionMode': execution_mode,
+                    'actions': actions
+                }
+            elif trigger_type == entities.TriggerType.CRON:
+                spec = {
+                    'endAt': end_at,
+                    'startAt': start_at,
+                    'cron': cron,
+                }
+            else:
+                raise ValueError('Unknown trigger type: "{}". Use dl.TriggerType for known types'.format(trigger_type))
+
+            spec['input'] = dict() if inputs is None else inputs
+            spec['operation'] = operation
+
+            # payload
+            if self._project_id is None and project_id is None:
+                raise exceptions.PlatformException('400', 'Please provide a project id')
+            elif project_id is None:
+                project_id = self._project_id
+
+            payload = {
+                'type': trigger_type,
+                'active': active,
+                'projectId': project_id,
+                'name': name,
+                'spec': spec
             }
 
-        if actions is not None:
-            if not isinstance(actions, list):
-                actions = [actions]
-        else:
-            actions = [entities.TriggerAction.CREATED]
+            if scope is not None:
+                logger.warning(
+                    "Only superuser is allowed to define a trigger's scope. "
+                    "If you are not a superuser you will not be able to perform this action")
+                payload['scope'] = scope
 
-        if len(actions) == 0:
-            actions = [entities.TriggerAction.CREATED]
+            # request
+            success, response = self._client_api.gen_request(req_type='post',
+                                                             path='/triggers',
+                                                             json_req=payload)
 
-        if trigger_type == entities.TriggerType.EVENT:
-            spec = {
-                'filter': filters,
-                'resource': resource,
-                'executionMode': execution_mode,
-                'actions': actions
-            }
-        elif trigger_type == entities.TriggerType.CRON:
-            spec = {
-                'endAt': end_at,
-                'startAt': start_at,
-                'cron': cron,
-            }
-        else:
-            raise ValueError('Unknown trigger type: "{}". Use dl.TriggerType for known types'.format(trigger_type))
+            # exception handling
+            if not success:
+                raise exceptions.PlatformException(response)
 
-        spec['input'] = dict() if inputs is None else inputs
-        spec['operation'] = operation
-
-        # payload
-        if self._project_id is None and project_id is None:
-            raise exceptions.PlatformException('400', 'Please provide a project id')
-        elif project_id is None:
-            project_id = self._project_id
-
-        payload = {
-            'type': trigger_type,
-            'active': active,
-            'projectId': project_id,
-            'name': name,
-            'spec': spec
-        }
-
-        if scope is not None:
-            logger.warning(
-                "Only superuser is allowed to define a trigger's scope. "
-                "If you are not a superuser you will not be able to perform this action")
-            payload['scope'] = scope
-
-        # request
-        success, response = self._client_api.gen_request(req_type='post',
-                                                         path='/triggers',
-                                                         json_req=payload)
-
-        # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
-
-        # return entity
-        return entities.BaseTrigger.from_json(_json=response.json(),
-                                              client_api=self._client_api,
-                                              project=self._project if self._project_id == project_id else None,
-                                              service=self._service)
+            # return entity
+            return entities.BaseTrigger.from_json(_json=response.json(),
+                                                  client_api=self._client_api,
+                                                  project=self._project if self._project_id == project_id else None,
+                                                  service=self._service)
 
     def get(self, trigger_id=None, trigger_name=None) -> entities.BaseTrigger:
         """

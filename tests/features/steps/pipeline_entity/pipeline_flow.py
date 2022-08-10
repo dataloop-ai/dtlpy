@@ -149,6 +149,16 @@ def step_impl(context):
     assert updated_trigger_json.get('spec') == original_trigger_json.get('spec')
 
 
+@behave.when(u'I add trigger to the node and check installed')
+def step_impl(context):
+    context.pipeline.pause()
+    node_id = context.pipeline.nodes[1].node_id
+    context.pipeline.triggers.create(pipeline_node_id=node_id)
+    assert len(context.pipeline.triggers.list().items) == 0
+    context.pipeline.install()
+    assert len(context.pipeline.triggers.list().items) == 2
+
+
 @behave.when(u'I create a pipeline from json')
 def step_impl(context):
     pipeline_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], "pipeline_flow/pipeline_flow.json")

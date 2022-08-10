@@ -199,3 +199,38 @@ class Drivers:
         else:
             return entities.Driver.from_json(_json=response.json(), client_api=self._client_api)
 
+    def delete(self,
+               driver_name: str = None,
+               driver_id: str = None,
+               sure: bool = False,
+               really: bool = False):
+        """
+        Delete a driver forever!
+
+        **Prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.drivers.delete(dataset_id='dataset_id', sure=True, really=True)
+
+        :param str driver_name: optional - search by name
+        :param str driver_id: optional - search by id
+        :param bool sure: Are you sure you want to delete?
+        :param bool really: Really really sure?
+        :return: True if success
+        :rtype: bool
+        """
+        if sure and really:
+            driver = self.get(driver_name=driver_name, driver_id=driver_id)
+            success, response = self._client_api.gen_request(req_type='delete',
+                                                             path='/drivers/{}'.format(driver.id))
+            if not success:
+                raise exceptions.PlatformException(response)
+            logger.info('Driver {!r} was deleted successfully'.format(driver.name))
+            return True
+        else:
+            raise exceptions.PlatformException(
+                error='403',
+                message='Cant delete driver from SDK. Please login to platform to delete')

@@ -9,9 +9,16 @@ Feature: Pipeline entity method testing
 
 
     @pipelines.delete
-    @testrail-C4523142
+    @testrail-C4532242
     Scenario: pipeline flow
         When I create a package and service to pipeline
         And I create a pipeline from json
         And I update pipeline trigger action
         Then valid trigger updated
+
+    @pipelines.delete
+    @testrail-C4524925
+    Scenario: pipeline flow
+        When I create a package and service to pipeline
+        And I create a pipeline from json
+        And I add trigger to the node and check installed

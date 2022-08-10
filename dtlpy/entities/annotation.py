@@ -9,6 +9,8 @@ import attr
 import json
 from PIL import Image
 from enum import Enum
+import datetime
+import webvtt
 
 from .. import entities, PlatformException, repositories, ApiClient, exceptions
 
@@ -93,6 +95,7 @@ class Annotation(entities.BaseEntity):
     type = attr.ib()
     source = attr.ib(repr=False)
     dataset_url = attr.ib(repr=False)
+    _description = attr.ib(repr=False)
 
     # api
     _platform_dict = attr.ib(repr=False)
@@ -346,14 +349,18 @@ class Annotation(entities.BaseEntity):
     @property
     def description(self):
         description = None
-        if 'system' in self.metadata:
+        if self._description is not None:
+            description = self._description
+        elif 'system' in self.metadata:
             description = self.metadata['system'].get('description', None)
         return description
 
     @description.setter
     def description(self, description):
-        if 'system' in self.metadata:
+        if 'system' in self.metadata and 'description' in self.metadata['system'] and self._description is None:
             self.metadata['system']['description'] = description
+        else:
+            self._description = description
 
     @property
     def last_frame(self):
@@ -551,18 +558,48 @@ class Annotation(entities.BaseEntity):
 
             annotation.download(filepath='filepath', annotation_format=dl.ViewAnnotationOptions.MASK)
         """
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
         if annotation_format == ViewAnnotationOptions.JSON:
             with open(filepath, 'w') as f:
                 json.dump(self.to_json(), f, indent=2)
+        elif annotation_format == entities.ViewAnnotationOptions.VTT:
+            _, ext = os.path.splitext(filepath)
+            if ext != '.vtt':
+                raise PlatformException(error='400', message='file extension must be vtt')
+            vtt = webvtt.WebVTT()
+            if self.type in ['subtitle']:
+                s = str(datetime.timedelta(seconds=self.start_time))
+                if len(s.split('.')) == 1:
+                    s += '.000'
+                e = str(datetime.timedelta(seconds=self.end_time))
+                if len(e.split('.')) == 1:
+                    e += '.000'
+                caption = webvtt.Caption(
+                    '{}'.format(s),
+                    '{}'.format(e),
+                    '{}'.format(self.coordinates['text'])
+                )
+                vtt.captions.append(caption)
+            vtt.save(filepath)
         else:
-            mask = self.show(thickness=thickness,
-                             alpha=alpha,
-                             with_text=with_text,
-                             height=height,
-                             width=width,
-                             annotation_format=annotation_format)
-            img = Image.fromarray(mask.astype(np.uint8))
-            img.save(filepath)
+            if self.is_video:
+                entities.AnnotationCollection(item=self.item, annotations=[self])._video_maker(
+                    input_filepath=None,
+                    output_filepath=filepath,
+                    annotation_format=annotation_format,
+                    thickness=thickness,
+                    alpha=alpha,
+                    with_text=with_text
+                )
+            else:
+                mask = self.show(thickness=thickness,
+                                 alpha=alpha,
+                                 with_text=with_text,
+                                 height=height,
+                                 width=width,
+                                 annotation_format=annotation_format)
+                img = Image.fromarray(mask.astype(np.uint8))
+                img.save(filepath)
         return filepath
 
     def set_frame(self, frame):
@@ -976,7 +1013,8 @@ class Annotation(entities.BaseEntity):
 
             # temp
             platform_dict=dict(),
-            source='sdk'
+            source='sdk',
+            description=None
         )
 
         if annotation_definition:
@@ -1357,7 +1395,8 @@ class Annotation(entities.BaseEntity):
             start_time=start_time,
             recipe_2_attributes=named_attributes,
             label_suggestions=_json.get('labelSuggestions', None),
-            source=_json.get('source', None)
+            source=_json.get('source', None),
+            description=_json.get('description', None)
         )
         annotation.annotation_definition = annotation_definition
         annotation.__client_api = client_api

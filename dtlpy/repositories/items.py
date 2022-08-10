@@ -594,7 +594,8 @@ class Items:
             item_metadata: dict = None,
             output_entity=entities.Item,
             no_output: bool = False,
-            export_version: str = entities.ExportVersion.V1
+            export_version: str = entities.ExportVersion.V1,
+            item_description: str = None
     ):
         """
         Upload local file to dataset.
@@ -613,6 +614,7 @@ class Items:
         :param output_entity: output type
         :param bool no_output: do not return the items after upload
         :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
+        :param str item_description: add a string description to the uploaded item
         :return: Output (generator/single item)
         :rtype: generator or single item
 
@@ -644,7 +646,8 @@ class Items:
             overwrite=overwrite,
             # metadata to upload with items
             item_metadata=item_metadata,
-            export_version=export_version
+            export_version=export_version,
+            item_description=item_description
         )
 
     @property
