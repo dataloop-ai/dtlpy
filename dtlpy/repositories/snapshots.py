@@ -458,7 +458,7 @@ class Snapshots:
 
     @property
     def platform_url(self):
-        return self._client_api._get_resource_url("projects/{}/snapshots".format(self.project.id))
+        return self._client_api._get_resource_url("projects/{}/snapshot".format(self.project.id))
 
     def open_in_web(self, snapshot=None, snapshot_id=None):
         """

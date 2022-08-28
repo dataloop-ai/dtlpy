@@ -125,7 +125,7 @@ def step_impl(context, labels_path):
     labels_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], labels_path)
     context.recipe = context.dataset.recipes.list()[0]
     context.ontology = context.recipe.ontologies.list()[0]
-    with open(labels_path, 'r') as f:
+    with open(labels_path, 'r', encoding="utf8") as f:
         context.labels = json.load(f)
     context.ontology.add_labels(label_list=context.labels)
     context.ontology = context.ontology.update(system_metadata=True)

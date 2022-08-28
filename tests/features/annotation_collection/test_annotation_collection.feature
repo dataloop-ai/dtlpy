@@ -41,7 +41,7 @@ Feature: Annotations collection testing
         And I create item annotation collection
         And I add a few annotations to image
         When I upload annotation collection
-        Then Annotations in host equal annotations uploded
+        Then Annotations in host equal annotations uploaded
 
     @testrail-C4523040
     Scenario: Upload - video
@@ -51,5 +51,12 @@ Feature: Annotations collection testing
         And I add a few annotations to video
         And I add a few frames to annotations
         When I upload annotation collection
-        Then Annotations in host equal annotations uploded
+        Then Annotations in host equal annotations uploaded
 
+    @testrail-C4523040
+   Scenario: Upload annotation from_json - with UTF-8 character
+       Given Classes in file: "annotation_collection/classes.json" are uploaded to test Dataset
+       And Item in path "assets_split/annotation_collection/0000000162.jpg" is uploaded to "Dataset"
+       And I get AnnotationCollection from json "annotation_collection/annotations_new.json"
+       When I upload annotation collection
+       Then Annotations in host equal annotations uploaded

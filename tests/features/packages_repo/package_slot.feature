@@ -20,7 +20,7 @@
      @testrail-C4528974
      Scenario: Add UI slot to exist package with all scopes
          When I push "first" package
-             |codebase_id=None|package_name=test-package|src_path=packages_create|inputs=None|outputs=None|
+             |codebase_id=None|package_name=test-package|src_path=packages_create|inputs=item,dataset,annotation,task|outputs=None|
          Then I receive package entity
          When I add UI slot to the package with all scopes
          Then I validate slot is added to the package

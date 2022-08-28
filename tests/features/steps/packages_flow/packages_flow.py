@@ -78,6 +78,13 @@ def step_impl(context, item_path):
     context.uploaded_item_with_trigger = context.dataset.items.upload(local_path=item_path)
 
 
+@behave.when(u'I clone item to dataset')
+def step_impl(context):
+    time.sleep(10)
+    context.uploaded_item_with_trigger = context.uploaded_item_with_trigger.clone(dst_dataset_id=context.dataset.id,
+                                                                                  remote_filepath='/clone/')
+
+
 @behave.then(u'Item "{item_num}" annotations equal annotations in "{assets_annotations_path}"')
 def step_impl(context, item_num, assets_annotations_path):
     num_try = 60

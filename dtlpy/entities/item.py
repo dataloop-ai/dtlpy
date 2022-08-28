@@ -665,33 +665,6 @@ class Item(entities.BaseEntity):
             text = ""
         if not isinstance(text, str):
             raise ValueError("Description must get string")
-
-        if 'description' in self.metadata and self._description is None:
-            filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION,
-                                       field='type',
-                                       values="item_description")
-
-            if text == "":
-                if self.description is not None:
-                    self.metadata.pop('description', None)
-                    self._platform_dict = self.update()._platform_dict
-                    for annotation in self.annotations.list(filters=filters):
-                        annotation.delete()
-                return self
-
-            for annotation in self.annotations.list(filters=filters):
-                annotation.delete()
-            try:
-                annotation_definition = entities.Description(text=text)
-                editor = self._client_api.info()['user_email']
-                entities.Annotation.new(item=self,
-                                        annotation_definition=annotation_definition).upload(),
-                self.metadata['description'] = {'editor': editor, 'text': text}
-                self._platform_dict = self.update()._platform_dict
-                return self
-            except Exception:
-                logger.error('Error adding description. Please use platform')
-                logger.debug(traceback.format_exc())
         self._description = text
         self._platform_dict = self.update()._platform_dict
         return self

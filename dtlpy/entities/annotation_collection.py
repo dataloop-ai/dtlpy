@@ -108,9 +108,13 @@ class AnnotationCollection(entities.BaseEntity):
                                                  automated=automated,
                                                  metadata=metadata,
                                                  object_id=object_id,
-                                                 parent_id=parent_id)
+                                                 parent_id=parent_id,
+                                                 start_time=start_time,
+                                                 end_time=end_time)
             #  add frame if exists
-            if frame_num is not None or start_time is not None:
+            if (frame_num is not None or start_time is not None) and (
+                    self.item is None or 'audio' not in self.item.metadata.get('system').get(
+                    'mimetype', '')):
                 if object_id is None:
                     raise ValueError('Video Annotation must have object_id. '
                                      'for more information visit: https://dataloop.ai/docs/sdk-create-video-annotation#create-video-annotation')
@@ -593,7 +597,7 @@ class AnnotationCollection(entities.BaseEntity):
 
     @classmethod
     def from_json_file(cls, filepath, item=None):
-        with open(filepath, 'r') as f:
+        with open(filepath, 'r', encoding='utf-8') as f:
             data = json.load(f)
         return cls.from_json(_json=data, item=item)
 

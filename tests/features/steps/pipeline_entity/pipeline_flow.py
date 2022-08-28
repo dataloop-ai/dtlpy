@@ -88,6 +88,32 @@ def step_impl(context):
     context.to_delete_pipelines_ids.append(context.pipeline.id)
 
 
+@behave.when(u'I add a node and connect it to the start node')
+def step_impl(context):
+    context.pipeline.pause()
+
+    def run(item):
+        item.metadata['user'] = {'Hello': 'World'}
+        item.update()
+        return item
+
+    context.new_node = dl.CodeNode(
+        name='My Function',
+        position=(4, 4),
+        project_id=context.project.id,
+        method=run,
+        project_name=context.project.name
+    )
+
+    context.pipeline.nodes.add(node=context.new_node).connect(node=context.pipeline.nodes[0])
+    context.pipeline.update()
+
+
+@behave.then(u'New node is the start node')
+def step_impl(context):
+    assert context.new_node.is_root()
+
+
 @behave.when(u'I create a pipeline from sdk with pipeline trigger')
 def step_impl(context):
     context.pipeline = context.project.pipelines.create(name='sdk-pipeline-test', project_id=context.project.id)

@@ -92,7 +92,7 @@ Feature: Annotaions repository download service testing
     And Item is annotated with annotations in file: "assets_split/annotations_download/0162_annotations.json"
     Then I download the items annotations with ViewAnnotationOptions "MASK" enum to find "downloaded_annotations/mask/0000000162.png"
 
-    @testrail-C4524925
+    @testrail-C4523033
     Scenario: Download annotation by id
       Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
       And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"
@@ -103,7 +103,7 @@ Feature: Annotaions repository download service testing
       Then I download the annotation to "downloaded_annotations/annotation/annotation.png" with "mask" type
       And annotation file exist in the path "downloaded_annotations/annotation"
 
-    @testrail-C4524925
+    @testrail-C4523033
     Scenario: Download annotation by id VTT
       Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
       And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"
@@ -114,7 +114,7 @@ Feature: Annotaions repository download service testing
       Then I download the annotation to "downloaded_annotations/annotation/annotation.vtt" with "vtt" type
       And annotation file exist in the path "downloaded_annotations/annotation"
 
-      @testrail-C4524925
+      @testrail-C4523033
     Scenario: Download video annotation by id
       Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
       And Item in path "assets_split/ann_json_to_object/sample_video.mp4" is uploaded to "Dataset"

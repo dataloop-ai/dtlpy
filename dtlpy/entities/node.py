@@ -276,6 +276,13 @@ class PipelineNode:
             _json['config'] = self.config
         return _json
 
+    def is_root(self):
+        if self._pipeline is not None:
+            for node in self._pipeline.start_nodes:
+                if self.node_id == node.get('nodeId', None) and node.get('type', None) == 'root':
+                    return True
+        return False
+
     def _build_connection(self,
                           node,
                           source_port: PipelineNodeIO = None,
@@ -295,6 +302,9 @@ class PipelineNode:
 
         if target_port is None and node.inputs:
             target_port = node.inputs[0]
+
+        if node.is_root():
+            self._pipeline.set_start_node(self)
 
         source_connection = PipelineConnectionPort(node_id=self.node_id, port_id=source_port.port_id)
         target_connection = PipelineConnectionPort(node_id=node.node_id, port_id=target_port.port_id)

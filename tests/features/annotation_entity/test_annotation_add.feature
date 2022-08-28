@@ -9,7 +9,7 @@ Feature: Annotation Entity Add annotation
     Scenario: Image - using add annotation method
         Given Classes in file: "classes_new.json" are uploaded to test Dataset
         And Item in path "0000000162.jpg" is uploaded to "Dataset"
-        When I add annotation to item using add annotation method 
+        When I add annotation to item using add annotation method
         And I upload annotation created
         Then Item in host has annotation added
 
@@ -17,8 +17,15 @@ Feature: Annotation Entity Add annotation
     Scenario: Video - using add annotation method
         Given Classes in file: "video_classes.json" are uploaded to test Dataset
         And Item in path "sample_video.mp4" is uploaded to "Dataset"
-        When I add annotation to item using add annotation method 
+        When I add annotation to item using add annotation method
         And I add some frames to annotation
         And I upload annotation created
         Then Item in host has annotation added
+
+    @testrail-C4523041
+    Scenario: Audio - using add annotation method
+        Given Classes in file: "classes_new.json" are uploaded to test Dataset
+        And Item in path "simple_audio.mp3" is uploaded to "Dataset"
+        When I add annotation to audio using add annotation method
+        Then audio in host has annotation added
 

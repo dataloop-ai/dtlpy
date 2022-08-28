@@ -64,8 +64,7 @@ def step_impl(context, entity):
             response = response.json()
             assert success
 
-            # TODO - temporary - need to check why platform dict doesnt have hash attribute
-            if ann_json.get('hash', None) is None and response.get('hash', None):
+            if ann_json.get('hash', None) is not None and ann_json.get('hash', None).startswith('NO'):
                 ann_json.pop('hash', None)
                 response.pop('hash', None)
 
@@ -126,6 +125,21 @@ def step_impl(context):
     )
 
 
+@behave.when(u"I add annotation to audio using add annotation method")
+def step_impl(context):
+    context.dataset = context.dataset.update()
+    item = context.item.update()
+    labels = context.dataset.labels
+    builder = item.annotations.builder()
+
+    builder.add(annotation_definition=context.dl.Subtitle(text="this is a test", label=r.choice(labels).tag),
+                start_time=10,
+                end_time=12,
+                object_id=1)
+
+    item.annotations.upload(builder)
+
+
 @behave.when(u"I upload annotation created")
 def step_impl(context):
     logging.warning('item fps is: {}'.format(context.item.fps))
@@ -174,6 +188,18 @@ def step_impl(context):
     assert context.annotation_get.coordinates == context.annotation.coordinates
 
 
+@behave.then(u"audio in host has annotation added")
+def step_impl(context):
+    context.item = context.dataset.items.get(item_id=context.item.id)
+    try:
+        annotations = context.item.annotations.list()
+        context.annotation_get = annotations[0]
+    except:
+        logging.error(context.item.to_json())
+    assert context.annotation_get.start_time == 10
+    assert context.annotation_get.end_time == 12
+
+
 @behave.when(u"I add frames to annotation")
 def step_impl(context):
     ann = context.annotation
@@ -206,7 +232,6 @@ def step_impl(context):
 
 @behave.when(u"I create a false fixed annotation in video")
 def step_impl(context):
-
     system = context.item.metadata.get('system', dict())
     nb_frames = system.get('nb_frames', None)
 
@@ -254,3 +279,38 @@ def step_impl(context):
     assert context.dl_annotation.end_frame == 190
     assert context.dl_annotation.to_json()['metadata']['system']['snapshots_'] == \
            context.annotation.to_json()['metadata']['system']['snapshots_']
+
+
+@behave.when(u'I update annotation start time to "{start_time}"')
+def step_impl(context, start_time):
+    context.start_time = float(start_time)
+    context.annotation_get = context.item.annotations.list()[0]
+    context.annotation_get.start_time = context.start_time
+    context.annotation_get = context.annotation_get.update(True)
+    context.start_frame = context.annotation_get.start_frame
+
+
+@behave.then(u"I validate snapshot has the correct start frame")
+def step_impl(context):
+    assert context.annotation_get.metadata['system']['snapshots_'][0]['frame'], "TEST FAILED: Missing frame in snapshots_ \n{}".format(context.annotation_get.metadata['system'])
+    assert context.annotation_get.metadata['system']['snapshots_'][0]['frame'] > context.start_frame, "TEST FAILED: Wrong start frame"
+
+
+@behave.when(u'I update annotation start time "{start_time}" end time "{end_time}"')
+def step_impl(context, start_time, end_time):
+    context.start_time = float(start_time)
+    context.end_time = float(end_time)
+    context.annotation_get = context.item.annotations.list()[0]
+    context.annotation_get.start_time = context.start_time
+    context.annotation_get.end_time = context.end_time
+    context.annotation_get = context.annotation_get.update(True)
+    context.start_time = context.annotation_get.start_time
+    context.end_time = context.annotation_get.end_time
+
+
+@behave.then(u"I validate audio has the correct start and end time")
+def step_impl(context):
+    assert context.annotation_get.metadata['system']['startTime'] == context.start_time, "TEST FAILED: failed to update startTime from {} to {}".format(
+        context.annotation_get.metadata['system']['startTime'], context.start_time)
+    assert context.annotation_get.metadata['system']['endTime'] == context.end_time, "TEST FAILED: failed to update endTime from {} to {}".format(context.annotation_get.metadata['system']['endTime'],
+                                                                                                                                                  context.end_time)

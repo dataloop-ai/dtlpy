@@ -145,3 +145,21 @@ def get_assignment_value(params, context):
             val = context.second_project.id
 
     return val
+
+
+def get_package_io(params, context):
+    val = list()
+    for key in params:
+        if key == 'item':
+            val.append(context.dl.FunctionIO(type=context.dl.PACKAGE_INPUT_TYPE_ITEM, name=key))
+        elif key == 'annotation':
+            val.append(context.dl.FunctionIO(type=context.dl.PACKAGE_INPUT_TYPE_ANNOTATION, name=key))
+        elif key == 'dataset':
+            val.append(context.dl.FunctionIO(type=context.dl.PACKAGE_INPUT_TYPE_DATASET, name=key))
+        elif key == 'task':
+            val.append(context.dl.FunctionIO(type=context.dl.PACKAGE_INPUT_TYPE_TASK, name=key))
+        elif key == 'assignment':
+            val.append(context.dl.FunctionIO(type=context.dl.PACKAGE_INPUT_TYPE_ASSIGNMENT, name=key))
+
+    return val
+

@@ -125,7 +125,7 @@ def step_impl(context):
     context.annotation_collection.upload()
 
 
-@behave.then(u"Annotations in host equal annotations uploded")
+@behave.then(u"Annotations in host equal annotations uploaded")
 def step_impl(context):
     context.annotation_collection_get = context.item.annotations.list()
     assert len(context.annotation_collection_get) == len(context.annotation_collection)

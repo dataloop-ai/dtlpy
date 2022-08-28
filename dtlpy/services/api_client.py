@@ -389,6 +389,7 @@ class ApiClient:
         # Initiate #
         ############
         # define local params - read only once from cookie file
+        self.lock = multiprocessing.Lock()
         self.renew_token_method = self.renew_token
         self.is_cli = False
         self.session = None
@@ -469,12 +470,14 @@ class ApiClient:
 
     @property
     def event_loop(self):
+        self.lock.acquire()
         if self._event_loop is None:
             self._event_loop = self.create_event_loop_thread()
         elif not self._event_loop.loop.is_running():
             if self._event_loop.is_alive():
                 self._event_loop.stop()
             self._event_loop = self.create_event_loop_thread()
+        self.lock.release()
         return self._event_loop
 
     def build_cache(self, cache_config=None):

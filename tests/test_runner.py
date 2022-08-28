@@ -38,7 +38,10 @@ def delete_projects():
                 p.creator.startswith('oa-test-1') or p.creator.startswith('oa-test-2') or
                 p.creator.startswith('oa-test-3') or p.creator.startswith('oa-test-4'))]
         for p in projects:
-            p.delete(True, True)
+            try:
+                p.delete(True, True)
+            except:
+                pass
     except Exception:
         print('Failed to delete projects')
 

@@ -44,8 +44,6 @@ class DictDiffer:
                 elif diff[TYPE] == 'remove':
                     for deletion in diff[LIST]:
                         field_pointer[deletion[0]] = None
-                        if root_change is True:
-                            diffs[deletion[0]] = None
 
                 elif diff[TYPE] == 'change':
                     change = diff[LIST]

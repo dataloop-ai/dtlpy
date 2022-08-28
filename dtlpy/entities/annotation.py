@@ -119,10 +119,10 @@ class Annotation(entities.BaseEntity):
     current_frame = attr.ib(default=0, repr=False)
 
     # video attributes
-    end_frame = attr.ib(default=0, repr=False)
-    end_time = attr.ib(default=0, repr=False)
-    start_frame = attr.ib(default=0)
-    start_time = attr.ib(default=0)
+    _end_frame = attr.ib(default=0, repr=False)
+    _end_time = attr.ib(default=0, repr=False)
+    _start_frame = attr.ib(default=0)
+    _start_time = attr.ib(default=0)
 
     # sdk
     _dataset = attr.ib(repr=False, default=None)
@@ -242,6 +242,54 @@ class Annotation(entities.BaseEntity):
         return coordinates
 
     @property
+    def start_frame(self):
+        return self._start_frame
+
+    @start_frame.setter
+    def start_frame(self, val):
+        if not isinstance(val, float) and not isinstance(val, int):
+            raise ValueError('Must input a valid number')
+        self._start_frame = int(val)
+        self._start_time = val / self.fps if self.fps else 0
+        self.frames.start = self._start_frame
+
+    @property
+    def end_frame(self):
+        return self._end_frame
+
+    @end_frame.setter
+    def end_frame(self, val):
+        if not isinstance(val, float) and not isinstance(val, int):
+            raise ValueError('Must input a valid number')
+        self._end_frame = int(val)
+        self._end_time = val / self.fps if self.fps else 0
+        self.frames.end = self._end_frame
+
+    @property
+    def start_time(self):
+        return self._start_time
+
+    @start_time.setter
+    def start_time(self, val):
+        if not isinstance(val, float) and not isinstance(val, int):
+            raise ValueError('Must input a valid number')
+        self._start_frame = int(val * self.fps if self.fps else 0)
+        self._start_time = val
+        self.frames.start = self._start_frame
+
+    @property
+    def end_time(self):
+        return self._end_time
+
+    @end_time.setter
+    def end_time(self, val):
+        if not isinstance(val, float) and not isinstance(val, int):
+            raise ValueError('Must input a valid number')
+        self._end_frame = int(val * self.fps if self.fps else 0)
+        self._end_time = val
+        self.frames.end = self._end_frame
+
+    @property
     def x(self):
         return self.annotation_definition.x
 
@@ -348,19 +396,15 @@ class Annotation(entities.BaseEntity):
 
     @property
     def description(self):
-        description = None
-        if self._description is not None:
-            description = self._description
-        elif 'system' in self.metadata:
-            description = self.metadata['system'].get('description', None)
-        return description
+        return self._description
 
     @description.setter
     def description(self, description):
-        if 'system' in self.metadata and 'description' in self.metadata['system'] and self._description is None:
-            self.metadata['system']['description'] = description
-        else:
-            self._description = description
+        if description is None:
+            description = ""
+        if not isinstance(description, str):
+            raise ValueError("Description must get string")
+        self._description = description
 
     @property
     def last_frame(self):
@@ -706,17 +750,27 @@ class Annotation(entities.BaseEntity):
                 logger.warning("Couldn't set label_instance_dict in annotation.show(). All labels will be mapped to 1")
                 label_instance_dict = dict()
 
+        in_video_range = True
         if frame_num is not None:
-            self.set_frame(frame_num)
-        image = self._show_single_frame(image=image,
-                                        thickness=thickness,
-                                        alpha=alpha,
-                                        with_text=with_text,
-                                        height=height,
-                                        width=width,
-                                        annotation_format=annotation_format,
-                                        color=color,
-                                        label_instance_dict=label_instance_dict)
+            in_video_range = self.set_frame(frame_num)
+
+        if self.is_video and not in_video_range:
+            if image is None:
+                image = self._get_default_mask(annotation_format=annotation_format,
+                                               width=width,
+                                               height=height,
+                                               label_instance_dict=label_instance_dict)
+            return image
+        else:
+            image = self._show_single_frame(image=image,
+                                            thickness=thickness,
+                                            alpha=alpha,
+                                            with_text=with_text,
+                                            height=height,
+                                            width=width,
+                                            annotation_format=annotation_format,
+                                            color=color,
+                                            label_instance_dict=label_instance_dict)
         return image
 
     def _show_single_frame(self,
@@ -793,14 +847,6 @@ class Annotation(entities.BaseEntity):
             raise PlatformException(error='1001',
                                     message='unknown annotations format: "{}". known formats: "{}"'.format(
                                         annotation_format, '", "'.join(list(entities.ViewAnnotationOptions))))
-
-        # show annotation
-        # TODO Why is this here? cannot reach this line with image is None
-        if image is None:
-            image = np.zeros((height, width, len(color)), dtype=np.uint8)
-            if image.shape[2] == 1:
-                image = np.squeeze(image)
-
         # color
         if color is None:
             if annotation_format in [entities.ViewAnnotationOptions.MASK,
@@ -889,7 +935,8 @@ class Annotation(entities.BaseEntity):
             parent_id=None,
             start_time=None,
             item_height=None,
-            item_width=None):
+            item_width=None,
+            end_time=None):
         """
         Create a new annotation object annotations
 
@@ -905,6 +952,7 @@ class Annotation(entities.BaseEntity):
         :param start_time: optional - start time if video annotation
         :param float item_height: annotation item's height
         :param float item_width: annotation item's width
+        :param end_time: optional - end time if video annotation
         :return: annotation object
         :rtype: dtlpy.entities.annotation.Annotation
 
@@ -966,6 +1014,8 @@ class Annotation(entities.BaseEntity):
                 start_time = frame_num / fps if fps != 0 else 0
             else:
                 start_time = 0
+        if end_time is None:
+            end_time = start_time
 
         if frame_num is None:
             frame_num = 0
@@ -1007,7 +1057,7 @@ class Annotation(entities.BaseEntity):
 
             # video only attributes
             end_frame=frame_num,
-            end_time=0,
+            end_time=end_time,
             start_frame=frame_num,
             start_time=start_time,
 
@@ -1507,6 +1557,9 @@ class Annotation(entities.BaseEntity):
         _json['updatedAt'] = self.updated_at
         _json['source'] = self.source
 
+        if self.description is not None:
+            _json['description'] = self.description
+
         if self.label_suggestions:
             _json['labelSuggestions'] = self.label_suggestions
 
@@ -1544,19 +1597,20 @@ class Annotation(entities.BaseEntity):
                 _json['metadata']['system']['attributes'] = orig_metadata_system['attributes']
 
         # add frame info
-        if self.is_video:
+        if self.is_video or (self.end_time and self.end_time > 0) or (self.end_frame and self.end_frame > 0):
             # get all snapshots but the first one
             snapshots = list()
-            first_frame_num = min(self.frames.actual_keys())
-            frame_numbers = self.frames.actual_keys()
+            frame_numbers = self.frames.actual_keys() if len(self.frames.actual_keys()) else []
             for frame_num in sorted(frame_numbers):
-                if frame_num == first_frame_num:
+                if frame_num <= self.frames.start:
                     continue
+                if frame_num > self.frames.end:
+                    break
                 if not self.frames[frame_num]._interpolation or self.frames[frame_num].fixed:
                     snapshots.append(self.frames[frame_num].to_snapshot())
                     self.frames[frame_num]._interpolation = False
             # add metadata to json
-            _json['metadata']['system']['frame'] = self.current_frame
+            _json['metadata']['system']['frame'] = self.start_frame
             _json['metadata']['system']['startTime'] = self.start_time
             _json['metadata']['system']['endTime'] = self.end_time
             if self.end_frame is not None:

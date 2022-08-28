@@ -214,26 +214,46 @@ class Settings:
         :param str setting_id: the setting id
         :return: setting entity
         """
-        success, response = self._client_api.gen_request(
-            req_type='get',
-            path='{}/{}'.format(
-                BASE_URL,
-                setting_id
+        if setting_id is not None:
+            success, response = self._client_api.gen_request(
+                req_type='get',
+                path='{}/{}'.format(
+                    BASE_URL,
+                    setting_id
+                )
             )
-        )
 
-        if success:
-            _json = response.json()
-            constructor = self.get_constructor(_json)
+            if success:
+                _json = response.json()
+                constructor = self.get_constructor(_json)
+                setting = constructor(
+                    _json=_json,
+                    client_api=self._client_api,
+                    project=self._project,
+                    org=self._org
+                )
+            else:
+                raise exceptions.PlatformException(response)
+        elif setting_name is not None:
+            if not isinstance(setting_name, str):
+                raise exceptions.PlatformException(
+                    error='400',
+                    message='setting_name must be strings')
+            settings = self.list(
+                filters=entities.Filters(field='name', values=setting_name, resource=entities.FiltersResource.SETTINGS))
+            if len(settings.items) > 1:
+                raise exceptions.PlatformException(
+                    error='404',
+                    message='More than one setting with same name. Please "get" by id')
+            elif len(settings.items) == 0:
+                raise exceptions.PlatformException('404', 'setting not found')
+            else:
+                setting = settings.items[0]
         else:
-            raise exceptions.PlatformException(response)
-
-        return constructor(
-            _json=_json,
-            client_api=self._client_api,
-            project=self._project,
-            org=self._org
-        )
+            raise exceptions.PlatformException(
+                error='400',
+                message='Must provide at least ONE of the following params: setting_id, setting_name.')
+        return setting
 
     def _list(self, filters: entities.Filters):
         success, response = self._client_api.gen_request(
@@ -263,7 +283,7 @@ class Settings:
                 message='Filters resource must to be FiltersResource.SETTINGS . Got: {!r}'.format(filters.resource))
 
         if self._project is not None:
-            filters.add(field='projectId', values=self._project.id)
+            filters.add(field='scope.id', values=self._project.id)
 
         paged = entities.PagedEntities(
             items_repository=self,

@@ -23,6 +23,7 @@ class TriggerAction(str, Enum):
     UPDATED = "Updated"
     DELETED = "Deleted"
     STATUS_CHANGED = 'statusChanged'
+    CLONE = 'Clone'
 
 
 class TriggerExecutionMode(str, Enum):

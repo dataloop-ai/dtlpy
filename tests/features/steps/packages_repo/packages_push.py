@@ -11,9 +11,9 @@ from .. import fixtures
 def step_impl(context, package_number):
     codebase_id = None
     package_name = None
-    inputs = None
+    inputs = list()
     src_path = None
-    outputs = None
+    outputs = list()
     modules = None
 
     params = context.table.headings
@@ -31,16 +31,21 @@ def step_impl(context, package_number):
                 codebase_id = param[1]
         elif param[0] == 'inputs':
             if param[1] != 'None':
-                inputs = param[1]
+                inputs = fixtures.get_package_io(params=param[1].split(','), context=context)
         elif param[0] == 'outputs':
             if param[1] != 'None':
-                outputs = param[1]
+                outputs = fixtures.get_package_io(params=param[1].split(','), context=context)
         elif param[0] == 'modules':
             if param[1] != 'None':
                 modules = param[1]
 
     if modules == 'no_input':
         func = context.dl.PackageFunction()
+        modules = context.dl.PackageModule(functions=func,
+                                           name=context.dl.entities.package_defaults.DEFAULT_PACKAGE_MODULE_NAME)
+
+    elif inputs or outputs:
+        func = [context.dl.PackageFunction(inputs=inputs, outputs=outputs)]
         modules = context.dl.PackageModule(functions=func,
                                            name=context.dl.entities.package_defaults.DEFAULT_PACKAGE_MODULE_NAME)
 

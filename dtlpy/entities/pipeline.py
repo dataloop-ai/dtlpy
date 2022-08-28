@@ -365,6 +365,10 @@ class Pipeline(entities.BaseEntity):
 
         :param PipelineNode node: node to be the start node
         """
+        connections = [connection for connection in self.connections if connection.target.node_id == node.node_id]
+        if connections:
+            raise Exception(
+                'Connections cannot be added to Pipeline start-node. To add a connection, please reposition the start sign')
         if self.start_nodes:
             for pipe_node in self.start_nodes:
                 if pipe_node['type'] == 'root':

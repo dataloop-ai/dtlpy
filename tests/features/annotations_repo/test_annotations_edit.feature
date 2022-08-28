@@ -16,41 +16,14 @@ Feature: Annotaions repository update service testing
         Then  Item annotations has no attributes
 
     @testrail-C4523035
-    Scenario: Updateing annotations: change label
+    Scenario: Updateing annotations: start and end time
         Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
-        And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"
-        And There are no files in folder "downloaded_annotations"
-        And Item is annotated with annotations in file: "assets_split/annotations_crud/0162_annotations.json"
-        And I change all annotations labels to "person"
-        When I update annotations
-        Then  All item annotations have label "person"
-
-    #TODO - not working as expected - server returns 200
-    # Scenario: Updateing annotations: change to non-existing label
-    #     Given I change all annotations labels to "non_existing_label"
-    #     When I try to update annotations
-    #     Then  "InternalServerError" exception should be raised
-
-    @testrail-C4523035
-    Scenario: Updateing annotation: change single annotation
-        Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
-        And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"
+        And Item in path "sample_video.mp4" is uploaded to "Dataset"
         And There are no files in folder "downloaded_annotations"
         And Item is annotated with annotations in file: "assets_split/annotations_crud/0162_annotations.json"
         And There is annotation x
-        And I change annotation values
+        And I set start frame to "20" and end frame to "70"
         When I update annotation
-        Then Annotation should be updated
-
-    @testrail-C4523035
-    Scenario: Updateing annotations: change coordinates
-        Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
-        And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"
-        And There are no files in folder "downloaded_annotations"
-        And Item is annotated with annotations in file: "assets_split/annotations_crud/0162_annotations.json"
-        And There is annotation x
-        And I add "50" to annotation coordinates
-        When I update annotation
-        Then Annotation x coordinates should be changed accordingly
+        Then annotation x metadata should be changed accordingly
 
 

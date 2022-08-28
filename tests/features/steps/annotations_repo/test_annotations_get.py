@@ -56,3 +56,14 @@ def step_impl(context):
         context.error = None
     except Exception as e:
         context.error = e
+
+
+@behave.given(u'I get AnnotationCollection from json "{annotations_path}"')
+def step_impl(context, annotations_path):
+    annotations_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], annotations_path)
+
+    try:
+        context.annotation_collection = context.dl.AnnotationCollection.from_json_file(filepath=annotations_path, item=context.item)
+    except Exception as e:
+        context.error = e
+        assert False, context.error

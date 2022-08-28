@@ -4,8 +4,28 @@ class ReflectDict(dict):
         super(ReflectDict, self).__init__()
         self.value_type = value_type
         self.on_access = on_access
-        self._start = start if start is not None else 0
-        self._end = end if end is not None else 0
+        self._start = int(start) if start is not None else 0
+        self._end = int(end) if end is not None else 0
+
+    @property
+    def start(self):
+        return self._start
+
+    @start.setter
+    def start(self, start):
+        if not isinstance(start, float) and not isinstance(start, int):
+            raise ValueError('Must input a valid number')
+        self._start = int(start) if start is not None else 0
+
+    @property
+    def end(self):
+        return self._end
+
+    @end.setter
+    def end(self, end):
+        if not isinstance(end, float) and not isinstance(end, int):
+            raise ValueError('Must input a valid number')
+        self._end = int(end) if end is not None else 0
 
     def actual_keys(self):
         return super(ReflectDict, self).keys()

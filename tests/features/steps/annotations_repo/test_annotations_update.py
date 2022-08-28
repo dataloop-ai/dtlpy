@@ -106,10 +106,25 @@ def step_impl(context, raise_value):
     context.annotation_x.bottom += raise_value
 
 
+@behave.given(u'I set start frame to "{start_frame}" and end frame to "{end_frame}"')
+def step_impl(context, start_frame, end_frame):
+    start_frame = int(start_frame)
+    end_frame = int(end_frame)
+    context.annotation_x.start_frame = start_frame
+    context.annotation_x.end_frame = end_frame
+
+
 @behave.then(u'annotation x coordinates should be changed accordingly')
 def step_impl(context):
     annotation_get = context.item.annotations.get(context.annotation_x.id)
     assert annotation_get.coordinates == context.annotation_x.coordinates
+
+
+@behave.then(u'annotation x metadata should be changed accordingly')
+def step_impl(context):
+    annotation_get = context.item.annotations.get(context.annotation_x.id)
+    assert annotation_get.start_time == context.annotation_x.start_time
+    assert annotation_get.end_time == context.annotation_x.end_time
 
 
 @behave.when(u'I get the only annotation')

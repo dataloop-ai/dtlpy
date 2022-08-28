@@ -20,7 +20,11 @@ Feature: Upload annotation testing
           When Item is annotated with annotations in file: "assets_split/annotations_upload/video_annotations.json"
           Then Item video annotations in host equal annotations in file "assets_split/annotations_upload/video_annotations.json"
 
-
-
+    @testrail-C4523047
+    Scenario: Upload audio annotations from file
+          Given Classes in file: "classes_new.json" are uploaded to test Dataset
+          And Item in path "simple_audio.mp3" is uploaded to "Dataset"
+          When Item is annotated with annotations in file: "audio_annotations.json"
+          Then audio in host has annotation added
 
 

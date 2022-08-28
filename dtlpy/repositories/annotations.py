@@ -1,4 +1,3 @@
-import warnings
 from copy import deepcopy
 import traceback
 import logging
@@ -436,6 +435,7 @@ class Annotations:
                         update = True
                         break
                     i += 1
+
         return update, origin_snapshots
 
     def _update_single_annotation(self, w_annotation, system_metadata):

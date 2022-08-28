@@ -104,7 +104,7 @@ Feature: Items repository upload service testing
 #         And Upload method returned an Item object
 #         And Item object from host equals item uploaded
 
-    @testrail-C4524925
+    @testrail-C4523119
     Scenario: Upload a single item with description
         When I upload the file in path "assets_split/items_upload/0000000162.jpg" with description "description"
         Then Item exist in host
