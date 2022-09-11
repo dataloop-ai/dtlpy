@@ -47,6 +47,7 @@ class Item(entities.BaseEntity):
     spec = attr.ib()
     creator = attr.ib()
     _description = attr.ib()
+    _src_item = attr.ib(repr=False)
 
     # name change
     annotations_count = attr.ib()
@@ -142,7 +143,8 @@ class Item(entities.BaseEntity):
             spec=_json.get('spec', None),
             creator=_json.get('creator', None),
             project_id=project_id,
-            description=_json.get('description', None)
+            description=_json.get('description', None),
+            src_item=_json.get('srcItem', None),
         )
         inst.is_fetched = is_fetched
         return inst
@@ -341,7 +343,7 @@ class Item(entities.BaseEntity):
     @property
     def platform_url(self):
         return self._client_api._get_resource_url(
-            "projects/{}/datasets/{}/items/{}".format(self.project.id, self._dataset.id, self.id))
+            "projects/{}/datasets/{}/items/{}".format(self.dataset.projects[-1], self.dataset.id, self.id))
 
     @property
     def snapshot_partition(self):
@@ -402,6 +404,7 @@ class Item(entities.BaseEntity):
                                                         attr.fields(Item).dataset_id,
                                                         attr.fields(Item)._project_id,
                                                         attr.fields(Item)._description,
+                                                        attr.fields(Item)._src_item,
                                                         ))
 
         _json.update({'annotations': self.annotations_link,
@@ -416,6 +419,8 @@ class Item(entities.BaseEntity):
             _json['creator'] = self.creator
         if self._description is not None:
             _json['description'] = self.description
+        if self._src_item is not None:
+            _json['srcItem'] = self._src_item
         return _json
 
     def download(

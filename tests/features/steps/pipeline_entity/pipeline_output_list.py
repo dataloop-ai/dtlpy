@@ -6,6 +6,7 @@ import time
 @behave.when(u'I create a pipeline with code and task node')
 def step_impl(context):
     context.pipeline = context.project.pipelines.create(name='sdk-pipeline-test', project_id=context.project.id)
+    context.code_node_name = 'My Function'
 
     def run(item):
         dataset = item.dataset
@@ -17,7 +18,7 @@ def step_impl(context):
         return items
 
     code_node = dl.CodeNode(
-        name='My Function',
+        name=context.code_node_name,
         position=(1, 1),
         project_id=context.project.id,
         method=run,
@@ -71,3 +72,19 @@ def step_impl(context, total_items):
     for pipe_execution in context.pipeline.pipeline_executions.list().items:
         assert pipe_execution.status == "success", "TEST FAILED: Pipeline execution {} is - {}".format(
             pipe_execution.id, pipe_execution.status)
+
+
+@behave.then(u'I validate pipeline code-node service is with the correct version "{version}"')
+def step_impl(context, version):
+
+    service_name = context.code_node_name.lower().replace(' ', '-')
+    for page in context.project.services.list():
+        for service in page:
+            if service_name in service.name:
+                context.service = service
+                break
+
+    if not hasattr(context, 'service'):
+        return False, "TEST FAILED: Failed to find service"
+
+    assert version == context.service.package_revision, "TEST FAILED: Expect version to be {} got {}".format(version, context.service.package_revision)

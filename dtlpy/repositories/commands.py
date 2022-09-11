@@ -97,7 +97,8 @@ class Commands:
             timeout = np.inf
 
         command = None
-        pbar = tqdm.tqdm(total=100, disable=self._client_api.verbose.disable_progress_bar, file=sys.stdout)
+        pbar = tqdm.tqdm(total=100, disable=self._client_api.verbose.disable_progress_bar,
+                         file=sys.stdout, desc='Command Progress')
         num_tries = 1
         while elapsed < timeout:
             command = self.get(command_id=command_id, url=url)

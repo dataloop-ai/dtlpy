@@ -30,13 +30,15 @@ def clean_feature_log_file(log_filepath):
         os.remove(os.path.join(directory, 'fail_' + file))
 
 
-def delete_projects():
+def delete_projects(env_name='rc'):
     start_phrase = 'to-delete-test-'
-
     try:
-        projects = [p for p in dl.projects.list() if p.name.startswith(start_phrase) and (
+        projects = [p for p in dl.projects.list() if (
                 p.creator.startswith('oa-test-1') or p.creator.startswith('oa-test-2') or
                 p.creator.startswith('oa-test-3') or p.creator.startswith('oa-test-4'))]
+        if env_name == 'prod':
+            projects = [p for p in projects if p.name.startswith(start_phrase)]
+
         for p in projects:
             try:
                 p.delete(True, True)
@@ -270,7 +272,7 @@ if __name__ == '__main__':
             print(res_msg)
 
     # delete projects
-    delete_projects()
+    delete_projects(env_name)
 
     # return success/failure
     if passed:

@@ -126,13 +126,13 @@ class Features:
         """
         Create a new Feature vector
 
-        :param str value: the vector (list of floats)
-        :param str project_id: project id
-        :param str feature_set_id: FeatureSet id
+        :param immutable value: actual vector - immutable (list of floats [1,2,3])
+        :param str project_id: the Id of the project where feature will be created
+        :param str feature_set_id: ref to a featureSet this vector is a part of
         :param str entity_id: id of the entity the feature vector is linked to (item.id, annotation.id etc)
-        :param str version: version
-        :param str parent_id: optional: parent FeatureSet id
-        :param str org_id: org id
+        :param str version: version of the feature set generator
+        :param str parent_id: optional: parent FeatureSet id - used when FeatureVector is a subFeature
+        :param str org_id: the Id of the org where feature will be created
         :return: Feature vector
         """
         if project_id is None:

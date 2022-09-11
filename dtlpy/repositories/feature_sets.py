@@ -103,13 +103,13 @@ class FeatureSets:
         """
         Create a new Feature Set
 
-        :param name: str - the Feature name
-        :param size: str - the Feature size
-        :param set_type: str - the Feature type
-        :param entity_type: entities.FeatureEntityType
-        :param project_id: project id
-        :param list tags: Feature tags
-        :param org_id: org id
+        :param str name: the Feature name
+        :param int size: the set size
+        :param str set_type: string of the feature type: 2d, 3d, modelFC, TSNE,PCA,FFT
+        :param entity_type: the entity that feature vector is linked to. Use the enum dl.FeatureEntityType
+        :param str project_id: the Id of the project where feature set will be created
+        :param list tags: optional tag per feature  - matched by index
+        :param str org_id: the Id of the org where feature set will be created
         :return: Feature Set object
         """
         if tags is None:

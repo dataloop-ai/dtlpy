@@ -1098,7 +1098,8 @@ class ApiClient:
                                  unit_divisor=1024,
                                  position=1,
                                  file=sys.stdout,
-                                 disable=self.verbose.disable_progress_bar)
+                                 disable=self.verbose.disable_progress_bar,
+                                 desc='Upload Items')
 
                 def callback(bytes_read):
                     pbar.update(bytes_read)

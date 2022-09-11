@@ -128,3 +128,21 @@ def step_impl(context):
     assert int(first_package_json.pop('version').replace(".", "")) == \
            int(second_package_json.pop('version').replace(".", "")) - 1
     assert first_package_json == second_package_json
+
+
+@behave.when(u'I update package')
+def step_impl(context):
+    context.package = context.package.update()
+
+
+@behave.then(u'I expect package version to be "{version}" and revision list size "{revision_size}"')
+def step_impl(context, version, revision_size):
+    package_revision_size = len(context.package.revisions)
+
+    assert version == context.package.version, "TEST FAILED: Expect version to be {} got {}".format(version, context.package.version)
+    assert int(revision_size) == package_revision_size, "TEST FAILED: Expect package revision size to be {} got {}".format(revision_size, package_revision_size)
+
+
+@behave.then(u'I validate service version is "{version}"')
+def step_impl(context, version):
+    assert version == context.service.package_revision, "TEST FAILED: Expect version to be {} got {}".format(version, context.service.package_revision)

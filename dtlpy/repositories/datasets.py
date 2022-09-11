@@ -803,7 +803,7 @@ class Datasets:
             jobs = [None for _ in range(pages.items_count)]
             progress = tqdm.tqdm(total=pages.items_count,
                                  disable=dataset._client_api.verbose.disable_progress_bar,
-                                 file=sys.stdout)
+                                 file=sys.stdout, desc='Download Annotations')
             i_item = 0
             for page in pages:
                 for item in page:
@@ -875,7 +875,8 @@ class Datasets:
             filters = entities.Filters()
         pages = dataset.items.list(filters=filters)
         total_items = pages.items_count
-        pbar = tqdm.tqdm(total=total_items, disable=dataset._client_api.verbose.disable_progress_bar, file=sys.stdout)
+        pbar = tqdm.tqdm(total=total_items, disable=dataset._client_api.verbose.disable_progress_bar,
+                         file=sys.stdout, desc='Upload Annotations')
         pool = self._client_api.thread_pools('annotation.upload')
         annotations_uploaded_count = 0
         for item in pages.all():

@@ -210,7 +210,7 @@ class Converter:
                     fp.write("{}\n".format(label))
 
         pbar = tqdm.tqdm(total=pages.items_count, disable=dataset._client_api.verbose.disable_progress_bar,
-                         file=sys.stdout)
+                         file=sys.stdout, desc='Convert Annotations')
         reporter = Reporter(
             num_workers=pages.items_count,
             resource=Reporter.CONVERTER,
@@ -359,7 +359,7 @@ class Converter:
         item_id_counter = 0
         pool = ThreadPool(processes=self.concurrency)
         pbar = tqdm.tqdm(total=pages.items_count, disable=dataset._client_api.verbose.disable_progress_bar,
-                         file=sys.stdout)
+                         file=sys.stdout, desc='Convert Annotations')
         reporter = Reporter(
             num_workers=pages.items_count,
             resource=Reporter.CONVERTER,
@@ -506,7 +506,8 @@ class Converter:
         try:
             if item.type != 'dir':
                 item = Converter.__get_item_shape(item=item)
-                images[item_id] = {'file_name': item.name,
+                filepath = item.filename[1:] if item.filename.startswith('/') else item.filename
+                images[item_id] = {'file_name': os.path.normpath(filepath),
                                    'id': item_id,
                                    'width': item.width,
                                    'height': item.height
@@ -672,11 +673,13 @@ class Converter:
     def _find_coco_item_annotations(local_annotations_path: dict, item: entities.Item):
         found = False
         ann_dict = None
-        if item.name in local_annotations_path:
-            ann_dict = local_annotations_path[item.name]
+        filename = item.filename[1:] if item.filename.startswith('/') else item.filename
+        filename = os.path.normpath(filename)
+        if filename in local_annotations_path:
+            ann_dict = local_annotations_path[filename]
             found = True
-        elif item.filename in local_annotations_path:
-            ann_dict = local_annotations_path[item.filename]
+        elif item.name in local_annotations_path:
+            ann_dict = local_annotations_path[item.name]
             found = True
         metadata = ann_dict.get('metadata', None) if found else None
         return found, ann_dict, metadata
@@ -691,7 +694,7 @@ class Converter:
             client_api=self.dataset._client_api
         )
 
-        pbar = tqdm.tqdm(total=file_count)
+        pbar = tqdm.tqdm(total=file_count, desc='Upload Annotations')
         pool = ThreadPool(processes=self.concurrency)
         i_item = 0
 
@@ -768,7 +771,7 @@ class Converter:
             client_api=self.dataset._client_api
         )
 
-        pbar = tqdm.tqdm(total=file_count)
+        pbar = tqdm.tqdm(total=file_count, desc='Upload Annotations')
 
         pool = ThreadPool(processes=self.concurrency)
         i_item = 0
@@ -777,10 +780,16 @@ class Converter:
             for name in files:
                 item_filepath = None
                 ann_filepath = None
+                prefix = None
                 if not os.path.isfile(os.path.join(path, name)):
                     continue
                 if from_format == AnnotationFormat.COCO:
                     item_filepath = os.path.join(path, name)
+                    prefix = os.path.relpath(path, local_items_path)
+                    if prefix != '.':
+                        name = os.path.join(prefix, name)
+                    else:
+                        prefix = None
                     ann_filepath = local_annotations_path[name]
                     metadata = {'user': local_annotations_path[name]['metadata']}
                 elif from_format == AnnotationFormat.VOC:
@@ -813,7 +822,8 @@ class Converter:
                         "reporter": reporter,
                         'i_item': i_item,
                         'pbar': pbar,
-                        'metadata': metadata
+                        'metadata': metadata,
+                        'remote_path': prefix
                     }
                 )
                 i_item += 1
@@ -839,13 +849,14 @@ class Converter:
         i_item = kwargs.get('i_item', None)
         pbar = kwargs.get('pbar', None)
         metadata = kwargs.get('metadata', None)
+        remote_path = kwargs.get('remote_path', None)
         report_ref = item_path
         try:
             if isinstance(item_path, entities.Item):
                 item = item_path
                 report_ref = item.filename
             else:
-                item = self.dataset.items.upload(local_path=item_path, item_metadata=metadata)
+                item = self.dataset.items.upload(local_path=item_path, item_metadata=metadata, remote_path=remote_path)
                 report_ref = item.filename
             if from_format == AnnotationFormat.YOLO:
                 item = Converter.__get_item_shape(item=item, local_path=item_path)

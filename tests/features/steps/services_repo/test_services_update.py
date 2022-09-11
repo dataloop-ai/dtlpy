@@ -72,7 +72,7 @@ def step_impl(context, updated_attribute):
     updated_to_json.pop('revisions', None)
     origin_to_json.pop('revisions', None)
 
-    assert len(context.service_update.revisions) == len(context.service.revisions) + 1
+    assert len(context.service_update.revisions) == len(context.service_revisions) + 1
     assert updated_to_json == origin_to_json
 
 
@@ -121,3 +121,8 @@ def step_impl(context):
         e = context.execution = context.service.executions.get(execution_id=context.execution.id)
         success = e.latest_status['status'] == 'failed'
     assert success
+
+
+@behave.when(u'I get service revisions')
+def step_impl(context):
+    context.service_revisions = context.service.revisions

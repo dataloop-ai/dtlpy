@@ -17,3 +17,8 @@ def step_impl(context):
 def step_impl(context):
     context.pipeline.pause()
 
+
+@then(u'I install pipeline in context')
+def step_impl(context):
+    context.pipeline.install()
+

@@ -44,7 +44,7 @@ class Zipping:
             for root, dirs, files in os.walk(directory):
                 for file in files:
                     filepath = os.path.join(root, file)
-                    if not spec.match_file(filepath):
+                    if not spec.match_file(os.path.relpath(filepath, directory)):
                         zip_file.write(filepath, arcname=os.path.relpath(filepath, directory))
                         if not ignore_max_file_size:
                             if np.sum([f.file_size for f in list(zip_file.NameToInfo.values())]) > MAX_ZIP_FILE:
