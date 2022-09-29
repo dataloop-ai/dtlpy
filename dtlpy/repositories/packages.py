@@ -1,15 +1,16 @@
-import importlib.util
 import collections.abc
+import importlib.util
 import inspect
 import logging
 import hashlib
+import typing
 import json
+import sys
 import os
+import re
 from copy import deepcopy
 from shutil import copyfile
 from concurrent.futures import ThreadPoolExecutor
-from typing import Union, List
-import re
 
 from .. import entities, repositories, exceptions, utilities, miscellaneous, assets, services
 
@@ -322,12 +323,6 @@ class Packages:
                            'The version you provided has type: int, it will be converted to: 1.0.{}'
                            'Next time use a 3-level semver for package/service versions'.format(version))
 
-        if self._project is None:
-            if package is not None and package.project is not None:
-                self._project = package.project
-            else:
-                self._project = repositories.Projects(client_api=self._client_api).get(project_id=project_id,
-                                                                                       fetch=None)
         dir_version = version
         if version is None:
             dir_version = package.version
@@ -335,10 +330,8 @@ class Packages:
         if local_path is None:
             local_path = os.path.join(
                 services.service_defaults.DATALOOP_PATH,
-                "projects",
-                self._project.name,
                 "packages",
-                package.name,
+                "{}-{}".format(package.name, package.id),
                 str(dir_version))
 
         if version is None or version == package.version:
@@ -355,9 +348,15 @@ class Packages:
                 client_api=package._client_api
             )
         if package_revision.codebase.type == entities.PackageCodebaseType.ITEM:
-            self._project.codebases.unpack(codebase_id=package_revision.codebase.item_id, local_path=local_path)
+            local_path = package_revision.codebases.unpack(codebase_id=package_revision.codebase.item_id,
+                                                           local_path=local_path)
+        elif package_revision.codebase.type == entities.PackageCodebaseType.GIT:
+            local_path = package_revision.codebases.unpack(codebase=package_revision.codebase,
+                                                           local_path=local_path)
         else:
-            raise Exception('Pull can only be performed on packages with "Item" codebase.')
+            raise Exception(
+                'Pull can only be performed on packages with Item or Git codebase. Codebase type: {!r}'.format(
+                    package_revision.codebase.type))
 
         return local_path
 
@@ -424,8 +423,8 @@ class Packages:
              project_id: str = None,
              package_name: str = None,
              src_path: str = None,
-             codebase: Union[entities.GitCodebase, entities.ItemCodebase, entities.FilesystemCodebase] = None,
-             modules: List[entities.PackageModule] = None,
+             codebase: typing.Union[entities.GitCodebase, entities.ItemCodebase, entities.FilesystemCodebase] = None,
+             modules: typing.List[entities.PackageModule] = None,
              is_global: bool = None,
              checkout: bool = False,
              revision_increment: str = None,
@@ -433,8 +432,10 @@ class Packages:
              ignore_sanity_check: bool = False,
              service_update: bool = False,
              service_config: dict = None,
-             slots: List[entities.PackageSlot] = None,
-             requirements: List[entities.PackageRequirement] = None
+             slots: typing.List[entities.PackageSlot] = None,
+             requirements: typing.List[entities.PackageRequirement] = None,
+             package_type=None,
+             metadata=None
              ) -> entities.Package:
         """
         Push your local package to the UI.
@@ -459,6 +460,8 @@ class Packages:
         :param dict service_config: json of service - a service that have config from the main service if wanted
         :param list slots: optional - list of slots PackageSlot of the package
         :param list requirements: requirements - list of package requirements
+        :param str package_type: default 'faas', options: 'app', 'ml
+        :param dict metadata: dictionary of system and user metadata
 
         :return: Package object
         :rtype: dtlpy.entities.package.Package
@@ -578,6 +581,11 @@ class Packages:
                 if service_config is not None:
                     package.service_config = service_config
 
+                if metadata is not None:
+                    package.metadata = metadata
+
+                if package_type is not None:
+                    package.package_type = package_type
                 package = self.update(package=package, revision_increment=revision_increment)
             else:
                 package = self._create(
@@ -589,7 +597,9 @@ class Packages:
                     is_global=is_global,
                     version=version,
                     service_config=service_config,
-                    requirements=requirements
+                    requirements=requirements,
+                    package_type=package_type,
+                    metadata=metadata
                 )
             if checkout:
                 self.checkout(package=package)
@@ -612,14 +622,16 @@ class Packages:
 
     def _create(self,
                 project_to_deploy: entities.Project = None,
-                codebase: Union[entities.GitCodebase, entities.ItemCodebase, entities.FilesystemCodebase] = None,
+                codebase: typing.Union[entities.GitCodebase, entities.ItemCodebase, entities.FilesystemCodebase] = None,
                 is_global: bool = None,
                 package_name: str = entities.package_defaults.DEFAULT_PACKAGE_NAME,
-                modules: List[entities.PackageModule] = None,
+                modules: typing.List[entities.PackageModule] = None,
                 version: str = None,
                 service_config: dict = None,
-                slots: List[entities.PackageSlot] = None,
-                requirements: List[entities.PackageRequirement] = None
+                slots: typing.List[entities.PackageSlot] = None,
+                requirements: typing.List[entities.PackageRequirement] = None,
+                package_type='faas',
+                metadata=None
                 ) -> entities.Package:
         """
         Create a package in platform.
@@ -650,7 +662,8 @@ class Packages:
                    'global': is_global,
                    'modules': modules,
                    'slots': slots,
-                   'serviceConfig': service_config
+                   'serviceConfig': service_config,
+                   'type': package_type
                    }
 
         if codebase is not None:
@@ -661,6 +674,9 @@ class Packages:
 
         if version is not None:
             payload['version'] = version
+
+        if metadata is not None:
+            payload['metadata'] = metadata
 
         if project_to_deploy is not None:
             payload['projectId'] = project_to_deploy.id
@@ -795,11 +811,11 @@ class Packages:
                service_name: str = None,
                project_id: str = None,
                revision: str or int = None,
-               init_input: Union[List[entities.FunctionIO], entities.FunctionIO, dict] = None,
-               runtime: Union[entities.KubernetesRuntime, dict] = None,
+               init_input: typing.Union[typing.List[entities.FunctionIO], entities.FunctionIO, dict] = None,
+               runtime: typing.Union[entities.KubernetesRuntime, dict] = None,
                sdk_version: str = None,
                agent_versions: dict = None,
-               bot: Union[entities.Bot, str] = None,
+               bot: typing.Union[entities.Bot, str] = None,
                pod_type: entities.InstanceCatalog = None,
                verify: bool = True,
                checkout: bool = False,
@@ -1212,12 +1228,12 @@ class Packages:
                                                     filters=dict(),
                                                     actions=['Created'],
                                                     function='first_method',
-                                                    execution_mode='Once')
+                                                    execution_mode=entities.TriggerExecutionMode.ONCE)
             trigger_b = Packages.build_trigger_dict(name='second_trigger',
                                                     filters=dict(),
                                                     actions=['Created'],
                                                     function='second_method',
-                                                    execution_mode='Once')
+                                                    execution_mode=entities.TriggerExecutionMode.ONCE)
             if 'item' in package_catalog:
                 trigger_a['spec']['resource'] = trigger_b['spec']['resource'] = 'Item'
             if 'dataset' in package_catalog:
@@ -1230,7 +1246,7 @@ class Packages:
                                                   filters=dict(),
                                                   actions=[],
                                                   function=entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME,
-                                                  execution_mode='Once')
+                                                  execution_mode=entities.TriggerExecutionMode.ONCE)
             if 'item' in package_catalog:
                 trigger['spec']['resource'] = 'Item'
             if 'dataset' in package_catalog:
@@ -1326,6 +1342,65 @@ class Packages:
                         json.dump(job['src'], f, indent=2)
 
         logger.info('Successfully generated package')
+
+    def build(self, package: entities.Package, module_name=None, init_inputs=None, local_path=None, from_local=None):
+        """
+        instantiate a module from the package code. Returns a loaded instance of the runner class
+
+        :param package: Package entity
+        :param module_name: Name of the module to build the runner class
+        :param str init_inputs: dictionary of the class init variables (if exists). will be used to init the moudle class
+        :param str local_path: local path of the package (if from_local=False - codebase will be downloaded)
+        :param bool from_local: bool. if true - codebase will not be downloaded (only use local files)
+        :return: dl.BaseServiceRunner
+        """
+        if module_name is None:
+            module_name = entities.package_defaults.DEFAULT_PACKAGE_MODULE_NAME
+        if init_inputs is None:
+            init_inputs = dict()
+        if package.codebase is None:
+            raise exceptions.PlatformException(error='2001',
+                                               message="Package {!r} has no codebase. unable to build a module".format(
+                                                   package.name))
+
+        if from_local is None:
+            from_local = package.codebase.is_local
+
+        if local_path is None:
+            if package.codebase.is_local:
+                local_path = package.codebase.local_path
+            else:
+                local_path = os.path.join(services.service_defaults.DATALOOP_PATH, "packages")
+
+        if not from_local:
+            # Not local => download codebase
+            if package.codebase.is_local:
+                raise RuntimeError("using local codebase: {}. Cannot use from_local=False".
+                                   format(package.codebase.to_json()))
+            local_path = self.pull(package=package, local_path=local_path)
+
+        sys.path.append(local_path)  # TODO: is it the best way to use the imports?
+        # load module from path
+        module = [module for module in package.modules if module.name == module_name]
+        if len(module) != 1:
+            raise ValueError('Cannot find module from package. trying to load: {!r}, available modules: {}'.format(
+                module_name,
+                [module.name for module in package.modules]
+            ))
+        module = module[0]
+        entry_point = os.path.join(local_path, module.entry_point)
+        class_name = module.class_name
+        if not os.path.isfile(entry_point):
+            raise ValueError('Module entry point file is missing: {}'.format(entry_point))
+        spec = importlib.util.spec_from_file_location(class_name, entry_point)
+        if spec is None:
+            raise ValueError('Cant load class ModelAdapter from entry point: {}'.format(entry_point))
+        package_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(package_module)
+        package_module_cls = getattr(package_module, class_name)
+        package_module = package_module_cls(**init_inputs)
+        logger.info('Model adapter loaded successfully!')
+        return package_module
 
     @staticmethod
     def _mock_json_generator(module: entities.PackageModule, function_name):

@@ -1,4 +1,5 @@
 import traceback
+from enum import Enum
 from typing import Union, List
 import attr
 import logging
@@ -6,6 +7,12 @@ import logging
 from .. import repositories, entities, exceptions
 
 logger = logging.getLogger(name='dtlpy')
+
+
+class TaskPriority(int, Enum):
+    LOW = 1
+    MEDIUM = 2
+    HIGH = 3
 
 
 class ItemAction:
@@ -79,6 +86,7 @@ class Task:
     created_at = attr.ib()
     available_actions = attr.ib()
     total_items = attr.ib()
+    priority = attr.ib()
 
     # sdk
     _client_api = attr.ib(repr=False)
@@ -154,6 +162,7 @@ class Task:
             created_at=_json.get('createdAt', None),
             available_actions=actions,
             total_items=_json.get('totalItems', None),
+            priority=_json.get('priority', None)
         )
 
     def to_json(self):
@@ -307,6 +316,7 @@ class Task:
                        batch_size=None,
                        max_batch_workload=None,
                        allowed_assignees=None,
+                       priority=TaskPriority.MEDIUM
                        ):
         """
         Create a new QA Task
@@ -323,6 +333,7 @@ class Task:
         :param int batch_size: Pulling batch size (items) . Restrictions - Min 3, max 100
         :param int max_batch_workload: Max items in assignment . Restrictions - Min batchSize + 2 , max batchSize * 2
         :param list allowed_assignees:  It’s like the workload, but without percentage.
+        :param entities.TaskPriority priority: priority of the task options in entities.TaskPriority
         :return: task object
         :rtype: dtlpy.entities.task.Task
 
@@ -346,6 +357,7 @@ class Task:
                                          batch_size=batch_size,
                                          max_batch_workload=max_batch_workload,
                                          allowed_assignees=allowed_assignees,
+                                         priority=priority
                                          )
 
     def create_assignment(self, assignment_name, assignee_id, items=None, filters=None):

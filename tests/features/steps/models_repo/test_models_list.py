@@ -1,23 +1,24 @@
 import behave
 
 
-@behave.given(u'I create "{num_models}" models')
+@behave.when(u'I create "{num_models}" models')
 def step_impl(context, num_models):
     models = list()
     for i_model in range(int(num_models)):
-        models.append(context.project.models.create(model_name='model-num-{}'.format(i_model)))
+        models.append(context.package.models.create(model_name='model-num-{}'.format(i_model),
+                                                    dataset_id=context.dataset.id,
+                                                    labels=[]))
     context.models = models
 
 
-@behave.when(u'I list model with filter field "{field}" and values "{values}"')
+@behave.when(u'I list models with filter field "{field}" and values "{values}"')
 def step_impl(context, field, values):
     filters = context.dl.Filters(resource='models',
                                  field=field,
                                  values=values)
-    context.list_results = context.project.models.list(filters=filters)
+    context.list_results = list(context.package.models.list(filters=filters).all())
 
 
-@behave.then(u'I get "{num}" entities')
-def step_impl(context, num):
-    assert len(context.list_results) == int(num), \
-        'Got wrong number of entities. expected: {!r}, found {!r}'.format(num, context.list_results.items_count)
+@behave.then(u'I get "{models_number}" entities')
+def step_impl(context, models_number):
+    assert len(context.list_results) == int(models_number)

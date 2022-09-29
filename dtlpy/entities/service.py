@@ -9,6 +9,22 @@ from .. import services, repositories, entities
 logger = logging.getLogger(name='dtlpy')
 
 
+class ServiceType(str, Enum):
+    """ The type of the service (SYSTEM).
+
+    .. list-table::
+       :widths: 15 150
+       :header-rows: 1
+
+       * - State
+         - Description
+       * - SYSTEM
+         - Dataloop internal service
+    """
+    SYSTEM = 'system'
+    REGULAR = 'regular'
+
+
 class OnResetAction(str, Enum):
     """ The Execution action when the service reset (RERUN, FAILED).
 
@@ -179,6 +195,7 @@ class Service(entities.BaseEntity):
     execution_timeout = attr.ib()
     drain_time = attr.ib()
     on_reset = attr.ib(type=OnResetAction)
+    _type = attr.ib(type=ServiceType)
     project_id = attr.ib()
     is_global = attr.ib()
     max_attempts = attr.ib()
@@ -281,7 +298,8 @@ class Service(entities.BaseEntity):
             client_api=client_api,
             package=package,
             project=project,
-            secrets=_json.get("secrets", None)
+            secrets=_json.get("secrets", None),
+            type=_json.get("type", None)
         )
         inst.is_fetched = is_fetched
         return inst
@@ -399,6 +417,7 @@ class Service(entities.BaseEntity):
                 attr.fields(Service).created_at,
                 attr.fields(Service).updated_at,
                 attr.fields(Service).secrets,
+                attr.fields(Service)._type,
             )
         )
 
@@ -432,6 +451,9 @@ class Service(entities.BaseEntity):
 
         if self.secrets is not None:
             _json['secrets'] = self.secrets
+
+        if self._type is not None:
+            _json['type'] = self._type
 
         return _json
 

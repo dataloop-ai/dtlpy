@@ -148,9 +148,13 @@ class Polygon(BaseAnnotationDefinition):
                 if epsilon is None:
                     epsilon = 0.0005 * cv2.arcLength(curve=curve,
                                                      closed=True)
-                new_pts_list.append(np.squeeze(cv2.approxPolyDP(curve=curve,
+                estimated_polygon = np.squeeze(cv2.approxPolyDP(curve=curve,
                                                                 epsilon=epsilon,
-                                                                closed=True)))
+                                                                closed=True))
+                if len(estimated_polygon.shape) == 1:
+                    new_pts_list.append(np.squeeze(curve))
+                else:
+                    new_pts_list.append(estimated_polygon)
         polygons = [cls(geo=new_pts,
                         label=label,
                         attributes=attributes,

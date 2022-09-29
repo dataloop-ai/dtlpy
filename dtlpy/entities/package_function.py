@@ -6,7 +6,7 @@ import attr
 from enum import Enum
 from .. import exceptions, entities
 
-logger = logging.getLogger("dataloop.function")
+logger = logging.getLogger(name='dtlpy')
 
 
 class PackageInputType(str, Enum):
@@ -27,7 +27,6 @@ class PackageInputType(str, Enum):
     FLOAT = "Float"
     BOOLEAN = "Boolean"
     MODEL = "Model"
-    SNAPSHOT = "Snapshot"
     DATASETS = "Dataset[]"
     ITEMS = "Item[]"
     ANNOTATIONS = "Annotation[]"
@@ -44,7 +43,6 @@ class PackageInputType(str, Enum):
     FLOATS = "Float[]"
     BOOLEANS = "Boolean[]"
     MODELS = "Model[]"
-    SNAPSHOTS = "Snapshot[]"
     RECIPES = "Recipe[]"
 
 
@@ -149,8 +147,6 @@ class FunctionIO:
             return 'execution'
         elif self.type == PackageInputType.MODEL:
             return 'model'
-        elif self.type == PackageInputType.SNAPSHOT:
-            return 'snapshot'
         else:
             return 'config'
 
@@ -158,8 +154,9 @@ class FunctionIO:
     @type.validator
     def check_type(self, attribute, value):
         if value not in self.INPUT_TYPES:
-            raise exceptions.PlatformException('400',
-                                               'Invalid input type please select from: {}'.format(self.INPUT_TYPES))
+            raise exceptions.PlatformException(
+                error='400',
+                message='Invalid input type: {!r}. Please one from dl.PackageInputType'.format(value))
 
     @staticmethod
     def is_json_serializable(val):

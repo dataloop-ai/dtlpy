@@ -1,4 +1,5 @@
 import logging
+from .. import entities
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -45,6 +46,7 @@ class ServiceSample(BaseSample):
                  ram=None,
                  queue_size=None,
                  num_executions=None,
+                 service_type: entities.ServiceType = None
                  ):
         super().__init__(start_time=start_time,
                          end_time=end_time,
@@ -65,6 +67,7 @@ class ServiceSample(BaseSample):
         self.ram = ram
         self.queue_size = queue_size
         self.num_executions = num_executions
+        self.service_type = service_type if service_type is not None else entities.ServiceType.REGULAR
 
     def to_json(self):
         _json = {
@@ -78,7 +81,8 @@ class ServiceSample(BaseSample):
                 'pipelineNodeId': self.pipeline_node_id,
                 'serviceId': self.service_id,
                 'podId': self.pod_id,
-                'podType': self.pod_type
+                'podType': self.pod_type,
+                'serviceType': self.service_type
             },
             'eventType': self.event_type,
             'entityType': self.entity_type,
@@ -94,6 +98,7 @@ class ServiceSample(BaseSample):
         }
         _json['context'] = {k: v for k, v in _json['context'].items() if v is not None}
         _json['data'] = {k: v for k, v in _json['data'].items() if v is not None}
+
         return {k: v for k, v in _json.items() if v is not None}
 
     @classmethod
@@ -118,6 +123,7 @@ class ServiceSample(BaseSample):
             ram=_json.get('data', {}).get('ram', None),
             queue_size=_json.get('data', {}).get('queueSize', None),
             num_executions=_json.get('data', {}).get('numExecutions', None),
+            service_type=_json.get('type', entities.ServiceType.REGULAR),
         )
         return inst
 

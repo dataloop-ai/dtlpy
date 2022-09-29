@@ -59,7 +59,7 @@ class Project(entities.BaseEntity):
         reps = namedtuple(
             'repositories',
             'projects triggers datasets items recipes packages codebases artifacts times_series services '
-            'executions assignments tasks bots webhooks models analytics ontologies snapshots buckets '
+            'executions assignments tasks bots webhooks models analytics ontologies '
             'drivers pipelines feature_sets features integrations settings'
         )
         datasets = repositories.Datasets(client_api=self._client_api, project=self)
@@ -82,8 +82,6 @@ class Project(entities.BaseEntity):
             bots=repositories.Bots(client_api=self._client_api, project=self),
             analytics=repositories.Analytics(client_api=self._client_api, project=self),
             ontologies=repositories.Ontologies(client_api=self._client_api, project=self),
-            snapshots=repositories.Snapshots(client_api=self._client_api, project=self),
-            buckets=repositories.Buckets(client_api=self._client_api, project=self),
             drivers=repositories.Drivers(client_api=self._client_api, project=self),
             pipelines=repositories.Pipelines(client_api=self._client_api, project=self),
             feature_sets=repositories.FeatureSets(client_api=self._client_api, project=self),
@@ -163,16 +161,6 @@ class Project(entities.BaseEntity):
     def models(self):
         assert isinstance(self._repositories.models, repositories.Models)
         return self._repositories.models
-
-    @property
-    def snapshots(self):
-        assert isinstance(self._repositories.snapshots, repositories.Snapshots)
-        return self._repositories.snapshots
-
-    @property
-    def buckets(self):
-        assert isinstance(self._repositories.buckets, repositories.Buckets)
-        return self._repositories.buckets
 
     @property
     def codebases(self):
@@ -381,4 +369,3 @@ class Project(entities.BaseEntity):
         :rtype: list
         """
         return self.projects.list_members(project=self, role=role)
-

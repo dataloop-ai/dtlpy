@@ -4,7 +4,7 @@ from enum import Enum
 
 from .. import services, repositories, entities
 
-logger = logging.getLogger("dataloop.service")
+logger = logging.getLogger(name='dtlpy')
 
 
 class HttpMethod(str, Enum):

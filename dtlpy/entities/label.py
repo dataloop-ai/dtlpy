@@ -31,7 +31,6 @@ class Label:
         color = (random.randrange(0, 255), random.randrange(0, 255), random.randrange(0, 255))
         return color
 
-
     @display_data.default
     def set_display_data(self):
         display_data = dict()
@@ -121,6 +120,7 @@ class Label:
         if isinstance(self.color, tuple) or isinstance(self.color, list):
             return '#%02x%02x%02x' % self.color
         elif self.color.startswith('rgb'):
-            return tuple(eval(self.color.lstrip('rgb')))
+            rgb = tuple(eval(self.color.lstrip('rgb')))
+            return '#%02x%02x%02x' % rgb
         elif self.color.startswith('#'):
             return self.color

@@ -13,8 +13,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with DTLPY.  If not, see <http://www.gnu.org/licenses/>.
-import json
-
 import logging
 import sys
 import os
@@ -29,7 +27,7 @@ from .entities import (
     # main entities
     Project, Dataset, ExpirationOptions, ExportVersion, Trigger, Item, Execution, AnnotationCollection, Annotation,
     Recipe, IndexDriver, AttributesTypes, AttributesRange,
-    Ontology, Label, Task, Assignment, Service, Package, Codebase, Model, Snapshot, PackageModule, PackageFunction,
+    Ontology, Label, Task, TaskPriority, Assignment, Service, Package, Codebase, Model, PackageModule, PackageFunction,
     # annotations
     Box, Cube, Cube3d, Point, Note, Segmentation, Ellipse, Classification, Subtitle, Polyline, Pose, Description,
     Polygon, Text,
@@ -40,16 +38,14 @@ from .entities import (
     TriggerResource, TriggerAction, TriggerExecutionMode, TriggerType,
     # faas
     FunctionIO, KubernetesAutuscalerType, KubernetesRabbitmqAutoscaler, KubernetesAutoscaler, KubernetesRuntime,
-    InstanceCatalog, PackageInputType,
+    InstanceCatalog, PackageInputType, ServiceType,
     PackageSlot, SlotPostAction, SlotPostActionType, SlotDisplayScope, SlotDisplayScopeResource, UiBindingPanel,
     # roberto
-    SnapshotPartitionType, SnapshotMetricSample, BucketType, Bucket, ItemBucket, GCSBucket, LocalBucket,
-    ModelOutputType, ModelInputType, EntityScopeLevel,
+    DatasetSubsetType, LogSample, ArtifactType, Artifact, ItemArtifact, LinkArtifact, LocalArtifact, EntityScopeLevel,
     #
     RequirementOperator, PackageRequirement,
     Command, CommandsStatus,
-    GitCodebase, ItemCodebase, FilesystemCodebase, PackageCodebaseType,
-    OntologySpec,
+    LocalCodebase, GitCodebase, ItemCodebase, FilesystemCodebase, PackageCodebaseType,
     MemberRole, FeatureEntityType, MemberOrgRole,
     Webhook, HttpMethod,
     ViewAnnotationOptions, AnnotationStatus, AnnotationType,
@@ -66,10 +62,9 @@ from .entities import (
     ExternalStorage, Role, PlatformEntityType, SettingsValueTypes, SettingsTypes, SettingsSectionNames, SettingScope, \
     BaseSetting, UserSetting, Setting, ServiceSample, ExecutionSample, PipelineExecutionSample, ResourceExecution
 )
-from .ml import BaseModelAdapter, SuperModelAdapter
+from .ml import BaseModelAdapter
 from .utilities import Converter, BaseServiceRunner, Progress, Context, AnnotationFormat
-from .repositories.packages import PackageCatalog
-from .repositories import FUNCTION_END_LINE
+from .repositories import FUNCTION_END_LINE, PackageCatalog
 import warnings
 
 warnings.simplefilter('once', DeprecationWarning)
@@ -142,8 +137,6 @@ assignments = repositories.Assignments(client_api=client_api)
 tasks = repositories.Tasks(client_api=client_api)
 annotations = repositories.Annotations(client_api=client_api)
 models = repositories.Models(client_api=client_api)
-snapshots = repositories.Snapshots(client_api=client_api)
-buckets = repositories.Buckets(client_api=client_api)
 ontologies = repositories.Ontologies(client_api=client_api)
 recipes = repositories.Recipes(client_api=client_api)
 pipelines = repositories.Pipelines(client_api=client_api)
@@ -342,7 +335,6 @@ FILTERS_RESOURCE_PACKAGE = FiltersResource.PACKAGE
 FILTERS_RESOURCE_SERVICE = FiltersResource.SERVICE
 FILTERS_RESOURCE_TRIGGER = FiltersResource.TRIGGER
 FILTERS_RESOURCE_MODEL = FiltersResource.MODEL
-FILTERS_RESOURCE_SNAPSHOT = FiltersResource.SNAPSHOT
 FILTERS_RESOURCE_WEBHOOK = FiltersResource.WEBHOOK
 FILTERS_RESOURCE_RECIPE = FiltersResource.RECIPE
 FILTERS_RESOURCE_DATASET = FiltersResource.DATASET
@@ -385,7 +377,6 @@ PACKAGE_INPUT_TYPE_DATASET = PackageInputType.DATASET
 PACKAGE_INPUT_TYPE_ANNOTATION = PackageInputType.ANNOTATION
 PACKAGE_INPUT_TYPE_JSON = PackageInputType.JSON
 PACKAGE_INPUT_TYPE_MODEL = PackageInputType.MODEL
-PACKAGE_INPUT_TYPE_SNAPSHOT = PackageInputType.SNAPSHOT
 PACKAGE_INPUT_TYPE_PACKAGE = PackageInputType.PACKAGE
 PACKAGE_INPUT_TYPE_SERVICE = PackageInputType.SERVICE
 PACKAGE_INPUT_TYPE_PROJECT = PackageInputType.PROJECT
@@ -414,7 +405,6 @@ PACKAGE_INPUT_TYPE_INTS = PackageInputType.INTS
 PACKAGE_INPUT_TYPE_FLOATS = PackageInputType.FLOATS
 PACKAGE_INPUT_TYPE_BOOLEANS = PackageInputType.BOOLEANS
 PACKAGE_INPUT_TYPE_MODELS = PackageInputType.MODELS
-PACKAGE_INPUT_TYPE_SNAPSHOTS = PackageInputType.SNAPSHOTS
 PACKAGE_INPUT_TYPE_RECIPES = PackageInputType.RECIPES
 
 FUNCTION_POST_ACTION_TYPE_DOWNLOAD = SlotPostActionType.DOWNLOAD
@@ -473,3 +463,7 @@ ATTRIBUTES_TYPES_RADIO_BUTTON = AttributesTypes.RADIO_BUTTON
 ATTRIBUTES_TYPES_YES_NO = AttributesTypes.YES_NO
 ATTRIBUTES_TYPES_SLIDER = AttributesTypes.SLIDER
 ATTRIBUTES_TYPES_FREE_TEXT = AttributesTypes.FREE_TEXT
+
+TASK_PRIORITY_LOW = TaskPriority.LOW
+TASK_PRIORITY_MEDIUM = TaskPriority.MEDIUM
+TASK_PRIORITY_HIGH = TaskPriority.HIGH

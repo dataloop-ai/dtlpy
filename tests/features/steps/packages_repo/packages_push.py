@@ -15,6 +15,7 @@ def step_impl(context, package_number):
     src_path = None
     outputs = list()
     modules = None
+    package_type = 'faas'
 
     params = context.table.headings
     for param in params:
@@ -38,6 +39,9 @@ def step_impl(context, package_number):
         elif param[0] == 'modules':
             if param[1] != 'None':
                 modules = param[1]
+        elif param[0] == 'type':
+            if param[1] != 'None':
+                package_type = param[1]
 
     if modules == 'no_input':
         func = context.dl.PackageFunction()
@@ -58,7 +62,8 @@ def step_impl(context, package_number):
         codebase=codebase,
         package_name=package_name,
         modules=modules,
-        src_path=src_path
+        src_path=src_path,
+        package_type=package_type
     )
 
     context.to_delete_packages_ids.append(package.id)
@@ -139,10 +144,14 @@ def step_impl(context):
 def step_impl(context, version, revision_size):
     package_revision_size = len(context.package.revisions)
 
-    assert version == context.package.version, "TEST FAILED: Expect version to be {} got {}".format(version, context.package.version)
-    assert int(revision_size) == package_revision_size, "TEST FAILED: Expect package revision size to be {} got {}".format(revision_size, package_revision_size)
+    assert version == context.package.version, "TEST FAILED: Expect version to be {} got {}".format(version,
+                                                                                                    context.package.version)
+    assert int(
+        revision_size) == package_revision_size, "TEST FAILED: Expect package revision size to be {} got {}".format(
+        revision_size, package_revision_size)
 
 
 @behave.then(u'I validate service version is "{version}"')
 def step_impl(context, version):
-    assert version == context.service.package_revision, "TEST FAILED: Expect version to be {} got {}".format(version, context.service.package_revision)
+    assert version == context.service.package_revision, "TEST FAILED: Expect version to be {} got {}".format(version,
+                                                                                                             context.service.package_revision)

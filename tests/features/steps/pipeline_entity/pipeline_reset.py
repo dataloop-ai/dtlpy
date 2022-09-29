@@ -1,11 +1,12 @@
 import behave
+from time import sleep
 
 
 @behave.then(u'I try to reset statistics with stop_if_running "{flag_status}"')
 def step_impl(context, flag_status):
     if flag_status == "True":
         context.pipeline.reset(stop_if_running=True)
-
+        sleep(2)
         # Checking that all statistics got rest
         for i in range(3):
             if context.pipeline.stats().node_averages[i].averages.avg_execution_per_day != 0:

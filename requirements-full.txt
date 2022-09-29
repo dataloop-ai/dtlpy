@@ -1,4 +1,4 @@
-tqdm>=4.64.0
+tqdm>=4.63
 certifi>=2020.12.5
 webvtt-py==0.4.3
 aiohttp>=3.8
@@ -18,7 +18,7 @@ validators<=0.18.2
 pathspec>=0.8.1
 filelock>=3.0.12
 diskcache>=5.4
-redis>=4.3
+redis>=3.5
 pydantic
 urllib3>=1.26
 

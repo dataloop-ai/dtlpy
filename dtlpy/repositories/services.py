@@ -410,6 +410,37 @@ class Services:
             raise exceptions.PlatformException(response)
         return success
 
+    def _notify(
+            self,
+            service_id: str,
+            message: str,
+            name: str,
+            action: str = 'created',
+            support: str = None,
+            docs: str = None
+    ):
+        url = "/services/{}/notify".format(service_id)
+        payload = {
+            'action': action,
+            'message': message,
+            'notificationName': name
+        }
+
+        if support:
+            payload['support'] = support
+
+        if docs:
+            payload['docs'] = docs
+
+        success, response = self._client_api.gen_request(
+            req_type="post",
+            path=url,
+            json_req=payload
+        )
+        if not success:
+            raise exceptions.PlatformException(response)
+        return success
+
     def resume(self,
                service_name: str = None,
                service_id: str = None,

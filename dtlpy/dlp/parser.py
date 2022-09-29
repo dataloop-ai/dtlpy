@@ -494,6 +494,18 @@ def get_parser():
                           help="Project name")
     optional.add_argument("-p", "--package-name", metavar='\b', default=None,
                           help="Package name")
+    optional.add_argument("-c", "--checkout", action='store_true', default=False, help="checkout the new package")
+
+    # deploy
+    a = subparser_parser.add_parser("deploy", help="Deploy package to platform")
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument("-p", "--package-name", metavar='\b', default=None,
+                          help="Package name")
+    optional.add_argument("-pr", "--project-name", metavar='\b', default=None,
+                          help="Project name")
+    optional.add_argument("--module-name", metavar='\b', default='default_module',
+                          help="Package module name")
+    optional.add_argument("-c", "--checkout", action='store_true', default=False, help="checkout the new package")
 
     # test
     a = subparser_parser.add_parser(

@@ -29,7 +29,6 @@ class FiltersResource(str, Enum):
     SERVICE = "services"
     TRIGGER = "triggers"
     MODEL = "models"
-    SNAPSHOT = "snapshots"
     WEBHOOK = "webhooks"
     RECIPE = 'recipe'
     DATASET = 'dataset'

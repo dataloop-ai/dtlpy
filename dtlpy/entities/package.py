@@ -1,12 +1,16 @@
-import os
 from collections import namedtuple
-from enum import Enum
 from typing import Union
-import logging
+from enum import Enum
+import importlib.util
 import traceback
-import attr
+import logging
+import inspect
+import typing
 import json
+import os
 
+from .package_module import PackageModule
+from .package_slot import PackageSlot
 from .. import repositories, entities, exceptions, services
 
 logger = logging.getLogger(name='dtlpy')
@@ -49,39 +53,48 @@ class PackageRequirement:
         return cls(**_json)
 
 
-@attr.s
-class Package(entities.BaseEntity):
+class Package(entities.DlEntity):
     """
     Package object
     """
     # platform
-    id = attr.ib()
-    url = attr.ib(repr=False)
-    version = attr.ib()
-    created_at = attr.ib()
-    updated_at = attr.ib(repr=False)
-    name = attr.ib()
-    codebase = attr.ib()
-    _modules = attr.ib()
-    slots = attr.ib(type=list)
-    ui_hooks = attr.ib()
-    creator = attr.ib()
-    is_global = attr.ib()
-    type = attr.ib()
-    service_config = attr.ib()
-    # name change
-    project_id = attr.ib()
+    id = entities.DlProperty(location=['id'], type=str)
+    url = entities.DlProperty(location=['url'], type=str)
+    name = entities.DlProperty(location=['name'], type=str)
+    version = entities.DlProperty(location=['version'], type=str)
+    created_at = entities.DlProperty(location=['createdAt'], type=str)
+    updated_at = entities.DlProperty(location=['updatedAt'], type=str)
+    project_id = entities.DlProperty(location=['projectId'], type=str)
+    creator = entities.DlProperty(location=['creator'], type=str)
+    type = entities.DlProperty(location=['type'], type=str)
+    metadata = entities.DlProperty(location=['metadata'], type=dict)
+    ui_hooks = entities.DlProperty(location=['uiHooks'], type=str)
+    service_config = entities.DlProperty(location=['serviceConfig'], type=str)
+    is_global = entities.DlProperty(location=['global'], type=str)
+
+    codebase: entities.ItemCodebase
+    modules: typing.List[PackageModule]
+    slots: typing.List[PackageSlot]
+    requirements: typing.List[PackageRequirement]
 
     # sdk
-    _project = attr.ib(repr=False)
-    _client_api = attr.ib(type=services.ApiClient, repr=False)
-    _revisions = attr.ib(default=None, repr=False)
-    _repositories = attr.ib(repr=False)
-    _artifacts = attr.ib(default=None)
-    _codebases = attr.ib(default=None)
+    _client_api: services.ApiClient
+    _revisions = None
+    __repositories = None
+    _project = None
 
-    # defaults
-    requirements = attr.ib(default=None)
+    def __init__(self, _dict):
+        self._dict = _dict
+
+    def __repr__(self):
+        # TODO need to move to DlEntity
+        return "Package(id={id}, name={name}, creator={creator}, project_id={project_id}, type={type}, version={version})".format(
+            id=self.id,
+            name=self.name,
+            version=self.version,
+            type=self.type,
+            project_id=self.project_id,
+            creator=self.creator)
 
     @property
     def createdAt(self):
@@ -92,8 +105,10 @@ class Package(entities.BaseEntity):
         return self.updated_at
 
     @property
-    def modules(self):
-        return self._modules
+    def revisions(self):
+        if self._revisions is None:
+            self._revisions = self.packages.revisions(package=self)
+        return self._revisions
 
     @property
     def platform_url(self):
@@ -108,18 +123,6 @@ class Package(entities.BaseEntity):
     @codebase_id.setter
     def codebase_id(self, item_id: str):
         self.codebase = entities.ItemCodebase(item_id=item_id)
-
-    @modules.setter
-    def modules(self, modules: list):
-        if not self.unique_modules(modules):
-            raise Exception('Cannot have 2 modules by the same name in one package.')
-        if not isinstance(modules, list):
-            raise Exception('Package modules must be a list.')
-        self._modules = modules
-
-    @staticmethod
-    def unique_modules(modules: list):
-        return len(modules) == len(set([module.name for module in modules]))
 
     @staticmethod
     def _protected_from_json(_json, client_api, project, is_fetched=True):
@@ -158,41 +161,31 @@ class Package(entities.BaseEntity):
                 logger.warning('Package has been fetched from a project that is not belong to it')
                 project = None
 
-        modules = [entities.PackageModule.from_json(_module) for _module in _json.get('modules', list())]
+        modules = _json.get('modules', None)
+        if modules is not None:
+            modules = [entities.PackageModule.from_json(module) for module in modules]
+
         slots = _json.get('slots', None)
         if slots is not None:
             slots = [entities.PackageSlot.from_json(_slot) for _slot in slots]
 
-        if 'codebase' in _json:
-            codebase = entities.Codebase.from_json(_json=_json['codebase'],
-                                                   client_api=client_api)
-        else:
-            codebase = None
+        codebase = _json.get('codebase', None)
+        if 'codebase' is not None:
+            codebase = entities.Codebase.from_json(_json=codebase, client_api=client_api)
 
         requirements = _json.get('requirements', None)
         if requirements is not None:
             requirements = [PackageRequirement.from_json(r) for r in requirements]
 
-        inst = cls(
-            project_id=_json.get('projectId', None),
-            codebase=codebase,
-            created_at=_json.get('createdAt', None),
-            updated_at=_json.get('updatedAt', None),
-            version=_json.get('version', None),
-            creator=_json.get('creator', None),
-            is_global=_json.get('global', None),
-            client_api=client_api,
-            modules=modules,
-            slots=slots,
-            ui_hooks=_json.get('uiHooks', None),
-            name=_json.get('name', None),
-            url=_json.get('url', None),
-            project=project,
-            id=_json.get('id', None),
-            service_config=_json.get('serviceConfig', None),
-            requirements=requirements,
-            type=_json.get('type', None)
-        )
+        # Entity
+        inst = cls(_dict=_json)
+        inst.codebase = codebase
+        inst.modules = modules
+        inst.requirements = requirements
+        inst.slots = slots
+        # Platform
+        inst._project = project
+        inst._client_api = client_api
         inst.is_fetched = is_fetched
         return inst
 
@@ -203,62 +196,28 @@ class Package(entities.BaseEntity):
         :return: platform json of package
         :rtype: dict
         """
-        _json = attr.asdict(self,
-                            filter=attr.filters.exclude(attr.fields(Package)._project,
-                                                        attr.fields(Package)._repositories,
-                                                        attr.fields(Package)._artifacts,
-                                                        attr.fields(Package)._codebases,
-                                                        attr.fields(Package)._client_api,
-                                                        attr.fields(Package)._revisions,
-                                                        attr.fields(Package).project_id,
-                                                        attr.fields(Package)._modules,
-                                                        attr.fields(Package).slots,
-                                                        attr.fields(Package).is_global,
-                                                        attr.fields(Package).ui_hooks,
-                                                        attr.fields(Package).codebase,
-                                                        attr.fields(Package).service_config,
-                                                        attr.fields(Package).created_at,
-                                                        attr.fields(Package).updated_at,
-                                                        attr.fields(Package).requirements,
-                                                        ))
+        _json = self._dict
 
+        # Sanity
         modules = self.modules
-        # check in inputs is a list
+        unique_modules = len(modules) == len(set([module.name for module in modules]))
+        if not unique_modules:
+            raise Exception('Cannot have 2 modules by the same name in one package.')
         if not isinstance(modules, list):
-            modules = [modules]
-        # if is dtlpy entity convert to dict
-        if modules and isinstance(modules[0], entities.PackageModule):
-            modules = [module.to_json() for module in modules]
-        _json['modules'] = modules
+            raise Exception('Package modules must be a list.')
+        _json['modules'] = [m.to_json() for m in modules]
+
         if self.slots is not None:
-            slot = [slot.to_json() for slot in self.slots]
-            _json['slots'] = slot
-        _json['projectId'] = self.project_id
-        _json['createdAt'] = self.created_at
-        _json['updatedAt'] = self.updated_at
-        if self.is_global is not None:
-            _json['global'] = self.is_global
+            _json['slots'] = [m.to_json() for m in self.slots]
         if self.codebase is not None:
             _json['codebase'] = self.codebase.to_json()
-        if self.ui_hooks is not None:
-            _json['uiHooks'] = self.ui_hooks
-        if self.service_config is not None:
-            _json['serviceConfig'] = self.service_config
-
         if self.requirements is not None:
             _json['requirements'] = [r.to_json() for r in self.requirements]
-
         return _json
 
     ############
     # entities #
     ############
-    @property
-    def revisions(self):
-        if self._revisions is None:
-            self._revisions = self.packages.revisions(package=self)
-        return self._revisions
-
     @property
     def project(self):
         if self._project is None:
@@ -266,20 +225,43 @@ class Package(entities.BaseEntity):
         assert isinstance(self._project, entities.Project)
         return self._project
 
+    @project.setter
+    def project(self, project):
+        assert isinstance(self._project, entities.Project), "Unknwon 'project' type: {}".format(type(project))
+        self._project = project
+
     ################
     # repositories #
     ################
-    @_repositories.default
-    def set_repositories(self):
-        reps = namedtuple('repositories',
-                          field_names=['executions', 'services', 'projects', 'packages'])
+    @property
+    def _repositories(self):
+        if self.__repositories is None:
+            reps = namedtuple('repositories',
+                              field_names=['executions', 'services', 'projects', 'packages', 'artifacts', 'codebases',
+                                           'models'])
 
-        r = reps(executions=repositories.Executions(client_api=self._client_api, project=self._project),
-                 services=repositories.Services(client_api=self._client_api, package=self, project=self._project,
-                                                project_id=self.project_id),
-                 projects=repositories.Projects(client_api=self._client_api),
-                 packages=repositories.Packages(client_api=self._client_api, project=self._project))
-        return r
+            self.__repositories = reps(
+                executions=repositories.Executions(client_api=self._client_api,
+                                                   project=self._project),
+                services=repositories.Services(client_api=self._client_api,
+                                               package=self,
+                                               project=self._project,
+                                               project_id=self.project_id),
+                projects=repositories.Projects(client_api=self._client_api),
+                packages=repositories.Packages(client_api=self._client_api,
+                                               project=self._project),
+                artifacts=repositories.Artifacts(client_api=self._client_api,
+                                                 project=self._project,
+                                                 project_id=self.project_id,
+                                                 package=self),
+                codebases=repositories.Codebases(client_api=self._client_api, project=self._project,
+                                                 project_id=self.project_id),
+                models=repositories.Models(client_api=self._client_api,
+                                           project=self._project,
+                                           package=self,
+                                           project_id=self.project_id)
+            )
+        return self.__repositories
 
     @property
     def executions(self):
@@ -303,25 +285,18 @@ class Package(entities.BaseEntity):
 
     @property
     def codebases(self):
-        if self._codebases is None:
-            self._codebases = repositories.Codebases(
-                client_api=self._client_api,
-                project=self._project,
-                project_id=self.project_id
-            )
-        assert isinstance(self._codebases, repositories.Codebases)
-        return self._codebases
+        assert isinstance(self._repositories.codebases, repositories.Codebases)
+        return self._repositories.codebases
 
     @property
     def artifacts(self):
-        if self._artifacts is None:
-            self._artifacts = repositories.Artifacts(
-                client_api=self._client_api,
-                project=self._project,
-                project_id=self.project_id
-            )
-        assert isinstance(self._artifacts, repositories.Artifacts)
-        return self._artifacts
+        assert isinstance(self._repositories.artifacts, repositories.Artifacts)
+        return self._repositories.artifacts
+
+    @property
+    def models(self):
+        assert isinstance(self._repositories.models, repositories.Models)
+        return self._repositories.models
 
     ##############
     # properties #
@@ -404,20 +379,20 @@ class Package(entities.BaseEntity):
         **Example**:
 
         .. code-block:: python
+        service: dl.Service = package.deploy(service_name=package_name,
+                                             execution_timeout=3 * 60 * 60,
+                                             module_name=module.name,
+                                             runtime=dl.KubernetesRuntime(
+                                                 concurrency=10,
+                                                 pod_type=dl.InstanceCatalog.REGULAR_S,
+                                                 autoscaler=dl.KubernetesRabbitmqAutoscaler(
+                                                     min_replicas=1,
+                                                     max_replicas=20,
+                                                     queue_length=20
+                                                 )
+                                             )
+                                             )
 
-            package.deploy(service_name=package_name,
-                            execution_timeout=3 * 60 * 60,
-                            module_name=module.name,
-                            runtime=dl.KubernetesRuntime(
-                                concurrency=10,
-                                pod_type=dl.InstanceCatalog.REGULAR_S,
-                                autoscaler=dl.KubernetesRabbitmqAutoscaler(
-                                    min_replicas=1,
-                                    max_replicas=20,
-                                    queue_length=20
-                                )
-                            )
-                        )
         """
         return self.project.packages.deploy(package=self,
                                             service_name=service_name,
@@ -449,7 +424,7 @@ class Package(entities.BaseEntity):
         """
         return self.packages.checkout(package=self)
 
-    def delete(self):
+    def delete(self) -> bool:
         """
         Delete Package object
 
@@ -466,6 +441,7 @@ class Package(entities.BaseEntity):
              revision_increment: str = None,
              service_update: bool = False,
              service_config: dict = None,
+             package_type='faas'
              ):
         """
         Push local package
@@ -478,6 +454,7 @@ class Package(entities.BaseEntity):
         :param str revision_increment: optional - str - version bumping method - major/minor/patch - default = None
         :param  bool service_update: optional - bool - update the service
         :param  dict service_config: optional - json of service - a service that have config from the main service if wanted
+        :param  str package_type: default is "faas", one of "app", "ml"
         :return: package entity
         :rtype: dtlpy.entities.package.Package
         
@@ -485,11 +462,10 @@ class Package(entities.BaseEntity):
 
         .. code-block:: python
 
-            packages.push(package_name='package_name',
-                        modules=[module],
-                        version='1.0.0',
-                        src_path=os.getcwd()
-                    )
+            package = packages.push(package_name='package_name',
+                                    modules=[module],
+                                    version='1.0.0',
+                                    src_path=os.getcwd())
         """
         return self.project.packages.push(
             package_name=package_name if package_name is not None else self.name,
@@ -499,11 +475,11 @@ class Package(entities.BaseEntity):
             src_path=src_path,
             checkout=checkout,
             service_update=service_update,
-            service_config=service_config
-
+            service_config=service_config,
+            package_type=package_type
         )
 
-    def pull(self, version=None, local_path=None):
+    def pull(self, version=None, local_path=None) -> str:
         """
         Pull local package
 
@@ -514,11 +490,27 @@ class Package(entities.BaseEntity):
 
         .. code-block:: python
 
-            package.pull(local_path='local_path')
+            path = package.pull(local_path='local_path')
         """
         return self.packages.pull(package=self,
                                   version=version,
                                   local_path=local_path)
+
+    def build(self, local_path=None, from_local=None, module_name=None):
+        """
+        Push local model
+
+        :param local_path: local path where the model code should be.
+                           if model is downloaded - this will be the point it will be downloaded
+                           (if from_local=False - codebase will be downloaded)
+        :param module_name: Name of the module to build the runner class
+        :param from_local: bool. use current directory to build
+        :return: ModelAdapter (dl.BaseModelAdapter)
+        """
+        return self.packages.build(package=self,
+                                   module_name=module_name,
+                                   local_path=local_path,
+                                   from_local=from_local)
 
     def open_in_web(self):
         """
@@ -612,3 +604,72 @@ class Package(entities.BaseEntity):
 
         with open(os.path.join(local_path, 'mock.json'), 'w') as f:
             json.dump(mock, f)
+
+    @staticmethod
+    def get_ml_metadata(cls=None,
+                        output_type=entities.AnnotationType.CLASSIFICATION,
+                        default_configuration: dict = None):
+        available_methods = ['predict', 'train', 'evaluate']
+        if cls is not None:
+            available_methods = [
+                {name: 'BaseModelAdapter' not in getattr(cls, name).__qualname__}
+                for name in ['predict', 'train', 'evaluate']
+            ]
+        if default_configuration is None:
+            default_configuration = dict()
+        metadata = {
+            'system': {'ml': {'defaultConfiguration': default_configuration,
+                              'outputType': output_type,
+                              'supportedMethods': available_methods
+                              }}}
+        return metadata
+
+    class decorators:
+        @staticmethod
+        def module(name='default-module', description='', init_inputs=None):
+            def wrapper(cls: typing.Callable):
+                # package_module_dict = package_module.to_json()
+                package_module_dict = {"name": name,
+                                       "description": description,
+                                       "functions": list(),
+                                       "className": cls.__name__}
+                if init_inputs is not None:
+                    package_module_dict.update(initInputs=Package.decorators.parse_io(io_list=init_inputs))
+                for member_name, member in inspect.getmembers(cls, predicate=inspect.isfunction):
+                    spec = getattr(member, '__dtlpy__', None)
+                    if spec is not None:
+                        package_module_dict["functions"].append(spec)
+                cls.__dtlpy__ = package_module_dict
+                return cls
+
+            return wrapper
+
+        @staticmethod
+        def function(display_name=None, inputs=None, outputs=None):
+            def wrapper(func: typing.Callable):
+                if display_name is None:
+                    d_name = func.__name__
+                else:
+                    d_name = display_name
+                func.__dtlpy__ = {"name": func.__name__,
+                                  "displayName": d_name,
+                                  "input": Package.decorators.parse_io(io_list=inputs),
+                                  "output": Package.decorators.parse_io(io_list=outputs)}
+                return func
+
+            return wrapper
+
+        @staticmethod
+        def parse_io(io_list: dict):
+            output = list()
+            if io_list is not None:
+                for io_name, io_type in io_list.items():
+                    if isinstance(io_type, Enum):
+                        io_type = io_type.name
+                    if isinstance(io_type, type):
+                        io_type = io_type.__name__
+                    else:
+                        io_type = str(io_type)
+                    output.append({"name": io_name,
+                                   "type": str(io_type)})
+            return output

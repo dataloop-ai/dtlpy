@@ -14,7 +14,7 @@ def step_impl(context, text):
     assert context.item.description == text
 
 
-@behave.then(u'i remove description from the root')
+@behave.then(u'I remove description from the root')
 def step_impl(context):
     item_json = context.item.to_json()
     item_json['metadata']['user'] = {'remove': 'description'}
@@ -38,7 +38,7 @@ def step_impl(context):
     context.dl.Item.from_json = context.origin_from_json
 
 
-@behave.when(u'i add new field to the root')
+@behave.when(u'I add new field to the root')
 def step_impl(context):
     context.origin_to_json = context.item.to_json
     context.origin_from_json = context.dl.Item.from_json
@@ -99,3 +99,36 @@ def step_impl(context):
 def step_impl(context):
     context.item_get = context.dataset.items.get(item_id=context.item.id)
     assert "modified" not in context.item_get.metadata["system"]
+
+
+@behave.when(u'I Add description "{text}" to item with "{method}"')
+def step_impl(context, text, method):
+    if method == "item.description":
+        context.item.description = text
+    elif method == "item.set_description":
+        context.item.set_description(text=text)
+    elif method == "dataset.items.upload":
+        context.item = context.dataset.items.upload(local_path=context.item_path, item_description=text)
+    elif method == "dataset.items.upload - overwrite=False":
+        context.item = context.dataset.items.upload(local_path=context.item_path, item_description=text,
+                                                    overwrite=False)
+    elif method == "dataset.items.upload - overwrite=True":
+        context.item = context.dataset.items.upload(local_path=context.item_path, item_description=text, overwrite=True)
+
+
+@behave.when(u'I delete all the dataset items')
+def step_impl(context):
+    context.dataset.items.delete(item_id=context.item.id)
+
+
+@behave.when(u'I upload an annotation with description')
+def step_impl(context):
+    build = context.item.annotations.builder()
+    build.add(annotation_definition=context.dl.Box(10, 10, 10, 10, 'a', description='description'))
+    build.upload()
+
+
+@behave.then(u'Annotation has description')
+def step_impl(context):
+    ann = context.item.annotations.list().annotations[0]
+    assert ann.description == 'description'

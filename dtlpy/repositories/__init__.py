@@ -21,7 +21,7 @@ from .codebases import Codebases
 from .projects import Projects
 from .ontologies import Ontologies
 from .recipes import Recipes
-from .packages import Packages
+from .packages import Packages, PackageCatalog
 from .downloader import Downloader
 from .uploader import Uploader
 from .triggers import Triggers
@@ -33,9 +33,7 @@ from .tasks import Tasks
 from .bots import Bots
 from .webhooks import Webhooks
 from .models import Models
-from .snapshots import Snapshots
 from .analytics import Analytics
-from .buckets import Buckets
 from .drivers import Drivers
 from .commands import Commands
 from .pipelines import Pipelines

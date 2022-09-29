@@ -5,7 +5,7 @@ import attr
 from enum import Enum
 from .. import entities
 
-logger = logging.getLogger("dataloop.function")
+logger = logging.getLogger(name='dtlpy')
 
 
 class SlotPostActionType(str, Enum):

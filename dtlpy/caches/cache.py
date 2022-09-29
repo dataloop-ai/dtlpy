@@ -158,7 +158,7 @@ class CacheManger:
             "org": '',
             "annotationtasks": 'datasets',
             "assignments": 'annotationtasks',
-            "snapshots": 'models',
+            "models": 'packages',
             "packages": 'projects',
             "services": 'packages',
         }

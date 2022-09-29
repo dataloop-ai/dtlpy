@@ -5,7 +5,7 @@ import logging
 import queue
 import os
 
-logger = logging.getLogger('dtlpy')
+logger = logging.getLogger(name='dtlpy')
 
 
 class Events(threading.Thread):

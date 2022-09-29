@@ -460,6 +460,7 @@ class Tasks:
                        batch_size=None,
                        max_batch_workload=None,
                        allowed_assignees=None,
+                       priority=entities.TaskPriority.MEDIUM
                        ) -> entities.Task:
         """
         Create a new QA Task.
@@ -479,6 +480,7 @@ class Tasks:
         :param int batch_size: Pulling batch size (items) . Restrictions - Min 3, max 100
         :param int max_batch_workload: Max items in assignment . Restrictions - Min batchSize + 2 , max batchSize * 2
         :param list allowed_assignees:  It’s like the workload, but without percentage.
+        :param entities.TaskPriority priority: priority of the task options in entities.TaskPriority
         :return: task object
         :rtype: dtlpy.entities.task.Task
 
@@ -539,6 +541,7 @@ class Tasks:
                            batch_size=batch_size,
                            max_batch_workload=max_batch_workload,
                            allowed_assignees=allowed_assignees,
+                           priority=priority
                            )
 
     def create(self,
@@ -564,6 +567,7 @@ class Tasks:
                batch_size=None,
                max_batch_workload=None,
                allowed_assignees=None,
+               priority=entities.TaskPriority.MEDIUM
                ) -> entities.Task:
         """
         Create a new Annotation Task.
@@ -592,6 +596,7 @@ class Tasks:
         :param int batch_size: Pulling batch size (items) . Restrictions - Min 3, max 100
         :param int max_batch_workload: Max items in assignment . Restrictions - Min batchSize + 2 , max batchSize * 2
         :param list allowed_assignees:  It’s like the workload, but without percentage.
+        :param entities.TaskPriority priority: priority of the task options in entities.TaskPriority
         :return: Annotation Task object
         :rtype: dtlpy.entities.task.Task
 
@@ -654,7 +659,9 @@ class Tasks:
                    'assignmentIds': assignments_ids,
                    'recipeId': recipe_id,
                    'dueDate': due_date * 1000,
-                   'asynced': wait}
+                   'asynced': wait,
+                   'priority': priority
+                   }
 
         if check_if_exist:
             if check_if_exist.resource != entities.FiltersResource.TASK:

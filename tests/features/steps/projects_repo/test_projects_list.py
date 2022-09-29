@@ -38,10 +38,6 @@ def step_impl(context):
             project_json.pop('role', None)
             list_json.pop('isBlocked', None)
             project_json.pop('isBlocked', None)
-            # remove domain from get project results contributors
-            contributors = list_json.get('contributors', list())
-            for contributor in contributors:
-                contributor.pop('domain')
             assert list_json == project_json
     assert found is True
     context.project.delete(True, True)

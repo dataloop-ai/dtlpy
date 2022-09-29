@@ -14,7 +14,7 @@ import os
 import re
 from ... import entities
 
-logger = logging.getLogger('dtlpy')
+logger = logging.getLogger(name='dtlpy')
 
 
 class DataItem(dict):
@@ -49,6 +49,7 @@ class DatasetGenerator:
                  shuffle=True,
                  seed=None,
                  to_categorical=False,
+                 to_mask=False,
                  class_balancing=False,
                  # debug flags
                  return_originals=False,
@@ -85,11 +86,11 @@ class DatasetGenerator:
         :param shuffle: Whether to shuffle the data (default: True) If set to False, sorts the data in alphanumeric order.
         :param seed: Optional random seed for shuffling and transformations.
         :param to_categorical: convert label id to categorical format
+        :param to_mask: convert annotations to an instance mask (will be true for SEGMENTATION)
         :param class_balancing: if True - performing random over-sample with class ids as the target to balance training data
         :param return_originals: bool - If True, return ALSO images and annotations before transformations (for debug)
         :param ignore_empty: bool - If True, generator will NOT collect items without annotations
         """
-
         self._dataset_entity = dataset_entity
         if label_to_id_map is None and id_to_label_map is None:
             # if both are None - take from dataset
@@ -108,6 +109,10 @@ class DatasetGenerator:
         self.id_to_label_map = id_to_label_map
         self.label_to_id_map = label_to_id_map
 
+        # if annotation type is segmentation - to_mask must be True
+        if annotation_type == entities.AnnotationType.SEGMENTATION:
+            to_mask = True
+
         if data_path is None:
             data_path = os.path.join(os.path.expanduser('~'),
                                      '.dataloop',
@@ -124,10 +129,11 @@ class DatasetGenerator:
             download = True
         if download:
             annotation_options = [entities.ViewAnnotationOptions.JSON]
-            if annotation_type in [entities.AnnotationType.SEGMENTATION]:
+            if to_mask is True:
                 annotation_options.append(entities.ViewAnnotationOptions.INSTANCE)
             _ = dataset_entity.items.download(filters=filters,
                                               local_path=data_path,
+                                              thickness=-1,
                                               annotation_options=annotation_options)
         self.root_dir = data_path
         self._items_path = Path(self.root_dir).joinpath('items')
@@ -145,6 +151,7 @@ class DatasetGenerator:
         self.num_classes = len(label_to_id_map)
         self.shuffle = shuffle
         self.seed = seed
+        self.to_mask = to_mask
         self.batch_size = batch_size
         self.collate_fn = collate_fn
         self.class_balancing = class_balancing
@@ -203,6 +210,7 @@ class DatasetGenerator:
             item_info.update(item_id=item_id)
             if self.annotation_type is not None:
                 # add item id from json
+                polygon_coordinates = list()
                 box_coordinates = list()
                 classes_ids = list()
                 labels = list()
@@ -225,19 +233,22 @@ class DatasetGenerator:
                                                                annotation.top,
                                                                annotation.right,
                                                                annotation.bottom]))
-
+                            if self.annotation_type == entities.AnnotationType.POLYGON:
+                                polygon_coordinates.append(annotation.geo)
                             if annotation.type not in [entities.AnnotationType.CLASSIFICATION,
                                                        entities.AnnotationType.SEGMENTATION,
-                                                       entities.AnnotationType.BOX]:
+                                                       entities.AnnotationType.BOX,
+                                                       entities.AnnotationType.POLYGON]:
                                 raise ValueError('unsupported annotation type: {}'.format(annotation.type))
                 # reorder for output
                 item_info.update({entities.AnnotationType.BOX.value: np.asarray(box_coordinates).astype(float),
                                   entities.AnnotationType.CLASSIFICATION.value: np.asarray(classes_ids),
+                                  entities.AnnotationType.POLYGON.value: np.asarray(polygon_coordinates),
                                   'labels': labels})
-                if len(item_info['labels']) == 0:
-                    logger.debug('Empty annotation for image filename: {}'.format(image_filepath))
+                if len(item_info['classes_ids']) == 0:
+                    logger.debug('Empty annotation (nothing matched label_to_id_map) for image filename: {}'.format(image_filepath))
                     is_empty = True
-            if self.annotation_type in [entities.AnnotationType.SEGMENTATION]:
+            if self.to_mask:
                 # get "platform" path
                 rel_path = image_filepath.relative_to(self._items_path)
                 # replace suffix to PNG
@@ -340,7 +351,7 @@ class DatasetGenerator:
         annotations._dataset = self._dataset_entity
         if labels is None:
             labels = [None] * len(targets)
-        if self.annotation_type == entities.AnnotationType.SEGMENTATION:
+        if self.to_mask is True:
             for label, label_ind in self.label_to_id_map.items():
                 target = targets == label_ind
                 if np.any(target):
@@ -356,6 +367,10 @@ class DatasetGenerator:
         elif self.annotation_type == entities.AnnotationType.CLASSIFICATION:
             for target, label in zip(targets, labels):
                 annotations.add(annotation_definition=entities.Classification(label=label))
+        elif self.annotation_type == entities.AnnotationType.POLYGON:
+            for target, label in zip(targets, labels):
+                annotations.add(annotation_definition=entities.Polygon(label=label,
+                                                                       geo=target))
         else:
             raise ValueError('unsupported annotation type: {}'.format(self.annotation_type))
         # set dataset for color
@@ -395,9 +410,9 @@ class DatasetGenerator:
         data_item.update({'image': image})
 
         annotations = data_item.get(self.annotation_type)
-        if self.annotation_type == entities.AnnotationType.SEGMENTATION:
+        if self.to_mask is True:
             # if segmentation - read from file
-            mask_filepath = annotations
+            mask_filepath = data_item.get(entities.AnnotationType.SEGMENTATION)
             annotations = np.asarray(Image.open(mask_filepath).convert('L'))
         if self.to_categorical:
             onehot = np.zeros((annotations.size, self.num_classes + 1))

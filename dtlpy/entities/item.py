@@ -58,6 +58,7 @@ class Item(entities.BaseEntity):
 
     # entities
     _dataset = attr.ib(repr=False)
+    _model = attr.ib(repr=False)
     _project = attr.ib(repr=False)
     _project_id = attr.ib(repr=False)
 
@@ -92,14 +93,15 @@ class Item(entities.BaseEntity):
         return status, item
 
     @classmethod
-    def from_json(cls, _json, client_api, dataset=None, project=None, is_fetched=True):
+    def from_json(cls, _json, client_api, dataset=None, project=None, model=None, is_fetched=True):
         """
         Build an item entity object from a json
 
         :param dtlpy.entities.project.Project project: project entity
         :param dict _json: _json response from host
         :param dtlpy.entities.dataset.Dataset dataset: dataset in which the annotation's item is located
-        :param dlApiClient .client_api: ApiClient entity
+        :param dtlpy.entities.dataset.Model model: the model entity if item is an artifact of a model
+        :param dlApiClient client_api: ApiClient entity
         :param bool is_fetched: is Entity fetched from Platform
         :return: Item object
         :rtype: dtlpy.entities.item.Item
@@ -123,6 +125,7 @@ class Item(entities.BaseEntity):
             client_api=client_api,
             dataset=dataset,
             project=project,
+            model=model,
             # params
             annotations_link=_json.get('annotations', None),
             thumbnail=_json.get('thumbnail', None),
@@ -168,6 +171,10 @@ class Item(entities.BaseEntity):
             self._dataset = self.datasets.get(dataset_id=self.dataset_id, fetch=None)
         assert isinstance(self._dataset, entities.Dataset)
         return self._dataset
+
+    @property
+    def model(self):
+        return self._model
 
     @property
     def project(self):
@@ -345,30 +352,6 @@ class Item(entities.BaseEntity):
         return self._client_api._get_resource_url(
             "projects/{}/datasets/{}/items/{}".format(self.dataset.projects[-1], self.dataset.id, self.id))
 
-    @property
-    def snapshot_partition(self):
-        return self.metadata['system'].get('snapshotPartition', None)
-
-    @snapshot_partition.setter
-    def snapshot_partition(self, partition):
-        """
-        Adds partition to the item. this is need when working with dl.Snapshot
-
-        Note - correct usage is to use dl.Snapshot builtin methods
-        :param partition: `entities.SnapshotPartitionType
-        :return:  True if successful
-        """
-        if partition not in list(entities.SnapshotPartitionType):
-            raise exceptions.SDKError(message="{!r} is not a supported partition: {{ {} }}".format(
-                partition,
-                list(entities.SnapshotPartitionType)))
-        try:
-            self.metadata['system']['snapshotPartition'] = partition
-            self.update(system_metadata=True)
-        except Exception:
-            logger.error('Error updating snapshot partition. Please use platform')
-            logger.debug(traceback.format_exc())
-
     @description.setter
     def description(self, text: str):
         """
@@ -392,6 +375,7 @@ class Item(entities.BaseEntity):
         _json = attr.asdict(self,
                             filter=attr.filters.exclude(attr.fields(Item)._repositories,
                                                         attr.fields(Item)._dataset,
+                                                        attr.fields(Item)._model,
                                                         attr.fields(Item)._project,
                                                         attr.fields(Item)._client_api,
                                                         attr.fields(Item)._platform_dict,

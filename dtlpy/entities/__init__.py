@@ -15,13 +15,13 @@
 # along with DTLPY.  If not, see <http://www.gnu.org/licenses/>.
 from . import package_defaults
 from .annotation_definitions import BaseAnnotationDefinition
-from .base_entity import BaseEntity
+from .base_entity import BaseEntity, DlEntity, DlProperty, EntityScopeLevel
 from .item import Item, ItemStatus, Modality, ModalityTypeEnum, ModalityRefTypeEnum, ExportMetadata
 from .links import Link, ItemLink, UrlLink, LinkTypeEnum
 from .trigger import Trigger, TriggerResource, TriggerAction, TriggerExecutionMode, BaseTrigger, CronTrigger, \
     TriggerType
 from .project import Project, MemberRole
-from .artifact import Artifact
+from .artifact import ItemArtifact, LocalArtifact, LinkArtifact, ArtifactType, Artifact
 from .dataset import Dataset, ExpirationOptions, IndexDriver
 from .codebase import Codebase
 from .annotation import Annotation, FrameAnnotation, ViewAnnotationOptions, AnnotationStatus, AnnotationType, \
@@ -44,19 +44,17 @@ from .package_slot import PackageSlot, SlotPostAction, SlotPostActionType, SlotD
 from .package_function import PackageFunction, FunctionIO, PackageInputType
 from .time_series import TimeSeries
 from .service import Service, KubernetesAutuscalerType, KubernetesRabbitmqAutoscaler, KubernetesAutoscaler, \
-    InstanceCatalog, KubernetesRuntime
+    InstanceCatalog, KubernetesRuntime, ServiceType
 from .execution import Execution, ExecutionStatus
 from .command import Command, CommandsStatus
 from .assignment import Assignment, Workload, WorkloadUnit
-from .task import Task, ItemAction
+from .task import Task, ItemAction, TaskPriority
 from .directory_tree import DirectoryTree
 from .similarity import Similarity, MultiView, SimilarityItem, MultiViewItem, SimilarityTypeEnum
 from .user import User
 from .bot import Bot
 from .webhook import Webhook, HttpMethod
-from .model import Model, ModelOutputType, ModelInputType, EntityScopeLevel
-from .snapshot import Snapshot, OntologySpec, SnapshotPartitionType, SnapshotMetricSample
-from .bucket import BucketType, Bucket, ItemBucket, GCSBucket, LocalBucket
+from .model import Model, DatasetSubsetType, LogSample
 from .driver import Driver
 from .pipeline import Pipeline, PipelineStats
 from .node import PipelineConnection, PipelineNode, PipelineConnectionPort, PipelineNodeIO, TaskNode, \

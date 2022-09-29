@@ -1,7 +1,7 @@
 import logging
 from .dataset_generator import DatasetGenerator
 
-logger = logging.getLogger('dtlpy')
+logger = logging.getLogger(name='dtlpy')
 
 try:
     import torch

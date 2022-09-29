@@ -186,6 +186,9 @@ def step_impl(context):
     assert context.annotation_get.label == context.annotation.label
     assert context.annotation_get.attributes == context.annotation.attributes
     assert context.annotation_get.coordinates == context.annotation.coordinates
+    assert context.annotation_get.to_json() == context.annotation.to_json()
+    if 'snapshots_' in context.annotation_get.metadata['system']:
+        assert len(context.annotation_get.metadata['system']['snapshots_']) == 19
 
 
 @behave.then(u"audio in host has annotation added")

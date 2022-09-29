@@ -95,13 +95,6 @@ class AnnotationCollection(entities.BaseEntity):
             annotation_definition = [annotation_definition]
 
         for single_definition in annotation_definition:
-            if isinstance(single_definition.description, str):
-                if metadata is None:
-                    metadata = dict()
-                if 'system' not in metadata:
-                    metadata['system'] = dict()
-                metadata['system']['description'] = single_definition.description
-
             annotation = entities.Annotation.new(item=self.item,
                                                  annotation_definition=single_definition,
                                                  frame_num=frame_num,

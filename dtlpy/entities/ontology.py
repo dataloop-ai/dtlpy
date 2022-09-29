@@ -347,27 +347,29 @@ class Ontology(entities.BaseEntity):
             if isinstance(label, str):
                 # Generate label from string
                 label = entities.Label(tag=label)
-            elif not isinstance(label, entities.Label):
-                # Generate label from json
+            elif isinstance(label, dict):
+                # Generate label from dict
                 label = Label.from_root(label)
-
-            if isinstance(label, entities.Label):
-                # label entity
-                label_node = {"tag": label.tag}
-                if label.color is not None:
-                    label_node["color"] = label.hex
-                if label.attributes is not None:
-                    label_node["attributes"] = label.attributes
-                if label.display_label is not None:
-                    label_node["displayLabel"] = label.display_label
-                if label.display_data is not None:
-                    label_node["displayData"] = label.display_data
-                labels_node.append(label_node)
-                children = label.children
-                self._add_children(label.tag, children, labels_node, mode=mode)
+            elif isinstance(label, entities.Label):
+                ...
             else:
-                raise PlatformException(error="400",
-                                        message="Invalid parameters - Label can be list of str, Labels or dict")
+                raise ValueError(
+                    'Unsupported type for `labels`. Expected a list of (str, dict, dl.Label). Got: {}'.format(
+                        type(label)))
+
+            # label entity
+            label_node = {"tag": label.tag}
+            if label.color is not None:
+                label_node["color"] = label.hex
+            if label.attributes is not None:
+                label_node["attributes"] = label.attributes
+            if label.display_label is not None:
+                label_node["displayLabel"] = label.display_label
+            if label.display_data is not None:
+                label_node["displayData"] = label.display_data
+            labels_node.append(label_node)
+            children = label.children
+            self._add_children(label.tag, children, labels_node, mode=mode)
 
         if not update_ontology or not len(labels_node):
             return labels_node
@@ -532,8 +534,9 @@ class Ontology(entities.BaseEntity):
         """
         Adds a list of labels to ontology
 
-        :param label_list: list of labels [{"value": {"tag": "tag", "displayLabel": "displayLabel",
-                                            "color": "#color", "attributes": [attributes]}, "children": [children]}]
+        :param list label_list: a list of labels to add to the dataset's ontology. each value should be a dict, dl.Label or a string
+                        if dictionary, should look like this: {"value": {"tag": "name of the label", "displayLabel": "display name on the platform",
+                                            "color": "#hex value", "attributes": [attributes]}, "children": [children]}
         :param update_ontology: update the ontology, default = False for backward compatible
         :param mode add, update or upsert, relevant on update_ontology=True only
         :return: List of label entities added

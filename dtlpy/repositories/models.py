@@ -1,16 +1,10 @@
-import importlib.util
+from typing import List
 import logging
 import os
-import sys
-from shutil import copyfile
-from typing import Union, List
 
-from .. import entities, repositories, exceptions, miscellaneous, assets, services, ml
+from .. import entities, repositories, exceptions, miscellaneous, services
 
 logger = logging.getLogger(name='dtlpy')
-
-DEFAULT_ENTRY_POINT = 'model_adapter.py'
-DEFAULT_CLASS_NAME = 'ModelAdapter'
 
 
 class Models:
@@ -18,9 +12,18 @@ class Models:
     Models Repository
     """
 
-    def __init__(self, client_api: services.ApiClient, project: entities.Project = None):
+    def __init__(self,
+                 client_api: services.ApiClient,
+                 package: entities.Package = None,
+                 project: entities.Project = None,
+                 project_id: str = None):
         self._client_api = client_api
         self._project = project
+        self._package = package
+        self._project_id = project_id
+
+        if self._project is not None:
+            self._project_id = self._project.id
 
     ############
     # entities #
@@ -28,12 +31,18 @@ class Models:
     @property
     def project(self) -> entities.Project:
         if self._project is None:
-            try:
-                self._project = repositories.Projects(client_api=self._client_api).get()
-            except exceptions.NotFound:
-                raise exceptions.PlatformException(
-                    error='2001',
-                    message='Missing "project". need to set a Project entity or use project.models repository')
+            if self._project_id is not None:
+                projects = repositories.Projects(client_api=self._client_api)
+                self._project = projects.get(project_id=self._project_id)
+        if self._project is None:
+            if self._package is not None:
+                if self._package._project is not None:
+                    self._project = self._package._project
+        if self._project is None:
+            raise exceptions.PlatformException(
+                error='2001',
+                message='Missing "project". need to set a Project entity or use project.models repository')
+        assert isinstance(self._project, entities.Project)
         return self._project
 
     @project.setter
@@ -42,75 +51,82 @@ class Models:
             raise ValueError('Must input a valid Project entity')
         self._project = project
 
+    @property
+    def package(self) -> entities.Package:
+        if self._package is None:
+            raise exceptions.PlatformException(
+                error='2001',
+                message='Cannot perform action WITHOUT Package entity in {} repository.'.format(
+                    self.__class__.__name__) +
+                        ' Please use package.models or set a model')
+        assert isinstance(self._package, entities.Package)
+        return self._package
+
     ###########
     # methods #
     ###########
-    def get(self,
-            model_name: str = None,
-            model_id: str = None,
-            checkout: bool = False,
-            fetch=None
-            ) -> entities.Model:
+    def get(self, model_name=None, model_id=None) -> entities.Model:
         """
         Get model object
-
-        :param str model_name: model name
-        :param str model_id: model id
-        :param bool checkout: checkout the current model
-        :param fetch: optional - fetch entity from platform, default taken from cookie
-        :return: model object
+        :param model_name:
+        :param model_id:
+        :return: dl.Model object
         """
-        if fetch is None:
-            fetch = self._client_api.fetch_entities
 
-        if model_name is None and model_id is None:
-            model = self.__get_from_cache()
-            if model is None:
-                raise exceptions.PlatformException(
-                    error='400',
-                    message='No checked-out Model was found, must checkout or provide an identifier in inputs')
-        elif fetch:
-            if model_id is not None:
-                success, response = self._client_api.gen_request(
-                    req_type="get",
-                    path="/models/{}".format(model_id))
-                if not success:
-                    raise exceptions.PlatformException(response)
-                model = entities.Model.from_json(client_api=self._client_api,
-                                                 _json=response.json(),
-                                                 project=self._project)
-                # verify input model name is same as the given id
-                if model_name is not None and model.name != model_name:
-                    logger.warning(
-                        "Mismatch found in models.get: model_name is different then model.name: {!r} != {!r}".format(
-                            model_name,
-                            model.name))
-            elif model_name is not None:
-                models = self.list(entities.Filters(resource=entities.FiltersResource.MODEL,
-                                                    field='name',
-                                                    values=model_name))
-                if models.items_count == 0:
-                    raise exceptions.PlatformException(
-                        error='404',
-                        message='Model not found. Name: {}'.format(model_name))
-                elif models.items_count > 1:
-                    raise exceptions.PlatformException(
-                        error='400',
-                        message='More than one Model found by the name of: {}. Try "get" by id or "list".'.format(model_name))
-                model = models.items[0]
-            else:
-                raise exceptions.PlatformException(
-                    error='400',
-                    message='No checked-out Model was found, must checkout or provide an identifier in inputs')
-        else:
-            model = entities.Model.from_json(_json={'id': model_id,
-                                                    'name': model_name},
-                                             client_api=self._client_api,
+        if model_id is not None:
+            success, response = self._client_api.gen_request(req_type="get",
+                                                             path="/ml/models/{}".format(model_id))
+            if not success:
+                raise exceptions.PlatformException(response)
+            model = entities.Model.from_json(client_api=self._client_api,
+                                             _json=response.json(),
                                              project=self._project,
-                                             is_fetched=False)
+                                             package=self._package)
+            # verify input model name is same as the given id
+            if model_name is not None and model.name != model_name:
+                logger.warning(
+                    "Mismatch found in models.get: model_name is different then model.name:"
+                    " {!r} != {!r}".format(
+                        model_name,
+                        model.name))
+        elif model_name is not None:
 
-        if checkout:
-            self.checkout(model=model)
+            filters = entities.Filters(
+                resource=entities.FiltersResource.MODEL,
+                field='name',
+                values=model_name
+            )
+
+            project_id = None
+
+            if self._project is not None:
+                project_id = self._project.id
+            elif self._project_id is not None:
+                project_id = self._project_id
+
+            if project_id is not None:
+                filters.add(field='projectId', values=project_id)
+
+            if self._package is not None:
+                filters.add(field='packageId', values=self._package.id)
+
+            models = self.list(filters=filters)
+
+            if models.items_count == 0:
+                raise exceptions.PlatformException(
+                    error='404',
+                    message='Model not found. Name: {}'.format(model_name))
+            elif models.items_count > 1:
+                raise exceptions.PlatformException(
+                    error='400',
+                    message='More than one Model found by the name of: {}. Try "get" by id or "list()".'.format(
+                        model_name))
+            model = models.items[0]
+        else:
+            raise exceptions.PlatformException(
+                error='400',
+                message='No checked-out Model was found, must checkout or provide an identifier in inputs')
+
         return model
 
     def _build_entities_from_response(self, response_items) -> miscellaneous.List[entities.Model]:
@@ -122,6 +138,7 @@ class Models:
             jobs[i_service] = pool.submit(entities.Model._protected_from_json,
                                           **{'client_api': self._client_api,
                                              '_json': service,
+                                             'package': self._package,
                                              'project': self._project})
 
         # get all results
@@ -132,10 +149,9 @@ class Models:
         return miscellaneous.List([r[1] for r in results if r[0] is True])
 
     def _list(self, filters: entities.Filters):
-        url = '/models/query'
         # request
         success, response = self._client_api.gen_request(req_type='POST',
-                                                         path=url,
+                                                         path='/ml/models/query',
                                                          json_req=filters.prepare())
         if not success:
             raise exceptions.PlatformException(response)
@@ -143,24 +159,29 @@ class Models:
 
     def list(self, filters: entities.Filters = None) -> entities.PagedEntities:
         """
-        List project models
+        List project model
 
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :return: Paged entity
         :rtype: dtlpy.entities.paged_entities.PagedEntities
         """
+        # default filters
         if filters is None:
             filters = entities.Filters(resource=entities.FiltersResource.MODEL)
+            if self._project is not None:
+                filters.add(field='projectId', values=self._project.id)
+            if self._package is not None:
+                filters.add(field='packageId', values=self._package.id)
+
         # assert type filters
-        elif not isinstance(filters, entities.Filters):
+        if not isinstance(filters, entities.Filters):
             raise exceptions.PlatformException(error='400',
                                                message='Unknown filters type: {!r}'.format(type(filters)))
+
         if filters.resource != entities.FiltersResource.MODEL:
             raise exceptions.PlatformException(
                 error='400',
                 message='Filters resource must to be FiltersResource.MODEL. Got: {!r}'.format(filters.resource))
-        if self._project is not None:
-            filters.add(field='projectId', values=self._project.id)
 
         paged = entities.PagedEntities(items_repository=self,
                                        filters=filters,
@@ -170,184 +191,99 @@ class Models:
         paged.get_page()
         return paged
 
-    def build(self, model: entities.Model, local_path=None, from_local=None) -> ml.BaseModelAdapter:
-        """
-        Build a model
-
-        :param model: Model entity
-        :param str local_path: local path of the model (if from_local=False - codebase will be downloaded)
-        :param bool from_local: bool. use current directory to build
-        :return: dl.BaseModelAdapter
-        """
-
-        if model.codebase is None:
-            raise exceptions.PlatformException(error='2001',
-                                               message="Model {!r} has no codebase. unable to build adapter".format(
-                                                   model.name))
-
-        if from_local is None:
-            from_local = model.codebase.is_local
-
-        if local_path is None:
-            if model.codebase.is_local:
-                local_path = model.codebase.local_path
-            else:
-                local_path = os.path.join(services.service_defaults.DATALOOP_PATH, "models")
-
-        if not from_local:
-            # Not local => download codebase
-            if model.codebase.is_local:
-                raise RuntimeError("using local codebase: {}. Can not use from_local=False".
-                                   format(model.codebase.to_json()))
-            if isinstance(model.codebase, entities.ItemCodebase):
-                codebase_id = model.codebase.item_id
-                project = self._project if self._project is not None else model.project
-                local_path = project.codebases.unpack(codebase_id=codebase_id,
-                                                      local_path=local_path)
-            elif isinstance(model.codebase, entities.GitCodebase):
-                local_path = model.codebases.unpack(codebase=model.codebase,
-                                                    local_path=local_path)
-            else:
-                raise NotImplementedError(
-                    'download not implemented for {} codebase yet. Build failed'.format(model.codebase.type))
-
-        sys.path.append(local_path)  # TODO: is it the best way to use the imports?
-        # load module from path
-        entry_point = os.path.join(local_path, model.entry_point)
-        class_name = model.class_name
-        if not os.path.isfile(entry_point):
-            raise ValueError('Model entry point file is missing: {}'.format(entry_point))
-        spec = importlib.util.spec_from_file_location(class_name, entry_point)
-        if spec is None:
-            raise ValueError('Cant load class ModelAdapter from entry point: {}'.format(entry_point))
-        adapter_module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(adapter_module)
-        model_adapter_cls = getattr(adapter_module, class_name)
-        model_adapter = model_adapter_cls(model_entity=model)
-        logger.info('Model adapter loaded successfully!')
-        return model_adapter
-
-    def push(
+    def create(
             self,
-            model: entities.Model,
-            src_path: str = None,
-            entry_point: str = DEFAULT_ENTRY_POINT,
-            class_name: str = DEFAULT_CLASS_NAME,
-            codebase: entities.ItemCodebase = None,
-    ):
+            model_name: str,
+            dataset_id: str,
+            labels: list = None,
+            ontology_id: str = None,
+            description: str = None,
+            model_artifacts: List[entities.Artifact] = None,
+            project_id=None,
+            tags: List[str] = None,
+            package: entities.Package = None,
+            configuration: dict = None,
+            status: str = None,
+            scope: entities.EntityScopeLevel = entities.EntityScopeLevel.PROJECT,
+            version: str = '1.0.0',
+    ) -> entities.Model:
         """
-        Uploads and updates codebase to Model
+        Create a Model entity
 
-        :param model: Model entity
-        :param str src_path: codebase location (path to directory of the code). if None pwd will be taken
-        :param str entry_point: relative path to the module where model adapter class is defined
-        :param str class_name: name of the adapter class in entry point. default: ModelAdapter
-        :param dtlpy.entities.codebase.Codebase codebase: `dl.Codebase` object - representing the model code  if None new will be created from src_path
-        :return: model entity
-        """
-
-        # get or create codebase
-        if codebase is None:
-            if isinstance(model.codebase, entities.ItemCodebase):
-                raise exceptions.PlatformException(
-                    error='400',
-                    message='Cant change codebase type implicitly. Please use codebase argument with dl.ItemCodebase')
-            if src_path is None:
-                src_path = os.getcwd()
-                logger.warning('No src_path is given, getting model information from cwd: {}'.format(src_path))
-            # sanity checks
-            if not os.path.isfile(os.path.join(src_path, entry_point)):
-                raise exceptions.PlatformException(
-                    error='400',
-                    message='Entry point not found. filepath: {}'.format(os.path.join(src_path, entry_point)))
-            codebase = model.codebases.pack(directory=src_path)
-
-        model.codebase = codebase
-        return self.update(model)
-
-    def create(self,
-               # offline mode
-               model_name: str,
-               description: str = None,
-               output_type: entities.ModelOutputType = None,
-               input_type: entities.ModelInputType = None,
-               checkout: bool = False,
-               tags: List[str] = None,
-               # online mode
-               codebase: Union[entities.GitCodebase,
-                               entities.ItemCodebase,
-                               entities.FilesystemCodebase,
-                               entities.LocalCodebase] = None,
-               src_path: str = None,
-               entry_point: str = DEFAULT_ENTRY_POINT,
-               class_name: str = DEFAULT_CLASS_NAME,
-               default_configuration: dict = None,
-               default_runtime: entities.KubernetesRuntime = None,
-               scope: entities.EntityScopeLevel = entities.EntityScopeLevel.PROJECT
-               ) -> entities.Model:
-        """
-        Create and return a Model entity in platform
-        If "model" is given - default values will be taken from model information
-        Passed params will override default values
-        If any of the "online mode" params are entered - codebase will be pushed after creation
-
-        For offline mode:
-        :param str model_name: name of model
-        :param str description: model description
-        :param str output_type: model output type (annotation type)
-        :param str input_type: model input mimetype
-        :param bool checkout: checkout model to local state
+        :param str model_name: name of the model
+        :param str dataset_id: dataset id
+        :param list labels: list of labels from ontology (must mach ontology id) can be a subset
+        :param str ontology_id: ontology to connect to the model
+        :param str description: description
+        :param model_artifacts: optional list of dl.Artifact. Can be ItemArtifact, LocaArtifact or LinkArtifact
+        :param str project_id: project that owns the model
         :param list tags: list of string tags
-        For online mode
-        :param dtlpy.entities.codebase.Codebase codebase: optional - model codebase
-        :param str src_path: codebase location. if None no codebase will be pushed
-        :param str entry_point: location of the model adapter class
-        :param str class_name: Name of the model adapter class, default is ModelAdapter
-        :param dl.KubernetesRuntime default_runtime: entity to set the default run env of the model (docker image, machine type etc)
-        :param dict default_configuration: the configuration and default values that can be used for a snapshot configuration
+        :param package: optional - Package object
+        :param dict configuration: optional - model configuration - dict
+        :param str status: `str` of the optional values of
         :param str scope: the scope level of the model dl.EntityScopeLevel
+        :param str version: version of the model
         :return: Model Entity
         """
 
-        if self._project is None:
-            raise exceptions.PlatformException('400', 'Repository must have a project to perform this action')
+        if ontology_id is not None:
+            # take labels from ontology
+            ontologies = repositories.Ontologies(client_api=self._client_api)
+            labels = [label.tag for label in ontologies.get(ontology_id=ontology_id).labels]
 
-        payload = dict(
-            projectId=self._project.id,
-            name=model_name
-        )
+        if labels is None:
+            # dont have to have labels. can use an empty list
+            labels = list()
 
-        if input_type is not None:
-            payload['inputType'] = input_type
+        # TODO need to remove the entire project id user interface - need to take it from dataset id (in BE)
+        if project_id is None:
+            if self._project is None:
+                raise exceptions.PlatformException('Please provide project_id')
+            project_id = self._project.id
+        else:
+            if project_id != self._project_id:
+                logger.warning(
+                    "Note! you are specified project_id {!r} which is different from repository context: {!r}".format(
+                        project_id, self._project_id))
 
-        if output_type is not None:
-            payload['outputType'] = output_type
+        if package is None and self._package is None:
+            raise exceptions.PlatformException('Must provide a Package or create from package.models')
+        elif package is None:
+            package = self._package
 
-        if description is not None:
-            payload['description'] = description
+        if model_artifacts is None:
+            model_artifacts = [entities.LocalArtifact(local_path=os.getcwd())]
+
+        if not isinstance(model_artifacts, list):
+            raise ValueError('`model_artifacts` must be a list of dl.Artifact entities')
+
+        # create payload for request
+        payload = {
+            'packageId': package.id,
+            'name': model_name,
+            'projectId': project_id,
+            'datasetId': dataset_id,
+            'labels': labels,
+            'artifacts': [artifact.to_json(as_artifact=True) for artifact in model_artifacts],
+            'scope': scope,
+            'version': version
+        }
+
+        if configuration is not None:
+            payload['configuration'] = configuration
 
         if tags is not None:
             payload['tags'] = tags
 
-        if codebase is None:
-            if src_path is None:
-                src_path = os.getcwd()
-            codebase = entities.LocalCodebase(local_path=src_path)
+        if description is not None:
+            payload['description'] = description
 
-        if default_runtime is not None:
-            payload['defaultRuntime'] = default_runtime.to_json()
-
-        if default_configuration is not None:
-            payload['defaultConfiguration'] = default_configuration
-
-        payload['codebase'] = codebase.to_json()
-        payload['entryPoint'] = entry_point
-        payload['className'] = class_name
-        payload['scope'] = scope
+        if status is not None:
+            payload['status'] = status
 
         # request
         success, response = self._client_api.gen_request(req_type='post',
-                                                         path='/models',
+                                                         path='/ml/models',
                                                          json_req=payload)
 
         # exception handling
@@ -356,33 +292,131 @@ class Models:
 
         model = entities.Model.from_json(_json=response.json(),
                                          client_api=self._client_api,
-                                         project=self._project)
+                                         project=self._project,
+                                         package=package)
 
-        if checkout:
-            self.checkout(model=model)
-        # return entity
+        if dataset_id is None:
+            logger.warning(
+                "Model {!r} was created without a dataset. This may cause unexpected errors.".format(model.id))
+        else:
+            if model.dataset.readonly is False:
+                logger.warning(
+                    "Model is using an unlocked dataset {!r}. Make it readonly for training reproducibility".format(
+                        model.dataset.name))
+
         return model
+
+    def clone(self,
+              from_model: entities.Model,
+              model_name: str,
+              dataset: entities.Dataset = None,
+              configuration: dict = None,
+              status=None,
+              scope=None,
+              project_id: str = None,
+              labels: list = None,
+              description: str = None,
+              tags: list = None,
+              ) -> entities.Model:
+        """
+        Clones and creates a new model out of existing one
+
+        :param from_model: existing model to clone from
+        :param str model_name: `str` new model name
+        :param str dataset: dataset object for the cloned model
+        :param dict configuration: `dict` (optional) if passed replaces the current configuration
+        :param str status: `str` (optional) set the new status
+        :param str scope: `str` (optional) set the new scope. default is "project"
+        :param str project_id: `str` specify the project id to create the new model on (if other than the source model)
+        :param list labels:  `list` of `str` - label of the model
+        :param str description: `str` description of the new model
+        :param list tags:  `list` of `str` - label of the model
+        :return: dl.Model which is a clone version of the existing model
+        """
+        from_json = {"name": model_name,
+                     "packageId": from_model.package_id,
+                     "configuration": from_model.configuration}
+        if project_id is not None:
+            from_json['projectId'] = project_id
+        if dataset is not None:
+            if labels is None:
+                labels = list(dataset.labels_flat_dict.keys())
+            from_json['datasetId'] = dataset.id
+        if labels is not None:
+            from_json['labels'] = labels
+            # if there are new labels - pop the mapping from the original
+            _ = from_json['configuration'].pop('id_to_label_map', None)
+            _ = from_json['configuration'].pop('label_to_id_map', None)
+        if configuration is not None:
+            from_json['configuration'].update(configuration)
+        if description is not None:
+            from_json['description'] = description
+        if tags is not None:
+            from_json['tags'] = tags
+        if scope is not None:
+            from_json['scope'] = scope
+        if status is not None:
+            from_json['status'] = status
+        success, response = self._client_api.gen_request(req_type='post',
+                                                         path='/ml/models/{}/clone'.format(from_model.id),
+                                                         json_req=from_json)
+        if not success:
+            raise exceptions.PlatformException(response)
+        new_model = entities.Model.from_json(_json=response.json(),
+                                             client_api=self._client_api,
+                                             project=self._project,
+                                             package=from_model.package)
+
+        if new_model._dataset is not None and new_model._dataset.readonly is False:
+            logger.warning(
+                "Model is using an unlocked dataset {!r}. Make it readonly for training reproducibility".format(
+                    new_model.dataset.name))
+
+        return new_model
+
+    @property
+    def platform_url(self):
+        return self._client_api._get_resource_url("projects/{}/models".format(self.project.id))
+
+    def open_in_web(self, model=None, model_id=None):
+        """
+        Open the model in web platform
+
+        :param model: model entity
+        :param str model_id: model id
+        """
+        if model is not None:
+            model.open_in_web()
+        elif model_id is not None:
+            self._client_api._open_in_web(url=self.platform_url + '/' + str(model_id) + '/main')
+        else:
+            self._client_api._open_in_web(url=self.platform_url)
 
     def delete(self, model: entities.Model = None, model_name=None, model_id=None):
         """
         Delete Model object
 
-        :param model: model entity
-        :param model_name: model name
-        :param model_id: model id
-        :return: True if success
+        :param model: Model entity to delete
+        :param str model_name: delete by model name
+        :param str model_id: delete by model id
+        :return: True
         :rtype: bool
         """
         # get id and name
-        if model_name is None or model_id is None:
-            if model is None:
-                model = self.get(model_id=model_id, model_name=model_name)
-            model_id = model.id
+        if model_id is None:
+            if model is not None:
+                model_id = model.id
+            elif model_name is not None:
+                model = self.get(model_name=model_name)
+                model_id = model.id
+            else:
+                raise exceptions.PlatformException(error='400',
+                                                   message='Must input at least one parameter to models.delete')
 
         # request
         success, response = self._client_api.gen_request(
             req_type="delete",
-            path="/models/{}".format(model_id)
+            path="/ml/models/{}".format(model_id)
         )
 
         # exception handling
@@ -396,7 +430,7 @@ class Models:
         """
         Update Model changes to platform
 
-        :param model:
+        :param model: Model entity
         :return: Model entity
         """
         # payload
@@ -404,7 +438,7 @@ class Models:
 
         # request
         success, response = self._client_api.gen_request(req_type='patch',
-                                                         path='/models/{}'.format(model.id),
+                                                         path='/ml/models/{}'.format(model.id),
                                                          json_req=payload)
 
         # exception handling
@@ -414,78 +448,63 @@ class Models:
         # return entity
         return entities.Model.from_json(_json=response.json(),
                                         client_api=self._client_api,
-                                        project=self._project)
+                                        project=self._project,
+                                        package=model._package)
 
-    @staticmethod
-    def generate(src_path=None,
-                 entry_point=DEFAULT_ENTRY_POINT,
-                 overwrite=False):
+    def train(self, model_id: str):
         """
-        Generate new model adapter file
+        Train the model in the cloud. This will create a service and will run the adapter's train function as an execution
 
-        :param str src_path: path where to create te model_adapter file (if None uses current working dir)
-        :param str entry_point: name of the python module to create (if None uses model_adapter.py as default)
-        :param bool overwrite: whether to over write an existing file (default False)
-        :return: path where the adapter was created
+        :param model_id: id of the model to train
+        :return:
         """
-        # src path
-        if src_path is None:
-            src_path = os.getcwd()
-
-        local_path = os.path.join(src_path, entry_point)
-        to_copy = True
-        if os.path.exists(local_path):
-            if overwrite:
-                logger.warning("Overwriting {} with a blank Model Adapter template".format(local_path))
-            else:
-                logger.warning(
-                    "Model Adapter already exists at {}. If you want to overwrite use the flag.".format(local_path))
-                to_copy = False
-        if to_copy:
-            if not os.path.isfile(os.path.join(src_path, '.gitignore')):
-                copyfile(assets.paths.ASSETS_GITIGNORE_FILEPATH, os.path.join(src_path, '.gitignore'))
-            copyfile(assets.paths.ASSETS_MODEL_ADAPTER_FILEPATH, local_path)
-            logger.info('Successfully generated model adapter at {}'.format(local_path))
-        return local_path
-
-    def __get_from_cache(self):
-        model = self._client_api.state_io.get('model')
-        if model is not None:
-            model = entities.Model.from_json(_json=model, client_api=self._client_api, project=self._project)
-        return model
-
-    def checkout(self, model: entities.Model = None, model_id=None, model_name=None):
-        """
-        Checkout as model
-
-        :param model: model entity
-        :param model_name: model name
-        :param model_id: model id
-        """
-        if model is None:
-            model = self.get(model_id=model_id, model_name=model_name)
-        self._client_api.state_io.put('model', model.to_json())
-        logger.info("Checked out to model {}".format(model.name))
-
-    def revisions(self, model: entities.Model = None, model_id=None):
-        """
-        Get model revisions history
-
-        :param model: Package entity
-        :param str model_id: model id
-        """
-        if model is None and model_id is None:
-            raise exceptions.PlatformException(
-                error='400',
-                message='must provide an identifier in inputs: "model" or "model_id"')
-
-        if model is not None:
-            model_id = model.id
-
-        success, response = self._client_api.gen_request(
-            req_type="get",
-            path="/models/{}/revisions".format(model_id))
-
+        success, response = self._client_api.gen_request(req_type="post",
+                                                         path=f"/ml/models/{model_id}/train")
         if not success:
             raise exceptions.PlatformException(response)
-        return response.json()
+
+        return True
+
+    def deploy(self, model_id: str):
+        """
+        Deploy a trained model. This will create a service that will execute predictions
+
+        :param model_id: id of the model to deploy
+        :return:
+        """
+        success, response = self._client_api.gen_request(req_type="post",
+                                                         path=f"/ml/models/{model_id}/deploy")
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        return True
+
+    def add_log_samples(self, samples, model_id, dataset_id) -> bool:
+        """
+        Add Samples for model analytics and metrics
+
+        :param samples: list of dl.LogSample - must contain: model_id, figure, legend, x, y
+        :param model_id: model id to save samples on
+        :param dataset_id:
+        :return: bool: True if success
+        """
+        if not isinstance(samples, list):
+            samples = [samples]
+
+        payload = list()
+        for sample in samples:
+            _json = sample.to_json()
+            _json['modelId'] = model_id
+            _json['datasetId'] = dataset_id
+            payload.append(_json)
+        # request
+        success, response = self._client_api.gen_request(req_type='post',
+                                                         path='/ml/metrics/publish',
+                                                         json_req=payload)
+
+        # exception handling
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        # return entity
+        return True

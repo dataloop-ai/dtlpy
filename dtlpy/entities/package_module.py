@@ -1,9 +1,11 @@
+import importlib.util
+import inspect
 import logging
 import attr
 
 from .. import entities
 
-logger = logging.getLogger("dataloop.module")
+logger = logging.getLogger(name='dtlpy')
 
 
 @attr.s
@@ -68,6 +70,28 @@ class PackageModule(entities.BaseEntity):
             name=_json.get("name", entities.package_defaults.DEFAULT_PACKAGE_MODULE_NAME),
             functions=functions,
         )
+
+    @classmethod
+    def from_entry_point(cls, entry_point):
+        """
+        Create a dl.PackageModule entity using decorator on the service class.
+
+        :param entry_point: path to the python file with the runner class (relative to the package path)
+        :return:
+        """
+        file_spec = importlib.util.spec_from_file_location(entry_point, entry_point)
+        file_module = importlib.util.module_from_spec(file_spec)
+        file_spec.loader.exec_module(file_module)
+        module = None
+        for cls_name, cls_inst in inspect.getmembers(file_module, predicate=inspect.isclass):
+            spec = getattr(cls_inst, '__dtlpy__', None)
+            if spec is not None:
+                spec['entryPoint'] = entry_point
+                module = cls.from_json(spec)
+                break
+        if module is None:
+            raise ValueError('Failed to find a decorated Runner class in file: {}'.format(entry_point))
+        return module
 
     def add_function(self, function):
         """

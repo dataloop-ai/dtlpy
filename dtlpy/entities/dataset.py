@@ -671,8 +671,8 @@ class Dataset(entities.BaseEntity):
         **Prerequisites**: You must have a dataset with items that are related to the annotations. The relationship between the dataset and annotations is shown in the name. You must be in the role of an *owner* or *developer*.
 
         :param str label_name: str - label name
-        :param tuple color: color
-        :param children: children (sub labels)
+        :param tuple color: RGB color of the annotation, e.g (255,0,0) or '#ff0000' for red
+        :param children: children (sub labels). list of sub labels of this current label, each value is either dict or dl.Label
         :param list attributes: attributes
         :param str display_label: display_label
         :param dtlpy.entities.label.Label label: label
@@ -717,7 +717,7 @@ class Dataset(entities.BaseEntity):
 
         **Prerequisites**: You must have a dataset with items that are related to the annotations. The relationship between the dataset and annotations is shown in the name. You must be in the role of an *owner* or *developer*.
 
-        :param list label_list: label list
+        :param list label_list: a list of labels to add to the dataset's ontology. each value should be a dict, dl.Label or a string
         :param str ontology_id: optional ontology id
         :param str recipe_id: optional recipe id
         :return: label entities
@@ -908,71 +908,6 @@ class Dataset(entities.BaseEntity):
             for ontology in recipe.ontologies.list():
                 ontology.delete_labels(label_names=label_names)
         self._labels = None
-
-    def download_partition(self, partition, local_path=None, filters=None, annotation_options=None):
-        """
-        Download a specific partition of the dataset to local_path
-        This function is commonly used with dl.ModelAdapter which implements thc convert to specific model structure
-
-        :param dl.SnapshotPartitionType partition: `dl.SnapshotPartitionType` name of the partition
-        :param str local_path: local path directory to download the data
-        :param dtlpy.entities.filters.Filters filters:  dl.entities.Filters to add the specific partitions constraint to
-
-        :return List `str` of the new downloaded path of each item
-        """
-        if local_path is None:
-            local_path = os.getcwd()
-        if filters is None:
-            filters = entities.Filters(resource=entities.FiltersResource.ITEM)
-        if annotation_options is None:
-            annotation_options = entities.ViewAnnotationOptions.JSON
-
-        if partition == 'all':  # TODO: should it be all or None (all != list(SnapshotPartitions) )
-            logger.info("downloading all items - even without partitions")
-        else:
-            filters.add(field='metadata.system.snapshotPartition', values=partition)
-
-        return self.items.download(filters=filters,
-                                   local_path=local_path,
-                                   annotation_options=annotation_options)
-
-    def set_partition(self, partition, filters=None):
-        """
-        Updates all items returned by filters in the dataset to specific partition
-
-        :param partition:  `dl.entities.SnapshotPartitionType` to set to
-        :param dtlpy.entities.filters.Filters filters:  dl.entities.Filters to add the specific partitions constraint to
-        :return:  dl.PagedEntities
-        """
-        if filters is None:
-            filters = entities.Filters(resource=entities.FiltersResource.ITEM)
-        # TODO: How to preform update using the Filter - where do i set the field - docstring should state dict key-val while arg name is only values....
-        return self.items.update(filters=filters,
-                                 system_update_values={'snapshotPartition': partition},
-                                 system_metadata=True)
-
-    def get_partitions(self, partitions, filters=None, batch_size: int = None):
-        """
-        Returns PagedEntity of items from one or more partitions
-
-        :param partitions: `dl.entities.SnapshotPartitionType` or a list. Name of the partitions
-        :param dtlpy.entities.filters.Filters filters:  dl.Filters to add the specific partitions constraint to
-        :param batch_size: `int` how many items per page
-        :return: `dl.PagedEntities` of `dl.Item`  preforms items.list()
-        """
-        # Question: do we have to give a partition? how do we get in case no partition is defined?
-        if isinstance(partitions, str):
-            partitions = [partitions]
-        if filters is None:
-            filters = entities.Filters(resource=entities.FiltersResource.ITEM)
-
-        if partitions == 'all':
-            logger.info("downloading all items - even without partitions")
-        else:
-            filters.add(field='metadata.system.snapshotPartition',
-                        values=partitions,
-                        operator=entities.FiltersOperations.IN)
-        return self.items.list(filters=filters, page_size=batch_size)
 
     def update_attributes(self,
                           title: str,

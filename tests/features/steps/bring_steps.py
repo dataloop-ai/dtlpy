@@ -102,6 +102,7 @@ from tests.features.steps.packages_repo import test_packages_context
 from tests.features.steps.packages_repo import packages_name_validation
 from tests.features.steps.packages_flow import packages_flow
 from tests.features.steps.packages_repo import package_slot
+from tests.features.steps.packages_repo import packages_delete
 
 from tests.features.steps.triggers_repo import test_triggers_create
 from tests.features.steps.triggers_repo import test_triggers_get
@@ -159,13 +160,10 @@ from tests.features.steps.assignments_repo import test_assignments_context
 from tests.features.steps.converter import converter
 
 from tests.features.steps.models_repo import test_models_create
-from tests.features.steps.models_repo import test_models_delete
 from tests.features.steps.models_repo import test_models_list
+from tests.features.steps.models_repo import test_models_delete
 
-from tests.features.steps.model_entity import test_model_update
-
-from tests.features.steps.snapshots_repo import test_snapshots_create
-from tests.features.steps.snapshots_repo import test_snapshots_list
+from tests.features.steps.model_entity import test_model_name
 
 from tests.features.steps.pipeline_entity import pipeline_get, pipeline_delete, pipeline_update, pipeline_flow
 from tests.features.steps.pipeline_entity import pipeline_output_list
@@ -184,3 +182,5 @@ from tests.features.steps.pipeline_entity import pipeline_reset
 from tests.features.steps.items_repo import test_upload_and_download_images
 
 from tests.features.steps.annotations_repo import test_rotated_box_points
+
+from tests.features.steps.webm_converter import test_failed_video_message

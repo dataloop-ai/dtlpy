@@ -118,7 +118,7 @@ class Verbose:
     def logging_level(self, val):
         self._logging_level = val
         # set log level
-        logging.getLogger('dtlpy').handlers[0].setLevel(logging._nameToLevel[self._logging_level.upper()])
+        logging.getLogger(name='dtlpy').handlers[0].setLevel(logging._nameToLevel[self._logging_level.upper()])
         # write to cookie
         self.to_cookie()
 
@@ -458,7 +458,7 @@ class ApiClient:
                                     'entity.create': num_processes,
                                     'dataset.download': num_processes}
         # set logging level
-        logging.getLogger('dtlpy').handlers[0].setLevel(logging._nameToLevel[self.verbose.logging_level.upper()])
+        logging.getLogger(name='dtlpy').handlers[0].setLevel(logging._nameToLevel[self.verbose.logging_level.upper()])
         os.environ["USE_ATTRIBUTE_2"] = json.dumps(self.attributes_mode.use_attributes_2)
 
         self.cache = None

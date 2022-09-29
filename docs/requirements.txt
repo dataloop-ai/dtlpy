@@ -5,7 +5,7 @@ requests>=2.25.0
 numpy>=1.16.2
 pandas==0.24.2
 tabulate==0.8.3
-tqdm>=4.64.0
+tqdm>=4.63
 Pillow<=9.1
 PyJWT>=2.4
 jinja2>=2.11.3
@@ -25,6 +25,6 @@ webvtt-py==0.4.3
 flask
 filelock>=3.0.12
 diskcache>=5.4
-redis>=4.3
+redis>=3.5
 m2r==0.2.1
 recommonmark

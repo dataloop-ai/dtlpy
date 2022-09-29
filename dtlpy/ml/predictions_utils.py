@@ -22,11 +22,11 @@ def mean_or_nan(arr):
         return np.mean(arr)
 
 
-def model_info_name(model: entities.Model, snapshot: entities.Snapshot):
-    if snapshot is None:
-        return "{}-no-snapshot".format(model.name)
+def model_info_name(model: entities.Model, package: entities.Package):
+    if model is None:
+        return "{}-no-model".format(package.name)
     else:
-        return "{}-{}".format(model.name, snapshot.name)
+        return "{}-{}".format(package.name, model.name)
 
 
 def measure_annotations(

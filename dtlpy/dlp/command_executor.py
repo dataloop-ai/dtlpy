@@ -10,7 +10,7 @@ from dtlpy import repositories
 
 from .. import exceptions, entities
 
-logger = logging.getLogger('dtlpy')
+logger = logging.getLogger(name='dtlpy')
 
 
 class CommandExecutor:
@@ -448,7 +448,17 @@ class CommandExecutor:
 
             package = packages.push(src_path=args.src_path,
                                     package_name=args.package_name,
-                                    checkout=True)
+                                    checkout=args.checkout)
+
+            logger.info("Successfully pushed package to platform\n"
+                        "Package id:{}\nPackage version:{}".format(package.id,
+                                                                   package.version))
+        elif args.packages == "deploy":
+            packages = self.utils.get_packages_repo(args=args)
+
+            package = packages.deploy(package_name=args.package_name,
+                                      checkout=args.checkout,
+                                      module_name=args.module_name)
 
             logger.info("Successfully pushed package to platform\n"
                         "Package id:{}\nPackage version:{}".format(package.id,

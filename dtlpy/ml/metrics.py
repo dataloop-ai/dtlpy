@@ -5,7 +5,7 @@ import datetime
 
 from .. import entities
 
-logger = logging.getLogger('dtlpy')
+logger = logging.getLogger(name='dtlpy')
 
 
 class Results:
@@ -45,7 +45,9 @@ class Results:
 
 
 class Match:
-    def __init__(self, first_annotation_id, second_annotation_id,
+    def __init__(self,
+                 first_annotation_id, first_annotation_label, first_annotation_confidence,
+                 second_annotation_id, second_annotation_label, second_annotation_confidence,
                  # defaults
                  annotation_score=0, attributes_score=0, geometry_score=0, label_score=0):
         """
@@ -59,7 +61,11 @@ class Match:
         :param label_score:
         """
         self.first_annotation_id = first_annotation_id
+        self.first_annotation_label = first_annotation_label
+        self.first_annotation_confidence = first_annotation_confidence
         self.second_annotation_id = second_annotation_id
+        self.second_annotation_label = second_annotation_label
+        self.second_annotation_confidence = second_annotation_confidence
         self.annotation_score = annotation_score
         self.attributes_score = attributes_score
         # Replace the old annotation score
@@ -87,7 +93,11 @@ class Matches:
         for match in self.matches:
             results.append({
                 'first_id': match.first_annotation_id,
+                'first_label': match.first_annotation_label,
+                'first_confidence': match.first_annotation_confidence,
                 'second_id': match.second_annotation_id,
+                'second_label': match.second_annotation_label,
+                'second_confidence': match.second_annotation_confidence,
                 'annotation_score': match.annotation_score,
                 'attribute_score': match.attributes_score,
                 'geometry_score': match.geometry_score,
@@ -358,7 +368,13 @@ class Matchers:
             # TODO use ignores for final score
             annotation_score = (geometry_score + attribute_score + labels_score) / 3
             matches.add(Match(first_annotation_id=first_annotation_id,
+                              first_annotation_label=first_annotation.label,
+                              first_annotation_confidence=
+                              first_annotation.metadata.get('user', dict()).get('model', dict()).get('confidence', 1),
                               second_annotation_id=second_annotation_id,
+                              second_annotation_label=second_annotation.label,
+                              second_annotation_confidence=
+                              second_annotation.metadata.get('user', dict()).get('model', dict()).get('confidence', 1),
                               geometry_score=geometry_score,
                               annotation_score=annotation_score,
                               label_score=labels_score,
@@ -367,11 +383,26 @@ class Matchers:
             df.drop(columns=first_annotation_id, inplace=True)
         # add un-matched
         for second_id in df.index:
+            second_annotation = [a for a in second_set if a.id == second_id][0]
             matches.add(match=Match(first_annotation_id=None,
-                                    second_annotation_id=second_id))
+                                    first_annotation_label=None,
+                                    first_annotation_confidence=None,
+                                    second_annotation_id=second_id,
+                                    second_annotation_label=second_annotation.label,
+                                    second_annotation_confidence=
+                                    second_annotation.metadata.get('user', dict()).get('model', dict()).get(
+                                        'confidence', 1),
+                                    ))
         for first_id in df.columns:
+            first_annotation = [a for a in first_set if a.id == first_id][0]
             matches.add(match=Match(first_annotation_id=first_id,
-                                    second_annotation_id=None))
+                                    first_annotation_label=first_annotation.label,
+                                    first_annotation_confidence=
+                                    first_annotation.metadata.get('user', dict()).get('model', dict()).get('confidence',
+                                                                                                           1),
+                                    second_annotation_id=None,
+                                    second_annotation_label=None,
+                                    second_annotation_confidence=None))
         return matches
 
 

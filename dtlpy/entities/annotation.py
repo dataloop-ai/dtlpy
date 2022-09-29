@@ -1,16 +1,15 @@
-import os
-import warnings
-
 import numpy as np
 import traceback
 import logging
+import datetime
+import webvtt
 import copy
 import attr
 import json
+import os
+
 from PIL import Image
 from enum import Enum
-import datetime
-import webvtt
 
 from .. import entities, PlatformException, repositories, ApiClient, exceptions
 
@@ -95,7 +94,6 @@ class Annotation(entities.BaseEntity):
     type = attr.ib()
     source = attr.ib(repr=False)
     dataset_url = attr.ib(repr=False)
-    _description = attr.ib(repr=False)
 
     # api
     _platform_dict = attr.ib(repr=False)
@@ -396,7 +394,7 @@ class Annotation(entities.BaseEntity):
 
     @property
     def description(self):
-        return self._description
+        return self.annotation_definition.description
 
     @description.setter
     def description(self, description):
@@ -404,7 +402,7 @@ class Annotation(entities.BaseEntity):
             description = ""
         if not isinstance(description, str):
             raise ValueError("Description must get string")
-        self._description = description
+        self.annotation_definition.description = description
 
     @property
     def last_frame(self):
@@ -1063,8 +1061,7 @@ class Annotation(entities.BaseEntity):
 
             # temp
             platform_dict=dict(),
-            source='sdk',
-            description=None
+            source='sdk'
         )
 
         if annotation_definition:
@@ -1115,8 +1112,6 @@ class Annotation(entities.BaseEntity):
 
         if frame_num is None:
             frame_num = int(np.round(start_time * self.fps))
-            self.start_time = start_time
-        self.start_frame = frame_num
 
         if end_frame_num is None:
             if end_time is not None:
@@ -1166,10 +1161,8 @@ class Annotation(entities.BaseEntity):
 
             if frame_num is None:
                 frame_num = 0
-            self.start_frame = frame_num
             self.current_frame = frame_num
             self.end_frame = frame_num
-            self.start_time = frame_num / self.fps if self.fps != 0 else 0
 
             frame = FrameAnnotation.new(annotation_definition=annotation_definition,
                                         frame_num=frame_num,
@@ -1445,11 +1438,14 @@ class Annotation(entities.BaseEntity):
             start_time=start_time,
             recipe_2_attributes=named_attributes,
             label_suggestions=_json.get('labelSuggestions', None),
-            source=_json.get('source', None),
-            description=_json.get('description', None)
+            source=_json.get('source', None)
         )
         annotation.annotation_definition = annotation_definition
         annotation.__client_api = client_api
+        if annotation_definition:
+            description = _json.get('description', None)
+            if description is not None:
+                annotation.description = description
 
         #################
         # if has frames #

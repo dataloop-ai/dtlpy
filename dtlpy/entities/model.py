@@ -2,37 +2,43 @@ from collections import namedtuple
 from enum import Enum
 import traceback
 import logging
+from typing import List
+
 import attr
 
-from .. import repositories, entities, services
+from .. import repositories, entities, services, exceptions
 
 logger = logging.getLogger(name='dtlpy')
 
 
-class ModelInputType(str, Enum):
-    VIDEO = 'video'
-    IMAGE = 'image'
-    TEXT = 'text'
-    AUDIO = 'audio'
+class DatasetSubsetType(str, Enum):
+    """Available types for dataset subsets"""
+    TRAIN = 'train'
+    VALIDATION = 'validation'
+    TEST = 'test'
 
 
-class EntityScopeLevel(str, Enum):
-    PRIVATE = 'private',
-    PROJECT = 'project',
-    ORG = 'org',
-    PUBLIC = 'public'
+class LogSample:
+    def __init__(self, figure, legend, x, y):
+        """
+        Create a single metric sample for Model
 
+        :param figure: figure name identifier
+        :param legend: line name identifier
+        :param x: x value for the current sample
+        :param y: y value for the current sample
+        """
+        self.figure = figure
+        self.legend = legend
+        self.x = x
+        self.y = y
 
-class ModelOutputType(str, Enum):
-    BOX = entities.Box.type
-    CLASSIFICATION = entities.Classification.type
-    COMPARISON = entities.Comparison.type
-    ELLIPSE = entities.Ellipse.type
-    POINT = entities.Point.type
-    POLYGON = entities.Polygon.type
-    SEGMENTATION = entities.Segmentation.type
-    SUBTITLE = entities.Subtitle.type
-    TEXT = entities.Text.type
+    def to_json(self) -> dict:
+        _json = {'figure': self.figure,
+                 'legend': self.legend,
+                 'data': {'x': self.x,
+                          'y': self.y}}
+        return _json
 
 
 @attr.s
@@ -42,67 +48,54 @@ class Model(entities.BaseEntity):
     """
     # platform
     id = attr.ib()
+    creator = attr.ib()
     created_at = attr.ib()
     updated_at = attr.ib(repr=False)
-    creator = attr.ib()
+    model_artifacts = attr.ib()
     name = attr.ib()
-    url = attr.ib(repr=False)
-    codebase = attr.ib(type=entities.Codebase)
     description = attr.ib()
-    default_runtime = attr.ib(repr=False, type=entities.KubernetesRuntime)
-    default_configuration = attr.ib(repr=False, type=dict)
-    version = attr.ib()
+    ontology_id = attr.ib(repr=False)
+    labels = attr.ib()
+    status = attr.ib()
     tags = attr.ib()
+    configuration = attr.ib()
+    metadata = attr.ib()
 
-    # name change
-    project_id = attr.ib()
-    entry_point = attr.ib()
-    class_name = attr.ib()
-    input_type = attr.ib()
-    output_type = attr.ib()
-    snapshots_count = attr.ib()
+    url = attr.ib()
     scope = attr.ib()
+    version = attr.ib()
     context = attr.ib()
 
-    # revisions
-    _revisions = attr.ib()
+    # name change
+    package_id = attr.ib(repr=False)
+    project_id = attr.ib()
+    dataset_id = attr.ib(repr=False)
 
     # sdk
     _project = attr.ib(repr=False)
+    _package = attr.ib(repr=False)
+    _dataset = attr.ib(repr=False)
     _client_api = attr.ib(type=services.ApiClient, repr=False)
     _repositories = attr.ib(repr=False)
-    _codebases = attr.ib(default=None)
-    _artifacts = attr.ib(default=None)
-
-    @property
-    def createdAt(self):
-        return self.created_at
-
-    @property
-    def updatedAt(self):
-        return self.updated_at
-
-    @property
-    def revisions(self):
-        if self._revisions is None:
-            self._revisions = self.models.revisions(model=self)
-        return self._revisions
+    _ontology = attr.ib(repr=False, default=None)
 
     @staticmethod
-    def _protected_from_json(_json, client_api, project, is_fetched=True):
+    def _protected_from_json(_json, client_api, project, package, is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
 
-        :param _json: platform representation of model
+        :param _json: platform representation of Model
         :param client_api: ApiClient entity
-        :param project: project entity
+        :param project: project that owns the model
+        :param package: package entity of the model
         :param is_fetched: is Entity fetched from Platform
-        :return:
+        :return: Model entity
         """
         try:
             model = Model.from_json(_json=_json,
                                     client_api=client_api,
                                     project=project,
+                                    package=package,
                                     is_fetched=is_fetched)
             status = True
         except Exception:
@@ -111,55 +104,56 @@ class Model(entities.BaseEntity):
         return status, model
 
     @classmethod
-    def from_json(cls, _json, client_api, project, is_fetched=True):
+    def from_json(cls, _json, client_api, project, package, is_fetched=True):
         """
         Turn platform representation of model into a model entity
 
         :param _json: platform representation of model
         :param client_api: ApiClient entity
-        :param project: project entity
+        :param project: project that owns the model
+        :param package: package entity of the model
         :param is_fetched: is Entity fetched from Platform
         :return: Model entity
         """
         if project is not None:
-            json_project_id = _json.get('context', {}).get('project', None)
-            if json_project_id and project.id != json_project_id:
+            if project.id != _json.get('context', {}).get('project', None):
                 logger.warning('Model has been fetched from a project that is not in it projects list')
                 project = None
 
-        if 'codebase' in _json:
-            codebase = entities.Codebase.from_json(_json=_json['codebase'],
-                                                   client_api=client_api)
-        else:
-            codebase = None
-        if 'defaultRuntime' in _json and _json['defaultRuntime'] is not None:
-            default_runtime = entities.KubernetesRuntime(**_json['defaultRuntime'])
-        else:
-            default_runtime = None
+        if package is not None:
+            if package.id != _json.get('packageId', None):
+                logger.warning('Model has been fetched from a model that is not in it projects list')
+                model = None
+
+        model_artifacts = [entities.Artifact.from_json(_json=artifact,
+                                                       client_api=client_api,
+                                                       project=project)
+                           for artifact in _json.get('artifacts', list())]
 
         inst = cls(
+            configuration=_json.get('configuration', None),
+            description=_json.get('description', None),
+            status=_json.get('status', None),
+            tags=_json.get('tags', None),
+            metadata=_json.get('metadata', dict()),
             project_id=_json.get('context', {}).get('project', None),
-            codebase=codebase,
+            dataset_id=_json.get('datasetId', None),
+            package_id=_json.get('packageId', None),
+            model_artifacts=model_artifacts,
+            labels=_json.get('labels', None),
+            ontology_id=_json.get('ontology_id', None),
             created_at=_json.get('createdAt', None),
             updated_at=_json.get('updatedAt', None),
-            version=_json.get('version', None),
-            description=_json.get('description', None),
             creator=_json.get('context', {}).get('creator', None),
-            entry_point=_json.get('entryPoint', None),
-            class_name=_json.get('className', 'ModelAdapter'),
             client_api=client_api,
             name=_json.get('name', None),
-            url=_json.get('url', None),
             project=project,
+            package=package,
+            dataset=None,
             id=_json.get('id', None),
-            output_type=_json.get('outputType', None),
-            input_type=_json.get('inputType', None),
-            revisions=_json.get('revisions', None),
-            default_runtime=default_runtime,
-            default_configuration=_json.get('defaultConfiguration', dict()),
-            tags=_json.get('tags', None),
-            snapshots_count=_json.get('snapshotsCount', 0),
-            scope=_json.get('scope', EntityScopeLevel.PROJECT),
+            url=_json.get('url', None),
+            scope=_json.get('scope', entities.EntityScopeLevel.PROJECT),
+            version=_json.get('version', '1.0.0'),
             context=_json.get('context', {})
         )
         inst.is_fetched = is_fetched
@@ -167,46 +161,39 @@ class Model(entities.BaseEntity):
 
     def to_json(self):
         """
-        Turn Model entity into a platform representation of Model
+        Get the dict of Model
 
         :return: platform json of model
         :rtype: dict
         """
         _json = attr.asdict(self,
                             filter=attr.filters.exclude(attr.fields(Model)._project,
+                                                        attr.fields(Model)._package,
+                                                        attr.fields(Model)._dataset,
+                                                        attr.fields(Model)._ontology,
                                                         attr.fields(Model)._repositories,
-                                                        attr.fields(Model)._codebases,
-                                                        attr.fields(Model)._revisions,
-                                                        attr.fields(Model)._artifacts,
-                                                        attr.fields(Model).input_type,
-                                                        attr.fields(Model).output_type,
                                                         attr.fields(Model)._client_api,
-                                                        attr.fields(Model).codebase,
-                                                        attr.fields(Model).entry_point,
-                                                        attr.fields(Model).class_name,
+                                                        attr.fields(Model).package_id,
                                                         attr.fields(Model).project_id,
+                                                        attr.fields(Model).dataset_id,
+                                                        attr.fields(Model).ontology_id,
+                                                        attr.fields(Model).model_artifacts,
                                                         attr.fields(Model).created_at,
                                                         attr.fields(Model).updated_at,
-                                                        attr.fields(Model).default_configuration,
-                                                        attr.fields(Model).default_runtime,
-                                                        attr.fields(Model).snapshots_count,
                                                         ))
-
-        _json['inputType'] = self.input_type
-        _json['outputType'] = self.output_type
-        _json['projectId'] = self.project_id
-        _json['entryPoint'] = self.entry_point
-        _json['className'] = self.class_name
-        _json['codebase'] = self.codebase.to_json()
+        _json['packageId'] = self.package_id
+        _json['datasetId'] = self.dataset_id
         _json['createdAt'] = self.created_at
         _json['updatedAt'] = self.updated_at
-        _json['defaultConfiguration'] = self.default_configuration
-        _json['snapshotsCount'] = self.snapshots_count
-        if isinstance(self.default_runtime, entities.KubernetesRuntime):
-            _json['defaultRuntime'] = self.default_runtime.to_json()
-        else:
-            _json['defaultRuntime'] = self.default_runtime
-
+        model_artifacts = list()
+        for artifact in self.model_artifacts:
+            if artifact.type in ['file', 'dir']:
+                artifact = {'type': 'item',
+                            'itemId': artifact.id}
+            else:
+                artifact = artifact.to_json(as_artifact=True)
+            model_artifacts.append(artifact)
+        _json['artifacts'] = model_artifacts
         return _json
 
     ############
@@ -216,8 +203,36 @@ class Model(entities.BaseEntity):
     def project(self):
         if self._project is None:
             self._project = self.projects.get(project_id=self.project_id, fetch=None)
+            self._repositories = self.set_repositories()  # update the repos with the new fetched entity
         assert isinstance(self._project, entities.Project)
         return self._project
+
+    @property
+    def package(self):
+        if self._package is None:
+            self._package = self.packages.get(package_id=self.package_id)
+            self._repositories = self.set_repositories()  # update the repos with the new fetched entity
+        assert isinstance(self._package, entities.Package)
+        return self._package
+
+    @property
+    def dataset(self):
+        if self._dataset is None:
+            if self.dataset_id is None:
+                raise RuntimeError("Model {!r} has no dataset. Can be used only for inference".format(self.id))
+            self._dataset = self.datasets.get(dataset_id=self.dataset_id, fetch=None)
+            self._repositories = self.set_repositories()  # update the repos with the new fetched entity
+        assert isinstance(self._dataset, entities.Dataset)
+        return self._dataset
+
+    @property
+    def ontology(self):
+        if self._ontology is None:
+            if self.ontology_id is None:
+                raise RuntimeError("Model {!r} has no ontology.".format(self.id))
+            self._ontology = self.ontologies.get(ontology_id=self.ontology_id)
+        assert isinstance(self._ontology, entities.Ontology)
+        return self._ontology
 
     ################
     # repositories #
@@ -225,42 +240,31 @@ class Model(entities.BaseEntity):
     @_repositories.default
     def set_repositories(self):
         reps = namedtuple('repositories',
-                          field_names=['projects', 'models', 'snapshots', 'buckets'])
+                          field_names=['projects', 'datasets', 'packages', 'models', 'ontologies', 'artifacts'])
 
         r = reps(projects=repositories.Projects(client_api=self._client_api),
+                 datasets=repositories.Datasets(client_api=self._client_api,
+                                                project=self._project),
                  models=repositories.Models(client_api=self._client_api,
-                                            project=self._project),
-                 snapshots=repositories.Snapshots(client_api=self._client_api,
+                                            project=self._project,
+                                            project_id=self.project_id,
+                                            package=self._package),
+                 packages=repositories.Packages(client_api=self._client_api,
+                                                project=self._project),
+                 ontologies=repositories.Ontologies(client_api=self._client_api,
+                                                    project=self._project,
+                                                    dataset=self._dataset),
+                 artifacts=repositories.Artifacts(client_api=self._client_api,
                                                   project=self._project,
-                                                  model=self),
-                 buckets=repositories.Buckets(client_api=self._client_api,
-                                              project=self._project,
-                                              project_id=self.project_id)
+                                                  project_id=self.project_id,
+                                                  model=self)
                  )
+
         return r
 
     @property
-    def codebases(self):
-        if self._codebases is None:
-            self._codebases = repositories.Codebases(
-                client_api=self._client_api,
-                project=self._project,
-                project_id=self.project_id
-            )
-        assert isinstance(self._codebases, repositories.Codebases)
-        return self._codebases
-
-    @property
-    def artifacts(self):
-        if self._artifacts is None:
-            self._artifacts = repositories.Artifacts(
-                client_api=self._client_api,
-                project=self._project,
-                project_id=self.project_id,
-                model=self
-            )
-        assert isinstance(self._artifacts, repositories.Artifacts)
-        return self._artifacts
+    def platform_url(self):
+        return self._client_api._get_resource_url("projects/{}/model/{}".format(self.project_id, self.id))
 
     @property
     def projects(self):
@@ -268,63 +272,76 @@ class Model(entities.BaseEntity):
         return self._repositories.projects
 
     @property
-    def snapshots(self):
-        assert isinstance(self._repositories.snapshots, repositories.Snapshots)
-        return self._repositories.snapshots
-
-    @property
-    def buckets(self):
-        assert isinstance(self._repositories.buckets, repositories.Buckets)
-        return self._repositories.buckets
+    def datasets(self):
+        assert isinstance(self._repositories.datasets, repositories.Datasets)
+        return self._repositories.datasets
 
     @property
     def models(self):
         assert isinstance(self._repositories.models, repositories.Models)
         return self._repositories.models
 
-    ##############
-    # properties #
-    ##############
     @property
-    def git_status(self):
-        status = 'Git status unavailable'
-        try:
-            if self.codebase.type == entities.PackageCodebaseType.ITEM:
-                if 'git' in self.codebase.item.metadata:
-                    status = self.codebase.item.metadata['git'].get('status', status)
-        except Exception:
-            logging.debug('Error getting codebase')
-        return status
+    def packages(self):
+        assert isinstance(self._repositories.packages, repositories.Packages)
+        return self._repositories.packages
 
     @property
-    def git_log(self):
-        log = 'Git log unavailable'
-        try:
-            if self.codebase.type == entities.PackageCodebaseType.ITEM:
-                if 'git' in self.codebase.item.metadata:
-                    log = self.codebase.item.metadata['git'].get('log', log)
-        except Exception:
-            logging.debug('Error getting codebase')
-        return log
+    def ontologies(self):
+        assert isinstance(self._repositories.ontologies, repositories.Ontologies)
+        return self._repositories.ontologies
+
+    @property
+    def artifacts(self):
+        assert isinstance(self._repositories.artifacts, repositories.Artifacts)
+        return self._repositories.artifacts
+
+    @property
+    def id_to_label_map(self):
+        if 'id_to_label_map' not in self.configuration:
+            # default
+            if self.ontology_id == 'null' or self.ontology_id is None:
+                self.configuration['id_to_label_map'] = {int(idx): lbl for idx, lbl in enumerate(self.labels)}
+            else:
+                self.configuration['id_to_label_map'] = {int(idx): lbl.tag for idx, lbl in
+                                                         enumerate(self.ontology.labels)}
+        else:
+            self.configuration['id_to_label_map'] = {int(idx): lbl for idx, lbl in
+                                                     self.configuration['id_to_label_map'].items()}
+        return self.configuration['id_to_label_map']
+
+    @id_to_label_map.setter
+    def id_to_label_map(self, mapping: dict):
+        self.configuration['id_to_label_map'] = {int(idx): lbl for idx, lbl in mapping.items()}
+
+    @property
+    def label_to_id_map(self):
+        if 'label_to_id_map' not in self.configuration:
+            self.configuration['label_to_id_map'] = {v: int(k) for k, v in self.id_to_label_map.items()}
+        return self.configuration['label_to_id_map']
+
+    @label_to_id_map.setter
+    def label_to_id_map(self, mapping: dict):
+        self.configuration['label_to_id_map'] = {v: int(k) for k, v in mapping.items()}
 
     ###########
     # methods #
     ###########
     def update(self):
         """
-        Update Model changes to platform
+        Update Models changes to platform
 
-        :return: Model entity
+        :return: Models entity
         """
         return self.models.update(model=self)
 
-    def checkout(self):
+    def open_in_web(self):
         """
-        Checkout as model
+        Open the model in web platform
 
         :return:
         """
-        return self.models.checkout(model=self)
+        self._client_api._open_in_web(url=self.platform_url)
 
     def delete(self):
         """
@@ -334,42 +351,67 @@ class Model(entities.BaseEntity):
         """
         return self.models.delete(model=self)
 
-    def push(self,
-             src_path: str = None,
-             entry_point: str = None,
-             codebase: entities.ItemCodebase = None):
+    def clone(self,
+              model_name: str,
+              dataset: entities.Dataset = None,
+              configuration: dict = None,
+              status=None,
+              scope=None,
+              project_id: str = None,
+              labels: list = None,
+              description: str = None,
+              tags: list = None,
+              ):
         """
-        Upload codebase to Model
+        Clones and creates a new model out of existing one
 
-        :param src_path: codebase location. if None pwd will be taken
-        :param entry_point: location on the ModelAdapter class
-        :param dtlpy.entities.codebase.Codebase codebase: codebase object  if none new will be created from src_path
+        :param str model_name: `str` new model name
+        :param str dataset: dataset object for the cloned model
+        :param dict configuration: `dict` (optional) if passed replaces the current configuration
+        :param str status: `str` (optional) set the new status
+        :param str scope: `str` (optional) set the new scope. default is "project"
+        :param str project_id: `str` specify the project id to create the new model on (if other than the source model)
+        :param list labels:  `list` of `str` - label of the model
+        :param str description: `str` description of the new model
+        :param list tags:  `list` of `str` - label of the model
+
+        :return: dl.Model which is a clone version of the existing model
+        """
+        return self.models.clone(from_model=self,
+                                 model_name=model_name,
+                                 project_id=project_id,
+                                 dataset=dataset,
+                                 scope=scope,
+                                 status=status,
+                                 configuration=configuration,
+                                 labels=labels,
+                                 description=description,
+                                 tags=tags
+                                 )
+
+    def train(self):
+        """
+        Train the model in the cloud. This will create a service and will run the adapter's train function as an execution
         :return:
         """
-        return self.project.models.push(model=self,
-                                        entry_point=entry_point,
-                                        codebase=codebase,
-                                        src_path=src_path)
+        return self.models.train(model_id=self.id)
 
-    def build(self, local_path=None, from_local=None):
+    def deploy(self):
         """
-        Push local model
+        Deploy a trained model. This will create a service that will execute predictions
 
-        :param local_path: local path where the model code should be.
-                           if model is downloaded - this will be the point it will be downloaded
-                           (if from_local=False - codebase will be downloaded)
-        :param from_local: bool. use current directory to build
-        :return: ModelAdapter (dl.BaseModelAdapter)
+        :return:
         """
-        return self.models.build(model=self,
-                                 local_path=local_path,
-                                 from_local=from_local)
+        return self.models.deploy(model_id=self.id)
 
-    def generate(self, local_path=None, overwrite=False):
+    def add_log_samples(self, samples, dataset_id) -> bool:
         """
-        Creates a local model_adapter file with virtual functions to be implemented
+        Add Samples for dataset analytics and metrics
 
-        :param local_path: `str` path to save the adapter (if None uses current working dir)
-        :param overwrite:  `bool` whether to over write an existing file (default False)
+        :param samples: list of dl.LogSample - must contain: figure, legend, x, y
+        :param dataset_id: id to dataset related to the metrics
+        :return: bool: True if success
         """
-        self.models.generate(src_path=local_path, entry_point=self.entry_point, overwrite=overwrite)
+        return self.models.add_log_samples(model_id=self.id,
+                                           dataset_id=dataset_id,
+                                           samples=samples)

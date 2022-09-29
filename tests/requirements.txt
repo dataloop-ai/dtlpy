@@ -3,5 +3,5 @@ opencv_python<=4.2.0.32
 behave-testrail-reporter>=0.5.1
 filelock>=3.0.12
 pycocotools
-redis>=4.3
+redis>=3.5
 diskcache>=5.4

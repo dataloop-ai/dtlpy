@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with DTLPY.  If not, see <http://www.gnu.org/licenses/>.
 from .base_model_adapter import BaseModelAdapter
-from .super_model_adapter import SuperModelAdapter
 
 from . import metrics
 from . import predictions_utils
