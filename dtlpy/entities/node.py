@@ -5,8 +5,9 @@ import uuid
 from typing import Callable
 from enum import Enum
 from typing import List
+import datetime
 
-from .. import entities, assets, repositories
+from .. import entities, assets, repositories, PlatformException
 
 NODE_SIZE = (200, 87)
 
@@ -526,7 +527,12 @@ class TaskNode(PipelineNode):
                  task_type: str = 'annotation',
                  position: tuple = (1, 1),
                  actions: list = None,
-                 repeatable: bool = True):
+                 repeatable: bool = True,
+                 batch_size=None,
+                 max_batch_workload=None,
+                 priority=entities.TaskPriority.MEDIUM,
+                 due_date=None
+                 ):
         """
         :param str name: node name
         :param str project_id: project id
@@ -539,6 +545,10 @@ class TaskNode(PipelineNode):
         :param tuple position: tuple of the node place
         :param list actions: list of task actions
         :param bool repeatable: can repeat in the item
+        :param int batch_size: Pulling batch size (items) . Restrictions - Min 3, max 100 - for create pulling task
+        :param int max_batch_workload: Max items in assignment . Restrictions - Min batchSize + 2 , max batchSize * 2 - for create pulling task
+        :param entities.TaskPriority priority: priority of the task options in entities.TaskPriority
+        :param float due_date: date by which the task should be finished; for example, due_date = datetime.datetime(day= 1, month= 1, year= 2029).timestamp()
         """
 
         if actions is None:
@@ -557,6 +567,7 @@ class TaskNode(PipelineNode):
             actions.insert(1, 'discard')
 
         outputs = [self._default_io(action=action) for action in actions]
+
         super().__init__(name=name,
                          node_id=str(uuid.uuid4()),
                          outputs=outputs,
@@ -578,6 +589,14 @@ class TaskNode(PipelineNode):
             workload = [workload]
         self.workload = workload
         self.repeatable = repeatable
+        if max_batch_workload:
+            self.max_batch_workload = max_batch_workload
+        if batch_size:
+            self.batch_size = batch_size
+        self.priority = priority
+        if due_date is None:
+            due_date = (datetime.datetime.now() + datetime.timedelta(days=7)).timestamp() * 1000
+        self.due_date = due_date
 
     @property
     def dataset_id(self):
@@ -585,6 +604,8 @@ class TaskNode(PipelineNode):
 
     @dataset_id.setter
     def dataset_id(self, dataset_id: str):
+        if not isinstance(dataset_id, str):
+            raise PlatformException('400', 'Param dataset_id must be of type string')
         self.metadata['datasetId'] = dataset_id
 
     @property
@@ -593,6 +614,8 @@ class TaskNode(PipelineNode):
 
     @repeatable.setter
     def repeatable(self, repeatable: bool):
+        if not isinstance(repeatable, bool):
+            raise PlatformException('400', 'Param repeatable must be of type bool')
         self.metadata['repeatable'] = repeatable
 
     @property
@@ -601,6 +624,8 @@ class TaskNode(PipelineNode):
 
     @recipe_title.setter
     def recipe_title(self, recipe_title: str):
+        if not isinstance(recipe_title, str):
+            raise PlatformException('400', 'Param recipe_title must be of type string')
         self.metadata['recipeTitle'] = recipe_title
 
     @property
@@ -609,6 +634,8 @@ class TaskNode(PipelineNode):
 
     @recipe_id.setter
     def recipe_id(self, recipe_id: str):
+        if not isinstance(recipe_id, str):
+            raise PlatformException('400', 'Param recipe_id must be of type string')
         self.metadata['recipeId'] = recipe_id
 
     @property
@@ -617,6 +644,8 @@ class TaskNode(PipelineNode):
 
     @task_owner.setter
     def task_owner(self, task_owner: str):
+        if not isinstance(task_owner, str):
+            raise PlatformException('400', 'Param task_owner must be of type string')
         self.metadata['taskOwner'] = task_owner
 
     @property
@@ -625,6 +654,8 @@ class TaskNode(PipelineNode):
 
     @task_type.setter
     def task_type(self, task_type: str):
+        if not isinstance(task_type, str):
+            raise PlatformException('400', 'Param task_type must be of type string')
         self.metadata['taskType'] = task_type
 
     @property
@@ -636,6 +667,46 @@ class TaskNode(PipelineNode):
         if not isinstance(workload, list):
             workload = [workload]
         self.metadata['workload'] = [val.to_json() for val in workload]
+
+    @property
+    def batch_size(self):
+        return self.metadata['batchSize']
+
+    @batch_size.setter
+    def batch_size(self, batch_size: int):
+        if not isinstance(batch_size, int):
+            raise PlatformException('400', 'Param batch_size must be of type int')
+        self.metadata['batchSize'] = batch_size
+
+    @property
+    def max_batch_workload(self):
+        return self.metadata['maxBatchWorkload']
+
+    @max_batch_workload.setter
+    def max_batch_workload(self, max_batch_workload: int):
+        if not isinstance(max_batch_workload, int):
+            raise PlatformException('400', 'Param max_batch_workload must be of type int')
+        self.metadata['maxBatchWorkload'] = max_batch_workload
+
+    @property
+    def priority(self):
+        return self.metadata['priority']
+
+    @priority.setter
+    def priority(self, priority: entities.TaskPriority):
+        if not isinstance(priority, int) and not isinstance(priority, entities.TaskPriority):
+            raise PlatformException('400', 'Param priority must be of type entities.TaskPriority')
+        self.metadata['priority'] = priority
+
+    @property
+    def due_date(self):
+        return self.metadata['dueDate']
+
+    @due_date.setter
+    def due_date(self, due_date: float):
+        if not isinstance(due_date, float) and not isinstance(due_date, int):
+            raise PlatformException('400', 'Param due_date must be of type float or int')
+        self.metadata['dueDate'] = due_date
 
 
 class FunctionNode(PipelineNode):

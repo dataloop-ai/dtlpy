@@ -1,7 +1,8 @@
 behave>=1.2.6
-opencv_python<=4.2.0.32
+opencv-python>=4.2.0.32
 behave-testrail-reporter>=0.5.1
 filelock>=3.0.12
 pycocotools
 redis>=3.5
 diskcache>=5.4
+xmltodict>=0.13.0

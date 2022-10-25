@@ -2,7 +2,7 @@ Feature: Items repository download_batch service testing
 
     Background: Initiate Platform Interface and create a project
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
-        And There is a project by the name of "items_download_batch"
+        And I create a project by the name of "items_download_batch"
         And I create a dataset with a random name
         And There are "2" Items
 

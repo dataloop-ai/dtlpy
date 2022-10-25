@@ -2,7 +2,7 @@
 
      Background: Initiate Platform Interface and create a project
          Given Platform Interface is initialized as dlp and Environment is set according to git branch
-         And There is a project by the name of "test_packages_context"
+         And I create a project by the name of "test_packages_context"
 
      @packages.delete
      @testrail-C4523134

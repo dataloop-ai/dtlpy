@@ -2,7 +2,7 @@ Feature: Ontology Entity attributes testing
 
     Background: Initiate Platform Interface
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
-        And There is a project by the name of "ontology_attributes"
+        And I create a project by the name of "ontology_attributes"
         And I create a dataset with a random name
         And Dataset has ontology
         And Classes in file: "classes_new.json" are uploaded to test Dataset

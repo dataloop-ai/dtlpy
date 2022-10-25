@@ -41,7 +41,6 @@ def project_should_exist_in_host(context, project_name):
     project_json.pop('role')
 
     assert list_json == project_json
-    context.project.delete(True, True)
 
 
 @behave.when(u'When I try to create a project with a blank name')
@@ -70,19 +69,7 @@ def step_impl(context, error_msg):
     assert error_msg in context.error.message
 
 
-@behave.given(u'I create a project by the name of "{project_name}"')
-def step_impl(context, project_name):
-    if not project_name.startswith('to-delete-test-'):
-        project_name = 'to-delete-test-' + project_name
-    project_name = project_name + str(random.randint(10000, 100000))
-    context.project = context.dl.projects.create(project_name=project_name)
-    context.to_delete_projects_ids.append(context.project.id)
-    time.sleep(5)  # to sleep because authorization takes time
-    context.project_name = project_name
-
-
 @behave.then(u'Error message includes "{error_text}"')
 def step_impl(context, error_text):
     assert error_text in str(context.error)
-    context.project.delete(True, True)
 

@@ -1,9 +1,5 @@
-from behave import given, when, then
+from behave import when, then
 import time
-import os
-import json
-from PIL import Image
-import numpy as np
 import dtlpy as dl
 
 
@@ -22,8 +18,8 @@ def step_impl(context):
         time.sleep(interval)
         executions_list = context.project.executions.list(filters=context.filters).items
         if {"success"} == set([exec.latest_status['status'] for exec in executions_list]):
-                finished = True
-                break
+            finished = True
+            break
 
     return finished
 

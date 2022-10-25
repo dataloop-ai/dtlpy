@@ -4,7 +4,7 @@
 #    When set binary cache size to 10
 #    Given cache is on
 #    Given Platform Interface is initialized as dlp and Environment is set according to git branch
-#    Given There is a project by the name of "cachetest"
+#    Given I create a project by the name of "cachetest"
 #
 #
 #  Scenario: Get an entities from cache

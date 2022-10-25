@@ -2,7 +2,7 @@ Feature: Models repository create testing
 
   Background: Initiate Platform Interface and create a project
     Given Platform Interface is initialized as dlp and Environment is set according to git branch
-    And There is a project by the name of "model_mgmt"
+    And I create a project by the name of "model_mgmt"
 
   @testrail-C4523165
   Scenario: Create a model with a legal name

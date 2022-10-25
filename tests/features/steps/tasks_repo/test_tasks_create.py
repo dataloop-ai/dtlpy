@@ -31,9 +31,12 @@ def compare_items_list(items_a, items_b):
     return equals
 
 
-@behave.then(u'Task has the correct attributes')
-def step_impl(context):
-    context.task = context.task.tasks.get(task_id=context.task.id)
+@behave.then(u'Task has the correct attributes for type "{task_type}"')
+def step_impl(context, task_type):
+    if task_type == "annotation":
+        context.task = context.task.tasks.get(task_id=context.task.id)
+    elif task_type == "qa":
+        context.task = context.task.tasks.get(task_id=context.qa_task.id)
     for key, val in context.params.items():
         if key == 'filters':
             task_query = json.loads(context.task.query)

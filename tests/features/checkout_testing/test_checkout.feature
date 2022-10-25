@@ -2,7 +2,7 @@
 
    Background: Background
      Given Platform Interface is initialized as dlp and Environment is set according to git branch
-     And There is a project by the name of "items_download_batch"
+     And I create a project by the name of "items_download_batch"
      And Get feature entities
        |dataset|codebase|package|service|
 

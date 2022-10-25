@@ -2,7 +2,7 @@ Feature: Items advanced browser filters
 
     Background: Initiate Platform Interface and create a project
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
-        And There is a project by the name of "items_list"
+        And I create a project by the name of "items_list"
         And I create a dataset with a random name
         And Dataset ontology has attributes "attr1" and "attr2"
         Then Add Multiple Labels "dog", "cat", "object"

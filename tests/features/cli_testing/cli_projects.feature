@@ -17,7 +17,7 @@ Feature: Cli Projects
         When I perform command:
             |projects|create|-p|to-delete-test-<random>_cli_project|
         Then I succeed
-        And There is a project by the name of "to-delete-test-<random>_cli_project"
+        And I create a project by the name of "to-delete-test-<random>_cli_project"
         And "to-delete-test-<random>_cli_project" in output
 
     @testrail-C4523071

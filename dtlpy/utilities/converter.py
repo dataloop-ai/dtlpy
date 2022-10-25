@@ -778,20 +778,19 @@ class Converter:
         metadata = None
         for path, subdirs, files in os.walk(local_items_path):
             for name in files:
-                item_filepath = None
                 ann_filepath = None
-                prefix = None
                 if not os.path.isfile(os.path.join(path, name)):
                     continue
+                item_filepath = os.path.join(path, name)
+                prefix = os.path.relpath(path, local_items_path)
+                coco_name = name
+                if prefix != '.':
+                    coco_name = os.path.join(prefix, name)
+                else:
+                    prefix = None
                 if from_format == AnnotationFormat.COCO:
-                    item_filepath = os.path.join(path, name)
-                    prefix = os.path.relpath(path, local_items_path)
-                    if prefix != '.':
-                        name = os.path.join(prefix, name)
-                    else:
-                        prefix = None
-                    ann_filepath = local_annotations_path[name]
-                    metadata = {'user': local_annotations_path[name]['metadata']}
+                    ann_filepath = local_annotations_path[coco_name]
+                    metadata = {'user': local_annotations_path[coco_name]['metadata']}
                 elif from_format == AnnotationFormat.VOC:
                     if name.endswith('.xml'):
                         continue
@@ -805,11 +804,9 @@ class Converter:
                         if ext == '' or ext is None or 'image' not in m:
                             continue
 
-                    item_filepath = os.path.join(path, name)
                     ann_filepath = os.path.join(path, '.'.join(name.split('.')[0:-1] + ['xml'])).replace(
                         local_items_path, local_annotations_path)
                 elif from_format == AnnotationFormat.YOLO:
-                    item_filepath = os.path.join(path, name)
                     ann_filepath = os.path.join(path, os.path.splitext(name)[0]) + '.txt'
                     ann_filepath = ann_filepath.replace(local_items_path, local_annotations_path)
                 pool.apply_async(

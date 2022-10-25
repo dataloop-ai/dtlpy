@@ -148,6 +148,7 @@ from tests.features.steps.tasks_repo import test_tasks_delete
 from tests.features.steps.tasks_repo import test_tasks_qa_task
 from tests.features.steps.tasks_repo import test_tasks_add_and_get_items
 from tests.features.steps.tasks_repo import test_task_context
+from tests.features.steps.tasks_repo import test_task_priority
 
 from tests.features.steps.assignments_repo import test_assignments_create
 from tests.features.steps.assignments_repo import test_assignments_get
@@ -184,3 +185,15 @@ from tests.features.steps.items_repo import test_upload_and_download_images
 from tests.features.steps.annotations_repo import test_rotated_box_points
 
 from tests.features.steps.webm_converter import test_failed_video_message
+
+from tests.features.steps.platform_urls import  test_platform_urls
+
+from tests.features.steps.annotation_entity import test_annotation_description
+
+from tests.features.steps.utilities import image_annotations_interface
+from tests.features.steps.utilities import items_interface
+from tests.features.steps.utilities import annotations_interface
+from tests.features.steps.utilities import projects_interface
+from tests.features.steps.utilities import datasets_interface
+
+from tests.features.steps.utilities import conveters_interface

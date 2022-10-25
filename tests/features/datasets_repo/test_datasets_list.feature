@@ -2,7 +2,7 @@ Feature: Datasets repository list service testing
 
     Background: Initiate Platform Interface and create a project
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
-        And There is a project by the name of "datasets_list"
+        And I create a project by the name of "datasets_list"
 
     @testrail-C4523089
     Scenario: List all datasets when no dataset exists

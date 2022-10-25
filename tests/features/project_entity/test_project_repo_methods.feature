@@ -2,7 +2,7 @@ Feature: Project Entity repo services
 
     Background: Initiate Platform Interface
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
-        And There is a project by the name of "project_repo_methods"
+        And I create a project by the name of "project_repo_methods"
 
     @testrail-C4523150
     Scenario: Delete project

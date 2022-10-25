@@ -2,7 +2,7 @@ Feature: Converter dataloop format
 
     Background: Initiate Platform Interface and create a project
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
-        And There is a project by the name of "dataloop_converter"
+        And I create a project by the name of "dataloop_converter"
 
    @converter.platform_dataset.delete
    @testrail-C4523081

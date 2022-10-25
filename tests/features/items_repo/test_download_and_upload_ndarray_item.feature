@@ -2,7 +2,7 @@ Feature: Upload and Download Numpy.Ndarray Item
 
     Background: Initiate Platform Interface
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
-        And There is a project by the name of "Project_test_annotation_add"
+        And I create a project by the name of "Project_test_annotation_add"
         And I create a dataset with a random name
         And I convert to Numpy.NdArray an item with the name "0000000162.jpg" and add it to context.array
         And I save item_metadata context.item_metadata

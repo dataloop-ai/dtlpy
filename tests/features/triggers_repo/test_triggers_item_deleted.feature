@@ -3,7 +3,7 @@ Feature: Triggers repository types - item
 
     Background: Initiate Platform Interface and create a project
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
-        And There is a project by the name of "triggers_deleted"
+        And I create a project by the name of "triggers_deleted"
         And I create a dataset with a random name
         And I upload item in "0000000162.jpg" to dataset
 

@@ -2,7 +2,7 @@ Feature: Datasets repository delete service testing
 
     Background: Initiate Platform Interface and create a project
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
-        And There is a project by the name of "datasets_delete"
+        And I create a project by the name of "datasets_delete"
 
     @testrail-C4523085
     Scenario: Delete dataset by name

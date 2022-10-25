@@ -2,7 +2,7 @@ Feature: Item Entity update item status
 
   Background: Initiate Platform Interface and create a project
     Given Platform Interface is initialized as dlp and Environment is set according to git branch
-    And There is a project by the name of "item_update_status"
+    And I create a project by the name of "item_update_status"
     And I create a dataset with a random name
     And There are items, path = "filters/image.jpg"
       | annotated_type={"box": 3, "polygon": 3} | metadata={"user.good": 3, "user.bad": 3} |

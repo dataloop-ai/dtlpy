@@ -8,7 +8,7 @@ def step_impl(context):
 
 @behave.then(u'I receive a list of "{codebase_count}" code bases')
 def step_impl(context, codebase_count):
-    assert context.codebase_list.items_count == int(codebase_count)
+    assert context.codebase_list.items_count == int(codebase_count), "Expected: {} , Got: {}".format(codebase_count, context.codebase_list.items_count)
 
 
 @behave.given(u'There are "{codebases_num}" code bases')

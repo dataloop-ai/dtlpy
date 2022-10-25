@@ -8,7 +8,7 @@ def step_impl(context):
 
 @behave.then(u'I receive a list of "{item_count}" items')
 def step_impl(context, item_count):
-    assert len(context.item_list) == int(item_count)
+    assert len(context.item_list) == int(item_count), "Expected: {} , Got: {}\n".format(item_count, len(context.item_list))
 
 
 @behave.when(u'I get all items, page size is "{page_size}"')

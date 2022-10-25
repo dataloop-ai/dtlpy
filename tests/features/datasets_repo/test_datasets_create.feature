@@ -2,7 +2,7 @@ Feature: Datasets repository create service testing
 
     Background: Initiate Platform Interface and create a project
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
-        And There is a project by the name of "datasets_create"
+        And I create a project by the name of "datasets_create"
 
     @testrail-C4523084
     Scenario: Create a dataset with a legal name

@@ -11,7 +11,7 @@ Feature: Projects repository get service testing
 
     @testrail-C4523147
     Scenario: Delete project by id
-        Given I create a project by the name of "project_delete_id"
+        When I create a project by the name of "project_delete_id"
         When I delete a project by the id of "project_delete_id"
         Then There are no projects by the name of "project_delete_id"
 

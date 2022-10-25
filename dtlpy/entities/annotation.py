@@ -1505,6 +1505,10 @@ class Annotation(entities.BaseEntity):
                     annotation.frames[frame.frame_num] = frame
 
             annotation.annotation_definition = annotation.frames[min(frames.actual_keys())].annotation_definition
+            if annotation.annotation_definition:
+                description = _json.get('description', None)
+                if description is not None:
+                    annotation.description = description
 
         return annotation
 

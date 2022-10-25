@@ -2,7 +2,7 @@
 #
 #    Background: Initiate Platform Interface and create a pipeline
 #        Given Platform Interface is initialized as dlp and Environment is set according to git branch
-#        And There is a project by the name of "feature_get"
+#        And I create a project by the name of "feature_get"
 #        And I create a dataset with a random name
 #        And I upload an item by the name of "test_item.jpg"
 #

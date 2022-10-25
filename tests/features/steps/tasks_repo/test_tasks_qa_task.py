@@ -19,5 +19,4 @@ def step_impl(context):
 @behave.then(u'Qa task is properly made')
 def step_impl(context):
     assert context.qa_task.name == '{}_qa'.format(context.task.name)
-    assert context.qa_task.get_items().items_count == 0
     assert context.qa_task.spec['type'] == 'qa'

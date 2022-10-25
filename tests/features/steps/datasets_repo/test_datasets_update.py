@@ -8,7 +8,7 @@ def step_impl(context, new_dataset_name):
                                   system_metadata=True)
 
 
-@behave.then(u'There is a dataset by the name of "{new_dataset_name}" in host')
+@behave.then(u'I create a dataset by the name of "{new_dataset_name}" in host')
 def step_impl(context, new_dataset_name):
     context.dataset_get = context.project.datasets.get(dataset_name=new_dataset_name)
     assert context.dataset_get.name == new_dataset_name

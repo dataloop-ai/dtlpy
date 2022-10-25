@@ -263,7 +263,6 @@ class Tasks:
                 [entities.Task.from_json(client_api=self._client_api,
                                          _json=_json, project=self._project, dataset=self._dataset)
                  for _json in response.json()['items']])
-            logger.warning('Deprecation Warning - return type will be pageEntity from version 1.46.0 not a list')
         else:
             logger.error('Platform error getting annotation task')
             raise exceptions.PlatformException(response)

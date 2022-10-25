@@ -2,7 +2,7 @@ Feature: Annotaions repository List service testing
 
     Background: Initiate Platform Interface
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
-        And There is a project by the name of "annotations_list"
+        And I create a project by the name of "annotations_list"
         And I create a dataset with a random name
 
     @testrail-C4523037

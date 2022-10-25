@@ -3,7 +3,7 @@ import os
 import shutil
 
 
-@behave.then(u'There is a dataset by the name of "{dataset_name}" in project "{project_name}"')
+@behave.then(u'I create a dataset by the name of "{dataset_name}" in project "{project_name}"')
 def step_impl(context, dataset_name, project_name):
     assert isinstance(dataset_name, str)
     project_name = project_name.replace("<random>", context.random)

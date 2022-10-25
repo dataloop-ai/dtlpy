@@ -2,7 +2,7 @@ Feature: Annotation Entity repo services
 
     Background: Initiate Platform Interface
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
-        And There is a project by the name of "Project_test_annotation_repo_methods"
+        And I create a project by the name of "Project_test_annotation_repo_methods"
         And I create a dataset with a random name
 
     @testrail-C4523044

@@ -2,7 +2,7 @@ Feature: Pipeline entity method testing
 
     Background: Initiate Platform Interface and create a pipeline
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
-        And There is a project by the name of "test_pipeline_get"
+        And I create a project by the name of "test_pipeline_get"
         And Directory "pipeline_get" is empty
 
     @pipelines.delete

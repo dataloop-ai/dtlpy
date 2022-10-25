@@ -228,7 +228,6 @@ class Ontologies:
             # log errors
             _ = [logger.warning(r[1]) for r in results if r[0] is False]
             # return good jobs
-            logger.warning('Deprecation Warning - return type will be pageEntity from version 1.46.0 not a list')
             return miscellaneous.List([r[1] for r in results if r[0] is True])
         else:
             filters = entities.Filters(resource=entities.FiltersResource.ONTOLOGY)
@@ -241,7 +240,6 @@ class Ontologies:
             pages = self.__list(filters=filters)
             for page in pages:
                 ontologies += page
-            logger.warning('Deprecation Warning - return type will be pageEntity from version 1.46.0 not a list')
             return miscellaneous.List(ontologies)
 
     def _protected_get(self, ontology_id):

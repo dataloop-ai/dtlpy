@@ -40,4 +40,3 @@ def step_impl(context):
             project_json.pop('isBlocked', None)
             assert list_json == project_json
     assert found is True
-    context.project.delete(True, True)

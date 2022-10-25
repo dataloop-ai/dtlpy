@@ -2,8 +2,8 @@ Feature: Model repository query testing
 
     Background: Initiate Platform Interface and create a project
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
-        And There is a project by the name of "models_list"
-        And There is a dataset by the name of "models_dataset"
+        And I create a project by the name of "models_list"
+        And I create a dataset by the name of "models_dataset" in the project
 
     @testrail-C4525320
     Scenario: List by model name

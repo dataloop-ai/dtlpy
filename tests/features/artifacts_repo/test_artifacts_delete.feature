@@ -3,7 +3,7 @@ Feature: Artifacts repository get artifact testing
 
   Background: Initiate Platform Interface and create a project
     Given Platform Interface is initialized as dlp and Environment is set according to git branch
-    And There is a project by the name of "test_artifacts_upload"
+    And I create a project by the name of "test_artifacts_upload"
     And Directory "artifacts_upload" is empty
     When I generate package by the name of "test_package" to "artifacts_upload"
     Given Context "artifact_filepath" is "artifacts_repo/artifact_item.jpg"

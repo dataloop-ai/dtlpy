@@ -1075,6 +1075,7 @@ class ApiClient:
             return_type = True
         return return_type, response
 
+    @Decorators.token_expired_decorator
     async def upload_file_async(self,
                                 to_upload,
                                 item_type,
@@ -1086,7 +1087,8 @@ class ApiClient:
                                 mode='skip',
                                 item_metadata=None,
                                 headers=None,
-                                item_description=None):
+                                item_description=None,
+                                **kwargs):
         headers = self._build_request_headers(headers=headers)
         pbar = None
         if callback is None:

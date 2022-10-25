@@ -2,7 +2,7 @@ Feature: Datasets repository download service testing
 
     Background: Initiate Platform Interface and create a project
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
-        And There is a project by the name of "datasets_download"
+        And I create a project by the name of "datasets_download"
 
     @testrail-C4523092
     Scenario: Download dataset with items

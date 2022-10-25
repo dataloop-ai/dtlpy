@@ -1,0 +1,17 @@
+import behave
+import time
+import random
+
+
+@behave.given('I create a dataset by the name of "{dataset_name}" in the project')
+def step_impl(context, dataset_name):
+    if hasattr(context.feature, 'dataloop_feature_dataset'):
+        context.dataset = context.feature.dataloop_feature_dataset
+    else:
+        num = random.randint(10000, 100000)
+        dataset_name = 'to-delete-test-{}_{}'.format(str(num), dataset_name)
+        context.dataset = context.project.datasets.create(dataset_name=dataset_name)
+        context.feature.dataloop_feature_dataset = context.dataset
+        time.sleep(5)
+
+    context.dataset_name = dataset_name

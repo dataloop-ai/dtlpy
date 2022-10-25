@@ -20,7 +20,7 @@ Feature: Settings Context
 
   @testrail-C4532533
   Scenario: check get setting by name
-    Given I create a project by the name of "to-delete-test-setting-get-name"
+    When I create a project by the name of "to-delete-test-setting-get-name"
     When add settings to the project
     And I get setting by "name"
     Then I check setting got is equal to the one created

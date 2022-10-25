@@ -144,7 +144,6 @@ class Artifacts:
                                              dataset=item._dataset,
                                              project=self.project)
                  for page in pages for item in page]
-        logger.warning('Deprecation Warning - return type will be pageEntity from version 1.46.0 not a list')
         return miscellaneous.List(items)
 
     def get(self,

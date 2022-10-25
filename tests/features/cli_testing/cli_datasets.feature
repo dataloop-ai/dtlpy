@@ -15,7 +15,7 @@ Feature: Cli Datasets
         When I perform command:
             |datasets|create|-p|to-delete-test-<random>_cli_datasets_project|-d|test_<random>_cli_datasets_dataset|
         Then I succeed
-        And There is a dataset by the name of "test_<random>_cli_datasets_dataset" in project "to-delete-test-<random>_cli_datasets_project"
+        And I create a dataset by the name of "test_<random>_cli_datasets_dataset" in project "to-delete-test-<random>_cli_datasets_project"
 
     @testrail-C4523068
     Scenario: Datasets list

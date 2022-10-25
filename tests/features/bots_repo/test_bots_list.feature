@@ -2,7 +2,7 @@ Feature: Bots repository list service testing
 
     Background: Background name
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
-        And There is a project by the name of "bots_list"
+        And I create a project by the name of "bots_list"
 
     @testrail-C4523064
     Scenario: List one bot

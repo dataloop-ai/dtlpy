@@ -26,7 +26,7 @@ def step_impl(context):
                 package = param[1]
         elif param[0] == 'revision':
             if param[1] != 'None':
-                revision = int(param[1])
+                revision = (param[1])
         elif param[0] == 'config':
             if param[1] != 'None':
                 config = json.loads(param[1])

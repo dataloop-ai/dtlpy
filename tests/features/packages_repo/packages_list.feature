@@ -2,7 +2,7 @@ Feature: Packages repository list service testing
 
     Background: Initiate Platform Interface and create a project
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
-        And There is a project by the name of "test_packages_list"
+        And I create a project by the name of "test_packages_list"
         And Directory "packages_list" is empty
         When I generate package by the name of "test-package" to "packages_list"
 

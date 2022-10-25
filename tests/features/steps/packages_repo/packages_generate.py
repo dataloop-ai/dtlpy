@@ -26,7 +26,6 @@ def step_impl(context, dir_path):
 
 @behave.when(u'I generate package by the name of "{package_name}" to "{src_path}"')
 def step_impl(context, package_name, src_path):
-
     if package_name == 'None':
         package_name = None
 

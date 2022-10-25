@@ -2,7 +2,7 @@ Feature: Bots repository get service testing
 
     Background: Initiate Platform Interface
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
-        Given There is a project by the name of "bot_delete"
+        Given I create a project by the name of "bot_delete"
 
     @testrail-C4523062
     Scenario: Delete bot by id

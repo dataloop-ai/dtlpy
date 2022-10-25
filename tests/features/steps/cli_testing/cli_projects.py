@@ -51,7 +51,7 @@ def step_impl(context):
             print(context.out.decode('utf-8'))
 
 
-@behave.then(u'There is a project by the name of "{project_name}"')
+@behave.then(u'I create a project by the name of "{project_name}"')
 def step_impl(context, project_name):
     assert isinstance(project_name, str)
     project_name = project_name.replace("<random>", context.random)
