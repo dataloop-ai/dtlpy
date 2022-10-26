@@ -959,6 +959,7 @@ class Converter:
         :param Callable conversion_func: Custom conversion service
         :return: the error log file path if there are errors
         """
+        self.dataset = dataset
         file_count = sum(len(files) for _, _, files in os.walk(local_path))
         reporter = Reporter(
             num_workers=file_count,
@@ -966,7 +967,6 @@ class Converter:
             print_error_logs=self.dataset._client_api.verbose.print_error_logs,
             client_api=self.dataset._client_api
         )
-        self.dataset = dataset
 
         pool = ThreadPool(processes=self.concurrency)
         i_item = 0
