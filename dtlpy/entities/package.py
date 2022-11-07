@@ -170,7 +170,7 @@ class Package(entities.DlEntity):
             slots = [entities.PackageSlot.from_json(_slot) for _slot in slots]
 
         codebase = _json.get('codebase', None)
-        if 'codebase' is not None:
+        if codebase is not None:
             codebase = entities.Codebase.from_json(_json=codebase, client_api=client_api)
 
         requirements = _json.get('requirements', None)
