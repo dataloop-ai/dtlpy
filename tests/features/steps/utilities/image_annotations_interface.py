@@ -57,10 +57,10 @@ def step_impl(context, annotation_type):
             label="label1",
             attributes=[{"attributes1": "semantic1"}]
         ),
-        "polygon": context.dl.Polyline(
+        "polygon": context.dl.Polygon(
             geo=[[25, 25], [50, 100], [70, 10]],
             label="label1",
-            attributes=[{"attributes1": "polyline1"}]
+            attributes=[{"attributes1": "polygon1"}]
         ),
         "polyline": context.dl.Polyline(
             geo=[[25, 25], [50, 100], [70, 10]],
@@ -153,10 +153,10 @@ def step_impl(context, annotation_type, annotation_description):
             attributes=[{"attributes1": "semantic1"}],
             description=annotation_description
         ),
-        "polygon": context.dl.Polyline(
+        "polygon": context.dl.Polygon(
             geo=[[25, 25], [50, 100], [70, 10]],
             label="label1",
-            attributes=[{"attributes1": "polyline1"}],
+            attributes=[{"attributes1": "polygon1"}],
             description=annotation_description
         ),
         "polyline": context.dl.Polyline(

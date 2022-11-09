@@ -26,6 +26,8 @@ class FiltersResource(str, Enum):
     ANNOTATION = "annotations"
     EXECUTION = "executions"
     PACKAGE = "packages"
+    DPK = "dpk"
+    APP = "app"
     SERVICE = "services"
     TRIGGER = "triggers"
     MODEL = "models"

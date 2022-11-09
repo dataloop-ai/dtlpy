@@ -1,13 +1,13 @@
-import subprocess
-import logging
 import getpass
 import json
-import jwt
-import sys
+import logging
 import os
+import subprocess
+import sys
+
+import jwt
 
 from dtlpy import repositories
-
 from .. import exceptions, entities
 
 logger = logging.getLogger(name='dtlpy')
@@ -107,6 +107,58 @@ class CommandExecutor:
     # noinspection PyUnusedLocal
     def init(self, args):
         self.dl.init()
+
+    def app(self, args):
+        if args.app == 'pack':
+            path = self.dl.dpks.pack()
+            logger.info(f'Packed to {path}')
+        elif args.app == 'init':
+            name = args.name
+            description = args.description
+            categories = args.categories
+            icon = args.icon
+            scope = args.scope
+            as_array = [name, description, categories, icon, scope]
+            if as_array.count(None) == len(as_array):  # No one value is initialized
+                dir_name = os.path.basename(os.getcwd())
+                name = input(f"Enter the name of the app (or press enter for '{dir_name}')")
+                if name == '':
+                    name = dir_name
+                description = input("Enter the description (or enter for empty)")
+                categories = input("Enter the categories (comma seperated, or enter for empty)")
+                icon = input("Enter the path to the icon (or enter for empty)")
+                scope = input("Enter the scope (or enter for 'organization')")
+            if scope == '' or scope is None:
+                scope = 'organization'
+            if categories is None:
+                categories = []
+            else:
+                categories = [c.strip() for c in categories.split(',')]
+            self.dl.dpks.init(name=name, description=description, categories=categories, icon=icon, scope=scope)
+        elif args.app == 'publish':
+            dpk = self.utils.get_dpks_repo(args).publish()
+            if dpk:
+                logger.info(f'Published the application: id={dpk.id}')
+            else:
+                logger.info("Couldn't publish the application")
+        elif args.app == 'update':
+            # TODO: I think it changed, not implemented
+            logger.info('App updated successfully')
+        elif args.app == 'install':
+            app = self.utils.get_apps_repo(args).install(
+                dpk=self.utils.get_dpks_repo(args).get(dpk_id=args.dpk_id),
+                organization_id=args.org_id
+            )
+            if app:
+                logger.info('App installed successfully')
+            else:
+                logger.info("Couldn't install the app")
+        elif args.app == 'pull':
+            succeed = self.dl.dpks.pull(dpk_name=args.dpk_name)
+            if succeed:
+                logger.info("Pulled successfully")
+            else:
+                logger.info("Couldn't pull")
 
     # noinspection PyUnusedLocal
     def checkout_state(self, args):
@@ -570,6 +622,30 @@ class Utils:
 
         assert isinstance(services, repositories.Services)
         return services
+
+    def get_apps_repo(self, args) -> repositories.Apps:
+        if args.project_name is not None:
+            project = self.dl.projects.get(project_name=args.project_name)
+            apps = project.apps
+        else:
+            try:
+                apps = self.dl.projects.get().apps
+            except Exception:
+                apps = self.dl.apps
+        assert isinstance(apps, repositories.Apps)
+        return apps
+
+    def get_dpks_repo(self, args) -> repositories.Dpks:
+        if args.project_name is not None:
+            project = self.dl.projects.get(project_name=args.project_name)
+            dpks = project.dpks
+        else:
+            try:
+                dpks = self.dl.projects.get().dpks
+            except Exception:
+                dpks = self.dl.dpks
+        assert isinstance(dpks, repositories.Dpks)
+        return dpks
 
     def get_triggers_repo(self, args):
         if args.project_name is not None:

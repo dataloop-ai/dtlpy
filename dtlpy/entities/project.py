@@ -60,7 +60,7 @@ class Project(entities.BaseEntity):
             'repositories',
             'projects triggers datasets items recipes packages codebases artifacts times_series services '
             'executions assignments tasks bots webhooks models analytics ontologies '
-            'drivers pipelines feature_sets features integrations settings'
+            'drivers pipelines feature_sets features integrations settings apps dpks'
         )
         datasets = repositories.Datasets(client_api=self._client_api, project=self)
         return reps(
@@ -90,7 +90,9 @@ class Project(entities.BaseEntity):
             settings=repositories.Settings(client_api=self._client_api,
                                            project=self,
                                            resource=self,
-                                           resource_type=entities.PlatformEntityType.PROJECT)
+                                           resource_type=entities.PlatformEntityType.PROJECT),
+            apps=repositories.Apps(client_api=self._client_api, project=self),
+            dpks=repositories.Dpks(client_api=self._client_api, project=self)
         )
 
     @property
@@ -136,6 +138,15 @@ class Project(entities.BaseEntity):
     def executions(self):
         assert isinstance(self._repositories.executions, repositories.Executions)
         return self._repositories.executions
+
+    @property
+    def apps(self):
+        assert isinstance(self._repositories.apps, repositories.Apps)
+        return self._repositories.apps
+    @property
+    def dpks(self):
+        assert isinstance(self._repositories.dpks, repositories.Dpks)
+        return self._repositories.dpks
 
     @property
     def projects(self):
@@ -244,7 +255,7 @@ class Project(entities.BaseEntity):
     @classmethod
     def from_json(cls, _json, client_api, is_fetched=True):
         """
-        Build a Project entity object from a json
+        Build a Project object from a json
 
         :param bool is_fetched: is Entity fetched from Platform
         :param dict _json: _json response from host
@@ -269,9 +280,9 @@ class Project(entities.BaseEntity):
 
     def to_json(self):
         """
-        Returns platform _json format of object
+        Returns platform _json format of project object
 
-        :return: platform json format of object
+        :return: platform json format of project object
         :rtype: dict
         """
         output_dict = attr.asdict(self,
@@ -295,9 +306,9 @@ class Project(entities.BaseEntity):
         """
         Delete the project forever!
 
-        :param bool sure: are you sure you want to delete?
-        :param bool really: really really?
-        :return: True
+        :param bool sure: Are you sure you want to delete?
+        :param bool really: Really really sure?
+        :return: True if success, error if not
         :rtype: bool
         """
         return self.projects.delete(project_id=self.id,
@@ -308,7 +319,7 @@ class Project(entities.BaseEntity):
         """
         Update the project
 
-        :param bool system_metadata: to update system metadata
+        :param bool system_metadata: optional - True, if you want to change metadata system
         :return: Project object
         :rtype: dtlpy.entities.project.Project
         """
@@ -316,7 +327,7 @@ class Project(entities.BaseEntity):
 
     def checkout(self):
         """
-        Checkout the project
+        Checkout (switch) to a project to work on.
 
         """
         self.projects.checkout(project=self)
@@ -333,7 +344,7 @@ class Project(entities.BaseEntity):
         Add a member to the project.
 
         :param str email: member email
-        ::param role: dl.MemberRole.OWNER, dl.MemberRole.DEVELOPER, dl.MemberRole.ANNOTATOR, dl.MemberRole.ANNOTATION_MANAGER
+        :param role: The required role for the user. Use the enum dl.MemberRole
         :return: dict that represent the user
         :rtype: dict
         """
@@ -344,7 +355,7 @@ class Project(entities.BaseEntity):
         Update member's information/details from the project.
 
         :param str email: member email
-        :param role: dl.MemberRole.OWNER, dl.MemberRole.DEVELOPER, dl.MemberRole.ANNOTATOR, dl.MemberRole.ANNOTATION_MANAGER
+        :param role: The required role for the user. Use the enum dl.MemberRole
         :return: dict that represent the user
         :rtype: dict
         """
@@ -355,7 +366,7 @@ class Project(entities.BaseEntity):
         Remove a member from the project.
 
         :param str email: member email
-        :return: dict that represent the user
+        :return: dict that represents the user
         :rtype: dict
         """
         return self.projects.remove_member(email=email, project_id=self.id)
@@ -364,7 +375,7 @@ class Project(entities.BaseEntity):
         """
         List the project members.
 
-        :param role: dl.MemberRole.OWNER, dl.MemberRole.DEVELOPER, dl.MemberRole.ANNOTATOR, dl.MemberRole.ANNOTATION_MANAGER
+        :param role: The required role for the user. Use the enum dl.MemberRole
         :return: list of the project members
         :rtype: list
         """

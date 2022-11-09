@@ -465,15 +465,18 @@ class Models:
 
         return True
 
-    def deploy(self, model_id: str):
+    def deploy(self, model_id: str, service_config=None):
         """
         Deploy a trained model. This will create a service that will execute predictions
 
         :param model_id: id of the model to deploy
+        :param dict service_config : Service object as dict. Contains the spec of the default service to create.
         :return:
         """
+        payload = {'serviceConfig': service_config}
         success, response = self._client_api.gen_request(req_type="post",
-                                                         path=f"/ml/models/{model_id}/deploy")
+                                                         path=f"/ml/models/{model_id}/deploy",
+                                                         json_req=payload)
         if not success:
             raise exceptions.PlatformException(response)
 

@@ -86,13 +86,13 @@ class Assignments:
 
         **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned as *owner* of the annotation task.
 
-        :param list project_ids: list of project ids
-        :param str status: assignment status
-        :param str assignment_name: assignment name
-        :param str assignee_id: the user that assignee the assignment to it
-        :param int pages_size: pages size
-        :param int page_offset: page offset
-        :param str task_id: task id
+        :param list project_ids: search assignment by given list of project ids
+        :param str status: search assignment by a given task status
+        :param str assignment_name: search assignment by a given assignment name
+        :param str assignee_id: the user email that assignee the assignment to it
+        :param int pages_size: pages size of the output generator
+        :param int page_offset: page offset of the output generator
+        :param str task_id: search assignment by given task id
         :return: List of Assignment objects
         :rtype: miscellaneous.List[dtlpy.entities.assignment.Assignment]
 
@@ -225,8 +225,8 @@ class Assignments:
 
         **Prerequisites**: All users.
 
-        :param str assignment_name: assignment name
-        :param str assignment_id: assignment id
+        :param str assignment_name: the name of the assignment
+        :param str assignment_id: the Id of the assignment
         :param dtlpy.entities.assignment.Assignment assignment: assignment object
 
         **Example**:
@@ -256,12 +256,12 @@ class Assignments:
 
         **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned as *owner* of the annotation task.
 
-        :param str assignee_id: the id of the user whom you want to assign the assignment to
+        :param str assignee_id: the email of the user that want to assign the assignment
         :param dtlpy.entities.assignment.Assignment assignment: assignment object
-        :param assignment_id: assignment id
+        :param assignment_id: the Id of the assignment
         :param dtlpy.entities.task.Task task: task object
-        :param str task_id: task id
-        :param bool wait: wait for the command to finish
+        :param str task_id: the Id of the task that include the assignment
+        :param bool wait: wait until reassign assignment finish
         :return: Assignment object
         :rtype: dtlpy.entities.assignment.Assignment
 
@@ -320,12 +320,12 @@ class Assignments:
 
         **Example**:
 
-        :param dtlpy.entities.assignment.Workload workload: workload object that contain the assignees and the work load
+        :param dtlpy.entities.assignment.Workload workload: list of WorkloadUnit objects. Customize distribution (percentage) between the task assignees. For example: [dl.WorkloadUnit(annotator@hi.com, 80), dl.WorkloadUnit(annotator2@hi.com, 20)]
         :param dtlpy.entities.assignment.Assignment assignment: assignment object
-        :param str assignment_id: assignment id
-        :param dtlpy.entities.task.Task task: task object
-        :param str task_id: task id
-        :param bool wait: wait for the command to finish
+        :param str assignment_id: the Id of the assignment
+        :param dtlpy.entities.task.Task task: the task object that include the assignment
+        :param str task_id: the Id of the task that include the assignment
+        :param bool wait: wait until redistribute assignment finish
         :return: Assignment object
         :rtype: dtlpy.entities.assignment.Assignment assignment
 
@@ -433,10 +433,10 @@ class Assignments:
 
         **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned as *owner* of the annotation task.
 
-        :param str assignee_id: the assignee for the assignment
-        :param dtlpy.entities.task.Task task: task entity
+        :param str assignee_id: the email of the user that want to assign the assignment
+        :param dtlpy.entities.task.Task task: the task object that include the assignment
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
-        :param list items: list of items
+        :param list items: list of items (item Id or objects) to insert to the assignment
         :return: Assignment object
         :rtype: dtlpy.entities.assignment.Assignment assignment
 
@@ -510,10 +510,10 @@ class Assignments:
 
         **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned as *owner* of the annotation task.
 
-        :param dtlpy.entities.assignment.Assignment assignment: assignment entity
-        :param str assignment_id: assignment id
-        :param str assignment_name: assignment name
-        :param dtlpy.entities.dataset.Dataset dataset: dataset entity
+        :param dtlpy.entities.assignment.Assignment assignment: assignment object
+        :param assignment_id: the Id of the assignment
+        :param str assignment_name: the name of the assignment
+        :param dtlpy.entities.dataset.Dataset dataset: dataset object, the dataset that refer to the assignment
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :return: pages of the items
         :rtype: dtlpy.entities.paged_entities.PagedEntities
@@ -560,10 +560,10 @@ class Assignments:
 
         **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned as *owner* of the annotation task.
 
-        :param str status: status
-        :param str operation: created/deleted
-        :param str item_id: item id
-        :param str assignment_id: assignment id
+        :param str status: string the describes the status
+        :param str operation: the status action need 'create' or 'delete'
+        :param str item_id: item id that want to set his status
+        :param assignment_id: the Id of the assignment
         :return: True id success
         :rtype: bool
 

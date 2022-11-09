@@ -69,4 +69,6 @@ from .driver import Driver, ExternalStorage
 from .setting import Role, PlatformEntityType, SettingsValueTypes, SettingsTypes, SettingsSectionNames, SettingScope, \
     BaseSetting, UserSetting, Setting
 from .reflect_dict import ReflectDict
+from .dpk import Dpk, Panel, Hook, Components
+from .app import App
 from .resource_execution import ResourceExecution

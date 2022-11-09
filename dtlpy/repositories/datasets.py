@@ -98,8 +98,8 @@ class Datasets:
 
         **Prerequisites**: You must be an *owner* or *developer* to use this method.
 
-        :param str dataset_name: dataset name
-        :param str dataset_id: dataset id
+        :param str dataset_name: The Name of the dataset
+        :param str dataset_id: The Id of the dataset
         :param dtlpy.entities.dataset.Dataset dataset: dataset object
 
         **Example**:
@@ -129,9 +129,9 @@ class Datasets:
 
         You must provide at least ONE of the following params: dataset_id, dataset_name.
 
-        :param str identifier: project name or partial id
-        :param str dataset_name: dataset name
-        :param str dataset_id: dataset id
+        :param str identifier: project name or partial id that you wish to switch
+        :param str dataset_name: The Name of the dataset
+        :param str dataset_id: The Id of the dataset
         :param dtlpy.entities.dataset.Dataset dataset: dataset object
 
         **Example**:
@@ -222,8 +222,8 @@ class Datasets:
 
         :param str dataset_name: optional - search by name
         :param str dataset_id: optional - search by id
-        :param bool checkout: True to checkout
-        :param bool fetch: optional - fetch entity from platform, default taken from cookie
+        :param bool checkout: set the dataset as a default dataset object (cookies)
+        :param bool fetch: optional - fetch entity from platform (True), default taken from cookie
         :return: Dataset object
         :rtype: dtlpy.entities.dataset.Dataset
 
@@ -364,8 +364,8 @@ class Datasets:
         You must provide at least ONE of the following params: dataset, dataset_name, dataset_id.
 
         :param dtlpy.entities.dataset.Dataset dataset: dataset object
-        :param str dataset_name: dataset name
-        :param str dataset_id: dataset id
+        :param str dataset_name: The Name of the dataset
+        :param str dataset_id: The Id of the dataset
         :return: DirectoryTree
 
         **Example**:
@@ -461,7 +461,7 @@ class Datasets:
 
     def merge(self,
               merge_name: str,
-              dataset_ids: str,
+              dataset_ids: list,
               project_ids: str,
               with_items_annotations: bool = True,
               with_metadata: bool = True,
@@ -473,11 +473,11 @@ class Datasets:
         **Prerequisites**: You must be an *owner* or *developer* to use this method.
 
         :param str merge_name: new dataset name
-        :param str dataset_ids: id's of the datatsets you wish to merge
-        :param str project_ids: project id
-        :param bool with_items_annotations: with items annotations
-        :param bool with_metadata: with metadata
-        :param bool with_task_annotations_status: with task annotations status
+        :param list dataset_ids: list id's of the datatsets you wish to merge
+        :param str project_ids: the project id that include the datasets
+        :param bool with_items_annotations: true to merge with items annotations
+        :param bool with_metadata: true to merge with metadata
+        :param bool with_task_annotations_status: true to merge with task annotations' status
         :param bool wait: wait for the command to finish
         :return: True if success
         :rtype: bool
@@ -486,7 +486,7 @@ class Datasets:
 
         .. code-block:: python
 
-            project.datasets.clone(dataset_ids=['dataset_id1','dataset_id2'],
+            project.datasets.merge(dataset_ids=['dataset_id1','dataset_id2'],
                                   merge_name='dataset_merge_name',
                                   with_metadata=True,
                                   with_items_annotations=False,
@@ -527,7 +527,7 @@ class Datasets:
 
         **Prerequisites**: You must be in the role of an *owner* or *developer*.
 
-        :param str dataset_id: to sync dataset
+        :param str dataset_id: The Id of the dataset to sync
         :param bool wait: wait for the command to finish
         :return: True if success
         :rtype: bool
@@ -565,7 +565,7 @@ class Datasets:
                driver_id: str = None,
                checkout: bool = False,
                expiration_options: entities.ExpirationOptions = None,
-               index_driver: entities.IndexDriver = entities.IndexDriver.V1,
+               index_driver: entities.IndexDriver = None,
                recipe_id: str = None
                ) -> entities.Dataset:
         """
@@ -573,13 +573,13 @@ class Datasets:
 
         **Prerequisites**: You must be in the role of an *owner* or *developer*.
 
-        :param str dataset_name: dataset name
+        :param str dataset_name: The Name of the dataset
         :param list labels: dictionary of {tag: color} or list of label entities
         :param list attributes: dataset's ontology's attributes
         :param list ontology_ids: optional - dataset ontology
         :param dtlpy.entities.driver.Driver driver: optional - storage driver Driver object or driver name
         :param str driver_id: optional - driver id
-        :param bool checkout: bool. cache the dataset to work locally
+        :param bool checkout: set the dataset as a default dataset object (cookies)
         :param ExpirationOptions expiration_options: dl.ExpirationOptions object that contain definitions for dataset like MaxItemDays
         :param str index_driver: dl.IndexDriver, dataset driver version
         :param str recipe_id: optional - recipe id
@@ -608,8 +608,8 @@ class Datasets:
         # get creator from token
         payload = {'name': dataset_name,
                    'projects': [self.project.id],
-                   'createDefaultRecipe': create_default_recipe,
-                   'indexDriver': index_driver}
+                   'createDefaultRecipe': create_default_recipe
+                   }
 
         if driver_id is None and driver is not None:
             if isinstance(driver, entities.Driver):
@@ -626,6 +626,8 @@ class Datasets:
 
         if expiration_options:
             payload['expirationOptions'] = expiration_options.to_json()
+        if index_driver is not None:
+            payload['indexDriver'] = index_driver
 
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/datasets',
@@ -709,9 +711,9 @@ class Datasets:
         :param dtlpy.entities.dataset.Dataset dataset: dataset object
         :param str local_path: local folder or filename to save to.
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
-        :param list annotation_options: download annotations options: list(dl.ViewAnnotationOptions)
+        :param list annotation_options: type of download annotations: list(dl.ViewAnnotationOptions)
         :param dtlpy.entities.filters.Filters annotation_filters: Filters entity to filter annotations for download
-        :param bool overwrite: optional - default = False
+        :param bool overwrite: optional - default = False to overwrite the existing files
         :param int thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :param bool with_text: optional - add text to annotations, default = False
         :param str remote_path: DEPRECATED and ignored

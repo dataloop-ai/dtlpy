@@ -170,7 +170,7 @@ class Package(entities.DlEntity):
             slots = [entities.PackageSlot.from_json(_slot) for _slot in slots]
 
         codebase = _json.get('codebase', None)
-        if 'codebase' is not None:
+        if codebase is not None:
             codebase = entities.Codebase.from_json(_json=codebase, client_api=client_api)
 
         requirements = _json.get('requirements', None)
@@ -453,7 +453,7 @@ class Package(entities.DlEntity):
         :param list modules: list of PackageModule
         :param str revision_increment: optional - str - version bumping method - major/minor/patch - default = None
         :param  bool service_update: optional - bool - update the service
-        :param  dict service_config: optional - json of service - a service that have config from the main service if wanted
+        :param dict service_config : Service object as dict. Contains the spec of the default service to create.
         :param  str package_type: default is "faas", one of "app", "ml"
         :return: package entity
         :rtype: dtlpy.entities.package.Package
@@ -607,9 +607,23 @@ class Package(entities.DlEntity):
 
     @staticmethod
     def get_ml_metadata(cls=None,
+                        available_methods=None,
                         output_type=entities.AnnotationType.CLASSIFICATION,
+                        input_type='image',
                         default_configuration: dict = None):
-        available_methods = ['predict', 'train', 'evaluate']
+        """
+        Create ML metadata for the package
+        :param cls: ModelAdapter class, to get the list of available_methods
+        :param available_methods: available user function on the adapter.  ['load', 'save', 'predict', 'train', 'evaluate']
+        :param output_type: annotation type the model create, e.g. dl.AnnotationType.CLASSIFICATION
+        :param input_type: input file type the model gets, one of ['image', 'video', 'txt']
+        :param default_configuration: default service configuration for the deployed services
+        :return:
+        """
+        if available_methods is None:
+            # default
+            available_methods = ['predict', 'train', 'evaluate']
+
         if cls is not None:
             available_methods = [
                 {name: 'BaseModelAdapter' not in getattr(cls, name).__qualname__}
@@ -620,6 +634,7 @@ class Package(entities.DlEntity):
         metadata = {
             'system': {'ml': {'defaultConfiguration': default_configuration,
                               'outputType': output_type,
+                              'inputType': input_type,
                               'supportedMethods': available_methods
                               }}}
         return metadata

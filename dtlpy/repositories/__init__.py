@@ -46,3 +46,5 @@ from .integrations import Integrations
 from .drivers import Drivers
 from .settings import Settings
 from .resource_executions import ResourceExecutions
+from .apps import Apps
+from .dpks import Dpks

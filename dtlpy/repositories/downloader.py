@@ -135,6 +135,8 @@ class Downloader:
                                      values=annotation_filter_or.values,
                                      operator=annotation_filter_or.operator,
                                      method=entities.FiltersMethod.OR)
+            else:
+                annotation_filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION)
 
             items_to_download = self.items_repository.list(filters=filters)
             num_items = items_to_download.items_count
@@ -578,29 +580,19 @@ class Downloader:
             return item, '', False
 
         if not item.filename.endswith('.json') or \
-                'system' not in item.metadata or \
-                'shebang' not in item.metadata['system'] or \
-                item.metadata['system']['shebang']['dltype'] != 'link':
+                item.metadata.get('system', {}).get('shebang', {}).get('dltype', '') != 'link':
             return item, '', False
 
         # recursively get next id link item
         while item.filename.endswith('.json') and \
-                'system' in item.metadata and \
-                'shebang' in item.metadata['system'] and \
-                'dltype' in item.metadata['system']['shebang'] and \
-                item.metadata['system']['shebang']['dltype'] == 'link' and \
-                'linkInfo' in item.metadata['system']['shebang'] and \
-                item.metadata['system']['shebang']['linkInfo']['type'] == 'id':
+                item.metadata.get('system', {}).get('shebang', {}).get('dltype', '') == 'link' and \
+                item.metadata.get('system', {}).get('shebang', {}).get('linkInfo', {}).get('type', '') == 'id':
             item = item.dataset.items.get(item_id=item.metadata['system']['shebang']['linkInfo']['ref'])
 
         # check if link
         if item.filename.endswith('.json') and \
-                'system' in item.metadata and \
-                'shebang' in item.metadata['system'] and \
-                'dltype' in item.metadata['system']['shebang'] and \
-                item.metadata['system']['shebang']['dltype'] == 'link' and \
-                'linkInfo' in item.metadata['system']['shebang'] and \
-                item.metadata['system']['shebang']['linkInfo']['type'] == 'url':
+                item.metadata.get('system', {}).get('shebang', {}).get('dltype', '') == 'link' and \
+                item.metadata.get('system', {}).get('shebang', {}).get('linkInfo', {}).get('type', '') == 'url':
             url = item.metadata['system']['shebang']['linkInfo']['ref']
             return item, url, True
         else:

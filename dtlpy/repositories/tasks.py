@@ -119,8 +119,8 @@ class Tasks:
         **Prerequisites**: You must be in the role of an *owner* or *developer* or *annotation manager* who has been assigned the task.
 
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
-        :param list project_ids: list of project ids
-        :return: Paged entity
+        :param list project_ids: list of project ids of the required tasks
+        :return: Paged entity - task pages generator
         :rtype: dtlpy.entities.paged_entities.PagedEntities
 
         **Example**:
@@ -182,22 +182,22 @@ class Tasks:
             filters: entities.Filters = None
     ) -> Union[miscellaneous.List[entities.Task], entities.PagedEntities]:
         """
-        List all Annotation Tasks.
+        List all tasks.
 
         **Prerequisites**: You must be in the role of an *owner* or *developer* or *annotation manager* who has been assigned the task.
 
-        :param project_ids: list of project ids
-        :param str status: status
-        :param str task_name: task name
-        :param int pages_size: pages size
-        :param int page_offset: page offset
-        :param dtlpy.entities.recipe.Recipe recipe: recipe entity
-        :param str creator: creator
-        :param dtlpy.entities.assignment.Assignment recipe assignments: assignments entity
-        :param double min_date: double min date
-        :param double max_date: double max date
-        :param dtlpy.entities.filters.Filters filters: dl.Filters entity to filters items
-        :return: List of Annotation Task objects
+        :param project_ids: search tasks by given list of project ids
+        :param str status: search tasks by a given task status
+        :param str task_name: search tasks by a given task name
+        :param int pages_size: pages size of the output generator
+        :param int page_offset: page offset of the output generator
+        :param dtlpy.entities.recipe.Recipe recipe: Search tasks that use a given recipe. Provide the required recipe object
+        :param str creator: search tasks created by a given creator (user email)
+        :param dtlpy.entities.assignment.Assignment recipe assignments: assignments object
+        :param double min_date: search all tasks created AFTER a given date, use a milliseconds format. For example: 1661780622008
+        :param double max_date: search all tasks created BEFORE a given date, use a milliseconds format. For example: 1661780622008
+        :param dtlpy.entities.filters.Filters filters: dl.Filters entity to filters tasks using DQL
+        :return: List of Task objects
 
         **Example**:
 
@@ -271,7 +271,7 @@ class Tasks:
 
     def get(self, task_name=None, task_id=None) -> entities.Task:
         """
-        Get an Annotation Task object to use in your code.
+        Get a Task object to use in your code.
 
         **Prerequisites**: You must be in the role of an *owner* or *developer* or *annotation manager* who has been assigned the task.
 
@@ -338,9 +338,9 @@ class Tasks:
 
         **Prerequisites**: You must be in the role of an *owner* or *developer* or *annotation manager* who has been assigned the task.
 
-        :param str task_name: task name
-        :param str task_id: task id
-        :param dtlpy.entities.task.Task task: task entity
+        :param str task_name: the name of the task
+        :param str task_id: the Id of the task
+        :param dtlpy.entities.task.Task task: the task object
 
         **Example**:
 
@@ -363,14 +363,14 @@ class Tasks:
                task_id: str = None,
                wait: bool = True):
         """
-        Delete an Annotation Task.
+        Delete the Task.
 
         **Prerequisites**: You must be in the role of an *owner* or *developer* or *annotation manager* who created that task.
 
-        :param dtlpy.entities.task.Task task: task entity
-        :param str task_name: task name
-        :param str task_id: task id
-        :param bool wait: wait for the command to finish
+        :param dtlpy.entities.task.Task task: the task object
+        :param str task_name: the name of the task
+        :param str task_id: the Id of the task
+        :param bool wait: wait until delete task finish
         :return: True is success
         :rtype: bool
 
@@ -415,13 +415,13 @@ class Tasks:
                system_metadata=False
                ) -> entities.Task:
         """
-        Update an Annotation Task.
+        Update a Task.
 
         **Prerequisites**: You must be in the role of an *owner* or *developer* or *annotation manager* who created that task.
 
-        :param dtlpy.entities.task.Task task: task entity
+        :param dtlpy.entities.task.Task task: the task object
         :param bool system_metadata: True, if you want to change metadata system
-        :return: Annotation Task object
+        :return: Task object
         :rtype: dtlpy.entities.task.Task
 
         **Example**:
@@ -466,19 +466,19 @@ class Tasks:
 
         **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned to be *owner* of the annotation task.
 
-        :param dtlpy.entities.task.Task task: parent task
-        :param list assignee_ids: list of assignee
-        :param float due_date: date by which the task should be finished; for example, due_date = datetime.datetime(day= 1, month= 1, year= 2029).timestamp()
-        :param entities.Filters filters: filter to the task
-        :param List[entities.Item] items: item to insert to the task
-        :param entities.Filters query: filter to the task
-        :param List[WorkloadUnit] workload: list WorkloadUnit for the task assignee
+        :param dtlpy.entities.task.Task task: the parent annotation task object
+        :param list assignee_ids: list the QA task assignees (contributors) that should be working on the task. Provide a list of users' emails
+        :param float due_date: date by which the QA task should be finished; for example, due_date=datetime.datetime(day=1, month=1, year=2029).timestamp()
+        :param entities.Filters filters: dl.Filters entity to filter items for the task
+        :param List[entities.Item] items: list of items (item Id or objects) to insert to the task
+        :param dict DQL query: filter items for the task
+        :param List[WorkloadUnit] workload: list of WorkloadUnit objects. Customize distribution (percentage) between the task assignees. For example: [dl.WorkloadUnit(annotator@hi.com, 80), dl.WorkloadUnit(annotator2@hi.com, 20)]
         :param dict metadata: metadata for the task
-        :param list available_actions: list of available actions to the task
-        :param bool wait: wait for the command to finish
-        :param int batch_size: Pulling batch size (items) . Restrictions - Min 3, max 100
-        :param int max_batch_workload: Max items in assignment . Restrictions - Min batchSize + 2 , max batchSize * 2
-        :param list allowed_assignees:  It’s like the workload, but without percentage.
+        :param list available_actions: list of available actions (statuses) that will be available for the task items; The default statuses are: "Approved" and "Discarded"
+        :param bool wait: wait until create task finish
+        :param int batch_size: Pulling batch size (items), use with pulling allocation method. Restrictions - Min 3, max 100
+        :param int max_batch_workload: Max items in assignment, use with pulling allocation method. Restrictions - Min batchSize + 2, max batchSize * 2
+        :param list allowed_assignees: list the task assignees (contributors) that should be working on the task. Provide a list of users' emails
         :param entities.TaskPriority priority: priority of the task options in entities.TaskPriority
         :return: task object
         :rtype: dtlpy.entities.task.Task
@@ -569,34 +569,34 @@ class Tasks:
                priority=entities.TaskPriority.MEDIUM
                ) -> entities.Task:
         """
-        Create a new Annotation Task.
+        Create a new Task (Annotation or QA).
 
         **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned to be *owner* of the annotation task.
 
-        :param str task_name: task name
-        :param float due_date: date by which the task should be finished; for example, due_date = datetime.datetime(day= 1, month= 1, year= 2029).timestamp()
-        :param list assignee_ids: list of assignee
-        :param List[WorkloadUnit] workload: list WorkloadUnit for the task assignee
-        :param entities.Dataset dataset: dataset entity
-        :param str task_owner: task owner
-        :param str task_type: "annotation" or "qa"
-        :param str task_parent_id: optional if type is qa - parent task id
-        :param str project_id: project id
-        :param str recipe_id: recipe id
-        :param list assignments_ids: assignments ids
+        :param str task_name: the name of the task
+        :param float due_date: date by which the task should be finished; for example, due_date=datetime.datetime(day=1, month=1, year=2029).timestamp()
+        :param list assignee_ids: list the task assignees (contributors) that should be working on the task. Provide a list of users' emails
+        :param List[WorkloadUnit] List[WorkloadUnit] workload: list of WorkloadUnit objects. Customize distribution (percentage) between the task assignees. For example: [dl.WorkloadUnit(annotator@hi.com, 80), dl.WorkloadUnit(annotator2@hi.com, 20)]
+        :param entities.Dataset dataset: dataset object, the dataset that refer to the task
+        :param str task_owner: task owner. Provide user email
+        :param str task_type: task type "annotation" or "qa"
+        :param str task_parent_id: optional if type is qa - parent annotation task id
+        :param str project_id: the Id of the project where task will be created
+        :param str recipe_id: recipe id for the task
+        :param list assignments_ids: assignments ids to the task
         :param dict metadata: metadata for the task
-        :param entities.Filters filters: filter to the task
-        :param List[entities.Item] items: item to insert to the task
-        :param entities.Filters query: filter to the task
-        :param list available_actions: list of available actions to the task
-        :param bool wait: wait for the command to finish
+        :param entities.Filters filters: dl.Filters entity to filter items for the task
+        :param List[entities.Item] items: list of items (item Id or objects) to insert to the task
+        :param dict DQL query: filter items for the task
+        :param list available_actions: list of available actions (statuses) that will be available for the task items; The default statuses are: "Completed" and "Discarded"
+        :param bool wait: wait until create task finish
         :param entities.Filters check_if_exist: dl.Filters check if task exist according to filter
-        :param int limit: task limit
-        :param int batch_size: Pulling batch size (items) . Restrictions - Min 3, max 100
-        :param int max_batch_workload: Max items in assignment . Restrictions - Min batchSize + 2 , max batchSize * 2
-        :param list allowed_assignees:  It’s like the workload, but without percentage.
+        :param int limit: the limit items that the task can include
+        :param int  batch_size: Pulling batch size (items), use with pulling allocation method. Restrictions - Min 3, max 100
+        :param int max_batch_workload: max_batch_workload: Max items in assignment, use with pulling allocation method. Restrictions - Min batchSize + 2, max batchSize * 2
+        :param list allowed_assignees: list the task assignees (contributors) that should be working on the task. Provide a list of users' emails
         :param entities.TaskPriority priority: priority of the task options in entities.TaskPriority
-        :return: Annotation Task object
+        :return: Task object
         :rtype: dtlpy.entities.task.Task
 
         **Example**:
@@ -775,15 +775,15 @@ class Tasks:
 
         **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned to be *owner* of the annotation task.
 
-        :param dtlpy.entities.task.Task task: task entity
-        :param str task_id: task id
+        :param dtlpy.entities.task.Task task: task object
+        :param str task_id: the Id of the task
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
-        :param list items: list of items to add to the task
+        :param list items: list of items (item Ids or objects) to add to the task
         :param list assignee_ids: list to assignee who works in the task
-        :param dict query: query to filter the items use it
-        :param list workload: list of the work load ber assignee and work load
-        :param int limit: task limit
-        :param bool wait: wait for the command to finish
+        :param dict query: query to filter the items for the task
+        :param list workload: list of WorkloadUnit objects. Customize distribution (percentage) between the task assignees. For example: [dl.WorkloadUnit(annotator@hi.com, 80), dl.WorkloadUnit(annotator2@hi.com, 20)]
+        :param int limit: the limit items that task can include
+        :param bool wait: wait until add items will to finish
         :return: task entity
         :rtype: dtlpy.entities.task.Task
 
@@ -864,12 +864,12 @@ class Tasks:
 
         **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned to be *owner* of the annotation task.
 
-        :param dtlpy.entities.task.Task task: task entity
-        :param str task_id: task id
+        :param dtlpy.entities.task.Task task: task object
+        :param str task_id: the Id of the task
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
-        :param dict query: query yo filter the items use it
+        :param dict query: query to filter the items use it
         :param list items: list of items to add to the task
-        :param bool wait: wait for the command to finish
+        :param bool wait: wait until remove items finish
         :return: True if success and an error if failed
         :rtype: bool
 
@@ -935,9 +935,9 @@ class Tasks:
 
         If a filters param is provided, you will receive a PagedEntity output of the task items. If no filter is provided, you will receive a list of the items.
 
-        :param str task_id: task id
-        :param str task_name: task name
-        :param dtlpy.entities.dataset.Dataset dataset: dataset entity
+        :param str task_id: the Id of the task
+        :param str task_name: the name of the task
+        :param dtlpy.entities.dataset.Dataset dataset: dataset object that refer to the task
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :return: list of the items or PagedEntity output of items
         :rtype: list or dtlpy.entities.paged_entities.PagedEntities
@@ -971,8 +971,8 @@ class Tasks:
         **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned to be *owner* of the annotation task.
 
         :param str status: string the describes the status
-        :param str operation:  'create' or 'delete'
-        :param str task_id: task id
+        :param str operation: the status action need 'create' or 'delete'
+        :param str task_id: the Id of the task
         :param list item_ids: List[str] id items ids
         :return: True if success
         :rtype: bool

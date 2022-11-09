@@ -67,6 +67,13 @@ class Analytics:
         return df
 
     def report_metrics(self, samples):
+        """
+        Report metrics
+
+        :param samples: table samples to report
+        :return: True/ False
+        :rtype: bool
+        """
         if not isinstance(samples, list):
             samples = [samples]
 

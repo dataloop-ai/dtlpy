@@ -1,3 +1,5 @@
+from typing import List
+
 import pathspec
 import numpy as np
 import logging
@@ -14,7 +16,7 @@ class Zipping:
         pass
 
     @staticmethod
-    def zip_directory(zip_filename, directory=None, ignore_max_file_size=False):
+    def zip_directory(zip_filename, directory=None, ignore_max_file_size=False, ignore_directories: List[str] = None):
         """
         Zip Directory
         Will ignore .gitignore files
@@ -22,6 +24,7 @@ class Zipping:
         :param directory:
         :param zip_filename:
         :param ignore_max_file_size: ignore the limitation on the zip file size
+        :param list[str] ignore_directories: directories to ignore.
         :return:
         """
         # default path
@@ -36,6 +39,8 @@ class Zipping:
         else:
             spec_src = ''
         ignore_lines = spec_src.splitlines() + ['.git', '.dataloop']
+        if ignore_directories is not None:
+            ignore_lines += ignore_directories
         spec = pathspec.PathSpec.from_lines(pathspec.patterns.GitWildMatchPattern, ignore_lines)
 
         # init zip file

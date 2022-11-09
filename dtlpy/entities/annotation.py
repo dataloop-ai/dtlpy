@@ -539,6 +539,11 @@ class Annotation(entities.BaseEntity):
 
             annotation.delete()
         """
+        if self.id is None:
+            raise PlatformException(
+                '400',
+                'Cannot delete annotation because it was not fetched from platform and therefore does not have an id'
+            )
         return self.annotations.delete(annotation_id=self.id)
 
     def update(self, system_metadata=False):
@@ -588,7 +593,7 @@ class Annotation(entities.BaseEntity):
         :param list annotation_format: options: list(dl.ViewAnnotationOptions)
         :param float height: image height
         :param float width: image width
-        :param int thickness: thickness
+        :param int thickness: line thickness
         :param bool with_text: get mask with text
         :param float alpha: opacity value [0 1], default 1
         :return: filepath
@@ -1312,12 +1317,11 @@ class Annotation(entities.BaseEntity):
                 dataset = None
 
         # get id
+        annotation_id = None
         if 'id' in _json:
             annotation_id = _json['id']
         elif '_id' in _json:
             annotation_id = _json['_id']
-        else:
-            raise PlatformException('400', 'missing id in annotation json')
 
         metadata = _json.get('metadata', dict())
 

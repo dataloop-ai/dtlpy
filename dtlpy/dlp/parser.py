@@ -326,6 +326,55 @@ def get_parser():
         help="encode video to mp4, remove bframes and upload",
     )
 
+    ###############
+    # Application #
+    ###############
+    subparser = subparsers.add_parser("app", help="Operations with application")
+    subparser_parser = subparser.add_subparsers(dest="app", help="application operations")
+
+    # ACTIONS #
+
+    # init
+    a = subparser_parser.add_parser('init', help="Initialize the structure in order to deploy a dpk")
+    optional = a.add_argument_group("Optional named arguments")
+    optional.add_argument('--name', required=False, dest='name', help="the name of the app")
+    optional.add_argument('--description', required=False, dest='description', help="the description of the app")
+    optional.add_argument('--categories', required=False, dest='categories',
+                          help="the categories of the app (comma seperated)")
+    optional.add_argument('--icon', required=False, dest='icon', help="the icon of the app")
+    optional.add_argument('--scope', required=False, dest='scope',
+                          help="the scope of the app (default is organization)")
+
+    # pack
+    a = subparser_parser.add_parser("pack", help="Pack the project as dpk file")
+
+    # publish
+    a = subparser_parser.add_parser("publish", help="Publish the app")
+    required = a.add_argument_group("Required named arguments")
+    required.add_argument("--project-name", dest="project_name", required=True, help="The name of the project")
+
+    # update
+    a = subparser_parser.add_parser("update", help="Update the app")
+    required = a.add_argument_group("Required named arguments")
+    required.add_argument("--app-name", dest="app_name", required=True, help="Locates the app by the name")
+    required.add_argument("--new-version", dest="new_version", required=True,
+                          help="Sets the new version of the specified app")
+    required.add_argument("--project-name", dest="project_name", required=True, help="The name of the project")
+
+    # install
+    a = subparser_parser.add_parser("install", help="Install the app to the platform")
+    required = a.add_argument_group("Required named arguments")
+    required.add_argument("--dpk-id", dest="dpk_id", required=True, help="The id of the dpk")
+    required.add_argument("--project-name", dest="project_name", default=None, help="The name of the project")
+
+    optional = a.add_argument_group("Optional named arguments")
+    optional.add_argument("--org-id", dest="org_id", default=None, help="The name of the org")
+
+    # pull
+    a = subparser_parser.add_parser('pull', help="Pull the app from the marketplace")
+    required = a.add_argument_group("Required named arguments")
+    required.add_argument('--dpk-name', dest='app_name', required=True, help='The name of the dpk')
+
     ############
     # Services #
     ############

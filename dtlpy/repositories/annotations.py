@@ -76,7 +76,7 @@ class Annotations:
         **Prerequisites**: You must have an item that has been annotated. You must have the role of an *owner* or
         *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*.
 
-        :param str annotation_id: annotation id
+        :param str annotation_id: The id of the annotation
         :return: Annotation object or None
         :rtype: dtlpy.entities.annotation.Annotation
 
@@ -228,11 +228,11 @@ class Annotations:
         *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*.
 
         :param ndarray image: empty or image to draw on
-        :param int thickness: line thickness
+        :param int thickness: optional - line thickness, default=1
         :param bool with_text: add label to annotation
-        :param float height: height
-        :param float width: width
-        :param str annotation_format: options: list(dl.ViewAnnotationOptions)
+        :param float height: item height
+        :param float width: item width
+        :param str annotation_format: the format that want to show ,options: list(dl.ViewAnnotationOptions)
         :param float alpha: opacity value [0 1], default 1
         :return: ndarray of the annotations
         :rtype: ndarray
@@ -276,11 +276,11 @@ class Annotations:
         *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*.
 
         :param str filepath: Target download directory
-        :param list annotation_format: optional - list(dl.ViewAnnotationOptions)
+        :param str annotation_format: the format that want to download ,options: list(dl.ViewAnnotationOptions)
         :param str img_filepath: img file path - needed for img_mask
         :param float height: optional - image height
         :param float width: optional - image width
-        :param int thickness: optional - annotation format, default =1
+        :param int thickness: optional - line thickness, default=1
         :param bool with_text: optional - draw annotation with text, default = False
         :param float alpha: opacity value [0 1], default 1
         :return: file path to where save the annotations
@@ -350,7 +350,7 @@ class Annotations:
         *developer* or be assigned a task that includes that item as an *annotation manager* or *annotator*.
 
         :param dtlpy.entities.annotation.Annotation annotation: Annotation object
-        :param str annotation_id: annotation id
+        :param str annotation_id: The id of the annotation
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :return: True/False
         :rtype: bool
@@ -441,6 +441,12 @@ class Annotations:
     def _update_single_annotation(self, w_annotation, system_metadata):
         try:
             if isinstance(w_annotation, entities.Annotation):
+                if w_annotation.id is None:
+                    raise exceptions.PlatformException(
+                        '400',
+                        'Cannot update annotation because it was not fetched'
+                        ' from platform and therefore does not have an id'
+                    )
                 annotation_id = w_annotation.id
             else:
                 raise exceptions.PlatformException('400',

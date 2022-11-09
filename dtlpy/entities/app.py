@@ -1,0 +1,127 @@
+import logging
+from collections import namedtuple
+
+import attr
+
+from .. import entities, services, repositories
+
+logger = logging.getLogger(name='dtlpy')
+
+
+@attr.s
+class App(entities.BaseEntity):
+    id = attr.ib(type=str)
+    name = attr.ib(type=str)
+    url = attr.ib(type=str)
+    created_at = attr.ib(type=str)
+    updated_at = attr.ib(type=str)
+    creator = attr.ib(type=str)
+    project_id = attr.ib(type=str)
+    org_id = attr.ib(type=str)
+    dpk_name = attr.ib(type=str)
+    dpk_version = attr.ib(type=str)
+    composition_id = attr.ib(type=str)
+    scope = attr.ib(type=str)
+    routes = attr.ib(type=dict)
+
+    # sdk
+    _project = attr.ib(type=entities.Project, repr=False)
+    _client_api = attr.ib(type=services.ApiClient, repr=False)
+    _repositories = attr.ib(repr=False)
+
+    @_repositories.default
+    def set_repositories(self):
+        reps = namedtuple('repositories', field_names=['projects', 'apps'])
+        return reps(
+            projects=repositories.Projects(client_api=self._client_api),
+            apps=repositories.Apps(client_api=self._client_api, project=self.project)
+        )
+
+    @property
+    def project(self):
+        return self._project
+
+    @property
+    def projects(self):
+        assert isinstance(self._repositories.projects, repositories.Projects)
+        return self._repositories.projects
+
+    @property
+    def apps(self):
+        assert isinstance(self._repositories.apps, repositories.Apps)
+        return self._repositories.apps
+
+    def uninstall(self):
+        """
+        Uninstall an app installed app from the project.
+
+        **Example**
+        .. code-block:: python
+            succeed = app.uninstall()
+        """
+        return self.apps.uninstall(self.id)
+
+    def update(self, pause: bool):
+        """
+        Run or pause a running application, this function has no effect if the state doesn't change.
+
+        :param bool pause: Whether we should pause or resume the application (pause=True, resume=False).
+        :return bool whether the operation ran successfully or not
+
+        **Example**
+        .. code-block:: python
+            succeed = dl.apps.update(app)
+        """
+        return self.apps.update(app_id=self.id, pause=pause)
+
+    def to_json(self):
+        _json = {}
+        if self.id is not None:
+            _json['id'] = self.id
+        if self.name is not None:
+            _json['name'] = self.name
+        if self.url is not None:
+            _json['url'] = self.url
+        if self.created_at is not None:
+            _json['createdAt'] = self.created_at
+        if self.updated_at is not None:
+            _json['updatedAt'] = self.updated_at
+        if self.creator is not None:
+            _json['creator'] = self.creator
+        if self.project_id is not None:
+            _json['projectId'] = self.project_id
+        if self.org_id is not None:
+            _json['orgId'] = self.org_id
+        if self.dpk_name is not None:
+            _json['dpkName'] = self.dpk_name
+        if self.dpk_version is not None:
+            _json['dpkVersion'] = self.dpk_version
+        if self.composition_id is not None:
+            _json['compositionId'] = self.composition_id
+        if self.scope is not None:
+            _json['scope'] = self.scope
+        if self.routes != {}:
+            _json['routes'] = self.routes
+        return _json
+
+    @classmethod
+    def from_json(cls, _json, client_api: services.ApiClient, project: entities.Project, is_fetched=True):
+        app = cls(
+            id=_json.get('id', None),
+            name=_json.get('name', None),
+            url=_json.get('url', None),
+            created_at=_json.get('createdAt', None),
+            updated_at=_json.get('updateAt', None),
+            creator=_json.get('creator', None),
+            project_id=_json.get('projectId', None),
+            org_id=_json.get('orgId', None),
+            dpk_name=_json.get('dpkName', None),
+            dpk_version=_json.get('dpkVersion', None),
+            composition_id=_json.get('compositionId', None),
+            scope=_json.get('scope', None),
+            routes=_json.get('routes', {}),
+            client_api=client_api,
+            project=project,
+        )
+        app.is_fetched = is_fetched
+        return app

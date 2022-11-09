@@ -112,9 +112,9 @@ class Artifacts:
         """
         List of artifacts
 
-        :param str execution_id: execution id
-        :param str package_name: package name
-        :param str model_name: model name
+        :param str execution_id: list by execution id
+        :param str package_name: list by package name
+        :param str model_name: list by model name
         :return: list of artifacts
         :rtype: miscellaneous.List[dtlpy.entities.artifact.Artifact]
 
@@ -159,9 +159,9 @@ class Artifacts:
 
         :param str artifact_id: search by artifact id
         :param str artifact_name: search by artifact id
-        :param str model_name: model name
-        :param str execution_id: execution id
-        :param str package_name: package name
+        :param str model_name: search by model name
+        :param str execution_id: search by execution id
+        :param str package_name: search by  package name
         :return: Artifact object
         :rtype: dtlpy.entities.artifact.Artifact
 
@@ -221,9 +221,9 @@ class Artifacts:
 
         :param str artifact_id: search by artifact id
         :param str artifact_name: search by artifact id
-        :param str execution_id: execution id
-        :param str package_name: package name
-        :param str model_name: model name
+        :param str execution_id: search by execution id
+        :param str package_name: search by package name
+        :param str model_name: search by model name
         :param str local_path: artifact will be saved to this filepath
         :param bool overwrite: optional - default = False
         :param bool save_locally: to save the file local
@@ -354,11 +354,11 @@ class Artifacts:
         Else and if create==True a new artifact will be created and uploaded
 
         :param str filepath: local binary file
-        :param str package_name: package name
+        :param str package_name: package name that include the artifact
         :param dtlpy.entities.package.Package package: package object
-        :param str execution_id: execution id
+        :param str execution_id: execution id that include the artifact
         :param dtlpy.entities.execution.Execution execution: execution object
-        :param str model_name: model name
+        :param str model_name: model name that include the artifact
         :param bool overwrite: optional - default = False to overwrite an existing object
         :return: Artifact Object
         :rtype: dtlpy.entities.artifact.Artifact
@@ -414,9 +414,9 @@ class Artifacts:
 
         :param str artifact_id: search by artifact id
         :param str artifact_name: search by artifact id
-        :param str execution_id: execution id
-        :param str model_name: model name
-        :param str package_name: package name
+        :param str execution_id: search by execution id
+        :param str model_name: search by model name
+        :param str package_name: search by package name
         :return: True if success
         :rtype: bool
 

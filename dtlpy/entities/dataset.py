@@ -165,7 +165,7 @@ class Dataset(entities.BaseEntity):
                    client_api=client_api,
                    project=project,
                    expiration_options=expiration_options,
-                   index_driver=_json.get('indexDriver', IndexDriver.V1))
+                   index_driver=_json.get('indexDriver', None))
         inst.is_fetched = is_fetched
         return inst
 
@@ -374,9 +374,20 @@ class Dataset(entities.BaseEntity):
                                       '%s_%s' % (self.name, self.id))
         return local_path
 
+    def _get_recipe(self):
+        recipes = self.recipes.list()
+        if len(recipes) > 0:
+            return recipes[0]
+        else:
+            raise exceptions.PlatformException('404', 'dataset has no recipes')
+
     def _get_ontology(self):
         if self._ontology is None:
-            self._ontology = self.recipes.list()[0].ontologies.list()[0]
+            ontologies = self._get_recipe().ontologies.list()
+            if len(ontologies) > 0:
+                self._ontology = ontologies[0]
+            else:
+                raise exceptions.PlatformException('404', 'dataset has no ontology')
         return self._ontology
 
     @staticmethod
@@ -673,9 +684,9 @@ class Dataset(entities.BaseEntity):
         :param str label_name: str - label name
         :param tuple color: RGB color of the annotation, e.g (255,0,0) or '#ff0000' for red
         :param children: children (sub labels). list of sub labels of this current label, each value is either dict or dl.Label
-        :param list attributes: attributes
-        :param str display_label: display_label
-        :param dtlpy.entities.label.Label label: label
+        :param list attributes: add attributes to the labels
+        :param str display_label: name that display label
+        :param dtlpy.entities.label.Label label: label object
         :param str recipe_id: optional recipe id
         :param str ontology_id: optional ontology id
         :param str icon_path: path to image to be display on label
@@ -753,8 +764,8 @@ class Dataset(entities.BaseEntity):
         :param str label_name: str - label name
         :param tuple color: color
         :param children: children (sub labels)
-        :param list attributes: attributes
-        :param str display_label: display_label
+        :param list attributes: add attributes to the labels
+        :param str display_label: name that display label
         :param dtlpy.entities.label.Label label: label
         :param str recipe_id: optional recipe id
         :param str ontology_id: optional ontology id
@@ -853,9 +864,9 @@ class Dataset(entities.BaseEntity):
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :param str local_path: local folder or filename to save to.
         :param list file_types: a list of file type to download. e.g ['video/webm', 'video/mp4', 'image/jpeg', 'image/png']
-        :param list(dtlpy.entities.annotation.ViewAnnotationOptions) annotation_options: download annotations options: list(dl.ViewAnnotationOptions)                                                                                        not relevant for JSON option
-        :param dtlpy.entities.filters.Filters annotation_filters: Filters entity to filter annotations for download                                                                                        not relevant for JSON option
-        :param bool overwrite: optional - default = False
+        :param list annotation_options: type of download annotations: list(dl.ViewAnnotationOptions)
+        :param dtlpy.entities.filters.Filters annotation_filters: Filters entity to filter annotations for download
+        :param bool overwrite: optional - default = False to overwrite the existing files
         :param bool to_items_folder: Create 'items' folder and download items to it
         :param int thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :param bool with_text: optional - add text to annotations, default = False

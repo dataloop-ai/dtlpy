@@ -46,7 +46,8 @@ class ServiceSample(BaseSample):
                  ram=None,
                  queue_size=None,
                  num_executions=None,
-                 service_type: entities.ServiceType = None
+                 service_type: entities.ServiceType = None,
+                 interval: int = None
                  ):
         super().__init__(start_time=start_time,
                          end_time=end_time,
@@ -68,6 +69,7 @@ class ServiceSample(BaseSample):
         self.queue_size = queue_size
         self.num_executions = num_executions
         self.service_type = service_type if service_type is not None else entities.ServiceType.REGULAR
+        self.interval = interval
 
     def to_json(self):
         _json = {
@@ -93,7 +95,8 @@ class ServiceSample(BaseSample):
                 'cpu': self.cpu,
                 'ram': self.ram,
                 'queueSize': self.queue_size,
-                'numExecutions': self.num_executions
+                'numExecutions': self.num_executions,
+                'interval': self.interval
             }
         }
         _json['context'] = {k: v for k, v in _json['context'].items() if v is not None}

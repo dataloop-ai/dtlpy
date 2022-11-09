@@ -352,7 +352,7 @@ class Converter:
         dataset.download_annotations(local_path=local_path, filters=filters, annotation_filters=annotation_filter)
         path_to_dataloop_annotations_dir = os.path.join(local_path, 'json')
         label_to_id = dataset.instance_map
-        recipe = dataset.recipes.list()[0]
+        recipe = dataset._get_recipe()
         categories = self.__gen_coco_categories(instance_map=label_to_id, recipe=recipe)
         images = [None for _ in range(pages.items_count)]
         converted_annotations = [None for _ in range(pages.items_count)]
@@ -960,13 +960,13 @@ class Converter:
         :return: the error log file path if there are errors
         """
         file_count = sum(len(files) for _, _, files in os.walk(local_path))
+        self.dataset = dataset
         reporter = Reporter(
             num_workers=file_count,
             resource=Reporter.CONVERTER,
             print_error_logs=self.dataset._client_api.verbose.print_error_logs,
             client_api=self.dataset._client_api
         )
-        self.dataset = dataset
 
         pool = ThreadPool(processes=self.concurrency)
         i_item = 0

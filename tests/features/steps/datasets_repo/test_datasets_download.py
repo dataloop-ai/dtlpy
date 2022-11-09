@@ -158,3 +158,13 @@ def step_impl(context, is_overwritten):
         assert str(context.overwritten_images_sizes_list[1]) == str(context.images_sizes_list[0])
 
     shutil.rmtree(os.path.join(os.environ['DATALOOP_TEST_ASSETS'], "Upload_Download_Dataset_Temp"))
+
+
+@behave.then(u'The folder "{download_path}" is equal to to "{should_be_path}"')
+def step_impl(context, download_path, should_be_path):
+    download_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], download_path)
+    should_be_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], should_be_path)
+    files = os.listdir(download_path)
+    excepted_dirs = os.listdir(should_be_path)
+    for file in excepted_dirs:
+        assert file in files

@@ -191,7 +191,7 @@ class Assignment(entities.BaseEntity):
 
         **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned as *owner* of the annotation task.
 
-        :param dtlpy.entities.dataset.Dataset dataset: dataset entity
+        :param dtlpy.entities.dataset.Dataset dataset: dataset object, the dataset that refer to the assignment
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :return: pages of the items
         :rtype: dtlpy.entities.paged_entities.PagedEntities
@@ -213,8 +213,8 @@ class Assignment(entities.BaseEntity):
 
         **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned as *owner* of the annotation task.
 
-        :param str assignee_id: the user that assignee the assignment to it
-        :param bool wait: wait for the command to finish
+        :param str assignee_id: the email of the user that want to assign the assignment
+        :param bool wait: wait until reassign assignment finish
         :return: Assignment object
         :rtype: dtlpy.entities.assignment.Assignment
 
@@ -236,8 +236,8 @@ class Assignment(entities.BaseEntity):
 
         **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned as *owner* of the annotation task.
 
-        :param dtlpy.entities.assignment.Workload workload: workload object that contain the assignees and the work load
-        :param bool wait: wait for the command to finish
+        :param dtlpy.entities.assignment.Workload workload: list of WorkloadUnit objects. Customize distribution (percentage) between the task assignees. For example: [dl.WorkloadUnit(annotator@hi.com, 80), dl.WorkloadUnit(annotator2@hi.com, 20)]
+        :param bool wait: wait until redistribute assignment finish
         :return: Assignment object
         :rtype: dtlpy.entities.assignment.Assignment assignment
 
@@ -260,9 +260,9 @@ class Assignment(entities.BaseEntity):
 
         **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned as *owner* of the annotation task.
 
-        :param str status: status
-        :param str operation: created/deleted
-        :param str item_id: item id
+        :param str status: string the describes the status
+        :param str operation: the status action need 'create' or 'delete'
+        :param str item_id: item id that want to set his status
         :return: True id success
         :rtype: bool
 

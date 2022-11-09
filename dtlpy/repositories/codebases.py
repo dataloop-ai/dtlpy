@@ -3,6 +3,7 @@ import logging
 import os
 import io
 import random
+from typing import List
 
 from .. import entities, PlatformException, exceptions, repositories, miscellaneous, services
 
@@ -245,7 +246,9 @@ class Codebases:
     def pack(self,
              directory: str,
              name: str = None,
-             description: str = ''):
+             extension: str = 'zip',
+             description: str = '',
+             ignore_directories: List[str] = None):
         """
         Zip a local code directory and post to codebases.
 
@@ -253,7 +256,9 @@ class Codebases:
 
         :param str directory: local directory to pack
         :param str name: codebase name
-        :param dtr description: codebase description
+        :param str extension: the extension of the file
+        :param str description: codebase description
+        :param list[str] ignore_directories: directories to ignore.
         :return: Codebase object
         :rtype: dtlpy.entities.codebase.Codebase
 
@@ -274,7 +279,7 @@ class Codebases:
             name = os.path.basename(directory)
 
         # create/get dist folder
-        zip_filename = os.path.join(dl_dir, '{}_{}.zip'.format(name, str(random.randrange(0, 1000))))
+        zip_filename = os.path.join(dl_dir, '{}_{}.{}'.format(name, str(random.randrange(0, 1000)), extension))
 
         try:
             if not os.path.isdir(directory):
@@ -282,7 +287,7 @@ class Codebases:
             directory = os.path.abspath(directory)
 
             # create zipfile
-            miscellaneous.Zipping.zip_directory(zip_filename=zip_filename, directory=directory)
+            miscellaneous.Zipping.zip_directory(zip_filename=zip_filename, directory=directory, ignore_directories=ignore_directories)
             zip_md = self.__file_hash(zip_filename)
 
             # get latest version
@@ -306,7 +311,7 @@ class Codebases:
                 # read from zipped file
                 with open(zip_filename, 'rb') as f:
                     buffer = io.BytesIO(f.read())
-                    buffer.name = str(current_version) + '.zip'
+                    buffer.name = '{}.{}'.format(str(current_version), extension)
 
                 # upload item
                 item = self.items_repository.upload(local_path=buffer,

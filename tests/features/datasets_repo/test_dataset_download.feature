@@ -58,3 +58,12 @@ Feature: Datasets repository download service testing
         When I download dataset to "downloaded.dataset" without item folder
         Then Dataset downloaded to "downloaded.dataset" is equal to dataset in "downloaded_dataset-should_be"
         And There is no "log" file in folder "downloaded.dataset"
+
+    @testrail-C4523092
+    Scenario: Download dataset with json items
+        Given I create a dataset with a random name
+        And Item in path "linked_items-should_be/items/wrong-linked-item.json" is uploaded to "Dataset"
+        And There are no folder or files in folder "linked_items"
+        When I download dataset to "linked_items"
+        Then The folder "linked_items" is equal to to "linked_items-should_be"
+        And There is no "log" file in folder "linked_items"

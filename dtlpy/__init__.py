@@ -148,6 +148,8 @@ analytics = repositories.Analytics(client_api=client_api)
 integrations = repositories.Integrations(client_api=client_api)
 drivers = repositories.Drivers(client_api=client_api)
 settings = repositories.Settings(client_api=client_api)
+apps = repositories.Apps(client_api=client_api)
+dpks = repositories.Dpks(client_api=client_api)
 
 try:
     check_sdk.check(version=__version__, client_api=client_api)

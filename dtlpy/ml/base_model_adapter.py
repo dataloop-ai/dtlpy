@@ -3,11 +3,15 @@ import datetime
 import logging
 import typing
 import shutil
+import base64
 import tqdm
 import json
+import io
 import os
 from PIL import Image
+from functools import partial
 import numpy as np
+from concurrent.futures import ThreadPoolExecutor
 
 from .. import entities, exceptions, dtlpy_services, utilities
 
@@ -21,10 +25,10 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         self._model_entity = None
         self._package = None
         self.package_name = None
-        if model_entity is not None:
-            self.model_entity = model_entity
         self.model = None
         self.bucket_path = None
+        if model_entity is not None:
+            self.load_from_model(model_entity=model_entity)
 
     ##################
     # Configurations #
@@ -276,13 +280,87 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
     # ===============
     # SERVICE METHODS
     # ===============
+
     @entities.Package.decorators.function(display_name='Predict Items',
                                           inputs={'items': 'Item[]'})
-    def predict_items(self, items: list, with_upload=True, cleanup=False, batch_size=16, output_shape=None, **kwargs):
+    def predict_items(self, items: list, with_upload=True, cleanup=False, batch_size=16, **kwargs):
         """
         Predicts all items given
 
         :param items: `List[dl.Item]`
+        :param with_upload: `bool` uploads the predictions back to the given items
+        :param cleanup: `bool` if set removes existing predictions with the same package-model name (default: False)
+        :param batch_size: `int` size of batch to run a single inference
+
+        :return: `List[dl.AnnotationCollection]` where all annotation in the collection are of type package.output_type
+                                                 and has prediction fields (model_info)
+        """
+        # TODO: do we want to add score filtering here?
+
+        input_type = self.package.metadata('system', dict()).get('ml', dict()).get('inputType', 'image')
+        self.logger.debug(
+            "Predicting {} items, using batch size {}. input type: {}".format(len(items), batch_size, input_type))
+        pool = ThreadPoolExecutor(max_workers=16)
+        all_predictions = dict()
+        for i_batch in tqdm.tqdm(range(0, len(items), batch_size), desc='predicting', unit='bt', leave=None):
+            batch_items = items[i_batch: i_batch + batch_size]
+            item_ids = [item.id for item in batch_items]
+            if input_type == 'image':
+                batch = list(pool.map(self._prepare_items_image_batch, batch_items))
+            elif input_type == 'txt':
+                batch = list(pool.map(self._prepare_items_txt_batch, batch_items))
+            else:
+                raise ValueError('Unknown inputType: {} (from package.metadata.system.ml.inputType'.format(input_type))
+            batch_predictions = self.predict(batch, **kwargs)
+            all_predictions.update({item_id: annotations for item_id, annotations in zip(item_ids, batch_predictions)})
+            if with_upload:
+                self.logger.debug(
+                    "Uploading items' annotation for model {!r}. cleanup {}".format(self.model_entity.name, cleanup))
+                try:
+                    annotations = list(pool.map(partial(self._upload_model_annotations, cleanup=cleanup),
+                                                batch_items, batch_predictions))
+                except Exception as err:
+                    self.logger.exception("Failed to upload annotations items.")
+
+        pool.shutdown()
+        return items
+
+    @entities.Package.decorators.function(display_name='Predict Items',
+                                          inputs={'data_uris': 'String[]'})
+    def predict_data_uris(self, data_uris: list, batch_size=16, **kwargs):
+        """
+        Predicts all items given
+
+        :param data_uris: `List[str]` a list of data URIs as strings
+        :param batch_size: `int` size of batch to run a single inference
+
+        :return: `List[dl.AnnotationCollection]` where all annotation in the collection are of type package.output_type
+                                                 and has prediction fields (model_info)
+        """
+
+        self.logger.debug(
+            "Predicting {} items, using batch size {}".format(len(data_uris), batch_size))
+        pool = ThreadPoolExecutor(max_workers=16)
+        all_predictions = list()
+        for i_batch in tqdm.tqdm(range(0, len(data_uris), batch_size), desc='predicting', unit='bt', leave=None):
+            batch_items = data_uris[i_batch: i_batch + batch_size]
+            batch = list(pool.map(self._prepare_uris_image_batch, batch_items))
+            batch_predictions = self.predict(batch, **kwargs)
+            all_predictions.extend([collection.to_json() for collection in batch_predictions])
+        pool.shutdown()
+        return all_predictions
+
+    @entities.Package.decorators.function(display_name='Predict Dataset with DQL',
+                                          inputs={'dataset': 'Dataset',
+                                                  'filters': 'Json'})
+    def predict_dataset(self,
+                        dataset: entities.Dataset, filters: entities.Filters = None,
+                        with_upload=True, cleanup=False, batch_size=16, output_shape=None, **kwargs):
+        """
+        Predicts all items given
+
+        :param dataset: Dataset entity to predict
+        :param filters: Filters entity for a filtering before predicting
         :param with_upload: `bool` uploads the predictions back to the given items
         :param cleanup: `bool` if set removes existing predictions with the same package-model name (default: False)
         :param batch_size: `int` size of batch to run a single inference
@@ -293,42 +371,21 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         """
         # TODO: do we want to add score filtering here?
         self.logger.debug(
-            "Predicting {} items, using batch size {}. Reshaping to: {}".format(len(items), batch_size, output_shape))
-        all_predictions = list()
-        for b in tqdm.tqdm(range(0, len(items), batch_size), desc='predicting', unit='bt', leave=None):
-            batch = list()
-            # TODO: add parallelism with multi threading
-            # TODO: add resize when adding to batch
-            for item in items[b: b + batch_size]:
-                buffer = item.download(save_locally=False)
-                img_pil = Image.open(buffer)
-                if output_shape is not None:
-                    img_pil = img_pil.resize(size=output_shape)
-                img_np = np.asarray(img_pil).astype(np.float)
-                batch.append(img_np)
-            batch = np.asarray(batch)
-            batch_predictions = self.predict(batch, **kwargs)
-            all_predictions += batch_predictions
-
-        if with_upload:
-            try:
-                for idx, item in enumerate(items):
-                    all_predictions[idx] = self._upload_model_annotations(item,
-                                                                          all_predictions[idx],
-                                                                          cleanup=cleanup)
-
-            except exceptions.InternalServerError as err:
-                self.logger.error("Failed to upload annotations items. Error: {}".format(err))
-
-            self.logger.debug("Uploading items' annotation for model {!r}. cleanup {}".format(self.model_entity.name,
-                                                                                              cleanup))
-        else:
-            # fix the collection to have to correct item in the annotations
-            for item, ann_coll in zip(items, all_predictions):
-                for ann in ann_coll:
-                    ann._item = item
-                ann_coll.item = item
-        return all_predictions
+            "Predicting dataset (name:{}, id:{}, using batch size {}. Reshaping to: {}".format(dataset.name,
+                                                                                               dataset.id,
+                                                                                               batch_size,
+                                                                                               output_shape))
+        if filters is not None:
+            filters = entities.Filters(custom_filter=filters)
+        pages = dataset.items.list(filters=filters, page_size=batch_size)
+        for page in tqdm.tqdm(pages, total=pages.items_count, desc='predicting', unit='bt', leave=None):
+            self.predict_items(items=page.items,
+                               with_upload=with_upload,
+                               cleanup=cleanup,
+                               batch_size=batch_size,
+                               output_shape=output_shape,
+                               **kwargs)
+        return True
 
     @entities.Package.decorators.function(display_name='Train a Model',
                                           inputs={'model': entities.Model},
@@ -426,22 +483,8 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         """
         output_path = None
         try:
-            logger.info("Received model: {} for training".format(model.id))
-
-            ##############
-            # Set status #
-            ##############
-            model.status = 'evaluating'
-            if 'system' not in model.metadata:
-                model.metadata['system'] = dict()
-            if 'evaluateExecutionId' not in model.metadata['system']:
-                model.metadata['system']['evaluations'] = list()
-            model.metadata['system']['evaluations'].append(
-                {"executionId": context.execution_id,
-                 "datasetId": dataset.id,
-                 "createdAt": datetime.datetime.now().isoformat(timespec='seconds')})
-            model.update()
-
+            logger.info(
+                f"Received model: {model.id} for evaluation on dataset (name: {dataset.name}, id: {dataset.name}")
             ##########################
             # load model and weights #
             ##########################
@@ -506,6 +549,26 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             item.annotations.delete(filters=clean_filter)
         annotations = item.annotations.upload(annotations=predictions)
         return annotations
+
+    @staticmethod
+    def _prepare_items_image_batch(item):
+        buffer = item.download(save_locally=False)
+        image = np.asarray(Image.open(buffer))
+        return image
+
+    @staticmethod
+    def _prepare_items_txt_batch(item):
+        buffer = item.download(save_locally=False)
+        txt = buffer.read().decode()
+        return txt
+
+    @staticmethod
+    def _prepare_uris_image_batch(data_uri):
+        # data_uri = "data:image/png;base64,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"
+        image_b64 = data_uri.split(",")[1]
+        binary = base64.b64decode(image_b64)
+        image = np.asarray(Image.open(io.BytesIO(binary)))
+        return image
 
     ##############################
     # Callback Factory functions #

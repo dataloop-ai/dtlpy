@@ -159,7 +159,7 @@ class Packages:
 
         :param str package_id: package id
         :param str package_name: package name
-        :param bool checkout: checkout
+        :param bool checkout: set the package as a default package object (cookies)
         :param fetch: optional - fetch entity from platform, default taken from cookie
         :return: Package object
         :rtype: dtlpy.entities.package.Package
@@ -306,9 +306,9 @@ class Packages:
         **Prerequisites**: You must be in the role of an *owner* or *developer*.
 
         :param dtlpy.entities.package.Package package: package entity
-        :param version:
-        :param local_path:
-        :param project_id:
+        :param str version: the package version to pull
+        :param local_path: the path of where to save the package
+        :param project_id: the project id that include the package
         :return: local path where the package pull
         :rtype: str
 
@@ -457,7 +457,7 @@ class Packages:
         :param str version: semver version f the package
         :param bool ignore_sanity_check: NOT RECOMMENDED - skip code sanity check before pushing
         :param bool service_update: optional - bool - update the service
-        :param dict service_config: json of service - a service that have config from the main service if wanted
+        :param dict service_config : Service object as dict. Contains the spec of the default service to create.
         :param list slots: optional - list of slots PackageSlot of the package
         :param list requirements: requirements - list of package requirements
         :param str package_type: default 'faas', options: 'app', 'ml
@@ -638,13 +638,15 @@ class Packages:
 
         :param project_to_deploy:
         :param dtlpy.entities.codebase.Codebase codebase: codebase object
-        :param is_global:
-        :param package_name: optional - default: 'default package'
-        :param modules: optional - PackageModules Entity
-        :param version: semver version of the package
-        :param  service_config : json of service - a service that have config from the main service if wanted
-        :param slots: optional - list of slots PackageSlot of the package
-        :param slots: requirements - list of package requirements
+        :param bool is_global: is package is global or local
+        :param str package_name: optional - default: 'default package'
+        :param list modules: optional - PackageModules Entity
+        :param str version: semver version of the package
+        :param dict service_config : Service object as dict. Contains the spec of the default service to create.
+        :param list slots: optional - list of slots PackageSlot of the package
+        :param list requirements: requirements - list of package requirements
+        :param str package_type: default 'faas', options: 'app', 'ml
+        :param dict metadata: dictionary of system and user metadata
         :return: Package object
         :rtype: dtlpy.entities.package.Package
         """
