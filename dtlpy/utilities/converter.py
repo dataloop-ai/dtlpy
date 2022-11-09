@@ -959,6 +959,7 @@ class Converter:
         :param Callable conversion_func: Custom conversion service
         :return: the error log file path if there are errors
         """
+        self.dataset = dataset
         file_count = sum(len(files) for _, _, files in os.walk(local_path))
         self.dataset = dataset
         reporter = Reporter(
