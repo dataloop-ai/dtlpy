@@ -72,6 +72,8 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
 
     @property
     def package(self):
+        if self._model_entity is not None:
+            self.package = self.model_entity.package
         if self._package is None:
             raise ValueError('Missing Package entity on adapter. please set: "adapter.package=package"')
         assert isinstance(self._package, entities.Package)
@@ -198,7 +200,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             self.logger.warning("Data path directory ({}) is not empty..".format(data_path))
 
         annotation_options = entities.ViewAnnotationOptions.JSON
-        if self.package.metadata['system']['ml']['outputType'] in [entities.AnnotationType.SEGMENTATION]:
+        if self.model_entity.output_type in [entities.AnnotationType.SEGMENTATION]:
             annotation_options = entities.ViewAnnotationOptions.INSTANCE
 
         # Download the subset items
@@ -297,7 +299,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         """
         # TODO: do we want to add score filtering here?
 
-        input_type = self.package.metadata('system', dict()).get('ml', dict()).get('inputType', 'image')
+        input_type = self.model_entity.input_type
         self.logger.debug(
             "Predicting {} items, using batch size {}. input type: {}".format(len(items), batch_size, input_type))
         pool = ThreadPoolExecutor(max_workers=16)
@@ -310,7 +312,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             elif input_type == 'txt':
                 batch = list(pool.map(self._prepare_items_txt_batch, batch_items))
             else:
-                raise ValueError('Unknown inputType: {} (from package.metadata.system.ml.inputType'.format(input_type))
+                raise ValueError('Unknown inputType: {} (from model_entity.input_type'.format(input_type))
             batch_predictions = self.predict(batch, **kwargs)
             all_predictions.update({item_id: annotations for item_id, annotations in zip(item_ids, batch_predictions)})
             if with_upload:

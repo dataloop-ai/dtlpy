@@ -245,7 +245,7 @@ class DatasetGenerator:
                                   entities.AnnotationType.CLASSIFICATION.value: np.asarray(classes_ids),
                                   entities.AnnotationType.POLYGON.value: np.asarray(polygon_coordinates),
                                   'labels': labels})
-                if len(item_info['classes_ids']) == 0:
+                if len(item_info[entities.AnnotationType.CLASSIFICATION.value]) == 0:
                     logger.debug('Empty annotation (nothing matched label_to_id_map) for image filename: {}'.format(image_filepath))
                     is_empty = True
             if self.to_mask:

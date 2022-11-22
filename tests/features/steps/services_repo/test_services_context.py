@@ -1,3 +1,6 @@
+import os
+import random
+
 import behave
 import dtlpy as dl
 
@@ -21,12 +24,12 @@ def step_impl(context, project_index):
 
 @behave.then(u'Service Project_id is equal to project {project_index} id')
 def step_impl(context, project_index):
-    assert context.service.project_id == context.projects[int(project_index)-1].id
+    assert context.service.project_id == context.projects[int(project_index) - 1].id
 
 
 @behave.then(u'Service Project.id is equal to project {project_index} id')
 def step_impl(context, project_index):
-    assert context.service.project.id == context.projects[int(project_index)-1].id
+    assert context.service.project.id == context.projects[int(project_index) - 1].id
 
 
 @behave.then(u'Service Package_id is equal to package {project_index} id')
@@ -37,3 +40,37 @@ def step_impl(context, project_index):
 @behave.then(u'Service Package.id is equal to package {project_index} id')
 def step_impl(context, project_index):
     assert context.service.package.id == context.packages[int(project_index) - 1].id
+
+
+@behave.when(u'I deploy a service with init prams')
+def step_impl(context):
+    context.service = context.project.services.deploy(
+        service_name=context.package.name,
+        package=context.package,
+        module_name=context.package.modules[0].name,
+        init_input={
+            'item': context.item.id,
+            'ds': context.dataset.id,
+            'string': 'test'
+        }
+    )
+
+
+@behave.then(u'I execute the service')
+def step_impl(context):
+    context.execution: dl.Execution = context.service.execute(item_id=context.item.id,
+                                                              function_name='run',
+                                                              project_id=context.project.id,
+                                                              sync=True,
+                                                              return_output=False,
+                                                              stream_logs=False
+                                                              )
+
+
+@behave.then(u'The execution success with the right output')
+def step_impl(context):
+    assert context.execution.output == {
+        'item_id': context.item.id,
+        'string': 'test',
+        'dataset': context.dataset.id
+    }

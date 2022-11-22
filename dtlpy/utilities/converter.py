@@ -959,7 +959,6 @@ class Converter:
         :param Callable conversion_func: Custom conversion service
         :return: the error log file path if there are errors
         """
-        self.dataset = dataset
         file_count = sum(len(files) for _, _, files in os.walk(local_path))
         self.dataset = dataset
         reporter = Reporter(
@@ -1306,13 +1305,21 @@ class Converter:
         attrs = list()
         for attribute in attributes:
             if attribute.tag not in ['bndbox', 'name'] and len(list(attribute)) == 0:
-                if attribute.text not in ['0', '1']:
-                    attrs.append(attribute.text)
+                if attribute.text is not None and attribute.text not in ['0', '1']:
+                    try:
+                        res = eval(attribute.text)
+                        if res:
+                            attrs.extend(res)
+                    except:
+                        attrs.append(attribute.text)
                 elif attribute.text == '1':
                     attrs.append(attribute.tag)
 
-        ann_def = entities.Box(label=label, top=top, bottom=bottom, left=left, right=right, attributes=attrs)
-        return entities.Annotation.new(annotation_definition=ann_def)
+        ann_def = entities.Box(label=label, top=top, bottom=bottom, left=left, right=right)
+        new_annotation = entities.Annotation.new(annotation_definition=ann_def)
+        if attrs is not None:
+            new_annotation.attributes = attrs
+        return new_annotation
 
     def from_yolo(self, annotation, item=None, **kwargs):
         """
@@ -1581,10 +1588,10 @@ class Converter:
                'xmin': left,
                'ymin': top,
                'xmax': right,
-               'ymax': bottom,
-               'attributes': attributes,
+               'ymax': bottom
                }
-
+        if attributes:
+            ann['attributes'] = attributes
         return ann
 
     @staticmethod

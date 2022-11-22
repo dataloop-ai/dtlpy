@@ -34,7 +34,7 @@ from .recipe import Recipe
 from .ontology import Ontology, AttributesTypes, AttributesRange
 from .annotation_definitions import Box, Cube, Cube3d, Point, Segmentation, Polygon, Ellipse, Classification, \
     Subtitle, Text, \
-    Polyline, Comparison, UndefinedAnnotationType, Note, Description, Pose
+    Polyline, Comparison, UndefinedAnnotationType, Note, Message, Description, Pose
 from .label import Label
 from .codebase import Codebase, PackageCodebaseType, ItemCodebase, GitCodebase, FilesystemCodebase, LocalCodebase
 from .package import Package, RequirementOperator, PackageRequirement
@@ -60,7 +60,7 @@ from .pipeline import Pipeline, PipelineStats
 from .node import PipelineConnection, PipelineNode, PipelineConnectionPort, PipelineNodeIO, TaskNode, \
     CodeNode, FunctionNode, PipelineNodeType, PipelineNameSpace, DatasetNode
 from .pipeline_execution import PipelineExecution, PipelineExecutionNode
-from .feature import Feature
+from .feature import Feature, FeatureDataType
 from .feature_set import FeatureSet, FeatureEntityType
 from .organization import Organization, OrganizationsPlans, MemberOrgRole, CacheAction, PodType
 from .analytic import ServiceSample, ExecutionSample, PipelineExecutionSample

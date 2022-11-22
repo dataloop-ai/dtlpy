@@ -12,6 +12,7 @@ class Dpks:
     def __init__(self, client_api: services.ApiClient, project: entities.Project = None):
         self._client_api = client_api
         self._project = project
+        self._revisions = None
 
     @property
     def project(self) -> Optional[entities.Project]:
@@ -52,16 +53,16 @@ class Dpks:
 
         with open(os.path.join(directory, 'app.json'), 'w') as json_file:
             json_file.write(json.dumps(dpk.to_json(), indent=4))
-        os.mkdir(os.path.join(directory, 'src'))
-        os.mkdir(os.path.join(directory, 'src', 'functions'))
-        os.mkdir(os.path.join(directory, 'src', 'ui'))
-        os.mkdir(os.path.join(directory, 'src', 'ui', 'panels'))
+        os.mkdir(os.path.join(directory, 'functions'))
+        os.mkdir(os.path.join(directory, 'panels'))
 
     # noinspection PyMethodMayBeStatic
-    def pack(self, directory: str = None, name: str = None) -> str:
+    def pack(self, directory: str = None, name: str = None, subpaths_to_append: List[str] = None) -> str:
         """
         :param str directory: optional - the project to pack, if not specified use the current project,
         :param str name: optional - the name of the dpk file.
+        :param List[str] subpaths_to_append: optional - the files/directories to add to the dpk file.
+                                            (along with functions, panels and app.json)
         :return the path of the dpk file
 
         **Example**
@@ -92,18 +93,38 @@ class Dpks:
 
         if not os.path.isdir(directory):
             raise exceptions.PlatformException(error='400', message='Not a directory: {}'.format(directory))
+        if subpaths_to_append is None:
+            subpaths_to_append = []
 
         try:
             directory = os.path.abspath(directory)
             # create zipfile
-            miscellaneous.Zipping.zip_directory(zip_filename=dpk_filename,
-                                                directory=directory,
-                                                ignore_directories=['artifacts']
-                                                )
+            miscellaneous.Zipping.zip_directory_inclusive(zip_filename=dpk_filename,
+                                                          directory=directory,
+                                                          subpaths=['functions', 'panels',
+                                                                    'app.json'] + subpaths_to_append
+                                                          )
             return dpk_filename
         except Exception:
             logger.error('Error when packing:')
             raise
+
+    def _build_entities_from_response(self, response_items) -> miscellaneous.List[entities.Dpk]:
+        pool = self._client_api.thread_pools(pool_name='entity.create')
+        jobs = [None for _ in range(len(response_items))]
+        # return triggers list
+        for i_item, item in enumerate(response_items):
+            jobs[i_item] = pool.submit(entities.Dpk._protected_from_json,
+                                       **{'client_api': self._client_api,
+                                          '_json': item,
+                                          'project': self._project})
+        # get all results
+        results = [j.result() for j in jobs]
+        # log errors
+        _ = [logger.warning(r[1]) for r in results if r[0] is False]
+        # return good jobs
+        items = miscellaneous.List([r[1] for r in results if r[0] is True])
+        return items
 
     def pull(self, dpk_id: str = None, dpk_name: str = None, local_path=None) -> str:
         """
@@ -130,7 +151,6 @@ class Dpks:
         dpk.codebase.from_json(client_api=self._client_api, _json=dpk.codebase.to_json()).unpack(local_path)
         return local_path
 
-    # noinspection DuplicatedCode
     def __get_by_name(self, dpk_name: str):
         filters = entities.Filters(field='name',
                                    values=dpk_name,
@@ -167,7 +187,9 @@ class Dpks:
                                                    message='app.json file must be exists in order to publish a dpk')
             with open('app.json', 'r') as f:
                 json_file = json.load(f)
-            dpk = entities.Dpk.from_json(json_file, self._client_api, self.project)
+            dpk = entities.Dpk.from_json(_json=json_file,
+                                         client_api=self._client_api,
+                                         project=self.project)
 
         dpk.codebase = self.project.codebases.pack(directory=os.getcwd(),
                                                    name=dpk.display_name,
@@ -199,25 +221,57 @@ class Dpks:
             raise exceptions.PlatformException(error='400', message="Couldn't delete the dpk from the store")
         return success
 
-    def revisions(self, dpk_id: str) -> List[str]:
+    def revisions(self, dpk_name: str, filters: entities.Filters = None) -> entities.PagedEntities:
         """
         returns the available versions of the dpk.
 
-        :param str dpk_id: the id of the dpk.
+        :param str dpk_name: the name of the dpk.
+        :param entities.Filters filters: the filters to apply to the search.
         :return the available versions of the dpk.
 
         ** Example **
         ..code-block:: python
-            versions = dl.dpks.revisions(dpk_id='id')
+            versions = dl.dpks.revisions(dpk_name='name')
         """
-        if dpk_id is None:
-            raise exceptions.PlatformException(error='400', message='You must provide dpk_id')
+        if dpk_name is None:
+            raise exceptions.PlatformException(error='400', message='You must provide dpk_name')
+        self._revisions = dpk_name
+        if filters is None:
+            filters = entities.Filters(resource=entities.FiltersResource.DPK)
+        elif not isinstance(filters, entities.Filters):
+            raise exceptions.PlatformException(error='400',
+                                               message='Unknown filters type: {!r}'.format(type(filters)))
+        elif filters.resource != entities.FiltersResource.DPK:
+            raise exceptions.PlatformException(
+                error='400',
+                message='Filters resource must to be FiltersResource.DPK. Got: {!r}'.format(filters.resource))
+
+        if dpk_name is None:
+            raise exceptions.PlatformException(error='400', message='You must provide dpk_name')
         success, response = self._client_api.gen_request(req_type='post',
-                                                         path="app-registry/{}/revisions".format(dpk_id))
+                                                         path="/app-registry/{}/revisions".format(dpk_name))
         if not success:
             raise exceptions.PlatformException(response)
-        json_list = response.json()
-        return json.loads(json_list)
+
+        paged = entities.PagedEntities(items_repository=self,
+                                       filters=filters,
+                                       page_offset=filters.page,
+                                       page_size=filters.page_size,
+                                       client_api=self._client_api,
+                                       list_function=self._list_revisions)
+        paged.get_page()
+        return paged
+
+    def _list_revisions(self, filters: entities.Filters):
+        url = '/app-registry/{}/revisions'.format(self._revisions)
+        self._revisions = None
+        # request
+        success, response = self._client_api.gen_request(req_type='post',
+                                                         path=url,
+                                                         json_req=filters.prepare())
+        if not success:
+            raise exceptions.PlatformException(response)
+        return response.json()
 
     def list(self, filters: entities.Filters = None) -> entities.PagedEntities:
         """
@@ -249,7 +303,7 @@ class Dpks:
         return paged
 
     def _list(self, filters: entities.Filters):
-        url = 'app-registry/query'
+        url = '/app-registry/query'
 
         # request
         success, response = self._client_api.gen_request(req_type='post',
@@ -259,7 +313,7 @@ class Dpks:
             raise exceptions.PlatformException(response)
         return response.json()
 
-    def get(self, dpk_id: str = None, dpk_name: str = None) -> entities.Dpk:
+    def get(self, dpk_name: str = None, dpk_id: str = None) -> entities.Dpk:
         """
         Get a specific dpk from the platform.
 
@@ -267,7 +321,7 @@ class Dpks:
 
         :param str dpk_id: the id of the dpk to get.
         :param str dpk_name: the name of the dpk to get.
-        :return the entitiy of the dpk
+        :return the entity of the dpk
         :rtype entities.Dpk
 
         ** Example **
@@ -287,7 +341,7 @@ class Dpks:
 
             dpk = entities.Dpk.from_json(_json=response.json(),
                                          client_api=self._client_api,
-                                         project=self.project,
+                                         project=self._project,
                                          is_fetched=False)
         else:
             dpk = self.__get_by_name(dpk_name)

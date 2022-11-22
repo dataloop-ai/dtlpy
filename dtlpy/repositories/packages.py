@@ -1347,11 +1347,11 @@ class Packages:
 
     def build(self, package: entities.Package, module_name=None, init_inputs=None, local_path=None, from_local=None):
         """
-        instantiate a module from the package code. Returns a loaded instance of the runner class
+        Instantiate a module from the package code. Returns a loaded instance of the runner class
 
         :param package: Package entity
         :param module_name: Name of the module to build the runner class
-        :param str init_inputs: dictionary of the class init variables (if exists). will be used to init the moudle class
+        :param str init_inputs: dictionary of the class init variables (if exists). will be used to init the module class
         :param str local_path: local path of the package (if from_local=False - codebase will be downloaded)
         :param bool from_local: bool. if true - codebase will not be downloaded (only use local files)
         :return: dl.BaseServiceRunner

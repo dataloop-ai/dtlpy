@@ -2,11 +2,11 @@ from collections import namedtuple
 from enum import Enum
 import traceback
 import logging
-from typing import List
+
 
 import attr
 
-from .. import repositories, entities, services, exceptions
+from .. import repositories, entities, services
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -60,6 +60,8 @@ class Model(entities.BaseEntity):
     tags = attr.ib()
     configuration = attr.ib()
     metadata = attr.ib()
+    input_type = attr.ib()
+    output_type = attr.ib()
 
     url = attr.ib()
     scope = attr.ib()
@@ -154,7 +156,9 @@ class Model(entities.BaseEntity):
             url=_json.get('url', None),
             scope=_json.get('scope', entities.EntityScopeLevel.PROJECT),
             version=_json.get('version', '1.0.0'),
-            context=_json.get('context', {})
+            context=_json.get('context', {}),
+            input_type=_json.get('inputType', None),
+            output_type=_json.get('outputType', None)
         )
         inst.is_fetched = is_fetched
         return inst
@@ -180,11 +184,15 @@ class Model(entities.BaseEntity):
                                                         attr.fields(Model).model_artifacts,
                                                         attr.fields(Model).created_at,
                                                         attr.fields(Model).updated_at,
+                                                        attr.fields(Model).input_type,
+                                                        attr.fields(Model).output_type,
                                                         ))
         _json['packageId'] = self.package_id
         _json['datasetId'] = self.dataset_id
         _json['createdAt'] = self.created_at
         _json['updatedAt'] = self.updated_at
+        _json['inputType'] = self.input_type
+        _json['outputType'] = self.output_type
         model_artifacts = list()
         for artifact in self.model_artifacts:
             if artifact.type in ['file', 'dir']:
@@ -396,13 +404,15 @@ class Model(entities.BaseEntity):
         """
         return self.models.train(model_id=self.id)
 
-    def deploy(self):
+    def deploy(self, service_config=None):
         """
         Deploy a trained model. This will create a service that will execute predictions
 
+        :param dict service_config : Service object as dict. Contains the spec of the default service to create.
+
         :return:
         """
-        return self.models.deploy(model_id=self.id)
+        return self.models.deploy(model_id=self.id, service_config=service_config)
 
     def add_log_samples(self, samples, dataset_id) -> bool:
         """

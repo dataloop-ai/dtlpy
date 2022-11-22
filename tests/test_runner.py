@@ -173,9 +173,9 @@ if __name__ == '__main__':
     # set timer and environment
     start_time = time.time()
     # set env to dev
-    env_name = get_env_from_git_branch()
-    dl.setenv(env_name)
-    print('Environment is: {}'.format(env_name))
+    _, base_env = get_env_from_git_branch()
+    dl.setenv(base_env)
+    print('Environment is: {}'.format(base_env))
 
     # set log level
     dl.verbose.logging_level = "warning"

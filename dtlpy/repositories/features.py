@@ -122,28 +122,31 @@ class Features:
                entity_id: str = None,
                version: str = None,
                parent_id: str = None,
-               org_id: str = None):
+               org_id: str = None,
+               tags: dict = None
+            ):
         """
         Create a new Feature vector
 
         :param immutable value: actual vector - immutable (list of floats [1,2,3])
-        :param str project_id: the Id of the project where feature will be created
+        :param str project_id: the id of the project where feature will be created
         :param str feature_set_id: ref to a featureSet this vector is a part of
-        :param str entity_id: id of the entity the feature vector is linked to (item.id, annotation.id etc)
-        :param str version: version of the feature set generator
+        :param str entity_id: id of the entity the featureVector is linked to (item.id, annotation.id etc)
+        :param str version: version of the featureSet generator
         :param str parent_id: optional: parent FeatureSet id - used when FeatureVector is a subFeature
-        :param str org_id: the Id of the org where feature will be created
-        :return: Feature vector
+        :param str org_id: the id of the org where featureVector will be created
+        :param str tags: the context of the featureVector (feautureSet should be defined with dataType).
+        :return: Feature vector: 
         """
         if project_id is None:
             if self._project is None:
-                raise ValueError('Must input a project id')
+                raise ValueError('Must insert a project id')
             else:
                 project_id = self._project.id
         if feature_set_id is None:
             if self._feature_set is None:
                 raise ValueError(
-                    'Missing feature_set_id. Input the variable or create from context - feature_set.features.create()')
+                    'Missing feature_set_id. Must insert the variable or create from context - feature_set.features.create()')
             feature_set_id = self._feature_set.id
 
         payload = {'project': project_id,
@@ -156,6 +159,9 @@ class Features:
             payload['parentId'] = parent_id
         if org_id is not None:
             payload['org'] = org_id
+        if tags is not None:
+            payload['tags'] = tags
+
         success, response = self._client_api.gen_request(req_type="post",
                                                          json_req=payload,
                                                          path=self.URL)

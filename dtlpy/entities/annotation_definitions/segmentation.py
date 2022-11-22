@@ -15,10 +15,11 @@ class Segmentation(BaseAnnotationDefinition):
     """
     type = "binary"
 
-    def __init__(self, geo, label, attributes=None, description=None):
+    def __init__(self, geo, label, attributes=None, description=None, color=None):
         super().__init__(description=description, attributes=attributes)
         self.geo = geo
         self.label = label
+        self._color = color
 
     @property
     def x(self):
@@ -82,6 +83,11 @@ class Segmentation(BaseAnnotationDefinition):
             overlay = image.copy()
         else:
             overlay = image
+        if color is None:
+            if self._color:
+                color = self._color
+            else:
+                color = (255, 255, 255)
         # draw annotation
         overlay[np.where(self.geo)] = color
 
@@ -101,7 +107,10 @@ class Segmentation(BaseAnnotationDefinition):
 
     def to_coordinates(self, color=None):
         if color is None:
-            color = (255, 255, 255)
+            if self._color:
+                color = self._color
+            else:
+                color = (255, 255, 255)
         max_val = np.max(self.geo)
         if max_val > 1:
             self.geo = self.geo / max_val
@@ -187,8 +196,13 @@ class Segmentation(BaseAnnotationDefinition):
             mask = cls.from_coordinates(_json["data"])
         else:
             raise ValueError('can not find "coordinates" or "data" in annotation. id: {}'.format(_json["id"]))
+        fill_coordinates = mask.nonzero()
+        color = None
+        if len(fill_coordinates) > 0 and len(fill_coordinates[0]) > 0 and len(fill_coordinates[1]) > 0:
+            color = mask[fill_coordinates[0][0]][fill_coordinates[1][0]]
         return cls(
             geo=(mask[:, :, 3] > 127).astype(float),
             label=_json["label"],
             attributes=_json.get("attributes", None),
+            color=color
         )

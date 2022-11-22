@@ -1,10 +1,10 @@
+import logging
+import os
+import zipfile
 from typing import List
 
-import pathspec
 import numpy as np
-import logging
-import zipfile
-import os
+import pathspec
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -21,17 +21,17 @@ class Zipping:
         Zip Directory
         Will ignore .gitignore files
 
-        :param directory:
-        :param zip_filename:
+        :param directory: the directory to zip
+        :param zip_filename: the name of the zipfile.
         :param ignore_max_file_size: ignore the limitation on the zip file size
         :param list[str] ignore_directories: directories to ignore.
-        :return:
+        :return: None
         """
         # default path
         if directory is None:
             directory = os.getcwd()
         # check if directory
-        assert os.path.isdir(directory), '[ERROR] Directory does not exists: %s' % directory
+        assert os.path.isdir(directory), '[ERROR] Directory does not exists: {}'.format(directory)
 
         if '.gitignore' in os.listdir(directory):
             with open(os.path.join(directory, '.gitignore')) as f:
@@ -50,16 +50,66 @@ class Zipping:
                 for file in files:
                     filepath = os.path.join(root, file)
                     if not spec.match_file(os.path.relpath(filepath, directory)):
-                        zip_file.write(filepath, arcname=os.path.relpath(filepath, directory))
-                        if not ignore_max_file_size:
-                            if np.sum([f.file_size for f in list(zip_file.NameToInfo.values())]) > MAX_ZIP_FILE:
-                                logger.error('Failed zipping in file: {}'.format(filepath))
-                                raise ValueError(
-                                    'Zip file cant be over 100MB. '
-                                    'Please verify that only code is being uploaded or '
-                                    'add files to .gitignore so they wont be zipped and uploaded as code.')
+                        Zipping.__add_to_zip_file(directory, filepath, ignore_max_file_size, zip_file)
         finally:
             zip_file.close()
+
+    @staticmethod
+    def zip_directory_inclusive(zip_filename, directory=None, ignore_max_file_size=False,
+                                subpaths: List[str] = None):
+        """
+        Zip Directory
+        Will ignore .gitignore files
+
+        :param directory: the directory to zip.
+        :param zip_filename: the name of the zipfile
+        :param ignore_max_file_size: ignore the limitation on the zip file size
+        :param list[str] subpaths: paths to include in the final zip (relative path).
+        :return: None
+        """
+        # default path
+        if directory is None:
+            directory = os.getcwd()
+        # check if directory
+        assert os.path.isdir(directory), '[ERROR] Directory does not exists: %s' % directory
+
+        if '.gitignore' in os.listdir(directory):
+            with open(os.path.join(directory, '.gitignore')) as f:
+                spec_src = f.read()
+        else:
+            spec_src = ''
+        ignore_lines = spec_src.splitlines() + ['.git', '.dataloop']
+        spec = pathspec.PathSpec.from_lines(pathspec.patterns.GitWildMatchPattern, ignore_lines)
+
+        # init zip file
+        zip_file = zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED)
+        try:
+            for root, dirs, files in os.walk(directory):
+                for file in files:
+                    filepath = os.path.join(root, file)
+                    if not spec.match_file(os.path.relpath(filepath, directory)) \
+                            and Zipping.__check_filepath(os.path.relpath(filepath, directory), subpaths):
+                        Zipping.__add_to_zip_file(directory, filepath, ignore_max_file_size, zip_file)
+        finally:
+            zip_file.close()
+
+    @staticmethod
+    def __check_filepath(filepath: str, paths: List[str]):
+        """
+        Checks whether a specific file is inside one of the subdirectories
+        """
+        return any(filepath.startswith(directory) for directory in paths)
+
+    @staticmethod
+    def __add_to_zip_file(directory, filepath, ignore_max_file_size, zip_file):
+        zip_file.write(filepath, arcname=os.path.relpath(filepath, directory))
+        if not ignore_max_file_size:
+            if np.sum([f.file_size for f in list(zip_file.NameToInfo.values())]) > MAX_ZIP_FILE:
+                logger.error('Failed zipping in file: {}'.format(filepath))
+                raise ValueError(
+                    'Zip file cant be over 100MB. '
+                    'Please verify that only code is being uploaded or '
+                    'add files to .gitignore so they wont be zipped and uploaded as code.')
 
     @staticmethod
     def unzip_directory(zip_filename, to_directory=None):

@@ -11,26 +11,36 @@ import sys
 import os
 
 
+def update_env_cookie_file(env_name, base_env):
+    if base_env in ['prod', 'rc', 'dev']:
+        return
+
+    if base_env not in [env_dict['alias'] for env_url, env_dict in dl.client_api.environments.items()]:
+        dl.add_environment(
+            environment='https://{}-gate.dataloop.ai/api/v1'.format(base_env),
+            verify_ssl=True,
+            alias='{}'.format(base_env),
+            gate_url="https://{}-gate.dataloop.ai".format(base_env),
+            url="https://{}.dataloop.ai/".format(env_name)
+        )
+
+    assert base_env in [env_dict['alias'] for env_url, env_dict in dl.client_api.environments.items()], "Failed to add_environment: {}".format(env_name)
+
 def test_login():
-    env_name = get_env_from_git_branch()
-    dl.setenv(env_name)
-    if env_name in ['rc', 'dev']:
-        username = os.environ["TEST_USERNAME"]
-        password = os.environ["TEST_PASSWORD"]
-        client_id = os.environ["TEST_CLIENT_ID"]
-        client_secret = os.environ["TEST_CLIENT_SECRET"]
-    elif env_name == 'prod':
+    env_name, base_env = get_env_from_git_branch()
+    # Check if needed to add new env to cookie file
+    update_env_cookie_file(env_name, base_env)
+    dl.setenv(base_env)
+    if env_name == 'prod':
         username = os.environ["TEST_USER_PROD"]
         password = os.environ["TEST_PASSWORD_PROD"]
-        client_id = os.environ["CLIENT_ID_PROD"]
-        client_secret = os.environ["CLIENT_SECRET_PROD"]
     else:
-        raise ValueError('unknown env alias: {}'.format(env_name))
-    dl.login_secret(
+        username = os.environ["TEST_USERNAME"]
+        password = os.environ["TEST_PASSWORD"]
+
+    dl.login_m2m(
         email=username,
         password=password,
-        client_id=client_id,
-        client_secret=client_secret
     )
 
     if dl.token_expired():

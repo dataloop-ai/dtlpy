@@ -27,7 +27,7 @@ author = 'Dataloop Team'
 # The short X.Y version
 version = ''
 # The full version, including alpha/beta/rc tags
-release = '1.67.25'
+release = '1.68.9'
 
 add_module_names = False
 

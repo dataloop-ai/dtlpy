@@ -206,6 +206,8 @@ class Models:
             status: str = None,
             scope: entities.EntityScopeLevel = entities.EntityScopeLevel.PROJECT,
             version: str = '1.0.0',
+            input_type=None,
+            output_type=None
     ) -> entities.Model:
         """
         Create a Model entity
@@ -223,6 +225,8 @@ class Models:
         :param str status: `str` of the optional values of
         :param str scope: the scope level of the model dl.EntityScopeLevel
         :param str version: version of the model
+        :param str input_type: the file type the model expect as input (image, video, txt, etc)
+        :param str output_type: dl.AnnotationType - the type of annotations the model produces (class, box segment, text, etc)
         :return: Model Entity
         """
 
@@ -234,6 +238,12 @@ class Models:
         if labels is None:
             # dont have to have labels. can use an empty list
             labels = list()
+
+        if input_type is None:
+            input_type = 'image'
+
+        if output_type is None:
+            output_type = entities.AnnotationType.CLASSIFICATION
 
         # TODO need to remove the entire project id user interface - need to take it from dataset id (in BE)
         if project_id is None:
@@ -266,7 +276,9 @@ class Models:
             'labels': labels,
             'artifacts': [artifact.to_json(as_artifact=True) for artifact in model_artifacts],
             'scope': scope,
-            'version': version
+            'version': version,
+            'inputType': input_type,
+            'outputType': output_type,
         }
 
         if configuration is not None:

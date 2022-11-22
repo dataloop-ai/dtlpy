@@ -96,6 +96,7 @@ class FeatureSets:
     def create(self, name: str,
                size: int,
                set_type: str,
+               data_type: entities.FeatureDataType,
                entity_type: entities.FeatureEntityType,
                project_id: str = None,
                tags: list = None,
@@ -110,6 +111,7 @@ class FeatureSets:
         :param str project_id: the Id of the project where feature set will be created
         :param list tags: optional tag per feature  - matched by index
         :param str org_id: the Id of the org where feature set will be created
+        :param data_type: the type of feature vectors that relate to this set. Use the enum dl.FeatureDataType
         :return: Feature Set object
         """
         if tags is None:
@@ -128,6 +130,8 @@ class FeatureSets:
                    'entityType': entity_type}
         if org_id is not None:
             payload['org'] = org_id
+        if data_type is not None:
+            payload['dataType'] = data_type
         success, response = self._client_api.gen_request(req_type="post",
                                                          json_req=payload,
                                                          path=self.URL)

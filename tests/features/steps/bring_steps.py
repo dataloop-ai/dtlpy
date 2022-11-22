@@ -194,14 +194,30 @@ from tests.features.steps.platform_urls import test_platform_urls
 
 from tests.features.steps.annotation_entity import test_annotation_description
 
-from tests.features.steps.utilities import image_annotations_interface
-from tests.features.steps.utilities import video_annotations_interface
-from tests.features.steps.utilities import audio_annotations_interface
-from tests.features.steps.utilities import text_annotations_interface
 
-from tests.features.steps.utilities import items_interface
-from tests.features.steps.utilities import annotations_interface
-from tests.features.steps.utilities import projects_interface
-from tests.features.steps.utilities import datasets_interface
+# Interface steps locations
+from tests.features.steps.annotation_entity import annotation_entity_interface
 
-from tests.features.steps.utilities import conveters_interface
+from tests.features.steps.annotations_repo import annotations_interface
+from tests.features.steps.annotations_repo import image_annotations_interface
+from tests.features.steps.annotations_repo import video_annotations_interface
+from tests.features.steps.annotations_repo import audio_annotations_interface
+from tests.features.steps.annotations_repo import text_annotations_interface
+
+from tests.features.steps.converter import conveters_interface
+
+from tests.features.steps.datasets_repo import datasets_interface
+
+from tests.features.steps.item_entity import item_entity_interface
+
+from tests.features.steps.items_repo import items_interface
+
+from tests.features.steps.projects_repo import projects_interface
+
+
+
+
+
+
+
+from tests.features.steps.annotations_repo import test_annotations_format_json

@@ -496,20 +496,20 @@ class Package(entities.DlEntity):
                                   version=version,
                                   local_path=local_path)
 
-    def build(self, local_path=None, from_local=None, module_name=None):
+    def build(self, module_name=None, init_inputs=None, local_path=None, from_local=None):
         """
-        Push local model
+        Instantiate a module from the package code. Returns a loaded instance of the runner class
 
-        :param local_path: local path where the model code should be.
-                           if model is downloaded - this will be the point it will be downloaded
-                           (if from_local=False - codebase will be downloaded)
         :param module_name: Name of the module to build the runner class
-        :param from_local: bool. use current directory to build
-        :return: ModelAdapter (dl.BaseModelAdapter)
+        :param str init_inputs: dictionary of the class init variables (if exists). will be used to init the module class
+        :param str local_path: local path of the package (if from_local=False - codebase will be downloaded)
+        :param bool from_local: bool. if true - codebase will not be downloaded (only use local files)
+        :return: dl.BaseServiceRunner
         """
         return self.packages.build(package=self,
                                    module_name=module_name,
                                    local_path=local_path,
+                                   init_inputs=init_inputs,
                                    from_local=from_local)
 
     def open_in_web(self):
