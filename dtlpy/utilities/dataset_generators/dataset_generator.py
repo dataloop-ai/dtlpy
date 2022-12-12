@@ -31,11 +31,11 @@ class DataItem(dict):
 
 
 class DatasetGenerator:
-    IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'bmp']
 
     def __init__(self,
                  dataset_entity: entities.Dataset,
                  annotation_type: entities.AnnotationType,
+                 item_type: None,
                  filters: entities.Filters = None,
                  data_path=None,
                  overwrite=False,
@@ -72,6 +72,7 @@ class DatasetGenerator:
 
         :param dataset_entity: dl.Dataset entity
         :param annotation_type: dl.AnnotationType - type of annotation to load from the annotated dataset
+        :param item_type: list of file extension to load. default: ['jpg', 'jpeg', 'png', 'bmp']
         :param filters: dl.Filters - filtering entity to filter the dataset items
         :param data_path: Path to Dataloop annotations (root to "item" and "json").
         :param overwrite:
@@ -92,6 +93,15 @@ class DatasetGenerator:
         :param ignore_empty: bool - If True, generator will NOT collect items without annotations
         """
         self._dataset_entity = dataset_entity
+
+        # default item types (extension for now)
+        if item_type is None:
+            item_type = ['jpg', 'jpeg', 'png', 'bmp']
+        if not isinstance(item_type, list):
+            item_type = [item_type]
+        self.item_type = item_type
+
+        # id labels mapping
         if label_to_id_map is None and id_to_label_map is None:
             # if both are None - take from dataset
             label_to_id_map = dataset_entity.instance_map
@@ -245,8 +255,9 @@ class DatasetGenerator:
                                   entities.AnnotationType.CLASSIFICATION.value: np.asarray(classes_ids),
                                   entities.AnnotationType.POLYGON.value: np.asarray(polygon_coordinates),
                                   'labels': labels})
-                if len(item_info['classes_ids']) == 0:
-                    logger.debug('Empty annotation (nothing matched label_to_id_map) for image filename: {}'.format(image_filepath))
+                if len(item_info[entities.AnnotationType.CLASSIFICATION.value]) == 0:
+                    logger.debug('Empty annotation (nothing matched label_to_id_map) for image filename: {}'.format(
+                        image_filepath))
                     is_empty = True
             if self.to_mask:
                 # get "platform" path
@@ -269,9 +280,9 @@ class DatasetGenerator:
                 pbar.update()
 
     def load_annotations(self):
-        logger.info(f"Collecting items with the following extensions: {self.IMAGE_EXTENSIONS}")
+        logger.info(f"Collecting items with the following extensions: {self.item_type}")
         files = list()
-        for ext in self.IMAGE_EXTENSIONS:
+        for ext in self.item_type:
             # build regex to ignore extension case
             regex = '*.{}'.format(''.join(['[{}{}]'.format(letter.lower(), letter.upper()) for letter in ext]))
             files.extend(self._items_path.rglob(regex))

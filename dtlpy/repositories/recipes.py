@@ -1,7 +1,7 @@
 import logging
 import traceback
 
-from .. import entities, miscellaneous, repositories, exceptions, services
+from .. import entities, miscellaneous, repositories, exceptions, services, _api_reference
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -54,6 +54,7 @@ class Recipes:
     ###########
     # methods #
     ###########
+    @_api_reference.add(path='/recipes', method='post')
     def create(self,
                project_ids=None,
                ontology_ids=None,
@@ -228,6 +229,7 @@ class Recipes:
             status = False
         return status, recipe
 
+    @_api_reference.add(path='/recipes/{id}', method='get')
     def get(self, recipe_id: str) -> entities.Recipe:
         """
         Get a Recipe object to use in your code.
@@ -281,6 +283,7 @@ class Recipes:
         else:
             self._client_api._open_in_web(url=self.platform_url)
 
+    @_api_reference.add(path='/recipes/{id}', method='delete')
     def delete(self, recipe_id: str, force: bool = False):
         """
         Delete recipe from platform.
@@ -308,6 +311,7 @@ class Recipes:
         logger.info('Recipe id {} deleted successfully'.format(recipe_id))
         return True
 
+    @_api_reference.add(path='/recipes/{id}', method='patch')
     def update(self, recipe: entities.Recipe, system_metadata=False) -> entities.Recipe:
         """
         Update recipe.
@@ -337,6 +341,7 @@ class Recipes:
             logger.error('Error while updating item:')
             raise exceptions.PlatformException(response)
 
+    @_api_reference.add(path='/recipes/{id}/clone', method='post')
     def clone(self,
               recipe: entities.Recipe = None,
               recipe_id: str = None,

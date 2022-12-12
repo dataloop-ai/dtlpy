@@ -216,7 +216,7 @@ class Setting(BaseSetting):
     @staticmethod
     def from_json(_json: dict, client_api, project=None, org=None):
         scope = SettingScope.from_json(_json.get('scope', None))
-        return Setting(
+        setting = Setting(
             default_value=_json.get('defaultValue', None),
             name=_json.get('name', None),
             value=_json.get('value', None),
@@ -234,6 +234,13 @@ class Setting(BaseSetting):
             project=project,
             org=org
         )
+        if 'slots' in setting.metadata:
+            for slot in setting.metadata.get('slots', []):
+                for scope in slot.get('displayScopes', []):
+                    if 'filter' in scope:
+                        scope['filter'] = json.loads(scope['filter'])
+
+        return setting
 
     def to_json(self):
         _json = super().to_json()

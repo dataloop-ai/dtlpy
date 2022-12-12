@@ -36,6 +36,7 @@ class PagedEntities:
     _execution_resource_type = attr.ib(default=None, repr=False)
     _execution_resource_id = attr.ib(default=None, repr=False)
     _execution_function_name = attr.ib(default=None, repr=False)
+    _list_function = attr.ib(default=None, repr=False)
 
     # items list
     items = attr.ib(default=miscellaneous.List(), repr=False)
@@ -110,7 +111,10 @@ class PagedEntities:
             filters = copy.copy(self.filters)
             filters.page = page_offset
             filters.page_size = page_size
-            result = self.items_repository._list(filters=filters)
+            if self._list_function is None:
+                result = self.items_repository._list(filters=filters)
+            else:
+                result = self._list_function(filters=filters)
             items = self.process_result(result)
             return items
         else:

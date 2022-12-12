@@ -177,7 +177,7 @@ class AnnotationCollection(entities.BaseEntity):
 
         .. code-block:: python
 
-            builder.show(image='ndarray',
+            image = builder.show(image='ndarray',
                         thickness=1,
                         annotation_format=dl.VIEW_ANNOTATION_OPTIONS_MASK,
                         )
@@ -330,7 +330,7 @@ class AnnotationCollection(entities.BaseEntity):
 
         .. code-block:: python
 
-            builder.download(filepath='filepath', annotation_format=dl.ViewAnnotationOptions.MASK)
+            filepath = builder.download(filepath='filepath', annotation_format=dl.ViewAnnotationOptions.MASK)
         """
         dir_name, ex = os.path.splitext(filepath)
         if annotation_format == entities.ViewAnnotationOptions.JSON:
@@ -443,7 +443,7 @@ class AnnotationCollection(entities.BaseEntity):
 
         .. code-block:: python
 
-            builder.update()
+            annotation = builder.update()
         """
         if self.item is None:
             raise PlatformException('400', 'missing item to perform platform update')
@@ -462,7 +462,7 @@ class AnnotationCollection(entities.BaseEntity):
 
         .. code-block:: python
 
-            builder.delete()
+            is_deleted = builder.delete()
         """
         if self.item is None:
             raise PlatformException('400', 'missing item to perform platform delete')
@@ -481,7 +481,7 @@ class AnnotationCollection(entities.BaseEntity):
 
         .. code-block:: python
 
-            builder.upload()
+            annotation = builder.upload()
         """
         if self.item is None:
             raise PlatformException('400', 'missing item to perform platform upload')

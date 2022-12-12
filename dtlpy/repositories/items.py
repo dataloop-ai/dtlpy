@@ -1,6 +1,6 @@
 import logging
 
-from .. import entities, exceptions, repositories, miscellaneous, services
+from .. import entities, exceptions, repositories, miscellaneous, services, _api_reference
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -152,6 +152,7 @@ class Items:
             raise exceptions.PlatformException(response)
         return response.json()
 
+    @_api_reference.add(path='/datasets/{id}/query', method='post')
     def list(self,
              filters: entities.Filters = None,
              page_offset: int = None,
@@ -214,6 +215,7 @@ class Items:
         paged.get_page()
         return paged
 
+    @_api_reference.add(path='/items/{id}', method='get')
     def get(self,
             filepath: str = None,
             item_id: str = None,
@@ -289,6 +291,7 @@ class Items:
         assert isinstance(item, entities.Item)
         return item
 
+    @_api_reference.add(path='/items/{id}/clone', method='post')
     def clone(self,
               item_id: str,
               dst_dataset_id: str,
@@ -357,6 +360,7 @@ class Items:
         cloned_item = self.get(item_id=command.spec['returnedModelId'][0])
         return cloned_item
 
+    @_api_reference.add(path='/items/{id}', method='delete')
     def delete(self,
                filename: str = None,
                item_id: str = None,
@@ -413,6 +417,7 @@ class Items:
         else:
             raise exceptions.PlatformException(response)
 
+    @_api_reference.add(path='/items/{id}', method='patch')
     def update(self,
                item: entities.Item = None,
                filters: entities.Filters = None,

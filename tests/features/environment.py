@@ -89,6 +89,11 @@ def after_tag(context, tag):
             use_fixture(delete_converter_dataset, context)
         except Exception:
             logging.exception('Failed to delete converter dataset')
+    elif tag == 'integrations.delete':
+        try:
+            use_fixture(integrations_delete, context)
+        except Exception:
+            logging.exception('Failed to delete integration')
     elif tag == 'frozen_dataset':
         pass
     elif 'testrail-C' in tag:
@@ -220,4 +225,20 @@ def delete_services(context):
         except:
             all_deleted = False
             logging.exception('Failed deleting service: ')
+    assert all_deleted
+
+@fixture
+def integrations_delete(context):
+    if not hasattr(context, 'to_delete_integrations_ids'):
+        return
+
+    all_deleted = True
+    for integration_id in context.to_delete_integrations_ids:
+        try:
+            context.dl.integrations.delete(integration_id=integration_id)
+        except context.dl.exceptions.NotFound:
+            pass
+        except:
+            all_deleted = False
+            logging.exception('Failed deleting integration: {}'.format(integration_id))
     assert all_deleted

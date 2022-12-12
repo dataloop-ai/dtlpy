@@ -5,7 +5,7 @@ import json
 import jwt
 import os
 
-from .. import entities, exceptions, miscellaneous, services
+from .. import entities, exceptions, miscellaneous, services, _api_reference
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -69,6 +69,7 @@ class Annotations:
     ###########
     # methods #
     ###########
+    @_api_reference.add(path='/annotations/{annotationId}', method='get')
     def get(self, annotation_id: str) -> entities.Annotation:
         """
         Get a single annotation.
@@ -78,13 +79,14 @@ class Annotations:
 
         :param str annotation_id: The id of the annotation
         :return: Annotation object or None
+        :return: Annotation object or None
         :rtype: dtlpy.entities.annotation.Annotation
 
         **Example**:
 
         .. code-block:: python
 
-            item.annotations.get(annotation_id='annotation_id')
+            annotation = item.annotations.get(annotation_id='annotation_id')
         """
         success, response = self._client_api.gen_request(req_type='get',
                                                          path='/annotations/{}'.format(annotation_id))
@@ -135,6 +137,7 @@ class Annotations:
             raise exceptions.PlatformException(response)
         return response.json()
 
+    @_api_reference.add(path='/datasets/{id}/query', method='post')
     def list(self, filters: entities.Filters = None, page_offset: int = None, page_size: int = None):
         """
         List Annotations of a specific item. You must get the item first and then list the annotations with the desired filters.
@@ -152,7 +155,7 @@ class Annotations:
 
         .. code-block:: python
 
-            item.annotations.list(filters=dl.Filters(
+            annotations = item.annotations.list(filters=dl.Filters(
                                          resource=dl.FiltersResource.ANNOTATION,
                                          field='type',
                                          values='box'),
@@ -241,7 +244,7 @@ class Annotations:
 
         .. code-block:: python
 
-            item.annotations.show(image='nd array',
+            image = item.annotations.show(image='nd array',
                       thickness=1,
                       with_text=False,
                       height=100,
@@ -290,7 +293,7 @@ class Annotations:
 
         .. code-block:: python
 
-            item.annotations.download(
+            file_path = item.annotations.download(
                           filepath='file_path',
                           annotation_format=dl.ViewAnnotationOptions.MASK,
                           img_filepath='img_filepath',
@@ -340,6 +343,7 @@ class Annotations:
             logger.exception('Failed to delete annotation')
             raise
 
+    @_api_reference.add(path='/annotations/{annotationId}', method='delete')
     def delete(self, annotation: entities.Annotation = None,
                annotation_id: str = None,
                filters: entities.Filters = None) -> bool:
@@ -359,7 +363,7 @@ class Annotations:
 
         .. code-block:: python
 
-            item.annotations.delete(annotation_id='annotation_id')
+            is_deleted = item.annotations.delete(annotation_id='annotation_id')
         """
         if annotation is not None:
             if isinstance(annotation, entities.Annotation):
@@ -499,6 +503,7 @@ class Annotations:
             result = traceback.format_exc()
         return status, result
 
+    @_api_reference.add(path='/annotations/{annotationId}', method='put')
     def update(self, annotations, system_metadata=False):
         """
         Update an existing annotation. For example, you may change the annotation's label and then use the update method. 
@@ -516,7 +521,7 @@ class Annotations:
 
         .. code-block:: python
 
-            item.annotations.update(annotation='annotation')
+            annotations = item.annotations.update(annotation='annotation')
         """
         pool = self._client_api.thread_pools(pool_name='annotation.update')
         if not isinstance(annotations, list):
@@ -666,6 +671,7 @@ class Annotations:
             result = entities.AnnotationCollection.from_json(_json=output_annotations, item=self.item)
             return result
 
+    @_api_reference.add(path='/items/{itemId}/annotations', method='post')
     def upload(self, annotations) -> entities.AnnotationCollection:
         """
         Upload a new annotation/annotations. You must first create the annotation using the annotation *builder* method.
@@ -681,7 +687,7 @@ class Annotations:
 
         .. code-block:: python
 
-            item.annotations.upload(annotations='builder')
+            annotations = item.annotations.upload(annotations='builder')
         """
         # make list if not list
         if isinstance(annotations, entities.AnnotationCollection):
@@ -732,7 +738,7 @@ class Annotations:
 
         .. code-block:: python
 
-            item.annotations.update_status(annotation_id='annotation_id', status=dl.AnnotationStatus.ISSUE)
+            annotation = item.annotations.update_status(annotation_id='annotation_id', status=dl.AnnotationStatus.ISSUE)
         """
         if annotation is None:
             if annotation_id is None:
@@ -757,7 +763,7 @@ class Annotations:
 
         .. code-block:: python
 
-            item.annotations.builder()
+            annotation_collection = item.annotations.builder()
         """
         return entities.AnnotationCollection(item=self.item)
 

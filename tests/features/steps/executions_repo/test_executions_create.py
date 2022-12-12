@@ -136,10 +136,16 @@ def step_impl(context, resource_type):
 @behave.then(u'Execution was executed and finished')
 def step_impl(context):
     success = False
-    execution = context.service.executions.get(execution_id=context.execution.id)
-    if execution.latest_status['status'] == 'success':
-        success = True
-    assert success
+    num_try = 60
+    interval = 10
+    for i in range(num_try):
+        time.sleep(interval)
+        execution = context.service.executions.get(execution_id=context.execution.id)
+        if execution.latest_status['status'] == 'success':
+            success = True
+            break
+
+    assert success, "TEST FAILED: Execution status is {}".format(execution.latest_status['status'])
 
 
 @behave.given(u'I upload item in "{item_path}" to dataset')

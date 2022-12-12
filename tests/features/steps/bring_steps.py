@@ -7,6 +7,7 @@ from tests.features.steps.projects_repo import test_projects_create
 from tests.features.steps.projects_repo import test_projects_list
 from tests.features.steps.projects_repo import test_projects_get
 from tests.features.steps.projects_repo import test_projects_delete
+from tests.features.steps.projects_repo import test_project_integrations
 
 from tests.features.steps.project_entity import test_project_repo_methods
 
@@ -120,6 +121,7 @@ from tests.features.steps.services_repo import test_services_delete
 from tests.features.steps.services_repo import test_services_list
 from tests.features.steps.services_repo import test_services_update
 from tests.features.steps.services_repo import test_services_context
+from tests.features.steps.services_repo import test_services_slot
 
 from tests.features.steps.filters_entity import test_filters
 
@@ -184,7 +186,7 @@ from tests.features.steps.pipeline_entity import pipeline_reset
 from tests.features.steps.items_repo import test_upload_and_download_images
 
 from tests.features.steps.annotations_repo import test_rotated_box_points
-from tests.features.steps.app_entity import test_app_install, test_app_uninstall
+from tests.features.steps.app_entity import test_app_install, test_app_uninstall, test_app_update, test_app_get
 from tests.features.steps.dpk_tests import dpk_json_to_object, test_dpk_publish, test_dpk_list,\
     test_dpk_pull, test_dpk_get
 
@@ -194,14 +196,30 @@ from tests.features.steps.platform_urls import test_platform_urls
 
 from tests.features.steps.annotation_entity import test_annotation_description
 
-from tests.features.steps.utilities import image_annotations_interface
-from tests.features.steps.utilities import video_annotations_interface
-from tests.features.steps.utilities import audio_annotations_interface
-from tests.features.steps.utilities import text_annotations_interface
 
-from tests.features.steps.utilities import items_interface
-from tests.features.steps.utilities import annotations_interface
-from tests.features.steps.utilities import projects_interface
-from tests.features.steps.utilities import datasets_interface
+# Interface steps locations
+from tests.features.steps.annotation_entity import annotation_entity_interface
 
-from tests.features.steps.utilities import conveters_interface
+from tests.features.steps.annotations_repo import annotations_interface
+from tests.features.steps.annotations_repo import image_annotations_interface
+from tests.features.steps.annotations_repo import video_annotations_interface
+from tests.features.steps.annotations_repo import audio_annotations_interface
+from tests.features.steps.annotations_repo import text_annotations_interface
+
+from tests.features.steps.converter import conveters_interface
+
+from tests.features.steps.datasets_repo import datasets_interface
+
+from tests.features.steps.item_entity import item_entity_interface
+
+from tests.features.steps.items_repo import items_interface
+
+from tests.features.steps.projects_repo import projects_interface
+
+
+
+
+
+
+
+from tests.features.steps.annotations_repo import test_annotations_format_json

@@ -46,3 +46,11 @@ def step_impl(context):
     assert not context.dataset.readonly
     assert item_uploaded_successfully(context=context)
     assert dataset_updated_successfully(context=context)
+
+
+@behave.then('I try and fail to delete the project with the readonly dataset')
+def step_impl(context):
+    try:
+        context.project.delete(True, True)
+    except Exception as e:
+        assert 'Failed to perform operation on readonly dataset' in e.args[1]

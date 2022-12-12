@@ -12,7 +12,7 @@ from copy import deepcopy
 from shutil import copyfile
 from concurrent.futures import ThreadPoolExecutor
 
-from .. import entities, repositories, exceptions, utilities, miscellaneous, assets, services
+from .. import entities, repositories, exceptions, utilities, miscellaneous, assets, services, _api_reference
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -118,6 +118,7 @@ class Packages:
         else:
             self._client_api._open_in_web(url=self.platform_url)
 
+    @_api_reference.add(path='/packages/{id}/revisions', method='get')
     def revisions(self, package: entities.Package = None, package_id: str = None):
         """
         Get the package revisions history.
@@ -147,6 +148,7 @@ class Packages:
             raise exceptions.PlatformException(response)
         return response.json()
 
+    @_api_reference.add(path='/packages/{id}', method='get')
     def get(self,
             package_name: str = None,
             package_id: str = None,
@@ -256,6 +258,7 @@ class Packages:
             raise exceptions.PlatformException(response)
         return response.json()
 
+    @_api_reference.add(path='/query/faas', method='post')
     def list(self, filters: entities.Filters = None, project_id: str = None) -> entities.PagedEntities:
         """
         List project packages.
@@ -418,6 +421,7 @@ class Packages:
                         entities.PackageRequirement(name=req_name, version=req_version, operator=op))
         return requirements_list
 
+    @_api_reference.add(path='/packages', method='post')
     def push(self,
              project: entities.Project = None,
              project_id: str = None,
@@ -699,6 +703,7 @@ class Packages:
                                           client_api=self._client_api,
                                           project=project_to_deploy)
 
+    @_api_reference.add(path='/packages/{ids}', method='delete')
     def delete(self, package: entities.Package = None, package_name=None, package_id=None):
         """
         Delete a Package object.
@@ -761,6 +766,7 @@ class Packages:
         # return results
         return True
 
+    @_api_reference.add(path='/packages/{id}', method='patch')
     def update(self, package: entities.Package, revision_increment: str = None) -> entities.Package:
         """
         Update Package changes to the platform.
@@ -1347,11 +1353,11 @@ class Packages:
 
     def build(self, package: entities.Package, module_name=None, init_inputs=None, local_path=None, from_local=None):
         """
-        instantiate a module from the package code. Returns a loaded instance of the runner class
+        Instantiate a module from the package code. Returns a loaded instance of the runner class
 
         :param package: Package entity
         :param module_name: Name of the module to build the runner class
-        :param str init_inputs: dictionary of the class init variables (if exists). will be used to init the moudle class
+        :param str init_inputs: dictionary of the class init variables (if exists). will be used to init the module class
         :param str local_path: local path of the package (if from_local=False - codebase will be downloaded)
         :param bool from_local: bool. if true - codebase will not be downloaded (only use local files)
         :return: dl.BaseServiceRunner

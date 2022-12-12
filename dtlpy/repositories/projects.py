@@ -2,7 +2,7 @@ import logging
 from urllib.parse import quote
 import jwt
 
-from .. import entities, miscellaneous, exceptions, services
+from .. import entities, miscellaneous, exceptions, services, _api_reference
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -163,6 +163,7 @@ class Projects:
             raise exceptions.PlatformException(response)
         return True
 
+    @_api_reference.add(path='projects /{project_id}/members/{user_id}', method='post')
     def add_member(self, email: str, project_id: str, role: entities.MemberRole = entities.MemberRole.DEVELOPER):
         """
         Add a member to the project.
@@ -179,7 +180,7 @@ class Projects:
 
         .. code-block:: python
 
-            dl.projects.add_member(project_id='project_id', email='user@dataloop.ai', role=dl.MemberRole.DEVELOPER)
+            user_json = dl.projects.add_member(project_id='project_id', email='user@dataloop.ai', role=dl.MemberRole.DEVELOPER)
         """
         url_path = '/projects/{}/members/{}'.format(project_id, email)
         payload = dict(role=role)
@@ -196,6 +197,7 @@ class Projects:
 
         return response.json()
 
+    @_api_reference.add(path='projects /{project_id}/members/{user_id}', method='patch')
     def update_member(self, email: str, project_id: str, role: entities.MemberRole = entities.MemberRole.DEVELOPER):
         """
         Update member's information/details in the project.
@@ -212,7 +214,7 @@ class Projects:
 
         .. code-block:: python
 
-            dl.projects.update_member(project_id='project_id', email='user@dataloop.ai', role=dl.MemberRole.DEVELOPER)
+            user_json = = dl.projects.update_member(project_id='project_id', email='user@dataloop.ai', role=dl.MemberRole.DEVELOPER)
         """
         url_path = '/projects/{}/members/{}'.format(project_id, email)
         payload = dict(role=role)
@@ -229,6 +231,7 @@ class Projects:
 
         return response.json()
 
+    @_api_reference.add(path='projects /{project_id}/members/{user_id}', method='delete')
     def remove_member(self, email: str, project_id: str):
         """
         Remove a member from the project.
@@ -244,7 +247,7 @@ class Projects:
 
         .. code-block:: python
 
-            dl.projects.remove_member(project_id='project_id', email='user@dataloop.ai')
+            user_json = dl.projects.remove_member(project_id='project_id', email='user@dataloop.ai')
         """
         url_path = '/projects/{}/members/{}'.format(project_id, email)
         success, response = self._client_api.gen_request(req_type='delete',
@@ -254,6 +257,7 @@ class Projects:
 
         return response.json()
 
+    @_api_reference.add(path='projects /{id}/members', method='get')
     def list_members(self, project: entities.Project, role: entities.MemberRole = None):
         """
         Get a list of the project members.
@@ -269,7 +273,7 @@ class Projects:
 
         .. code-block:: python
 
-            dl.projects.list_members(project_id='project_id', role=dl.MemberRole.DEVELOPER)
+            users_jsons_list = dl.projects.list_members(project_id='project_id', role=dl.MemberRole.DEVELOPER)
         """
         url_path = '/projects/{}/members'.format(project.id)
 
@@ -291,6 +295,7 @@ class Projects:
 
         return members
 
+    @_api_reference.add(path='/projects', method='get')
     def list(self) -> miscellaneous.List[entities.Project]:
         """
         Get the user's project list
@@ -303,7 +308,7 @@ class Projects:
 
         .. code-block:: python
 
-            dl.projects.list()
+            projects = dl.projects.list()
         """
         if self._org is None:
             url_path = '/projects'
@@ -333,6 +338,7 @@ class Projects:
             raise exceptions.PlatformException(response)
         return projects
 
+    @_api_reference.add(path='/projects/{id}', method='get')
     def get(self,
             project_name: str = None,
             project_id: str = None,
@@ -358,7 +364,7 @@ class Projects:
 
         .. code-block:: python
 
-            dl.projects.get(project_id='project_id')
+            project = dl.projects.get(project_id='project_id')
         """
         if fetch is None:
             fetch = self._client_api.fetch_entities
@@ -417,6 +423,7 @@ class Projects:
             self._client_api.platform_settings.add_bulk(settings_list)
         return project
 
+    @_api_reference.add(path='/projects/{id}', method='delete')
     def delete(self,
                project_name: str = None,
                project_id: str = None,
@@ -438,7 +445,7 @@ class Projects:
 
         .. code-block:: python
 
-            dl.projects.delete(project_id='project_id', sure=True, really=True)
+            is_deleted = dl.projects.delete(project_id='project_id', sure=True, really=True)
         """
         if sure and really:
             if project_id is None:
@@ -455,6 +462,7 @@ class Projects:
                 error='403',
                 message='Cant delete project from SDK. Please login to platform to delete')
 
+    @_api_reference.add(path='/projects/{id}', method='patch')
     def update(self,
                project: entities.Project,
                system_metadata: bool = False) -> entities.Project:
@@ -472,7 +480,7 @@ class Projects:
 
         .. code-block:: python
 
-            dl.projects.delete(project='project_entity')
+            project = dl.projects.delete(project='project_entity')
         """
         url_path = '/projects/{}'.format(project.id)
         if system_metadata:
@@ -485,6 +493,7 @@ class Projects:
         else:
             raise exceptions.PlatformException(response)
 
+    @_api_reference.add(path='/projects', method='post')
     def create(self,
                project_name: str,
                checkout: bool = False) -> entities.Project:
@@ -502,7 +511,7 @@ class Projects:
 
         .. code-block:: python
 
-            dl.projects.create(project_name='project_name')
+            project = dl.projects.create(project_name='project_name')
         """
         payload = {'name': project_name}
         success, response = self._client_api.gen_request(req_type='post',

@@ -1,5 +1,5 @@
 import logging
-from .. import entities, repositories, exceptions, miscellaneous, services
+from .. import entities, repositories, exceptions, miscellaneous, services, _api_reference
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -55,6 +55,7 @@ class PipelineExecutions:
     ###########
     # methods #
     ###########
+    @_api_reference.add(path='/pipelines/{pipeline_id}/executions/{executionId}', method='get')
     def get(self,
             pipeline_execution_id: str,
             pipeline_id: str = None
@@ -73,7 +74,7 @@ class PipelineExecutions:
 
         .. code-block:: python
 
-            pipeline.pipeline_executions.get(pipeline_id='pipeline_id')
+            pipeline_executions = pipeline.pipeline_executions.get(pipeline_id='pipeline_id')
         """
 
         if pipeline_id is None and self._pipeline is None:
@@ -135,6 +136,7 @@ class PipelineExecutions:
             raise exceptions.PlatformException(response)
         return response.json()
 
+    @_api_reference.add(path='/pipelines/query', method='post')
     def list(self, filters: entities.Filters = None) -> entities.PagedEntities:
         """
         List project pipeline executions.
@@ -149,7 +151,7 @@ class PipelineExecutions:
 
         .. code-block:: python
 
-            pipeline.pipeline_executions.list()
+            pipeline_executions = pipeline.pipeline_executions.list()
         """
         if filters is None:
             filters = entities.Filters(resource=entities.FiltersResource.PIPELINE_EXECUTION)
@@ -186,6 +188,7 @@ class PipelineExecutions:
         paged.get_page()
         return paged
 
+    @_api_reference.add(path='/pipelines/{pipelineId}/execute', method='post')
     def create(self,
                pipeline_id: str = None,
                execution_input=None):
@@ -203,7 +206,7 @@ class PipelineExecutions:
 
         .. code-block:: python
 
-            pipeline.pipeline_executions.create(pipeline_id='pipeline_id', execution_input={'item': 'item_id'})
+            pipeline_execution = pipeline.pipeline_executions.create(pipeline_id='pipeline_id', execution_input={'item': 'item_id'})
         """
         if pipeline_id is None:
             if self._pipeline is None:

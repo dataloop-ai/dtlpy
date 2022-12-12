@@ -350,7 +350,7 @@ class Task:
 
         .. code-block:: python
 
-            task.create_qa_task(due_date = datetime.datetime(day= 1, month= 1, year= 2029).timestamp(),
+            task = task.create_qa_task(due_date = datetime.datetime(day= 1, month= 1, year= 2029).timestamp(),
                                 assignee_ids =[ 'annotator1@dataloop.ai', 'annotator2@dataloop.ai'])
         """
         return self.tasks.create_qa_task(task=self,
@@ -384,7 +384,7 @@ class Task:
 
         .. code-block:: python
 
-            task.create_assignment(assignee_id='annotator1@dataloop.ai')
+            assignment = task.create_assignment(assignee_id='annotator1@dataloop.ai')
         """
         assignment = self.assignments.create(assignee_id=assignee_id,
                                              filters=filters,

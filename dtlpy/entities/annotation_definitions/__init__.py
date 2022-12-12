@@ -2,7 +2,7 @@ from .base_annotation_definition import BaseAnnotationDefinition
 from .box import Box
 from .cube import Cube
 from .cube_3d import Cube3d
-from .note import Note
+from .note import Note, Message
 from .classification import Classification
 from .comparison import Comparison
 from .ellipse import Ellipse

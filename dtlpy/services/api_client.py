@@ -735,7 +735,7 @@ class ApiClient:
                         alias=None,
                         use_ssl_context=False,
                         gate_url=None,
-                        url=None
+                        url=None,
                         ):
         environments = self.environments
         if environment in environments:

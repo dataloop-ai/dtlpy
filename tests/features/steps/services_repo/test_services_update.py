@@ -84,9 +84,7 @@ def step_impl(context):
 @behave.given(u'Service has max_attempts of "{max_attempts}"')
 def step_impl(context, max_attempts):
     max_attempts = int(max_attempts)
-    context.service.max_attempts = max_attempts
-    context.service = context.service.update(force=True)
-    time.sleep(10)
+    assert context.service.max_attempts == max_attempts
 
 
 @behave.given(u'Execution is running')
@@ -111,8 +109,8 @@ def step_impl(context, force: str):
 
 @behave.then(u'Execution stopped immediately')
 def step_impl(context):
-    interval = 30
-    num_tries = 8
+    interval = 10
+    num_tries = 24
     success = False
     for i in range(num_tries):
         time.sleep(interval)
@@ -126,3 +124,10 @@ def step_impl(context):
 @behave.when(u'I get service revisions')
 def step_impl(context):
     context.service_revisions = context.service.revisions
+
+
+@behave.when(u'I update service to latest package revision')
+def step_impl(context):
+    context.package = context.project.packages.get(package_id=context.service.package_id)
+    context.service.package_revision = context.package.version
+    context.service = context.service.update(True)

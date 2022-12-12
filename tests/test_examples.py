@@ -21,8 +21,8 @@ except ImportError:
     from env_from_git_branch import get_env_from_git_branch
 
 logging.basicConfig(level='DEBUG')
-
-dl.setenv(get_env_from_git_branch())
+_, base_env = get_env_from_git_branch()
+dl.setenv(base_env)
 # check token
 payload = jwt.decode(dl.token(), algorithms=['HS256'], verify=False,
                      options={'verify_signature': False})

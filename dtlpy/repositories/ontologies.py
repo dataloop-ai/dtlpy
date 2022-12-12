@@ -2,7 +2,7 @@ import logging
 import traceback
 import warnings
 
-from .. import entities, miscellaneous, exceptions, services
+from .. import entities, miscellaneous, exceptions, services, _api_reference
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -86,6 +86,7 @@ class Ontologies:
     ###########
     # methods #
     ###########
+    @_api_reference.add(path='/ontologies', method='post')
     def create(self,
                labels,
                title=None,
@@ -256,6 +257,7 @@ class Ontologies:
             status = False
         return status, ontology
 
+    @_api_reference.add(path='/ontologies/{id}', method='get')
     def get(self, ontology_id: str) -> entities.Ontology:
         """
         Get Ontology object to use in your code.
@@ -284,6 +286,7 @@ class Ontologies:
             raise exceptions.PlatformException(response)
         return ontology
 
+    @_api_reference.add(path='/ontologies/{id}', method='delete')
     def delete(self, ontology_id):
         """
         Delete Ontology from the platform.
@@ -308,6 +311,7 @@ class Ontologies:
         else:
             raise exceptions.PlatformException(response)
 
+    @_api_reference.add(path='/ontologies/{id}', method='put')
     def update(self, ontology: entities.Ontology, system_metadata=False) -> entities.Ontology:
         """
         Update the Ontology metadata.

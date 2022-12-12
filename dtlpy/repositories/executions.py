@@ -3,7 +3,7 @@ import logging
 import time
 import numpy as np
 
-from .. import exceptions, entities, repositories, miscellaneous, services
+from .. import exceptions, entities, repositories, miscellaneous, services, _api_reference
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -131,6 +131,7 @@ class Executions:
     ###########
     # methods #
     ###########
+    @_api_reference.add(path='/executions/{serviceId}', method='post')
     def create(self,
                # executions info
                service_id: str = None,
@@ -283,6 +284,7 @@ class Executions:
 
         return response.json()
 
+    @_api_reference.add(path='/query/faas', method='post')
     def list(self, filters: entities.Filters = None) -> entities.PagedEntities:
         """
         List service executions
@@ -342,6 +344,7 @@ class Executions:
         # return good jobs
         return miscellaneous.List([r[1] for r in results if r[0] is True])
 
+    @_api_reference.add(path='/executions/{id}', method='get')
     def get(self,
             execution_id: str = None,
             sync: bool = False
@@ -436,6 +439,7 @@ class Executions:
         else:
             return response.json()
 
+    @_api_reference.add(path='/executions/{executionId}/rerun', method='post')
     def rerun(self, execution: entities.Execution, sync: bool = False):
         """
         Rerun execution
@@ -527,6 +531,7 @@ class Executions:
                 execution.id, execution.latest_status))
         return execution
 
+    @_api_reference.add(path='/executions/{id}/terminate', method='post')
     def terminate(self, execution: entities.Execution):
         """
         Terminate Execution
@@ -556,6 +561,7 @@ class Executions:
                                                 project=self._project,
                                                 client_api=self._client_api)
 
+    @_api_reference.add(path='/executions/{id}', method='patch')
     def update(self, execution: entities.Execution) -> entities.Execution:
         """
         Update execution changes to platform

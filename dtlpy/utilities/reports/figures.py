@@ -128,6 +128,8 @@ class ConfusionMatrix(Base):
     type = 'table'
     href_map: Optional[list]
     color_map: Optional[np.ndarray]
+    xlabel = 'Predicted'
+    ylabel = 'Actual'
 
     @staticmethod
     def _rbgtohex(r, g, b):
@@ -149,7 +151,7 @@ class ConfusionMatrix(Base):
                     'href': href,
                     'color': color}
             row.insert(0, labels[i_row])
-        labels.insert(0, 'DET//GT')
+        labels.insert(0, f'{self.ylabel}//{self.xlabel}')
         return {
             "type": self.type,
             "title": self.title,

@@ -1,6 +1,6 @@
 import logging
 
-from .. import entities, services, exceptions
+from .. import entities, services, exceptions, miscellaneous
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -27,8 +27,8 @@ class Apps:
         self._project = project
 
     def get(self,
-            app_id: str = None,
             app_name: str = None,
+            app_id: str = None,
             fetch: bool = None) -> entities.App:
         """
         Get an app object.
@@ -55,11 +55,12 @@ class Apps:
             if app_name is not None:
                 app = self.__get_by_name(name=app_name)
             else:
-                success, response = self._client_api.gen_request(req_type='get', path="apps/{}".format(app_id))
+                success, response = self._client_api.gen_request(req_type='get', path="/apps/{}".format(app_id))
                 if not success:
                     raise exceptions.PlatformException(response)
                 app = entities.App.from_json(client_api=self._client_api,
-                                             _json=response.json(), project=self.project)
+                                             _json=response.json(),
+                                             project=self._project)
         else:
             app = entities.App.from_json(
                 _json={
@@ -67,7 +68,7 @@ class Apps:
                     'name': app_name
                 },
                 client_api=self._client_api,
-                project=self.project,
+                project=self._project,
                 is_fetched=False
             )
         assert isinstance(app, entities.App)
@@ -91,8 +92,25 @@ class Apps:
                 message='More than one app found by the name of: {} '.format(apps))
         return apps.items[0]
 
+    def _build_entities_from_response(self, response_items) -> miscellaneous.List[entities.App]:
+        pool = self._client_api.thread_pools(pool_name='entity.create')
+        jobs = [None for _ in range(len(response_items))]
+        # return triggers list
+        for i_item, item in enumerate(response_items):
+            jobs[i_item] = pool.submit(entities.App._protected_from_json,
+                                       **{'client_api': self._client_api,
+                                          '_json': item,
+                                          'project': self._project})
+        # get all results
+        results = [j.result() for j in jobs]
+        # log errors
+        _ = [logger.warning(r[1]) for r in results if r[0] is False]
+        # return good jobs
+        items = miscellaneous.List([r[1] for r in results if r[0] is True])
+        return items
+
     def _list(self, filters: entities.Filters):
-        url = 'apps/query'
+        url = '/apps/query'
 
         # request
         success, response = self._client_api.gen_request(req_type='post',
@@ -141,27 +159,22 @@ class Apps:
         paged.get_page()
         return paged
 
-    def update(self, app_id: str, pause: bool) -> bool:
+    def update(self, app: entities.App) -> bool:
         """
-        Run or pause a running application, this function has no effect if the state doesn't change.
+        Update the current app to the new configuration
 
-        :param str app_id: the app to update.
-        :param bool pause: Whether we should pause or resume the application (pause=True, resume=False).
+        :param entities.App app: The app to update.
         :return bool whether the operation ran successfully or not
 
         **Example**
         .. code-block:: python
             succeed = dl.apps.update(app)
         """
-        if app_id is None:
-            raise exceptions.PlatformException(error='400', message='You must provide app_id')
-        req_path = "apps/{}"
-        # TODO: check whether we pass pause or resume
+        if app is None:
+            raise exceptions.PlatformException(error='400', message='You must provide app')
         success, response = self._client_api.gen_request(req_type='put',
-                                                         path=req_path.format(app_id),
-                                                         data={
-                                                             'pause': pause
-                                                         })
+                                                         path=f"/apps/{app.id}",
+                                                         json_req=app.to_json())
         if success:
             return success
         raise exceptions.PlatformException(response)
@@ -183,18 +196,21 @@ class Apps:
         if dpk is None:
             raise exceptions.PlatformException(error='400', message='You must provide an app')
 
-        app = entities.App.from_json({
-            'name': dpk.display_name,
-            'projectId': self.project.id,
-            'orgId': organization_id,
-            'dpkName': dpk.name,
-            'dpkVersion': dpk.version,
-            'scope': dpk.scope
-        }, client_api=self._client_api, project=self.project)
+        app = entities.App.from_json(_json={'name': dpk.display_name,
+                                            'projectId': self.project.id,
+                                            'orgId': organization_id,
+                                            'dpkName': dpk.name,
+                                            'dpkVersion': dpk.version,
+                                            'scope': dpk.scope
+                                            },
+                                     client_api=self._client_api,
+                                     project=self.project)
         success, response = self._client_api.gen_request(req_type='post', path="/apps", json_req=app.to_json())
         if not success:
             raise exceptions.UnknownException(response)
-        return entities.App.from_json(response.json(), self._client_api, self.project)
+        return entities.App.from_json(_json=response.json(),
+                                      client_api=self._client_api,
+                                      project=self.project)
 
     def uninstall(self, app_id: str = None, app_name: str = None) -> bool:
         """
@@ -218,7 +234,7 @@ class Apps:
         if app_name is not None:
             app_id = self.__get_by_name(app_name)
 
-        success, response = self._client_api.gen_request(req_type='delete', path='apps/{}'.format(app_id))
+        success, response = self._client_api.gen_request(req_type='delete', path='/apps/{}'.format(app_id))
         if not success:
             raise exceptions.PlatformException(response)
 

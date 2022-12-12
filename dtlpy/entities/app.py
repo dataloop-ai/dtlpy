@@ -1,6 +1,6 @@
-import logging
 from collections import namedtuple
-
+import traceback
+import logging
 import attr
 
 from .. import entities, services, repositories
@@ -61,18 +61,37 @@ class App(entities.BaseEntity):
         """
         return self.apps.uninstall(self.id)
 
-    def update(self, pause: bool):
+    def update(self):
         """
-        Run or pause a running application, this function has no effect if the state doesn't change.
+        Update the current app to the new configuration
 
-        :param bool pause: Whether we should pause or resume the application (pause=True, resume=False).
         :return bool whether the operation ran successfully or not
 
         **Example**
         .. code-block:: python
-            succeed = dl.apps.update(app)
+            succeed = app.update()
         """
-        return self.apps.update(app_id=self.id, pause=pause)
+        return self.apps.update(self)
+
+    @staticmethod
+    def _protected_from_json(_json, client_api, project, is_fetched=True):
+        """
+        Same as from_json but with try-except to catch if error
+
+        :param _json:  platform json
+        :param client_api: ApiClient entity
+        :return:
+        """
+        try:
+            package = App.from_json(_json=_json,
+                                    client_api=client_api,
+                                    project=project,
+                                    is_fetched=is_fetched)
+            status = True
+        except Exception:
+            package = traceback.format_exc()
+            status = False
+        return status, package
 
     def to_json(self):
         _json = {}

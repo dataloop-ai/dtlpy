@@ -3,7 +3,7 @@ Integrations Repository
 """
 
 import logging
-from .. import entities, exceptions, services, miscellaneous
+from .. import entities, exceptions, services, miscellaneous, _api_reference
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -47,6 +47,7 @@ class Integrations:
             raise ValueError('Must input a valid Organization entity')
         self._org = org
 
+    @_api_reference.add(path='/orgs/{org_id}/integrations/{id}', method='delete')
     def delete(self,
                integrations_id: str,
                sure: bool = False,
@@ -91,6 +92,7 @@ class Integrations:
                 error='403',
                 message='Cant delete integrations from SDK. Please login to platform to delete')
 
+    @_api_reference.add(path='/orgs/{org_id}/integrations', method='post')
     def create(self,
                integrations_type: entities.ExternalStorage,
                name: str,
@@ -142,6 +144,7 @@ class Integrations:
         else:
             return entities.Integration.from_json(_json=response.json(), client_api=self._client_api)
 
+    @_api_reference.add(path='/orgs/{org_id}/integrations', method='patch')
     def update(self,
                new_name: str,
                integrations_id: str):
@@ -182,6 +185,7 @@ class Integrations:
 
         return entities.Integration.from_json(_json=response.json(), client_api=self._client_api)
 
+    @_api_reference.add(path='/orgs/{org_id}/integrations/{id}', method='get')
     def get(self, integrations_id: str):
         """
         Get organization integrations. Use this method to access your integration and be able to use it in your code.
@@ -216,6 +220,7 @@ class Integrations:
             raise exceptions.PlatformException(response)
         return entities.Integration.from_json(_json=response.json(), client_api=self._client_api)
 
+    @_api_reference.add(path='/orgs/{org_id}/integrations', method='get')
     def list(self, only_available=False):
         """
         List all the organization's integrations with external storage.

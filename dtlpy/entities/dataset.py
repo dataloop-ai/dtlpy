@@ -379,7 +379,7 @@ class Dataset(entities.BaseEntity):
         if len(recipes) > 0:
             return recipes[0]
         else:
-            raise exceptions.PlatformException('404', 'dataset has no recipes')
+            raise exceptions.PlatformException('404', 'Dataset {} has no recipe'.format(self.name))
 
     def _get_ontology(self):
         if self._ontology is None:
@@ -387,7 +387,7 @@ class Dataset(entities.BaseEntity):
             if len(ontologies) > 0:
                 self._ontology = ontologies[0]
             else:
-                raise exceptions.PlatformException('404', 'dataset has no ontology')
+                raise exceptions.PlatformException('404', 'Dataset {} has no ontology'.format(self.name))
         return self._ontology
 
     @staticmethod
@@ -456,7 +456,7 @@ class Dataset(entities.BaseEntity):
 
         .. code-block:: python
 
-            dataset.delete(sure=True, really=True)
+            is_deleted = dataset.delete(sure=True, really=True)
         """
         return self.datasets.delete(dataset_id=self.id,
                                     sure=sure,
@@ -476,7 +476,7 @@ class Dataset(entities.BaseEntity):
 
         .. code-block:: python
 
-            dataset.update()
+            dataset = dataset.update()
         """
         return self.datasets.update(dataset=self,
                                     system_metadata=system_metadata)
@@ -520,7 +520,7 @@ class Dataset(entities.BaseEntity):
 
         .. code-block:: python
 
-            dataset.clone(dataset_id='dataset_id',
+            dataset = dataset.clone(dataset_id='dataset_id',
                           clone_name='dataset_clone_name',
                           with_metadata=True,
                           with_items_annotations=False,
@@ -547,7 +547,7 @@ class Dataset(entities.BaseEntity):
 
         .. code-block:: python
 
-            dataset.sync()
+            success = dataset.sync()
         """
         return self.datasets.sync(dataset_id=self.id, wait=wait)
 
@@ -593,7 +593,7 @@ class Dataset(entities.BaseEntity):
 
         .. code-block:: python
 
-            dataset.download_annotations(dataset='dataset_entity',
+            local_path = dataset.download_annotations(dataset='dataset_entity',
                                          local_path='local_path',
                                          annotation_options=[dl.ViewAnnotationOptions.JSON, dl.ViewAnnotationOptions.MASK],
                                          overwrite=False,

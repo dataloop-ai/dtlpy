@@ -26,6 +26,7 @@ def step_impl(context):
 
 
 @behave.when(u'I install the app')
+@behave.given(u'I install the app')
 def step_impl(context):
     context.app = context.dl.entities.App.from_json({
 

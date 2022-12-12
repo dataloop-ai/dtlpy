@@ -155,3 +155,17 @@ def step_impl(context, version, revision_size):
 def step_impl(context, version):
     assert version == context.service.package_revision, "TEST FAILED: Expect version to be {} got {}".format(version,
                                                                                                              context.service.package_revision)
+
+
+@behave.when(u'I add new function to package')
+def step_impl(context):
+
+    function_1 = {'name': 'run_1',
+                  'description': None,
+                  'input': [{'name': 'item', 'type': 'Item'}],
+                  'output': [],
+                  'displayIcon': ''}
+
+    context.package.modules[0].add_function(function_1)
+    context.package = context.package.update()
+

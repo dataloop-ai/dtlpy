@@ -11,6 +11,8 @@ Feature: Datasets repository readonly mode testing
         And I create a dataset with a random name
         When I set dataset readonly mode to "True"
         Then Dataset is in readonly mode
+        Then I try and fail to delete the project with the readonly dataset
+        When I set dataset readonly mode to "False"
 
     @testrail-C4523090
     Scenario: Set and unset readonly mode

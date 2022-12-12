@@ -235,7 +235,9 @@ class Annotation(entities.BaseEntity):
     def coordinates(self):
         color = None
         if self.type in ['binary']:
-            color = self.color
+            color = self.annotation_definition._color
+            if color is None:
+                color = self.color
         coordinates = self.annotation_definition.to_coordinates(color=color)
         return coordinates
 
@@ -444,15 +446,18 @@ class Annotation(entities.BaseEntity):
     @property
     def color(self):
         # if "dataset" is not in self - this will always get the dataset
-        try:
-            colors = self.dataset._get_ontology().color_map
-        except exceptions.BadRequest:
-            colors = None
-            logger.warning('Cant get dataset for annotation color. using default.')
-        if colors is not None and self.label in colors:
-            color = colors[self.label]
+        if self.type == 'binary' and self.annotation_definition._color is not None:
+            color = self.annotation_definition._color
         else:
-            color = (255, 255, 255)
+            try:
+                colors = self.dataset._get_ontology().color_map
+            except exceptions.BadRequest:
+                colors = None
+                logger.warning('Cant get dataset for annotation color. using default.')
+            if colors is not None and self.label in colors:
+                color = colors[self.label]
+            else:
+                color = (255, 255, 255)
         return color
 
     ####################
@@ -520,7 +525,7 @@ class Annotation(entities.BaseEntity):
 
         .. code-block:: python
 
-            annotation.update_status(status=dl.AnnotationStatus.ISSUE)
+            annotation = annotation.update_status(status=dl.AnnotationStatus.ISSUE)
         """
         return self.annotations.update_status(annotation=self, status=status)
 
@@ -537,7 +542,7 @@ class Annotation(entities.BaseEntity):
 
         .. code-block:: python
 
-            annotation.delete()
+            is_deleted = annotation.delete()
         """
         if self.id is None:
             raise PlatformException(
@@ -560,7 +565,7 @@ class Annotation(entities.BaseEntity):
 
         .. code-block:: python
 
-            annotation.update()
+            annotation = annotation.update()
         """
         return self.annotations.update(annotations=self,
                                        system_metadata=system_metadata)[0]
@@ -603,7 +608,7 @@ class Annotation(entities.BaseEntity):
 
         .. code-block:: python
 
-            annotation.download(filepath='filepath', annotation_format=dl.ViewAnnotationOptions.MASK)
+            filepath = annotation.download(filepath='filepath', annotation_format=dl.ViewAnnotationOptions.MASK)
         """
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         if annotation_format == ViewAnnotationOptions.JSON:
@@ -663,7 +668,7 @@ class Annotation(entities.BaseEntity):
 
         .. code-block:: python
 
-            annotation.set_frame(frame=10)
+            success = annotation.set_frame(frame=10)
         """
         if frame in self.frames:
             self.current_frame = frame
@@ -709,7 +714,7 @@ class Annotation(entities.BaseEntity):
 
         .. code-block:: python
 
-            annotation.show(image='ndarray',
+            image = annotation.show(image='ndarray',
                             thickness=1,
                             annotation_format=dl.VIEW_ANNOTATION_OPTIONS_MASK,
                             )
@@ -963,7 +968,7 @@ class Annotation(entities.BaseEntity):
 
         .. code-block:: python
 
-            annotation.new(item='item_entity,
+            annotation = annotation.new(item='item_entity,
                             annotation_definition=dl.Box(top=10,left=10,bottom=100, right=100,label='labelName'))
                             )
         """
@@ -1149,7 +1154,7 @@ class Annotation(entities.BaseEntity):
 
         .. code-block:: python
 
-            annotation.add_frame(frame_num=10,
+            success = annotation.add_frame(frame_num=10,
                             annotation_definition=dl.Box(top=10,left=10,bottom=100, right=100,label='labelName'))
                             )
         """

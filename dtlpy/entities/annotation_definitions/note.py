@@ -35,7 +35,14 @@ class Note(Box):
             description=description
         )
         self.type = "note"
-        self.messages = messages if messages is not None else list()
+        if messages is None:
+            messages = []
+        if not isinstance(messages, list):
+            messages = [messages]
+        for msg_index in range(len(messages)):
+            if not isinstance(messages[msg_index], Message):
+                messages[msg_index] = Message(body=messages[msg_index])
+        self.messages = messages
         self.status = status
         self.create_time = create_time
         self.creator = creator

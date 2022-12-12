@@ -59,3 +59,19 @@ def step_impl(context, identifier):
 @behave.then(u'I check setting got is equal to the one created')
 def step_impl(context):
     assert context.setting_get.to_json() == context.setting.to_json()
+
+
+@behave.then(u'I get setting for context service')
+def step_impl(context):
+
+    context.settings_list = context.project.settings.list()
+    for setting in context.settings_list.items:
+        if context.service.name in setting.name:
+            # Found expected setting
+            context.setting_get = setting
+            break
+
+    if not hasattr(context, "setting_get"):
+        return False, "No setting found with the name: {}".format(context.service.name)
+
+

@@ -1,5 +1,5 @@
 import logging
-from .. import entities, repositories, exceptions, miscellaneous, services
+from .. import entities, repositories, exceptions, miscellaneous, services, _api_reference
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -77,6 +77,7 @@ class Pipelines:
         else:
             self._client_api._open_in_web(url=self.platform_url)
 
+    @_api_reference.add(path='/pipelines/{pipelineId}', method='get')
     def get(self,
             pipeline_name=None,
             pipeline_id=None,
@@ -99,7 +100,7 @@ class Pipelines:
 
         .. code-block:: python
 
-            project.pipelines.get(pipeline_id='pipeline_id')
+            pipeline = project.pipelines.get(pipeline_id='pipeline_id')
         """
         if fetch is None:
             fetch = self._client_api.fetch_entities
@@ -199,6 +200,7 @@ class Pipelines:
             raise exceptions.PlatformException(response)
         return response.json()
 
+    @_api_reference.add(path='/pipelines/query', method='post')
     def list(self,
              filters: entities.Filters = None,
              project_id: str = None
@@ -217,7 +219,7 @@ class Pipelines:
 
         .. code-block:: python
 
-            project.pipelines.get()
+            pipelines = project.pipelines.list()
         """
         if filters is None:
             filters = entities.Filters(resource=entities.FiltersResource.PIPELINE)
@@ -254,6 +256,7 @@ class Pipelines:
         if not success:
             raise exceptions.PlatformException(response)
 
+    @_api_reference.add(path='/pipelines/{pipelineId}', method='delete')
     def delete(self,
                pipeline: entities.Pipeline = None,
                pipeline_name: str = None,
@@ -273,7 +276,7 @@ class Pipelines:
 
         .. code-block:: python
 
-            project.pipelines.delete(pipeline_id='pipeline_id')
+            is_deleted = project.pipelines.delete(pipeline_id='pipeline_id')
        """
         # get id and name
         if pipeline_id is None:
@@ -294,6 +297,7 @@ class Pipelines:
         # return results
         return True
 
+    @_api_reference.add(path='/pipelines/{pipelineId}', method='patch')
     def update(self,
                pipeline: entities.Pipeline = None
                ) -> entities.Pipeline:
@@ -310,7 +314,7 @@ class Pipelines:
 
         .. code-block:: python
 
-            project.pipelines.update(pipeline='pipeline_entity')
+            pipeline = project.pipelines.update(pipeline='pipeline_entity')
         """
 
         # payload
@@ -333,6 +337,7 @@ class Pipelines:
             project=self._project
         )
 
+    @_api_reference.add(path='/pipelines', method='post')
     def create(self,
                name: str = None,
                project_id: str = None,
@@ -353,7 +358,7 @@ class Pipelines:
 
         .. code-block:: python
 
-            project.pipelines.create(name='pipeline_name')
+            pipeline = project.pipelines.create(name='pipeline_name')
         """
         if pipeline_json is None:
             pipeline_json = BASIC_PIPELINE
@@ -379,6 +384,7 @@ class Pipelines:
         assert isinstance(pipeline, entities.Pipeline)
         return pipeline
 
+    @_api_reference.add(path='/compositions/{compositionsId}/install', method='post')
     def install(self, pipeline: entities.Pipeline = None):
         """
         Install (start) a pipeline.
@@ -402,6 +408,7 @@ class Pipelines:
         if not success:
             raise exceptions.PlatformException(response)
 
+    @_api_reference.add(path='/compositions/{compositionsId}/uninstall', method='post')
     def pause(self, pipeline: entities.Pipeline = None):
         """
         Pause a pipeline.
@@ -425,6 +432,7 @@ class Pipelines:
         if not success:
             raise exceptions.PlatformException(response)
 
+    @_api_reference.add(path='/pipelines/{pipelineId}/reset', method='post')
     def reset(self,
               pipeline: entities.Pipeline = None,
               pipeline_id: str = None,
@@ -445,7 +453,7 @@ class Pipelines:
 
         .. code-block:: python
 
-            project.pipelines.reset(pipeline='pipeline_entity')
+            success = project.pipelines.reset(pipeline='pipeline_entity')
         """
 
         if pipeline_id is None:
@@ -474,6 +482,7 @@ class Pipelines:
 
         return True
 
+    @_api_reference.add(path='/pipelines/{id}/statistics', method='get')
     def stats(self, pipeline: entities.Pipeline = None, pipeline_id: str = None, pipeline_name: str = None):
         """
         Get pipeline counters.
@@ -490,7 +499,7 @@ class Pipelines:
 
         .. code-block:: python
 
-            project.pipelines.stats(pipeline='pipeline_entity')
+            pipeline_stats = project.pipelines.stats(pipeline='pipeline_entity')
         """
 
         if pipeline_id is None:
@@ -535,7 +544,7 @@ class Pipelines:
 
         .. code-block:: python
 
-            project.pipelines.execute(pipeline='pipeline_entity', execution_input= {'item': 'item_id'} )
+            pipeline_execution= project.pipelines.execute(pipeline='pipeline_entity', execution_input= {'item': 'item_id'} )
         """
         if pipeline is None:
             pipeline = self.get(pipeline_id=pipeline_id, pipeline_name=pipeline_name)

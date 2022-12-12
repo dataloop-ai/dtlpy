@@ -258,11 +258,11 @@ def compare_dataloop(src_path, dest_path):
 #########
 def compare_attributes(attributes, obj):
     success = True
-    for attr in attributes:
+    for attr_key, attr_val in attributes.items():
         suc = False
         for elem in obj.iter():
-            suc = elem.tag == attr and elem.text == '1'
-            suc = suc or elem.text == attr
+            suc = elem.tag == attr_key and elem.text == str(attr_val)
+            suc = suc or elem.text == attr_key
             if suc:
                 break
         success = success and suc
@@ -278,8 +278,9 @@ def compare_xml_object(obj_a, obj_b):
             if e.tag == 'bndbox':
                 success = success and compare_xml_object(obj_a=e, obj_b=obj_b.find('bndbox'))
             elif e.tag == 'attributes':
-                attributes = json.loads(e.text.replace("'", '"'))
-                success = success and compare_attributes(attributes=attributes, obj=obj_b)
+                if e.text:
+                    attributes = json.loads(e.text.replace("'", '"'))
+                    success = success and compare_attributes(attributes=attributes, obj=obj_b)
             else:
                 success = success and e.text == obj_b.find(e.tag).text
     except Exception as e:

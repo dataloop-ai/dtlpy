@@ -509,7 +509,7 @@ class Service(entities.BaseEntity):
 
         .. code-block:: python
 
-            service.log()
+            service_log = service.log()
         """
         return self.services.log(service=self,
                                  size=size,
@@ -590,7 +590,7 @@ class Service(entities.BaseEntity):
 
         .. code-block:: python
 
-            service.execute(function_name='function_name', item_id='item_id', project_id='project_id')
+            execution = service.execute(function_name='function_name', item_id='item_id', project_id='project_id')
         """
         execution = self.executions.create(sync=sync,
                                            execution_input=execution_input,
@@ -639,7 +639,7 @@ class Service(entities.BaseEntity):
 
         .. code-block:: python
 
-            service.activate_slots(project_id='project_id',
+            setting = service.activate_slots(project_id='project_id',
                                     slots=List[entities.PackageSlot],
                                     icon='fas fa-magic')
         """

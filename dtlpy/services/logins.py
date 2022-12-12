@@ -38,8 +38,6 @@ def login_secret(api_client, email, password, client_id, client_secret=None, for
                     payload['email'] == email and \
                     not api_client.token_expired() and \
                     not force:
-                logger.warning('Trying to login with same email but token not expired. Not doing anything... '
-                               'Set "force" flag to True to login anyway.')
                 return True
         except jwt.exceptions.DecodeError:
             logger.debug('{}'.format('Cant decode token. Force login is used'))

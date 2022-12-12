@@ -959,7 +959,6 @@ class Converter:
         :param Callable conversion_func: Custom conversion service
         :return: the error log file path if there are errors
         """
-        self.dataset = dataset
         file_count = sum(len(files) for _, _, files in os.walk(local_path))
         self.dataset = dataset
         reporter = Reporter(
@@ -1303,16 +1302,31 @@ class Converter:
                 logger.warning('Only bounding box conversion is supported in voc format. Segmentation will be ignored.')
 
         attributes = list(annotation)
-        attrs = list()
+        attrs = dict()
         for attribute in attributes:
             if attribute.tag not in ['bndbox', 'name'] and len(list(attribute)) == 0:
-                if attribute.text not in ['0', '1']:
-                    attrs.append(attribute.text)
-                elif attribute.text == '1':
-                    attrs.append(attribute.tag)
+                if attribute.text is not None:
+                    if attribute.tag == 'attributes':
+                        attribute_value = eval(attribute.text)
+                        if isinstance(attribute_value, list):
+                            attrs = {attribute_value[i]: i for i in range(len(attribute_value))}
+                        else:
+                            attrs.update(attribute_value)
+                    else:
+                        try:
+                            attr_value = eval(attribute.text)
+                        except:
+                            attr_value = attribute.text
+                        attrs[attribute.tag] = attr_value
 
-        ann_def = entities.Box(label=label, top=top, bottom=bottom, left=left, right=right, attributes=attrs)
-        return entities.Annotation.new(annotation_definition=ann_def)
+        ann_def = entities.Box(label=label, top=top, bottom=bottom, left=left, right=right)
+        new_annotation = entities.Annotation.new(annotation_definition=ann_def)
+        if attrs is not None:
+            try:
+                new_annotation.attributes = attrs
+            except:
+                new_annotation.attributes = list(attrs.keys())
+        return new_annotation
 
     def from_yolo(self, annotation, item=None, **kwargs):
         """
@@ -1566,11 +1580,12 @@ class Converter:
 
         label = annotation.label
 
-        if annotation.attributes is not None and isinstance(annotation.attributes, list) and len(
-                annotation.attributes) > 0:
-            attributes = annotation.attributes
-        else:
-            attributes = list()
+        attributes = dict()
+        if annotation.attributes is not None:
+            if isinstance(annotation.attributes, dict) and len(annotation.attributes) > 0:
+                attributes = annotation.attributes
+            elif isinstance(annotation.attributes, list) and len(annotation.attributes) > 0:
+                attributes = {annotation.attributes[i]: i for i in range(len(annotation.attributes))}
 
         left = annotation.left
         top = annotation.top
@@ -1581,10 +1596,10 @@ class Converter:
                'xmin': left,
                'ymin': top,
                'xmax': right,
-               'ymax': bottom,
-               'attributes': attributes,
+               'ymax': bottom
                }
-
+        if attributes:
+            ann['attributes'] = attributes
         return ann
 
     @staticmethod

@@ -178,7 +178,7 @@ class FunctionIO:
                 value_ok = False
         else:
             expected_value = 'Unknown value type: {}'.format(type(value))
-            if type(value) not in [dict, str, float, int, bool]:
+            if type(value) not in [dict, str, float, int, bool, list]:
                 value_ok = False
 
         if not value_ok and value is not None:

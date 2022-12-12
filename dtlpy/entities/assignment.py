@@ -165,7 +165,7 @@ class Assignment(entities.BaseEntity):
 
         .. code-block:: python
 
-            assignment.update(system_metadata=False)
+            assignment = assignment.update(system_metadata=False)
         """
         return self.assignments.update(assignment=self, system_metadata=system_metadata)
 
@@ -200,7 +200,7 @@ class Assignment(entities.BaseEntity):
 
         .. code-block:: python
 
-            task.assignments.get_items()
+            items = task.assignments.get_items()
         """
         if dataset is None:
             dataset = self.dataset
@@ -222,7 +222,7 @@ class Assignment(entities.BaseEntity):
 
         .. code-block:: python
 
-            assignment.reassign(assignee_ids='annotator1@dataloop.ai')
+            assignment = assignment.reassign(assignee_ids='annotator1@dataloop.ai')
         """
         return self.assignments.reassign(assignment=self,
                                          task=self._task,
@@ -245,7 +245,7 @@ class Assignment(entities.BaseEntity):
 
         .. code-block:: python
 
-            assignment.redistribute(workload=dl.Workload([dl.WorkloadUnit(assignee_id="annotator1@dataloop.ai", load=50),
+            assignment = assignment.redistribute(workload=dl.Workload([dl.WorkloadUnit(assignee_id="annotator1@dataloop.ai", load=50),
                                                          dl.WorkloadUnit(assignee_id="annotator2@dataloop.ai", load=50)]))
         """
         return self.assignments.redistribute(assignment=self,
@@ -270,7 +270,7 @@ class Assignment(entities.BaseEntity):
 
         .. code-block:: python
 
-            assignment.set_status(status='complete',
+            success = assignment.set_status(status='complete',
                                     operation='created',
                                     item_id='item_id')
         """

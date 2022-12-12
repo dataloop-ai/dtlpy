@@ -32,6 +32,7 @@ class FeatureSet(entities.BaseEntity):
     entity_type = attr.ib()
     project_id = attr.ib()
     org_id = attr.ib()
+    data_type = attr.ib()
 
     # sdk
     _client_api = attr.ib(type=services.ApiClient, repr=False)
@@ -102,7 +103,8 @@ class FeatureSet(entities.BaseEntity):
             updated_by=_json.get('updatedBy', None),
             tags=_json.get('tags', None),
             client_api=client_api,
-            org_id=_json.get('org', None)
+            org_id=_json.get('org', None),
+            data_type =_json.get('dataType', None)
         )
         inst.is_fetched = is_fetched
         return inst
@@ -128,6 +130,8 @@ class FeatureSet(entities.BaseEntity):
                  'url': self.url}
         if self.org_id is not None:
             _json['org'] = self.org_id
+        if self.data_type is not None:
+            _json['dataType'] = self.data_type
 
         return _json
 

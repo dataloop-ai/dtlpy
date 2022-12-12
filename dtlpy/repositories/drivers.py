@@ -1,6 +1,6 @@
 import logging
 
-from .. import entities, miscellaneous, exceptions, services
+from .. import entities, miscellaneous, exceptions, services, _api_reference
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -53,6 +53,7 @@ class Drivers:
             raise exceptions.PlatformException(response)
         return driver
 
+    @_api_reference.add(path='/drivers?projectId={id}', method='get')
     def list(self) -> miscellaneous.List[entities.Driver]:
         """
         Get the project's drivers list.
@@ -79,6 +80,7 @@ class Drivers:
                                       response.json()])
         return drivers
 
+    @_api_reference.add(path='/drivers/{id}', method='get')
     def get(self,
             driver_name: str = None,
             driver_id: str = None) -> entities.Driver:
@@ -123,6 +125,7 @@ class Drivers:
                 message='Must provide an identifier (name or id) in inputs')
         return driver
 
+    @_api_reference.add(path='/drivers', method='post')
     def create(self,
                name: str,
                driver_type: entities.ExternalStorage,
@@ -199,6 +202,7 @@ class Drivers:
         else:
             return entities.Driver.from_json(_json=response.json(), client_api=self._client_api)
 
+    @_api_reference.add(path='/drivers/{id}', method='delete')
     def delete(self,
                driver_name: str = None,
                driver_id: str = None,

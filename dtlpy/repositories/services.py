@@ -6,7 +6,7 @@ import os
 import tempfile
 import time
 from typing import Union, List, Callable
-from .. import miscellaneous, exceptions, entities, repositories, assets, ApiClient
+from .. import miscellaneous, exceptions, entities, repositories, assets, ApiClient, _api_reference
 from ..__version__ import version as __version__
 
 logger = logging.getLogger(name='dtlpy')
@@ -145,6 +145,7 @@ class Services:
     ###########
     # methods #
     ###########
+    @_api_reference.add(path='/services/{id}/revisions', method='get')
     def revisions(self,
                   service: entities.Service = None,
                   service_id: str = None):
@@ -162,7 +163,7 @@ class Services:
 
         .. code-block:: python
 
-            package.services.revisions(service_id='service_id')
+            service_revision = package.services.revisions(service_id='service_id')
         """
         if service is None and service_id is None:
             raise exceptions.PlatformException(
@@ -178,6 +179,7 @@ class Services:
             raise exceptions.PlatformException(response)
         return response.json()
 
+    @_api_reference.add(path='/services/{id}', method='get')
     def get(self,
             service_name=None,
             service_id=None,
@@ -200,7 +202,7 @@ class Services:
 
         .. code-block:: python
 
-            package.services.get(service_id='service_id')
+            service = package.services.get(service_id='service_id')
         """
         if fetch is None:
             fetch = self._client_api.fetch_entities
@@ -293,6 +295,7 @@ class Services:
 
         return response.json()
 
+    @_api_reference.add(path='/query/faas', method='post')
     def list(self, filters: entities.Filters = None) -> entities.PagedEntities:
         """
         List all services (services can be listed for a package or for a project).
@@ -307,7 +310,7 @@ class Services:
 
         .. code-block:: python
 
-            package.services.list()
+            services = package.services.list()
         """
         # default filters
         if filters is None:
@@ -339,6 +342,7 @@ class Services:
         paged.get_page()
         return paged
 
+    @_api_reference.add(path='/services/{id}/status', method='post')
     def status(self, service_name=None, service_id=None):
         """
         Get service status.
@@ -356,7 +360,7 @@ class Services:
 
         .. code-block:: python
 
-            package.services.status(service_id='service_id')
+            status_json = package.services.status(service_id='service_id')
         """
         if service_id is None:
             if service_name is None:
@@ -371,6 +375,7 @@ class Services:
             raise exceptions.PlatformException(response)
         return response.json()
 
+    @_api_reference.add(path='/services/{id}/stop', method='post')
     def pause(self,
               service_name: str = None,
               service_id: str = None,
@@ -392,7 +397,7 @@ class Services:
 
         .. code-block:: python
 
-            package.services.pause(service_id='service_id')
+            success = package.services.pause(service_id='service_id')
         """
         if service_id is None:
             if service_name is None:
@@ -441,6 +446,7 @@ class Services:
             raise exceptions.PlatformException(response)
         return success
 
+    @_api_reference.add(path='/services/{id}/resume', method='post')
     def resume(self,
                service_name: str = None,
                service_id: str = None,
@@ -462,7 +468,7 @@ class Services:
 
         .. code-block:: python
 
-            package.services.resume(service_id='service_id')
+            service_json = package.services.resume(service_id='service_id')
         """
         if service_id is None:
             if service_name is None:
@@ -710,6 +716,7 @@ class Services:
             project=self._project
         )
 
+    @_api_reference.add(path='/services/{id}', method='delete')
     def delete(self, service_name: str = None, service_id: str = None):
         """
         Delete Service object
@@ -727,7 +734,7 @@ class Services:
 
         .. code-block:: python
 
-            package.services.delete(service_id='service_id')
+            is_deleted = package.services.delete(service_id='service_id')
         """
         # get bby name
         if service_id is None:
@@ -745,6 +752,7 @@ class Services:
             raise exceptions.PlatformException(response)
         return True
 
+    @_api_reference.add(path='/services/{id}', method='patch')
     def update(self, service: entities.Service, force: bool = False) -> entities.Service:
         """
         Update service changes to platform.
@@ -760,7 +768,7 @@ class Services:
 
         .. code-block:: python
 
-            package.services.update(service='service_entity')
+            service = package.services.update(service='service_entity')
         """
         assert isinstance(service, entities.Service)
 
@@ -829,7 +837,7 @@ class Services:
 
         .. code-block:: python
 
-            package.services.activate_slots(service='service_entity',
+            setting = package.services.activate_slots(service='service_entity',
                                             project_id='project_id',
                                             slots=List[entities.PackageSlot],
                                             icon='fas fa-magic')
@@ -901,10 +909,19 @@ class Services:
                 hint=None
             )
 
-            settings.append(self._settings.create(setting=setting))
+            try:
+                settings.append(self._settings.create(setting=setting))
+            except exceptions.BadRequest as err:
+                if 'settings already exist' in err.message:
+                    old_setting = self._settings.get(setting_name=setting.name)
+                    setting.id = old_setting.id
+                    settings.append(self._settings.update(setting=setting))
+                else:
+                    raise err
 
         return settings
 
+    @_api_reference.add(path='/services/{id}/logs', method='post')
     def log(self,
             service,
             size=100,
@@ -944,7 +961,7 @@ class Services:
 
         .. code-block:: python
 
-            package.services.log(service='service_entity')
+            service_logs = package.services.log(service='service_entity')
         """
         assert isinstance(service, entities.Service)
 
@@ -1048,7 +1065,7 @@ class Services:
 
         .. code-block:: python
 
-            package.services.execute(service='service_entity',
+            execution = package.services.execute(service='service_entity',
                                     function_name='run',
                                     item_id='item_id',
                                     project_id='project_id')
@@ -1069,6 +1086,7 @@ class Services:
                                                                           stream_logs=stream_logs)
         return execution
 
+    @_api_reference.add(path='/services', method='post')
     def deploy(self,
                service_name: str = None,
                package: entities.Package = None,
@@ -1128,7 +1146,7 @@ class Services:
 
         .. code-block:: python
 
-            package.services.deploy(service_name=package_name,
+            service = package.services.deploy(service_name=package_name,
                                     execution_timeout=3 * 60 * 60,
                                     module_name=module.name,
                                     runtime=dl.KubernetesRuntime(
@@ -1320,7 +1338,7 @@ class Services:
 
         .. code-block:: python
 
-            package.services.deploy_from_local_folder(cwd='file_path',
+            service = package.services.deploy_from_local_folder(cwd='file_path',
                                                       service_file='service_file')
         """
         # get cwd and service.json path
@@ -1460,7 +1478,7 @@ class Services:
 
         .. code-block:: python
 
-            dl.organizations.enable_cache(organization='organization',
+            success = dl.organizations.enable_cache(organization='organization',
                                           mode=dl.CacheAction.APPLY)
         """
         if organization is None:

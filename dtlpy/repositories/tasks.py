@@ -3,7 +3,7 @@ import logging
 import json
 from typing import Union, List
 
-from .. import exceptions, miscellaneous, entities, repositories, services
+from .. import exceptions, miscellaneous, entities, repositories, services, _api_reference
 
 logger = logging.getLogger(name='dtlpy')
 URL_PATH = '/annotationtasks'
@@ -167,6 +167,7 @@ class Tasks:
     ###########
     # methods #
     ###########
+    @_api_reference.add(path='/annotationtasks/query', method='post')
     def list(
             self,
             project_ids=None,
@@ -269,6 +270,7 @@ class Tasks:
 
         return tasks
 
+    @_api_reference.add(path='/annotationtasks/{id}', method='get')
     def get(self, task_name=None, task_id=None) -> entities.Task:
         """
         Get a Task object to use in your code.
@@ -357,6 +359,7 @@ class Tasks:
         else:
             self._client_api._open_in_web(url=self.platform_url)
 
+    @_api_reference.add(path='/annotationtasks/{id}', method='delete')
     def delete(self,
                task: entities.Task = None,
                task_name: str = None,
@@ -410,6 +413,7 @@ class Tasks:
                                                .format(response))
         return True
 
+    @_api_reference.add(path='/annotationtasks/{id}', method='patch')
     def update(self,
                task: entities.Task = None,
                system_metadata=False
@@ -543,6 +547,7 @@ class Tasks:
                            priority=priority
                            )
 
+    @_api_reference.add(path='/annotationtasks', method='post')
     def create(self,
                task_name,
                due_date=None,
@@ -760,6 +765,7 @@ class Tasks:
             if filters is not None:
                 filters._nullify_refs()
 
+    @_api_reference.add(path='annotationtasks/{id}/addToTask', method='post')
     def add_items(self,
                   task: entities.Task = None,
                   task_id=None,
@@ -852,6 +858,7 @@ class Tasks:
         assert isinstance(task, entities.Task)
         return task
 
+    @_api_reference.add(path='annotationtasks/{id}/removeFromTask', method='post')
     def remove_items(self,
                      task: entities.Task = None,
                      task_id=None,

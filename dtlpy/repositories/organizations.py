@@ -1,7 +1,7 @@
 import logging
 from enum import Enum
 
-from .. import entities, miscellaneous, exceptions, services
+from .. import entities, miscellaneous, exceptions, services, _api_reference
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -49,7 +49,7 @@ class Organizations:
 
         .. code-block:: python
 
-            dl.organizations.list_groups(organization_id='organization_id')
+            groups_list = dl.organizations.list_groups(organization_id='organization_id')
         """
         if organization is None and organization_id is None and organization_name is None:
             raise exceptions.PlatformException(
@@ -91,7 +91,7 @@ class Organizations:
 
         .. code-block:: python
 
-            dl.organizations.list_integrations(organization='organization-entity',
+            list_integrations = dl.organizations.list_integrations(organization='organization-entity',
                                                 only_available=True)
         """
         if organization is None and organization_id is None and organization_name is None:
@@ -115,6 +115,7 @@ class Organizations:
         available_integrations = miscellaneous.List(response.json())
         return available_integrations
 
+    @_api_reference.add(path='/orgs/{org_id}/members', method='get')
     def list_members(self, organization: entities.Organization = None,
                      organization_id: str = None,
                      organization_name: str = None,
@@ -137,7 +138,7 @@ class Organizations:
 
         .. code-block:: python
 
-            dl.organizations.list_members(organization='organization-entity',
+            list_members = dl.organizations.list_members(organization='organization-entity',
                                         role=dl.MemberOrgRole.MEMBER)
         """
         if organization is None and organization_id is None and organization_name is None:
@@ -169,6 +170,7 @@ class Organizations:
 
         return members
 
+    @_api_reference.add(path='/orgs', method='get')
     def list(self) -> miscellaneous.List[entities.Organization]:
         """
         Lists all the organizations in Dataloop.
@@ -182,7 +184,7 @@ class Organizations:
 
         .. code-block:: python
 
-            dl.organizations.list()
+            organizations = dl.organizations.list()
         """
         success, response = self._client_api.gen_request(req_type='get',
                                                          path='/orgs')
@@ -208,6 +210,7 @@ class Organizations:
             raise exceptions.PlatformException(response)
         return organization
 
+    @_api_reference.add(path='/orgs/{id}', method='get')
     def get(self,
             organization_id: str = None,
             organization_name: str = None,
@@ -229,7 +232,7 @@ class Organizations:
 
         .. code-block:: python
 
-            dl.organizations.get(organization_id='organization_id')
+            org = dl.organizations.get(organization_id='organization_id')
         """
         if organization_name is None and organization_id is None:
             raise exceptions.PlatformException(
@@ -274,6 +277,7 @@ class Organizations:
 
         return organization
 
+    @_api_reference.add(path='/orgs/{org_id}/plan', method='patch')
     def update(self, plan: str,
                organization: entities.Organization = None,
                organization_id: str = None,
@@ -296,7 +300,7 @@ class Organizations:
 
         .. code-block:: python
 
-            dl.organizations.update(organization='organization-entity',
+            org = dl.organizations.update(organization='organization-entity',
                                     plan=dl.OrganizationsPlans.FREEMIUM)
         """
         if organization is None and organization_id is None and organization_name is None:
@@ -321,6 +325,7 @@ class Organizations:
         else:
             raise exceptions.PlatformException(response)
 
+    @_api_reference.add(path='/orgs/{org_id}/members', method='post')
     def add_member(self, email: str,
                    role: entities.MemberOrgRole = entities.MemberOrgRole.MEMBER,
                    organization_id: str = None,
@@ -345,7 +350,7 @@ class Organizations:
 
         .. code-block:: python
 
-            dl.organizations.add_member(email='user@domain.com',
+            success = dl.organizations.add_member(email='user@domain.com',
                                         organization_id='organization_id',
                                         role=dl.MemberOrgRole.MEMBER)
         """
@@ -376,6 +381,7 @@ class Organizations:
         else:
             return True
 
+    @_api_reference.add(path='/orgs/{org_id}/members/{user_id}', method='delete')
     def delete_member(self, user_id: str,
                       organization_id: str = None,
                       organization_name: str = None,
@@ -402,7 +408,7 @@ class Organizations:
 
         .. code-block:: python
 
-            dl.organizations.delete_member(user_id='user_id',
+            success = dl.organizations.delete_member(user_id='user_id',
                                             organization_id='organization_id',
                                             sure=True,
                                             really=True)
@@ -428,6 +434,7 @@ class Organizations:
                 error='403',
                 message='Cant delete member from SDK. Please login to platform to delete')
 
+    @_api_reference.add(path='/orgs/{org_id}/members', method='patch')
     def update_member(self, email: str,
                       role: entities.MemberOrgRole = entities.MemberOrgRole.MEMBER,
                       organization_id: str = None,
@@ -452,7 +459,7 @@ class Organizations:
 
         .. code-block:: python
 
-            dl.organizations.update_member(email='user@domain.com',
+            member_json = dl.organizations.update_member(email='user@domain.com',
                                             organization_id='organization_id',
                                              role=dl.MemberOrgRole.MEMBER)
         """
@@ -505,7 +512,7 @@ class Organizations:
 
         .. code-block:: python
 
-            dl.organizations.enable_cache(organization_id='organization_id',
+            success = dl.organizations.enable_cache(organization_id='organization_id',
                                           mode=dl.CacheAction.APPLY)
         """
         if organization is None and organization_id is None and organization_name is None:

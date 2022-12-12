@@ -155,3 +155,13 @@ def step_impl(context, service_name):
 
     except Exception as e:
         context.error = e
+
+
+@behave.then(u"I call service.execute() on items in dataset")
+def step_impl(context):
+    items_list = [item.id for item in context.dataset.items.list().items]
+    context.execution = context.service.execute(
+        execution_input=FunctionIO(name='items', value=items_list, type=PackageInputType.ITEMS),
+        function_name='run',
+        project_id=context.package.project_id)
+

@@ -46,7 +46,7 @@ class Bots:
 
         .. code-block:: python
 
-            service.bots.list()
+            bots_list = service.bots.list()
 
         """
         success, response = self._client_api.gen_request(req_type='get',

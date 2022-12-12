@@ -1,6 +1,6 @@
 import logging
 
-from .. import exceptions, miscellaneous, entities, repositories, services
+from .. import exceptions, miscellaneous, entities, repositories, services, _api_reference
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -100,7 +100,7 @@ class Assignments:
 
         .. code-block:: python
 
-            task.assignments.list(status='complete', assignee_id='user@dataloop.ai', pages_size=100, page_offset=0)
+            assignments = task.assignments.list(status='complete', assignee_id='user@dataloop.ai', pages_size=100, page_offset=0)
         """
 
         # url
@@ -155,6 +155,7 @@ class Assignments:
             raise exceptions.PlatformException(response)
         return assignments
 
+    @_api_reference.add(path='/assignments/{id}', method='get')
     def get(self,
             assignment_name: str = None,
             assignment_id: str = None):
@@ -170,7 +171,7 @@ class Assignments:
 
         .. code-block:: python
 
-            task.assignments.get(assignment_id='assignment_id')
+            assignment = task.assignments.get(assignment_id='assignment_id')
         """
 
         if assignment_id is not None:
@@ -244,6 +245,7 @@ class Assignments:
         else:
             self._client_api._open_in_web(url=self.platform_url)
 
+    @_api_reference.add(path='/assignments/{id}/reassign', method='post')
     def reassign(self,
                  assignee_id: str,
                  assignment: entities.Assignment = None,
@@ -269,7 +271,7 @@ class Assignments:
 
         .. code-block:: python
 
-            task.assignments.reassign(assignee_ids='annotator1@dataloop.ai')
+            assignment = task.assignments.reassign(assignee_ids='annotator1@dataloop.ai')
         """
         if assignment_id is None and assignment is None:
             raise exceptions.PlatformException('400', 'Must provide either assignment or assignment_id')
@@ -306,6 +308,7 @@ class Assignments:
         else:
             raise exceptions.PlatformException(response)
 
+    @_api_reference.add(path='/assignments/{id}/redistribute', method='post')
     def redistribute(self,
                      workload: entities.Workload,
                      assignment: entities.Assignment = None,
@@ -331,7 +334,7 @@ class Assignments:
 
         .. code-block:: python
 
-            task.assignments.redistribute(workload=dl.Workload([dl.WorkloadUnit(assignee_id="annotator1@dataloop.ai", load=50),
+            assignment = task.assignments.redistribute(workload=dl.Workload([dl.WorkloadUnit(assignee_id="annotator1@dataloop.ai", load=50),
                                                                 dl.WorkloadUnit(assignee_id="annotator2@dataloop.ai", load=50)]))
         """
         if assignment_id is None and assignment is None:
@@ -388,6 +391,7 @@ class Assignments:
         else:
             raise exceptions.PlatformException(response)
 
+    @_api_reference.add(path='/assignments/{id}', method='patch')
     def update(self,
                assignment: entities.Assignment = None,
                system_metadata: bool = False
@@ -406,7 +410,7 @@ class Assignments:
 
         .. code-block:: python
 
-            task.assignments.update(assignment='assignment_entity', system_metadata=False)
+            assignment = task.assignments.update(assignment='assignment_entity', system_metadata=False)
         """
         url = '/assignments/{}'.format(assignment.id)
 
@@ -444,7 +448,7 @@ class Assignments:
 
         .. code-block:: python
 
-            task.assignments.create(assignee_id='annotator1@dataloop.ai')
+            assignment = task.assignments.create(assignee_id='annotator1@dataloop.ai')
         """
         return self._create_in_task(assignee_id=assignee_id, task=task, filters=filters, items=items)
 
@@ -522,7 +526,7 @@ class Assignments:
 
         .. code-block:: python
 
-            task.assignments.get_items(assignment_id='assignment_id')
+            items = task.assignments.get_items(assignment_id='assignment_id')
         """
         if assignment is None and assignment_id is None and assignment_name is None:
             raise exceptions.PlatformException('400',
@@ -571,7 +575,7 @@ class Assignments:
 
         .. code-block:: python
 
-            task.assignments.set_status(assignment_id='assignment_id',
+            success = task.assignments.set_status(assignment_id='assignment_id',
                                         status='complete',
                                         operation='created',
                                         item_id='item_id')

@@ -1,7 +1,7 @@
 import behave
 
 
-@behave.given(u'I update the app')
+@behave.when(u'I update the app')
 def step_impl(context):
     context.app_updated = context.project.apps.update(app_id=context.app.id, pause=True)
 

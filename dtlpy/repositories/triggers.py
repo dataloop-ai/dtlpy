@@ -1,6 +1,6 @@
 import logging
 
-from .. import entities, miscellaneous, exceptions, services, repositories
+from .. import entities, miscellaneous, exceptions, services, repositories, _api_reference
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -95,6 +95,7 @@ class Triggers:
         if not success:
             raise exceptions.PlatformException(response)
 
+    @_api_reference.add(path='/triggers', method='post')
     def create(self,
                # for both trigger types
                service_id: str = None,
@@ -296,6 +297,7 @@ class Triggers:
                                                   project=self._project if self._project_id == project_id else None,
                                                   service=self._service)
 
+    @_api_reference.add(path='/triggers/{id}', method='get')
     def get(self, trigger_id=None, trigger_name=None) -> entities.BaseTrigger:
         """
         Get Trigger object
@@ -352,6 +354,7 @@ class Triggers:
 
         return trigger
 
+    @_api_reference.add(path='/triggers/{id}', method='delete')
     def delete(self, trigger_id=None, trigger_name=None):
         """
         Delete Trigger object
@@ -384,6 +387,7 @@ class Triggers:
             raise exceptions.PlatformException(response)
         return True
 
+    @_api_reference.add(path='/triggers/{id}', method='patch')
     def update(self, trigger: entities.BaseTrigger) -> entities.BaseTrigger:
         """
         Update trigger
@@ -451,6 +455,7 @@ class Triggers:
             raise exceptions.PlatformException(response)
         return response.json()
 
+    @_api_reference.add(path='/query/faas', method='post')
     def list(self, filters: entities.Filters = None) -> entities.PagedEntities:
         """
         List triggers of a project, package, or service.

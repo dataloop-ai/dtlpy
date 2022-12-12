@@ -615,7 +615,7 @@ class Ontology(entities.BaseEntity):
 
         .. code-block:: python
 
-            ontology.add_label(label_name='person', color=(34, 6, 231), attributes=['big', 'small'])
+            label = ontology.add_label(label_name='person', color=(34, 6, 231), attributes=['big', 'small'])
         """
         return self._label_handler(label_name=label_name, color=color, children=children, attributes=attributes,
                                    display_label=display_label, label=label, add=add, icon_path=icon_path,
@@ -634,7 +634,7 @@ class Ontology(entities.BaseEntity):
 
         .. code-block:: python
 
-            ontology.add_labels(label_list=label_list)
+            labels = ontology.add_labels(label_list=label_list)
         """
         self._labels_handler(label_list=label_list, update_ontology=update_ontology, mode=LabelHandlerMode.UPSERT)
 
@@ -660,7 +660,7 @@ class Ontology(entities.BaseEntity):
 
         .. code-block:: python
 
-            ontology.update_label(label_name='person', color=(34, 6, 231), attributes=['big', 'small'])
+            label = ontology.update_label(label_name='person', color=(34, 6, 231), attributes=['big', 'small'])
         """
         if upsert:
             mode = LabelHandlerMode.UPSERT
@@ -685,7 +685,7 @@ class Ontology(entities.BaseEntity):
 
         .. code-block:: python
 
-            ontology.update_labels(label_list=label_list)
+            labels = ontology.update_labels(label_list=label_list)
         """
 
         if upsert:
@@ -737,7 +737,7 @@ class Ontology(entities.BaseEntity):
 
         .. code-block:: python
 
-            ontology.delete_attributes(['1'])
+            success = ontology.delete_attributes(['1'])
         """
 
         return self.ontologies.delete_attributes(ontology_id=self.id, keys=keys)

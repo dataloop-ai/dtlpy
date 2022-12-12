@@ -8,5 +8,5 @@ Feature: Test app update
 
     @testrail-C4524925
     Scenario: I update the app
-        Given I update the app
+        When I update the app
         Then The update should success

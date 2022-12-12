@@ -19,6 +19,7 @@ import os
 
 from . import services as dtlpy_services
 from .services import DataloopLogger, DtlpyFilter, ApiClient, check_sdk, Reporter, VerboseLoggingLevel, service_defaults
+from .services.api_reference import api_reference as _api_reference
 from .caches.cache import CacheConfig, CacheType
 from .exceptions import PlatformException
 from . import repositories, exceptions, entities, examples
@@ -29,7 +30,7 @@ from .entities import (
     Recipe, IndexDriver, AttributesTypes, AttributesRange,
     Ontology, Label, Task, TaskPriority, Assignment, Service, Package, Codebase, Model, PackageModule, PackageFunction,
     # annotations
-    Box, Cube, Cube3d, Point, Note, Segmentation, Ellipse, Classification, Subtitle, Polyline, Pose, Description,
+    Box, Cube, Cube3d, Point, Note, Message, Segmentation, Ellipse, Classification, Subtitle, Polyline, Pose, Description,
     Polygon, Text,
     # filters
     Filters, FiltersKnownFields, FiltersResource, FiltersOperations, FiltersMethod, FiltersOrderByDirection,
@@ -46,7 +47,7 @@ from .entities import (
     RequirementOperator, PackageRequirement,
     Command, CommandsStatus,
     LocalCodebase, GitCodebase, ItemCodebase, FilesystemCodebase, PackageCodebaseType,
-    MemberRole, FeatureEntityType, MemberOrgRole,
+    MemberRole, FeatureEntityType, FeatureDataType, MemberOrgRole,
     Webhook, HttpMethod,
     ViewAnnotationOptions, AnnotationStatus, AnnotationType,
     ItemStatus, ExecutionStatus, ExportMetadata,

@@ -13,9 +13,9 @@ def step_impl(context):
                               type=context.dl.SlotPostActionType.NO_ACTION),
                           display_scopes=[
                               context.dl.SlotDisplayScope(
-                                  filters=context.filters,
+                                  filters={},
                                   resource=context.dl.SlotDisplayScopeResource.ITEM,
-                                  panel=context.dl.UI_BINDING_PANEL_ALL)
+                                  panel=context.dl.UI_BINDING_PANEL_STUDIO)
                           ])
 
     context.package.slots = []
@@ -37,23 +37,23 @@ def step_impl(context):
                               context.dl.SlotDisplayScope(
                                   filters=context.dl.Filters(resource=context.dl.FiltersResource.ITEM),
                                   resource=context.dl.SlotDisplayScopeResource.ITEM,
-                                  panel=context.dl.UI_BINDING_PANEL_ALL),
+                                  panel=context.dl.UI_BINDING_PANEL_STUDIO),
                               context.dl.SlotDisplayScope(
                                   filters=context.dl.Filters(resource=context.dl.FiltersResource.ANNOTATION),
                                   resource=context.dl.SlotDisplayScopeResource.ANNOTATION,
-                                  panel=context.dl.UI_BINDING_PANEL_ALL),
+                                  panel=context.dl.UI_BINDING_PANEL_STUDIO),
                               context.dl.SlotDisplayScope(
                                   filters=context.dl.Filters(resource=context.dl.FiltersResource.DATASET),
                                   resource=context.dl.SlotDisplayScopeResource.DATASET_QUERY,
-                                  panel=context.dl.UI_BINDING_PANEL_ALL),
+                                  panel=context.dl.UI_BINDING_PANEL_BROWSER),
                               context.dl.SlotDisplayScope(
                                   filters=context.dl.Filters(resource=context.dl.FiltersResource.DATASET),
                                   resource=context.dl.SlotDisplayScopeResource.DATASET,
-                                  panel=context.dl.UI_BINDING_PANEL_ALL),
+                                  panel=context.dl.UI_BINDING_PANEL_BROWSER),
                               context.dl.SlotDisplayScope(
                                   filters=context.dl.Filters(resource=context.dl.FiltersResource.TASK),
                                   resource=context.dl.SlotDisplayScopeResource.TASK,
-                                  panel=context.dl.UI_BINDING_PANEL_ALL)
+                                  panel=context.dl.UI_BINDING_PANEL_TABLE)
                           ])
 
     context.package.slots = []
@@ -65,3 +65,24 @@ def step_impl(context):
     assert context.package.slots != [], "No slots added to the package"
     assert context.package.slots[0].to_json() == context.slot.to_json(), "The slot in the package is not equal to uploaded slot ###package###\n {}\n###uploaded-Slot###\n{}".\
         format(context.package.slots[0].to_json(), context.slot.to_json())
+
+
+@behave.when(u'I add new function to UI slot')
+def step_impl(context):
+
+    context.filters = context.dl.Filters()
+    context.slot_1 = context.dl.PackageSlot(module_name='default_module',
+                          function_name='run_1',
+                          display_name="ui_slot_run_1",
+                          display_icon='fas fa-play',
+                          post_action=context.dl.SlotPostAction(
+                              type=context.dl.SlotPostActionType.NO_ACTION),
+                          display_scopes=[
+                              context.dl.SlotDisplayScope(
+                                  filters={},
+                                  resource=context.dl.SlotDisplayScopeResource.ITEM,
+                                  panel=context.dl.UI_BINDING_PANEL_STUDIO)
+                          ])
+
+    context.package.slots.append(context.slot_1)
+    context.package = context.package.update()

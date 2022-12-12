@@ -7,11 +7,11 @@ Feature: Converter voc format
 
     @testrail-C4523082
     Scenario: Convert local voc dataset to dataloop
-        Given There is a local "voc" dataset in "converter/voc/local_dataset"
+        Given There is a local "voc" dataset in "converter/voc/local_dataset_attr"
         When I convert local "voc" dataset to "dataloop"
         Given Local path in "converter/voc/reverse" is clean
         When I reverse dataloop dataset to local "voc" in "converter/voc/reverse"
-        Then local "voc" dataset in "converter/voc/local_dataset" is equal to reversed dataset in "converter/voc/reverse"
+        Then local "voc" dataset in "converter/voc/local_dataset_attr" is equal to reversed dataset in "converter/voc/reverse"
 
     @testrail-C4523082
     Scenario: Upload dataset with inner folder using coco converter

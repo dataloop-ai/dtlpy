@@ -8,7 +8,7 @@ import copy
 import tqdm
 import logging
 from urllib.parse import urlencode
-from .. import entities, repositories, miscellaneous, exceptions, services, PlatformException
+from .. import entities, repositories, miscellaneous, exceptions, services, PlatformException, _api_reference
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -154,6 +154,7 @@ class Datasets:
         self._client_api.state_io.put('dataset', dataset.to_json())
         logger.info('Checked out to dataset {}'.format(dataset.name))
 
+    @_api_reference.add(path='/datasets', method='get')
     def list(self, name=None, creator=None) -> miscellaneous.List[entities.Dataset]:
         """
         List all datasets.
@@ -169,7 +170,7 @@ class Datasets:
 
         .. code-block:: python
 
-            project.datasets.list(name='name')
+            datasets = project.datasets.list(name='name')
         """
         url = '/datasets'
 
@@ -207,6 +208,7 @@ class Datasets:
             raise exceptions.PlatformException(response)
         return datasets
 
+    @_api_reference.add(path='/datasets/{id}', method='get')
     def get(self,
             dataset_name: str = None,
             dataset_id: str = None,
@@ -231,7 +233,7 @@ class Datasets:
 
         .. code-block:: python
 
-            project.datasets.get(dataset_id='dataset_id')
+            dataset = project.datasets.get(dataset_id='dataset_id')
         """
         if fetch is None:
             fetch = self._client_api.fetch_entities
@@ -278,6 +280,7 @@ class Datasets:
             self.checkout(dataset=dataset)
         return dataset
 
+    @_api_reference.add(path='/datasets/{id}', method='delete')
     def delete(self,
                dataset_name: str = None,
                dataset_id: str = None,
@@ -292,7 +295,7 @@ class Datasets:
 
         .. code-block:: python
 
-            project.datasets.delete(dataset_id='dataset_id', sure=True, really=True)
+            is_deleted = project.datasets.delete(dataset_id='dataset_id', sure=True, really=True)
 
         :param str dataset_name: optional - search by name
         :param str dataset_id: optional - search by id
@@ -314,6 +317,7 @@ class Datasets:
                 error='403',
                 message='Cant delete dataset from SDK. Please login to platform to delete')
 
+    @_api_reference.add(path='/datasets/{id}', method='patch')
     def update(self,
                dataset: entities.Dataset,
                system_metadata: bool = False,
@@ -334,7 +338,7 @@ class Datasets:
 
         .. code-block:: python
 
-            project.datasets.update(dataset='dataset_entity')
+            dataset = project.datasets.update(dataset='dataset_entity')
         """
         url_path = '/datasets/{}'.format(dataset.id)
         if system_metadata:
@@ -352,6 +356,7 @@ class Datasets:
         else:
             raise exceptions.PlatformException(response)
 
+    @_api_reference.add(path='/datasets/{}/directoryTree', method='get')
     def directory_tree(self,
                        dataset: entities.Dataset = None,
                        dataset_name: str = None,
@@ -372,7 +377,7 @@ class Datasets:
 
         .. code-block:: python
 
-            project.datasets.directory_tree(dataset='dataset_entity')
+            directory_tree = project.datasets.directory_tree(dataset='dataset_entity')
         """
         if dataset is None and dataset_name is None and dataset_id is None:
             raise exceptions.PlatformException('400', 'Must provide dataset, dataset name or dataset id')
@@ -391,6 +396,7 @@ class Datasets:
         else:
             raise exceptions.PlatformException(response)
 
+    @_api_reference.add(path='/datasets/{id}/clone', method='post')
     def clone(self,
               dataset_id: str,
               clone_name: str,
@@ -416,7 +422,7 @@ class Datasets:
 
         .. code-block:: python
 
-            project.datasets.clone(dataset_id='dataset_id',
+            dataset = project.datasets.clone(dataset_id='dataset_id',
                                   clone_name='dataset_clone_name',
                                   with_metadata=True,
                                   with_items_annotations=False,
@@ -459,6 +465,7 @@ class Datasets:
                                                .format(response))
         return self.get(dataset_id=command.spec['returnedModelId'])
 
+    @_api_reference.add(path='/datasets/merge', method='post')
     def merge(self,
               merge_name: str,
               dataset_ids: list,
@@ -486,7 +493,7 @@ class Datasets:
 
         .. code-block:: python
 
-            project.datasets.merge(dataset_ids=['dataset_id1','dataset_id2'],
+            success = project.datasets.merge(dataset_ids=['dataset_id1','dataset_id2'],
                                   merge_name='dataset_merge_name',
                                   with_metadata=True,
                                   with_items_annotations=False,
@@ -521,6 +528,7 @@ class Datasets:
         else:
             raise exceptions.PlatformException(response)
 
+    @_api_reference.add(path='/datasets/{id}/sync', method='post')
     def sync(self, dataset_id: str, wait: bool = True):
         """
         Sync dataset with external storage.
@@ -536,7 +544,7 @@ class Datasets:
 
         .. code-block:: python
 
-            project.datasets.sync(dataset_id='dataset_id')
+            success = project.datasets.sync(dataset_id='dataset_id')
         """
 
         success, response = self._client_api.gen_request(req_type='post',
@@ -556,6 +564,7 @@ class Datasets:
         else:
             raise exceptions.PlatformException(response)
 
+    @_api_reference.add(path='/datasets', method='post')
     def create(self,
                dataset_name: str,
                labels=None,
@@ -590,7 +599,7 @@ class Datasets:
 
         .. code-block:: python
 
-            project.datasets.create(dataset_name='dataset_name', ontology_ids='ontology_ids')
+            dataset = project.datasets.create(dataset_name='dataset_name', ontology_ids='ontology_ids')
         """
         create_default_recipe = True
         if any([labels, attributes, ontology_ids, recipe_id]):
@@ -729,7 +738,7 @@ class Datasets:
 
         .. code-block:: python
 
-            project.datasets.download_annotations(dataset='dataset_entity',
+            file_path = project.datasets.download_annotations(dataset='dataset_entity',
                                                  local_path='local_path',
                                                  annotation_options=dl.ViewAnnotationOptions,
                                                  overwrite=False,
