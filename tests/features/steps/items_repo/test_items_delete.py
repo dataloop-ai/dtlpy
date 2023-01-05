@@ -23,6 +23,20 @@ def step_impl(context, item_name):
     context.item_count = 1
 
 
+@behave.given(u'I upload item by the name of "{item_name}" to a remote path "{remote_path}"')
+def step_impl(context, item_name, remote_path):
+    local_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], '0000000162.jpg')
+
+    import io
+    with open(local_path, 'rb') as f:
+        buffer = io.BytesIO(f.read())
+        buffer.name = item_name
+
+    context.item = context.dataset.items.upload(local_path=buffer, remote_path=remote_path)
+    context.item = context.dataset.items.get(item_id=context.item.id)
+    context.item_count = 1
+
+
 @behave.when(u'I delete the item by name')
 def step_impl(context):
     context.dataset.items.delete(filename=context.item.filename)

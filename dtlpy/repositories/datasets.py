@@ -85,6 +85,14 @@ class Datasets:
         else:
             raise Exception("Dataset not found")
 
+    def _bulid_folder_filter(self, folder_path, filters=None):
+        if filters is None:
+            filters = entities.Filters()
+        if not folder_path.startswith('/'):
+            folder_path = '/' + folder_path
+        filters.add(field='dir', values=folder_path + '*')
+        return filters
+
     @property
     def platform_url(self):
         return self._client_api._get_resource_url("projects/{}/datasets".format(self.project.id))

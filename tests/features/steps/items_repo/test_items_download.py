@@ -33,10 +33,13 @@ def step_impl(context, item_name, download_path):
 @behave.then(u'There are "{item_count}" files in "{local_path}"')
 def step_impl(context, item_count, local_path):
     local_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], local_path)
-    content = [name for name in os.listdir(local_path)]
-    if 'folder_keeper' in content:
-        content.pop(content.index('folder_keeper'))
-    assert len(content) == int(item_count)
+    content = list()
+    for root, dirs, files in os.walk(local_path):
+        for file in files:
+            if file.endswith(".jpg"):
+                content.append(file)
+
+    assert len(content) == int(item_count), "TEST FAILED: Expected {} got {}".format(item_count, len(content))
 
 
 @behave.then(u'Item is correctly downloaded to "{downloaded_path}" (compared with "{item_to_compare}")')
@@ -65,6 +68,20 @@ def step_impl(context, download_path):
                                    save_locally=True,
                                    local_path=download_path,
                                    annotation_options=None)
+
+
+@behave.when(u'I download the item without saving and create folder')
+def step_impl(context):
+    context.path = os.path.join(os.getcwd(), 'items_check')
+    context.item_data = context.dataset.items.download(items=context.item.id,
+                                                       save_locally=False,
+                                                       local_path=context.path,
+                                                       annotation_options=None)
+
+
+@behave.then(u'file do not created')
+def step_impl(context):
+    assert not os.path.exists(path=context.path)
 
 
 @behave.when(u'I download without saving an item by the id of "{item_name}"')

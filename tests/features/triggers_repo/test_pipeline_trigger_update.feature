@@ -7,7 +7,6 @@ Feature: Pipeline entity method testing
         When I create a new plain recipe
         And I update dataset recipe to the new recipe
 
-
     @pipelines.delete
     @testrail-C4532242
     Scenario: pipeline flow
@@ -21,4 +20,4 @@ Feature: Pipeline entity method testing
     Scenario: pipeline flow
         When I create a package and service to pipeline
         And I create a pipeline from json
-        And I add trigger to the node and check installed
+        And I add trigger to the node and check installed with param keep_triggers_active equal to "False"

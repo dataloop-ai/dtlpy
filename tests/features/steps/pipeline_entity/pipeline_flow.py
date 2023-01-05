@@ -9,6 +9,7 @@ import json
 
 
 @behave.when(u'I create a package and service to pipeline')
+@behave.given(u'I create a package and service to pipeline')
 def step_impl(context):
     module = dl.PackageModule(
         entry_point='main.py',
@@ -26,7 +27,7 @@ def step_impl(context):
             )
         ])
 
-    project = dl.projects.get(project_name=context.project.name)
+    project = dl.projects.get(project_id=context.project.id)
     context.package = project.packages.push(
         package_name='test-pipeline',
         modules=[module],
@@ -175,14 +176,20 @@ def step_impl(context):
     assert updated_trigger_json.get('spec') == original_trigger_json.get('spec')
 
 
-@behave.when(u'I add trigger to the node and check installed')
-def step_impl(context):
-    context.pipeline.pause()
+@behave.when(u'I add trigger to the node and check installed with param keep_triggers_active equal to "{keep_triggers_active}"')
+def step_impl(context, keep_triggers_active: str):
+    keep_triggers_active = eval(keep_triggers_active)
+    context.pipeline.pause(keep_triggers_active=keep_triggers_active)
     node_id = context.pipeline.nodes[1].node_id
     context.pipeline.triggers.create(pipeline_node_id=node_id)
-    assert len(context.pipeline.triggers.list().items) == 0
+    triggers = context.pipeline.triggers.list().items
+    for trigger in triggers:
+        assert trigger.active == keep_triggers_active
     context.pipeline.install()
-    assert len(context.pipeline.triggers.list().items) == 2
+    triggers = context.pipeline.triggers.list().items
+    assert len(triggers) == 2
+    for trigger in triggers:
+        assert trigger.active
 
 
 @behave.when(u'I create a pipeline from json')
@@ -402,6 +409,7 @@ def step_impl(context):
 
 @behave.then(u'I expect that pipeline execution has "{execution_number}" success executions')
 def step_impl(context, execution_number):
+    time.sleep(2)
     assert context.pipeline.pipeline_executions.list().items_count != 0, "Pipeline did not executed"
     context.pipeline = context.project.pipelines.get(context.pipeline.name)
 
@@ -422,7 +430,7 @@ def step_impl(context, execution_number):
                 executed = True
                 break
 
-    assert executed
+    assert executed, "TEST FAILED: Pipeline has {} executions instead of {}".format(execution_count ,execution_number)
     return executed
 
 
@@ -477,3 +485,23 @@ def step_impl(context, type, flag):
         context.task = context.project.tasks.get(task_name=task_name + " (" + pipeline_name + ")")
     except Exception as e:
         assert False, "Failed to get task with the name: {}\n{}".format(task_name + " (" + pipeline_name + ")", e)
+
+
+@behave.when(u'I create a pipeline with task node and new recipe')
+def step_impl(context):
+    context.pipeline = context.project.pipelines.create(name='sdk-pipeline-test', project_id=context.project.id)
+
+    task_node = dl.TaskNode(
+        name='My Task',
+        recipe_id=context.recipe.id,
+        recipe_title=context.recipe.title,
+        task_owner=dl.info()['user_email'],
+        workload=[dl.WorkloadUnit(assignee_id=dl.info()['user_email'], load=100)],
+        position=(2, 2),
+        project_id=context.project.id,
+        dataset_id=context.dataset.id,
+    )
+
+    context.pipeline.nodes.add(node=task_node)
+    context.pipeline.update()
+    context.to_delete_pipelines_ids.append(context.pipeline.id)

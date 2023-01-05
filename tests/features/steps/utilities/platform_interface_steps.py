@@ -109,7 +109,8 @@ def before_all(context):
 def step_impl(context, directory):
     context.new_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], directory)
     try:
-        os.mkdir(context.new_path)
+        if not os.path.exists(context.new_path):
+            os.mkdir(context.new_path)
     except Exception as e:
         assert 'File exists' in e.args
 

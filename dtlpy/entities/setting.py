@@ -238,7 +238,7 @@ class Setting(BaseSetting):
             for slot in setting.metadata.get('slots', []):
                 for scope in slot.get('displayScopes', []):
                     if 'filter' in scope:
-                        scope['filter'] = json.loads(scope['filter'])
+                        scope['filter'] = json.loads(scope['filter']) if isinstance(scope['filter'], str) else scope['filter']
 
         return setting
 

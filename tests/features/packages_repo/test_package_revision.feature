@@ -37,7 +37,23 @@ Feature: Packages revision testing
 
     @pipelines.delete
     @testrail-C4532574
-    Scenario: Update pipeline code node package revision is updated
+    Scenario: Update pipeline and update code node - package revision should updated
+      Given I create a dataset with a random name
+      When I create a new plain recipe
+      And I update dataset recipe to the new recipe
+      And I create a pipeline with code node
+      Then I wait "4"
+      And I pause pipeline in context
+      And I wait "4"
+      When I update pipeline code node
+      Then I install pipeline in context
+      And I wait "4"
+      And I validate pipeline code-node service is with the correct version "1.0.1"
+
+
+    @pipelines.delete
+    @testrail-C4532574
+    Scenario: Update pipeline with code node not update the package revision
       Given I create a dataset with a random name
       When I create a new plain recipe
       And I update dataset recipe to the new recipe
@@ -46,8 +62,4 @@ Feature: Packages revision testing
       And I pause pipeline in context
       And I wait "4"
       And I install pipeline in context
-      And I wait "4"
-      And I pause pipeline in context
-      And I wait "4"
-      And I install pipeline in context
-      And I validate pipeline code-node service is with the correct version "1.0.2"
+      And I validate pipeline code-node service is with the correct version "1.0.0"

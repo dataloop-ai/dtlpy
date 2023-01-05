@@ -89,7 +89,7 @@ def logout(api_client):
     return True
 
 
-def login(api_client, auth0_url=None, audience=None, client_id=None):
+def login(api_client, auth0_url=None, audience=None, client_id=None, login_domain=None):
     import webbrowser
     from http.server import BaseHTTPRequestHandler, HTTPServer
     from urllib.parse import urlparse, parse_qs
@@ -167,6 +167,8 @@ def login(api_client, auth0_url=None, audience=None, client_id=None):
             api_client.environments[api_client.environment] = env_params
         remote_ep = env_params['gate_url']
         login_page_url = "{}/login?callback={}".format(remote_ep, local_ep)
+        if login_domain is not None:
+            login_page_url = "{}&domain={}".format(login_page_url, login_domain)
         logger.info("Launching interactive login via {}".format(remote_ep))
         webbrowser.open(url=login_page_url, new=2, autoraise=True)
 

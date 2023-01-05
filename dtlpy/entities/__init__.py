@@ -56,7 +56,7 @@ from .bot import Bot
 from .webhook import Webhook, HttpMethod
 from .model import Model, DatasetSubsetType, LogSample
 from .driver import Driver
-from .pipeline import Pipeline, PipelineStats
+from .pipeline import Pipeline, PipelineStats, PipelineResumeOption, PipelineSettings
 from .node import PipelineConnection, PipelineNode, PipelineConnectionPort, PipelineNodeIO, TaskNode, \
     CodeNode, FunctionNode, PipelineNodeType, PipelineNameSpace, DatasetNode
 from .pipeline_execution import PipelineExecution, PipelineExecutionNode

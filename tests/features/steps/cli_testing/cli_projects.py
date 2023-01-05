@@ -89,5 +89,6 @@ def step_impl(context, project_name):
 
 
 @behave.then(u'I wait "{seconds}"')
+@behave.when(u'I wait "{seconds}"')
 def step_impl(_, seconds):
     time.sleep(int(seconds))

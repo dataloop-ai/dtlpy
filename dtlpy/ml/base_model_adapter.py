@@ -325,7 +325,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
                     self.logger.exception("Failed to upload annotations items.")
 
         pool.shutdown()
-        return items
+        return items, all_predictions
 
     @entities.Package.decorators.function(display_name='Predict Items',
                                           inputs={'data_uris': 'String[]'})
@@ -466,7 +466,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             model.status = 'failed'
             model.update()
             raise
-        return self.model.id
+        return model.id
 
     @entities.Package.decorators.function(display_name='Evaluate a Model',
                                           inputs={'model': entities.Model,

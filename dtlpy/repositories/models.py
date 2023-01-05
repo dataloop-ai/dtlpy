@@ -438,19 +438,27 @@ class Models:
         # return results
         return True
 
-    def update(self, model: entities.Model) -> entities.Model:
+    def update(self,
+               model: entities.Model,
+               system_metadata: bool = False) -> entities.Model:
         """
         Update Model changes to platform
 
         :param model: Model entity
+        :param bool system_metadata: True, if you want to change metadata system
         :return: Model entity
         """
         # payload
         payload = model.to_json()
 
+        # url
+        url_path = '/ml/models/{}'.format(model.id)
+        if system_metadata:
+            url_path += '?system=true'
+
         # request
         success, response = self._client_api.gen_request(req_type='patch',
-                                                         path='/ml/models/{}'.format(model.id),
+                                                         path=url_path,
                                                          json_req=payload)
 
         # exception handling
@@ -485,7 +493,9 @@ class Models:
         :param dict service_config : Service object as dict. Contains the spec of the default service to create.
         :return:
         """
-        payload = {'serviceConfig': service_config}
+        payload = dict()
+        if service_config is not None:
+            payload['serviceConfig'] = service_config
         success, response = self._client_api.gen_request(req_type="post",
                                                          path=f"/ml/models/{model_id}/deploy",
                                                          json_req=payload)

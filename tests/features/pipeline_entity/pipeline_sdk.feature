@@ -31,3 +31,10 @@ Feature: Pipeline entity method testing
     And I create a pipeline from json
     And I update the pipeline nodes
     And check pipeline nodes
+
+  @pipelines.delete
+  @testrail-C4533330
+  Scenario: pipeline with dataset task with new recipe
+    When I create a new plain recipe
+    When I create a pipeline with task node and new recipe
+    Then I install pipeline in context

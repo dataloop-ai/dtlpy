@@ -88,3 +88,45 @@ def step_impl(context, version):
         return False, "TEST FAILED: Failed to find service"
 
     assert version == context.service.package_revision, "TEST FAILED: Expect version to be {} got {}".format(version, context.service.package_revision)
+
+
+@behave.when(u'I update pipeline code node')
+def step_impl(context):
+    context.pipeline = context.project.pipelines.get(pipeline_id=context.pipeline.id)
+    code = context.pipeline.nodes.get('My Function').config.get('package').get('code')
+    context.pipeline.nodes.get('My Function').config['package']['code'] = "# Adding comment to code node\n{}".format(code)
+    context.pipeline = context.pipeline.update()
+
+
+
+@behave.when(u'I create a pipeline with code node')
+def step_impl(context):
+    context.pipeline = context.project.pipelines.create(name='sdk-pipeline-test', project_id=context.project.id)
+    context.code_node_name = 'My Function'
+
+    def run(item):
+        dataset = item.dataset
+        items = []
+        for page in dataset.items.list():
+            for item in page:
+                items.append(item.id)
+
+        return items
+
+    code_node = dl.CodeNode(
+        name=context.code_node_name,
+        position=(1, 1),
+        project_id=context.project.id,
+        method=run,
+        project_name=context.project.name,
+        outputs=[dl.PipelineNodeIO(input_type=dl.PackageInputType.ITEMS,
+                                   name='items',
+                                   display_name='items')]
+    )
+
+    context.pipeline.nodes.add(node=code_node)
+    filters = dl.Filters(field='datasetId', values=context.dataset.id)
+    code_node.add_trigger(filters=filters)
+    context.pipeline.update()
+    context.pipeline.install()
+    context.to_delete_pipelines_ids.append(context.pipeline.id)

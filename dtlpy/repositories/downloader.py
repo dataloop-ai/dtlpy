@@ -168,7 +168,7 @@ class Downloader:
                 _, ext_download = os.path.splitext(file_name)
                 if ext_download != ext:
                     is_folder = True
-            if is_folder:
+            if is_folder and save_locally:
                 path_to_create = local_path
                 if local_path.endswith('*'):
                     path_to_create = os.path.dirname(local_path)

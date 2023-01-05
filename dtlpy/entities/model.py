@@ -335,13 +335,15 @@ class Model(entities.BaseEntity):
     ###########
     # methods #
     ###########
-    def update(self):
+    def update(self, system_metadata=False):
         """
         Update Models changes to platform
 
+        :param bool system_metadata: bool - True, if you want to change metadata system
         :return: Models entity
         """
-        return self.models.update(model=self)
+        return self.models.update(model=self,
+                                  system_metadata=system_metadata)
 
     def open_in_web(self):
         """

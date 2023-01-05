@@ -467,7 +467,13 @@ class Item(entities.BaseEntity):
                     local_path = os.path.join(local_path, self.name)
 
         # download
-        return self.items.download(items=self,
+        filters = None
+        items = self
+        if self.type == 'dir':
+            filters = self.datasets._bulid_folder_filter(folder_path=self.filename)
+            items = None
+
+        return self.items.download(items=items,
                                    local_path=local_path,
                                    file_types=file_types,
                                    save_locally=save_locally,
@@ -479,7 +485,8 @@ class Item(entities.BaseEntity):
                                    thickness=thickness,
                                    alpha=alpha,
                                    with_text=with_text,
-                                   export_version=export_version)
+                                   export_version=export_version,
+                                   filters=filters)
 
     def delete(self):
         """

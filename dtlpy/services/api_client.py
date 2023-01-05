@@ -415,6 +415,7 @@ class ApiClient:
         # event and pools
         self._thread_pools = dict()
         self._event_loop = None
+        self._login_domain = None
 
         # TODO- remove before release - only for debugging
         self._stopped_pools = list()
@@ -736,6 +737,7 @@ class ApiClient:
                         use_ssl_context=False,
                         gate_url=None,
                         url=None,
+                        login_domain=None
                         ):
         environments = self.environments
         if environment in environments:
@@ -753,7 +755,8 @@ class ApiClient:
                                      'refresh_token': refresh_token,
                                      'verify_ssl': verify_ssl,
                                      'use_ssl_context': use_ssl_context,
-                                     'url': url}
+                                     'url': url,
+                                     'login_domain': login_domain}
         self.environments = environments
 
     def info(self, with_token=True):
@@ -1469,6 +1472,20 @@ class ApiClient:
         """
         self.token = token  # this will also set the refresh_token to None
 
+    @property
+    def login_domain(self):
+        if self._login_domain is None:
+            self._login_domain = self.environments[self.environment].get('login_domain', None)
+        return self._login_domain
+
+    @login_domain.setter
+    def login_domain(self, domain: str):
+        if domain is not None and not isinstance(domain, str):
+            raise exceptions.PlatformException('400', 'domain should be a string value')
+        self._login_domain = domain
+        self.environments[self.environment]['login_domain'] = domain
+        self.cookie_io.put('login_parameters', self.environments)
+
     def login(self, audience=None, auth0_url=None, client_id=None):
         """
         Login using Auth0.
@@ -1477,7 +1494,8 @@ class ApiClient:
         res = login(api_client=self,
                     audience=audience,
                     auth0_url=auth0_url,
-                    client_id=client_id)
+                    client_id=client_id,
+                    login_domain=self.login_domain)
         if res:
             self._send_login_event(user_type='human', login_type='interactive')
         return res

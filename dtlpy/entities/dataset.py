@@ -901,6 +901,71 @@ class Dataset(entities.BaseEntity):
                                    alpha=alpha,
                                    export_version=export_version)
 
+    def download_folder(
+            self,
+            folder_path,
+            filters=None,
+            local_path=None,
+            file_types=None,
+            annotation_options: ViewAnnotationOptions = None,
+            annotation_filters=None,
+            overwrite=False,
+            to_items_folder=True,
+            thickness=1,
+            with_text=False,
+            without_relative_path=None,
+            alpha=1,
+            export_version=ExportVersion.V1
+    ):
+        """
+        Download dataset folder.
+        Optional - also download annotation, mask, instance and image mask of the item
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param str folder_path: the path of the folder that want to download
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
+        :param str local_path: local folder or filename to save to.
+        :param list file_types: a list of file type to download. e.g ['video/webm', 'video/mp4', 'image/jpeg', 'image/png']
+        :param list annotation_options: type of download annotations: list(dl.ViewAnnotationOptions)
+        :param dtlpy.entities.filters.Filters annotation_filters: Filters entity to filter annotations for download
+        :param bool overwrite: optional - default = False to overwrite the existing files
+        :param bool to_items_folder: Create 'items' folder and download items to it
+        :param int thickness: optional - line thickness, if -1 annotation will be filled, default =1
+        :param bool with_text: optional - add text to annotations, default = False
+        :param bool without_relative_path: bool - download items without the relative path from platform
+        :param float alpha: opacity value [0 1], default 1
+        :param str export_version:  `V2` - exported items will have original extension in filename, `V1` - no original extension in filenames
+        :return: `List` of local_path per each downloaded item
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.download_folder(folder_path='folder_path'
+                             local_path='local_path',
+                             annotation_options=[dl.ViewAnnotationOptions.JSON, dl.ViewAnnotationOptions.MASK],
+                             overwrite=False,
+                             thickness=1,
+                             with_text=False,
+                             alpha=1,
+                             save_locally=True
+                             )
+        """
+        filters = self.datasets._bulid_folder_filter(folder_path=folder_path, filters=filters)
+        return self.items.download(filters=filters,
+                                   local_path=local_path,
+                                   file_types=file_types,
+                                   annotation_options=annotation_options,
+                                   annotation_filters=annotation_filters,
+                                   overwrite=overwrite,
+                                   to_items_folder=to_items_folder,
+                                   thickness=thickness,
+                                   with_text=with_text,
+                                   without_relative_path=without_relative_path,
+                                   alpha=alpha,
+                                   export_version=export_version)
+
     def delete_labels(self, label_names):
         """
         Delete labels from dataset's ontologies

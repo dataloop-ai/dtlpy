@@ -297,6 +297,43 @@ class Pipelines:
         # return results
         return True
 
+    @_api_reference.add(path='/pipelines/{pipelineId}/settings', method='patch')
+    def update_settings(self, pipeline: entities.Pipeline, settings: entities.PipelineSettings):
+        """
+        Update pipeline settings.
+
+        **prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param dtlpy.entities.pipeline.Pipeline pipeline: pipeline entity
+        :param dtlpy.entities.pipeline.PipelineSettings settings: settings entity
+        :return: Pipeline object
+        :rtype: dtlpy.entities.pipeline.Pipeline
+
+        **Example**:
+
+        .. code-block:: python
+
+            pipeline = project.pipelines.update_settings(pipeline='pipeline_entity', settings=dl.PipelineSettings(keep_triggers_active=True))
+        """
+        # payload
+        payload = {'settings': settings.to_json()}
+
+        # request
+        success, response = self._client_api.gen_request(
+            req_type='patch',
+            path='/pipelines/{}'.format(pipeline.id),
+            json_req=payload
+        )
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        # return entity
+        return entities.Pipeline.from_json(
+            _json=response.json(),
+            client_api=self._client_api,
+            project=self._project
+        )
+
     @_api_reference.add(path='/pipelines/{pipelineId}', method='patch')
     def update(self,
                pipeline: entities.Pipeline = None
@@ -320,12 +357,17 @@ class Pipelines:
         # payload
         payload = pipeline.to_json()
 
+        # update settings
+        if pipeline.settings_changed():
+            self.update_settings(pipeline=pipeline, settings=pipeline.settings)
+
         # request
         success, response = self._client_api.gen_request(
             req_type='patch',
             path='/pipelines/{}'.format(pipeline.id),
             json_req=payload
         )
+
         # exception handling
         if not success:
             raise exceptions.PlatformException(response)
@@ -384,14 +426,15 @@ class Pipelines:
         assert isinstance(pipeline, entities.Pipeline)
         return pipeline
 
-    @_api_reference.add(path='/compositions/{compositionsId}/install', method='post')
-    def install(self, pipeline: entities.Pipeline = None):
+    @_api_reference.add(path='/pipelines/{compositionsId}/install', method='post')
+    def install(self, pipeline: entities.Pipeline = None, resume_option: entities.PipelineResumeOption = None):
         """
         Install (start) a pipeline.
 
         **prerequisites**: You must be an *owner* or *developer* to use this method.
 
         :param dtlpy.entities.pipeline.Pipeline pipeline: pipeline entity
+        :param dtlpy.entities.pipeline.PipelineResumeOption resume_option: optional - resume pipeline method (what to do with existing cycles)
         :return: Composition object
 
         **Example**:
@@ -401,21 +444,28 @@ class Pipelines:
             project.pipelines.install(pipeline='pipeline_entity')
         """
 
-        success, response = self._client_api.gen_request(req_type='post',
-                                                         path='/compositions/{}/install'.format(
-                                                             pipeline.composition_id))
+        payload = {}
+        if resume_option:
+            payload['resumeOption'] = resume_option
+
+        success, response = self._client_api.gen_request(
+            req_type='post',
+            path='/pipelines/{}/install'.format(pipeline.id),
+            json_req=payload
+        )
 
         if not success:
             raise exceptions.PlatformException(response)
 
-    @_api_reference.add(path='/compositions/{compositionsId}/uninstall', method='post')
-    def pause(self, pipeline: entities.Pipeline = None):
+    @_api_reference.add(path='/pipelines/{compositionsId}/uninstall', method='post')
+    def pause(self, pipeline: entities.Pipeline = None, keep_triggers_active: bool = None):
         """
         Pause a pipeline.
 
         **prerequisites**: You must be an *owner* or *developer* to use this method.
 
         :param dtlpy.entities.pipeline.Pipeline pipeline: pipeline entity
+        :param bool keep_triggers_active: Do we want the triggers to stay active and collect events
         :return: Composition object
 
         **Example**:
@@ -425,9 +475,15 @@ class Pipelines:
             project.pipelines.pause(pipeline='pipeline_entity')
         """
 
-        success, response = self._client_api.gen_request(req_type='post',
-                                                         path='/compositions/{}/uninstall'.format(
-                                                             pipeline.composition_id))
+        payload = {}
+        if keep_triggers_active is not None:
+            payload['keepTriggersActive'] = keep_triggers_active
+
+        success, response = self._client_api.gen_request(
+            req_type='post',
+            path='/pipelines/{}/uninstall'.format(pipeline.id),
+            json_req=payload
+        )
 
         if not success:
             raise exceptions.PlatformException(response)

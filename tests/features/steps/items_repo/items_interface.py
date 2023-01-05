@@ -39,7 +39,7 @@ def step_impl(context, item_type):
     }
 
     context.item_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], items_types_list[item_type])
-    context.item = context.dataset.items.upload(local_path=context.item_path)
+    context.item = context.dataset.items.upload(local_path=context.item_path, overwrite=True)
 
 
 @behave.given(u'I upload an item in the path "{item_path}" to "{dataset_name}"')

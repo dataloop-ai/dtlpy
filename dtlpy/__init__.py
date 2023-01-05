@@ -56,8 +56,8 @@ from .entities import (
     Modality, ModalityTypeEnum, ModalityRefTypeEnum,
     Workload, WorkloadUnit, ItemAction,
     PipelineExecution, PipelineExecutionNode, Pipeline, PipelineConnection,
-    PipelineNode, TaskNode, CodeNode, PipelineStats,
-    PipelineNodeType, PipelineNameSpace,
+    PipelineNode, TaskNode, CodeNode, PipelineStats, PipelineSettings,
+    PipelineNodeType, PipelineNameSpace, PipelineResumeOption,
     FunctionNode, DatasetNode, PipelineConnectionPort, PipelineNodeIO, Organization, OrganizationsPlans, Integration,
     Driver, CacheAction, PodType,
     ExternalStorage, Role, PlatformEntityType, SettingsValueTypes, SettingsTypes, SettingsSectionNames, SettingScope, \

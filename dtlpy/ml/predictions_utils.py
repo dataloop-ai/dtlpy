@@ -212,6 +212,7 @@ def measure_items(ref_items, ref_project, ref_dataset, ref_name,
                      df=df,
                      ref_name=ref_name,
                      test_name=test_name)
+    return df, raw_items_summary, failed_items_errors
 
 
 def create_summary(ref_name, test_name, raw_items_summary):

@@ -19,6 +19,15 @@ def step_impl(context, local_path):
                                    thickness=3)
 
 
+@behave.when(u'I download dataset folder "{folder_path}" to "{local_path}"')
+def step_impl(context, folder_path, local_path):
+    local_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], local_path)
+
+    context.dataset.download_folder(folder_path=folder_path,
+                                    local_path=local_path,
+                                    to_items_folder=False)
+
+
 @behave.when(u'I download dataset to "{local_path}" without item folder')
 def step_impl(context, local_path):
     local_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], local_path)

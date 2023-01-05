@@ -1,12 +1,74 @@
 from collections import namedtuple
 import logging
 import traceback
+from enum import Enum
 from typing import List
 import attr
 from .node import PipelineNode, PipelineConnection
 from .. import repositories, entities, services
 
 logger = logging.getLogger(name='dtlpy')
+
+
+class PipelineResumeOption(str, Enum):
+    TERMINATE_EXISTING_CYCLES = 'terminateExistingCycles',
+    RESUME_EXISTING_CYCLES = 'resumeExistingCycles'
+
+
+class CompositionStatus(str, Enum):
+    CREATED = "Created",
+    INITIALIZING = "Initializing",
+    INSTALLED = "Installed",
+    ACTIVATED = "Activated",
+    DEACTIVATED = "Deactivated",
+    UNINSTALLED = "Uninstalled",
+    TERMINATING = "Terminating",
+    TERMINATED = "Terminated",
+    UPDATING = "Updating",
+    FAILURE = "Failure"
+
+
+class PipelineSettings:
+
+    def __init__(
+            self,
+            default_resume_option: PipelineResumeOption = None,
+            keep_triggers_active: bool = None,
+            active_trigger_ask_again: bool = None,
+            last_update: dict = None
+    ):
+        self.default_resume_option = default_resume_option
+        self.keep_triggers_active = keep_triggers_active
+        self.active_trigger_ask_again = active_trigger_ask_again
+        self.last_update = last_update
+
+    @classmethod
+    def from_json(cls, _json: dict = None):
+        if _json is None:
+            _json = dict()
+        return cls(
+            default_resume_option=_json.get('defaultResumeOption', None),
+            keep_triggers_active=_json.get('keepTriggersActive', None),
+            active_trigger_ask_again=_json.get('activeTriggerAskAgain', None),
+            last_update=_json.get('lastUpdate', None)
+        )
+
+    def to_json(self):
+        _json = dict()
+
+        if self.default_resume_option is not None:
+            _json['defaultResumeOption'] = self.default_resume_option
+
+        if self.default_resume_option is not None:
+            _json['keepTriggersActive'] = self.default_resume_option
+
+        if self.default_resume_option is not None:
+            _json['activeTriggerAskAgain'] = self.default_resume_option
+
+        if self.default_resume_option is not None:
+            _json['lastUpdate'] = self.default_resume_option
+
+        return _json
 
 
 class PipelineAverages:
@@ -98,7 +160,7 @@ class PipelineStats:
 @attr.s
 class Pipeline(entities.BaseEntity):
     """
-    Package object
+    Pipeline object
     """
     # platform
     id = attr.ib()
@@ -106,6 +168,8 @@ class Pipeline(entities.BaseEntity):
     creator = attr.ib()
     org_id = attr.ib()
     connections = attr.ib()
+    settings = attr.ib(type=PipelineSettings)
+    status = attr.ib(type=CompositionStatus)
 
     # name change
     created_at = attr.ib()
@@ -121,6 +185,7 @@ class Pipeline(entities.BaseEntity):
     # sdk
     _project = attr.ib(repr=False)
     _client_api = attr.ib(type=services.ApiClient, repr=False)
+    _original_settings = attr.ib(repr=False, type=PipelineSettings)
     _repositories = attr.ib(repr=False)
 
     @staticmethod
@@ -163,6 +228,7 @@ class Pipeline(entities.BaseEntity):
                 project = None
 
         connections = [PipelineConnection.from_json(_json=con) for con in _json.get('connections', list())]
+        settings = PipelineSettings.from_json(_json=_json.get('settings', dict()))
         inst = cls(
             created_at=_json.get('createdAt', None),
             updated_at=_json.get('updatedAt', None),
@@ -180,11 +246,17 @@ class Pipeline(entities.BaseEntity):
             preview=_json.get('preview', None),
             description=_json.get('description', None),
             revisions=_json.get('revisions', None),
+            settings=settings,
+            status=_json.get('status', None),
+            original_settings=settings
         )
         for node in _json.get('nodes', list()):
             inst.nodes.add(node=PipelineNode.from_json(node))
         inst.is_fetched = is_fetched
         return inst
+
+    def settings_changed(self) -> bool:
+        return self.settings.to_json() != self._original_settings.to_json()
 
     def to_json(self):
         """
@@ -209,6 +281,8 @@ class Pipeline(entities.BaseEntity):
                                                         attr.fields(Pipeline).preview,
                                                         attr.fields(Pipeline).description,
                                                         attr.fields(Pipeline).revisions,
+                                                        attr.fields(Pipeline).settings,
+                                                        attr.fields(Pipeline)._original_settings
                                                         ))
 
         _json['projectId'] = self.project_id
@@ -220,6 +294,11 @@ class Pipeline(entities.BaseEntity):
         _json['nodes'] = [node.to_json() for node in self.nodes]
         _json['connections'] = [con.to_json() for con in self.connections]
         _json['url'] = self.url
+
+        settings_json = self.settings.to_json()
+        if settings_json:
+            _json['settings'] = settings_json
+
         if self.preview is not None:
             _json['preview'] = self.preview
         if self.description is not None:
@@ -315,21 +394,21 @@ class Pipeline(entities.BaseEntity):
         """
         self._client_api._open_in_web(url=self.platform_url)
 
-    def install(self):
+    def install(self, resume_option: PipelineResumeOption = None):
         """
         install pipeline
 
         :return: Composition entity
         """
-        return self.pipelines.install(pipeline=self)
+        return self.pipelines.install(pipeline=self, resume_option=resume_option)
 
-    def pause(self):
+    def pause(self, keep_triggers_active: bool = None):
         """
         pause pipeline
 
         :return: Composition entity
         """
-        return self.pipelines.pause(pipeline=self)
+        return self.pipelines.pause(pipeline=self, keep_triggers_active=keep_triggers_active)
 
     def execute(self, execution_input=None):
         """
