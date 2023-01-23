@@ -43,6 +43,7 @@ def step_impl(context):
                                                                    'maxReplicas': 5,
                                                                    'queueLength': 10}}
                                                       )
+    context.to_delete_services_ids.append(context.service.id)
     time.sleep(10)
 
 
@@ -235,12 +236,7 @@ def step_impl(context):
     for ref in context.item.metadata['system']['refs']:
         if ref['type'] == 'assignment':
             ass_id = ref['id']
-    payload = {"operation": "create", "status": "complete"}
-    dl.client_api.gen_request(
-        req_type='post',
-        path='/assignments/{}/items/{}/status'.format(ass_id, context.item.id),
-        json_req=payload
-    )
+    context.item.update_status(status='complete', assignment_id=ass_id, clear=False)
     current_num_of_tries = 0
     flag = False
     while flag is False and current_num_of_tries < 6:

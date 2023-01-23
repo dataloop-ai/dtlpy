@@ -1,4 +1,5 @@
 import behave
+import time
 
 
 @behave.when(u'I get Task by "{get_method}"')
@@ -26,3 +27,16 @@ def step_impl(context):
     assert context.task.to_json() == context.task_get.to_json()
 
 
+@behave.then(u'I expect Task created with "{total_items}" items')
+def step_impl(context, total_items):
+    num_try = 12
+    interval = 10
+    success = False
+
+    for i in range(num_try):
+        time.sleep(interval)
+        if int(total_items) == context.task.get_items().items_count:
+            success = True
+            break
+
+    assert success, "TEST FAILED: Task total expected : {} , Actual : {}".format(total_items, context.task.get_items().items_count)

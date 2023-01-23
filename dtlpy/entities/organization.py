@@ -29,6 +29,7 @@ class MemberOrgRole(str, Enum):
     OWNER = "owner"
     ADMIN = "admin"
     MEMBER = "member"
+    WORKER = "worker"
 
 
 @attr.s()
@@ -208,7 +209,7 @@ class Organization(entities.BaseEntity):
 
         Prerequisites: You must be an organization "owner" to use this method.
 
-        :param str role: MemberOrgRole.ADMIN, MemberOrgRole.OWNER, MemberOrgRole.MEMBER
+        :param str role: MemberOrgRole.ADMIN, MemberOrgRole.OWNER, MemberOrgRole.MEMBER, MemberOrgRole.WORKER
         :return: projects list
         :rtype: list
         """
@@ -233,7 +234,7 @@ class Organization(entities.BaseEntity):
         Prerequisities: To add members to an organization, you must be in the role of an "owner" in that organization.
 
         :param str email: the member's email
-        :param str role: MemberOrgRole.ADMIN, MemberOrgRole.OWNER, MemberOrgRole.MEMBER
+        :param str role: MemberOrgRole.ADMIN, MemberOrgRole.OWNER, MemberOrgRole.MEMBER, MemberOrgRole.WORKER
         :return: True if successful or error if unsuccessful
         :rtype: bool
         """
@@ -260,7 +261,7 @@ class Organization(entities.BaseEntity):
         Prerequisities: You must be an organization "owner" to update a member's role.
 
         :param str email: the member's email
-        :param str role: MemberOrgRole.ADMIN, MemberOrgRole.OWNER, MemberOrgRole.MEMBER
+        :param str role: MemberOrgRole.ADMIN, MemberOrgRole.OWNER, MemberOrgRole.MEMBER, MemberOrgRole.WORKER
         :return: json of the member fields
         :rtype: dict
         """

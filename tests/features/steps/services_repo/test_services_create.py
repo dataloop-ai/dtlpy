@@ -14,6 +14,8 @@ def step_impl(context):
     revision = None
     config = None
     runtime = None
+    execution_timeout = None
+    max_attempts = None
 
     params = context.table.headings
     for param in params:
@@ -35,6 +37,12 @@ def step_impl(context):
                 runtime = json.loads(param[1])
             else:
                 runtime = {"gpu": False, "numReplicas": 1, 'concurrency': 1}
+        elif param[0] == "execution_timeout":
+            if param[1] != "None":
+                execution_timeout = int(param[1])
+        elif param[0] == "max_attempts":
+            if param[1] != "None":
+                max_attempts = int(param[1])
 
     context.service = context.package.services._create(
         bot=context.bot_user,
@@ -43,6 +51,8 @@ def step_impl(context):
         revision=revision,
         init_input=config,
         runtime=runtime,
+        execution_timeout=execution_timeout,
+        max_attempts=max_attempts
     )
     context.to_delete_services_ids.append(context.service.id)
     if hasattr(context, "first_service"):
@@ -70,7 +80,7 @@ def step_impl(context):
                 package = param[1]
         elif param[0] == "revision":
             if param[1] != "None":
-                revision = int(param[1])
+                revision = param[1]
         elif param[0] == "config":
             if param[1] != "None":
                 config = json.loads(param[1])
@@ -90,7 +100,7 @@ def step_impl(context):
         package=context.package,
         revision=revision,
         init_input=config,
-        runtime=runtime,
+        runtime=runtime
     )
     context.to_delete_services_ids.append(context.service.id)
     if hasattr(context, "first_service"):

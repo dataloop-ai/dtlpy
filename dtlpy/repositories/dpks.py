@@ -3,7 +3,7 @@ import logging
 import os
 from typing import List, Optional
 
-from .. import exceptions, entities, services, miscellaneous
+from .. import exceptions, entities, services, miscellaneous, assets
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -43,18 +43,19 @@ class Dpks:
         """
         if directory is None:
             directory = os.getcwd()
-        dpk = entities.Dpk.from_json({
-            'name': miscellaneous.JsonUtils.get_if_absent(name),
-            'description': miscellaneous.JsonUtils.get_if_absent(description),
-            'categories': miscellaneous.JsonUtils.get_if_absent(categories),
-            'icon': miscellaneous.JsonUtils.get_if_absent(icon),
-            'scope': miscellaneous.JsonUtils.get_if_absent(scope, 'organization')
-        }, self._client_api, entities.Project.from_json({}, self._client_api, False))
-
-        with open(os.path.join(directory, 'app.json'), 'w') as json_file:
+        dpk = entities.Dpk.from_json(_json={'name': miscellaneous.JsonUtils.get_if_absent(name),
+                                            'description': miscellaneous.JsonUtils.get_if_absent(description),
+                                            'categories': miscellaneous.JsonUtils.get_if_absent(categories),
+                                            'icon': miscellaneous.JsonUtils.get_if_absent(icon),
+                                            'scope': miscellaneous.JsonUtils.get_if_absent(scope, 'organization'),
+                                            'components': dict()
+                                            },
+                                     client_api=self._client_api)
+        dataloop_filepath = os.path.join(directory, assets.paths.APP_JSON_FILENAME)
+        with open(dataloop_filepath, 'w') as json_file:
             json_file.write(json.dumps(dpk.to_json(), indent=4))
-        os.mkdir(os.path.join(directory, 'functions'))
-        os.mkdir(os.path.join(directory, 'panels'))
+        os.makedirs(os.path.join(directory, 'functions'), exist_ok=True)
+        os.makedirs(os.path.join(directory, 'panels'), exist_ok=True)
 
     # noinspection PyMethodMayBeStatic
     def pack(self, directory: str = None, name: str = None, subpaths_to_append: List[str] = None) -> str:
@@ -62,7 +63,7 @@ class Dpks:
         :param str directory: optional - the project to pack, if not specified use the current project,
         :param str name: optional - the name of the dpk file.
         :param List[str] subpaths_to_append: optional - the files/directories to add to the dpk file.
-                                            (along with functions, panels and app.json)
+                                            (along with functions, panels and dataloop.json)
         :return the path of the dpk file
 
         **Example**
@@ -82,7 +83,7 @@ class Dpks:
         if name is None:
             name = os.path.basename(directory)
 
-        with open(os.path.join(directory, 'app.json'), 'r') as file:
+        with open(os.path.join(directory, 'dataloop.json'), 'r') as file:
             app_json = json.load(file)
         version = app_json.get('version', None)
         if version is None:
@@ -101,8 +102,9 @@ class Dpks:
             # create zipfile
             miscellaneous.Zipping.zip_directory_inclusive(zip_filename=dpk_filename,
                                                           directory=directory,
-                                                          subpaths=['functions', 'panels',
-                                                                    'app.json'] + subpaths_to_append
+                                                          subpaths=['functions',
+                                                                    'panels',
+                                                                    'dataloop.json'] + subpaths_to_append
                                                           )
             return dpk_filename
         except Exception:
@@ -126,11 +128,12 @@ class Dpks:
         items = miscellaneous.List([r[1] for r in results if r[0] is True])
         return items
 
-    def pull(self, dpk_id: str = None, dpk_name: str = None, local_path=None) -> str:
+    def pull(self, dpk: entities.Dpk = None, dpk_id: str = None, dpk_name: str = None, local_path=None) -> str:
         """
         Pulls the app from the platform as dpk file.
 
         Note: you must pass either dpk_name or dpk_id to the function.
+        :param str dpk: DPK entity.
         :param str dpk_id: the name of the dpk.
         :param str dpk_name: the id of the dpk.
         :param local_path: the path where you want to install the dpk file.
@@ -140,7 +143,8 @@ class Dpks:
         ..code-block:: python
             path = dl.dpks.pull(dpk_name='my-app')
         """
-        dpk = self.get(dpk_id=dpk_id, dpk_name=dpk_name)
+        if dpk is None:
+            dpk = self.get(dpk_id=dpk_id, dpk_name=dpk_name)
         if local_path is None:
             local_path = os.path.join(
                 services.service_defaults.DATALOOP_PATH,
@@ -148,7 +152,7 @@ class Dpks:
                 dpk.name,
                 str(dpk.version))
 
-        dpk.codebase.from_json(client_api=self._client_api, _json=dpk.codebase.to_json()).unpack(local_path)
+        dpk.codebases.unpack(codebase=dpk.codebase, local_path=local_path)
         return local_path
 
     def __get_by_name(self, dpk_name: str):
@@ -182,25 +186,26 @@ class Dpks:
         """
 
         if dpk is None:
-            if not os.path.exists(os.path.abspath('app.json')):
+            if not os.path.exists(os.path.abspath('dataloop.json')):
                 raise exceptions.PlatformException(error='400',
-                                                   message='app.json file must be exists in order to publish a dpk')
-            with open('app.json', 'r') as f:
+                                                   message='dataloop.json file must be exists in order to publish a dpk')
+            with open('dataloop.json', 'r') as f:
                 json_file = json.load(f)
             dpk = entities.Dpk.from_json(_json=json_file,
                                          client_api=self._client_api,
                                          project=self.project)
 
-        dpk.codebase = self.project.codebases.pack(directory=os.getcwd(),
-                                                   name=dpk.display_name,
-                                                   extension='dpk',
-                                                   ignore_directories=['artifacts'])
+        if dpk.codebase is None:
+            dpk.codebase = self.project.codebases.pack(directory=os.getcwd(),
+                                                       name=dpk.display_name,
+                                                       extension='dpk',
+                                                       ignore_directories=['artifacts'])
 
         success_pack, response_pack = self._client_api.gen_request(req_type='post',
                                                                    json_req=dpk.to_json(),
                                                                    path='/app-registry')
         if not success_pack:
-            raise exceptions.PlatformException(error='400', message=f"Couldn't publish the app, {response_pack}")
+            raise exceptions.PlatformException(error=response_pack)
 
         return entities.Dpk.from_json(response_pack.json(), self._client_api, dpk.project)
 

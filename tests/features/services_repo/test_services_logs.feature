@@ -26,3 +26,13 @@ Feature: Services repository logs testing
       | service_name=services-log-init | package=services-log-init | revision=None | config=None | runtime=None |
     Then I receive a Service entity
     And Log "THIS LOG LINE SHOULD BE IN LOGS" is in service.log()
+
+  @services.delete
+  @packages.delete
+  @testrail-C4533401
+  Scenario: Requirements errors
+    When Add requirements "noRequirements" to package
+    And I create a service with autoscaler
+      | service_name=services-log-init | package=services-log-init | revision=1.0.1 | config=None | runtime=None |
+    Then I receive a Service entity
+    And Log "ERROR: No matching distribution found for" is in service.log()

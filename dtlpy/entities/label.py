@@ -11,7 +11,7 @@ logger = logging.getLogger(name='dtlpy')
 class Label:
     tag = attr.ib()
     display_data = attr.ib()
-    color = attr.ib()
+    color = attr.ib(default=None)
     display_label = attr.ib(default=None)
     attributes = attr.ib()
     children = attr.ib()
@@ -26,10 +26,6 @@ class Label:
         children = list()
         return children
 
-    @color.default
-    def set_color(self):
-        color = (random.randrange(0, 255), random.randrange(0, 255), random.randrange(0, 255))
-        return color
 
     @display_data.default
     def set_display_data(self):
@@ -82,7 +78,8 @@ class Label:
                                                               attr.fields(Label).display_data))
         value['displayLabel'] = self.display_label
         value['displayData'] = self.display_data
-        value['color'] = self.hex
+        if self.color:
+            value['color'] = self.hex
         children = [child.to_root() for child in self.children]
         _json = {
             'value': value,

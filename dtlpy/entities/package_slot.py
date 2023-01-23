@@ -94,10 +94,10 @@ class PackageSlot(entities.BaseEntity):
     Webhook object
     """
     # platform
+    display_name = attr.ib()
+    display_scopes = attr.ib(type=list)
     module_name = attr.ib(default='default_module')
     function_name = attr.ib(default='run')
-    display_name = attr.ib(default=None)
-    display_scopes = attr.ib(default=None, type=list)
     display_icon = attr.ib(repr=False, default=None)
     post_action = attr.ib(type=SlotPostAction)
     default_inputs = attr.ib(default=None, type=list)

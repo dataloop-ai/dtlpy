@@ -76,7 +76,6 @@ def step_impl(context, total_items):
 
 @behave.then(u'I validate pipeline code-node service is with the correct version "{version}"')
 def step_impl(context, version):
-
     service_name = context.code_node_name.lower().replace(' ', '-')
     for page in context.project.services.list():
         for service in page:
@@ -98,10 +97,12 @@ def step_impl(context):
     context.pipeline = context.pipeline.update()
 
 
-
 @behave.when(u'I create a pipeline with code node')
 def step_impl(context):
-    context.pipeline = context.project.pipelines.create(name='sdk-pipeline-test', project_id=context.project.id)
+    t = time.localtime()
+    current_time = time.strftime("%H-%M-%S", t)
+    context.pipeline_name = 'pipeline-{}'.format(current_time)
+    context.pipeline = context.project.pipelines.create(name=context.pipeline_name, project_id=context.project.id)
     context.code_node_name = 'My Function'
 
     def run(item):

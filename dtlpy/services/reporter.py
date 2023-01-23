@@ -2,6 +2,7 @@ import os
 import datetime
 import json
 import threading
+from .. import services
 from .. import exceptions
 import logging
 from ..caches import dl_cache
@@ -208,7 +209,10 @@ class Reporter:
             self._reports['errors'].push(self._errors)
             self._errors.clear()
 
-        log_filepath = os.path.join(os.getcwd(),
+        reports_dir = os.path.join(services.service_defaults.DATALOOP_PATH, 'reporters')
+        if not os.path.exists(reports_dir):
+            os.mkdir(reports_dir)
+        log_filepath = os.path.join(reports_dir,
                                     "log_{}_{}.json".format(self._resource,
                                                             datetime.datetime.utcnow().strftime("%Y%m%d_%H%M%S")))
         errors_json = dict()

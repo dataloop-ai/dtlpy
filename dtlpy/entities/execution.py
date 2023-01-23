@@ -322,16 +322,19 @@ class Execution(entities.BaseEntity):
         """
         return self.executions.update(execution=self)
 
-    def logs(self, follow=False):
+    def logs(self, follow=False, log_level='DEBUG'):
         """
         Print logs for execution
 
         :param follow: keep stream future logs
+        :param str log_level: the log level to display
         """
         self.services.log(execution_id=self.id,
                           view=True,
                           service=self.service,
-                          follow=follow)
+                          follow=follow,
+                          start=self.created_at,
+                          log_level=log_level)
 
     def increment(self):
         """

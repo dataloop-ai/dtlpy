@@ -1,7 +1,7 @@
 import logging
 import os
 
-from .. import entities, repositories
+from .. import entities, repositories, services
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -13,87 +13,64 @@ class PackageCodebaseType:
     LOCAL = 'local'
 
 
-class Codebase:
-    def __init__(self,
-                 package_codebase_type=PackageCodebaseType.ITEM,
-                 client_api=None):
-        self.type = package_codebase_type
-        self._client_api = client_api
+def Codebase(**kwargs):
+    """
+    Factory function to init all codebases types
+    """
+    client_api = kwargs.pop('client_api', None)
+    # take it out because we dont need it from the factory method
+    _dict = kwargs.pop('_dict', None)
 
-    def __str__(self):
-        return str(self.to_json())
+    if kwargs['type'] == PackageCodebaseType.GIT:
+        cls = GitCodebase.from_json(_json=kwargs,
+                                    client_api=client_api)
+    elif kwargs['type'] == PackageCodebaseType.ITEM:
+        cls = ItemCodebase.from_json(_json=kwargs,
+                                     client_api=client_api)
+    elif kwargs['type'] == PackageCodebaseType.FILESYSTEM:
+        cls = FilesystemCodebase.from_json(_json=kwargs,
+                                           client_api=client_api)
+    elif kwargs['type'] == PackageCodebaseType.LOCAL:
+        cls = LocalCodebase.from_json(_json=kwargs,
+                                      client_api=client_api)
+    else:
+        raise ValueError('[Codebase constructor] Unknown codebase type: {}'.format(kwargs['type']))
+    return cls
 
-    def to_json(self):
-        _json = {'type': self.type}
-        return _json
 
-    @staticmethod
-    def from_json(_json: dict, client_api):
-        """
-        :param client_api: ApiClient entity
-        """
-        if _json['type'] == PackageCodebaseType.GIT:
-            cls = GitCodebase.from_json(_json=_json,
-                                        client_api=client_api)
-        elif _json['type'] == PackageCodebaseType.ITEM:
-            cls = ItemCodebase.from_json(_json=_json,
-                                         client_api=client_api)
-        elif _json['type'] == PackageCodebaseType.FILESYSTEM:
-            cls = FilesystemCodebase.from_json(_json=_json,
-                                               client_api=client_api)
-        elif _json['type'] == PackageCodebaseType.LOCAL:
-            cls = LocalCodebase.from_json(_json=_json,
-                                          client_api=client_api)
-        else:
-            raise ValueError('[Codebase constructor] Unknown codebase type: {}'.format(_json['type']))
-        return cls
+class GitCodebase(entities.DlEntity):
+    type = entities.DlProperty(location=['type'], _type=str)
+    git_url = entities.DlProperty(location=['gitUrl'], _type=str)
+    git_tag = entities.DlProperty(location=['gitTag'], _type=str)
+    credentials = entities.DlProperty(location=['credentials'], _type=dict)
+    _codebases = None
+    client_api: 'services.ClientApi'
 
     @property
     def is_remote(self):
         """ Return whether the codebase is managed remotely and supports upload-download"""
-        return self.type in [PackageCodebaseType.ITEM, PackageCodebaseType.GIT]
+        return True
 
     @property
     def is_local(self):
         """ Return whether the codebase is locally and has no management implementations"""
         return not self.is_remote
 
-
-class GitCodebase(Codebase):
-    def __init__(self, git_url: str, git_tag: str, credentials=None):
-        super().__init__(package_codebase_type=PackageCodebaseType.GIT)
-        self.git_url = git_url if git_url.endswith('.git') else git_url + '.git'
-        self.git_tag = git_tag
-        self.credentials = credentials
-        self._codebases = None
-
-        # add .git prefix to the url
-        if git_url.endswith('.git'):
-            self.git_url = git_url
-        else:
-            self.git_url = git_url + '.git'
-
-        if git_tag is None:
-            logger.warning("git_tag param not provided. Using 'master'!")
-            git_tag = 'master'
-        self.git_tag = git_tag
-
     @property
     def codebases(self):
         if self._codebases is None:
-            self._codebases = repositories.Codebases(client_api=self._client_api)
+            if self._item is not None:
+                dataset = self.item.dataset
+            else:
+                dataset = None
+            self._codebases = repositories.Codebases(client_api=self.client_api,
+                                                     dataset=dataset)
         assert isinstance(self._codebases, repositories.Codebases)
         return self._codebases
 
-    def to_json(self):
-        _json = super().to_json()
-        _json['gitUrl'] = self.git_url
-        _json['gitTag'] = self.git_tag
-
-        if self.credentials is not None:
-            _json['credentials'] = self.credentials
-
-        return _json
+    def to_json(self) -> dict:
+        _dict = self._dict.copy()
+        return _dict
 
     @classmethod
     def from_json(cls, _json: dict, client_api):
@@ -101,11 +78,8 @@ class GitCodebase(Codebase):
         :param _json: platform json
         :param client_api: ApiClient entity
         """
-        return cls(
-            git_url=_json.get('gitUrl'),
-            git_tag=_json.get('gitTag'),
-            credentials=_json.get('credentials', None),
-        )
+        return cls(_dict=_json.copy(),
+                   client_api=client_api)
 
     @property
     def git_user_name(self):
@@ -147,31 +121,31 @@ class GitCodebase(Codebase):
         Clones the git codebase
         :param local_path:
         """
-
         return self.codebases.clone_git(
             codebase=self,
             local_path=local_path
         )
 
 
-class LocalCodebase(Codebase):
-    def __init__(self, local_path: str = None):
-        super().__init__(package_codebase_type=PackageCodebaseType.LOCAL)
-        self._local_path = local_path
-
-    def to_json(self):
-        _json = super().to_json()
-        if self._local_path is not None:
-            _json['localPath'] = self._local_path
-        return _json
+class LocalCodebase(entities.DlEntity):
+    type: str
+    local_path: str
+    _client_api: 'services.ClientApi'
 
     @property
-    def local_path(self):
-        return os.path.expandvars(self._local_path)
+    def is_remote(self):
+        """ Return whether the codebase is managed remotely and supports upload-download"""
+        return False
 
-    @local_path.setter
-    def local_path(self, local_path: str):
-        self._local_path = local_path
+    @property
+    def is_local(self):
+        """ Return whether the codebase is locally and has no management implementations"""
+        return not self.is_remote
+
+    def to_json(self):
+        _json = {'type': self.type,
+                 'localPath': self._local_path}
+        return _json
 
     @classmethod
     def from_json(cls, _json: dict, client_api):
@@ -180,15 +154,27 @@ class LocalCodebase(Codebase):
         :param client_api: ApiClient entity
         """
         return cls(
+            client_api=client_api,
             local_path=_json.get('localPath', None),
+            type=_json.get('type', None)
         )
 
 
-class FilesystemCodebase(Codebase):
-    def __init__(self, container_path: str = None, host_path: str = None):
-        super().__init__(package_codebase_type=PackageCodebaseType.FILESYSTEM)
-        self.host_path = host_path
-        self.container_path = container_path
+class FilesystemCodebase(entities.DlEntity):
+    type: str
+    host_path: str
+    container_path: str
+    _client_api: 'services.ClientApi'
+
+    @property
+    def is_remote(self):
+        """ Return whether the codebase is managed remotely and supports upload-download"""
+        return False
+
+    @property
+    def is_local(self):
+        """ Return whether the codebase is locally and has no management implementations"""
+        return not self.is_remote
 
     def to_json(self):
         _json = super().to_json()
@@ -205,38 +191,52 @@ class FilesystemCodebase(Codebase):
         :param client_api: ApiClient entity
         """
         return cls(
+            client_api=client_api,
             container_path=_json.get('containerPath', None),
-            host_path=_json.get('hostPath', None)
+            host_path=_json.get('hostPath', None),
+            type=_json.get('type', None)
         )
 
 
-class ItemCodebase(Codebase):
-    def __init__(self, item_id: str, client_api=None, item=None):
-        super().__init__()
-        self.item_id = item_id
-        self._item = item
-        self._client_api = client_api
-        self._codebases = None
-
-    @property
-    def codebases(self):
-        if self._codebases is None:
-            self._codebases = repositories.Codebases(client_api=self._client_api,
-                                                     dataset=self.item.dataset)
-        assert isinstance(self._codebases, repositories.Codebases)
-        return self._codebases
-
-    def to_json(self) -> dict:
-        _json = super().to_json()
-        _json['itemId'] = self.item_id
-        return _json
+class ItemCodebase(entities.DlEntity):
+    type = entities.DlProperty(location=['type'], _type=str)
+    item_id = entities.DlProperty(location=['itemId'], _type=str)
+    _item = entities.DlProperty(location=['item'], _type=str, default=None)
+    _codebases = None
+    client_api: 'services.ClientApi'
 
     @property
     def item(self):
         if self._item is None:
-            self._item = repositories.Items(client_api=self._client_api).get(item_id=self.item_id)
-        assert isinstance(self._item, entities.Item)
+            self._item = self.codebases.items_repository.get(item_id=self.item_id)
         return self._item
+
+    @property
+    def is_remote(self):
+        """ Return whether the codebase is managed remotely and supports upload-download"""
+        return True
+
+    @property
+    def is_local(self):
+        """ Return whether the codebase is locally and has no management implementations"""
+        return not self.is_remote
+
+    @property
+    def codebases(self):
+        if self._codebases is None:
+            if self._item is not None:
+                dataset = self.item.dataset
+            else:
+                dataset = None
+            self._codebases = repositories.Codebases(client_api=self.client_api,
+                                                     dataset=dataset)
+        assert isinstance(self._codebases, repositories.Codebases)
+        return self._codebases
+
+    def to_json(self) -> dict:
+        _dict = self._dict.copy()
+        _dict.pop('item', None)
+        return _dict
 
     @classmethod
     def from_json(cls, _json: dict, client_api):
@@ -244,10 +244,8 @@ class ItemCodebase(Codebase):
         :param _json: platform json
         :param client_api: ApiClient entity
         """
-        return cls(
-            item_id=_json['itemId'],
-            client_api=client_api
-        )
+        return cls(_dict=_json.copy(),
+                   client_api=client_api)
 
     def unpack(self, local_path):
         """

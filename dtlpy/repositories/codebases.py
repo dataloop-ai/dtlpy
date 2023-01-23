@@ -32,7 +32,10 @@ class Codebases:
     @property
     def items_repository(self) -> repositories.Items:
         if self._items_repository is None:
-            self._items_repository = self.dataset.items
+            if self._dataset is not None or self._project is not None:
+                self._items_repository = self.dataset.items
+            else:
+                self._items_repository = repositories.Items(client_api=services.ApiClient())
         assert isinstance(self._items_repository, repositories.Items)
         return self._items_repository
 
@@ -90,7 +93,7 @@ class Codebases:
                 m.update(chunk)
         return m.hexdigest()
 
-    def list_versions(self, codebase_name: str):
+    def list_versions(self, codebase_name: str) -> entities.PagedEntities:
         """
         List all codebase versions.
 
@@ -161,8 +164,10 @@ class Codebases:
                     "{!r} != {!r}".format(
                         codebase_name,
                         matched_version.name))
-            codebase = entities.ItemCodebase(item_id=matched_version.id,
-                                             item=matched_version)
+            codebase = entities.Codebase(type='item',
+                                         client_api=self._client_api,
+                                         itemId=matched_version.id,
+                                         item=matched_version)
             return codebase
 
         if codebase_name is None:
@@ -177,8 +182,10 @@ class Codebases:
             except Exception:
                 raise PlatformException(error='404',
                                         message='No matching version was found. version: {}'.format(version))
-            codebase = entities.ItemCodebase(item_id=matched_version.id,
-                                             item=matched_version)
+            codebase = entities.Codebase(type='item',
+                                         client_api=self._client_api,
+                                         itemId=matched_version.id,
+                                         item=matched_version)
             return codebase
 
         # get all or latest
@@ -187,8 +194,10 @@ class Codebases:
             raise PlatformException(error='404', message='No codebase was found. name: {}'.format(codebase_name))
         else:
             if version == 'all':
-                codebase = [entities.ItemCodebase(item_id=mv.id,
-                                                  item=mv) for mv in versions_pages.all()]
+                codebase = [entities.Codebase(type='item',
+                                              client_api=self._client_api,
+                                              itemId=mv.id,
+                                              item=mv) for mv in versions_pages.all()]
             elif version == 'latest':
                 max_ver = -1
                 matched_version = None
@@ -205,8 +214,10 @@ class Codebases:
                     raise PlatformException(error='404',
                                             message='No codebase was found. name: {}'.format(codebase_name))
                 else:
-                    codebase = entities.ItemCodebase(item_id=matched_version.id,
-                                                     item=matched_version)
+                    codebase = entities.Codebase(type='item',
+                                                 client_api=self._client_api,
+                                                 itemId=matched_version.id,
+                                                 item=matched_version)
             else:
                 raise PlatformException(error='404', message='Unknown version string: {}'.format(version))
 
@@ -287,7 +298,8 @@ class Codebases:
             directory = os.path.abspath(directory)
 
             # create zipfile
-            miscellaneous.Zipping.zip_directory(zip_filename=zip_filename, directory=directory, ignore_directories=ignore_directories)
+            miscellaneous.Zipping.zip_directory(zip_filename=zip_filename, directory=directory,
+                                                ignore_directories=ignore_directories)
             zip_md = self.__file_hash(zip_filename)
 
             # get latest version
@@ -338,8 +350,10 @@ class Codebases:
 
                 # update item
                 item = self.items_repository.update(item=item, system_metadata=True)
-                codebase = entities.ItemCodebase(item_id=item.id,
-                                                 client_api=self._client_api)
+                codebase = entities.Codebase(type='item',
+                                             client_api=self._client_api,
+                                             itemId=item.id,
+                                             item=item)
         except Exception:
             logger.error('Error when packing:')
             raise
@@ -416,7 +430,7 @@ class Codebases:
         """
         if not isinstance(codebase, entities.GitCodebase):
             raise RuntimeError('only support Git Codebase')
-        response = self.git_utils.git_clone(path=os.path.join(local_path, codebase.git_repo_name),
+        response = self.git_utils.git_clone(path=local_path,
                                             git_url=codebase.git_url,
                                             tag=codebase.git_tag)
         if response:
@@ -505,7 +519,7 @@ class Codebases:
                                     download_path=download_path,
                                     local_path=local_path)
             return os.path.dirname(local_path)
-        elif isinstance(codebase, (entities.Codebase, entities.Item)):
+        elif isinstance(codebase, (entities.ItemCodebase, entities.Item, entities.GitCodebase)):
             artifact_filepath = self._unpack_single(codebase=codebase,
                                                     download_path=download_path,
                                                     local_path=local_path)

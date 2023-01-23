@@ -89,7 +89,7 @@ def logout(api_client):
     return True
 
 
-def login(api_client, auth0_url=None, audience=None, client_id=None, login_domain=None):
+def login(api_client, auth0_url=None, audience=None, client_id=None, login_domain=None, callback_port=None):
     import webbrowser
     from http.server import BaseHTTPRequestHandler, HTTPServer
     from urllib.parse import urlparse, parse_qs
@@ -135,7 +135,7 @@ def login(api_client, auth0_url=None, audience=None, client_id=None, login_domai
                 self.__class__.tokens_obtained = True
 
         def __init__(self):
-            self.port = 3001
+            self.port = callback_port if callback_port is not None else 3001
             self.server = HTTPServer(('', self.port), self.Handler)
             self.server.timeout = 60
 

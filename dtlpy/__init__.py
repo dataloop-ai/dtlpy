@@ -27,7 +27,7 @@ from .__version__ import version as __version__
 from .entities import (
     # main entities
     Project, Dataset, ExpirationOptions, ExportVersion, Trigger, Item, Execution, AnnotationCollection, Annotation,
-    Recipe, IndexDriver, AttributesTypes, AttributesRange,
+    Recipe, IndexDriver, AttributesTypes, AttributesRange, Dpk,
     Ontology, Label, Task, TaskPriority, Assignment, Service, Package, Codebase, Model, PackageModule, PackageFunction,
     # annotations
     Box, Cube, Cube3d, Point, Note, Message, Segmentation, Ellipse, Classification, Subtitle, Polyline, Pose, Description,
@@ -59,7 +59,7 @@ from .entities import (
     PipelineNode, TaskNode, CodeNode, PipelineStats, PipelineSettings,
     PipelineNodeType, PipelineNameSpace, PipelineResumeOption,
     FunctionNode, DatasetNode, PipelineConnectionPort, PipelineNodeIO, Organization, OrganizationsPlans, Integration,
-    Driver, CacheAction, PodType,
+    Driver, S3Driver, GcsDriver, AzureBlobDriver, CacheAction, PodType,
     ExternalStorage, Role, PlatformEntityType, SettingsValueTypes, SettingsTypes, SettingsSectionNames, SettingScope, \
     BaseSetting, UserSetting, Setting, ServiceSample, ExecutionSample, PipelineExecutionSample, ResourceExecution
 )
@@ -228,6 +228,7 @@ class LoggingLevel:
     WARNING = "warning"
     CRITICAL = "critical"
     INFO = "info"
+    ERROR = "error"
 
 
 #################
@@ -444,6 +445,7 @@ MEMBER_ROLE_ANNOTATION_MANAGER = MemberRole.ANNOTATION_MANAGER
 MEMBER_ORG_ROLE_OWNER = MemberOrgRole.OWNER
 MEMBER_ORG_ROLE_ADMIN = MemberOrgRole.ADMIN
 MEMBER_ORG_ROLE_MEMBER = MemberOrgRole.MEMBER
+MEMBER_ORG_ROLE_WORKER = MemberOrgRole.WORKER
 
 PACKAGE_REQUIREMENT_OP_EQUAL = RequirementOperator.EQUAL
 PACKAGE_REQUIREMENT_OP_GREATER_THAN = RequirementOperator.GREATER_THAN

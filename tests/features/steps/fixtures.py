@@ -74,6 +74,10 @@ def get_value(params, context):
             val = 7
         elif key == 'allowed_assignees':
             val = ['annotator1@dataloop.ai', 'annotator2@dataloop.ai']
+        elif key == 'consensus_percentage':
+            val = 100
+        elif key == 'consensus_assignees':
+            val = 2
 
     if key == 'filters' and val is not None and not isinstance(val, dict):
         filters = context.dl.Filters()
@@ -108,6 +112,11 @@ def get_value(params, context):
         val = int(val)
     elif key == 'max_batch_workload':
         val = int(val)
+    elif key == 'consensus_percentage':
+        val = int(val)
+    elif key == 'consensus_assignees':
+        val = int(val)
+
     return val
 
 

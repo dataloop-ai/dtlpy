@@ -21,3 +21,4 @@ filelock>=3.0.12
 diskcache>=5.4
 redis>=3.5
 pydantic
+inquirer

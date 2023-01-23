@@ -1,8 +1,6 @@
 import logging
+import typing
 import json
-
-import attr
-
 from enum import Enum
 from .. import exceptions, entities
 
@@ -46,38 +44,35 @@ class PackageInputType(str, Enum):
     RECIPES = "Recipe[]"
 
 
-@attr.s
-class PackageFunction(entities.BaseEntity):
+class PackageFunction(entities.DlEntity):
     """
     Webhook object
     """
-    # platform
-    outputs = attr.ib()
-    name = attr.ib()
-    description = attr.ib(default='')
-    inputs = attr.ib()
-    display_name = attr.ib(default=None)
-    display_icon = attr.ib(repr=False, default=None)
 
-    @name.default
-    def set_name(self):
-        logger.warning('No function name was given. Using default name: {}'.format(
-            entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME))
-        return entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME
+    # platform
+    name: str = entities.DlProperty(location=['name'],
+                                    _type=str,
+                                    default=entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME)
+    description: str = entities.DlProperty(location=['description'],
+                                           _type=str)
+    display_name: typing.Union[str, None] = entities.DlProperty(location=['displayName'],
+                                                                _type=typing.Union[str, None])
+    display_icon: typing.Union[str, None] = entities.DlProperty(location=['displayIcon'],
+                                                                _type=typing.Union[str, None])
+
+    outputs: typing.Union[typing.List['entities.FunctionIO'], None] = entities.DlProperty(location=['output'],
+                                                                                          _kls='FunctionIO')
+    inputs: typing.Union[typing.List['entities.FunctionIO'], None] = entities.DlProperty(location=['input'],
+                                                                                         _kls='FunctionIO')
+
+    def __repr__(self):
+        # TODO need to move to DlEntity
+        return f"PackageFunction(name={self.name}, description={self.description})"
 
     @classmethod
     def from_json(cls, _json):
-        inputs = [FunctionIO.from_json(_io) for _io in _json.get('input', list())]
-        outputs = [FunctionIO.from_json(_io) for _io in _json.get('output', list())]
-
-        return cls(
-            description=_json.get("description", None),
-            name=_json.get("name", None),
-            inputs=inputs,
-            outputs=outputs,
-            display_name=_json.get('displayName', None),
-            display_icon=_json.get('displayIcon', None)
-        )
+        inst = cls(_dict=_json.copy())
+        return inst
 
     @outputs.default
     def get_outputs(self):
@@ -90,44 +85,19 @@ class PackageFunction(entities.BaseEntity):
         return inputs
 
     def to_json(self):
-        _json = attr.asdict(
-            self,
-            filter=attr.filters.exclude(attr.fields(PackageFunction).inputs,
-                                        attr.fields(PackageFunction).outputs,
-                                        attr.fields(PackageFunction).display_name,
-                                        attr.fields(PackageFunction).display_icon,
-                                        ),
-        )
-        inputs = self.inputs
-        # check in inputs is a list
-        if not isinstance(inputs, list):
-            inputs = [inputs]
-        # if is dtlpy entity convert to dict
-        if inputs and isinstance(inputs[0], entities.FunctionIO):
-            inputs = [_io.to_json() for _io in inputs]
-
-        outputs = self.outputs
-        # check in inputs is a list
-        if not isinstance(outputs, list):
-            outputs = [outputs]
-        # if is dtlpy entity convert to dict
-        if outputs and isinstance(outputs[0], entities.FunctionIO):
-            outputs = [_io.to_json() for _io in outputs]
-
-        _json['input'] = inputs
-        _json['output'] = outputs
-        if self.display_name is not None:
-            _json['displayName'] = self.display_name
-        _json['displayIcon'] = self.display_icon
+        _json = self._dict.copy()
         return _json
 
 
-@attr.s
-class FunctionIO:
-    INPUT_TYPES = [val for key, val in PackageInputType.__dict__.items() if not key.startswith('_')]
-    type = attr.ib(type=str)
-    value = attr.ib(default=None)
-    name = attr.ib(type=str)
+class FunctionIO(entities.DlEntity):
+    INPUT_TYPES: list = [val for key, val in PackageInputType.__dict__.items() if not key.startswith('_')]
+    type = entities.DlProperty(location=['type'], _type=str)
+    value = entities.DlProperty(location=['value'], _type=str)
+    name = entities.DlProperty(location=['name'], _type=str)
+
+    def __repr__(self):
+        # TODO need to move to DlEntity
+        return f"FunctionIO(type={self.type}, name={self.name}, value={self.value})"
 
     @name.default
     def set_name(self):
@@ -150,9 +120,8 @@ class FunctionIO:
         else:
             return 'config'
 
-    # noinspection PyUnusedLocal
     @type.validator
-    def check_type(self, attribute, value):
+    def check_type(self, value):
         if value not in self.INPUT_TYPES:
             raise exceptions.PlatformException(
                 error='400',
@@ -167,9 +136,8 @@ class FunctionIO:
             is_json_serializable = False
         return is_json_serializable
 
-    # noinspection PyUnusedLocal
     @value.validator
-    def check_value(self, attribute, value):
+    def check_value(self, value):
         value_ok = True
         expected_value = 'Expected value should be:'
         if self.type == PackageInputType.JSON:
@@ -204,8 +172,5 @@ class FunctionIO:
 
     @classmethod
     def from_json(cls, _json):
-        return cls(
-            type=_json.get('type', None),
-            value=_json.get('value', None),
-            name=_json.get('name', None)
-        )
+        inst = cls(_dict=_json.copy())
+        return inst

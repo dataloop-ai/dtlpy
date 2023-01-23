@@ -1486,16 +1486,19 @@ class ApiClient:
         self.environments[self.environment]['login_domain'] = domain
         self.cookie_io.put('login_parameters', self.environments)
 
-    def login(self, audience=None, auth0_url=None, client_id=None):
+    def login(self, audience=None, auth0_url=None, client_id=None, callback_port=None):
         """
         Login using Auth0.
         :return:
         """
-        res = login(api_client=self,
-                    audience=audience,
-                    auth0_url=auth0_url,
-                    client_id=client_id,
-                    login_domain=self.login_domain)
+        res = login(
+            api_client=self,
+            audience=audience,
+            auth0_url=auth0_url,
+            client_id=client_id,
+            login_domain=self.login_domain,
+            callback_port=callback_port
+        )
         if res:
             self._send_login_event(user_type='human', login_type='interactive')
         return res
@@ -1601,6 +1604,7 @@ class ApiClient:
 
         env = self._environments[self._environment]['alias']
         head = self._environments[self._environment].get('url', None)
+        # TODO need to deprecate somehow (the following)
         if head is None:
             if env == 'prod':
                 head = 'https://console.dataloop.ai/'
@@ -1611,7 +1615,7 @@ class ApiClient:
             elif env in ['local', 'minikube_local_mac']:
                 head = 'https://localhost:8443/'
             elif env == 'new-dev':
-                head = 'https://custom0-gate.dataloop.ai/'
+                head = 'https://custom1-gate.dataloop.ai/'
             else:
                 raise exceptions.PlatformException(error='400', message='Unknown environment: {}'.format(env))
 

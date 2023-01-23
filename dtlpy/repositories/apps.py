@@ -205,9 +205,11 @@ class Apps:
                                             },
                                      client_api=self._client_api,
                                      project=self.project)
-        success, response = self._client_api.gen_request(req_type='post', path="/apps", json_req=app.to_json())
+        success, response = self._client_api.gen_request(req_type='post',
+                                                         path="/apps",
+                                                         json_req=app.to_json())
         if not success:
-            raise exceptions.UnknownException(response)
+            raise exceptions.PlatformException(response)
         return entities.App.from_json(_json=response.json(),
                                       client_api=self._client_api,
                                       project=self.project)

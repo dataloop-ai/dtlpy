@@ -20,13 +20,10 @@ class Driver(entities.BaseEntity):
     """
     Driver entity
     """
-    bucket_name = attr.ib()
     creator = attr.ib()
     allow_external_delete = attr.ib()
     allow_external_modification = attr.ib()
     created_at = attr.ib()
-    region = attr.ib()
-    path = attr.ib()
     type = attr.ib()
     integration_id = attr.ib()
     integration_type = attr.ib()
@@ -60,20 +57,17 @@ class Driver(entities.BaseEntity):
         :param is_fetched: is Entity fetched from Platform
         :return: Driver object
         """
-        inst = cls(bucket_name=_json.get('bucketName', None),
-                   creator=_json.get('creator', None),
+        inst = cls(creator=_json.get('creator', None),
                    allow_external_delete=_json.get('allowExternalDelete', None),
                    allow_external_modification=_json.get('allowExternalModification', None),
                    created_at=_json.get('createdAt', None),
-                   region=_json.get('region', None),
                    type=_json.get('type', None),
                    integration_id=_json.get('integrationId', None),
                    integration_type=_json.get('integrationType', None),
                    metadata=_json.get('metadata', None),
                    name=_json.get('name', None),
                    id=_json.get('id', None),
-                   client_api=client_api,
-                   path=_json.get('path', None))
+                   client_api=client_api)
         inst.is_fetched = is_fetched
         return inst
 
@@ -86,22 +80,17 @@ class Driver(entities.BaseEntity):
         """
         output_dict = attr.asdict(self,
                                   filter=attr.filters.exclude(attr.fields(Driver)._client_api,
-                                                              attr.fields(Driver).bucket_name,
                                                               attr.fields(Driver).allow_external_delete,
                                                               attr.fields(Driver).allow_external_modification,
                                                               attr.fields(Driver).created_at,
                                                               attr.fields(Driver).integration_id,
                                                               attr.fields(Driver).integration_type,
-                                                              attr.fields(Driver).path,
                                                               ))
-        output_dict['bucketName'] = self.bucket_name
         output_dict['allowExternalDelete'] = self.allow_external_delete
         output_dict['allowExternalModification'] = self.allow_external_modification
         output_dict['createdAt'] = self.created_at
         output_dict['integrationId'] = self.integration_id
         output_dict['integrationType'] = self.integration_type
-        if self.path is not None:
-            output_dict['path'] = self.path
 
         return output_dict
 
@@ -125,3 +114,91 @@ class Driver(entities.BaseEntity):
         return self.drivers.delete(driver_id=self.id,
                                    sure=sure,
                                    really=really)
+
+
+@attr.s()
+class AzureBlobDriver(Driver):
+    container_name = attr.ib(default=None)
+    path = attr.ib(default=None)
+
+    def to_json(self):
+        _json = super().to_json()
+        _json['containerName'] = self.container_name
+        if self.path is not None:
+            _json['path'] = self.path
+        return _json
+
+    @classmethod
+    def from_json(cls, _json, client_api, is_fetched=True):
+        """
+        Build a Driver entity object from a json
+
+        :param _json: _json response from host
+        :param client_api: ApiClient entity
+        :param is_fetched: is Entity fetched from Platform
+        :return: Driver object
+        """
+        inst = super().from_json(_json, client_api, is_fetched=True)
+        inst.container_name = _json.get('containerName', None)
+        inst.path = _json.get('path', None)
+        return inst
+
+
+@attr.s()
+class GcsDriver(Driver):
+    bucket = attr.ib(default=None)
+
+    def to_json(self):
+        _json = super().to_json()
+        _json['bucket'] = self.bucket
+        return _json
+
+    @classmethod
+    def from_json(cls, _json, client_api, is_fetched=True):
+        """
+        Build a Driver entity object from a json
+
+        :param _json: _json response from host
+        :param client_api: ApiClient entity
+        :param is_fetched: is Entity fetched from Platform
+        :return: Driver object
+        """
+        inst = super().from_json(_json, client_api, is_fetched=True)
+        inst.bucket = _json.get('bucket', None)
+        return inst
+
+
+@attr.s()
+class S3Driver(Driver):
+    bucket_name = attr.ib(default=None)
+    region = attr.ib(default=None)
+    path = attr.ib(default=None)
+    storage_class = attr.ib(default=None)
+
+    def to_json(self):
+        _json = super().to_json()
+        _json['bucketName'] = self.bucket_name
+        if self.region is not None:
+            _json['region'] = self.region
+        if self.path is not None:
+            _json['path'] = self.path
+        if self.storage_class is not None:
+            _json['storageClass'] = self.storage_class
+        return _json
+
+    @classmethod
+    def from_json(cls, _json, client_api, is_fetched=True):
+        """
+        Build a Driver entity object from a json
+
+        :param _json: _json response from host
+        :param client_api: ApiClient entity
+        :param is_fetched: is Entity fetched from Platform
+        :return: Driver object
+        """
+        inst = super().from_json(_json, client_api, is_fetched=True)
+        inst.bucket_name = _json.get('bucketName', None)
+        inst.region = _json.get('region', None)
+        inst.path = _json.get('path', None)
+        inst.storage_class = _json.get('storageClass', None)
+        return inst

@@ -1293,7 +1293,7 @@ class Packages:
 
             project.packages.generate(name='package_name',
                                       src_path='src_path')
-        
+
         """
         # name
         if name is None:
@@ -1373,12 +1373,6 @@ class Packages:
 
         if from_local is None:
             from_local = package.codebase.is_local
-
-        if local_path is None:
-            if package.codebase.is_local:
-                local_path = package.codebase.local_path
-            else:
-                local_path = os.path.join(services.service_defaults.DATALOOP_PATH, "packages")
 
         if not from_local:
             # Not local => download codebase
@@ -1575,7 +1569,7 @@ class Packages:
         .. code-block:: python
 
             project.packages.checkout(package='package_entity')
-        
+
         """
         if package is None:
             package = self.get(package_id=package_id, package_name=package_name)
@@ -1599,7 +1593,7 @@ class Packages:
         func_inspect = inspect.getfullargspec(func)
         if not isinstance(function_inputs, list):
             function_inputs = [function_inputs]
-        defined_input_names = [inp.name for inp in function_inputs]
+        defined_input_names = [inp['name'] if isinstance(inp, dict) else inp.name for inp in function_inputs]
 
         args_with_values = dict()
         # go over the defaults and inputs from end to start to map between them

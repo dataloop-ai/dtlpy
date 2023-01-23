@@ -63,7 +63,11 @@ def step_impl(context):
 
 @behave.then(u"I receive a Codebase object")
 def step_impl(context):
-    assert isinstance(context.codebase, context.dl.Codebase)
+    assert isinstance(context.codebase, (context.dl.ItemCodebase,
+                                         context.dl.FilesystemCodebase,
+                                         context.dl.LocalCodebase,
+                                         context.dl.GitCodebase,
+                                         ))
 
 
 @behave.then(u'Codebase in host when downloaded to "{unpack_path}" equals code base in path "{original_path}"')

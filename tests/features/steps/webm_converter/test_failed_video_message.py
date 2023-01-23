@@ -35,7 +35,7 @@ def step_impl(context):
         time.sleep(interval)
         if 'errors' in context.item.metadata['system'].keys():
             error_message = [{"type": "origExpectedFrames",
-                              "message": "Frames is not equal to FPS * Duration", "value": 3, "service": "VideoPreprocess"}]
+                              "message": "Frames is not equal to FPS * (Duration - StartTime)", "value": 3, "service": "VideoPreprocess"}]
 
             assert error_message == context.item.metadata['system']['errors'], "TEST FAILED: Wrong error message.\nExpected: {}\nGot: {}".format(error_message,
                                                                                                                                                  context.item.metadata['system']['errors'])

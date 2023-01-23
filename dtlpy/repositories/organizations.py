@@ -9,7 +9,7 @@ logger = logging.getLogger(name='dtlpy')
 class Organizations:
     """
     Organizations Repository
-    
+
     Read our `documentation <https://dataloop.ai/docs/org-setup>`_ and `SDK documentation <https://dataloop.ai/docs/sdk-org>`_ to learn more about Organizations in the Dataloop platform.
     """
 
@@ -130,7 +130,7 @@ class Organizations:
         :param entities.Organization organization: Organization object
         :param str organization_id: Organization id
         :param str organization_name: Organization name
-        :param entities.MemberOrgRole role: MemberOrgRole.ADMIN, MemberOrgRole.OWNER, MemberOrgRole.MEMBER
+        :param entities.MemberOrgRole role: MemberOrgRole.ADMIN, MemberOrgRole.OWNER, MemberOrgRole.MEMBER, MemberOrgRole.WORKER
         :return: projects list
         :rtype: list
 
@@ -335,11 +335,11 @@ class Organizations:
         Add members to your organization. Read about members and groups `here <https://dataloop.ai/docs/org-members-groups>`_.
 
         **Prerequisities**: To add members to an organization, you must be an *owner* in that organization.
-        
+
         You must provide at least ONE of the following params: organization, organization_name, or organization_id.
 
         :param str email: the member's email
-        :param str role: MemberOrgRole.ADMIN, MemberOrgRole.OWNER, MemberOrgRole.MEMBER
+        :param str role: MemberOrgRole.ADMIN, MemberOrgRole.OWNER, MemberOrgRole.MEMBER, MemberOrgRole.WORKER
         :param str organization_id: Organization id
         :param str organization_name: Organization name
         :param entities.Organization organization: Organization object
@@ -444,11 +444,11 @@ class Organizations:
         Update member role.
 
         **Prerequisites**: You must be an organization *owner* to update a member's role.
-       
+
         You must provide at least ONE of the following params: organization, organization_name, or organization_id.
 
         :param str email: the member's email
-        :param str role: MemberOrgRole.ADMIN, MemberOrgRole.OWNER, MemberOrgRole.MEMBER
+        :param str role: MemberOrgRole.ADMIN, MemberOrgRole.OWNER, MemberOrgRole.MEMBER, MemberOrgRole.WORKER
         :param str organization_id: Organization id
         :param str organization_name: Organization name
         :param entities.Organization organization: Organization object

@@ -394,3 +394,11 @@ def get_items_height_and_width(dataset, to_format):
                     item.metadata['system']['height'] = im.size[1]
                     item.metadata['system']['width'] = im.size[0]
                 item.update(system_metadata=True)
+
+
+@then(u'The converter do not overwrite the existing label')
+def step_impl(context):
+    dataset = context.dl.datasets.get(dataset_id=context.dataset.id)
+    for label in dataset.labels:
+        if label.tag == context.nested_labels[0]['label_name']:
+            assert label.color == context.nested_labels[0]['color'], 'The converter overwrite the existing label'

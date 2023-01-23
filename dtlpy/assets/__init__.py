@@ -12,6 +12,7 @@ class PATHS:
     MODULE_A_FILENAME = 'first_module_class.py'
     MODULE_B_FILENAME = 'second_module_class.py'
     REQUIREMENTS_FILENAME = 'requirements.txt'
+    APP_JSON_FILENAME = 'dataloop.json'
 
     ASSETS_PATH = os.path.dirname(__file__)
     ASSETS_MAIN_FILEPATH = os.path.join(ASSETS_PATH, MAIN_FILENAME)

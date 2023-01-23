@@ -55,6 +55,15 @@ def step_impl(context):
     context.dataset.add_labels(label_list=context.nested_labels)
 
 
+@behave.when(u'I add single root Label "{name}"')
+def step_impl(context, name):
+    context.nested_labels = [
+        {'label_name': name,
+         'color': '#220605'}]
+
+    context.dataset.add_labels(label_list=context.nested_labels)
+
+
 @behave.then(u'I add single root Label')
 def step_impl(context):
     context.nested_labels = [

@@ -13,13 +13,14 @@ from functools import partial
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor
 
-from .. import entities, exceptions, dtlpy_services, utilities
+from .. import entities, utilities
+from ..services import service_defaults
 
 logger = logging.getLogger('ModelAdapter')
 
 
 class BaseModelAdapter(utilities.BaseServiceRunner):
-    def __init__(self, model_entity: entities.Model):
+    def __init__(self, model_entity: entities.Model = None):
         self.logger = logger
         # entities
         self._model_entity = None
@@ -56,7 +57,8 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
     @property
     def model_entity(self):
         if self._model_entity is None:
-            raise ValueError('Missing Model on adapter. please set: "adapter.model_entity=model"')
+            raise ValueError(
+                "No model entity loaded. Please load a model (adapter.load_from_model(<dl.Model>)) or set: 'adapter.model_entity=<dl.Model>'")
         assert isinstance(self._model_entity, entities.Model)
         return self._model_entity
 
@@ -235,7 +237,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         if model_entity is not None:
             self.model_entity = model_entity
         if local_path is None:
-            local_path = os.path.join(dtlpy_services.service_defaults.DATALOOP_PATH, "models", self.model_entity.name)
+            local_path = os.path.join(service_defaults.DATALOOP_PATH, "models", self.model_entity.name)
         # update adapter instance
         _configuration = self.package.metadata.get('system', {}).get('ml', {}).get('defaultConfiguration', {})
         _configuration.update(self.model_entity.configuration)
@@ -284,73 +286,52 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
     # ===============
 
     @entities.Package.decorators.function(display_name='Predict Items',
-                                          inputs={'items': 'Item[]'})
-    def predict_items(self, items: list, with_upload=True, cleanup=False, batch_size=16, **kwargs):
+                                          inputs={'items': 'Item[]'},
+                                          outputs={'items': 'Item[]', 'annotations': 'Annotation[]'})
+    def predict_items(self, items: list, upload_annotations=True, conf_threshold=0, batch_size=16, **kwargs):
         """
-        Predicts all items given
+        Run the predict function on the input list of items (or single) and return the items and the predictions.
+        Each prediction is by the model output type (package.output_type) and model_info in the metadata
 
-        :param items: `List[dl.Item]`
-        :param with_upload: `bool` uploads the predictions back to the given items
-        :param cleanup: `bool` if set removes existing predictions with the same package-model name (default: False)
+        :param items: `List[dl.Item]` list of items to predict
+        :param upload_annotations: `bool` uploads the predictions on the given items
+        :param conf_threshold: `float` returns and uploads annotation only above this threshold
         :param batch_size: `int` size of batch to run a single inference
 
-        :return: `List[dl.AnnotationCollection]` where all annotation in the collection are of type package.output_type
-                                                 and has prediction fields (model_info)
+        :return: `List[dl.Item]`, `List[List[dl.Annotation]]`
         """
-        # TODO: do we want to add score filtering here?
 
         input_type = self.model_entity.input_type
         self.logger.debug(
             "Predicting {} items, using batch size {}. input type: {}".format(len(items), batch_size, input_type))
         pool = ThreadPoolExecutor(max_workers=16)
-        all_predictions = dict()
+        annotations = list()
         for i_batch in tqdm.tqdm(range(0, len(items), batch_size), desc='predicting', unit='bt', leave=None):
             batch_items = items[i_batch: i_batch + batch_size]
-            item_ids = [item.id for item in batch_items]
             if input_type == 'image':
                 batch = list(pool.map(self._prepare_items_image_batch, batch_items))
             elif input_type == 'txt':
                 batch = list(pool.map(self._prepare_items_txt_batch, batch_items))
             else:
                 raise ValueError('Unknown inputType: {} (from model_entity.input_type'.format(input_type))
-            batch_predictions = self.predict(batch, **kwargs)
-            all_predictions.update({item_id: annotations for item_id, annotations in zip(item_ids, batch_predictions)})
-            if with_upload:
+            batch_collections = self.predict(batch, **kwargs)
+            for collection in batch_collections:
+                # convert annotation collection to a list aof annotations jsons
+                if isinstance(collection, entities.AnnotationCollection):
+                    annotations.append(collection.to_json()['annotations'])
+                else:
+                    annotations.append(collection)
+            if upload_annotations is True:
                 self.logger.debug(
-                    "Uploading items' annotation for model {!r}. cleanup {}".format(self.model_entity.name, cleanup))
+                    "Uploading items' annotation for model {!r}.".format(self.model_entity.name))
                 try:
-                    annotations = list(pool.map(partial(self._upload_model_annotations, cleanup=cleanup),
-                                                batch_items, batch_predictions))
+                    annotations = list(pool.map(partial(self._upload_model_annotations),
+                                                batch_items, batch_collections))
                 except Exception as err:
                     self.logger.exception("Failed to upload annotations items.")
 
         pool.shutdown()
-        return items, all_predictions
-
-    @entities.Package.decorators.function(display_name='Predict Items',
-                                          inputs={'data_uris': 'String[]'})
-    def predict_data_uris(self, data_uris: list, batch_size=16, **kwargs):
-        """
-        Predicts all items given
-
-        :param data_uris: `List[str]` a list of data URIs as strings
-        :param batch_size: `int` size of batch to run a single inference
-
-        :return: `List[dl.AnnotationCollection]` where all annotation in the collection are of type package.output_type
-                                                 and has prediction fields (model_info)
-        """
-
-        self.logger.debug(
-            "Predicting {} items, using batch size {}".format(len(data_uris), batch_size))
-        pool = ThreadPoolExecutor(max_workers=16)
-        all_predictions = list()
-        for i_batch in tqdm.tqdm(range(0, len(data_uris), batch_size), desc='predicting', unit='bt', leave=None):
-            batch_items = data_uris[i_batch: i_batch + batch_size]
-            batch = list(pool.map(self._prepare_uris_image_batch, batch_items))
-            batch_predictions = self.predict(batch, **kwargs)
-            all_predictions.extend([collection.to_json() for collection in batch_predictions])
-        pool.shutdown()
-        return all_predictions
+        return items, annotations
 
     @entities.Package.decorators.function(display_name='Predict Dataset with DQL',
                                           inputs={'dataset': 'Dataset',
@@ -533,7 +514,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
     # INNER METHODS
     # =============
 
-    def _upload_model_annotations(self, item: entities.Item, predictions, cleanup=False):
+    def _upload_model_annotations(self, item: entities.Item, predictions):
         """
         Utility function that upload prediction to dlp platform based on the package.output_type
         :param predictions: `dl.AnnotationCollection`
@@ -543,12 +524,12 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             raise TypeError('predictions was expected to be of type {}, but instead it is {}'.
                             format(entities.AnnotationCollection, type(predictions)))
         model_info_name = "{}-{}".format(self.package_name, self.model_entity.name)
-        if cleanup:
-            clean_filter = entities.Filters(field='type',
-                                            values=self.model_entity.output_type,
-                                            resource=entities.FiltersResource.ANNOTATION)
-            clean_filter.add(field='metadata.user.model.name', values=model_info_name)
-            item.annotations.delete(filters=clean_filter)
+        # if cleanup:
+        #     clean_filter = entities.Filters(field='type',
+        #                                     values=self.model_entity.output_type,
+        #                                     resource=entities.FiltersResource.ANNOTATION)
+        #     clean_filter.add(field='metadata.user.model.name', values=model_info_name)
+        #     item.annotations.delete(filters=clean_filter)
         annotations = item.annotations.upload(annotations=predictions)
         return annotations
 

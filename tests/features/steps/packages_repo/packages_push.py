@@ -159,7 +159,6 @@ def step_impl(context, version):
 
 @behave.when(u'I add new function to package')
 def step_impl(context):
-
     function_1 = {'name': 'run_1',
                   'description': None,
                   'input': [{'name': 'item', 'type': 'Item'}],
@@ -169,3 +168,8 @@ def step_impl(context):
     context.package.modules[0].add_function(function_1)
     context.package = context.package.update()
 
+
+@behave.when(u'Add requirements "{req}" to package')
+def step_impl(context, req):
+    context.package.requirements = [context.dl.PackageRequirement(name=req)]
+    context.package.update()

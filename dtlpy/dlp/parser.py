@@ -107,13 +107,42 @@ def get_parser():
     required = a.add_argument_group("required named arguments")
     required.add_argument("-e", "--env", metavar='\b', help="working environment", required=True)
 
+    ###############
+    # Development #
+    ###############
+    subparser = subparsers.add_parser(name="development", help="Start a development session")
+    subparser_parser = subparser.add_subparsers(dest="development", help="local development session")
+    local_subparser_parser = subparser_parser.add_parser(name="local",
+                                                         help="local development using docker and code-server session")
+    remote_subparser_parser = subparser_parser.add_parser(name="remote",
+                                                          help="remote development (dl.Service) using code-server session")
+
+    #############################
+    # Local Development Session #
+    #############################
+    # start
+    local_subparser_subparser = local_subparser_parser.add_subparsers(dest="local", help="Local development session")
+    a = local_subparser_subparser.add_parser(name="start", help="Start a local development session")
+    optional = a.add_argument_group("optional named arguments")
+    optional.add_argument("-p", "--port",
+                          default=None,
+                          help="Local port for the docker connection, default: 5802")
+    optional.add_argument("-d", "--docker-image",
+                          default=None,
+                          help="Docker image to create. default: 'dataloopai/dtlpy-agent:1.57.3.gpu.cuda11.5.py3.8.opencv'")
+    # pause
+    _ = local_subparser_subparser.add_parser(name="pause", help="Pause the local development session (container pause)")
+    # stop
+    _ = local_subparser_subparser.add_parser(name="stop", help="Stop the local development session (container kill)")
+    ##############################
+    # Remote Development Session #
+    ##############################
+
     ############
     # Projects #
     ############
     subparser = subparsers.add_parser("projects", help="Operations with projects")
-    subparser_parser = subparser.add_subparsers(
-        dest="projects", help="projects operations"
-    )
+    subparser_parser = subparser.add_subparsers(dest="projects", help="projects operations")
 
     # ACTIONS #
 
@@ -340,18 +369,24 @@ def get_parser():
     optional.add_argument('--name', required=False, dest='name', help="the name of the app")
     optional.add_argument('--description', required=False, dest='description', help="the description of the app")
     optional.add_argument('--categories', required=False, dest='categories',
-                          help="the categories of the app (comma seperated)")
+                          help="the categories of the app (comma separated)")
     optional.add_argument('--icon', required=False, dest='icon', help="the icon of the app")
     optional.add_argument('--scope', required=False, dest='scope',
                           help="the scope of the app (default is organization)")
+    # add components
+    a = subparser_parser.add_parser('add', help="Add component to the dataloop json file")
+    optional = a.add_argument_group("Optional named arguments")
+    optional.add_argument('--panel', action='store_true', help="builder for panel component")
+    optional.add_argument('--module', action='store_true', help="builder for module component")
+    optional.add_argument('--toolbar', action='store_true', help="builder for toolbar component")
 
     # pack
     a = subparser_parser.add_parser("pack", help="Pack the project as dpk file")
-
     # publish
     a = subparser_parser.add_parser("publish", help="Publish the app")
-    required = a.add_argument_group("Required named arguments")
-    required.add_argument("--project-name", dest="project_name", required=True, help="The name of the project")
+    optional = a.add_argument_group("Optional named arguments")
+    optional.add_argument("--project-name", dest="project_name", help="The name of the project")
+    optional.add_argument("--project-id", dest="project_id", help="The ID of the project")
 
     # update
     a = subparser_parser.add_parser("update", help="Update the app")
@@ -359,21 +394,28 @@ def get_parser():
     required.add_argument("--app-name", dest="app_name", required=True, help="Locates the app by the name")
     required.add_argument("--new-version", dest="new_version", required=True,
                           help="Sets the new version of the specified app")
-    required.add_argument("--project-name", dest="project_name", required=True, help="The name of the project")
+    optional = a.add_argument_group("Required named arguments")
+    optional.add_argument("--project-id", dest="project_id", default=None, help="The id of the project")
+    optional.add_argument("--project-name", dest="project_name", default=None, help="The name of the project")
 
     # install
     a = subparser_parser.add_parser("install", help="Install the app to the platform")
     required = a.add_argument_group("Required named arguments")
     required.add_argument("--dpk-id", dest="dpk_id", required=True, help="The id of the dpk")
-    required.add_argument("--project-name", dest="project_name", default=None, help="The name of the project")
-
     optional = a.add_argument_group("Optional named arguments")
+    optional.add_argument("--project-id", dest="project_id", default=None, help="The id of the project")
+    optional.add_argument("--project-name", dest="project_name", default=None, help="The name of the project")
     optional.add_argument("--org-id", dest="org_id", default=None, help="The name of the org")
 
     # pull
     a = subparser_parser.add_parser('pull', help="Pull the app from the marketplace")
     required = a.add_argument_group("Required named arguments")
     required.add_argument('--dpk-name', dest='app_name', required=True, help='The name of the dpk')
+
+    # list
+    a = subparser_parser.add_parser('list', help="List all installed apps")
+    required = a.add_argument_group("Required named arguments")
+    required.add_argument('--project-name', dest='project_name', required=False, help='The name of the project')
 
     ############
     # Services #

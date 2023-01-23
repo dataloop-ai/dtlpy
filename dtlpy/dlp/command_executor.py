@@ -1,14 +1,12 @@
-import getpass
-import json
-import logging
-import os
 import subprocess
+import inquirer
+import logging
+import json
+import os
 import sys
-
 import jwt
 
-from dtlpy import repositories
-from .. import exceptions, entities
+from .. import exceptions, entities, repositories, utilities, assets
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -45,6 +43,9 @@ class CommandExecutor:
         else:
             print('See "dlp --help" for options')
 
+    def help(self, args):
+        self.parser.print_help()
+
     def logout(self, args):
         self.dl.logout()
         logger.info('logout successful')
@@ -60,23 +61,6 @@ class CommandExecutor:
 
     def login_secret(self, args):
         self.login_m2m(args=args)
-
-    def login_m2m(self, args):
-        if args.email is None:
-            args.email = input('Enter user email: ')
-        if args.password is None:
-            args.password = getpass.getpass('Enter password: ')
-        if args.client_id is None:
-            args.client_id = input('Enter client id: ')
-        if args.client_secret is None:
-            args.client_secret = getpass.getpass('Enter client secret (press Enter if None):')
-            if not args.client_secret:
-                args.client_secret = None
-        self.dl.login_secret(email=args.email,
-                             password=args.password,
-                             client_id=args.client_id,
-                             client_secret=args.client_secret)
-        self.dl.info(with_token=False)
 
     def login_m2m(self, args):
         self.dl.login_m2m(email=args.email,
@@ -108,58 +92,6 @@ class CommandExecutor:
     def init(self, args):
         self.dl.init()
 
-    def app(self, args):
-        if args.app == 'pack':
-            path = self.dl.dpks.pack()
-            logger.info(f'Packed to {path}')
-        elif args.app == 'init':
-            name = args.name
-            description = args.description
-            categories = args.categories
-            icon = args.icon
-            scope = args.scope
-            as_array = [name, description, categories, icon, scope]
-            if as_array.count(None) == len(as_array):  # No one value is initialized
-                dir_name = os.path.basename(os.getcwd())
-                name = input(f"Enter the name of the app (or press enter for '{dir_name}')")
-                if name == '':
-                    name = dir_name
-                description = input("Enter the description (or enter for empty)")
-                categories = input("Enter the categories (comma seperated, or enter for empty)")
-                icon = input("Enter the path to the icon (or enter for empty)")
-                scope = input("Enter the scope (or enter for 'organization')")
-            if scope == '' or scope is None:
-                scope = 'organization'
-            if categories is None:
-                categories = []
-            else:
-                categories = [c.strip() for c in categories.split(',')]
-            self.dl.dpks.init(name=name, description=description, categories=categories, icon=icon, scope=scope)
-        elif args.app == 'publish':
-            dpk = self.utils.get_dpks_repo(args).publish()
-            if dpk:
-                logger.info(f'Published the application: id={dpk.id}')
-            else:
-                logger.info("Couldn't publish the application")
-        elif args.app == 'update':
-            # TODO: I think it changed, not implemented
-            logger.info('App updated successfully')
-        elif args.app == 'install':
-            app = self.utils.get_apps_repo(args).install(
-                dpk=self.utils.get_dpks_repo(args).get(dpk_id=args.dpk_id),
-                organization_id=args.org_id
-            )
-            if app:
-                logger.info('App installed successfully')
-            else:
-                logger.info("Couldn't install the app")
-        elif args.app == 'pull':
-            succeed = self.dl.dpks.pull(dpk_name=args.dpk_name)
-            if succeed:
-                logger.info("Pulled successfully")
-            else:
-                logger.info("Couldn't pull")
-
     # noinspection PyUnusedLocal
     def checkout_state(self, args):
         state = self.dl.checkout_state()
@@ -175,9 +107,40 @@ class CommandExecutor:
     def version(self, args):
         logger.info("Dataloop SDK Version: {}".format(self.dl.__version__))
 
+    def development(self, args):
+        if args.development == "local":
+            # start the local development
+            if args.local == 'start':
+                development = self.utils.dl.client_api.state_io.get('development')
+                # create default values
+                if development is None:
+                    development = dict()
+                if 'port' not in development:
+                    development['port'] = 5802
+                if 'docker_image' not in development:
+                    development['docker_image'] = 'dataloopai/dtlpy-agent:1.57.3.gpu.cuda11.5.py3.8.opencv'
+
+                # get values from input
+                if args.docker_image is not None:
+                    development['docker_image'] = args.docker_image
+                if args.port is not None:
+                    development['port'] = int(args.port)
+
+                # set values to local state
+                self.utils.dl.client_api.state_io.put('development', development)
+                utilities.local_development.start_session()
+            elif args.local == 'pause':
+                utilities.local_development.pause_session()
+            elif args.local == 'stop':
+                utilities.local_development.stop_session()
+            else:
+                print('Must select one of "start", "pause", "stop". Type "dlp development start --help" for options')
+        elif args.development == "remote":
+            logger.warning('FUTURE! This is not supported yet..')
+        else:
+            print('Type "dlp development --help" for options')
+
     # noinspection PyUnusedLocal
-    def help(self, args):
-        self.parser.print_help()
 
     def api(self, args):
         if args.api == "info":
@@ -533,6 +496,117 @@ class CommandExecutor:
         else:
             logger.info('Type "dlp packages --help" for options')
 
+    def app(self, args):
+        if args.app == 'pack':
+            path = self.dl.dpks.pack()
+            logger.info(f'Packed to {path}')
+        elif args.app == 'init':
+            app_filename = assets.paths.APP_JSON_FILENAME
+            if os.path.isfile(app_filename):
+                questions = [
+                    inquirer.Confirm(name='overwrite',
+                                     message=f"Dataloop app already initialized. Re-initialize?",
+                                     default=False)]
+                answers = inquirer.prompt(questions)
+                if answers.get('overwrite') is False:
+                    return
+            name = args.name
+            description = args.description
+            categories = args.categories
+            icon = args.icon
+            scope = args.scope
+            as_array = [name, description, categories, icon, scope]
+            if as_array.count(None) == len(as_array):  # No one value is initialized
+                dir_name = os.path.basename(os.getcwd())
+                questions = [
+                    inquirer.Text(name='name',
+                                  message=f"Enter the name of the app (or press enter for '{dir_name}'):",
+                                  default=dir_name),
+                    inquirer.Text(name='description',
+                                  message="Enter the description (or enter for empty): "),
+                    inquirer.Text(name='categories',
+                                  message="Enter the categories (comma separated, or enter for empty): ",
+                                  default=None),
+                    inquirer.Text(name='icon',
+                                  message="Enter the path to the icon (or enter for empty): "),
+                    inquirer.Text(name='scope',
+                                  message="Enter the scope (or enter for 'organization'): ",
+                                  default='project'),
+                ]
+                answers = inquirer.prompt(questions)
+                name = answers.get('name')
+                description = answers.get('description')
+                categories = answers.get('categories')
+                icon = answers.get('icon')
+                scope = answers.get('scope')
+
+            if categories is None:
+                categories = []
+            else:
+                categories = [c.strip() for c in categories.split(',')]
+
+            self.dl.dpks.init(name=name,
+                              description=description,
+                              categories=categories,
+                              icon=icon,
+                              scope=scope)
+        elif args.app == 'add':
+            if args.panel is True:
+                default_panel_name = "myPanel"
+                choices = list(entities.dpk.SlotType)
+
+                questions = [
+                    inquirer.Text(name='name',
+                                  message=f"Enter PANEL NAME (or press enter for '{default_panel_name}'): ",
+                                  default='default_panel_name'),
+                    inquirer.List(name='support_slot_type',
+                                  message="Enter SUPPORTED SLOT TYPE:",
+                                  choices=choices),
+                ]
+
+                answers = inquirer.prompt(questions)
+                #####
+                # create a dir for that panel
+                os.makedirs(answers.get('name'), exist_ok=True)
+                # dump to dataloop.json
+                app_filename = assets.paths.APP_JSON_FILENAME
+                if not os.path.isfile(app_filename):
+                    logger.error(f"Can't find app config file ({app_filename}), please run `dlp app init` first")
+                else:
+                    with open(app_filename, 'r') as f:
+                        dpk = entities.Dpk.from_json(json.load(f))
+                    dpk.components.panels.append(entities.Panel(name=answers.get('name'),
+                                                                supported_slots=[answers.get('support_slot_type')]))
+                    with open(app_filename, 'w') as f:
+                        json.dump(dpk.to_json(), f, indent=4)
+
+        elif args.app == 'publish':
+            dpk = self.utils.get_dpks_repo(args).publish()
+            if dpk:
+                logger.info(f'Published the application: id={dpk.id}')
+            else:
+                logger.info("Couldn't publish the application")
+        elif args.app == 'update':
+            # TODO: I think it changed, not implemented
+            logger.info('App updated successfully')
+        elif args.app == 'install':
+            app = self.utils.get_apps_repo(args).install(
+                dpk=self.utils.get_dpks_repo(args).get(dpk_id=args.dpk_id),
+                organization_id=args.org_id
+            )
+            if app is not None:
+                logger.info('App installed successfully')
+            else:
+                logger.info("Couldn't install the app")
+        elif args.app == 'pull':
+            succeed = self.dl.dpks.pull(dpk_name=args.dpk_name)
+            if succeed is True:
+                logger.info("Pulled successfully")
+            else:
+                logger.info("Couldn't pull")
+        elif args.app == 'list':
+            self.dl.apps.list().print()
+
     # noinspection PyUnusedLocal
     @staticmethod
     def pwd(args):
@@ -636,14 +710,16 @@ class Utils:
         return apps
 
     def get_dpks_repo(self, args) -> repositories.Dpks:
-        if args.project_name is not None:
-            project = self.dl.projects.get(project_name=args.project_name)
-            dpks = project.dpks
-        else:
+        if args.project_name is None and args.project_id is None:
             try:
                 dpks = self.dl.projects.get().dpks
             except Exception:
                 dpks = self.dl.dpks
+        else:
+            project = self.dl.projects.get(project_name=args.project_name, project_id=args.project_id)
+            dpks = project.dpks
+        if dpks.project is None:
+            raise ValueError("Must input one of `project-name` or `project-id`") from None
         assert isinstance(dpks, repositories.Dpks)
         return dpks
 

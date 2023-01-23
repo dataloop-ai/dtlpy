@@ -169,7 +169,7 @@ def step_impl(context, function_name, package_path):
     package_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], package_path)
     package_name = '{}-{}'.format(function_name, random.randrange(1000, 10000))
 
-    function_io = context.dl.FunctionIO(name='item', type=context.dl.PackageInputType.ITEM)
+    function_io = [context.dl.FunctionIO(name='item', type=context.dl.PackageInputType.ITEM)]
     function = context.dl.PackageFunction(name=function_name, inputs=function_io)
     module = context.dl.PackageModule(name='default_module', functions=[function], entry_point='main.py')
 

@@ -412,13 +412,39 @@ class Pipeline(entities.BaseEntity):
 
     def execute(self, execution_input=None):
         """
-        execute a pipeline and return the execute
+        execute a pipeline and return to execute
 
         :param execution_input: list of the dl.FunctionIO or dict of pipeline input - example {'item': 'item_id'}
         :return: entities.PipelineExecution object
         """
         execution = self.pipeline_executions.create(pipeline_id=self.id, execution_input=execution_input)
         return execution
+
+    def execute_batch(self,
+                      filters,
+                      execution_inputs=None,
+                      wait=True):
+        """
+        execute a pipeline and return to execute
+
+        :param execution_inputs: list of the dl.FunctionIO or dict of pipeline input - example {'item': 'item_id'}
+        :param filters: Filters entity for a filtering before execute
+        :param bool wait: wait until create task finish
+        :return: entities.PipelineExecution object
+
+        **Example**:
+
+        .. code-block:: python
+
+            command = pipeline.execute_batch(
+                        execution_inputs=dl.FunctionIO(type=dl.PackageInputType.STRING, value='test', name='string'),
+                        filters=dl.Filters(field='dir', values='/test'))
+        """
+        command = self.pipeline_executions.create_batch(pipeline_id=self.id,
+                                                        execution_inputs=execution_inputs,
+                                                        filters=filters,
+                                                        wait=wait)
+        return command
 
     def reset(self, stop_if_running: bool = False):
         """

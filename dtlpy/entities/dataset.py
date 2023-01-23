@@ -884,8 +884,7 @@ class Dataset(entities.BaseEntity):
                              overwrite=False,
                              thickness=1,
                              with_text=False,
-                             alpha=1,
-                             save_locally=True
+                             alpha=1
                              )
         """
         return self.items.download(filters=filters,

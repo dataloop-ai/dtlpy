@@ -168,12 +168,13 @@ from tests.features.steps.models_repo import test_models_delete
 
 from tests.features.steps.model_entity import test_model_name
 
-from tests.features.steps.pipeline_entity import pipeline_get, pipeline_delete, pipeline_update, pipeline_flow, pipeline_output_list
+from tests.features.steps.pipeline_entity import pipeline_get, pipeline_delete, pipeline_update, pipeline_flow, pipeline_output_list, pipeline_execute
 from tests.features.steps.pipeline_resume import pipeline_resume
 
 from tests.features.steps.features_vectors import test_features_create, test_features_delete
 from tests.features.steps.pipeline_entity import test_pipeline_pulling_task
 from tests.features.steps.pipeline_entity import test_pipeline_actions
+from tests.features.steps.pipeline_entity import test_pipeline_install
 
 from tests.features.steps.documentation_tests import test_projects_docs
 from tests.features.steps.documentation_tests import test_contributor_docs

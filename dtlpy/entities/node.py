@@ -203,7 +203,7 @@ class PipelineNode:
         self.node_id = node_id
         self.outputs = outputs
         self.inputs = inputs
-        self.metadata = metadata if metadata is None else {}
+        self.metadata = metadata if metadata is not None else {}
         self.node_type = node_type
         self.namespace = namespace
         self.project_id = project_id
@@ -531,7 +531,9 @@ class TaskNode(PipelineNode):
                  batch_size=None,
                  max_batch_workload=None,
                  priority=entities.TaskPriority.MEDIUM,
-                 due_date=None
+                 due_date=None,
+                 consensus_percentage=None,
+                 consensus_assignees=None
                  ):
         """
         :param str name: node name
@@ -549,6 +551,8 @@ class TaskNode(PipelineNode):
         :param int max_batch_workload: Max items in assignment . Restrictions - Min batchSize + 2 , max batchSize * 2 - for create pulling task
         :param entities.TaskPriority priority: priority of the task options in entities.TaskPriority
         :param float due_date: date by which the task should be finished; for example, due_date = datetime.datetime(day= 1, month= 1, year= 2029).timestamp()
+        :param int consensus_percentage: the consensus percentage ber task
+        :param int consensus_assignees: the consensus assignees number of the task
         """
 
         if actions is None:
@@ -593,6 +597,10 @@ class TaskNode(PipelineNode):
             self.max_batch_workload = max_batch_workload
         if batch_size:
             self.batch_size = batch_size
+        if consensus_percentage:
+            self.consensus_percentage = consensus_percentage
+        if consensus_assignees:
+            self.consensus_assignees = consensus_assignees
         self.priority = priority
         if due_date is None:
             due_date = (datetime.datetime.now() + datetime.timedelta(days=7)).timestamp() * 1000
@@ -687,6 +695,26 @@ class TaskNode(PipelineNode):
         if not isinstance(max_batch_workload, int):
             raise PlatformException('400', 'Param max_batch_workload must be of type int')
         self.metadata['maxBatchWorkload'] = max_batch_workload
+
+    @property
+    def consensus_percentage(self):
+        return self.metadata['consensusPercentage']
+
+    @consensus_percentage.setter
+    def consensus_percentage(self, consensus_percentage: int):
+        if not isinstance(consensus_percentage, int):
+            raise PlatformException('400', 'Param consensus_percentage must be of type int')
+        self.metadata['consensusPercentage'] = consensus_percentage
+
+    @property
+    def consensus_assignees(self):
+        return self.metadata['consensusAssignees']
+
+    @consensus_assignees.setter
+    def consensus_assignees(self, consensus_assignees: int):
+        if not isinstance(consensus_assignees, int):
+            raise PlatformException('400', 'Param consensus_assignees must be of type int')
+        self.metadata['consensusAssignees'] = consensus_assignees
 
     @property
     def priority(self):

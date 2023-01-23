@@ -17,3 +17,4 @@ from .converter import Converter, AnnotationFormat
 from .base_package_runner import BaseServiceRunner, Progress, Context
 from .videos import Videos
 from .dataset_generators import DatasetGenerator
+from . import local_development

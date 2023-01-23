@@ -3,6 +3,7 @@ from enum import Enum
 import traceback
 import logging
 from typing import List
+from urllib.parse import urlsplit
 import attr
 from .. import services, repositories, entities
 
@@ -241,7 +242,7 @@ class Service(entities.BaseEntity):
         return status, service
 
     @classmethod
-    def from_json(cls, _json: dict, client_api: services.ApiClient, package=None, project=None, is_fetched=True):
+    def from_json(cls, _json: dict, client_api: services.ApiClient = None, package=None, project=None, is_fetched=True):
         """
         Build a service entity object from a json
 
@@ -531,7 +532,11 @@ class Service(entities.BaseEntity):
 
         :return:
         """
-        self._client_api._open_in_web(url=self.platform_url)
+        parsed_url = urlsplit(self.platform_url)
+        base_url = parsed_url.scheme + "://" + parsed_url.netloc
+        url = '{}/projects/{}/faas?byCreator=false&byProject=true&' \
+              'byDataloop=false&tab=installed&selectedServiceId={}'.format(base_url, self.project_id, self.id)
+        self._client_api._open_in_web(url=url)
 
     def checkout(self):
         """
@@ -604,6 +609,40 @@ class Service(entities.BaseEntity):
                                            return_output=return_output)
         return execution
 
+    def execute_batch(self,
+                      filters,
+                      function_name: str = None,
+                      execution_inputs: list = None,
+                      wait=True
+                      ):
+        """
+        Execute a function on an existing service
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a service.
+
+        :param filters: Filters entity for a filtering before execute
+        :param str function_name: function name to run
+        :param List[FunctionIO] or dict execution_inputs: input dictionary or list of FunctionIO entities
+        :param bool wait: wait until create task finish
+        :return: execution object
+        :rtype: dtlpy.entities.execution.Execution
+
+        **Example**:
+
+        .. code-block:: python
+
+            command = service.execute_batch(
+                        execution_inputs=dl.FunctionIO(type=dl.PackageInputType.STRING, value='test', name='string'),
+                        filters=dl.Filters(field='dir', values='/test'),
+                        function_name='run')
+        """
+        execution = self.executions.create_batch(service_id=self.id,
+                                                 execution_inputs=execution_inputs,
+                                                 filters=filters,
+                                                 function_name=function_name,
+                                                 wait=wait)
+        return execution
+
     def activate_slots(
             self,
             project_id: str = None,
@@ -627,7 +666,7 @@ class Service(entities.BaseEntity):
         :param str org_id: org id
         :param str user_email: user email
         :param list slots: list of entities.PackageSlot
-        :param str role: user role MemberOrgRole.ADMIN, MemberOrgRole.owner, MemberOrgRole.MEMBER
+        :param str role: user role MemberOrgRole.ADMIN, MemberOrgRole.owner, MemberOrgRole.MEMBER, MemberOrgRole.WORKER
         :param bool prevent_override: True to prevent override
         :param bool visible: visible
         :param str icon: icon

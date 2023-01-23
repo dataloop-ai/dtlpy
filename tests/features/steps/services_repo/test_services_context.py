@@ -55,6 +55,8 @@ def step_impl(context):
         }
     )
 
+    context.to_delete_services_ids.append(context.service.id)
+
 
 @behave.then(u'I execute the service')
 def step_impl(context):

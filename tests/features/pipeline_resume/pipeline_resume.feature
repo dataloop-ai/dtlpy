@@ -5,6 +5,7 @@ Feature: Resuming Pipeline
         And I create a project by the name of "test_pipeline_flow"
         And I create a dataset with a random name
 
+    @services.delete
     @pipelines.delete
     Scenario: Resuming pipeline
         Given I create a package and service to pipeline

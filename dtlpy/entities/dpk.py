@@ -2,101 +2,167 @@ from collections import namedtuple
 from dataclasses import dataclass
 from typing import List
 import traceback
-import attr
+import enum
 
-from .. import entities, services, repositories, miscellaneous as misc
+from .. import entities, services, repositories
 
 
 @dataclass
-class Hook:
-    name: str
-    html_tag: str
-    location: str
+class Toolbar:
     display_name: str
-    description: str
-    emit: str
+    conditions: dict
+    invoke: dict
+    location: str
+    icon: str
 
 
-@attr.s()
-class Panel:
-    name = attr.ib(type=str)
-    min_role = attr.ib(type=str)
-    icon = attr.ib(type=str)
+class SlotType(str, enum.Enum):
+    ITEM_VIEWER = 'itemViewer'
+    FLOATING_WINDOW = 'floatingWindow'
 
-    supported_slots = attr.ib(type=list, default=[])
-    metadata = attr.ib(type=dict, default={})
-    default_settings = attr.ib(type=dict, default={})
+
+DEFAULT_STOPS = {SlotType.ITEM_VIEWER: {"type": "itemViewer",
+                                        "configuration": {"layout": {"leftBar": True,
+                                                                     "rightBar": True,
+                                                                     "bottomBar": True,
+                                                                     }
+                                                          }
+                                        },
+                 SlotType.FLOATING_WINDOW: {"type": "floatingWindow",
+                                            "configuration": {"layout": {"width": 455,
+                                                                         "height": 340,
+                                                                         "resizable": True,
+                                                                         "backgroundColor": "dl-color-studio-panel"
+                                                                         }
+                                                              }
+                                            }
+                 }
+
+
+class Slot(entities.DlEntity):
+    type = entities.DlProperty(location=['type'], _type=str)
+    configuration = entities.DlProperty(location=['configuration'], _type=dict)
 
     def to_json(self) -> dict:
-        _json = {
-            'name': self.name,
-            'minRole': self.min_role,
-            'icon': self.icon,
-            'supportedSlots': self.supported_slots,
-            'metadata': self.metadata,
-            'defaultSettings': self.default_settings
-        }
-        return _json
+        return self._dict.copy()
 
     @classmethod
     def from_json(cls, _json):
-        return cls(
-            supported_slots=_json.get('supportedSlots', []),
-            name=_json.get('name', None),
-            min_role=_json.get('minRole', None),
-            icon=_json.get('icon', None),
-            metadata=_json.get('metadata', {}),
-            default_settings=_json.get('defaultSettings', {})
-        )
+        return cls(_dict=_json)
 
 
-@dataclass
-class Components:
-    panels: List[Panel]
-    modules: List[entities.PackageModule]
-    services: List[entities.Service]
-    triggers: List[entities.Trigger]
-    pipelines: List[entities.Pipeline]
-    hooks: List[Hook]
-    models: List[entities.Model]
+class Panel(entities.DlEntity):
+    name = entities.DlProperty(location=['name'], _type=str)
+    min_role = entities.DlProperty(location=['minRole'], _type=list)
+    supported_slots = entities.DlProperty(location=['supportedSlots'], _type=list)
+
+    metadata = entities.DlProperty(location=['metadata'], _type=list)
+    default_settings = entities.DlProperty(location=['defaultSettings'], _type=list)
+    conditions = entities.DlProperty(location=['conditions'], _type=list)
+
+    def to_json(self) -> dict:
+        return self._dict.copy()
+
+    @classmethod
+    def from_json(cls, _json):
+        return cls(_dict=_json.copy())
 
 
-@attr.s()
-class Dpk(entities.BaseEntity):
+class Components(entities.DlEntity):
+    panels: List[Panel] = entities.DlProperty(location=['panels'],
+                                              _kls='Panel')
+    modules: List[entities.PackageModule] = entities.DlProperty(location=['modules'],
+                                                                _kls='PackageModule')
+    services: List[entities.Service] = entities.DlProperty(location=['services'],
+                                                           _kls='Service')
+    triggers: List[entities.Trigger] = entities.DlProperty(location=['triggers'],
+                                                           _kls='Trigger')
+    pipelines: List[entities.Pipeline] = entities.DlProperty(location=['pipelines'],
+                                                             _kls='Pipeline')
+    toolbars: List[Toolbar] = entities.DlProperty(location=['toolbars'],
+                                                  _kls='Toolbar')
+    models: List[entities.Model] = entities.DlProperty(location=['models'],
+                                                       _kls='Model')
+
+    @panels.default
+    def default_panels(self):
+        self._dict['panels'] = list()
+        return self._dict['panels']
+
+    @modules.default
+    def default_modules(self):
+        self._dict['modules'] = list()
+        return self._dict['modules']
+
+    @services.default
+    def default_services(self):
+        self._dict['services'] = list()
+        return self._dict['services']
+
+    @triggers.default
+    def default_triggers(self):
+        self._dict['triggers'] = list()
+        return self._dict['triggers']
+
+    @pipelines.default
+    def default_pipelines(self):
+        self._dict['pipelines'] = list()
+        return self._dict['pipelines']
+
+    @classmethod
+    def from_json(cls, _json):
+        inst = cls(_dict=_json.copy())
+        return inst
+
+    def to_json(self):
+        return self._dict.copy()
+
+
+class Dpk(entities.DlEntity):
     # name change
-    id = attr.ib(type=str)
-    name = attr.ib(type=str)
-    version = attr.ib(type=dict)
-    categories = attr.ib(type=List[str])
-    created_at = attr.ib(type=str)
-    updated_at = attr.ib(type=str)
-    creator = attr.ib(type=str)
-    display_name = attr.ib(type=str)
-    icon = attr.ib(type=str)
-    tags = attr.ib(type=List[str])
-    codebase = attr.ib(type=entities.Codebase)
-    scope = attr.ib(type=str)
-
-    # sdk
-    _client_api = attr.ib(type=services.ApiClient, repr=False)
-    _project = attr.ib(repr=False)
-    _repositories = attr.ib(repr=False)
+    id: str = entities.DlProperty(location=['id'], _type=str)
+    name: str = entities.DlProperty(location=['name'], _type=str)
+    version: str = entities.DlProperty(location=['version'], _type=str)
+    categories: list = entities.DlProperty(location=['categories'], _type=list)
+    created_at: str = entities.DlProperty(location=['createdAt'], _type=str)
+    updated_at: str = entities.DlProperty(location=['updatedAt'], _type=str)
+    creator: str = entities.DlProperty(location=['creator'], _type=str)
+    display_name: str = entities.DlProperty(location=['displayName'], _type=str)
+    icon: str = entities.DlProperty(location=['icon'], _type=str)
+    tags: list = entities.DlProperty(location=['tags'], _type=list)
+    codebase: str = entities.DlProperty(location=['codebase'], _kls="Codebase")
+    scope: dict = entities.DlProperty(location=['scope'], _type=dict)
 
     # defaults
-    components = attr.ib(type=dict, default={})
-    description = attr.ib(type=str, default='')
-    url = attr.ib(type=str, default='')
+    components: Components = entities.DlProperty(location=['components'], _kls='Components')
+    description: str = entities.DlProperty(location=['name'], _type=str)
+    url: str = entities.DlProperty(location=['name'], _type=str)
 
-    @_repositories.default
-    def set_repositories(self):
-        reps = namedtuple('repositories',
-                          field_names=['dpks', 'codebases', 'organizations'])
+    # sdk
+    client_api: services.ApiClient
+    project: entities.Project
+    __repositories = None
 
-        r = reps(dpks=repositories.Dpks(client_api=self._client_api, project=self.project),
-                 codebases=repositories.Codebases(client_api=self._client_api),
-                 organizations=repositories.Organizations(client_api=self._client_api)
-                 )
-        return r
+    @components.default
+    def default_components(self):
+        self._dict['components'] = dict()
+        return self._dict['components']
+
+    ################
+    # repositories #
+    ################
+    @property
+    def _repositories(self):
+        if self.__repositories is None:
+            reps = namedtuple('repositories',
+                              field_names=['dpks', 'codebases', 'organizations'])
+
+            self.__repositories = reps(dpks=repositories.Dpks(client_api=self.client_api, project=self.project),
+                                       codebases=repositories.Codebases(client_api=self.client_api),
+                                       organizations=repositories.Organizations(client_api=self.client_api)
+                                       )
+
+        return self.__repositories
 
     @property
     def codebases(self):
@@ -106,17 +172,16 @@ class Dpk(entities.BaseEntity):
     @property
     def organizations(self):
         assert isinstance(self._repositories.organizations, repositories.Organizations)
-        return self._repositories.organizations
-
-    @property
-    def project(self):
-        return self._project
+        return self._repositories.organizationsFapp
 
     @property
     def dpks(self) -> 'repositories.Dpks':
         assert isinstance(self._repositories.dpks, repositories.Dpks)
         return self._repositories.dpks
 
+    ###########
+    # methods #
+    ###########
     def publish(self):
         """
         Publish the dpk to Dataloop platform.
@@ -139,7 +204,7 @@ class Dpk(entities.BaseEntity):
         ..code-block:: python
             path = dl.dpks.pull(dpk_name='my-app')
         """
-        return self.dpks.pull(dpk_id=self.id, dpk_name=self.name, local_path=local_path)
+        return self.dpks.pull(dpk=self, local_path=local_path)
 
     def delete(self):
         """
@@ -164,35 +229,6 @@ class Dpk(entities.BaseEntity):
         """
         return self.dpks.revisions(self.id)
 
-    # noinspection PyProtectedMember
-    def to_json(self):
-        """
-        convert the class to json
-        """
-        # noinspection PyDictCreation
-        _json = {}
-        _json['id'] = misc.JsonUtils.get_if_absent(self.id, '')
-        _json['name'] = misc.JsonUtils.get_if_absent(self.name, '')
-        _json['version'] = misc.JsonUtils.get_if_absent(self.version, '')
-        _json['categories'] = misc.JsonUtils.get_if_absent(self.categories, [])
-        _json['createdAt'] = misc.JsonUtils.get_if_absent(self.created_at, '')
-        _json['updatedAt'] = misc.JsonUtils.get_if_absent(self.updated_at, '')
-        _json['creator'] = misc.JsonUtils.get_if_absent(self.creator, '')
-        _json['displayName'] = misc.JsonUtils.get_if_absent(self.display_name, _json['name'])
-        _json['icon'] = misc.JsonUtils.get_if_absent(self.icon, '')
-        _json['tags'] = misc.JsonUtils.get_if_absent(self.tags, [])
-        if self.codebase is not None:
-            _json['codebase'] = self.codebase.to_json()
-        else:
-            _json['codebase'] = {}
-
-        _json['scope'] = misc.JsonUtils.get_if_absent(self.scope, '')
-        _json['components'] = misc.JsonUtils.get_if_absent(self.components_to_json(self.components), {})
-        _json['description'] = misc.JsonUtils.get_if_absent(self.description, '')
-        _json['url'] = misc.JsonUtils.get_if_absent(self.url, '')
-
-        return _json
-
     @staticmethod
     def _protected_from_json(_json, client_api, project, is_fetched=True):
         """
@@ -213,8 +249,18 @@ class Dpk(entities.BaseEntity):
             status = False
         return status, package
 
+    def to_json(self):
+        """
+        convert the class to json
+        """
+        _json = self._dict.copy()
+        return _json
+
     @classmethod
-    def from_json(cls, _json, client_api: services.ApiClient, project: entities.Project,
+    def from_json(cls,
+                  _json,
+                  client_api: services.ApiClient = None,
+                  project: entities.Project = None,
                   is_fetched=True) -> 'Dpk':
         """
         Turn platform representation of app into an app entity
@@ -227,64 +273,8 @@ class Dpk(entities.BaseEntity):
         :rtype: dtlpy.entities.App
         """
 
-        components = cls.__components_from_json(_json.get('components', {}), client_api, project)
-        codebase = _json.get('codebase', None)
-        if codebase is not None:
-            codebase = entities.Codebase.from_json(codebase, client_api)
-
-        instance = cls(
-            version=_json.get('version', None),
-            creator=_json.get('creator', None),
-            name=_json.get('name', None),
-            display_name=_json.get('displayName', None),
-            scope=_json.get('scope', None),
-            client_api=client_api,
-            description=_json.get('description', None),
-            icon=_json.get('icon', None),
-            categories=_json.get('categories', []),
-            components=components,
-            created_at=_json.get('createdAt', None),
-            updated_at=_json.get('updateAt', None),
-            id=_json.get('id', None),
-            codebase=codebase,
-            url=_json.get('url', None),
-            tags=_json.get('tags', []),
-            project=project
-        )
-        instance.is_fetched = is_fetched
-        return instance
-
-    @classmethod
-    def __components_from_json(cls, _json, client_api: services.ApiClient, project: entities.Project) -> dict:
-        modules = [entities.PackageModule.from_json(module) for module in _json.get('modules', [])]
-        _services = [entities.Service.from_json(service, client_api) for service in _json.get('services', [])]
-        triggers = [entities.Trigger.from_json(trigger, client_api, project=project) for trigger in
-                    _json.get('triggers', [])]
-        pipelines = [entities.Pipeline.from_json(pipeline, client_api, project=project) for pipeline in
-                     _json.get('pipelines', [])]
-        models = [entities.Model.from_json(model, client_api, project=project) for model in _json.get('models', [])]
-        return {
-            'panels': [Panel.from_json(panel) for panel in _json.get('panels', [])],
-            'modules': modules,
-            'services': _services,
-            'triggers': triggers,
-            'pipelines': pipelines,
-            'models': models,
-            'hooks': _json.get('hooks', [])
-        }
-
-    @classmethod
-    def components_to_json(cls, components):
-        modules = [module.to_json() for module in components['modules']]
-        _services = [service.to_json() for service in components['services']]
-        triggers = [trigger.to_json() for trigger in components['triggers']]
-        pipelines = [pipeline.to_json() for pipeline in components['pipelines']]
-        models = [model.to_json() for model in components['models']]
-        return {
-            'panels': [panel.to_json() for panel in components.get('panels', [])],
-            'modules': modules,
-            'services': _services,
-            'triggers': triggers,
-            'pipelines': pipelines,
-            'models': models
-        }
+        inst = cls(_dict=_json,
+                   client_api=client_api,
+                   project=project,
+                   is_fetched=is_fetched)
+        return inst

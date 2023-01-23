@@ -547,6 +547,14 @@ class Tasks:
                            priority=priority
                            )
 
+    def _add_task_metadata_params(self, metadata, input_value, input_name):
+        if input_value is not None and not isinstance(input_value, int):
+            raise exceptions.PlatformException(error='400',
+                                               message="{} must be a numbers".format(input_name))
+        if input_value is not None:
+            metadata['system'][input_name] = input_value
+        return metadata
+
     @_api_reference.add(path='/annotationtasks', method='post')
     def create(self,
                task_name,
@@ -571,7 +579,9 @@ class Tasks:
                batch_size=None,
                max_batch_workload=None,
                allowed_assignees=None,
-               priority=entities.TaskPriority.MEDIUM
+               priority=entities.TaskPriority.MEDIUM,
+               consensus_percentage=None,
+               consensus_assignees=None
                ) -> entities.Task:
         """
         Create a new Task (Annotation or QA).
@@ -601,6 +611,8 @@ class Tasks:
         :param int max_batch_workload: max_batch_workload: Max items in assignment, use with pulling allocation method. Restrictions - Min batchSize + 2, max batchSize * 2
         :param list allowed_assignees: list the task assignees (contributors) that should be working on the task. Provide a list of users' emails
         :param entities.TaskPriority priority: priority of the task options in entities.TaskPriority
+        :param int consensus_percentage: the consensus percentage ber task
+        :param int consensus_assignees: the consensus assignees number of the task
         :return: Task object
         :rtype: dtlpy.entities.task.Task
 
@@ -688,17 +700,25 @@ class Tasks:
         if task_parent_id is not None:
             payload['spec']['parentTaskId'] = task_parent_id
 
-        if batch_size is not None or allowed_assignees is not None or max_batch_workload is not None:
+        is_pulling = any([batch_size, max_batch_workload])
+        is_consensus = any([consensus_percentage, consensus_assignees])
+        if is_pulling and is_consensus:
+            raise exceptions.PlatformException(error='400',
+                                               message="Consensus can not work as a pulling task")
+        if any([is_pulling, is_consensus]):
             if metadata is None:
                 metadata = {}
             if 'system' not in metadata:
                 metadata['system'] = {}
-            if batch_size is not None:
-                metadata['system']['batchSize'] = batch_size
-            if max_batch_workload is not None:
-                metadata['system']['maxBatchWorkload'] = max_batch_workload
-            if allowed_assignees is not None:
-                metadata['system']['allowedAssignees'] = allowed_assignees
+            if allowed_assignees is not None or assignee_ids is not None:
+                metadata['system']['allowedAssignees'] = allowed_assignees if allowed_assignees else assignee_ids
+            metadata = self._add_task_metadata_params(metadata=metadata, input_value=batch_size, input_name='batchSize')
+            metadata = self._add_task_metadata_params(metadata=metadata, input_value=max_batch_workload,
+                                                      input_name='maxBatchWorkload')
+            metadata = self._add_task_metadata_params(metadata=metadata, input_value=consensus_percentage,
+                                                      input_name='consensusPercentage')
+            metadata = self._add_task_metadata_params(metadata=metadata, input_value=consensus_assignees,
+                                                      input_name='consensusAssignees')
 
         if metadata is not None:
             payload['metadata'] = metadata
@@ -995,6 +1015,7 @@ class Tasks:
             'itemIds': item_ids,
             'statusPayload': {
                 'operation': operation,
+                'returnLastStatus': True,
                 'status': status
             }
         }
@@ -1007,5 +1028,12 @@ class Tasks:
 
         if not success:
             raise exceptions.PlatformException(response)
-
+        if response.json() is not None:
+            updated_items = set(response.json().keys())
+            log_msg = 'Items status was updated successfully.'
+            if len(updated_items) != len(item_ids):
+                failed_items = set(item_ids).difference(updated_items)
+                log_msg = '{success_count} out of TOTAL items were updated. The following items failed to update: {failed_items}'.format(
+                    success_count=len(updated_items), failed_items=failed_items)
+            logger.info(msg=log_msg)
         return True

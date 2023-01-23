@@ -579,7 +579,7 @@ class Services:
         """
         Create service entity.
 
-        
+
         :param str service_name: service name
         :param dtlpy.entities.package.Package package: package entity
         :param str module_name: module name
@@ -825,7 +825,7 @@ class Services:
         :param str org_id: org id
         :param str user_email: user email
         :param list slots: list of entities.PackageSlot
-        :param str role: user role MemberOrgRole.ADMIN, MemberOrgRole.owner, MemberOrgRole.MEMBER
+        :param str role: user role MemberOrgRole.ADMIN, MemberOrgRole.owner, MemberOrgRole.MEMBER, MemberOrgRole.WORKER
         :param bool prevent_override: True to prevent override
         :param bool visible: visible
         :param str icon: icon
@@ -921,7 +921,7 @@ class Services:
 
         return settings
 
-    @_api_reference.add(path='/services/{id}/logs', method='post')
+    @_api_reference.add(path='/services/logs', method='post')
     def log(self,
             service,
             size=100,
@@ -935,7 +935,8 @@ class Services:
             replica_id=None,
             system=False,
             view=True,
-            until_completed=True):
+            until_completed=True,
+            log_level='DEBUG'):
         """
         Get service logs.
 
@@ -943,7 +944,7 @@ class Services:
 
         :param dtlpy.entities.service.Service service: service object
         :param int size: size
-        :param dict checkpoint: the information from the lst point checked in the service 
+        :param dict checkpoint: the information from the lst point checked in the service
         :param str start: iso format time
         :param str end: iso format time
         :param bool follow: if true, keep stream future logs
@@ -954,8 +955,9 @@ class Services:
         :param bool system: system
         :param bool view: if true, print out all the logs
         :param bool until_completed: wait until completed
+        :param str log_level: the log level to display dl.LoggingLevel
         :return: ServiceLog entity
-        :rtype: ServiceLog 
+        :rtype: ServiceLog
 
         **Example**:
 
@@ -964,19 +966,22 @@ class Services:
             service_logs = package.services.log(service='service_entity')
         """
         assert isinstance(service, entities.Service)
+        if isinstance(log_level, str):
+            log_level = log_level.upper()
 
         payload = {
             'direction': 'asc',
             'follow': follow,
             'system': system,
-            'serviceId': service.id
+            'serviceId': service.id,
+            'logLevel': log_level
         }
 
         if size is not None:
             payload['size'] = size
 
         if execution_id is not None:
-            payload['executionId'] = execution_id
+            payload['executionId'] = [execution_id]
 
         if function_name is not None:
             payload['functionName'] = function_name
@@ -1005,7 +1010,7 @@ class Services:
 
         # request
         success, response = self._client_api.gen_request(req_type='post',
-                                                         path='/services/{}/logs'.format(service.id),
+                                                         path='/services/logs',
                                                          json_req=payload)
 
         # exception handling

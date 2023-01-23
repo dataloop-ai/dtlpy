@@ -1,7 +1,6 @@
 from collections import namedtuple
 from typing import Union
 from enum import Enum
-import importlib.util
 import traceback
 import logging
 import inspect
@@ -58,33 +57,32 @@ class Package(entities.DlEntity):
     Package object
     """
     # platform
-    id = entities.DlProperty(location=['id'], type=str)
-    url = entities.DlProperty(location=['url'], type=str)
-    name = entities.DlProperty(location=['name'], type=str)
-    version = entities.DlProperty(location=['version'], type=str)
-    created_at = entities.DlProperty(location=['createdAt'], type=str)
-    updated_at = entities.DlProperty(location=['updatedAt'], type=str)
-    project_id = entities.DlProperty(location=['projectId'], type=str)
-    creator = entities.DlProperty(location=['creator'], type=str)
-    type = entities.DlProperty(location=['type'], type=str)
-    metadata = entities.DlProperty(location=['metadata'], type=dict)
-    ui_hooks = entities.DlProperty(location=['uiHooks'], type=str)
-    service_config = entities.DlProperty(location=['serviceConfig'], type=str)
-    is_global = entities.DlProperty(location=['global'], type=str)
+    id: str = entities.DlProperty(location=['id'], _type=str)
+    url: str = entities.DlProperty(location=['url'], _type=str)
+    name: str = entities.DlProperty(location=['name'], _type=str)
+    version: str = entities.DlProperty(location=['version'], _type=str)
+    created_at: str = entities.DlProperty(location=['createdAt'], _type=str)
+    updated_at: str = entities.DlProperty(location=['updatedAt'], _type=str)
+    project_id: str = entities.DlProperty(location=['projectId'], _type=str)
+    creator: str = entities.DlProperty(location=['creator'], _type=str)
+    type: str = entities.DlProperty(location=['type'], _type=str)
+    metadata: dict = entities.DlProperty(location=['metadata'], _type=dict)
+    ui_hooks: list = entities.DlProperty(location=['uiHooks'], _type=str)
+    service_config: dict = entities.DlProperty(location=['serviceConfig'], _type=str)
+    is_global: bool = entities.DlProperty(location=['global'], _type=str)
 
-    codebase: entities.ItemCodebase
-    modules: typing.List[PackageModule]
-    slots: typing.List[PackageSlot]
-    requirements: typing.List[PackageRequirement]
+    codebase: typing.Any = entities.DlProperty(location=['codebase'], _kls='Codebase')
+    modules: typing.List[PackageModule] = entities.DlProperty(location=['modules'], _kls='PackageModule')
+    slots: typing.Union[typing.List[PackageSlot], None] = entities.DlProperty(location=['slots'],
+                                                                              _kls='PackageSlot')
+    requirements: typing.Union[typing.List[PackageRequirement], None] = entities.DlProperty(location=['requirements'],
+                                                                                            _kls='PackageRequirement')
 
     # sdk
     _client_api: services.ApiClient
     _revisions = None
     __repositories = None
     _project = None
-
-    def __init__(self, _dict):
-        self._dict = _dict
 
     def __repr__(self):
         # TODO need to move to DlEntity
@@ -160,33 +158,13 @@ class Package(entities.DlEntity):
             if project.id != _json.get('projectId', None):
                 logger.warning('Package has been fetched from a project that is not belong to it')
                 project = None
-
-        modules = _json.get('modules', None)
-        if modules is not None:
-            modules = [entities.PackageModule.from_json(module) for module in modules]
-
-        slots = _json.get('slots', None)
-        if slots is not None:
-            slots = [entities.PackageSlot.from_json(_slot) for _slot in slots]
-
-        codebase = _json.get('codebase', None)
-        if codebase is not None:
-            codebase = entities.Codebase.from_json(_json=codebase, client_api=client_api)
-
-        requirements = _json.get('requirements', None)
-        if requirements is not None:
-            requirements = [PackageRequirement.from_json(r) for r in requirements]
-
         # Entity
-        inst = cls(_dict=_json)
-        inst.codebase = codebase
-        inst.modules = modules
-        inst.requirements = requirements
-        inst.slots = slots
+        inst = cls(_dict=_json.copy())
         # Platform
         inst._project = project
         inst._client_api = client_api
         inst.is_fetched = is_fetched
+
         return inst
 
     def to_json(self):
@@ -196,23 +174,7 @@ class Package(entities.DlEntity):
         :return: platform json of package
         :rtype: dict
         """
-        _json = self._dict
-
-        # Sanity
-        modules = self.modules
-        unique_modules = len(modules) == len(set([module.name for module in modules]))
-        if not unique_modules:
-            raise Exception('Cannot have 2 modules by the same name in one package.')
-        if not isinstance(modules, list):
-            raise Exception('Package modules must be a list.')
-        _json['modules'] = [m.to_json() for m in modules]
-
-        if self.slots is not None:
-            _json['slots'] = [m.to_json() for m in self.slots]
-        if self.codebase is not None:
-            _json['codebase'] = self.codebase.to_json()
-        if self.requirements is not None:
-            _json['requirements'] = [r.to_json() for r in self.requirements]
+        _json = self._dict.copy()
         return _json
 
     ############

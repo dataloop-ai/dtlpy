@@ -47,8 +47,9 @@ class Drivers:
         success, response = self._client_api.gen_request(req_type='get',
                                                          path='/drivers/{}'.format(driver_id))
         if success:
-            driver = entities.Driver.from_json(client_api=self._client_api,
-                                               _json=response.json())
+            _json = response.json()
+            driver = self._getDriverClass(_json).from_json(client_api=self._client_api,
+                                                           _json=_json)
         else:
             raise exceptions.PlatformException(response)
         return driver
@@ -75,10 +76,22 @@ class Drivers:
                                                          path='/drivers?projectId={}'.format(self.project.id))
         if not success:
             raise exceptions.PlatformException(response)
-        drivers = miscellaneous.List([entities.Driver.from_json(_json=_json,
-                                                                client_api=self._client_api) for _json in
+        drivers = miscellaneous.List([self._getDriverClass(_json).from_json(_json=_json,
+                                                                            client_api=self._client_api) for _json in
                                       response.json()])
         return drivers
+
+    def _getDriverClass(self, _json):
+        driver_type = _json.get('type', None)
+        if driver_type == entities.ExternalStorage.S3:
+            driver_class = entities.S3Driver
+        elif driver_type == entities.ExternalStorage.GCS:
+            driver_class = entities.GcsDriver
+        elif driver_type == entities.ExternalStorage.AZUREBLOB:
+            driver_class = entities.AzureBlobDriver
+        else:
+            driver_class = entities.Driver
+        return driver_class
 
     @_api_reference.add(path='/drivers/{id}', method='get')
     def get(self,
@@ -131,7 +144,7 @@ class Drivers:
                driver_type: entities.ExternalStorage,
                integration_id: str,
                bucket_name: str,
-               integration_type:  entities.ExternalStorage,
+               integration_type: entities.ExternalStorage,
                project_id: str = None,
                allow_external_delete: bool = True,
                region: str = None,
@@ -200,7 +213,8 @@ class Drivers:
         if not success:
             raise exceptions.PlatformException(response)
         else:
-            return entities.Driver.from_json(_json=response.json(), client_api=self._client_api)
+            _json = response.json()
+            return self._getDriverClass(_json).from_json(_json=_json, client_api=self._client_api)
 
     @_api_reference.add(path='/drivers/{id}', method='delete')
     def delete(self,

@@ -266,6 +266,84 @@ class Executions:
             return execution.output
         return execution
 
+    @_api_reference.add(path='/executions/{serviceId}', method='post')
+    def create_batch(self,
+                     service_id: str,
+                     filters,
+                     function_name: str = None,
+                     execution_inputs: list = None,
+                     wait=True
+                     ):
+        """
+        Execute a function on an existing service
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a service.
+
+        :param str service_id: service id to execute on
+        :param filters: Filters entity for a filtering before execute
+        :param str function_name: function name to run
+        :param List[FunctionIO] or dict execution_inputs: input dictionary or list of FunctionIO entities
+        :param bool wait: wait until create task finish
+        :return: execution object
+        :rtype: dtlpy.entities.execution.Execution
+
+        **Example**:
+
+        .. code-block:: python
+
+            command = service.executions.create_batch(
+                        execution_inputs=dl.FunctionIO(type=dl.PackageInputType.STRING, value='test', name='string'),
+                        filters=dl.Filters(field='dir', values='/test'),
+                        function_name='run')
+        """
+        if service_id is None:
+            if self._service is None:
+                raise exceptions.PlatformException('400', 'Please provide service id')
+            service_id = self._service.id
+
+        if filters is None:
+            raise exceptions.PlatformException('400', 'Please provide filter')
+
+        if isinstance(execution_inputs, dict):
+            customer_inputs = execution_inputs
+        else:
+            if not isinstance(execution_inputs, list):
+                execution_inputs = [execution_inputs]
+            if len(execution_inputs) > 0 and isinstance(execution_inputs[0], entities.FunctionIO):
+                customer_inputs = dict()
+                for single_input in execution_inputs:
+                    customer_inputs.update(single_input.to_json(resource='execution'))
+            else:
+                raise exceptions.PlatformException('400', 'Unknown input type')
+
+        # payload
+        payload = dict()
+        payload['batch'] = dict()
+        payload['batch']['query'] = filters.prepare()
+        payload['batch']['args'] = customer_inputs
+
+        if function_name is not None:
+            payload['functionName'] = function_name
+        else:
+            payload['functionName'] = entities.package_defaults.DEFAULT_PACKAGE_FUNCTION_NAME
+
+        # request url
+        url_path = '/executions/{service_id}'.format(service_id=service_id)
+
+        success, response = self._client_api.gen_request(req_type='post',
+                                                         path=url_path,
+                                                         json_req=payload)
+        # exception handling
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        response_json = response.json()
+        command = entities.Command.from_json(_json=response_json,
+                                             client_api=self._client_api)
+        if wait:
+            command = command.wait(timeout=0)
+        return command
+
     def _list(self, filters: entities.Filters):
         """
         List service executions
@@ -409,7 +487,7 @@ class Executions:
 
     def increment(self, execution: entities.Execution):
         """
-        Increment the number of attempts that an execution is allowed to attempt to run a service that is not responding. 
+        Increment the number of attempts that an execution is allowed to attempt to run a service that is not responding.
 
         **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a service.
 

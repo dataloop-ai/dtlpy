@@ -239,3 +239,69 @@ class PipelineExecutions:
                                                          client_api=self._client_api,
                                                          pipeline=self._pipeline)
         return execution
+
+    @_api_reference.add(path='/pipelines/{pipelineId}/execute', method='post')
+    def create_batch(self,
+                     pipeline_id: str,
+                     filters,
+                     execution_inputs=None,
+                     wait=True):
+        """
+        Execute a pipeline and return the execute.
+
+        **prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param pipeline_id: pipeline id
+        :param filters: Filters entity for a filtering before execute
+        :param execution_inputs: list of the dl.FunctionIO or dict of pipeline input - example {'item': 'item_id'}
+        :param bool wait: wait until create task finish
+        :return: entities.PipelineExecution object
+        :rtype: dtlpy.entities.pipeline_execution.PipelineExecution
+
+        **Example**:
+
+        .. code-block:: python
+
+            command = pipeline.pipeline_executions.create_batch(
+                        execution_inputs=dl.FunctionIO(type=dl.PackageInputType.STRING, value='test', name='string'),
+                        filters=dl.Filters(field='dir', values='/test'))
+        """
+        if pipeline_id is None:
+            if self._pipeline is None:
+                raise exceptions.PlatformException('400', 'Please provide pipeline id')
+            pipeline_id = self._pipeline.id
+
+        if filters is None:
+            raise exceptions.PlatformException('400', 'Please provide filter')
+        customer_input = dict()
+
+        if isinstance(execution_inputs, dict):
+            customer_input = execution_inputs
+        else:
+            if not isinstance(execution_inputs, list):
+                execution_inputs = [execution_inputs]
+            if len(execution_inputs) > 0 and isinstance(execution_inputs[0], entities.FunctionIO):
+                for single_input in execution_inputs:
+                    customer_input.update(single_input.to_json(resource='execution'))
+            else:
+                raise exceptions.PlatformException('400', 'Unknown input type')
+        payload = dict()
+        payload['batch'] = dict()
+        payload['batch']['query'] = filters.prepare()
+        payload['batch']['args'] = customer_input
+
+        success, response = self._client_api.gen_request(
+            path='/pipelines/{}/execute'.format(pipeline_id),
+            req_type='POST',
+            json_req=payload
+        )
+
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        response_json = response.json()
+        command = entities.Command.from_json(_json=response_json,
+                                             client_api=self._client_api)
+        if wait:
+            command = command.wait(timeout=0)
+        return command

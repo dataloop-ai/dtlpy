@@ -96,8 +96,6 @@ class BaseSetting:
             project=None,
             org=None
     ):
-        if value is None and default_value is None:
-            raise Exception('Must provide either value or default_value')
 
         self.default_value = default_value
         self.name = name
