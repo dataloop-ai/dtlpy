@@ -547,6 +547,8 @@ class Packages:
         if slots is not None:
             if modules is None:
                 raise ValueError('Cannot add slots when modules is empty.')
+            if not isinstance(slots[0], entities.PackageSlot):
+                slots = [entities.PackageSlot.from_json(_json=slot) for slot in slots]
             self._validate_slots(slots, modules)
 
         delete_codebase = False
@@ -1278,7 +1280,7 @@ class Packages:
                  service_name: str = None,
                  package_type=PackageCatalog.DEFAULT_PACKAGE_TYPE):
         """
-        Generate a new package. Provide a file path to a JSON file with all the details of the package and service to generate the package. 
+        Generate a new package. Provide a file path to a JSON file with all the details of the package and service to generate the package.
 
         **Prerequisites**: You must be in the role of an *owner* or *developer*.
 
