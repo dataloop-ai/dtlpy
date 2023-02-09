@@ -406,7 +406,7 @@ def step_impl(context):
 @behave.then(u'I expect that pipeline execution has "{execution_number}" success executions')
 def step_impl(context, execution_number):
     time.sleep(2)
-    assert context.pipeline.pipeline_executions.list().items_count != 0, "Pipeline did not executed"
+    assert context.pipeline.pipeline_executions.list().items_count != 0, "Pipeline not executed found 0 executions"
     context.pipeline = context.project.pipelines.get(context.pipeline.name)
 
     num_try = 10
@@ -426,7 +426,7 @@ def step_impl(context, execution_number):
                 executed = True
                 break
 
-    assert executed, "TEST FAILED: Pipeline has {} executions instead of {}".format(execution_count ,execution_number)
+    assert executed, "TEST FAILED: Pipeline has {} executions instead of {}".format(execution_count, execution_number)
     return executed
 
 

@@ -113,6 +113,7 @@ from tests.features.steps.triggers_repo import test_triggers_delete
 from tests.features.steps.triggers_repo import test_triggers_context
 from tests.features.steps.triggers_repo import test_triggers_item_update
 from tests.features.steps.triggers_repo import test_triggers_annotation_update
+from tests.features.steps.triggers_repo import test_pipeline_triggers_create
 
 from tests.features.steps.services_repo import test_services_deploy
 from tests.features.steps.services_repo import test_services_create
@@ -175,6 +176,7 @@ from tests.features.steps.features_vectors import test_features_create, test_fea
 from tests.features.steps.pipeline_entity import test_pipeline_pulling_task
 from tests.features.steps.pipeline_entity import test_pipeline_actions
 from tests.features.steps.pipeline_entity import test_pipeline_install
+from tests.features.steps.pipeline_entity import test_pipeline_connectors
 
 from tests.features.steps.documentation_tests import test_projects_docs
 from tests.features.steps.documentation_tests import test_contributor_docs
@@ -198,6 +200,8 @@ from tests.features.steps.webm_converter import test_failed_video_message
 from tests.features.steps.platform_urls import test_platform_urls
 
 from tests.features.steps.annotation_entity import test_annotation_description
+
+from tests.features.steps.annotations_repo import test_note_annotation_with_messages
 
 
 # Interface steps locations

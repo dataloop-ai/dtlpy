@@ -34,11 +34,13 @@ class App(entities.BaseEntity):
         reps = namedtuple('repositories', field_names=['projects', 'apps'])
         return reps(
             projects=repositories.Projects(client_api=self._client_api),
-            apps=repositories.Apps(client_api=self._client_api, project=self.project)
+            apps=repositories.Apps(client_api=self._client_api, project=self._project)
         )
 
     @property
     def project(self):
+        if self._project is None:
+            self._project = self.projects.get(project_id=self.project_id)
         return self._project
 
     @property

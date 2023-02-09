@@ -1491,17 +1491,22 @@ class Services:
                 error='400',
                 message='Must provide an identifier in inputs')
 
-        fs_url_path = '/services/fs-cache?mode={}'.format(mode)
-        url_path = '/services/cache?mode={}'.format(mode)
+        fs_mode = mode if mode != entities.CacheAction.APPLY else '{}-filestore'.format(mode)
+        apply_fs_url_path = '/services/fs-cache?mode={}'.format(fs_mode)
+        apply_volume_url_path = '/services/fs-cache?mode={}'.format(mode)
+        cache_url_path = '/services/cache?mode={}'.format(mode)
 
-        success, response = self.__enable_cache(url=fs_url_path, organization=organization, pod_type=pod_type)
+        success, response = self.__enable_cache(url=apply_fs_url_path, organization=organization, pod_type=pod_type)
         if not success:
             raise exceptions.PlatformException(response)
 
         if mode == entities.CacheAction.APPLY:
             self.__polling_wait(organization=organization, pod_type=pod_type)
+            success, response = self.__enable_cache(url=apply_volume_url_path, organization=organization, pod_type=pod_type)
+            if not success:
+                raise exceptions.PlatformException(response)
 
-        success, response = self.__enable_cache(url=url_path, organization=organization, pod_type=pod_type)
+        success, response = self.__enable_cache(url=cache_url_path, organization=organization, pod_type=pod_type)
         if not success:
             raise exceptions.PlatformException(response)
 

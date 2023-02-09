@@ -514,6 +514,12 @@ class CodeNode(PipelineNode):
                                                       method_func_string)
         return code
 
+    @staticmethod
+    def from_json(_json: dict):
+        parent = PipelineNode.from_json(_json)
+        parent.__class__ = CodeNode
+        return parent
+
 
 class TaskNode(PipelineNode):
     def __init__(self,
@@ -554,21 +560,20 @@ class TaskNode(PipelineNode):
         :param int consensus_percentage: the consensus percentage ber task
         :param int consensus_assignees: the consensus assignees number of the task
         """
-
-        if actions is None:
+        if actions is None or actions == []:
             actions = []
+            if task_type == 'qa':
+                if 'approve' not in actions:
+                    actions.append('approve')
+            else:
+                if 'complete' not in actions:
+                    actions.append('complete')
+            actions.append('discard')
+        else:
+            logger.warning(
+                "The 'actions' field was updated to override the system default actions for task (Complete/Approve, Discard) if provided, due to a bug fix.")
 
         inputs = [self._default_io()]
-
-        if task_type == 'qa':
-            if 'approve' not in actions:
-                actions.insert(0, 'approve')
-        else:
-            if 'complete' not in actions:
-                actions.insert(0, 'complete')
-
-        if 'discard' not in actions:
-            actions.insert(1, 'discard')
 
         outputs = [self._default_io(action=action) for action in actions]
 
@@ -736,6 +741,12 @@ class TaskNode(PipelineNode):
             raise PlatformException('400', 'Param due_date must be of type float or int')
         self.metadata['dueDate'] = due_date
 
+    @staticmethod
+    def from_json(_json: dict):
+        parent = PipelineNode.from_json(_json)
+        parent.__class__ = TaskNode
+        return parent
+
 
 class FunctionNode(PipelineNode):
     def __init__(self,
@@ -813,6 +824,12 @@ class FunctionNode(PipelineNode):
                                default_value=single_input.value))
         return pipeline_io
 
+    @staticmethod
+    def from_json(_json: dict):
+        parent = PipelineNode.from_json(_json)
+        parent.__class__ = FunctionNode
+        return parent
+
 
 class DatasetNode(PipelineNode):
     def __init__(self,
@@ -862,3 +879,9 @@ class DatasetNode(PipelineNode):
             if not dataset_folder.startswith("/"):
                 dataset_folder = '/' + dataset_folder
             self.metadata['dir'] = dataset_folder
+
+    @staticmethod
+    def from_json(_json: dict):
+        parent = PipelineNode.from_json(_json)
+        parent.__class__ = DatasetNode
+        return parent

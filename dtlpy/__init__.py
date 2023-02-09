@@ -27,7 +27,7 @@ from .__version__ import version as __version__
 from .entities import (
     # main entities
     Project, Dataset, ExpirationOptions, ExportVersion, Trigger, Item, Execution, AnnotationCollection, Annotation,
-    Recipe, IndexDriver, AttributesTypes, AttributesRange, Dpk,
+    Recipe, IndexDriver, AttributesTypes, AttributesRange, Dpk, App,
     Ontology, Label, Task, TaskPriority, Assignment, Service, Package, Codebase, Model, PackageModule, PackageFunction,
     # annotations
     Box, Cube, Cube3d, Point, Note, Message, Segmentation, Ellipse, Classification, Subtitle, Polyline, Pose, Description,

@@ -7,6 +7,7 @@ import random
 from multiprocessing.pool import ThreadPool
 import logging
 import datetime
+from operator import attrgetter
 
 
 @behave.given(u'There are items, path = "{item_path}"')
@@ -431,8 +432,8 @@ def step_impl(context, field, values, operator):
         values = int(values)
 
     if operator == "in":
-        if values == "task.id":
-            values = context.task.id
+        if "." in values:
+            values = attrgetter(values)(context)
         values = values.split(",")
 
     context.filters.add(field=field, values=values, operator=operator)
@@ -499,7 +500,6 @@ def step_impl(context, date_time):
 
 @behave.when(u'I use custom filter for Specific task and status from today')
 def step_impl(context):
-
     if not hasattr(context, 'start_date'):
         assert False, "Need to create timestamp before"
 
@@ -539,9 +539,9 @@ def step_impl(context):
 @behave.when(u'I add "{resource}" filter with "{field}" and "{values}"')
 def step_impl(context, resource, field, values):
     context.filters.resource = resource
-    if values == 'dataset.id':
+    if "." in values:
         try:
-            context.filters.add(field=field, values=context.dataset.id)
+            context.filters.add(field=field, values=attrgetter(values)(context))
         except Exception as e:
             context.error = e
     else:

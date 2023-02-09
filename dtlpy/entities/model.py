@@ -3,7 +3,6 @@ from enum import Enum
 import traceback
 import logging
 
-
 import attr
 
 from .. import repositories, entities, services
@@ -405,6 +404,15 @@ class Model(entities.BaseEntity):
         :return:
         """
         return self.models.train(model_id=self.id)
+
+    def predict(self, item_ids):
+        """
+        Run model prediction with items
+
+        :param item_ids: a list of item id to run the prediction.
+        :return:
+        """
+        return self.models.predict(model=self, item_ids=item_ids)
 
     def deploy(self, service_config=None):
         """

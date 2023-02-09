@@ -310,8 +310,8 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             batch_items = items[i_batch: i_batch + batch_size]
             if input_type == 'image':
                 batch = list(pool.map(self._prepare_items_image_batch, batch_items))
-            elif input_type == 'txt':
-                batch = list(pool.map(self._prepare_items_txt_batch, batch_items))
+            elif input_type == 'text':
+                batch = list(pool.map(self._prepare_items_text_batch, batch_items))
             else:
                 raise ValueError('Unknown inputType: {} (from model_entity.input_type'.format(input_type))
             batch_collections = self.predict(batch, **kwargs)
@@ -467,7 +467,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         output_path = None
         try:
             logger.info(
-                f"Received model: {model.id} for evaluation on dataset (name: {dataset.name}, id: {dataset.name}")
+                f"Received model: {model.id} for evaluation on dataset (name: {dataset.name}, id: {dataset.id}")
             ##########################
             # load model and weights #
             ##########################
@@ -540,10 +540,10 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         return image
 
     @staticmethod
-    def _prepare_items_txt_batch(item):
+    def _prepare_items_text_batch(item):
         buffer = item.download(save_locally=False)
-        txt = buffer.read().decode()
-        return txt
+        text = buffer.read().decode()
+        return text
 
     @staticmethod
     def _prepare_uris_image_batch(data_uri):

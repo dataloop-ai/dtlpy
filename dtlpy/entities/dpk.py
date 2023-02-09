@@ -136,7 +136,7 @@ class Dpk(entities.DlEntity):
     # defaults
     components: Components = entities.DlProperty(location=['components'], _kls='Components')
     description: str = entities.DlProperty(location=['name'], _type=str)
-    url: str = entities.DlProperty(location=['name'], _type=str)
+    url: str = entities.DlProperty(location=['url'], _type=str)
 
     # sdk
     client_api: services.ApiClient

@@ -56,9 +56,11 @@ def step_impl(context):
 
 @given(u'I remove log files')
 def step_impl(context):
-    for f in os.listdir("."):
-        if any(x in f for x in ["log", ".json"]):
-            os.remove(f)
+    path = os.path.join(dl.service_defaults.DATALOOP_PATH, 'reporters')
+    if os.path.exists(path):
+        for f in os.listdir(path):
+            if any(x in f for x in ["log", ".json"]):
+                os.remove(f)
 
 
 @then(u'Log file is exist')

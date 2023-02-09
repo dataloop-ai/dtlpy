@@ -389,7 +389,7 @@ class ApiClient:
         # Initiate #
         ############
         # define local params - read only once from cookie file
-        self.lock = multiprocessing.Lock()
+        self.lock = threading.Lock()
         self.renew_token_method = self.renew_token
         self.is_cli = False
         self.session = None

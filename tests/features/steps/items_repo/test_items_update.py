@@ -97,3 +97,8 @@ def step_impl(context):
 def step_impl(context):
     context.item_get = context.dataset.items.get(item_id=context.item.id)
     assert "modified" not in context.item_get.metadata["system"]
+
+
+@behave.given(u'I add folder "{folder_name}" to context.dataset')
+def step_impl(context, folder_name):
+    context.dataset.items.make_dir(directory="/{}".format(folder_name))

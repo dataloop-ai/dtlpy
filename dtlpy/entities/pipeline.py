@@ -4,7 +4,7 @@ import traceback
 from enum import Enum
 from typing import List
 import attr
-from .node import PipelineNode, PipelineConnection
+from .node import PipelineNode, PipelineConnection, TaskNode, CodeNode, FunctionNode, DatasetNode
 from .. import repositories, entities, services
 
 logger = logging.getLogger(name='dtlpy')
@@ -251,9 +251,23 @@ class Pipeline(entities.BaseEntity):
             original_settings=settings
         )
         for node in _json.get('nodes', list()):
-            inst.nodes.add(node=PipelineNode.from_json(node))
+            inst.nodes.add(node=cls.pipeline_node(node))
         inst.is_fetched = is_fetched
         return inst
+
+    @classmethod
+    def pipeline_node(self, _json):
+        node_type = _json.get('type')
+        if node_type == 'task':
+            return TaskNode.from_json(_json)
+        elif node_type == 'code':
+            return CodeNode.from_json(_json)
+        elif node_type == 'function':
+            return FunctionNode.from_json(_json)
+        elif node_type == 'storage':
+            return DatasetNode.from_json(_json)
+        else:
+            return PipelineNode.from_json(_json)
 
     def settings_changed(self) -> bool:
         return self.settings.to_json() != self._original_settings.to_json()

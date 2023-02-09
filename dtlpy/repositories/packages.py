@@ -1280,7 +1280,7 @@ class Packages:
                  service_name: str = None,
                  package_type=PackageCatalog.DEFAULT_PACKAGE_TYPE):
         """
-        Generate a new package. Provide a file path to a JSON file with all the details of the package and service to generate the package.
+        Generate a new package. Provide a file path to a JSON file with all the details of the package and service to generate the package. 
 
         **Prerequisites**: You must be in the role of an *owner* or *developer*.
 

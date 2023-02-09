@@ -485,6 +485,29 @@ class Models:
 
         return True
 
+    def predict(self, model, item_ids):
+        """
+        Run model prediction with items
+
+        :param model: dl.Model entity to run the prediction.
+        :param item_ids: a list of item id to run the prediction.
+        :return:
+        """
+        if len(model.metadata['system']['deploy']['services']) == 0:
+            # no services for model
+            raise ValueError("Model doesnt have any associated services. Need to deploy before predicting")
+        payload = {'input': {'itemIds': item_ids},
+                   'config': {'serviceId': model.metadata['system']['deploy']['services'][0]}}
+
+        success, response = self._client_api.gen_request(req_type="post",
+                                                         path=f"/ml/models/{model.id}/predict",
+                                                         json_req=payload)
+        if not success:
+            raise exceptions.PlatformException(response)
+        return entities.Execution.from_json(_json=response.json(),
+                                            client_api=self._client_api,
+                                            project=self._project)
+
     def deploy(self, model_id: str, service_config=None):
         """
         Deploy a trained model. This will create a service that will execute predictions
