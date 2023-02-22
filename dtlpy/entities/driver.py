@@ -30,6 +30,7 @@ class Driver(entities.BaseEntity):
     metadata = attr.ib(repr=False)
     name = attr.ib()
     id = attr.ib()
+    path = attr.ib()
     # api
     _client_api = attr.ib(type=services.ApiClient, repr=False)
     _repositories = attr.ib(repr=False)
@@ -67,7 +68,9 @@ class Driver(entities.BaseEntity):
                    metadata=_json.get('metadata', None),
                    name=_json.get('name', None),
                    id=_json.get('id', None),
-                   client_api=client_api)
+                   client_api=client_api,
+                   path=_json.get('path', None))
+
         inst.is_fetched = is_fetched
         return inst
 
@@ -85,12 +88,16 @@ class Driver(entities.BaseEntity):
                                                               attr.fields(Driver).created_at,
                                                               attr.fields(Driver).integration_id,
                                                               attr.fields(Driver).integration_type,
+                                                              attr.fields(Driver).path
                                                               ))
         output_dict['allowExternalDelete'] = self.allow_external_delete
         output_dict['allowExternalModification'] = self.allow_external_modification
         output_dict['createdAt'] = self.created_at
         output_dict['integrationId'] = self.integration_id
         output_dict['integrationType'] = self.integration_type
+
+        if self.path is not None:
+            output_dict['path'] = self.path
 
         return output_dict
 
@@ -119,13 +126,10 @@ class Driver(entities.BaseEntity):
 @attr.s()
 class AzureBlobDriver(Driver):
     container_name = attr.ib(default=None)
-    path = attr.ib(default=None)
 
     def to_json(self):
         _json = super().to_json()
         _json['containerName'] = self.container_name
-        if self.path is not None:
-            _json['path'] = self.path
         return _json
 
     @classmethod
@@ -140,7 +144,6 @@ class AzureBlobDriver(Driver):
         """
         inst = super().from_json(_json, client_api, is_fetched=True)
         inst.container_name = _json.get('containerName', None)
-        inst.path = _json.get('path', None)
         return inst
 
 
@@ -172,7 +175,6 @@ class GcsDriver(Driver):
 class S3Driver(Driver):
     bucket_name = attr.ib(default=None)
     region = attr.ib(default=None)
-    path = attr.ib(default=None)
     storage_class = attr.ib(default=None)
 
     def to_json(self):
@@ -180,8 +182,6 @@ class S3Driver(Driver):
         _json['bucketName'] = self.bucket_name
         if self.region is not None:
             _json['region'] = self.region
-        if self.path is not None:
-            _json['path'] = self.path
         if self.storage_class is not None:
             _json['storageClass'] = self.storage_class
         return _json
@@ -199,6 +199,5 @@ class S3Driver(Driver):
         inst = super().from_json(_json, client_api, is_fetched=True)
         inst.bucket_name = _json.get('bucketName', None)
         inst.region = _json.get('region', None)
-        inst.path = _json.get('path', None)
         inst.storage_class = _json.get('storageClass', None)
         return inst

@@ -1458,6 +1458,7 @@ class Services:
             if response.json().get('state', None) == 'READY':
                 break
             sleep_time = min(backoff_factor * (2 ** (i - 1)), MAX_WAIT_TIME)
+            logger.debug("Going to sleep {:.2f}[s]".format(sleep_time))
             time.sleep(sleep_time)
             i += 1
         return success

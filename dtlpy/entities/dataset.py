@@ -60,6 +60,7 @@ class Dataset(entities.BaseEntity):
     export = attr.ib(repr=False)
     expiration_options = attr.ib()
     index_driver = attr.ib()
+    enable_sync_with_cloned = attr.ib(repr=False)
 
     # name change when to_json
     created_at = attr.ib()
@@ -165,7 +166,8 @@ class Dataset(entities.BaseEntity):
                    client_api=client_api,
                    project=project,
                    expiration_options=expiration_options,
-                   index_driver=_json.get('indexDriver', None))
+                   index_driver=_json.get('indexDriver', None),
+                   enable_sync_with_cloned=_json.get('enableSyncWithCloned', None))
         inst.is_fetched = is_fetched
         return inst
 
@@ -193,6 +195,7 @@ class Dataset(entities.BaseEntity):
                                                               attr.fields(Dataset).expiration_options,
                                                               attr.fields(Dataset).items_count,
                                                               attr.fields(Dataset).index_driver,
+                                                              attr.fields(Dataset).enable_sync_with_cloned
                                                               ))
         _json.update({'items': self.items_url})
         _json['readableType'] = self.readable_type
@@ -203,6 +206,8 @@ class Dataset(entities.BaseEntity):
         _json['indexDriver'] = self.index_driver
         if self.expiration_options and self.expiration_options.to_json():
             _json['expirationOptions'] = self.expiration_options.to_json()
+        if self.enable_sync_with_cloned is not None:
+            _json['enableSyncWithCloned'] = self.enable_sync_with_cloned
         return _json
 
     @property

@@ -65,14 +65,18 @@ def step_impl(context):
 
 @then(u'Log file is exist')
 def step_impl(context):
-    for f in os.listdir(os.path.join(dl.service_defaults.DATALOOP_PATH, 'reporters')):
-        if any(x in f for x in ["log", ".json"]):
-            return
+    path = os.path.join(dl.service_defaults.DATALOOP_PATH, 'reporters')
+    if os.path.exists(path):
+        for f in os.listdir(path):
+            if any(x in f for x in ["log", ".json"]):
+                return
     assert False
 
 
 @then(u'Log file does not exist')
 def step_impl(context):
-    for f in os.listdir(os.path.join(dl.service_defaults.DATALOOP_PATH, 'reporters')):
-        if any(x in f for x in ["log", ".json"]):
-            assert False
+    path = os.path.join(dl.service_defaults.DATALOOP_PATH, 'reporters')
+    if os.path.exists(path):
+        for f in os.listdir(path):
+            if any(x in f for x in ["log", ".json"]):
+                assert False

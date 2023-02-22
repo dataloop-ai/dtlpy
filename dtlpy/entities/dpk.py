@@ -7,15 +7,6 @@ import enum
 from .. import entities, services, repositories
 
 
-@dataclass
-class Toolbar:
-    display_name: str
-    conditions: dict
-    invoke: dict
-    location: str
-    icon: str
-
-
 class SlotType(str, enum.Enum):
     ITEM_VIEWER = 'itemViewer'
     FLOATING_WINDOW = 'floatingWindow'
@@ -42,6 +33,21 @@ DEFAULT_STOPS = {SlotType.ITEM_VIEWER: {"type": "itemViewer",
 class Slot(entities.DlEntity):
     type = entities.DlProperty(location=['type'], _type=str)
     configuration = entities.DlProperty(location=['configuration'], _type=dict)
+
+    def to_json(self) -> dict:
+        return self._dict.copy()
+
+    @classmethod
+    def from_json(cls, _json):
+        return cls(_dict=_json)
+
+
+class Toolbar(entities.DlEntity):
+    display_name: str = entities.DlProperty(location=['displayName'], _type=str)
+    conditions: dict = entities.DlProperty(location=['conditions'], _type=dict)
+    invoke: dict = entities.DlProperty(location=['invoke'], _type=dict)
+    location: str = entities.DlProperty(location=['location'], _type=str)
+    icon: str = entities.DlProperty(location=['icon'], _type=str)
 
     def to_json(self) -> dict:
         return self._dict.copy()

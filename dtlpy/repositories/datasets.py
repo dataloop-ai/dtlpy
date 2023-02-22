@@ -874,7 +874,7 @@ class Datasets:
         **Prerequisites**: You must have a dataset with items that are related to the annotations. The relationship between the dataset and annotations is shown in the name. You must be in the role of an *owner* or *developer*.
 
         :param dtlpy.entities.dataset.Dataset dataset: dataset to upload to
-        :param str local_path: str - local folder where the annotations files is
+        :param str local_path: str - local folder where the annotations files are
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :param bool clean: True to remove the old annotations
         :param str remote_root_path: the remote root path to match remote and local items

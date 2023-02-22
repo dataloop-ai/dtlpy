@@ -539,7 +539,8 @@ class TaskNode(PipelineNode):
                  priority=entities.TaskPriority.MEDIUM,
                  due_date=None,
                  consensus_percentage=None,
-                 consensus_assignees=None
+                 consensus_assignees=None,
+                 groups=None
                  ):
         """
         :param str name: node name
@@ -553,6 +554,7 @@ class TaskNode(PipelineNode):
         :param tuple position: tuple of the node place
         :param list actions: list of task actions
         :param bool repeatable: can repeat in the item
+        :param int groups: groups to assign the task to
         :param int batch_size: Pulling batch size (items) . Restrictions - Min 3, max 100 - for create pulling task
         :param int max_batch_workload: Max items in assignment . Restrictions - Min batchSize + 2 , max batchSize * 2 - for create pulling task
         :param entities.TaskPriority priority: priority of the task options in entities.TaskPriority
@@ -577,11 +579,15 @@ class TaskNode(PipelineNode):
 
         outputs = [self._default_io(action=action) for action in actions]
 
+        if groups is not None:
+            if not isinstance(groups, list) or not all(isinstance(group, str) for group in groups):
+                raise ValueError('groups must be a list of strings')
+
         super().__init__(name=name,
                          node_id=str(uuid.uuid4()),
                          outputs=outputs,
                          inputs=inputs,
-                         metadata={},
+                         metadata=dict(),
                          node_type=PipelineNodeType.TASK,
                          namespace=PipelineNameSpace(function_name="move_to_task",
                                                      project_name="DataloopTasks",
@@ -610,6 +616,7 @@ class TaskNode(PipelineNode):
         if due_date is None:
             due_date = (datetime.datetime.now() + datetime.timedelta(days=7)).timestamp() * 1000
         self.due_date = due_date
+        self.groups = groups
 
     @property
     def dataset_id(self):
@@ -620,6 +627,15 @@ class TaskNode(PipelineNode):
         if not isinstance(dataset_id, str):
             raise PlatformException('400', 'Param dataset_id must be of type string')
         self.metadata['datasetId'] = dataset_id
+
+    @property
+    def groups(self):
+        return self.metadata.get('groups')
+
+    @groups.setter
+    def groups(self, groups: List[str]):
+        if groups is not None:
+            self.metadata['groups'] = groups
 
     @property
     def repeatable(self):

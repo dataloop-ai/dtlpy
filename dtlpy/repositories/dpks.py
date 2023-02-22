@@ -93,7 +93,7 @@ class Dpks:
         dpk_filename = os.path.join(dl_dir, '{}_{}.dpk'.format(name, version))
 
         if not os.path.isdir(directory):
-            raise exceptions.PlatformException(error='400', message='Not a directory: {}'.format(directory))
+            raise ValueError('Not a directory: {}'.format(directory))
         if subpaths_to_append is None:
             subpaths_to_append = []
 
@@ -187,8 +187,7 @@ class Dpks:
 
         if dpk is None:
             if not os.path.exists(os.path.abspath('dataloop.json')):
-                raise exceptions.PlatformException(error='400',
-                                                   message='dataloop.json file must be exists in order to publish a dpk')
+                raise ValueError('dataloop.json file must be exists in order to publish a dpk')
             with open('dataloop.json', 'r') as f:
                 json_file = json.load(f)
             dpk = entities.Dpk.from_json(_json=json_file,
@@ -219,11 +218,11 @@ class Dpks:
         :return whether the operation ran successfully
         :rtype bool
         """
-        success, response = self._client_api.gen_request(req_type='delete', path=f'app-registry/{dpk_id}')
+        success, response = self._client_api.gen_request(req_type='delete', path=f'/app-registry/{dpk_id}')
         if success:
             logger.info('Deleted dpk successfully')
         else:
-            raise exceptions.PlatformException(error='400', message="Couldn't delete the dpk from the store")
+            raise exceptions.PlatformException(response)
         return success
 
     def revisions(self, dpk_name: str, filters: entities.Filters = None) -> entities.PagedEntities:
@@ -239,20 +238,15 @@ class Dpks:
             versions = dl.dpks.revisions(dpk_name='name')
         """
         if dpk_name is None:
-            raise exceptions.PlatformException(error='400', message='You must provide dpk_name')
+            raise ValueError('You must provide dpk_name')
         self._revisions = dpk_name
         if filters is None:
             filters = entities.Filters(resource=entities.FiltersResource.DPK)
         elif not isinstance(filters, entities.Filters):
-            raise exceptions.PlatformException(error='400',
-                                               message='Unknown filters type: {!r}'.format(type(filters)))
+            raise ValueError('Unknown filters type: {!r}'.format(type(filters)))
         elif filters.resource != entities.FiltersResource.DPK:
-            raise exceptions.PlatformException(
-                error='400',
-                message='Filters resource must to be FiltersResource.DPK. Got: {!r}'.format(filters.resource))
+            raise TypeError('Filters resource must to be FiltersResource.DPK. Got: {!r}'.format(filters.resource))
 
-        if dpk_name is None:
-            raise exceptions.PlatformException(error='400', message='You must provide dpk_name')
         success, response = self._client_api.gen_request(req_type='post',
                                                          path="/app-registry/{}/revisions".format(dpk_name))
         if not success:
@@ -292,12 +286,9 @@ class Dpks:
         if filters is None:
             filters = entities.Filters(resource=entities.FiltersResource.DPK)
         elif not isinstance(filters, entities.Filters):
-            raise exceptions.PlatformException(error='400',
-                                               message='Unknown filters type: {!r}'.format(type(filters)))
+            raise ValueError('Unknown filters type: {!r}'.format(type(filters)))
         elif filters.resource != entities.FiltersResource.DPK:
-            raise exceptions.PlatformException(
-                error='400',
-                message='Filters resource must to be FiltersResource.DPK. Got: {!r}'.format(filters.resource))
+            raise ValueError('Filters resource must to be FiltersResource.DPK. Got: {!r}'.format(filters.resource))
 
         paged = entities.PagedEntities(items_repository=self,
                                        filters=filters,
@@ -334,7 +325,7 @@ class Dpks:
             dpk = dl.dpks.get(dpk_name='name')
         """
         if dpk_id is None and dpk_name is None:
-            raise exceptions.PlatformException(error='400', message='You must provide an identifier')
+            raise ValueError('You must provide an identifier, either dpk_id or dpk_name')
         if dpk_id is not None:
             url = '/app-registry/{}'.format(dpk_id)
 

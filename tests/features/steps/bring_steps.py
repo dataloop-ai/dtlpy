@@ -223,7 +223,7 @@ from tests.features.steps.items_repo import items_interface
 
 from tests.features.steps.projects_repo import projects_interface
 
-
+from tests.features.steps.annotations_repo import test_annotations_adding_multiple_frames
 
 
 

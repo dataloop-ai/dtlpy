@@ -44,8 +44,11 @@ def step_impl(context):
                    'execution_mode': execution_mode, 'function_name': function_name, 'service_id': context.service.id}
 
     params = {k: v for k, v in params_temp.items() if v is not None}
-
-    context.trigger = context.service.triggers.create(**params)
+    try:
+        context.trigger = context.service.triggers.create(**params)
+        context.error = None
+    except Exception as e:
+        context.error = e
 
 
 @behave.when(u"I create a cron trigger")
@@ -148,9 +151,12 @@ def step_impl(context, resource_type):
                 triggered = True
                 break
         elif resource_type == 'task':
+            context.task = context.project.tasks.get(task_id=context.task.id)
             if context.task.name == "name updated by trigger":
                 triggered = True
                 break
+        context.dl.logger.debug("Step is running for {:.2f}[s] and now Going to sleep {:.2f}[s]".format((i + 1) * interval,
+                                                                                                        interval))
 
     assert triggered
 
