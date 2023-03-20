@@ -1,5 +1,6 @@
 import logging
-from .. import exceptions, entities, services, miscellaneous, _api_reference
+from .. import exceptions, entities, miscellaneous, _api_reference
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -10,7 +11,7 @@ class FeatureSets:
     """
     URL = '/features/sets'
 
-    def __init__(self, client_api: services.ApiClient, project: entities.Project = None):
+    def __init__(self, client_api: ApiClient, project: entities.Project = None):
         self._project = project
         self._client_api = client_api
 

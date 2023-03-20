@@ -2,7 +2,8 @@ import logging
 import attr
 from enum import Enum
 
-from .. import services, repositories, entities
+from .. import repositories, entities
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -33,7 +34,7 @@ class Webhook(entities.BaseEntity):
     hook_url = attr.ib()
 
     # SDK
-    _client_api = attr.ib(type=services.ApiClient, repr=False)
+    _client_api = attr.ib(type=ApiClient, repr=False)
     _project = attr.ib()
 
     # repos
@@ -48,7 +49,7 @@ class Webhook(entities.BaseEntity):
         return self.updated_at
 
     @classmethod
-    def from_json(cls, _json: dict, client_api: services.ApiClient, project=None):
+    def from_json(cls, _json: dict, client_api: ApiClient, project=None):
         """
         :param _json: platform json
         :param client_api: ApiClient entity

@@ -4,7 +4,8 @@ import traceback
 from enum import Enum
 from collections import namedtuple
 
-from .. import repositories, entities, services
+from .. import repositories, entities
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -49,7 +50,7 @@ class Execution(entities.BaseEntity):
     package_name = attr.ib()
 
     # sdk
-    _client_api = attr.ib(type=services.ApiClient, repr=False)
+    _client_api = attr.ib(type=ApiClient, repr=False)
     _service = attr.ib(repr=False)
     _project = attr.ib(repr=False, default=None)
     _repositories = attr.ib(repr=False)

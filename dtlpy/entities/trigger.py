@@ -4,7 +4,8 @@ import logging
 from enum import Enum
 from collections import namedtuple
 
-from .. import entities, services, exceptions, repositories
+from .. import entities, exceptions, repositories
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -79,7 +80,7 @@ class BaseTrigger(entities.BaseEntity):
     ##################
     _service = attr.ib(repr=False)
     _project = attr.ib(repr=False)
-    _client_api = attr.ib(type=services.ApiClient, repr=False)
+    _client_api = attr.ib(type=ApiClient, repr=False)
     _op_type = attr.ib(default='service')
     _repositories = attr.ib(repr=False)
 

@@ -186,6 +186,7 @@ class PipelineNode:
                  metadata: dict = None,
                  config: dict = None,
                  position: tuple = (1, 1),
+                 app_id: str = None,
                  ):
         """
         :param str name: node name
@@ -198,6 +199,7 @@ class PipelineNode:
         :param str project_id: project id
         :param dict config: for the code node dict in format { package: {code : the_code}}
         :param tuple position: tuple of the node place
+        :param str app_id: app id
         """
         self.name = name
         self.node_id = node_id
@@ -209,6 +211,7 @@ class PipelineNode:
         self.project_id = project_id
         self.config = config
         self.position = position
+        self.app_id = app_id
         self._pipeline = None
 
     @property
@@ -259,7 +262,8 @@ class PipelineNode:
             namespace=namespace,
             project_id=_json.get('projectId', None),
             config=_json.get('config', None),
-            position=position
+            position=position,
+            app_id=_json.get('appId', None)
         )
 
     def to_json(self):
@@ -275,6 +279,8 @@ class PipelineNode:
         }
         if self.config is not None:
             _json['config'] = self.config
+        if self.app_id is not None:
+            _json['appId'] = self.app_id
         return _json
 
     def is_root(self):

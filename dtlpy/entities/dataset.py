@@ -7,6 +7,7 @@ import attr
 import os
 
 from .. import repositories, entities, services, exceptions
+from ..services.api_client import ApiClient
 from .annotation import ViewAnnotationOptions, AnnotationType, ExportVersion
 
 logger = logging.getLogger(name='dtlpy')
@@ -68,10 +69,11 @@ class Dataset(entities.BaseEntity):
     readable_type = attr.ib(repr=False)
     access_level = attr.ib(repr=False)
     driver = attr.ib(repr=False)
+    src_dataset = attr.ib(repr=False)
     _readonly = attr.ib(repr=False)
 
     # api
-    _client_api = attr.ib(type=services.ApiClient, repr=False)
+    _client_api = attr.ib(type=ApiClient, repr=False)
 
     # entities
     _project = attr.ib(default=None, repr=False)
@@ -94,7 +96,7 @@ class Dataset(entities.BaseEntity):
     @staticmethod
     def _protected_from_json(project: entities.Project,
                              _json: dict,
-                             client_api: services.ApiClient,
+                             client_api: ApiClient,
                              datasets=None,
                              is_fetched=True):
         """
@@ -123,7 +125,7 @@ class Dataset(entities.BaseEntity):
     def from_json(cls,
                   project: entities.Project,
                   _json: dict,
-                  client_api: services.ApiClient,
+                  client_api: ApiClient,
                   datasets=None,
                   is_fetched=True):
         """
@@ -167,7 +169,8 @@ class Dataset(entities.BaseEntity):
                    project=project,
                    expiration_options=expiration_options,
                    index_driver=_json.get('indexDriver', None),
-                   enable_sync_with_cloned=_json.get('enableSyncWithCloned', None))
+                   enable_sync_with_cloned=_json.get('enableSyncWithCloned', None),
+                   src_dataset=_json.get('srcDataset', None))
         inst.is_fetched = is_fetched
         return inst
 
@@ -195,7 +198,8 @@ class Dataset(entities.BaseEntity):
                                                               attr.fields(Dataset).expiration_options,
                                                               attr.fields(Dataset).items_count,
                                                               attr.fields(Dataset).index_driver,
-                                                              attr.fields(Dataset).enable_sync_with_cloned
+                                                              attr.fields(Dataset).enable_sync_with_cloned,
+                                                              attr.fields(Dataset).src_dataset,
                                                               ))
         _json.update({'items': self.items_url})
         _json['readableType'] = self.readable_type
@@ -208,6 +212,8 @@ class Dataset(entities.BaseEntity):
             _json['expirationOptions'] = self.expiration_options.to_json()
         if self.enable_sync_with_cloned is not None:
             _json['enableSyncWithCloned'] = self.enable_sync_with_cloned
+        if self.src_dataset is not None:
+            _json['srcDataset'] = self.src_dataset
         return _json
 
     @property

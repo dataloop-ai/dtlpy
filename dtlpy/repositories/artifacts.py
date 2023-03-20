@@ -4,7 +4,8 @@ import logging
 import shutil
 import os
 
-from .. import entities, miscellaneous, PlatformException, exceptions, services, repositories
+from .. import entities, miscellaneous, PlatformException, exceptions, repositories
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -15,7 +16,7 @@ class Artifacts:
     """
 
     def __init__(self,
-                 client_api: services.ApiClient,
+                 client_api: ApiClient,
                  project: entities.Project = None,
                  dataset: entities.Dataset = None,
                  project_id: str = None,

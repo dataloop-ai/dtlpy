@@ -5,7 +5,8 @@ from enum import Enum
 from typing import List
 import attr
 from .node import PipelineNode, PipelineConnection, TaskNode, CodeNode, FunctionNode, DatasetNode
-from .. import repositories, entities, services
+from .. import repositories, entities
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -184,7 +185,7 @@ class Pipeline(entities.BaseEntity):
 
     # sdk
     _project = attr.ib(repr=False)
-    _client_api = attr.ib(type=services.ApiClient, repr=False)
+    _client_api = attr.ib(type=ApiClient, repr=False)
     _original_settings = attr.ib(repr=False, type=PipelineSettings)
     _repositories = attr.ib(repr=False)
 
@@ -452,7 +453,7 @@ class Pipeline(entities.BaseEntity):
 
             command = pipeline.execute_batch(
                         execution_inputs=dl.FunctionIO(type=dl.PackageInputType.STRING, value='test', name='string'),
-                        filters=dl.Filters(field='dir', values='/test'))
+                        filters=dl.Filters(field='dir', values='/test', context={'datasets': [dataset.id]))
         """
         command = self.pipeline_executions.create_batch(pipeline_id=self.id,
                                                         execution_inputs=execution_inputs,

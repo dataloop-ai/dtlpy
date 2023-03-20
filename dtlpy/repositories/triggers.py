@@ -1,6 +1,7 @@
 import logging
 
-from .. import entities, miscellaneous, exceptions, services, repositories, _api_reference
+from .. import entities, miscellaneous, exceptions, repositories, _api_reference
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -13,7 +14,7 @@ class Triggers:
     """
 
     def __init__(self,
-                 client_api: services.ApiClient,
+                 client_api: ApiClient,
                  project: entities.Project = None,
                  service: entities.Service = None,
                  project_id: str = None,

@@ -1,13 +1,14 @@
 import logging
 
-from .. import entities, services, exceptions, miscellaneous
+from .. import entities, exceptions, miscellaneous
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
 
 class Apps:
 
-    def __init__(self, client_api: services.ApiClient, project: entities.Project = None):
+    def __init__(self, client_api: ApiClient, project: entities.Project = None):
         self._client_api = client_api
         self._project = project
 

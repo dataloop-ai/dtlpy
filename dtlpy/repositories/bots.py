@@ -1,5 +1,6 @@
 import logging
-from .. import entities, miscellaneous, exceptions, services
+from .. import entities, miscellaneous, exceptions
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -11,7 +12,7 @@ class Bots:
     The Bots class allows the user to manage bots and their properties. See our documentation for more information on `bots <https://dataloop.ai/docs/faas-bot>`_.
     """
 
-    def __init__(self, client_api: services.ApiClient, project: entities.Project):
+    def __init__(self, client_api: ApiClient, project: entities.Project):
         self._client_api = client_api
         self._project = project
 

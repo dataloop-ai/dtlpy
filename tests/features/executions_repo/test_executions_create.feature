@@ -63,4 +63,4 @@ Feature: Executions repository create service testing
     When I create an execution with "inputs"
       | sync=True | inputs=Item |
     Then I receive an Execution entity
-    Then Execution was executed and finished
+    Then Execution was executed and finished with status "success"

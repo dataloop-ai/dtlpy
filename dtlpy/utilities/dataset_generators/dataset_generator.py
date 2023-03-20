@@ -35,7 +35,7 @@ class DatasetGenerator:
     def __init__(self,
                  dataset_entity: entities.Dataset,
                  annotation_type: entities.AnnotationType,
-                 item_type: None,
+                 item_type: list = None,
                  filters: entities.Filters = None,
                  data_path=None,
                  overwrite=False,

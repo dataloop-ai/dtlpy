@@ -133,17 +133,17 @@ def step_impl(context, resource_type):
     assert success
 
 
-@behave.then(u'Execution was executed and finished')
-def step_impl(context):
+@behave.then(u'Execution was executed and finished with status "{execution_status}"')
+def step_impl(context, execution_status):
     success = False
     num_try = 60
     interval = 10
     for i in range(num_try):
-        time.sleep(interval)
         execution = context.service.executions.get(execution_id=context.execution.id)
-        if execution.latest_status['status'] == 'success':
+        if execution.latest_status['status'] == execution_status:
             success = True
             break
+        time.sleep(interval)
 
     assert success, "TEST FAILED: Execution status is {}".format(execution.latest_status['status'])
 
@@ -152,3 +152,22 @@ def step_impl(context):
 def step_impl(context, item_path):
     item_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], item_path)
     context.item = context.dataset.items.upload(local_path=item_path)
+
+
+@behave.when(u'I upload item in "{item_path}"')
+def step_impl(context, item_path):
+    item_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], item_path)
+    context.item = context.dataset.items.upload(local_path=item_path)
+
+
+@behave.when(u'I execute pipeline with input type "{input_type}"')
+def step_impl(context, input_type):
+    execution_input = list()
+    if input_type == 'Item':
+        execution_input.append(context.dl.FunctionIO(
+            type='Item',
+            value={'item_id': context.item.id},
+            name='item'))
+
+    context.execution = context.pipeline.execute(
+        execution_input=execution_input)

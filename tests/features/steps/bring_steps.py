@@ -19,6 +19,7 @@ from tests.features.steps.datasets_repo import test_datasets_update
 from tests.features.steps.datasets_repo import test_datasets_readonly
 from tests.features.steps.datasets_repo import test_datasets_download_annotations
 from tests.features.steps.datasets_repo import test_dataset_upload_annotations
+from tests.features.steps.datasets_repo import test_dataset_upload_csv
 from tests.features.steps.datasets_repo import test_datasets_download
 from tests.features.steps.datasets_repo import test_dataset_context
 from tests.features.steps.datasets_repo import tets_dataset_upload_labels
@@ -115,6 +116,8 @@ from tests.features.steps.triggers_repo import test_triggers_item_update
 from tests.features.steps.triggers_repo import test_triggers_annotation_update
 from tests.features.steps.triggers_repo import test_pipeline_triggers_create
 
+from tests.features.steps.service_entity import test_service_debug_mode
+
 from tests.features.steps.services_repo import test_services_deploy
 from tests.features.steps.services_repo import test_services_create
 from tests.features.steps.services_repo import test_services_get
@@ -152,6 +155,7 @@ from tests.features.steps.tasks_repo import test_tasks_qa_task
 from tests.features.steps.tasks_repo import test_tasks_add_and_get_items
 from tests.features.steps.tasks_repo import test_task_context
 from tests.features.steps.tasks_repo import test_task_priority
+from tests.features.steps.tasks_repo import test_task_update
 
 from tests.features.steps.assignments_repo import test_assignments_create
 from tests.features.steps.assignments_repo import test_assignments_get
@@ -160,6 +164,8 @@ from tests.features.steps.assignments_repo import test_assignments_reassign
 from tests.features.steps.assignments_repo import test_assignments_redistribute
 from tests.features.steps.assignments_repo import test_assignments_items_operations
 from tests.features.steps.assignments_repo import test_assignments_context
+
+from tests.features.steps.assignment_entity import test_assignment_update
 
 from tests.features.steps.converter import converter
 
@@ -171,6 +177,8 @@ from tests.features.steps.model_entity import test_model_name
 
 from tests.features.steps.pipeline_entity import pipeline_get, pipeline_delete, pipeline_update, pipeline_flow, pipeline_output_list, pipeline_execute
 from tests.features.steps.pipeline_resume import pipeline_resume
+from tests.features.steps.pipeline_entity import test_pipeline_interface
+from tests.features.steps.pipeline_entity import test_pipeline_execution
 
 from tests.features.steps.features_vectors import test_features_create, test_features_delete
 from tests.features.steps.pipeline_entity import test_pipeline_pulling_task
@@ -203,6 +211,11 @@ from tests.features.steps.annotation_entity import test_annotation_description
 
 from tests.features.steps.annotations_repo import test_note_annotation_with_messages
 
+from tests.features.steps.annotations_repo import test_annotations_format_json
+
+from tests.features.steps.annotations_repo import test_annotations_adding_multiple_frames
+
+from tests.features.steps.annotation_entity import test_segmentation_to_polygon
 
 # Interface steps locations
 from tests.features.steps.annotation_entity import annotation_entity_interface
@@ -215,7 +228,11 @@ from tests.features.steps.annotations_repo import text_annotations_interface
 
 from tests.features.steps.converter import conveters_interface
 
+from tests.features.steps.dataset_entity import dataset_entity_interface
+
 from tests.features.steps.datasets_repo import datasets_interface
+
+from tests.features.steps.filters_entity import filters_interface
 
 from tests.features.steps.item_entity import item_entity_interface
 
@@ -224,9 +241,9 @@ from tests.features.steps.items_repo import items_interface
 from tests.features.steps.projects_repo import projects_interface
 
 from tests.features.steps.annotations_repo import test_annotations_adding_multiple_frames
-
-
+from tests.features.steps.drivers_repo import test_drivers_create
 
 
 
 from tests.features.steps.annotations_repo import test_annotations_format_json
+from tests.features.steps.xray import test_xray

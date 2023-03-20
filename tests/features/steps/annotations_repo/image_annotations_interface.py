@@ -9,8 +9,10 @@ def step_impl(context, annotation_type):
     sleep(4)
     context.item = context.dl.items.get(item_id=context.item.id)
 
-    mask = np.zeros(shape=(context.item.height, context.item.width), dtype=np.uint8)
-    mask[50:50, 150:200] = 1
+    mask = None
+    if annotation_type == "semantic segmentation":
+        mask = np.zeros(shape=(context.item.height, context.item.width), dtype=np.uint8)
+        mask[50:50, 150:200] = 1
 
     annotations_definitions_list = {
         "classification": context.dl.Classification(

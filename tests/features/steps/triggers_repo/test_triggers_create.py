@@ -155,6 +155,11 @@ def step_impl(context, resource_type):
             if context.task.name == "name updated by trigger":
                 triggered = True
                 break
+        elif resource_type == 'assignment':
+            context.assignment = context.project.assignments.get(assignment_id=context.assignment.id)
+            if "name-updated." in context.assignment.name:
+                triggered = True
+                break
         context.dl.logger.debug("Step is running for {:.2f}[s] and now Going to sleep {:.2f}[s]".format((i + 1) * interval,
                                                                                                         interval))
 

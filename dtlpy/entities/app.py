@@ -3,7 +3,8 @@ import traceback
 import logging
 import attr
 
-from .. import entities, services, repositories
+from .. import entities, repositories
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -26,7 +27,7 @@ class App(entities.BaseEntity):
 
     # sdk
     _project = attr.ib(type=entities.Project, repr=False)
-    _client_api = attr.ib(type=services.ApiClient, repr=False)
+    _client_api = attr.ib(type=ApiClient, repr=False)
     _repositories = attr.ib(repr=False)
 
     @_repositories.default
@@ -126,7 +127,7 @@ class App(entities.BaseEntity):
         return _json
 
     @classmethod
-    def from_json(cls, _json, client_api: services.ApiClient, project: entities.Project, is_fetched=True):
+    def from_json(cls, _json, client_api: ApiClient, project: entities.Project, is_fetched=True):
         app = cls(
             id=_json.get('id', None),
             name=_json.get('name', None),

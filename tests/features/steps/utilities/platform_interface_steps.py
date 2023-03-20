@@ -51,6 +51,10 @@ def before_all(context):
         context.to_delete_feature_ids = list()
     if not hasattr(context, 'to_delete_integrations_ids'):
         context.to_delete_integrations_ids = list()
+    if not hasattr(context, 'to_delete_drivers_ids'):
+        context.to_delete_drivers_ids = list()
+    if not hasattr(context, 'nodes'):
+        context.nodes = list()
     if hasattr(context.feature, 'dataloop_feature_dl'):
         context.dl = context.feature.dataloop_feature_dl
     else:

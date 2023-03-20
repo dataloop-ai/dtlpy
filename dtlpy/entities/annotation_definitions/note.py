@@ -2,7 +2,7 @@ import numpy as np
 import time
 
 from . import Box
-from ...services import ApiClient
+from ...services.api_client import client as api_client
 
 
 class Note(Box):
@@ -47,7 +47,6 @@ class Note(Box):
         self.create_time = create_time
         self.creator = creator
         if self.creator is None:
-            api_client = ApiClient()
             self.creator = api_client.info()['user_email']
         self.assignee = assignee
         if self.assignee is None:
@@ -119,7 +118,6 @@ class Message:
         self.body = body
         self.creator = creator
         if self.creator is None:
-            api_client = ApiClient()
             self.creator = api_client.info()['user_email']
 
     def to_json(self):

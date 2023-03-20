@@ -5,7 +5,8 @@ import json
 import jwt
 import os
 
-from .. import entities, exceptions, miscellaneous, services, _api_reference
+from .. import entities, exceptions, miscellaneous, _api_reference
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -21,7 +22,7 @@ class Annotations:
     `Show Video with Annotations <https://dataloop.ai/docs/sdk-show-videos>`_.
     """
 
-    def __init__(self, client_api: services.ApiClient, item=None, dataset=None, dataset_id=None):
+    def __init__(self, client_api: ApiClient, item=None, dataset=None, dataset_id=None):
         self._client_api = client_api
         self._item = item
         self._dataset = dataset

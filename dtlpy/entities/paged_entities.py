@@ -1,11 +1,12 @@
 import logging
 import math
+import tqdm
 import copy
 import sys
 
 import attr
-from .. import services, miscellaneous
-import tqdm
+from .. import miscellaneous
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -16,7 +17,7 @@ class PagedEntities:
     Pages object
     """
     # api
-    _client_api = attr.ib(type=services.ApiClient, repr=False)
+    _client_api = attr.ib(type=ApiClient, repr=False)
 
     # params
     page_offset = attr.ib()

@@ -1,6 +1,7 @@
 import logging
 
-from .. import entities, miscellaneous, exceptions, services, _api_reference
+from .. import entities, miscellaneous, exceptions, _api_reference
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -12,7 +13,7 @@ class Drivers:
     The Drivers class allows users to manage drivers that are used to connect with external storage. Read more about external storage in our `documentation <https://dataloop.ai/docs/storage>`_ and `SDK documentation <https://dataloop.ai/docs/sdk-sync-storage>`_.
     """
 
-    def __init__(self, client_api: services.ApiClient, project: entities.Project = None):
+    def __init__(self, client_api: ApiClient, project: entities.Project = None):
         self._client_api = client_api
         self._project = project
 
@@ -87,7 +88,7 @@ class Drivers:
             driver_class = entities.S3Driver
         elif driver_type == entities.ExternalStorage.GCS:
             driver_class = entities.GcsDriver
-        elif driver_type == entities.ExternalStorage.AZUREBLOB:
+        elif driver_type in [entities.ExternalStorage.AZUREBLOB, entities.ExternalStorage.AZURE_DATALAKE_GEN2]:
             driver_class = entities.AzureBlobDriver
         else:
             driver_class = entities.Driver

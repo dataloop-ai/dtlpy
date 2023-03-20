@@ -1,8 +1,7 @@
 import logging
-import time
-import numpy as np
 
-from .. import exceptions, entities, services, miscellaneous, _api_reference
+from .. import exceptions, entities, miscellaneous, _api_reference
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -13,7 +12,7 @@ class Features:
     """
     URL = '/features/vectors'
 
-    def __init__(self, client_api: services.ApiClient,
+    def __init__(self, client_api: ApiClient,
                  project: entities.Project = None,
                  item: entities.Item = None,
                  annotation: entities.Annotation = None,
@@ -127,7 +126,7 @@ class Features:
                parent_id: str = None,
                org_id: str = None,
                refs: dict = None
-            ):
+               ):
         """
         Create a new Feature vector
 

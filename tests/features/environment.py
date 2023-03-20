@@ -4,7 +4,9 @@ import os
 import json
 import logging
 from filelock import FileLock
-
+from dotenv import load_dotenv
+def before_all(context):
+    load_dotenv('.test.env')
 
 @fixture
 def after_feature(context, feature):
@@ -94,9 +96,16 @@ def after_tag(context, tag):
             use_fixture(integrations_delete, context)
         except Exception:
             logging.exception('Failed to delete integration')
+    elif tag == 'drivers.delete':
+        try:
+            use_fixture(drivers_delete, context)
+        except Exception:
+            logging.exception('Failed to delete driver')
     elif tag == 'frozen_dataset':
         pass
     elif 'testrail-C' in tag:
+        pass
+    elif 'DAT-' in tag or tag == 'wip':
         pass
     else:
         raise ValueError('unknown tag: {}'.format(tag))
@@ -235,10 +244,26 @@ def integrations_delete(context):
     all_deleted = True
     for integration_id in context.to_delete_integrations_ids:
         try:
-            context.dl.integrations.delete(integration_id=integration_id)
+            context.project.integrations.delete(integrations_id=integration_id, sure=True, really=True)
         except context.dl.exceptions.NotFound:
             pass
         except:
             all_deleted = False
             logging.exception('Failed deleting integration: {}'.format(integration_id))
+    assert all_deleted
+
+@fixture
+def drivers_delete(context):
+    if not hasattr(context, 'to_delete_drivers_ids'):
+        return
+
+    all_deleted = True
+    for driver_id in context.to_delete_drivers_ids:
+        try:
+            context.project.drivers.delete(driver_id=driver_id, sure=True, really=True)
+        except context.dl.exceptions.NotFound:
+            pass
+        except:
+            all_deleted = False
+            logging.exception('Failed deleting driver: {}'.format(driver_id))
     assert all_deleted

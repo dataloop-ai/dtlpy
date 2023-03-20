@@ -4,7 +4,7 @@ from jinja2 import Environment, PackageLoader
 from multiprocessing.pool import ThreadPool
 from multiprocessing import Lock
 from .base_package_runner import Progress
-from .. import exceptions, entities, dtlpy_services
+from .. import exceptions, entities
 import xml.etree.ElementTree as Et
 from ..services import Reporter
 from itertools import groupby

@@ -41,18 +41,18 @@ Feature: Pipeline pulling task testing
       | priority           | LOW   |
     Then I expect pipeline error to be "Request failed with status code 400, Failed to create a task"
 
-#  @pipelines.delete
-#  @testrail-C4532851
-#  Scenario: Create pipeline with pulling task - receive the correct task params
-#    When I create pipeline with pulling task with type "annotation" node and dataset node
-#      | key                | value |
-#      | batch_size         | 5     |
-#      | max_batch_workload | 7     |
-#      | priority           | LOW   |
-#    And I get task by pipeline task node
-#    Given There are "10" items
-#    Then I wait "45"
-#    When I get Task items by "name"
-#    Then I receive task items list of "10" items
-#    And I receive a list of "5" items for each assignment
+  @pipelines.delete
+  @testrail-C4532851
+  Scenario: Create pipeline with pulling task - receive the correct task params
+    When I create pipeline with pulling task with type "annotation" node and dataset node
+      | key                | value |
+      | batch_size         | 5     |
+      | max_batch_workload | 7     |
+      | priority           | LOW   |
+    And I get task by pipeline task node
+    Given There are "10" items
+    Then I wait "45"
+    When I get Task items by "name"
+    Then I receive task items list of "10" items
+    And I receive a list of "1" items for each assignment
 

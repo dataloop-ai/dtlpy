@@ -38,10 +38,10 @@ def step_impl(context):
     context.execution.terminate()
 
 
-@behave.then(u'Execution was terminated')
-def step_impl(context):
-    num_tries = 20
-    interval = 10
+@behave.then(u'Execution was terminated with error message "{message}"')
+def step_impl(context, message):
+    num_tries = 60
+    interval = 7
     terminated = False
 
     for i in range(num_tries):
@@ -49,7 +49,7 @@ def step_impl(context):
         execution = context.service.executions.get(execution_id=context.execution.id)
         terminated = execution.to_terminate
         terminated = terminated and execution.latest_status['status'] == 'failed'
-        terminated = terminated and 'InterruptedError' in execution.latest_status['message']
+        terminated = terminated and message in execution.latest_status['message']
         if terminated:
             break
 
@@ -59,8 +59,8 @@ def step_impl(context):
 @behave.then(u'Execution "{on_reset}" on timeout')
 def step_impl(context, on_reset):
     time.sleep(context.service.execution_timeout + context.service.drain_time + 5)
-    num_tries = 50
-    interval = 4
+    num_tries = 60
+    interval = 7
 
     reset = False
     for _ in range(num_tries):

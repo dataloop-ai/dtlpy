@@ -1,9 +1,10 @@
-from .. import entities, repositories, exceptions, miscellaneous, services
+from .. import entities, exceptions
+from ..services.api_client import ApiClient
 
 
 class Nodes(list):
 
-    def __init__(self, client_api: services.ApiClient, pipeline: entities.Pipeline = None, nodes=None):
+    def __init__(self, client_api: ApiClient, pipeline: entities.Pipeline = None, nodes=None):
         if nodes is None:
             nodes = []
         self._client_api = client_api

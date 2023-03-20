@@ -60,7 +60,8 @@ def step_impl(context):
     if os.path.exists(path):
         for f in os.listdir(path):
             if any(x in f for x in ["log", ".json"]):
-                os.remove(f)
+                if os.path.exists(f):
+                    os.remove(f)
 
 
 @then(u'Log file is exist')

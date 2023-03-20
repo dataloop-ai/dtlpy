@@ -1,7 +1,8 @@
 import logging
 import attr
 
-from .. import entities, services, exceptions, repositories
+from .. import entities, exceptions, repositories
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -18,13 +19,13 @@ class Integration(entities.BaseEntity):
     created_at = attr.ib()
     created_by = attr.ib()
     update_at = attr.ib()
-    _client_api = attr.ib(type=services.ApiClient, repr=False)
+    _client_api = attr.ib(type=ApiClient, repr=False)
     _project = attr.ib(default=None, repr=False)
 
     @classmethod
     def from_json(cls,
                   _json: dict,
-                  client_api: services.ApiClient,
+                  client_api: ApiClient,
                   is_fetched=True):
         """
         Build a Integration entity object from a json

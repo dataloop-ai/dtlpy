@@ -403,31 +403,7 @@ def step_impl(context):
     context.pipeline.install()
 
 
-@behave.then(u'I expect that pipeline execution has "{execution_number}" success executions')
-def step_impl(context, execution_number):
-    time.sleep(2)
-    assert context.pipeline.pipeline_executions.list().items_count != 0, "Pipeline not executed found 0 executions"
-    context.pipeline = context.project.pipelines.get(context.pipeline.name)
 
-    num_try = 10
-    interval = 10
-    validate = 0
-    executed = False
-
-    for i in range(num_try):
-        time.sleep(interval)
-        execution_list = context.pipeline.pipeline_executions.list()[0][0].executions
-        execution_count = 0
-        for ex in execution_list.values():
-            execution_count = execution_count + len(ex)
-        if execution_count == int(execution_number):
-            validate += 1
-            if validate == 2:
-                executed = True
-                break
-
-    assert executed, "TEST FAILED: Pipeline has {} executions instead of {}".format(execution_count, execution_number)
-    return executed
 
 
 @behave.when(u'I create a pipeline dataset, task "{type}" and code nodes - repeatable "{flag}"')

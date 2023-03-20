@@ -5,6 +5,7 @@ import traceback
 import enum
 
 from .. import entities, services, repositories
+from ..services.api_client import ApiClient
 
 
 class SlotType(str, enum.Enum):
@@ -145,7 +146,7 @@ class Dpk(entities.DlEntity):
     url: str = entities.DlProperty(location=['url'], _type=str)
 
     # sdk
-    client_api: services.ApiClient
+    client_api: ApiClient
     project: entities.Project
     __repositories = None
 
@@ -265,7 +266,7 @@ class Dpk(entities.DlEntity):
     @classmethod
     def from_json(cls,
                   _json,
-                  client_api: services.ApiClient = None,
+                  client_api: ApiClient = None,
                   project: entities.Project = None,
                   is_fetched=True) -> 'Dpk':
         """

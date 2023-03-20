@@ -8,7 +8,9 @@ import copy
 import tqdm
 import logging
 from urllib.parse import urlencode
+
 from .. import entities, repositories, miscellaneous, exceptions, services, PlatformException, _api_reference
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -20,7 +22,7 @@ class Datasets:
     The Datasets class allows the user to manage datasets. Read more about datasets in our `documentation <https://dataloop.ai/docs/dataset>`_ and `SDK documentation <https://dataloop.ai/docs/sdk-create-dataset>`_.
     """
 
-    def __init__(self, client_api: services.ApiClient, project: entities.Project = None):
+    def __init__(self, client_api: ApiClient, project: entities.Project = None):
         self._client_api = client_api
         self._project = project
 

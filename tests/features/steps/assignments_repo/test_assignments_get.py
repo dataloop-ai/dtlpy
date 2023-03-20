@@ -22,3 +22,9 @@ def step_impl(context):
 @behave.given(u'I save dataset items to context')
 def step_impl(context):
     context.items_in_dataset = context.dataset.items.list().items
+
+
+@behave.when(u'I get assignment from task')
+def step_impl(context):
+    assert hasattr(context, "task"), "TEST FAILED: Please create a task with assignments before this step"
+    context.assignment = context.task.assignments.list()[0]

@@ -4,7 +4,8 @@ import traceback
 import logging
 import attr
 
-from .. import repositories, miscellaneous, services, entities
+from .. import repositories, miscellaneous, entities
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -37,7 +38,7 @@ class Project(entities.BaseEntity):
     feature_constraints = attr.ib()
 
     # api
-    _client_api = attr.ib(type=services.ApiClient, repr=False)
+    _client_api = attr.ib(type=ApiClient, repr=False)
 
     # repositories
     _repositories = attr.ib(repr=False)

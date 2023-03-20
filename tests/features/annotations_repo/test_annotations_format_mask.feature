@@ -17,7 +17,7 @@ Feature: Annotations format mask
              | Parameter          | Value                                       |
              | filepath           | annotations_format_mask1/png_image_item.png |
              | annotation_format  | MASK                                        |
-        And  I call Item.annotations.download() using the given params
+        And   I call Item.annotations.download() using the given params
              | Parameter          | Value                    |
              | filepath           | annotations_format_mask2 |
              | annotation_format  | MASK                     |
@@ -38,7 +38,7 @@ Feature: Annotations format mask
              | Parameter          | Value                                       |
              | filepath           | annotations_format_mask1/mp4_video_item.mp4 |
              | annotation_format  | MASK                                        |
-        And  I call Item.annotations.download() using the given params
+        And   I call Item.annotations.download() using the given params
              | Parameter          | Value                    |
              | filepath           | annotations_format_mask2 |
              | annotation_format  | MASK                     |

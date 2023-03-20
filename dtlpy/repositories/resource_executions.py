@@ -1,6 +1,7 @@
 import logging
 
-from .. import exceptions, entities, miscellaneous, services
+from .. import exceptions, entities, miscellaneous
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -13,7 +14,7 @@ class ResourceExecutions:
     """
 
     def __init__(self,
-                 client_api: services.ApiClient,
+                 client_api: ApiClient,
                  project: entities.Project = None,
                  resource=None):
         self._client_api = client_api

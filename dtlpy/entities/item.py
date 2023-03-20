@@ -7,8 +7,10 @@ import attr
 import copy
 import os
 
-from .. import repositories, entities, services, exceptions
+from .. import repositories, entities, exceptions
 from .annotation import ViewAnnotationOptions, ExportVersion
+from ..services.api_client import ApiClient
+from ..services.api_client import client as client_api
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -53,7 +55,7 @@ class Item(entities.BaseEntity):
     annotations_count = attr.ib()
 
     # api
-    _client_api = attr.ib(type=services.ApiClient, repr=False)
+    _client_api = attr.ib(type=ApiClient, repr=False)
     _platform_dict = attr.ib(repr=False)
 
     # entities
@@ -160,7 +162,7 @@ class Item(entities.BaseEntity):
         # create a new item, and update the current one with the same state
         # this way we can have _client_api, and all the repositories and entities which are not picklable
         self.__dict__.update(entities.Item.from_json(_json=state,
-                                                     client_api=services.ApiClient()).__dict__)
+                                                     client_api=client_api).__dict__)
 
     ############
     # entities #

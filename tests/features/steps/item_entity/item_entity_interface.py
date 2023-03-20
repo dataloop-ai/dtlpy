@@ -1,6 +1,7 @@
 import behave
 import os
 import json
+from time import sleep
 
 
 @behave.given(u'I call Item.download() using the given params')
@@ -20,8 +21,11 @@ def step_impl(context):
 
     annotation_options_list = {
         "JSON": context.dl.VIEW_ANNOTATION_OPTIONS_JSON,
+        "MASK": context.dl.VIEW_ANNOTATION_OPTIONS_MASK,
+        "INSTANCE": context.dl.VIEW_ANNOTATION_OPTIONS_INSTANCE,
+        "ANNOTATION_ON_IMAGE": context.dl.VIEW_ANNOTATION_OPTIONS_ANNOTATION_ON_IMAGE,
         "VTT": context.dl.VIEW_ANNOTATION_OPTIONS_VTT,
-        "MASK": context.dl.VIEW_ANNOTATION_OPTIONS_MASK
+        "OBJECT_ID": context.dl.VIEW_ANNOTATION_OPTIONS_OBJECT_ID
     }
 
     export_versions_list = {
@@ -84,6 +88,10 @@ def step_impl(context):
 
 @behave.when(u'I call Item.annotations.download() using the given params')
 def step_impl(context):
+    # Used to get item height and width from the backend
+    sleep(4)
+    context.item = context.dl.items.get(item_id=context.item.id)
+
     context.filepath = None
     context.annotation_format = None
     context.img_filepath = None
@@ -95,8 +103,11 @@ def step_impl(context):
 
     annotation_format_list = {
         "JSON": context.dl.VIEW_ANNOTATION_OPTIONS_JSON,
+        "MASK": context.dl.VIEW_ANNOTATION_OPTIONS_MASK,
+        "INSTANCE": context.dl.VIEW_ANNOTATION_OPTIONS_INSTANCE,
+        "ANNOTATION_ON_IMAGE": context.dl.VIEW_ANNOTATION_OPTIONS_ANNOTATION_ON_IMAGE,
         "VTT": context.dl.VIEW_ANNOTATION_OPTIONS_VTT,
-        "MASK": context.dl.VIEW_ANNOTATION_OPTIONS_MASK
+        "OBJECT_ID": context.dl.VIEW_ANNOTATION_OPTIONS_OBJECT_ID
     }
 
     for parameter in context.table.rows:

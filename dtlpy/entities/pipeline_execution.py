@@ -3,7 +3,8 @@ import logging
 import traceback
 import attr
 
-from .. import repositories, entities, services
+from .. import repositories, entities
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -63,10 +64,11 @@ class PipelineExecution(entities.BaseEntity):
     updated_at = attr.ib(repr=False)
     pipeline_id = attr.ib()
     max_attempts = attr.ib()
+    creator = attr.ib()
 
     # sdk
     _pipeline = attr.ib(repr=False)
-    _client_api = attr.ib(type=services.ApiClient, repr=False)
+    _client_api = attr.ib(type=ApiClient, repr=False)
     _repositories = attr.ib(repr=False)
 
     @staticmethod
@@ -126,6 +128,7 @@ class PipelineExecution(entities.BaseEntity):
             pipeline_id=_json.get('pipelineId', None),
             status=_json.get('status', None),
             max_attempts=_json.get('maxAttempts', None),
+            creator=_json.get('creator', None),
             nodes=nodes,
             executions=executions,
             pipeline=pipeline,
@@ -150,7 +153,7 @@ class PipelineExecution(entities.BaseEntity):
                                                         attr.fields(PipelineExecution).updated_at,
                                                         attr.fields(PipelineExecution).pipeline_id,
                                                         attr.fields(PipelineExecution).executions,
-                                                        attr.fields(PipelineExecution).max_attempts,
+                                                        attr.fields(PipelineExecution).max_attempts
                                                         ))
         executions = dict()
         for node_id, executions_list in self.executions.items():

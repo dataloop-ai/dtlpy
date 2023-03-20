@@ -12,7 +12,7 @@ Feature: Execution Monitoring
         When I push and deploy package with param "None" in "execution_monitoring/kill_thread"
         And I execute
         And I terminate execution
-        Then Execution was terminated
+        Then Execution was terminated with error message "termination signal"
 
     @services.delete
     @packages.delete
@@ -21,7 +21,7 @@ Feature: Execution Monitoring
         When I push and deploy package with param "None" in "execution_monitoring/run_as_process"
         And I execute
         And I terminate execution
-        Then Execution was terminated
+        Then Execution was terminated with error message "killed"
 
     @services.delete
     @packages.delete

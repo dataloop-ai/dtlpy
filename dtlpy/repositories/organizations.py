@@ -1,7 +1,7 @@
 import logging
-from enum import Enum
 
-from .. import entities, miscellaneous, exceptions, services, _api_reference
+from .. import entities, miscellaneous, exceptions, _api_reference
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -13,7 +13,7 @@ class Organizations:
     Read our `documentation <https://dataloop.ai/docs/org-setup>`_ and `SDK documentation <https://dataloop.ai/docs/sdk-org>`_ to learn more about Organizations in the Dataloop platform.
     """
 
-    def __init__(self, client_api: services.ApiClient):
+    def __init__(self, client_api: ApiClient):
         self._client_api = client_api
 
     def create(self, organization_json: dict) -> entities.Organization:

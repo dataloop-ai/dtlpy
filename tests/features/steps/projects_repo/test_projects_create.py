@@ -21,7 +21,6 @@ def creating_a_project(context, project_name):
     project_name = project_name + str(random.randint(10000, 100000))
     context.project = context.dl.projects.create(project_name=project_name)
     context.to_delete_projects_ids.append(context.project.id)
-    time.sleep(5)  # to sleep because authorization takes time
     context.project_name = project_name
 
 
@@ -61,7 +60,7 @@ def step_impl(context, status_code):
 
 @behave.then(u'"{error}" exception should be raised')
 def step_impl(context, error):
-    assert error in str(type(context.error))
+    assert error in str(type(context.error)), "TEST FAILED: Expected to get {}, Actual got {}".format(error, type(context.error))
 
 
 @behave.then(u'"{error_msg}" in error message')

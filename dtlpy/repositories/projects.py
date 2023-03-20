@@ -2,7 +2,8 @@ import logging
 from urllib.parse import quote
 import jwt
 
-from .. import entities, miscellaneous, exceptions, services, _api_reference
+from .. import entities, miscellaneous, exceptions, _api_reference
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -16,7 +17,7 @@ class Projects:
     For more information on Projects see the `Dataloop documentation <https://dataloop.ai/docs/project#>`_  and `SDK documentation <https://dataloop.ai/docs/sdk-projects>`_.
     """
 
-    def __init__(self, client_api: services.ApiClient, org=None):
+    def __init__(self, client_api: ApiClient, org=None):
         self._client_api = client_api
         self._org = org
 

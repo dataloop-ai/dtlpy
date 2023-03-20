@@ -7,7 +7,8 @@ class Dtlpy:
         AnnotationCollection, Annotation, Item, Codebase, Filters, Execution, Recipe, Ontology, Label, Similarity, \
         ItemLink, UrlLink, PackageModule, PackageFunction, FunctionIO, Modality, Workload, WorkloadUnit
     from .utilities import Converter, BaseServiceRunner, Progress
-    from .services import ApiClient, check_sdk
+    from .services.api_client import ApiClient
+    from .services import check_sdk
 
     def __init__(self, cookie_filepath=None):
         self.client_api = self.ApiClient(cookie_filepath=cookie_filepath)

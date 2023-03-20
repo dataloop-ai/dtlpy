@@ -3,13 +3,15 @@ import traceback
 from collections import namedtuple
 from enum import Enum
 
+from .. import repositories, entities
+from ..services.api_client import ApiClient
 
-from .. import repositories, entities, services
 
 class FeatureDataType(str, Enum):
     """Available types for Feature vectors data type"""
     ANNOTATION_SCORE = 'annotationScore',
     ITEM_SCORE = 'itemScore'
+
 
 @attr.s
 class Feature(entities.BaseEntity):
@@ -32,7 +34,7 @@ class Feature(entities.BaseEntity):
     refs = attr.ib()
 
     # sdk
-    _client_api = attr.ib(type=services.ApiClient, repr=False)
+    _client_api = attr.ib(type=ApiClient, repr=False)
     _repositories = attr.ib(repr=False)
 
     ################
@@ -93,8 +95,8 @@ class Feature(entities.BaseEntity):
             client_api=client_api,
             org_id=_json.get('org', None),
             creator=_json.get('creator', None),
-            refs = _json.get('refs', None),
-            data_type =_json.get('dataType', None)
+            refs=_json.get('refs', None),
+            data_type=_json.get('dataType', None)
         )
         inst.is_fetched = is_fetched
         return inst

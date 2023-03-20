@@ -1,6 +1,7 @@
 import logging
 
-from .. import exceptions, miscellaneous, entities, repositories, services, _api_reference
+from .. import exceptions, miscellaneous, entities, repositories, _api_reference
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -13,7 +14,7 @@ class Assignments:
     """
 
     def __init__(self,
-                 client_api: services.ApiClient,
+                 client_api: ApiClient,
                  project: entities.Project = None,
                  task: entities.Task = None,
                  dataset: entities.Dataset = None,

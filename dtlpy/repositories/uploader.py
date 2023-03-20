@@ -20,7 +20,7 @@ from PIL import Image
 
 from . import upload_element
 
-from .. import PlatformException, entities, repositories, exceptions, dtlpy_services
+from .. import PlatformException, entities, repositories, exceptions
 from ..services import Reporter
 
 logger = logging.getLogger(name='dtlpy')

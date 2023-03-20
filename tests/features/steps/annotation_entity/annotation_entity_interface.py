@@ -14,8 +14,11 @@ def step_impl(context):
 
     annotation_format_list = {
         "JSON": context.dl.VIEW_ANNOTATION_OPTIONS_JSON,
+        "MASK": context.dl.VIEW_ANNOTATION_OPTIONS_MASK,
+        "INSTANCE": context.dl.VIEW_ANNOTATION_OPTIONS_INSTANCE,
+        "ANNOTATION_ON_IMAGE": context.dl.VIEW_ANNOTATION_OPTIONS_ANNOTATION_ON_IMAGE,
         "VTT": context.dl.VIEW_ANNOTATION_OPTIONS_VTT,
-        "MASK": context.dl.VIEW_ANNOTATION_OPTIONS_MASK
+        "OBJECT_ID": context.dl.VIEW_ANNOTATION_OPTIONS_OBJECT_ID
     }
 
     for parameter in context.table.rows:

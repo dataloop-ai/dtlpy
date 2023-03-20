@@ -5,7 +5,9 @@ import io
 import random
 from typing import List
 
-from .. import entities, PlatformException, exceptions, repositories, miscellaneous, services
+from .. import entities, PlatformException, exceptions, repositories, miscellaneous
+from ..services.api_client import ApiClient
+from ..services.api_client import client as client_api
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -18,7 +20,7 @@ class Codebases:
     """
 
     def __init__(self,
-                 client_api: services.ApiClient,
+                 client_api: ApiClient,
                  project: entities.Project = None,
                  dataset: entities.Dataset = None,
                  project_id: str = None):
@@ -35,7 +37,7 @@ class Codebases:
             if self._dataset is not None or self._project is not None:
                 self._items_repository = self.dataset.items
             else:
-                self._items_repository = repositories.Items(client_api=services.ApiClient())
+                self._items_repository = repositories.Items(client_api=client_api)
         assert isinstance(self._items_repository, repositories.Items)
         return self._items_repository
 

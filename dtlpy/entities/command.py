@@ -3,7 +3,8 @@ import traceback
 from enum import Enum
 from collections import namedtuple
 
-from .. import repositories, entities, services
+from .. import repositories, entities
+from ..services.api_client import ApiClient
 
 
 class CommandsStatus(str, Enum):
@@ -36,7 +37,7 @@ class Command(entities.BaseEntity):
     error = attr.ib()
 
     # sdk
-    _client_api = attr.ib(type=services.ApiClient, repr=False)
+    _client_api = attr.ib(type=ApiClient, repr=False)
     _repositories = attr.ib(repr=False)
 
     ################

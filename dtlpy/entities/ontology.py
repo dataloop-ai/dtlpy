@@ -1,13 +1,13 @@
-import os
-import traceback
 from collections import namedtuple
+import traceback
 import logging
 import random
 import uuid
 import attr
+import os
 
-from .. import entities, PlatformException, repositories, services, exceptions
-
+from .. import entities, PlatformException, repositories, exceptions
+from ..services.api_client import ApiClient
 from .label import Label
 
 logger = logging.getLogger(name='dtlpy')
@@ -43,7 +43,7 @@ class Ontology(entities.BaseEntity):
     Ontology object
     """
     # api
-    _client_api = attr.ib(type=services.ApiClient, repr=False)
+    _client_api = attr.ib(type=ApiClient, repr=False)
 
     # params
     id = attr.ib()

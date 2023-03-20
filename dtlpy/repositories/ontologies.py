@@ -1,8 +1,8 @@
 import logging
 import traceback
-import warnings
 
-from .. import entities, miscellaneous, exceptions, services, _api_reference
+from .. import entities, miscellaneous, exceptions, _api_reference
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -14,7 +14,7 @@ class Ontologies:
     The Ontologies class allows users to manage ontologies and their properties. Read more about ontology in our `SDK docs <https://dataloop.ai/docs/sdk-ontology>`_.
     """
 
-    def __init__(self, client_api: services.ApiClient,
+    def __init__(self, client_api: ApiClient,
                  recipe: entities.Recipe = None,
                  project: entities.Project = None,
                  dataset: entities.Dataset = None):

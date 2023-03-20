@@ -2,7 +2,8 @@ from typing import List
 import logging
 import os
 
-from .. import entities, repositories, exceptions, miscellaneous, services
+from .. import entities, repositories, exceptions, miscellaneous
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -13,7 +14,7 @@ class Models:
     """
 
     def __init__(self,
-                 client_api: services.ApiClient,
+                 client_api: ApiClient,
                  package: entities.Package = None,
                  project: entities.Project = None,
                  project_id: str = None):
@@ -482,8 +483,9 @@ class Models:
                                                          path=f"/ml/models/{model_id}/train")
         if not success:
             raise exceptions.PlatformException(response)
-
-        return True
+        return entities.Execution.from_json(_json=response.json(),
+                                            client_api=self._client_api,
+                                            project=self._project)
 
     def predict(self, model, item_ids):
         """

@@ -2,12 +2,13 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.DS_Store
 
 dtlpy.2
-.vscode
 
 # tests assets
 tests/assets/
+behave_test_report.json
 
 # C extensions
 *.so

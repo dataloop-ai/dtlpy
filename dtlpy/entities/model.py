@@ -5,7 +5,8 @@ import logging
 
 import attr
 
-from .. import repositories, entities, services
+from .. import repositories, entities
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -76,7 +77,7 @@ class Model(entities.BaseEntity):
     _project = attr.ib(repr=False)
     _package = attr.ib(repr=False)
     _dataset = attr.ib(repr=False)
-    _client_api = attr.ib(type=services.ApiClient, repr=False)
+    _client_api = attr.ib(type=ApiClient, repr=False)
     _repositories = attr.ib(repr=False)
     _ontology = attr.ib(repr=False, default=None)
 

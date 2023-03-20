@@ -1,6 +1,6 @@
 import behave
 import os
-
+import random
 
 @behave.when(u"I delete entity annotation x")
 def step_impl(context):
@@ -76,6 +76,30 @@ def step_impl(context):
     context.item.annotations.delete(context.annotation)
     assert len(context.item.annotations.list()) == 0
 
+@behave.when(u"I upload random x annotations")
+def step_impl(context):
+    annotation = {
+        "type": "box",
+        "label": "car",
+        "attributes": ["Occlusion2"],
+        "coordinates": [
+            {"x": random.randrange(0, 500), "y": random.randrange(0, 500)},
+            {"x": random.randrange(0, 500), "y": random.randrange(0, 500)},
+        ]
+    }
+    context.dataset = context.project.datasets.get(dataset_id=context.dataset.id)
+    context.annotation_count = random.randrange(1, len(context.dataset.items.list()))
+
+    itemList = context.dataset.items.list().items
+    for i in range(context.annotation_count):
+        context.item = itemList[i]
+        context.item.annotations.upload(annotations=annotation)
+
+@behave.then(u"analytic should say I have x annotations")
+def step_impl(context):
+    context.dataset = context.project.datasets.get(dataset_id=context.dataset.id)
+    assert(context.annotation_count == context.dataset.annotated)
+
 
 @behave.then(u"Item in host have annotation uploaded")
 def step_impl(context):
@@ -83,6 +107,7 @@ def step_impl(context):
     host_annotation = context.item.annotations.list()[0]
     assert host_annotation.label == context.annotation.label
     assert host_annotation.type == context.annotation.type
+
 
 @behave.given(u'I create an annotation')
 def step_impl(context):

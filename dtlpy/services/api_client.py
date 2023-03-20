@@ -1,8 +1,6 @@
 """
 Dataloop platform calls
 """
-import sys
-
 import aiohttp.client_exceptions
 import requests_toolbelt
 import multiprocessing
@@ -18,6 +16,7 @@ import base64
 import time
 import tqdm
 import json
+import sys
 import ssl
 import jwt
 import os
@@ -531,7 +530,7 @@ class ApiClient:
                 message="Input 'headers' must be a dictionary, got: {}".format(type(headers)))
         headers.update(self.default_headers)
         headers.update(self.auth)
-        headers.update({'User-Agent': requests_toolbelt.user_agent('dtlpy', __version__.version)})
+        headers.update({'User-Agent': requests_toolbelt.user_agent('dtlpy', __version__)})
         return headers
 
     @property
@@ -1624,3 +1623,6 @@ class ApiClient:
     def _open_in_web(self, url):
         import webbrowser
         webbrowser.open(url=url, new=2, autoraise=True)
+
+
+client = ApiClient()

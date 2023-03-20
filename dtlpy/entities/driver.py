@@ -2,7 +2,8 @@ import logging
 import attr
 from enum import Enum
 from collections import namedtuple
-from .. import services, entities, repositories
+from .. import entities, repositories
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -13,6 +14,7 @@ class ExternalStorage(str, Enum):
     AZUREBLOB = "azureblob"
     KEY_VALUE = "key_value"
     AWS_STS = 'aws-sts'
+    AZURE_DATALAKE_GEN2 = 'azureDatalakeGen2'
 
 
 @attr.s()
@@ -32,7 +34,7 @@ class Driver(entities.BaseEntity):
     id = attr.ib()
     path = attr.ib()
     # api
-    _client_api = attr.ib(type=services.ApiClient, repr=False)
+    _client_api = attr.ib(type=ApiClient, repr=False)
     _repositories = attr.ib(repr=False)
 
     @_repositories.default

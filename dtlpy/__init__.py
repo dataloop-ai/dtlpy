@@ -13,84 +13,17 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with DTLPY.  If not, see <http://www.gnu.org/licenses/>.
+import warnings
 import logging
 import sys
 import os
 
-from . import services as dtlpy_services
-from .services import DataloopLogger, DtlpyFilter, ApiClient, check_sdk, Reporter, VerboseLoggingLevel, service_defaults
-from .services.api_reference import api_reference as _api_reference
-from .caches.cache import CacheConfig, CacheType
-from .exceptions import PlatformException
-from . import repositories, exceptions, entities, examples
-from .__version__ import version as __version__
-from .entities import (
-    # main entities
-    Project, Dataset, ExpirationOptions, ExportVersion, Trigger, Item, Execution, AnnotationCollection, Annotation,
-    Recipe, IndexDriver, AttributesTypes, AttributesRange, Dpk, App,
-    Ontology, Label, Task, TaskPriority, Assignment, Service, Package, Codebase, Model, PackageModule, PackageFunction,
-    # annotations
-    Box, Cube, Cube3d, Point, Note, Message, Segmentation, Ellipse, Classification, Subtitle, Polyline, Pose, Description,
-    Polygon, Text,
-    # filters
-    Filters, FiltersKnownFields, FiltersResource, FiltersOperations, FiltersMethod, FiltersOrderByDirection,
-    FiltersKnownFields as KnownFields,
-    # triggers
-    TriggerResource, TriggerAction, TriggerExecutionMode, TriggerType,
-    # faas
-    FunctionIO, KubernetesAutuscalerType, KubernetesRabbitmqAutoscaler, KubernetesAutoscaler, KubernetesRuntime,
-    InstanceCatalog, PackageInputType, ServiceType,
-    PackageSlot, SlotPostAction, SlotPostActionType, SlotDisplayScope, SlotDisplayScopeResource, UiBindingPanel,
-    # roberto
-    DatasetSubsetType, LogSample, ArtifactType, Artifact, ItemArtifact, LinkArtifact, LocalArtifact, EntityScopeLevel,
-    #
-    RequirementOperator, PackageRequirement,
-    Command, CommandsStatus,
-    LocalCodebase, GitCodebase, ItemCodebase, FilesystemCodebase, PackageCodebaseType,
-    MemberRole, FeatureEntityType, FeatureDataType, MemberOrgRole,
-    Webhook, HttpMethod,
-    ViewAnnotationOptions, AnnotationStatus, AnnotationType,
-    ItemStatus, ExecutionStatus, ExportMetadata,
-    Similarity, SimilarityTypeEnum, MultiView,
-    ItemLink, UrlLink, LinkTypeEnum,
-    Modality, ModalityTypeEnum, ModalityRefTypeEnum,
-    Workload, WorkloadUnit, ItemAction,
-    PipelineExecution, PipelineExecutionNode, Pipeline, PipelineConnection,
-    PipelineNode, TaskNode, CodeNode, PipelineStats, PipelineSettings,
-    PipelineNodeType, PipelineNameSpace, PipelineResumeOption,
-    FunctionNode, DatasetNode, PipelineConnectionPort, PipelineNodeIO, Organization, OrganizationsPlans, Integration,
-    Driver, S3Driver, GcsDriver, AzureBlobDriver, CacheAction, PodType,
-    ExternalStorage, Role, PlatformEntityType, SettingsValueTypes, SettingsTypes, SettingsSectionNames, SettingScope, \
-    BaseSetting, UserSetting, Setting, ServiceSample, ExecutionSample, PipelineExecutionSample, ResourceExecution
-)
-from .ml import BaseModelAdapter
-from .utilities import Converter, BaseServiceRunner, Progress, Context, AnnotationFormat
-from .repositories import FUNCTION_END_LINE, PackageCatalog
-import warnings
-
-warnings.simplefilter('once', DeprecationWarning)
-
-# check python version
-if sys.version_info.major != 3:
-    if sys.version_info.minor not in [5, 6]:
-        sys.stderr.write(
-            'Error: Your Python version "{}.{}" is NOT supported by Dataloop SDK dtlpy. '
-            "Supported version are 3.5, 3.6)\n".format(
-                sys.version_info.major, sys.version_info.minor
-            )
-        )
-        sys.exit(-1)
-
-if os.name == "nt":
-    # set encoding for windows printing
-    os.environ["PYTHONIOENCODING"] = ":replace"
-
-"""
-Main Platform Interface module for Dataloop
-"""
 ##########
 # Logger #
 ##########
+from .services import DataloopLogger, DtlpyFilter
+from .__version__ import version as __version__
+
 logger = logging.getLogger(name='dtlpy')
 logging.getLogger(name='filelock').setLevel(level=logging.CRITICAL)
 if len(logger.handlers) == 0:
@@ -120,11 +53,82 @@ if len(logger.handlers) == 0:
     logger.addHandler(sh)
     logger.addHandler(fh)
 
+from .services.api_client import client as client_api
+from .services.api_client import VerboseLoggingLevel, ApiClient
+from .services import DataloopLogger, DtlpyFilter, check_sdk, Reporter, service_defaults
+from .services.api_reference import api_reference as _api_reference
+from .caches.cache import CacheConfig, CacheType
+from .exceptions import PlatformException
+from . import repositories, exceptions, entities, examples
+from .entities import (
+    # main entities
+    Project, Dataset, ExpirationOptions, ExportVersion, Trigger, Item, Execution, AnnotationCollection, Annotation,
+    Recipe, IndexDriver, AttributesTypes, AttributesRange, Dpk, App,
+    Ontology, Label, Task, TaskPriority, Assignment, Service, Package, Codebase, Model, PackageModule, PackageFunction,
+    # annotations
+    Box, Cube, Cube3d, Point, Note, Message, Segmentation, Ellipse, Classification, Subtitle, Polyline, Pose,
+    Description,
+    Polygon, Text,
+    # filters
+    Filters, FiltersKnownFields, FiltersResource, FiltersOperations, FiltersMethod, FiltersOrderByDirection,
+    FiltersKnownFields as KnownFields,
+    # triggers
+    TriggerResource, TriggerAction, TriggerExecutionMode, TriggerType,
+    # faas
+    FunctionIO, KubernetesAutuscalerType, KubernetesRabbitmqAutoscaler, KubernetesAutoscaler, KubernetesRuntime,
+    InstanceCatalog, PackageInputType, ServiceType, ServiceModeType,
+    PackageSlot, SlotPostAction, SlotPostActionType, SlotDisplayScope, SlotDisplayScopeResource, UiBindingPanel,
+    # roberto
+    DatasetSubsetType, LogSample, ArtifactType, Artifact, ItemArtifact, LinkArtifact, LocalArtifact, EntityScopeLevel,
+    #
+    RequirementOperator, PackageRequirement,
+    Command, CommandsStatus,
+    LocalCodebase, GitCodebase, ItemCodebase, FilesystemCodebase, PackageCodebaseType,
+    MemberRole, FeatureEntityType, FeatureDataType, MemberOrgRole,
+    Webhook, HttpMethod,
+    ViewAnnotationOptions, AnnotationStatus, AnnotationType,
+    ItemStatus, ExecutionStatus, ExportMetadata,
+    Similarity, SimilarityTypeEnum, MultiView,
+    ItemLink, UrlLink, LinkTypeEnum,
+    Modality, ModalityTypeEnum, ModalityRefTypeEnum,
+    Workload, WorkloadUnit, ItemAction,
+    PipelineExecution, PipelineExecutionNode, Pipeline, PipelineConnection,
+    PipelineNode, TaskNode, CodeNode, PipelineStats, PipelineSettings,
+    PipelineNodeType, PipelineNameSpace, PipelineResumeOption,
+    FunctionNode, DatasetNode, PipelineConnectionPort, PipelineNodeIO, Organization, OrganizationsPlans, Integration,
+    Driver, S3Driver, GcsDriver, AzureBlobDriver, CacheAction, PodType,
+    ExternalStorage, Role, PlatformEntityType, SettingsValueTypes, SettingsTypes, SettingsSectionNames, SettingScope, \
+    BaseSetting, UserSetting, Setting, ServiceSample, ExecutionSample, PipelineExecutionSample, ResourceExecution
+)
+from .ml import BaseModelAdapter
+from .utilities import Converter, BaseServiceRunner, Progress, Context, AnnotationFormat
+from .repositories import FUNCTION_END_LINE, PackageCatalog
+
+warnings.simplefilter('once', DeprecationWarning)
+
+# check python version
+if sys.version_info.major != 3:
+    if sys.version_info.minor not in [5, 6]:
+        sys.stderr.write(
+            'Error: Your Python version "{}.{}" is NOT supported by Dataloop SDK dtlpy. '
+            "Supported version are 3.5, 3.6)\n".format(
+                sys.version_info.major, sys.version_info.minor
+            )
+        )
+        sys.exit(-1)
+
+if os.name == "nt":
+    # set encoding for windows printing
+    os.environ["PYTHONIOENCODING"] = ":replace"
+
+"""
+Main Platform Interface module for Dataloop
+"""
+
 ################
 # Repositories #
 ################
 # Create repositories instances
-client_api = ApiClient()
 projects = repositories.Projects(client_api=client_api)
 datasets = repositories.Datasets(client_api=client_api, project=None)
 items = repositories.Items(client_api=client_api, datasets=datasets)
@@ -472,3 +476,8 @@ ATTRIBUTES_TYPES_FREE_TEXT = AttributesTypes.FREE_TEXT
 TASK_PRIORITY_LOW = TaskPriority.LOW
 TASK_PRIORITY_MEDIUM = TaskPriority.MEDIUM
 TASK_PRIORITY_HIGH = TaskPriority.HIGH
+
+SERVICE_MODE_TYPE_REGULAR = ServiceModeType.REGULAR
+SERVICE_MODE_TYPE_DEBUG = ServiceModeType.DEBUG
+
+

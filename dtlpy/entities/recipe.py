@@ -1,11 +1,12 @@
-import os
-import traceback
-import uuid
 from collections import namedtuple
+import traceback
 import logging
+import uuid
 import attr
+import os
 
-from .. import repositories, entities, services, exceptions
+from .. import repositories, entities, exceptions
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -31,7 +32,7 @@ class Recipe(entities.BaseEntity):
     ui_settings = attr.ib()
 
     # platform
-    _client_api = attr.ib(type=services.ApiClient, repr=False)
+    _client_api = attr.ib(type=ApiClient, repr=False)
     # entities
     _dataset = attr.ib(repr=False, default=None)
     _project = attr.ib(repr=False, default=None)

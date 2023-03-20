@@ -3,7 +3,8 @@ Integrations Repository
 """
 
 import logging
-from .. import entities, exceptions, services, miscellaneous, _api_reference
+from .. import entities, exceptions, miscellaneous, _api_reference
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -18,7 +19,7 @@ class Integrations:
 
     """
 
-    def __init__(self, client_api: services.ApiClient, org: entities.Organization = None,
+    def __init__(self, client_api: ApiClient, org: entities.Organization = None,
                  project: entities.Project = None):
         self._client_api = client_api
         self._org = org

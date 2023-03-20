@@ -1,5 +1,6 @@
 import logging
-from .. import entities, repositories, exceptions, miscellaneous, services, _api_reference
+from .. import entities, repositories, exceptions, miscellaneous, _api_reference
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -18,7 +19,7 @@ class Pipelines:
     The Pipelines class allows users to manage pipelines and their properties. See our documentation for more information on `pipelines <https://dataloop.ai/docs/pipelines-overview>`_.
     """
 
-    def __init__(self, client_api: services.ApiClient, project: entities.Project = None):
+    def __init__(self, client_api: ApiClient, project: entities.Project = None):
         self._client_api = client_api
         self._project = project
 

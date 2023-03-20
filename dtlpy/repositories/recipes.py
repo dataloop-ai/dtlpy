@@ -1,7 +1,8 @@
 import logging
 import traceback
 
-from .. import entities, miscellaneous, repositories, exceptions, services, _api_reference
+from .. import entities, miscellaneous, repositories, exceptions, _api_reference
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -14,7 +15,7 @@ class Recipes:
     """
 
     def __init__(self,
-                 client_api: services.ApiClient,
+                 client_api: ApiClient,
                  dataset: entities.Dataset = None,
                  project: entities.Project = None,
                  project_id: str = None):

@@ -5,7 +5,8 @@ import logging
 from typing import List
 from urllib.parse import urlsplit
 import attr
-from .. import services, repositories, entities
+from .. import repositories, entities
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -24,6 +25,24 @@ class ServiceType(str, Enum):
     """
     SYSTEM = 'system'
     REGULAR = 'regular'
+
+
+class ServiceModeType(str, Enum):
+    """ The type of the service mode.
+
+    .. list-table::
+       :widths: 15 150
+       :header-rows: 1
+
+       * - State
+         - Description
+       * - REGULAR
+         - Service regular mode type
+       * - DEBUG
+         - Service debug mode type
+    """
+    REGULAR = 'regular'
+    DEBUG = 'debug'
 
 
 class OnResetAction(str, Enum):
@@ -200,10 +219,11 @@ class Service(entities.BaseEntity):
     project_id = attr.ib()
     is_global = attr.ib()
     max_attempts = attr.ib()
+    mode = attr.ib(repr=False)
 
     # SDK
     _package = attr.ib(repr=False)
-    _client_api = attr.ib(type=services.ApiClient, repr=False)
+    _client_api = attr.ib(type=ApiClient, repr=False)
     _revisions = attr.ib(default=None, repr=False)
     # repositories
     _project = attr.ib(default=None, repr=False)
@@ -218,7 +238,7 @@ class Service(entities.BaseEntity):
         return self.updated_at
 
     @staticmethod
-    def _protected_from_json(_json: dict, client_api: services.ApiClient, package=None, project=None, is_fetched=True):
+    def _protected_from_json(_json: dict, client_api: ApiClient, package=None, project=None, is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
 
@@ -242,7 +262,7 @@ class Service(entities.BaseEntity):
         return status, service
 
     @classmethod
-    def from_json(cls, _json: dict, client_api: services.ApiClient = None, package=None, project=None, is_fetched=True):
+    def from_json(cls, _json: dict, client_api: ApiClient=None, package=None, project=None, is_fetched=True):
         """
         Build a service entity object from a json
 
@@ -300,7 +320,8 @@ class Service(entities.BaseEntity):
             package=package,
             project=project,
             secrets=_json.get("secrets", None),
-            type=_json.get("type", None)
+            type=_json.get("type", None),
+            mode=_json.get('mode', dict()),
         )
         inst.is_fetched = is_fetched
         return inst
@@ -419,6 +440,7 @@ class Service(entities.BaseEntity):
                 attr.fields(Service).updated_at,
                 attr.fields(Service).secrets,
                 attr.fields(Service)._type,
+                attr.fields(Service).mode,
             )
         )
 
@@ -455,6 +477,9 @@ class Service(entities.BaseEntity):
 
         if self._type is not None:
             _json['type'] = self._type
+
+        if self.mode:
+            _json['mode'] = self.mode
 
         return _json
 
@@ -633,7 +658,7 @@ class Service(entities.BaseEntity):
 
             command = service.execute_batch(
                         execution_inputs=dl.FunctionIO(type=dl.PackageInputType.STRING, value='test', name='string'),
-                        filters=dl.Filters(field='dir', values='/test'),
+                        filters=dl.Filters(field='dir', values='/test', context={"datasets": [dataset.id]),
                         function_name='run')
         """
         execution = self.executions.create_batch(service_id=self.id,

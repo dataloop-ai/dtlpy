@@ -2,7 +2,8 @@ import attr
 import logging
 import traceback
 
-from .. import repositories, entities, services
+from .. import repositories, entities
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -30,7 +31,7 @@ class ResourceExecution(entities.BaseEntity):
     project_id = attr.ib()
 
     # sdk
-    _client_api = attr.ib(type=services.ApiClient, repr=False)
+    _client_api = attr.ib(type=ApiClient, repr=False)
     _project = attr.ib()
     resource = attr.ib()
 
@@ -135,4 +136,3 @@ class ResourceExecution(entities.BaseEntity):
                                                                                    fetch=None)
         assert isinstance(self._project, entities.Project)
         return self._project
-

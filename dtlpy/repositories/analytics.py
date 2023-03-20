@@ -1,7 +1,7 @@
 import logging
 import pandas as pd
-
-from dtlpy import entities, exceptions, services
+from dtlpy import entities, exceptions
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -11,7 +11,7 @@ class Analytics:
     Time series Repository
     """
 
-    def __init__(self, client_api: services.ApiClient, project: entities.Project = None):
+    def __init__(self, client_api: ApiClient, project: entities.Project = None):
         self._client_api = client_api
         self._project = project
 

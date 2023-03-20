@@ -1,6 +1,7 @@
 import behave
 import logging
 import json
+from operator import attrgetter
 
 
 @behave.when(u"I get execution by id")
@@ -33,3 +34,24 @@ def step_impl(context):
                                                                       json.dumps(context.execution.to_json(),
                                                                                  indent=2)))
         assert False
+
+
+@behave.when(u'I get service execution by "{resource}"')
+def step_impl(context, resource):
+    resource_att = resource.split(".")
+    filters = context.dl.Filters()
+    filters.add(field="resource.type", values=resource_att[0])
+    filters.add(field="resource.{}".format(resource_att[1]), values="{}".format(attrgetter(resource)(context)))
+    filters.resource = context.dl.FiltersResource.EXECUTION
+    context.execution = context.service.executions.list(filters=filters).items[0]
+
+
+@behave.then(u"I validate execution params")
+def step_impl(context):
+    for row in context.table:
+        value = row['value']
+        execution_val = attrgetter(row['key'])(context.execution)
+
+        if row['value'] == "current_user":
+            value = context.dl.info()['user_email']
+        assert execution_val == value, "TEST FAILED: Expected to get {}, Actual got {}".format(value, execution_val)

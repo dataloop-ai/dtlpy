@@ -4,7 +4,8 @@ import attr
 import traceback
 from collections import namedtuple
 
-from .. import repositories, entities, services
+from .. import repositories, entities
+from ..services.api_client import ApiClient
 
 
 class FeatureEntityType(str, Enum):
@@ -35,7 +36,7 @@ class FeatureSet(entities.BaseEntity):
     data_type = attr.ib()
 
     # sdk
-    _client_api = attr.ib(type=services.ApiClient, repr=False)
+    _client_api = attr.ib(type=ApiClient, repr=False)
     _repositories = attr.ib(repr=False)
 
     ################
@@ -104,7 +105,7 @@ class FeatureSet(entities.BaseEntity):
             tags=_json.get('tags', None),
             client_api=client_api,
             org_id=_json.get('org', None),
-            data_type =_json.get('dataType', None)
+            data_type=_json.get('dataType', None)
         )
         inst.is_fetched = is_fetched
         return inst

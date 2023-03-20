@@ -32,7 +32,7 @@ def step_impl(context):
     context.annotation_x_get = context.item.get_annotation(context.annotation_x.id)
 
 
-@behave.when(u'I uploade to item entity annotations from file: "{file_path}"')
+@behave.when(u'I upload to item entity annotations from file: "{file_path}"')
 def step_impl(context, file_path):
     file_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], file_path)
 

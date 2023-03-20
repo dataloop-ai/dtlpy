@@ -1,11 +1,12 @@
-import logging
-import sys
-import time
 import numpy as np
-import tqdm
 import warnings
+import logging
+import time
+import tqdm
+import sys
 
-from .. import exceptions, entities, services, miscellaneous
+from .. import exceptions, entities, miscellaneous
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -17,7 +18,7 @@ class Commands:
     Service Commands repository
     """
 
-    def __init__(self, client_api: services.ApiClient):
+    def __init__(self, client_api: ApiClient):
         self._client_api = client_api
 
     ############

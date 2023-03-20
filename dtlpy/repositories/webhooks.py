@@ -1,6 +1,7 @@
 import logging
 from urllib.parse import urlencode
-from .. import exceptions, entities, miscellaneous, services
+from .. import exceptions, entities, miscellaneous
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -11,7 +12,7 @@ class Webhooks:
     """
 
     def __init__(self,
-                 client_api: services.ApiClient,
+                 client_api: ApiClient,
                  project: entities.Project = None):
         self._project = project
         self._client_api = client_api

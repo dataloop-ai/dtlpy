@@ -15,4 +15,4 @@ Feature: Service repository Execute items input
         When I create a service
             |service_name=services-items|package=services-items|revision=None|config=None|runtime=None|
         Then I call service.execute() on items in dataset
-        And Execution was executed and finished
+        And Execution was executed and finished with status "success"

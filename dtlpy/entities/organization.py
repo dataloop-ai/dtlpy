@@ -4,7 +4,8 @@ import traceback
 import logging
 import attr
 
-from .. import repositories, services, entities
+from .. import repositories, entities
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -51,7 +52,7 @@ class Organization(entities.BaseEntity):
     created_by = attr.ib(repr=False)
 
     # api
-    _client_api = attr.ib(type=services.ApiClient, repr=False)
+    _client_api = attr.ib(type=ApiClient, repr=False)
 
     # repositories
     _repositories = attr.ib(repr=False)

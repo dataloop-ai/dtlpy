@@ -315,21 +315,23 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             else:
                 raise ValueError('Unknown inputType: {} (from model_entity.input_type'.format(input_type))
             batch_collections = self.predict(batch, **kwargs)
-            for collection in batch_collections:
-                # convert annotation collection to a list aof annotations jsons
-                if isinstance(collection, entities.AnnotationCollection):
-                    annotations.append(collection.to_json()['annotations'])
-                else:
-                    annotations.append(collection)
             if upload_annotations is True:
                 self.logger.debug(
                     "Uploading items' annotation for model {!r}.".format(self.model_entity.name))
                 try:
-                    annotations = list(pool.map(partial(self._upload_model_annotations),
-                                                batch_items, batch_collections))
+                    batch_collections = list(pool.map(partial(self._upload_model_annotations),
+                                                      batch_items, batch_collections))
                 except Exception as err:
                     self.logger.exception("Failed to upload annotations items.")
 
+            for collection in batch_collections:
+                # function needs to return `List[List[dl.Annotation]]`
+                # convert annotation collection to a list of dl.Annotation for each batch
+                if isinstance(collection, entities.AnnotationCollection):
+                    annotations.extend([annotation for annotation in collection.annotations])
+                else:
+                    logger.warning(f'RETURN TYPE MAY BE INVALID: {type(collection)}')
+                    annotations.extend(collection)
         pool.shutdown()
         return items, annotations
 

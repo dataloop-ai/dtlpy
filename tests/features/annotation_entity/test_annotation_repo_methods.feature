@@ -53,3 +53,9 @@ Feature: Annotation Entity repo services
         When I upload video annotation entity to item
         Then Item in host has video annotation entity created
 
+    @DAT-44231
+    Scenario: Upload items batch with random annotations
+        Given Labels in file: "assets_split/annotation_repo/labels.json" are uploaded to test Dataset
+        When I upload item batch from "upload_batch/to_upload"
+        And I upload random x annotations
+        Then analytic should say I have x annotations

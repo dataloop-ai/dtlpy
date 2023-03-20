@@ -3,7 +3,8 @@ import logging
 import time
 import numpy as np
 
-from .. import exceptions, entities, repositories, miscellaneous, services, _api_reference
+from .. import exceptions, entities, repositories, miscellaneous, _api_reference
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -16,7 +17,7 @@ class Executions:
     """
 
     def __init__(self,
-                 client_api: services.ApiClient,
+                 client_api: ApiClient,
                  service: entities.Service = None,
                  project: entities.Project = None):
         self._client_api = client_api

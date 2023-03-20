@@ -10,7 +10,8 @@ import os
 
 from .package_module import PackageModule
 from .package_slot import PackageSlot
-from .. import repositories, entities, exceptions, services
+from .. import repositories, entities, exceptions
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -79,7 +80,7 @@ class Package(entities.DlEntity):
                                                                                             _kls='PackageRequirement')
 
     # sdk
-    _client_api: services.ApiClient
+    _client_api: ApiClient
     _revisions = None
     __repositories = None
     _project = None

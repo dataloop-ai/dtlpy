@@ -13,6 +13,7 @@ from shutil import copyfile
 from concurrent.futures import ThreadPoolExecutor
 
 from .. import entities, repositories, exceptions, utilities, miscellaneous, assets, services, _api_reference
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -58,7 +59,7 @@ class Packages:
     The Packages class allows users to manage packages (code used for running in Dataloop's FaaS) and their properties. Read more about `Packages <https://dataloop.ai/docs/faas-package>`_.
     """
 
-    def __init__(self, client_api: services.ApiClient, project: entities.Project = None):
+    def __init__(self, client_api: ApiClient, project: entities.Project = None):
         self._client_api = client_api
         self._project = project
         self.package_io = PackageIO()
@@ -393,19 +394,21 @@ class Packages:
         :return: a list of dl.PackageRequirement
         :rtype: list
         """
-        try:
-            import pkg_resources
-        except (ImportError, ModuleNotFoundError):
-            logger.warning(
-                'We tried to convert you requirements file into PackageRequirements so your service will run with all the required packages. \n'
-                'We cannot pkg_resources is not installed \n '
-                'Please install setuptools package or add requirements manual by using dl.PackageRequirement'
-            )
-            return []
         requirements_list = []
+        if not os.path.exists(filepath):
+            raise exceptions.PlatformException('400', 'requirements file {} does not exist'.format(filepath))
         with open(filepath) as requirements_txt:
-            for requirement in pkg_resources.parse_requirements(requirements_txt):
-                requirement = str(requirement)
+            for requirement in requirements_txt:
+                requirement = requirement.strip()
+                if '\n' in requirement:
+                    requirement.replace('\n', '')
+                if requirement.startswith('#'):
+                    continue
+                elif ' #' in requirement:
+                    requirement = requirement[:requirement.find(' #')]
+                if 'install -r' in requirement:
+                    requirements_list.extend(self.build_requirements(requirement[requirement.find('-r ') + 3:]))
+                    continue
                 requirement_spit = requirement.split(',')
                 for req in requirement_spit:
                     name_version = re.split('<=|>=|==|<|>', req)
@@ -1697,7 +1700,7 @@ class LocalServiceRunner:
     """
 
     def __init__(self,
-                 client_api: services.ApiClient,
+                 client_api: ApiClient,
                  packages,
                  cwd=None,
                  multithreading=False,
