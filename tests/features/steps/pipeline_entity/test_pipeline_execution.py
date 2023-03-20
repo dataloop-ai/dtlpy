@@ -1,0 +1,58 @@
+import behave
+from operator import attrgetter
+import time
+
+
+@behave.then(u'I validate pipeline execution params include node executions "{node_exec_flag}"')
+def step_impl(context, node_exec_flag):
+    executions_val = list()
+    for row in context.table:
+        test_value = row['value']
+        executions_val.append(attrgetter(row['key'])(context.execution))
+
+        if eval(node_exec_flag):
+            time.sleep(5)
+            context.execution = context.pipeline.pipeline_executions.get(context.execution.id)
+            assert context.execution.executions, "TEST FAILED: Executions empty.{}".format(context.execution.executions)
+            for execution in context.execution.executions.values():
+                assert isinstance(execution, list), "TEST FAILED: execution Should be a list"
+                executions_val.append(attrgetter(row['key'])(execution[0]))
+
+        if row['value'] == "current_user":
+            test_value = context.dl.info()['user_email']
+        for val in executions_val:
+            assert val == test_value, "TEST FAILED: Expected to get {}, Actual got {}".format(test_value, val)
+
+
+@behave.then(u'I expect that pipeline execution has "{execution_number}" success executions')
+def step_impl(context, execution_number):
+    time.sleep(2)
+    assert context.pipeline.pipeline_executions.list().items_count != 0, "Pipeline not executed found 0 executions"
+    context.pipeline = context.project.pipelines.get(context.pipeline.name)
+
+    num_try = 10
+    interval = 10
+    validate = 0
+    executed = False
+
+    for i in range(num_try):
+        time.sleep(interval)
+        execution_list = context.pipeline.pipeline_executions.list()[0][0].executions
+        execution_count = 0
+        for ex in execution_list.values():
+            execution_count = execution_count + len(ex)
+        if execution_count == int(execution_number):
+            validate += 1
+            if validate == 2:
+                executed = True
+                break
+
+    assert executed, "TEST FAILED: Pipeline has {} executions instead of {}".format(execution_count, execution_number)
+    return executed
+
+
+@behave.when(u'I get pipeline cycle execution in index "{num}"')
+def step_impl(context, num):
+    filters = context.dl.Filters()
+    filters.resource = context.dl.FiltersResource.PIPELINE_EXECUTION
+    context.execution = context.pipeline.pipeline_executions.list(filters=filters).items[eval(num)]
