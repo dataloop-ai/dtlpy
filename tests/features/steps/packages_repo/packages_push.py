@@ -43,16 +43,29 @@ def step_impl(context, package_number):
             if param[1] != 'None':
                 package_type = param[1]
 
-    if modules == 'no_input':
-        func = context.dl.PackageFunction()
+    modules_name = context.dl.entities.package_defaults.DEFAULT_PACKAGE_MODULE_NAME if package_type == 'faas' else 'model-adapter'
+    if package_type == 'ml':
+        func = [context.dl.PackageFunction(name='train_model',
+                                           inputs=[context.dl.FunctionIO(name='model',
+                                                                         type=context.dl.PackageInputType.MODEL),
+                                                   context.dl.FunctionIO(name='cleanup',
+                                                                         type=context.dl.PackageInputType.BOOLEAN)
+                                                   ],
+                                           outputs=[context.dl.FunctionIO(name='model',
+                                                                          type=context.dl.PackageInputType.MODEL)])]
         modules = context.dl.PackageModule(functions=func,
-                                           name=context.dl.entities.package_defaults.DEFAULT_PACKAGE_MODULE_NAME)
+                                           name=modules_name,
+                                           init_inputs=[context.dl.FunctionIO(name='model_entity',
+                                                                              type=context.dl.PackageInputType.MODEL)])
+    if modules == 'no_input':
+        func = [context.dl.PackageFunction()]
+        modules = context.dl.PackageModule(functions=func,
+                                           name=modules_name)
 
     elif inputs or outputs:
         func = [context.dl.PackageFunction(inputs=inputs, outputs=outputs)]
         modules = context.dl.PackageModule(functions=func,
-                                           name=context.dl.entities.package_defaults.DEFAULT_PACKAGE_MODULE_NAME)
-
+                                           name=modules_name)
     codebase = None
     if codebase_id is not None:
         codebase = context.dl.entities.ItemCodebase(item_id=codebase_id)

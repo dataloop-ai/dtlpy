@@ -7,7 +7,7 @@ Feature: Models repository create testing
   @testrail-C4523165
   Scenario: Create a model with a legal name
     When I push "first" package
-      |codebase_id=None|package_name=test-package|src_path=packages_create|inputs=None|outputs=None|type=ml|
+      | codebase_id=None | package_name=test-package | src_path=package_module | inputs=None | outputs=None | type=ml |
     And I create a model with a random name
     Then Model object with the same name should be exist
     And Model object with the same name should be exist in host
@@ -15,7 +15,7 @@ Feature: Models repository create testing
   @testrail-C4523165
   Scenario: Create a model with an existing model name
     When I push "first" package
-      |codebase_id=None|package_name=test-package|src_path=packages_create|inputs=None|outputs=None|type=ml|
+      | codebase_id=None | package_name=test-package | src_path=package_module | inputs=None | outputs=None | type=ml |
     And There are no models
     And I create a model with a random name
     When I create a model with the same name
@@ -27,7 +27,29 @@ Feature: Models repository create testing
   @testrail-C4523165
   Scenario: Rename model entity
     When I push "first" package
-      |codebase_id=None|package_name=test-package|src_path=packages_create|inputs=None|outputs=None|type=ml|
+      | codebase_id=None | package_name=test-package | src_path=package_module | inputs=None | outputs=None | type=ml |
     And I create a model with a random name
     When I rename model to "some_other_name"
     Then model name is "some_other_name"
+
+  @DAT-44734
+  Scenario: Create a two models with the same bot
+    When I push "first" package
+      |codebase_id=None|package_name=test-package|src_path=package_module|inputs=None|outputs=None|type=ml|modules=no_input|
+    And I create a model with a random name
+    And I update model status to "trained"
+    And I deploy the model
+    And I create a model with a random name
+    And I train the model
+    Then The project have only one bot
+
+  @DAT-44695
+  Scenario: delete clone model artifact
+    When I push "first" package
+      | codebase_id=None | package_name=test-package-clone | src_path=package_module | inputs=None | outputs=None | type=ml |
+    And I create a model with a random name
+    Then Model object with the same name should be exist
+    When I upload an artifact "0000000162.jpg" to the model
+    And I clone the model
+    And I delete the clone model
+    Then artifact is exist in the host

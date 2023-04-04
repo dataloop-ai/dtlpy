@@ -157,10 +157,10 @@ class Drivers:
         **Prerequisites**: You must be in the role of an *owner* or *developer*.
 
         :param str name: the driver name
-        :param str driver_type: ExternalStorage.S3, ExternalStorage.GCS, ExternalStorage.AZUREBLOB
+        :param ExternalStorage driver_type: dl.ExternalStorage (Enum). For all options run: list(dl.ExsternalStorage)
         :param str integration_id: the integration id
         :param str bucket_name: the external bucket name
-        :param str integration_type: ExternalStorage.S3, ExternalStorage.GCS, ExternalStorage.AZUREBLOB, ExternalStorage.AWS_STS
+        :param ExternalStorage integration_type: dl.ExternalStorage (Enum). For all options run: list(dl.ExsternalStorage)
         :param str project_id: project id
         :param bool allow_external_delete: true to allow deleting files from external storage when files are deleted in your Dataloop storage
         :param str region: relevant only for s3 - the bucket region

@@ -32,8 +32,8 @@ Feature: Executions repository execution creator testing
     When I upload item in "0000000162.jpg"
     And I get service execution by "item.id"
     Then I validate execution params
-      | key     | value             |
-      | creator | piper@dataloop.ai |
+      | key     | value |
+      | creator | piper |
 
   @pipelines.delete
   @testrail-C4533878
@@ -71,5 +71,5 @@ Feature: Executions repository execution creator testing
     Then I wait "5"
     When I get pipeline cycle execution in index "0"
     Then I validate pipeline execution params include node executions "True"
-      | key     | value             |
-      | creator | piper@dataloop.ai |
+      | key     | value |
+      | creator | piper |

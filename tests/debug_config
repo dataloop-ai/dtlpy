@@ -1,0 +1,4 @@
+module name: behave
+parameters: file.feature --stop
+env vars: ALLOW_RUN_TESTS_LOCALLY_WITH_USER=true;AVOID_TESTRAIL=true;PYTHONUNBUFFERED=1
+working directory: /dtlpy

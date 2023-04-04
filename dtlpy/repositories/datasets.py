@@ -687,6 +687,9 @@ class Datasets:
                         export_version):
         # this is to convert the downloaded json files to any other annotation type
         try:
+            if entities.ViewAnnotationOptions.ANNOTATION_ON_IMAGE in annotation_options:
+                if img_filepath is None:
+                    img_filepath = item.download()
             downloader._download_img_annotations(item=item,
                                                  img_filepath=img_filepath,
                                                  local_path=local_path,
@@ -815,7 +818,7 @@ class Datasets:
                                         filter_output_annotations=filter_output_annotations,
                                         export_version=export_version
                                         )
-        if annotation_options is not None:
+        if annotation_options:
             pages = dataset.items.list(filters=filters)
             if not isinstance(annotation_options, list):
                 annotation_options = [annotation_options]

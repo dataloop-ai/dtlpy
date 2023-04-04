@@ -59,3 +59,12 @@ Feature: Annotation Entity repo services
         When I upload item batch from "upload_batch/to_upload"
         And I upload random x annotations
         Then analytic should say I have x annotations
+
+    @DAT-45327
+    Scenario: same frames - Video
+        Given Classes in file: "video_classes.json" are uploaded to test Dataset
+        And Item in path "sample_video.mp4" is uploaded to "Dataset"
+        When I create video annotation by frames
+        And I add same frames to video annotation
+        Then Item in host has video annotation entity created
+        And annotation do not have snapshots

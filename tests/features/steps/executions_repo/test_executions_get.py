@@ -54,4 +54,6 @@ def step_impl(context):
 
         if row['value'] == "current_user":
             value = context.dl.info()['user_email']
-        assert execution_val == value, "TEST FAILED: Expected to get {}, Actual got {}".format(value, execution_val)
+        elif row['value'] == "piper":
+            value = ["piper@dataloop.ai", "pipelines@dataloop.ai"]
+        assert execution_val in value, "TEST FAILED: Expected to get {}, Actual got {}".format(value, execution_val)

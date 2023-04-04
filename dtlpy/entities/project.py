@@ -33,6 +33,7 @@ class Project(entities.BaseEntity):
     role = attr.ib(repr=False)
     account = attr.ib(repr=False)
     is_blocked = attr.ib(repr=False)
+    archived = attr.ib(repr=False)
 
     # name change
     feature_constraints = attr.ib()
@@ -275,6 +276,7 @@ class Project(entities.BaseEntity):
                    role=_json.get('role', None),
                    org=_json.get('org', None),
                    id=_json.get('id', None),
+                   archived=_json.get('archived', None),
                    client_api=client_api)
         inst.is_fetched = is_fetched
         return inst

@@ -154,6 +154,15 @@ class GitUtils:
         if not os.path.isdir(path):
             os.makedirs(path)
         try:
+            username = kwargs.get('username')
+            password = kwargs.get('password')
+            if username is not None and password is not None:
+                if git_url.startswith('https://'):
+                    git_url = git_url.replace('https://', 'https://{}:{}@'.format(username, password))
+                elif git_url.startswith('http://'):
+                    git_url = git_url.replace('http://', 'http://{}:{}@'.format(username, password))
+                else:
+                    git_url = 'https://{}:{}@{}'.format(username, password, git_url)
             tag = kwargs.get('tag')
             branch = kwargs.get('branch')
             if tag is not None:

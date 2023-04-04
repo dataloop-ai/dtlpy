@@ -23,6 +23,30 @@ def step_impl(context):
     context.model_count += 1
 
 
+@behave.when(u'I update model status to "{model_status}"')
+def step_impl(context, model_status):
+    context.model.status = model_status
+    context.model.update()
+
+
+@behave.when(u'I deploy the model')
+def step_impl(context):
+    context.model.deploy()
+
+
+@behave.when(u'I train the model')
+def step_impl(context):
+    context.model.train()
+
+
+@behave.then(u'The project have only one bot')
+def step_impl(context):
+    context.project.open_in_web()
+    bots = context.project.bots.list()
+    print(bots)
+    assert len(bots) == 1, 'more than one bot was created'
+
+
 @behave.then(u'Model object with the same name should be exist')
 def step_impl(context):
     assert isinstance(context.model, context.dl.entities.Model)
@@ -48,4 +72,29 @@ def step_impl(context):
 @behave.then(u'No model was created')
 def step_impl(context):
     pages = context.package.models.list()
-    assert pages.items_count == context.model_count, 'model count doesnt match. {} from server, {} from test'.format(pages.items_count, context.model_count)
+    assert pages.items_count == context.model_count, 'model count doesnt match. {} from server, {} from test'.format(
+        pages.items_count, context.model_count)
+
+@behave.when(u'I upload an artifact "{artifact_path}" to the model')
+def step_impl(context, artifact_path):
+    artifact_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], artifact_path)
+    context.model.artifacts.upload(filepath=artifact_path)
+
+
+@behave.when(u'I clone the model')
+def step_impl(context):
+    context.model_clone = context.model.clone(model_name='clone_{}'.format(context.model.name))
+
+
+@behave.when(u'I delete the clone model')
+def step_impl(context):
+    context.model_clone.delete()
+
+
+@behave.then(u'artifact is exist in the host')
+def step_impl(context):
+    try:
+        artifact = context.dl.items.get(item_id=context.model.model_artifacts[0].id)
+    except context.dl.exceptions.NotFound:
+        artifact = None
+    assert artifact is not None, 'artifact not found'

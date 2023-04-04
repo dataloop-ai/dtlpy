@@ -1,3 +1,5 @@
+import time
+
 import behave
 import numpy as np
 from time import sleep
@@ -98,8 +100,17 @@ def step_impl(context, annotation_type):
 @behave.given(u'I upload "{annotation_type}" annotation with description "{annotation_description}" to the image item')
 def step_impl(context, annotation_type, annotation_description):
     # Used to get item height and width from the backend
-    sleep(4)
-    context.item = context.dl.items.get(item_id=context.item.id)
+    num_try = 12
+    interval = 5
+    success = False
+
+    for i in range(num_try):
+        time.sleep(interval)
+        context.item = context.dl.items.get(item_id=context.item.id)
+        if context.item.height:
+            success = True
+            break
+    assert success, "TEST FAILED: Failed to get item height. {}".format(context.item.metadata)
 
     mask = np.zeros(shape=(context.item.height, context.item.width), dtype=np.uint8)
     mask[50:50, 150:200] = 1

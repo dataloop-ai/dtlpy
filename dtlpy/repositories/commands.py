@@ -88,10 +88,6 @@ class Commands:
         :param float backoff_factor: A backoff factor to apply between attempts after the second try
         :return: Command  object
         """
-        if step is not None:
-            warnings.warn(
-                message='step param will be Deprecation from version 1.58.0 use backoff_factor',
-                category=DeprecationWarning)
         elapsed = 0
         start = time.time()
         if timeout is None or timeout <= 0:

@@ -124,3 +124,13 @@ Feature: Annotaions repository download service testing
       When I get the annotation by id
       Then I download the annotation to "downloaded_annotations/annotation/annotation.mp4" with "mask" type
       And annotation file exist in the path "downloaded_annotations/annotation"
+
+
+  @testrail-C4523033
+  Scenario: Download dataset annotations with img_mask
+    Given Labels in file: "assets_split/annotations_download/labels.json" are uploaded to test Dataset
+    And Item in path "assets_split/annotations_download/0000000162.jpg" is uploaded to "Dataset"
+    And There are no files in folder "downloaded_annotations"
+    And Item is annotated with annotations in file: "assets_split/annotations_download/0162_annotations.json"
+    When I download dataset annotations with "img_mask" to "downloaded_annotations/img_mask.png"
+    Then dataset "img_mask" folder has been downloaded to "downloaded_annotations"

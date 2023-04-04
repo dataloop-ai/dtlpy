@@ -39,7 +39,7 @@ def Codebase(**kwargs):
 
 
 class GitCodebase(entities.DlEntity):
-    type = entities.DlProperty(location=['type'], _type=str)
+    type = entities.DlProperty(location=['type'], _type=str, default='git')
     git_url = entities.DlProperty(location=['gitUrl'], _type=str)
     git_tag = entities.DlProperty(location=['gitTag'], _type=str)
     credentials = entities.DlProperty(location=['credentials'], _type=dict)

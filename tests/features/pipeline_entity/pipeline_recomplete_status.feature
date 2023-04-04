@@ -15,7 +15,7 @@ Feature: Pipeline entity method testing recomplete items
     When I create a package and service to pipeline
     And I create a pipeline dataset, task "annotation" and code nodes - repeatable "True"
     And I upload item in "0000000162.jpg" to pipe dataset
-    Then I wait "7"
+    Then I wait for item to enter task
     And I update item status to "complete" with task id
     Then I wait "2"
     And I remove specific "complete" from item with task id

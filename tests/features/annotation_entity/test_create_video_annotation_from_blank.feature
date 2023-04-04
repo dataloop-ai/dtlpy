@@ -34,3 +34,11 @@ Feature: Annotation Entity create video annotation from blank
         And I get annotation using dl
         Then I validate annotation have frames
 
+    @testrail-C4523045
+    Scenario: Video - change attrs for frames
+        Given Classes in file: "video_classes.json" are uploaded to test Dataset
+        And Item in path "sample_video.mp4" is uploaded to "Dataset"
+        When I add class annotation to item using add annotation method
+        And I set frame "3" annotation attributes
+        And I upload annotation created
+        Then I validity "3" has the updated attributes

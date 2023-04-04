@@ -113,14 +113,6 @@ class PipelineExecution(entities.BaseEntity):
 
         nodes = [PipelineExecutionNode.from_json(_json=node) for node in _json.get('nodes', list())]
 
-        executions = _json.get('executions', dict())
-        for node_id, executions_list in executions.items():
-            if len(executions_list) > 0 and isinstance(executions_list[0], dict):
-                executions[node_id] = [entities.Execution.from_json(_json=execution,
-                                                                    client_api=client_api
-                                                                    )
-                                       for execution in executions_list]
-
         inst = cls(
             id=_json.get('id', None),
             created_at=_json.get('createdAt', None),
@@ -130,10 +122,11 @@ class PipelineExecution(entities.BaseEntity):
             max_attempts=_json.get('maxAttempts', None),
             creator=_json.get('creator', None),
             nodes=nodes,
-            executions=executions,
+            executions=_json.get('executions', dict()),
             pipeline=pipeline,
             client_api=client_api,
         )
+
         inst.is_fetched = is_fetched
         return inst
 

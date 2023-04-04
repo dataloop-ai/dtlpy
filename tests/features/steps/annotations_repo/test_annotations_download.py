@@ -109,12 +109,13 @@ def step_impl(context, file_type, folder_path):
 @behave.then(u'I download the annotation to "{item_path}" with "{annotation_type}" type')
 def step_impl(context, item_path, annotation_type):
     item_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], item_path)
-    context.annotation_filepath = context.annotation_x_get.download(filepath=item_path, annotation_format=annotation_type)
+    context.annotation_filepath = context.annotation_x_get.download(filepath=item_path,
+                                                                    annotation_format=annotation_type)
 
 
 @behave.then(u'annotation file exist in the path "{annotation_filepath}"')
 def step_impl(context, annotation_filepath):
-    files = os.listdir(os.path.join(os.environ['DATALOOP_TEST_ASSETS'],annotation_filepath))
+    files = os.listdir(os.path.join(os.environ['DATALOOP_TEST_ASSETS'], annotation_filepath))
     assert os.path.basename(context.annotation_filepath) in files
 
 
@@ -148,3 +149,22 @@ def step_impl(context, file_type, item_path):
 
     items = os.listdir(items)
     assert file in items
+
+
+@behave.when(u'I download dataset annotations with "{ann_type}" to "{path}"')
+def step_impl(context, ann_type, path):
+    path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], path)
+    context.dataset.download_annotations(
+        local_path=path,
+        annotation_options=ann_type,
+    )
+
+
+@behave.then(u'dataset "{folder_name}" folder has been downloaded to "{folder_path}"')
+def step_impl(context, folder_name, folder_path):
+    folder_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], folder_path)
+    items = os.listdir(folder_path)
+    assert folder_name in items
+    count_files = os.listdir(os.path.join(folder_path, folder_name))
+    assert len(count_files) == 1
+

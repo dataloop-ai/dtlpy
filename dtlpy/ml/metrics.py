@@ -41,6 +41,8 @@ class Results:
             'n_annotations_unmatched_set_two': unmatched_set_two,
             'n_annotations_unmatched_total': unmatched_set_one + unmatched_set_two,
             'n_annotations_matched_total': matched_set_one,
+            'precision': matched_set_one / (matched_set_one + unmatched_set_two),
+            'recall': matched_set_one / (matched_set_one + unmatched_set_one)
         }
 
 

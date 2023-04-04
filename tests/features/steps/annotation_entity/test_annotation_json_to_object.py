@@ -295,8 +295,10 @@ def step_impl(context, start_time):
 
 @behave.then(u"I validate snapshot has the correct start frame")
 def step_impl(context):
-    assert context.annotation_get.metadata['system']['snapshots_'][0]['frame'], "TEST FAILED: Missing frame in snapshots_ \n{}".format(context.annotation_get.metadata['system'])
-    assert context.annotation_get.metadata['system']['snapshots_'][0]['frame'] > context.start_frame, "TEST FAILED: Wrong start frame"
+    assert context.annotation_get.metadata['system']['snapshots_'][0][
+        'frame'], "TEST FAILED: Missing frame in snapshots_ \n{}".format(context.annotation_get.metadata['system'])
+    assert context.annotation_get.metadata['system']['snapshots_'][0][
+               'frame'] > context.start_frame, "TEST FAILED: Wrong start frame"
 
 
 @behave.when(u'I update annotation start time "{start_time}" end time "{end_time}"')
@@ -313,7 +315,42 @@ def step_impl(context, start_time, end_time):
 
 @behave.then(u"I validate audio has the correct start and end time")
 def step_impl(context):
-    assert context.annotation_get.metadata['system']['startTime'] == context.start_time, "TEST FAILED: failed to update startTime from {} to {}".format(
+    assert context.annotation_get.metadata['system'][
+               'startTime'] == context.start_time, "TEST FAILED: failed to update startTime from {} to {}".format(
         context.annotation_get.metadata['system']['startTime'], context.start_time)
-    assert context.annotation_get.metadata['system']['endTime'] == context.end_time, "TEST FAILED: failed to update endTime from {} to {}".format(context.annotation_get.metadata['system']['endTime'],
-                                                                                                                                                  context.end_time)
+    assert context.annotation_get.metadata['system'][
+               'endTime'] == context.end_time, "TEST FAILED: failed to update endTime from {} to {}".format(
+        context.annotation_get.metadata['system']['endTime'],
+        context.end_time)
+
+
+@behave.when(u"I add class annotation to item using add annotation method")
+def step_impl(context):
+    labels = context.dataset.labels
+    context.label = r.choice(labels).tag
+    context.annotation_definition = context.dl.Classification(
+        label=context.label,
+        attributes=["attr1", "attr2"],
+    )
+    context.annotation = context.dl.Annotation.new(
+        annotation_definition=context.annotation_definition, item=context.item, end_time=1
+    )
+
+
+@behave.when(u'I set frame "{frame}" annotation attributes')
+def step_impl(context, frame):
+    context.new_attributes = ["attr3", "attr4"]
+    context.old_attributes = context.annotation_definition.attributes
+    annotation_definition = context.dl.Classification(
+        label=context.label,
+        attributes=context.new_attributes,
+    )
+    context.annotation.add_frame(annotation_definition=annotation_definition, frame_num=int(frame))
+
+
+@behave.then(u'I validity "{frames}" has the updated attributes')
+def step_impl(context, frames):
+    context.annotation_get = context.item.annotations.list()[0]
+    assert context.annotation_get.attributes == context.old_attributes, "TEST FAILED: attributes not updated"
+    assert context.annotation_get.frames[
+               int(frames)].attributes == context.new_attributes, "TEST FAILED: attributes not updated"

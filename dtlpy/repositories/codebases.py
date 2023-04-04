@@ -411,6 +411,32 @@ class Codebases:
             raise ValueError('Not implemented: "_unpack_single" for codebase type: {!r}'.format(codebase.type))
         return artifact_filepath
 
+    def _get_single(self, codebase: entities.GitCodebase, name: str):
+        value = None
+        integration_id = codebase.credentials.get(name, {}).get('id', None)
+        key = codebase.credentials.get(name, {}).get('key', None)
+
+        if integration_id is not None:
+            try:
+                key = self.project.integrations.get(integrations_id=integration_id).name
+            except Exception:
+                pass
+            value = os.environ.get(key, None)
+
+        return value
+
+    def _get_credential(self, codebase: entities.GitCodebase):
+        username = password = None
+
+        if codebase.credentials:
+            try:
+                username = self._get_single(codebase=codebase, name='username')
+                password = self._get_single(codebase=codebase, name='password')
+            except Exception:
+                logger.exception('Failed to get credentials from codebase')
+
+        return username, password
+
     def clone_git(self,
                   codebase: entities.Codebase,
                   local_path: str):
@@ -432,9 +458,12 @@ class Codebases:
         """
         if not isinstance(codebase, entities.GitCodebase):
             raise RuntimeError('only support Git Codebase')
+        username, password = self._get_credential(codebase=codebase)
         response = self.git_utils.git_clone(path=local_path,
                                             git_url=codebase.git_url,
-                                            tag=codebase.git_tag)
+                                            tag=codebase.git_tag,
+                                            username=username,
+                                            password=password)
         if response:
             logger.info('Source code was cloned from {}(Git) to: {}'.format(codebase.git_url, local_path))
         else:

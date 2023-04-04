@@ -177,7 +177,8 @@ def step_impl(context):
     assert updated_trigger_json.get('spec') == original_trigger_json.get('spec')
 
 
-@behave.when(u'I add trigger to the node and check installed with param keep_triggers_active equal to "{keep_triggers_active}"')
+@behave.when(
+    u'I add trigger to the node and check installed with param keep_triggers_active equal to "{keep_triggers_active}"')
 def step_impl(context, keep_triggers_active: str):
     keep_triggers_active = eval(keep_triggers_active)
     context.pipeline.pause(keep_triggers_active=keep_triggers_active)
@@ -403,9 +404,6 @@ def step_impl(context):
     context.pipeline.install()
 
 
-
-
-
 @behave.when(u'I create a pipeline dataset, task "{type}" and code nodes - repeatable "{flag}"')
 def step_impl(context, type, flag):
     flag = eval(flag)
@@ -477,3 +475,106 @@ def step_impl(context):
     context.pipeline.nodes.add(node=task_node)
     context.pipeline.update()
     context.to_delete_pipelines_ids.append(context.pipeline.id)
+
+
+@behave.given(u'a pipeline with same item enters task twice')
+def step_impl(context):
+    t = time.localtime()
+    current_time = time.strftime("%H-%M-%S", t)
+    context.task_name = 'My Task-completed' + current_time
+
+    context.task_node = dl.TaskNode(
+        name=context.task_name,
+        project_id=context.project.id,
+        dataset_id=context.dataset.id,
+        recipe_id=context.recipe.id,
+        recipe_title=context.recipe.title,
+        task_owner=context.dl.info()['user_email'],
+        workload=[dl.WorkloadUnit(assignee_id=context.dl.info()['user_email'], load=100)],
+        position=(3,5),
+        task_type='annotation',
+        priority=dl.entities.TaskPriority.LOW
+    )
+
+    context.dataset_node_1 = dl.DatasetNode(
+        name=context.dataset.name,
+        project_id=context.project.id,
+        dataset_id=context.dataset.id,
+        position=(1, 5)
+    )
+
+    context.dataset_node_2 = dl.DatasetNode(
+        name=context.dataset.name,
+        project_id=context.project.id,
+        dataset_id=context.dataset.id,
+        position=(2, 3)
+    )
+
+    context.dataset_node_3 = dl.DatasetNode(
+        name=context.dataset.name,
+        project_id=context.project.id,
+        dataset_id=context.dataset.id,
+        position=(2, 7)
+    )
+
+    context.pipeline_name = 'pipeline-{}'.format(current_time)
+    context.pipeline = context.project.pipelines.create(name='pipeline-sdk-test')
+    context.dataset_node_1 = context.pipeline.nodes.add(context.dataset_node_1)
+    context.dataset_node_1.connect(node=context.dataset_node_2, source_port=context.dataset_node_1.outputs[0],
+                                   target_port=context.dataset_node_2.inputs[0])
+    context.dataset_node_1.connect(node=context.dataset_node_3, source_port=context.dataset_node_1.outputs[0],
+                                   target_port=context.dataset_node_3.inputs[0])
+    context.dataset_node_2.connect(node=context.task_node, source_port=context.dataset_node_2.outputs[0],
+                                   target_port=context.task_node.inputs[0])
+    context.dataset_node_3.connect(node=context.task_node, source_port=context.dataset_node_3.outputs[0],
+                                   target_port=context.task_node.inputs[0])
+    context.pipeline.update()
+    context.pipeline.install()
+    context.task = context.project.tasks.list()[0]
+    context.pipeline = context.dl.pipelines.get(pipeline_id=context.pipeline.id)
+    is_installed = context.pipeline.status == 'Installed'
+    assert is_installed, "Pipeline was not installed"
+
+
+@behave.when(u'I execute pipeline on item')
+def step_impl(context):
+    context.pipeline: dl.Pipeline
+    context.cycle = context.pipeline.execute(execution_input={'item': context.item.id})
+
+
+@behave.when(u'I wait for item to enter task')
+def step_impl(context):
+    time.sleep(2)
+
+    num_try = 10
+    interval = 10
+    entered = False
+
+    for i in range(num_try):
+        time.sleep(interval)
+        context.item = context.dl.items.get(item_id=context.item.id)
+        refs = context.item.metadata.get('system', {}).get('refs', [])
+        if len(refs) > 0:
+            entered = True
+            break
+
+    assert entered, "TEST FAILED: Item was not move to task"
+
+
+@behave.then(u'Cycle should be completed')
+def step_impl(context):
+    time.sleep(2)
+
+    num_try = 10
+    interval = 10
+    completed = False
+
+    for i in range(num_try):
+        time.sleep(interval)
+        pipeline: dl.Pipeline = context.pipeline
+        context.cycle: dl.PipelineExecution = pipeline.pipeline_executions.list().items[0]
+        if context.cycle.status == 'success':
+            completed = True
+            break
+
+    assert completed, "TEST FAILED: cycle was not completed"

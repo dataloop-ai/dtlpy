@@ -38,6 +38,9 @@ def measure_annotations(
         compare_types=None):
     """
     Compares list (or collections) of annotations
+    This will also return the precision and recall of the two sets, given that the first that is a GT and the second set
+    is the detection (this affects the denominator of the calculation).
+
 
     :param annotations_set_one: dl.AnnotationCollection entity with a list of annotations to compare
     :param annotations_set_two: dl.AnnotationCollection entity with a list of annotations to compare
@@ -57,6 +60,9 @@ def measure_annotations(
                          entities.AnnotationType.SEGMENTATION]
     final_results = dict()
     all_scores = list()
+    true_positives = 0
+    false_positives = 0
+    false_negatives = 0
 
     # for local annotations - set random id if None
     for annotation in annotations_set_one:
@@ -105,7 +111,13 @@ def measure_annotations(
         all_scores.extend(matches.to_df()['annotation_score'])
         final_results[compare_type] = metrics.Results(matches=matches,
                                                       annotation_type=compare_type)
+        true_positives += final_results[compare_type].summary()['n_annotations_matched_total']
+        false_positives += final_results[compare_type].summary()['n_annotations_unmatched_set_two']
+        false_negatives += final_results[compare_type].summary()['n_annotations_unmatched_set_one']
+
     final_results['total_mean_score'] = mean_or_nan(all_scores)
+    final_results['precision'] = true_positives / (true_positives + false_positives)
+    final_results['recall'] = true_positives / (true_positives + false_negatives)
     return final_results
 
 

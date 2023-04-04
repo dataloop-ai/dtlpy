@@ -54,5 +54,5 @@ Feature: Pipeline pulling task testing
     Then I wait "45"
     When I get Task items by "name"
     Then I receive task items list of "10" items
-    And I receive a list of "1" items for each assignment
+    And I receive a list of "5" items for each assignment
 

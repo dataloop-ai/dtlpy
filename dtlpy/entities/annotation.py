@@ -1216,6 +1216,13 @@ class Annotation(entities.BaseEntity):
                                     annotation=self)
 
         self.frames[frame_num] = frame
+        if not self.frames[frame_num].fixed and self.start_frame < frame_num:
+            frame_last = self.frames[frame_num - 1].to_snapshot()
+            frame_current = self.frames[frame_num].to_snapshot()
+            frame_last.pop('frame')
+            frame_current.pop('frame')
+            if frame_last == frame_current:
+                self.frames[frame_num]._interpolation = True
         self.end_frame = max(self.last_frame, frame_num)
         self.end_time = self.end_frame / self.fps
 
@@ -1460,58 +1467,36 @@ class Annotation(entities.BaseEntity):
         # if has frames #
         #################
         if is_video:
-            if annotation.type in ['class', 'subtitle', 'pose']:
-                if end_frame is None:
-                    end_frame = start_frame
-                # for class type annotation create frames
-                # make copies of the head annotations for all frames in it
-                for frame_num in range(start_frame, end_frame + 1):
-                    snapshot = {
-                        'frame': frame_num,
-                        'attributes': first_frame_attributes,
-                        'coordinates': first_frame_coordinates,
-                        'fixed': True,
-                        'label': _json['label'],
-                        'type': annotation.type,
-                        'namedAttributes': named_attributes
-                    }
-                    frame = FrameAnnotation.from_snapshot(
-                        _json=snapshot,
-                        annotation=annotation,
-                        fps=fps
-                    )
-                    annotation.frames[frame.frame_num] = frame
-            else:
-                # set first frame
-                snapshot = {
-                    'attributes': first_frame_attributes,
-                    'coordinates': first_frame_coordinates,
-                    'fixed': True,
-                    'objectVisible': True,
-                    'frame': first_frame_number,
-                    'label': _json['label'],
-                    'type': annotation.type,
-                    'namedAttributes': named_attributes
-                }
+            # set first frame
+            snapshot = {
+                'attributes': first_frame_attributes,
+                'coordinates': first_frame_coordinates,
+                'fixed': True,
+                'objectVisible': True,
+                'frame': first_frame_number,
+                'label': _json['label'],
+                'type': annotation.type,
+                'namedAttributes': named_attributes
+            }
 
-                # add first frame
+            # add first frame
+            frame = FrameAnnotation.from_snapshot(
+                _json=snapshot,
+                annotation=annotation,
+                fps=fps
+            )
+            annotation.frames[frame.frame_num] = frame
+            annotation.annotation_definition = frame.annotation_definition
+
+            # put snapshots if there are any
+            for snapshot in _json['metadata']['system'].get('snapshots_', []):
                 frame = FrameAnnotation.from_snapshot(
                     _json=snapshot,
                     annotation=annotation,
                     fps=fps
                 )
+
                 annotation.frames[frame.frame_num] = frame
-                annotation.annotation_definition = frame.annotation_definition
-
-                # put snapshots if there are any
-                for snapshot in _json['metadata']['system'].get('snapshots_', []):
-                    frame = FrameAnnotation.from_snapshot(
-                        _json=snapshot,
-                        annotation=annotation,
-                        fps=fps
-                    )
-
-                    annotation.frames[frame.frame_num] = frame
 
             annotation.annotation_definition = annotation.frames[min(frames.actual_keys())].annotation_definition
             if annotation.annotation_definition:
@@ -1626,7 +1611,7 @@ class Annotation(entities.BaseEntity):
                 _json['metadata']['system']['endFrame'] = self.end_frame
 
             # add snapshots only if classification
-            if self.type not in ['class', 'subtitle']:
+            if self.type not in ['subtitle']:
                 _json['metadata']['system']['snapshots_'] = snapshots
 
         return _json

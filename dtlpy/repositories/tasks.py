@@ -866,7 +866,10 @@ class Tasks:
                                                  client_api=self._client_api)
             if not wait:
                 return command
-            command = command.wait(timeout=0)
+            backoff_factor = 0.1
+            if command.type == 'BulkAddToTaskSetting':
+                backoff_factor = 8
+            command = command.wait(timeout=0, backoff_factor=backoff_factor)
             if task is None:
                 task = self.get(task_id=task_id)
             if 'addToTaskPayload' not in command.spec:
