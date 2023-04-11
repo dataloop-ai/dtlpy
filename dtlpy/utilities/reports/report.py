@@ -5,7 +5,6 @@ import dtlpy as dl
 import tempfile
 import io
 import requests
-from figures import *
 
 
 class Report:
