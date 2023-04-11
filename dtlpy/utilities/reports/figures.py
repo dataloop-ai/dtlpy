@@ -13,6 +13,7 @@ class FigOptions(BaseModel):
     y_title: Optional[str]
     colors: Optional[list]
     direction: Optional[str]
+    filters: Optional[list]
 
     def to_dict(self):
         return {
@@ -22,6 +23,7 @@ class FigOptions(BaseModel):
             "yTitle": self.y_title,
             "colors": self.colors,
             "direction": self.direction,
+            "filters": self.filters,
         }
 
 
