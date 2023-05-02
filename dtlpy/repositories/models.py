@@ -1,3 +1,5 @@
+import json
+
 from typing import List
 import logging
 import os
@@ -192,6 +194,24 @@ class Models:
         paged.get_page()
         return paged
 
+    def _set_model_filter(self,
+                          metadata: dict,
+                          train_filter: entities.Filters = None,
+                          validation_filter: entities.Filters = None, ):
+        if metadata is None:
+            metadata = {}
+        if 'system' not in metadata:
+            metadata['system'] = {}
+        if 'subsets' not in metadata['system']:
+            metadata['system']['subsets'] = {}
+        if train_filter is not None:
+            metadata['system']['subsets']['train'] = train_filter.prepare() if isinstance(train_filter,
+                                                                                          entities.Filters) else train_filter
+        if validation_filter is not None:
+            metadata['system']['subsets']['validation'] = validation_filter.prepare() if isinstance(validation_filter,
+                                                                                                    entities.Filters) else validation_filter
+        return metadata
+
     def create(
             self,
             model_name: str,
@@ -208,7 +228,9 @@ class Models:
             scope: entities.EntityScopeLevel = entities.EntityScopeLevel.PROJECT,
             version: str = '1.0.0',
             input_type=None,
-            output_type=None
+            output_type=None,
+            train_filter: entities.Filters = None,
+            validation_filter: entities.Filters = None,
     ) -> entities.Model:
         """
         Create a Model entity
@@ -228,7 +250,16 @@ class Models:
         :param str version: version of the model
         :param str input_type: the file type the model expect as input (image, video, txt, etc)
         :param str output_type: dl.AnnotationType - the type of annotations the model produces (class, box segment, text, etc)
+        :param dtlpy.entities.filters.Filters train_filter: Filters entity or a dictionary to define the items' scope in the specified dataset_id for the model train
+        :param dtlpy.entities.filters.Filters validation_filter: Filters entity or a dictionary to define the items' scope in the specified dataset_id for the model validation
         :return: Model Entity
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.models.create(model_name='model_name', dataset_id='dataset_id', labels=['label1', 'label2'], train_filter={filter: {$and: [{dir: "/10K short videos"}]},page: 0,pageSize: 1000,resource: "items"}})
+
         """
 
         if ontology_id is not None:
@@ -294,6 +325,11 @@ class Models:
         if status is not None:
             payload['status'] = status
 
+        if train_filter or validation_filter:
+            metadata = self._set_model_filter(metadata={}, train_filter=train_filter,
+                                              validation_filter=validation_filter)
+            payload['metadata'] = metadata
+
         # request
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/ml/models',
@@ -330,6 +366,8 @@ class Models:
               labels: list = None,
               description: str = None,
               tags: list = None,
+              train_filter: entities.Filters = None,
+              validation_filter: entities.Filters = None,
               ) -> entities.Model:
         """
         Clones and creates a new model out of existing one
@@ -344,11 +382,14 @@ class Models:
         :param list labels:  `list` of `str` - label of the model
         :param str description: `str` description of the new model
         :param list tags:  `list` of `str` - label of the model
+        :param dtlpy.entities.filters.Filters train_filter: Filters entity or a dictionary to define the items' scope in the specified dataset_id for the model train
+        :param dtlpy.entities.filters.Filters validation_filter: Filters entity or a dictionary to define the items' scope in the specified dataset_id for the model validation
         :return: dl.Model which is a clone version of the existing model
         """
         from_json = {"name": model_name,
                      "packageId": from_model.package_id,
-                     "configuration": from_model.configuration}
+                     "configuration": from_model.configuration,
+                     "metadata": from_model.metadata}
         if project_id is not None:
             from_json['projectId'] = project_id
         if dataset is not None:
@@ -370,6 +411,12 @@ class Models:
             from_json['scope'] = scope
         if status is not None:
             from_json['status'] = status
+
+        metadata = self._set_model_filter(metadata=from_model.metadata,
+                                          train_filter=train_filter,
+                                          validation_filter=validation_filter)
+        if metadata['system']:
+            from_json['metadata'] = metadata
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/ml/models/{}/clone'.format(from_model.id),
                                                          json_req=from_json)
@@ -529,11 +576,22 @@ class Models:
 
         return True
 
-    def add_log_samples(self, samples, model_id, dataset_id) -> bool:
+
+class Metrics:
+    def __init__(self, client_api, model=None, model_id=None):
+        self._client_api = client_api
+        self._model_id = model_id
+        self._model = model
+
+    @property
+    def model(self):
+        return self._model
+
+    def create(self, samples, dataset_id) -> bool:
         """
         Add Samples for model analytics and metrics
 
-        :param samples: list of dl.LogSample - must contain: model_id, figure, legend, x, y
+        :param samples: list of dl.PlotSample - must contain: model_id, figure, legend, x, y
         :param model_id: model id to save samples on
         :param dataset_id:
         :return: bool: True if success
@@ -544,7 +602,7 @@ class Models:
         payload = list()
         for sample in samples:
             _json = sample.to_json()
-            _json['modelId'] = model_id
+            _json['modelId'] = self.model.id
             _json['datasetId'] = dataset_id
             payload.append(_json)
         # request
@@ -558,3 +616,57 @@ class Models:
 
         # return entity
         return True
+
+    def _list(self, filters: entities.Filters):
+        # request
+        success, response = self._client_api.gen_request(req_type='POST',
+                                                         path='/ml/metrics/query',
+                                                         json_req=filters.prepare())
+        if not success:
+            raise exceptions.PlatformException(response)
+        return response.json()
+
+    def _build_entities_from_response(self, response_items) -> miscellaneous.List[entities.Model]:
+        jobs = [None for _ in range(len(response_items))]
+        pool = self._client_api.thread_pools(pool_name='entity.create')
+
+        # return triggers list
+        for i_service, sample in enumerate(response_items):
+            jobs[i_service] = pool.submit(entities.PlotSample,
+                                          **{'x': sample.get('data', dict()).get('x', None),
+                                             'y': sample.get('data', dict()).get('y', None),
+                                             'legend': sample.get('legend', ''),
+                                             'figure': sample.get('figure', '')})
+
+        # get all results
+        results = [j.result() for j in jobs]
+        # return good jobs
+        return miscellaneous.List(results)
+
+    def list(self, filters=None) -> entities.PagedEntities:
+        """
+        List Samples for model analytics and metrics
+
+        :param filters: dl.Filter query entity
+        """
+        if filters is None:
+            filters = entities.Filters(resource=entities.FiltersResource.METRICS)
+            if self._model is not None:
+                filters.add(field='modelId', values=self._model.id)
+        # assert type filters
+        if not isinstance(filters, entities.Filters):
+            raise exceptions.PlatformException(error='400',
+                                               message='Unknown filters type: {!r}'.format(type(filters)))
+
+        if filters.resource != entities.FiltersResource.METRICS:
+            raise exceptions.PlatformException(
+                error='400',
+                message='Filters resource must to be FiltersResource.METRICS. Got: {!r}'.format(filters.resource))
+
+        paged = entities.PagedEntities(items_repository=self,
+                                       filters=filters,
+                                       page_offset=filters.page,
+                                       page_size=filters.page_size,
+                                       client_api=self._client_api)
+        paged.get_page()
+        return paged

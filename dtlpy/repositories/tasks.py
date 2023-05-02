@@ -479,7 +479,7 @@ class Tasks:
         :param dict DQL query: filter items for the task
         :param List[WorkloadUnit] workload: list of WorkloadUnit objects. Customize distribution (percentage) between the task assignees. For example: [dl.WorkloadUnit(annotator@hi.com, 80), dl.WorkloadUnit(annotator2@hi.com, 20)]
         :param dict metadata: metadata for the task
-        :param list available_actions: list of available actions (statuses) that will be available for the task items; The default statuses are: "Approved" and "Discarded"
+        :param list available_actions: list of available actions (statuses) that will be available for the task items; The default statuses are: "approved" and "discard"
         :param bool wait: wait until create task finish
         :param int batch_size: Pulling batch size (items), use with pulling allocation method. Restrictions - Min 3, max 100
         :param int max_batch_workload: Max items in assignment, use with pulling allocation method. Restrictions - Min batchSize + 2, max batchSize * 2
@@ -604,7 +604,7 @@ class Tasks:
         :param entities.Filters filters: dl.Filters entity to filter items for the task
         :param List[entities.Item] items: list of items (item Id or objects) to insert to the task
         :param dict DQL query: filter items for the task
-        :param list available_actions: list of available actions (statuses) that will be available for the task items; The default statuses are: "Completed" and "Discarded"
+        :param list available_actions: list of available actions (statuses) that will be available for the task items; The default statuses are: "completed" and "discard"
         :param bool wait: wait until create task finish
         :param entities.Filters check_if_exist: dl.Filters check if task exist according to filter
         :param int limit: the limit items that the task can include
@@ -612,8 +612,8 @@ class Tasks:
         :param int max_batch_workload: max_batch_workload: Max items in assignment, use with pulling allocation method. Restrictions - Min batchSize + 2, max batchSize * 2
         :param list allowed_assignees: list the task assignees (contributors) that should be working on the task. Provide a list of users' emails
         :param entities.TaskPriority priority: priority of the task options in entities.TaskPriority
-        :param int consensus_percentage: the consensus percentage ber task
-        :param int consensus_assignees: the consensus assignees number of the task
+        :param int consensus_percentage: percentage of items to be copied to multiple annotators (consensus items)
+        :param int consensus_assignees: the number of different annotators per item (number of copies per item)
         :return: Task object
         :rtype: dtlpy.entities.task.Task
 
@@ -713,12 +713,17 @@ class Tasks:
                 metadata['system'] = {}
             if allowed_assignees is not None or assignee_ids is not None:
                 metadata['system']['allowedAssignees'] = allowed_assignees if allowed_assignees else assignee_ids
-            metadata = self._add_task_metadata_params(metadata=metadata, input_value=batch_size, input_name='batchSize')
-            metadata = self._add_task_metadata_params(metadata=metadata, input_value=max_batch_workload,
+            metadata = self._add_task_metadata_params(metadata=metadata,
+                                                      input_value=batch_size,
+                                                      input_name='batchSize')
+            metadata = self._add_task_metadata_params(metadata=metadata,
+                                                      input_value=max_batch_workload,
                                                       input_name='maxBatchWorkload')
-            metadata = self._add_task_metadata_params(metadata=metadata, input_value=consensus_percentage,
+            metadata = self._add_task_metadata_params(metadata=metadata,
+                                                      input_value=consensus_percentage,
                                                       input_name='consensusPercentage')
-            metadata = self._add_task_metadata_params(metadata=metadata, input_value=consensus_assignees,
+            metadata = self._add_task_metadata_params(metadata=metadata,
+                                                      input_value=consensus_assignees,
                                                       input_name='consensusAssignees')
 
         if metadata is not None:

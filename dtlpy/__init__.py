@@ -79,12 +79,14 @@ from .entities import (
     InstanceCatalog, PackageInputType, ServiceType, ServiceModeType,
     PackageSlot, SlotPostAction, SlotPostActionType, SlotDisplayScope, SlotDisplayScopeResource, UiBindingPanel,
     # roberto
-    DatasetSubsetType, LogSample, ArtifactType, Artifact, ItemArtifact, LinkArtifact, LocalArtifact, EntityScopeLevel,
+    DatasetSubsetType, PlotSample, ArtifactType, Artifact, ItemArtifact, LinkArtifact, LocalArtifact, EntityScopeLevel,
+    # features
+    FeatureEntityType, FeatureDataType, Feature, FeatureSet,
     #
     RequirementOperator, PackageRequirement,
     Command, CommandsStatus,
     LocalCodebase, GitCodebase, ItemCodebase, FilesystemCodebase, PackageCodebaseType,
-    MemberRole, FeatureEntityType, FeatureDataType, MemberOrgRole,
+    MemberRole, MemberOrgRole,
     Webhook, HttpMethod,
     ViewAnnotationOptions, AnnotationStatus, AnnotationType,
     ItemStatus, ExecutionStatus, ExportMetadata,
@@ -97,8 +99,9 @@ from .entities import (
     PipelineNodeType, PipelineNameSpace, PipelineResumeOption,
     FunctionNode, DatasetNode, PipelineConnectionPort, PipelineNodeIO, Organization, OrganizationsPlans, Integration,
     Driver, S3Driver, GcsDriver, AzureBlobDriver, CacheAction, PodType,
-    ExternalStorage, Role, PlatformEntityType, SettingsValueTypes, SettingsTypes, SettingsSectionNames, SettingScope, \
-    BaseSetting, UserSetting, Setting, ServiceSample, ExecutionSample, PipelineExecutionSample, ResourceExecution
+    ExternalStorage, IntegrationType, Role, PlatformEntityType, SettingsValueTypes, SettingsTypes, SettingsSectionNames,
+    SettingScope, BaseSetting, UserSetting, Setting, ServiceSample, ExecutionSample, PipelineExecutionSample,
+    ResourceExecution
 )
 from .ml import BaseModelAdapter
 from .utilities import Converter, BaseServiceRunner, Progress, Context, AnnotationFormat
@@ -479,5 +482,3 @@ TASK_PRIORITY_HIGH = TaskPriority.HIGH
 
 SERVICE_MODE_TYPE_REGULAR = ServiceModeType.REGULAR
 SERVICE_MODE_TYPE_DEBUG = ServiceModeType.DEBUG
-
-

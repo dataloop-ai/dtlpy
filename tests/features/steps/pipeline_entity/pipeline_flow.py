@@ -211,12 +211,55 @@ def step_impl(context):
     pipeline_json['nodes'][1]['metadata']['recipeTitle'] = context.recipe.title
     pipeline_json['nodes'][1]['metadata']['recipeId'] = context.recipe.id
     pipeline_json['nodes'][1]['metadata']['datasetId'] = context.dataset.id
+    pipeline_json['nodes'][1]['metadata']["workload"] = [
+        {
+            "assigneeId": dl.info()['user_email'],
+            "load": 100
+        }
+    ]
 
     pipeline_json['nodes'][2]['namespace']['projectName'] = context.project.name
 
     context.pipeline = context.project.pipelines.create(pipeline_json=pipeline_json)
     context.pipeline.install()
     context.to_delete_pipelines_ids.append(context.pipeline.id)
+
+
+@behave.given(u'I have a custom "{name}" pipeline from json')
+def step_impl(context, name: str):
+    pipeline_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], "pipeline_flow/{}.json".format(name))
+
+    with open(pipeline_path, 'r') as f:
+        pipeline_json = json.load(f)
+
+    pipeline_json['projectId'] = context.project.id
+
+    for node in pipeline_json['nodes']:
+        if node['type'] in ['code', 'function']:
+            node['namespace']['projectName'] = context.project.name
+            node['projectId'] = context.project.id
+        elif node['type'] == 'task':
+            node['metadata']['recipeTitle'] = context.recipe.title
+            node['metadata']['recipeId'] = context.recipe.id
+            node['metadata']['datasetId'] = context.dataset.id
+            node['metadata']["taskOwner"] = dl.info()['user_email']
+            node['metadata']["workload"] = [
+                {
+                    "assigneeId": dl.info()['user_email'],
+                    "load": 100
+                }
+            ]
+
+    context.pipeline = context.project.pipelines.create(pipeline_json=pipeline_json)
+    context.pipeline.install()
+    context.to_delete_pipelines_ids.append(context.pipeline.id)
+
+    tasks = context.pipeline.project.tasks.list()
+
+    if len(tasks) == 1:
+        context.task = tasks[0]
+    elif len(tasks) > 1:
+        context.tasks = tasks
 
 
 @behave.when(u'I upload item in "{item_path}" to pipe dataset')
@@ -299,7 +342,7 @@ def step_impl(context):
         recipe_id=context.recipe.id,
         recipe_title=context.recipe.title,
         task_owner="nirrozmarin@dataloop.ai",
-        workload=[dl.WorkloadUnit(assignee_id="oa-test-1@dataloop.ai", load=100)],
+        workload=[dl.WorkloadUnit(assignee_id=dl.info()['user_email'], load=100)],
         position=(1, 2),
         project_id=context.project_id,
         dataset_id=context.dataset.id
@@ -427,7 +470,7 @@ def step_impl(context, type, flag):
         recipe_id=context.recipe.id,
         recipe_title=context.recipe.title,
         task_owner="nirrozmarin@dataloop.ai",
-        workload=[dl.WorkloadUnit(assignee_id="oa-test-1@dataloop.ai", load=100)],
+        workload=[dl.WorkloadUnit(assignee_id=dl.info()['user_email'], load=100)],
         position=(2, 2),
         task_type=type,
         project_id=context.project.id,
@@ -491,7 +534,7 @@ def step_impl(context):
         recipe_title=context.recipe.title,
         task_owner=context.dl.info()['user_email'],
         workload=[dl.WorkloadUnit(assignee_id=context.dl.info()['user_email'], load=100)],
-        position=(3,5),
+        position=(3, 5),
         task_type='annotation',
         priority=dl.entities.TaskPriority.LOW
     )
@@ -578,3 +621,32 @@ def step_impl(context):
             break
 
     assert completed, "TEST FAILED: cycle was not completed"
+
+
+@behave.then(u'Context should have all required properties')
+def step_impl(context):
+    timeout = 60 * 10
+    interval = 5
+    start_time = time.time()
+    execution = None
+    success = False
+    while time.time() - start_time < timeout:
+        context.cycle = context.pipeline.pipeline_executions.list().items[0]
+        if context.cycle.status == 'success':
+            success = True
+            break
+        time.sleep(interval)
+
+    if success:
+        services = context.project.services.list().all()
+        for service in services:
+            if service.name.startswith('code'):
+                executions = service.executions.list()
+                assert executions.items_count == 1
+                execution = executions.items[0]
+                break
+
+    assert execution is not None, "TEST FAILED: execution was not found"
+    assert execution.output['taskName'] == context.task.name
+    assert execution.output['pipelineName'] == context.pipeline.name
+    assert execution.output['nodeName'] == [n for n in context.pipeline.nodes if n.node_type == 'code'][0].name

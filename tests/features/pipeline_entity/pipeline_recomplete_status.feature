@@ -17,9 +17,9 @@ Feature: Pipeline entity method testing recomplete items
     And I upload item in "0000000162.jpg" to pipe dataset
     Then I wait for item to enter task
     And I update item status to "complete" with task id
-    Then I wait "2"
+    Then I wait "30"
     And I remove specific "complete" from item with task id
-    Then I wait "2"
+    Then I wait "30"
     And I update item status to "complete" with task id
     And I expect that pipeline execution has "4" success executions
 
@@ -31,11 +31,11 @@ Feature: Pipeline entity method testing recomplete items
     When I create a package and service to pipeline
     And I create a pipeline dataset, task "qa" and code nodes - repeatable "True"
     And I upload item in "0000000162.jpg" to pipe dataset
-    Then I wait "7"
+    Then I wait for item to enter task
     And I update item status to "approve" with task id
-    Then I wait "2"
+    Then I wait "30"
     And I remove specific "approve" from item with task id
-    Then I wait "2"
+    Then I wait "30"
     And I update item status to "approve" with task id
     And I expect that pipeline execution has "4" success executions
 
@@ -47,10 +47,10 @@ Feature: Pipeline entity method testing recomplete items
     When I create a package and service to pipeline
     And I create a pipeline dataset, task "annotation" and code nodes - repeatable "False"
     And I upload item in "0000000162.jpg" to pipe dataset
-    Then I wait "7"
+    Then I wait "30"
     And I update item status to "complete" with task id
-    Then I wait "2"
+    Then I wait "30"
     And I remove specific "complete" from item with task id
-    Then I wait "2"
+    Then I wait "30"
     And I update item status to "complete" with task id
     And I expect that pipeline execution has "3" success executions

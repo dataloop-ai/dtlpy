@@ -7,6 +7,9 @@ Feature: Assignments repository create method testing
         And There are items, path = "filters/image.jpg"
             |annotated_type={"box": 3, "polygon": 3}|metadata={"user.good": 3, "user.bad": 3}|
         And I save dataset items to context
+        When Add Members "annotator1@dataloop.ai" as "annotator"
+        And Add Members "annotator2@dataloop.ai" as "annotator"
+        And Add Members "annotator3@dataloop.ai" as "annotator"
 
     @testrail-C4523055
     Scenario: Create - minimum params

@@ -3,6 +3,9 @@ from PIL import Image
 import numpy
 import os
 import dtlpy as dl
+import json
+from operator import attrgetter
+
 
 
 @given(u'I convert to Numpy.NdArray an item with the name "{item_path}" and add it to context.array')
@@ -60,17 +63,20 @@ def step_impl(context):
     if os.path.exists(path):
         for f in os.listdir(path):
             if any(x in f for x in ["log", ".json"]):
-                if os.path.exists(f):
-                    os.remove(f)
+                if os.path.exists(os.path.join(path, f)):
+                    os.remove(os.path.join(path, f))
 
 
-@then(u'Log file is exist')
-def step_impl(context):
+@then(u'Log file is exist with resource "{resource_input}"')
+def step_impl(context, resource_input):
     path = os.path.join(dl.service_defaults.DATALOOP_PATH, 'reporters')
     if os.path.exists(path):
         for f in os.listdir(path):
             if any(x in f for x in ["log", ".json"]):
-                return
+                with open(os.path.join(path, f), 'r') as file:
+                    log_file = json.load(file)
+                    if attrgetter(resource_input)(context) in log_file.keys():
+                        return
     assert False
 
 

@@ -54,7 +54,7 @@ from .similarity import Similarity, MultiView, SimilarityItem, MultiViewItem, Si
 from .user import User
 from .bot import Bot
 from .webhook import Webhook, HttpMethod
-from .model import Model, DatasetSubsetType, LogSample
+from .model import Model, DatasetSubsetType, PlotSample
 from .driver import Driver, S3Driver, GcsDriver, AzureBlobDriver
 from .pipeline import Pipeline, PipelineStats, PipelineResumeOption, PipelineSettings
 from .node import PipelineConnection, PipelineNode, PipelineConnectionPort, PipelineNodeIO, TaskNode, \
@@ -64,7 +64,7 @@ from .feature import Feature, FeatureDataType
 from .feature_set import FeatureSet, FeatureEntityType
 from .organization import Organization, OrganizationsPlans, MemberOrgRole, CacheAction, PodType
 from .analytic import ServiceSample, ExecutionSample, PipelineExecutionSample
-from .integration import Integration
+from .integration import Integration, IntegrationType
 from .driver import Driver, ExternalStorage
 from .setting import Role, PlatformEntityType, SettingsValueTypes, SettingsTypes, SettingsSectionNames, SettingScope, \
     BaseSetting, UserSetting, Setting

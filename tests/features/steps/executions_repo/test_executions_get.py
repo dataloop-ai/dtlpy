@@ -57,3 +57,14 @@ def step_impl(context):
         elif row['value'] == "piper":
             value = ["piper@dataloop.ai", "pipelines@dataloop.ai"]
         assert execution_val in value, "TEST FAILED: Expected to get {}, Actual got {}".format(value, execution_val)
+
+
+@behave.then(u"I validate params in executions list")
+def step_impl(context):
+    for execution in context.execution_list.items:
+        for row in context.table:
+            if "item.id" in row['value']:
+                row['value'].replace('item.id', context.item.id)
+            assert attrgetter(row['key'])(execution) == eval(row['value']), \
+                "TEST FAILED: Expected to get {}, Actual got {}".format(eval(row['value']),
+                                                                        attrgetter(row['key'])(context.execution))

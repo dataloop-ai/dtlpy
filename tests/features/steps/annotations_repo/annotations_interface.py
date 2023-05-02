@@ -89,3 +89,19 @@ def step_impl(context):
     builder = context.item.annotations.builder()
     builder.add(note_annotation, object_id=context.object_id, frame_num=context.frame_num, end_frame_num=context.end_frame_num, fixed=False)
     context.annotation = context.item.annotations.upload(annotations=builder)[0]
+
+
+@behave.when(u'I upload x annotations to item')
+def step_impl(context, x):
+    """
+    Search keywords: Upload annotations | Add annotations
+    """
+    context.dataset.add_label(label_name="Box")
+    builder = context.item.annotations.builder()
+    for i in range(x):
+        builder.add(annotation_definition=context.dl.Box(top=10 + i,
+                                                         left=10 + i,
+                                                         bottom=100 + i,
+                                                         right=100 + i,
+                                                         label='Box'))
+    context.item.annotations.upload(builder)

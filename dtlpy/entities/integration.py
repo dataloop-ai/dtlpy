@@ -1,3 +1,5 @@
+from enum import Enum
+
 import logging
 import attr
 
@@ -5,6 +7,36 @@ from .. import entities, exceptions, repositories
 from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
+
+
+class IntegrationType(str, Enum):
+    """ The type of the Integration.
+
+    .. list-table::
+       :widths: 15 150
+       :header-rows: 1
+
+       * - State
+         - Description
+       * - S3
+         - S3 Integration - for S3 drivers
+       * - AWS_CROSS_ACCOUNT
+         - AWS CROSS ACCOUNT Integration - for S3 drivers
+       * - AWS_STS
+         - AWS STS Integration - for S3 drivers
+       * - GCS
+         - GCS Integration - for GCS drivers
+       * - AZUREBLOB
+         - AZURE BLOB Integration - for S3 AZUREBLOB and AZURE_DATALAKE_GEN2 drivers
+       * - KEY_VALUE
+         - KEY VALUE Integration - for save secrets in the platform
+    """
+    S3 = "s3"
+    AWS_CROSS_ACCOUNT = 'aws-cross'
+    AWS_STS = 'aws-sts'
+    GCS = "gcs"
+    AZUREBLOB = "azureblob"
+    KEY_VALUE = "key_value"
 
 
 @attr.s
@@ -20,6 +52,7 @@ class Integration(entities.BaseEntity):
     created_by = attr.ib()
     update_at = attr.ib()
     _client_api = attr.ib(type=ApiClient, repr=False)
+    meatadata = attr.ib(default=None, repr=False)
     _project = attr.ib(default=None, repr=False)
 
     @classmethod
@@ -42,7 +75,8 @@ class Integration(entities.BaseEntity):
                    update_at=_json.get('updateAt', None),
                    type=_json.get('type', None),
                    org=_json.get('org', None),
-                   client_api=client_api)
+                   client_api=client_api,
+                   meatadata=_json.get('metadata', None))
         inst.is_fetched = is_fetched
         return inst
 
@@ -67,11 +101,32 @@ class Integration(entities.BaseEntity):
             raise ValueError('Must input a valid Project entity')
         self._project = project
 
-    def update(self, new_name: str):
+    def update(self,
+               new_name: str = None,
+               new_options: dict = None):
         """
-        Update the integrations name
+        Update the integration's name.
+
+        **Prerequisites**: You must be an *owner* in the organization.
 
         :param str new_name: new name
+        :param dict new_options: new value
+        :return: Integration object
+        :rtype: dtlpy.entities.integration.Integration
+
+        **Examples for options include**:
+        s3 - {key: "", secret: ""};
+        gcs - {key: "", secret: "", content: ""};
+        azureblob - {key: "", secret: "", clientId: "", tenantId: ""};
+        key_value - {key: "", value: ""}
+        aws-sts - {key: "", secret: "", roleArns: ""}
+        aws-cross - {roleArns: ""}
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.integrations.update(integrations_id='integrations_id', new_name="new_integration_name")
         """
         if self.project is not None:
             identifier = self.project
@@ -83,7 +138,10 @@ class Integration(entities.BaseEntity):
                 error='400',
                 message='Must provide an identifier in inputs')
 
-        identifier.integrations.update(new_name=new_name, integrations_id=self.id)
+        identifier.integrations.update(new_name=new_name,
+                                       integrations_id=self.id,
+                                       integration=self,
+                                       new_options=new_options)
 
     def delete(self,
                sure: bool = False,

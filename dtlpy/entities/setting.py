@@ -272,9 +272,6 @@ class UserSetting(Setting):
             project=None,
             org=None
     ):
-        warnings.warn(
-            message='UserSetting will be Deprecation from version 1.62 use Setting',
-            category=DeprecationWarning)
         super().__init__(
             default_value=default_value,
             value=value,

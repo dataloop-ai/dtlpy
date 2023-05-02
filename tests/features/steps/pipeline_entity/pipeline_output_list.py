@@ -64,11 +64,12 @@ def step_impl(context, total_items):
 
     assert finished
 
+    time.sleep(10)
     for items in task.get_items():
         for item in items:
             item.update_status(task_id=task.id, status='complete')
 
-    time.sleep(30)
+    time.sleep(10)
     for pipe_execution in context.pipeline.pipeline_executions.list().items:
         assert pipe_execution.status == "success", "TEST FAILED: Pipeline execution {} is - {}".format(
             pipe_execution.id, pipe_execution.status)

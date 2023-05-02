@@ -6,6 +6,8 @@ Feature: Tasks repository create consensus task
     And I create a dataset with a random name
     And There are "10" items
     And I save dataset items to context
+    When Add Members "annotator1@dataloop.ai" as "annotator"
+    And Add Members "annotator2@dataloop.ai" as "annotator"
 
   @testrail-C4533547
   Scenario: Create consensus task with 100 percentage should success

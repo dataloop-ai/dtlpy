@@ -1669,6 +1669,19 @@ class FrameAnnotation(entities.BaseEntity):
     def attributes(self):
         return self._recipe_2_attributes if self.annotation._use_attributes_2 else self.annotation_definition.attributes
 
+    @attributes.setter
+    def attributes(self, attributes):
+        if self.annotation._use_attributes_2:
+            if not isinstance(attributes, dict):
+                raise ValueError(
+                    'Attributes must be a dict. If you are using v1 attributes please use dl.use_attributes_2(False)')
+            self._recipe_2_attributes = attributes
+        else:
+            if not isinstance(attributes, list):
+                raise ValueError(
+                    'Attributes must be a list. If you are using v2 attributes please use dl.use_attributes_2(True)')
+            self.annotation_definition.attributes = attributes
+
     @property
     def geo(self):
         return self.annotation_definition.geo
@@ -1793,7 +1806,7 @@ class FrameAnnotation(entities.BaseEntity):
         :param object_visible: does the annotated object is visible
         :return: FrameAnnotation object
         """
-        return cls(
+        frame = cls(
             # annotations
             annotation=annotation,
             annotation_definition=annotation_definition,
@@ -1801,8 +1814,11 @@ class FrameAnnotation(entities.BaseEntity):
             # multi
             frame_num=frame_num,
             fixed=fixed,
-            object_visible=object_visible
+            object_visible=object_visible,
         )
+        if annotation_definition.attributes:
+            frame.attributes = annotation_definition.attributes
+        return frame
 
     @classmethod
     def from_snapshot(cls, annotation, _json, fps):
@@ -1840,13 +1856,14 @@ class FrameAnnotation(entities.BaseEntity):
             'frame': self.frame_num,
             'fixed': self.fixed,
             'label': self.label,
-            'attributes': self.attributes,
             'type': self.type,
             'objectVisible': self.object_visible,
             'data': self.coordinates
         }
 
-        if self._recipe_2_attributes:
+        if self.annotation._use_attributes_2:
             snapshot_dict['namedAttributes'] = self._recipe_2_attributes
+        else:
+            snapshot_dict['attributes'] = self.attributes
 
         return snapshot_dict

@@ -7,7 +7,10 @@ Feature: Assignments repository reassign method testing
         And There are items, path = "filters/image.jpg"
             |annotated_type={"box": 3, "polygon": 3}|metadata={"user.good": 3, "user.bad": 3}|
         And I save dataset items to context
-        When I create Task
+        When Add Members "annotator1@dataloop.ai" as "annotator"
+        And Add Members "annotator2@dataloop.ai" as "annotator"
+        And Add Members "new_annotator@dataloop.ai" as "annotator"
+        And I create Task
             | task_name=reassign | due_date=auto | assignee_ids=annotator1@dataloop.ai | items=2 |
         And I create an Assignment from "task" entity
             | assignee_id=annotator2@dataloop.ai | items=2 |

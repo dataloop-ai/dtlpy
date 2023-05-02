@@ -2,6 +2,8 @@ from behave import when, then, given
 import time
 import dtlpy as dl
 import json
+import random
+import os
 
 
 @when(u'I delete current nodes and add dataset nodes to pipeline')
@@ -52,3 +54,35 @@ def step_impl(context, status):
         )
 
         print("Error message: {}".format(response.json()['errorText']['message']))
+
+
+def generate_pipeline_json(context, pipeline_json):
+    pipeline_json['name'] = 'json-pipe-{}'.format(random.randrange(10000, 100000))
+    pipeline_json['creator'] = context.dl.info()['user_email']
+    pipeline_json['projectId'] = context.project.id
+    pipeline_json['orgId'] = context.project.org['id']
+
+    for node in pipeline_json['nodes']:
+        node['projectId'] = context.project.id
+
+    datasets_node = [node for node in pipeline_json['nodes'] if node['type'] == 'storage']
+    for node in datasets_node:
+        node['name'] = context.dataset.name
+        node['metadata']["datasetId"] = context.dataset.id
+
+    return pipeline_json
+
+
+@given(u'I create pipeline from json in path "{path}"')
+def step_impl(context, path):
+    test_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], path)
+    with open(test_path, 'r') as pipeline_path:
+        pipeline_json = json.load(pipeline_path)
+
+    pipeline_payload = generate_pipeline_json(
+        context=context,
+        pipeline_json=pipeline_json
+    )
+
+    context.pipeline = context.project.pipelines.create(pipeline_json=pipeline_payload)
+    context.to_delete_pipelines_ids.append(context.pipeline.id)

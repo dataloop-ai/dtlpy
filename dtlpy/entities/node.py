@@ -565,8 +565,8 @@ class TaskNode(PipelineNode):
         :param int max_batch_workload: Max items in assignment . Restrictions - Min batchSize + 2 , max batchSize * 2 - for create pulling task
         :param entities.TaskPriority priority: priority of the task options in entities.TaskPriority
         :param float due_date: date by which the task should be finished; for example, due_date = datetime.datetime(day= 1, month= 1, year= 2029).timestamp()
-        :param int consensus_percentage: the consensus percentage ber task
-        :param int consensus_assignees: the consensus assignees number of the task
+        :param int consensus_percentage: percentage of items to be copied to multiple annotators (consensus items)
+        :param int consensus_assignees: the number of different annotators per item (number of copies per item)
         """
         if actions is None or actions == []:
             actions = []
@@ -579,7 +579,7 @@ class TaskNode(PipelineNode):
             actions.append('discard')
         else:
             logger.warning(
-                "The 'actions' field was updated to override the system default actions for task (Complete/Approve, Discard) if provided, due to a bug fix.")
+                "The 'actions' field was updated to override the system default actions for task (complete/approve, discard) if provided, due to a bug fix.")
 
         inputs = [self._default_io()]
 

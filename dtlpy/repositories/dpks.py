@@ -101,12 +101,9 @@ class Dpks:
         try:
             directory = os.path.abspath(directory)
             # create zipfile
-            miscellaneous.Zipping.zip_directory_inclusive(zip_filename=dpk_filename,
-                                                          directory=directory,
-                                                          subpaths=['functions',
-                                                                    'panels',
-                                                                    'dataloop.json'] + subpaths_to_append
-                                                          )
+            miscellaneous.Zipping.zip_directory(zip_filename=dpk_filename,
+                                                directory=directory,
+                                                ignore_directories=['artifacts'])
             return dpk_filename
         except Exception:
             logger.error('Error when packing:')
@@ -156,11 +153,13 @@ class Dpks:
         dpk.codebases.unpack(codebase=dpk.codebase, local_path=local_path)
         return local_path
 
-    def __get_by_name(self, dpk_name: str):
+    def __get_by_name(self, dpk_name: str, dpk_version: str = None):
         filters = entities.Filters(field='name',
                                    values=dpk_name,
                                    resource=entities.FiltersResource.DPK,
                                    use_defaults=False)
+        if dpk_version is not None:
+            filters.add(field='version', values=dpk_version)
         dpks = self.list(filters=filters)
         if dpks.items_count == 0:
             raise exceptions.PlatformException(
@@ -310,7 +309,7 @@ class Dpks:
             raise exceptions.PlatformException(response)
         return response.json()
 
-    def get(self, dpk_name: str = None, dpk_id: str = None) -> entities.Dpk:
+    def get(self, dpk_name: str = None, dpk_version: str = None, dpk_id: str = None) -> entities.Dpk:
         """
         Get a specific dpk from the platform.
 
@@ -318,6 +317,7 @@ class Dpks:
 
         :param str dpk_id: the id of the dpk to get.
         :param str dpk_name: the name of the dpk to get.
+        :param str dpk_version: options - to get a specific dpk version
         :return the entity of the dpk
         :rtype entities.Dpk
 
@@ -341,6 +341,6 @@ class Dpks:
                                          project=self._project,
                                          is_fetched=False)
         else:
-            dpk = self.__get_by_name(dpk_name)
+            dpk = self.__get_by_name(dpk_name=dpk_name, dpk_version=dpk_version)
 
         return dpk

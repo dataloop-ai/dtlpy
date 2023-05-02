@@ -5,6 +5,7 @@ Feature: Triggers repository create service testing - Task resource
     Given Platform Interface is initialized as dlp and Environment is set according to git branch
     And I create a project by the name of "task_triggers"
     And I create a dataset with a random name
+    When Add Members "annotator1@dataloop.ai" as "annotator"
 
   @services.delete
   @packages.delete

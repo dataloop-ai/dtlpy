@@ -16,7 +16,7 @@ def step_impl(context, number_of_annotations):
                                                          bottom=250 + i * 15,
                                                          label='label1'),
                     object_visible=True,
-                    object_id=0,
+                    object_id=1,
                     frame_num=i + 10 * i)
     context.item.annotations.upload(builder)
 
@@ -37,3 +37,16 @@ def step_impl(context, number_of_keyframes):
         assert top == 50 + i * 15
         assert right == 250 + i * 15
         assert bottom == 250 + i * 15
+
+
+@behave.when(u'I update the "{number_of_keyframes}" frame attribute of the annotation')
+def step_impl(context, number_of_keyframes):
+    context.annotation = context.item.annotations.list()[0]
+    context.annotation.frames[int(number_of_keyframes)].attributes = ['a']
+    context.annotation = context.annotation.update(True)
+
+
+@behave.then(u'I the only frame "{number_of_keyframes}" attribute is updated')
+def step_impl(context, number_of_keyframes):
+    assert context.annotation.frames[int(number_of_keyframes)].attributes == ['a'], "The attribute is not updated"
+    assert context.annotation.frames[0].attributes == [], "The attribute is not updated"

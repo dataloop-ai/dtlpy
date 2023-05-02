@@ -337,7 +337,7 @@ class Task:
         :param dict DQL query: filter items for the task
         :param List[WorkloadUnit] workload: list of WorkloadUnit objects. Customize distribution (percentage) between the task assignees. For example: [dl.WorkloadUnit(annotator@hi.com, 80), dl.WorkloadUnit(annotator2@hi.com, 20)]
         :param dict metadata: metadata for the task
-        :param list available_actions: list of available actions (statuses) that will be available for the task items; The default statuses are: "Approved" and "Discarded"
+        :param list available_actions: list of available actions (statuses) that will be available for the task items; The default statuses are: "approved" and "discard"
         :param bool wait: wait until create task finish
         :param int batch_size: Pulling batch size (items), use with pulling allocation method. Restrictions - Min 3, max 100
         :param int max_batch_workload: Max items in assignment, use with pulling allocation method. Restrictions - Min batchSize + 2, max batchSize * 2

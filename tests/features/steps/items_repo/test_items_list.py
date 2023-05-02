@@ -199,7 +199,7 @@ def step_impl(context):
 def step_impl(context):
     filepath = "sample_video.mp4"
     filepath = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], filepath)
-    context.item_mp4 = context.dataset.items.upload(
+    context.item = context.item_mp4 = context.dataset.items.upload(
         local_path=filepath,
         remote_path=None
     )

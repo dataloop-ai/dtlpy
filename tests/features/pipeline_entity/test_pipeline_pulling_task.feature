@@ -7,6 +7,7 @@ Feature: Pipeline pulling task testing
     When I create a new plain recipe
     And I update dataset recipe to the new recipe
 
+
   @pipelines.delete
   @testrail-C4532851
   Scenario: Create pipeline with pulling task - receive the correct task params

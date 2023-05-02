@@ -1,3 +1,4 @@
+import json
 from collections import namedtuple
 from enum import Enum
 import traceback
@@ -18,7 +19,7 @@ class DatasetSubsetType(str, Enum):
     TEST = 'test'
 
 
-class LogSample:
+class PlotSample:
     def __init__(self, figure, legend, x, y):
         """
         Create a single metric sample for Model
@@ -39,6 +40,29 @@ class LogSample:
                  'data': {'x': self.x,
                           'y': self.y}}
         return _json
+
+
+# class MatrixSample:
+#     def __init__(self, figure, legend, x, y):
+#         """
+#         Create a single metric sample for Model
+#
+#         :param figure: figure name identifier
+#         :param legend: line name identifier
+#         :param x: x value for the current sample
+#         :param y: y value for the current sample
+#         """
+#         self.figure = figure
+#         self.legend = legend
+#         self.x = x
+#         self.y = y
+#
+#     def to_json(self) -> dict:
+#         _json = {'figure': self.figure,
+#                  'legend': self.legend,
+#                  'data': {'x': self.x,
+#                           'y': self.y}}
+#         return _json
 
 
 @attr.s
@@ -193,6 +217,7 @@ class Model(entities.BaseEntity):
         _json['updatedAt'] = self.updated_at
         _json['inputType'] = self.input_type
         _json['outputType'] = self.output_type
+
         model_artifacts = list()
         for artifact in self.model_artifacts:
             if artifact.type in ['file', 'dir']:
@@ -248,7 +273,8 @@ class Model(entities.BaseEntity):
     @_repositories.default
     def set_repositories(self):
         reps = namedtuple('repositories',
-                          field_names=['projects', 'datasets', 'packages', 'models', 'ontologies', 'artifacts'])
+                          field_names=['projects', 'datasets', 'packages', 'models', 'ontologies', 'artifacts',
+                                       'metrics'])
 
         r = reps(projects=repositories.Projects(client_api=self._client_api),
                  datasets=repositories.Datasets(client_api=self._client_api,
@@ -265,7 +291,9 @@ class Model(entities.BaseEntity):
                  artifacts=repositories.Artifacts(client_api=self._client_api,
                                                   project=self._project,
                                                   project_id=self.project_id,
-                                                  model=self)
+                                                  model=self),
+                 metrics=repositories.Metrics(client_api=self._client_api,
+                                              model=self)
                  )
 
         return r
@@ -303,6 +331,11 @@ class Model(entities.BaseEntity):
     def artifacts(self):
         assert isinstance(self._repositories.artifacts, repositories.Artifacts)
         return self._repositories.artifacts
+
+    @property
+    def metrics(self):
+        assert isinstance(self._repositories.metrics, repositories.Metrics)
+        return self._repositories.metrics
 
     @property
     def id_to_label_map(self):
@@ -371,6 +404,8 @@ class Model(entities.BaseEntity):
               labels: list = None,
               description: str = None,
               tags: list = None,
+              train_filter: entities.Filters = None,
+              validation_filter: entities.Filters = None,
               ):
         """
         Clones and creates a new model out of existing one
@@ -384,6 +419,8 @@ class Model(entities.BaseEntity):
         :param list labels:  `list` of `str` - label of the model
         :param str description: `str` description of the new model
         :param list tags:  `list` of `str` - label of the model
+        :param dtlpy.entities.filters.Filters train_filter: Filters entity or a dictionary to define the items' scope in the specified dataset_id for the model train
+        :param dtlpy.entities.filters.Filters validation_filter: Filters entity or a dictionary to define the items' scope in the specified dataset_id for the model validation
 
         :return: dl.Model which is a clone version of the existing model
         """
@@ -396,7 +433,9 @@ class Model(entities.BaseEntity):
                                  configuration=configuration,
                                  labels=labels,
                                  description=description,
-                                 tags=tags
+                                 tags=tags,
+                                 train_filter=train_filter,
+                                 validation_filter=validation_filter,
                                  )
 
     def train(self):
@@ -424,15 +463,3 @@ class Model(entities.BaseEntity):
         :return:
         """
         return self.models.deploy(model_id=self.id, service_config=service_config)
-
-    def add_log_samples(self, samples, dataset_id) -> bool:
-        """
-        Add Samples for dataset analytics and metrics
-
-        :param samples: list of dl.LogSample - must contain: figure, legend, x, y
-        :param dataset_id: id to dataset related to the metrics
-        :return: bool: True if success
-        """
-        return self.models.add_log_samples(model_id=self.id,
-                                           dataset_id=dataset_id,
-                                           samples=samples)

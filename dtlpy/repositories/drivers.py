@@ -10,7 +10,7 @@ class Drivers:
     """
     Drivers Repository
     
-    The Drivers class allows users to manage drivers that are used to connect with external storage. Read more about external storage in our `documentation <https://dataloop.ai/docs/storage>`_ and `SDK documentation <https://dataloop.ai/docs/sdk-sync-storage>`_.
+    The Drivers class allows users to manage drivers that are used to connect with external storage. Read more about external storage in our `documentation <https://dataloop.ai/docs/storage>`_ and `SDK documentation <https://sdk-docs.dataloop.ai/en/latest/tutorials/data_management/cloud_storage/create_an_external_dataset/chapter.html#external-storage-dataset>`_.
     """
 
     def __init__(self, client_api: ApiClient, project: entities.Project = None):
@@ -145,7 +145,7 @@ class Drivers:
                driver_type: entities.ExternalStorage,
                integration_id: str,
                bucket_name: str,
-               integration_type: entities.ExternalStorage,
+               integration_type: entities.IntegrationType,
                project_id: str = None,
                allow_external_delete: bool = True,
                region: str = None,
@@ -160,11 +160,11 @@ class Drivers:
         :param ExternalStorage driver_type: dl.ExternalStorage (Enum). For all options run: list(dl.ExsternalStorage)
         :param str integration_id: the integration id
         :param str bucket_name: the external bucket name
-        :param ExternalStorage integration_type: dl.ExternalStorage (Enum). For all options run: list(dl.ExsternalStorage)
+        :param IntegrationType integration_type: dl.IntegrationType (Enum). For all options run: list(dl.IntegrationType)
         :param str project_id: project id
         :param bool allow_external_delete: true to allow deleting files from external storage when files are deleted in your Dataloop storage
         :param str region: relevant only for s3 - the bucket region
-        :param str storage_class: rilevante only for s3
+        :param str storage_class: relevant only for s3
         :param str path: Optional. By default path is the root folder. Path is case sensitive integration
         :return: driver object
         :rtype: dtlpy.entities.driver.Driver

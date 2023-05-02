@@ -9,12 +9,29 @@ logger = logging.getLogger(name='dtlpy')
 
 
 class ExternalStorage(str, Enum):
+    """ The type of the Integration.
+
+    .. list-table::
+       :widths: 15 150
+       :header-rows: 1
+
+       * - State
+         - Description
+       * - S3
+         - AWS S3 drivers
+       * - GCS
+         - Google GCS drivers
+       * - AZUREBLOB
+         - Microsoft AZURE BLOB drivers
+       * - AZURE_DATALAKE_GEN2
+         - Microsoft AZURE GEN2 drivers
+    """
     S3 = "s3"
     GCS = "gcs"
     AZUREBLOB = "azureblob"
+    AZURE_DATALAKE_GEN2 = 'azureDatalakeGen2'
     KEY_VALUE = "key_value"
     AWS_STS = 'aws-sts'
-    AZURE_DATALAKE_GEN2 = 'azureDatalakeGen2'
 
 
 @attr.s()

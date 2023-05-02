@@ -7,6 +7,8 @@ Feature: Item Entity update item status
     And There are items, path = "filters/image.jpg"
       | annotated_type={"box": 3, "polygon": 3} | metadata={"user.good": 3, "user.bad": 3} |
     And I save dataset items to context
+    When Add Members "annotator1@dataloop.ai" as "annotator"
+    And Add Members "annotator2@dataloop.ai" as "annotator"
 
   @testrail-C4525318
   Scenario: Update default status on items in task

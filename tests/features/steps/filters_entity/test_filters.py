@@ -509,8 +509,8 @@ def step_impl(context):
         "type": "task",
         "metadata":
             {
-                "status": {'${}'.format(context.dl.FiltersOperations.EQUAL): "completed"},
-                "timestamp": {'${}'.format(context.dl.FiltersOperations.GREATER_THAN): context.start_date}
+                "status": {'${}'.format(context.dl.FiltersOperations.EQUAL.value): "completed"},
+                "timestamp": {'${}'.format(context.dl.FiltersOperations.GREATER_THAN.value): context.start_date}
             }
     }
 

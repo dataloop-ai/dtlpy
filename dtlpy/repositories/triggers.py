@@ -343,8 +343,9 @@ class Triggers:
             if trigger_name is None:
                 raise exceptions.PlatformException('400', 'Must provide either trigger name or trigger id')
             else:
-                triggers = self.list(filters=entities.Filters(field='name', values=trigger_name,
-                                                              resource=entities.FiltersResource.TRIGGER))
+                filters = self.__generate_default_filter()
+                filters.add(field='name', values=trigger_name)
+                triggers = self.list(filters)
                 if triggers.items_count == 0:
                     raise exceptions.PlatformException('404', 'Trigger not found')
                 elif triggers.items_count == 1:
@@ -456,6 +457,17 @@ class Triggers:
             raise exceptions.PlatformException(response)
         return response.json()
 
+    def __generate_default_filter(self):
+        filters = entities.Filters(resource=entities.FiltersResource.TRIGGER)
+        if self._project is not None:
+            filters.add(field='projectId', values=self._project.id)
+        if self._service is not None:
+            filters.add(field='spec.operation.serviceId', values=self._service.id)
+        if self._pipeline is not None:
+            filters.add(field='spec.operation.id', values=self._pipeline.id)
+
+        return filters
+
     @_api_reference.add(path='/query/faas', method='post')
     def list(self, filters: entities.Filters = None) -> entities.PagedEntities:
         """
@@ -474,13 +486,7 @@ class Triggers:
             service.triggers.list()
         """
         if filters is None:
-            filters = entities.Filters(resource=entities.FiltersResource.TRIGGER)
-            if self._project is not None:
-                filters.add(field='projectId', values=self._project.id)
-            if self._service is not None:
-                filters.add(field='spec.operation.serviceId', values=self._service.id)
-            if self._pipeline is not None:
-                filters.add(field='spec.operation.id', values=self._pipeline.id)
+            filters = self.__generate_default_filter()
         # assert type filters
         elif not isinstance(filters, entities.Filters):
             raise exceptions.PlatformException(error='400',

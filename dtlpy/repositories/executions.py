@@ -66,6 +66,7 @@ class Executions:
             from_dataset = False
             entity_obj = None
             for input_type in entities.FunctionIO.INPUT_TYPES:
+                input_type = input_type.value
                 entity = input_type.lower()
                 param = '{}_id'.format(entity)
                 if isinstance(value, dict):

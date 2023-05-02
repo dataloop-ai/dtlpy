@@ -974,8 +974,7 @@ class Converter:
             for name in files:
                 save_to = os.path.join(os.path.split(local_path)[0], to_format)
                 save_to = path.replace(local_path, save_to)
-                if not os.path.isdir(save_to):
-                    os.mkdir(save_to)
+                os.makedirs(save_to, exist_ok=True)
                 file_path = os.path.join(path, name)
                 pool.apply_async(
                     func=self._convert_and_report,

@@ -300,7 +300,8 @@ class Codebases:
             directory = os.path.abspath(directory)
 
             # create zipfile
-            miscellaneous.Zipping.zip_directory(zip_filename=zip_filename, directory=directory,
+            miscellaneous.Zipping.zip_directory(zip_filename=zip_filename,
+                                                directory=directory,
                                                 ignore_directories=ignore_directories)
             zip_md = self.__file_hash(zip_filename)
 
@@ -468,7 +469,7 @@ class Codebases:
             logger.info('Source code was cloned from {}(Git) to: {}'.format(codebase.git_url, local_path))
         else:
             raise RuntimeError('Failed cloning. See above for full log. codebase: {}'.format(codebase))
-        return os.path.join(local_path, codebase.git_repo_name)
+        return local_path
 
     def pull_git(self, codebase, local_path):
         """

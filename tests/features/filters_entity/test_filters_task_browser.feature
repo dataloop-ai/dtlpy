@@ -6,7 +6,8 @@ Feature: Items task browser filters
         And I create a dataset with a random name
         And Dataset ontology has attributes "attr1" and "attr2"
         Then Add Multiple Labels "dog", "cat", "object"
-
+        When Add Members "annotator1@dataloop.ai" as "annotator"
+        And Add Members "annotator2@dataloop.ai" as "annotator"
 
     @testrail-C4526503
     Scenario:

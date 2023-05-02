@@ -7,13 +7,15 @@ Feature: Tasks repository create method testing
     And There are items, path = "filters/image.jpg"
       | annotated_type={"box": 3, "polygon": 3} | metadata={"user.good": 3, "user.bad": 3} |
     And I save dataset items to context
+    When Add Members "annotator1@dataloop.ai" as "annotator"
+    And Add Members "annotator2@dataloop.ai" as "annotator"
 
-   @testrail-C4523167
-   Scenario: Create - minimum params
-       When I create Task
-           | task_name=min_params | due_date=auto | assignee_ids=auto |
-       Then I receive a task entity
-       And Task has the correct attributes for type "annotation"
+  @testrail-C4523167
+  Scenario: Create - minimum params
+    When I create Task
+      | task_name=min_params | due_date=auto | assignee_ids=auto |
+    Then I receive a task entity
+    And Task has the correct attributes for type "annotation"
 
   @testrail-C4523167
   Scenario: Create - maximum params - filters

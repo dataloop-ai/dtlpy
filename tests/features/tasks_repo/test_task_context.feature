@@ -5,7 +5,9 @@ Feature: Task repository Context testing
         And I create projects by the name of "project1 project2"
         And I create datasets by the name of "dataset1 dataset2"
         And I upload items in "0000000162.jpg" to datasets
-        And I create task belong to dataset 1
+        When Add Members "annotator1@dataloop.ai" as "annotator" to project 1
+        And Add Members "annotator2@dataloop.ai" as "annotator" to project 1
+        Given I create task belong to dataset 1
             | task_name=context_task_test | due_date=auto | assignee_ids=auto |
 
     @testrail-C4523172

@@ -5,6 +5,8 @@ Feature: Triggers repository types - itemStatus
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
         And I create a project by the name of "triggers_update"
         And I create a dataset with a random name
+        When Add Members "annotator1@dataloop.ai" as "annotator"
+        And Add Members "annotator2@dataloop.ai" as "annotator"
 
     @services.delete
     @packages.delete
@@ -36,7 +38,7 @@ Feature: Triggers repository types - itemStatus
             | task_name=min_params | due_date=auto | assignee_ids=auto |
         Then I receive a task entity
         When I update items status to default task actions
-               Then I receive a Trigger entity
+        Then I receive a Trigger entity
         When I create Task
             | task_name=min_params | due_date=auto | assignee_ids=auto |
         Then I receive a task entity

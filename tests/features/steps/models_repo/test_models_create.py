@@ -17,10 +17,39 @@ def step_impl(context):
     # create model
     context.model = context.package.models.create(model_name=model_name,
                                                   dataset_id=context.dataset.id,
-                                                  ontology_id=context.dataset.ontology_ids[0])
+                                                  ontology_id=context.dataset.ontology_ids[0],
+                                                  train_filter=context.dl.Filters())
     if not hasattr(context, 'model_count'):
         context.model_count = 0
     context.model_count += 1
+
+
+@behave.when(u'I create a model without dataset')
+def step_impl(context):
+    rand_str = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(5))
+    model_name = 'random_model_{}'.format(rand_str)
+    context.model = context.package.models.create(model_name=model_name, dataset_id=None)
+    if not hasattr(context, 'model_count'):
+        context.model_count = 0
+    context.model_count += 1
+
+
+@behave.when(u'I create a model without filter')
+def step_impl(context):
+    try:
+        rand_str = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(5))
+        model_name = 'random_model_{}'.format(rand_str)
+        # create dataset
+        try:
+            context.dataset = context.project.datasets.get('model_dataset')
+        except context.dl.exceptions.NotFound:
+            context.dataset = context.project.datasets.create('model_dataset')
+        # create model
+        context.model = context.package.models.create(model_name=model_name,
+                                                      dataset_id=context.dataset.id,
+                                                      ontology_id=context.dataset.ontology_ids[0])
+    except Exception as e:
+        context.error = e
 
 
 @behave.when(u'I update model status to "{model_status}"')
@@ -36,7 +65,16 @@ def step_impl(context):
 
 @behave.when(u'I train the model')
 def step_impl(context):
-    context.model.train()
+    try:
+        context.model.train()
+    except Exception as e:
+        context.error = e
+
+
+@behave.Then(u'Model filter should not be empty')
+def step_impl(context):
+    assert context.model.metadata['system'].get('subsets', {}).get('train',
+                                                                   None) is not None, 'train filter is empty'
 
 
 @behave.then(u'The project have only one bot')

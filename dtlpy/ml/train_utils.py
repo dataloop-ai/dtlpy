@@ -56,26 +56,6 @@ def prepare_dataset(dataset: entities.Dataset,
                                                        'originalDatasetId': dataset.id}
     if filters is not None:
         cloned_dataset.metadata['system']['clone_info'].update({'filters': json.dumps(filters.prepare())})
-
-    dataset_subsets = cloned_dataset.metadata['system'].get("subsets", None)
-    if dataset_subsets is not None:
-        logger.warning(
-            "Dataset {} ({!r}) already have subsets in dataset.system.subsets".format(dataset.name, dataset.id))
-    else:
-        subsets_dict = dict()
-        for subset_name, subset_filter in subsets.items():
-            if isinstance(subset_filter, entities.Filters):
-                subset_filter_str = json.dumps(subset_filter.prepare())
-            elif isinstance(subset_filter, dict):
-                subset_filter_str = json.dumps(subset_filter)
-            elif isinstance(subset_filter, str):
-                subset_filter_str = subset_filter
-            else:
-                raise ValueError(
-                    'Input value `subsets` should be a dictionary with dl.Filter as values. got: {}'.format(
-                        subset_filter))
-            subsets_dict[subset_name] = subset_filter_str
-        cloned_dataset.metadata['system']['subsets'] = subsets_dict
     cloned_dataset.update(system_metadata=True)
     return cloned_dataset
     # cloned_dataset.set_readonly(True)

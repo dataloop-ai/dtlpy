@@ -9,6 +9,8 @@ dtlpy.2
 # tests assets
 tests/assets/
 behave_test_report.json
+json.output
+api_calls.json.lock
 
 # C extensions
 *.so

@@ -71,12 +71,6 @@ class Box(BaseAnnotationDefinition):
         if self._box_points_setting():
             res = self._four_points
         else:
-            warnings.warn(
-                message='annotation.geo() for box representation will be changed from 2 points to 4 points, '
-                        'starting from version 1.62.0. '
-                        'We recommend switching to the new format before the deprecation. '
-                        'For more info: https://dataloop.ai/docs/SDK/sdk-annotationgeo-deprecation ',
-                category=DeprecationWarning)
             res = [
                 [self.left, self.top],
                 [self.right, self.bottom]

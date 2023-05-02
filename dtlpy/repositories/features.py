@@ -1,6 +1,6 @@
 import logging
 
-from .. import exceptions, entities, miscellaneous, _api_reference
+from .. import exceptions, entities, miscellaneous, _api_reference, repositories
 from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
@@ -14,10 +14,12 @@ class Features:
 
     def __init__(self, client_api: ApiClient,
                  project: entities.Project = None,
+                 project_id: str = None,
                  item: entities.Item = None,
                  annotation: entities.Annotation = None,
                  feature_set: entities.FeatureSet = None):
         self._project = project
+        self._project_id = project_id
         self._item = item
         self._annotation = annotation
         self._feature_set = feature_set
@@ -32,6 +34,9 @@ class Features:
 
     @property
     def project(self) -> entities.Project:
+        if self._project is None and self._project_id is not None:
+            # get from id
+            self._project = repositories.Projects(client_api=self._client_api).get(project_id=self._project_id)
         if self._project is None:
             # try get checkout
             project = self._client_api.state_io.get('project')
@@ -141,10 +146,13 @@ class Features:
         :return: Feature vector: 
         """
         if project_id is None:
-            if self._project is None:
-                raise ValueError('Must insert a project id')
-            else:
+            if self._project is not None:
                 project_id = self._project.id
+            elif self._project_id is not None:
+                project_id = self._project_id
+            else:
+                raise ValueError('Must insert a project id')
+
         if feature_set_id is None:
             if self._feature_set is None:
                 raise ValueError(

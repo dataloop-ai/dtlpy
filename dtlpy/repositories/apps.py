@@ -180,12 +180,13 @@ class Apps:
             return success
         raise exceptions.PlatformException(response)
 
-    def install(self, dpk: entities.Dpk, organization_id: str = None) -> entities.App:
+    def install(self, dpk: entities.Dpk, app_name: str = None, organization_id: str = None) -> entities.App:
         """
         Install the specified app in the project.
 
         Note: You must pass either the app_id or app_name
         :param entities.App dpk: the app entity
+        :param str app_name: installed app name. default is the dpk name
         :param str organization_id: the organization which you want to apply on the filter.
         :return the installed app.
         :rtype entities.App
@@ -197,7 +198,9 @@ class Apps:
         if dpk is None:
             raise exceptions.PlatformException(error='400', message='You must provide an app')
 
-        app = entities.App.from_json(_json={'name': dpk.display_name,
+        if app_name is None:
+            app_name = dpk.name
+        app = entities.App.from_json(_json={'name': app_name,
                                             'projectId': self.project.id,
                                             'orgId': organization_id,
                                             'dpkName': dpk.name,

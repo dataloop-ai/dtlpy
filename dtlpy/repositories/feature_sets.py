@@ -1,5 +1,5 @@
 import logging
-from .. import exceptions, entities, miscellaneous, _api_reference
+from .. import exceptions, entities, miscellaneous, _api_reference, repositories
 from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
@@ -11,8 +11,11 @@ class FeatureSets:
     """
     URL = '/features/sets'
 
-    def __init__(self, client_api: ApiClient, project: entities.Project = None):
+    def __init__(self, client_api: ApiClient,
+                 project_id: str = None,
+                 project: entities.Project = None):
         self._project = project
+        self._project_id = project_id
         self._client_api = client_api
 
     ############
@@ -20,6 +23,9 @@ class FeatureSets:
     ############
     @property
     def project(self) -> entities.Project:
+        if self._project is None and self._project_id is not None:
+            # get from id
+            self._project = repositories.Projects(client_api=self._client_api).get(project_id=self._project_id)
         if self._project is None:
             # try get checkout
             project = self._client_api.state_io.get('project')
@@ -100,8 +106,8 @@ class FeatureSets:
     def create(self, name: str,
                size: int,
                set_type: str,
-               data_type: entities.FeatureDataType,
                entity_type: entities.FeatureEntityType,
+               data_type: entities.FeatureDataType = None,
                project_id: str = None,
                tags: list = None,
                org_id: str = None):
@@ -109,13 +115,13 @@ class FeatureSets:
         Create a new Feature Set
 
         :param str name: the Feature name
-        :param int size: the set size
+        :param int size: the length of a single vector in the set
         :param str set_type: string of the feature type: 2d, 3d, modelFC, TSNE,PCA,FFT
         :param entity_type: the entity that feature vector is linked to. Use the enum dl.FeatureEntityType
-        :param str project_id: the Id of the project where feature set will be created
+        :param str project_id: the ID of the project where feature set will be created
         :param list tags: optional tag per feature  - matched by index
-        :param str org_id: the Id of the org where feature set will be created
-        :param data_type: the type of feature vectors that relate to this set. Use the enum dl.FeatureDataType
+        :param str org_id: the ID of the org where feature set will be created
+        :param data_type: optional, only when using feature vector as scores. Use the enum dl.FeatureDataType
         :return: Feature Set object
         """
         if tags is None:

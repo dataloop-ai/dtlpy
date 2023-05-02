@@ -45,6 +45,7 @@ class FiltersResource(str, Enum):
     DRIVERS = 'drivers'
     SETTINGS = 'setting'
     RESOURCE_EXECUTION = 'resourceExecution'
+    METRICS = 'metrics'
 
 
 class FiltersOperations(str, Enum):
@@ -531,7 +532,8 @@ class SingleFilter:
             _json[self.field] = values
         else:
             value = dict()
-            value['${}'.format(self.operator)] = values
+            op = self.operator.value if isinstance(self.operator, FiltersOperations) else self.operator
+            value['${}'.format(op)] = values
             _json[self.field] = value
 
         return _json

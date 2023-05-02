@@ -7,9 +7,23 @@ def step_impl(context):
     context.members_list = context.project.list_members(role=dl.MemberRole.OWNER)  # View all annotators in a project
 
 
+@behave.when(u'Add Members "{member_email}" as "{member_role}"')
 @behave.then(u'Add Members "{member_email}" as "{member_role}"')
 def step_impl(context, member_email, member_role):
-    context.project.add_member(email=member_email, role=member_role)  # role is optional - default is developer
+    if member_email not in [member.email for member in context.project.list_members()]:
+        context.project.add_member(email=member_email, role=member_role)  # role is optional - default is developer
+
+
+@behave.when(u'Add Members "{member_email}" as "{member_role}" to project {project_index}')
+def step_impl(context, member_email, member_role, project_index):
+    if member_email not in [member.email for member in context.projects[int(project_index) - 1].list_members()]:
+        context.projects[int(project_index) - 1].add_member(email=member_email, role=member_role)  # role is optional - default is developer
+
+
+@behave.when(u'Add Members "{member_email}" as "{member_role}" to second_project')
+def step_impl(context, member_email, member_role):
+    if member_email not in [member.email for member in context.second_project.list_members()]:
+        context.second_project.add_member(email=member_email, role=member_role)  # role is optional - default is developer
 
 
 @behave.then(u'Update Members "{member_email}" to "{member_role}"')

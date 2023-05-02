@@ -32,7 +32,7 @@ from .assignments import Assignments
 from .tasks import Tasks
 from .bots import Bots
 from .webhooks import Webhooks
-from .models import Models
+from .models import Models, Metrics
 from .analytics import Analytics
 from .drivers import Drivers
 from .commands import Commands

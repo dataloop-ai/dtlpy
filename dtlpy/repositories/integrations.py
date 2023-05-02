@@ -95,7 +95,7 @@ class Integrations:
 
     @_api_reference.add(path='/orgs/{org_id}/integrations', method='post')
     def create(self,
-               integrations_type: entities.ExternalStorage,
+               integrations_type: entities.IntegrationType,
                name: str,
                options: dict):
         """
@@ -107,10 +107,11 @@ class Integrations:
         azureblob - {key: "", secret: "", clientId: "", tenantId: ""};
         key_value - {key: "", value: ""}
         aws-sts - {key: "", secret: "", roleArns: ""}
+        aws-cross - {}
 
         **Prerequisites**: You must be an *owner* in the organization.
 
-        :param str integrations_type: integrations type dl.ExternalStorage
+        :param IntegrationType integrations_type: integrations type dl.IntegrationType
         :param str name: integrations name
         :param dict options: dict of storage secrets
         :return: success
@@ -120,7 +121,7 @@ class Integrations:
 
         .. code-block:: python
 
-            project.integrations.create(integrations_type=dl.ExternalStorage.S3,
+            project.integrations.create(integrations_type=dl.IntegrationType.S3,
                             name='S3ntegration',
                             options={key: "Access key ID", secret: "Secret access key"})
         """
@@ -143,12 +144,20 @@ class Integrations:
         if not success:
             raise exceptions.PlatformException(response)
         else:
-            return entities.Integration.from_json(_json=response.json(), client_api=self._client_api)
+            integration = entities.Integration.from_json(_json=response.json(), client_api=self._client_api)
+        if integration.meatadata and isinstance(integration.meatadata, list) and len(integration.meatadata) > 0:
+            for metadata in integration.meatadata:
+                if metadata['name'] == 'status':
+                    integration_status = metadata['value']
+                    logger.info('Integration status: {}'.format(integration_status))
+        return integration
 
     @_api_reference.add(path='/orgs/{org_id}/integrations', method='patch')
     def update(self,
-               new_name: str,
-               integrations_id: str):
+               new_name: str = None,
+               integrations_id: str = None,
+               integration: entities.Integration = None,
+               new_options: dict = None):
         """
         Update the integration's name.
 
@@ -156,19 +165,33 @@ class Integrations:
 
         :param str new_name: new name
         :param str integrations_id: integrations id
+        :param Integration integration: integration object
+        :param dict new_options: new value
         :return: Integration object
         :rtype: dtlpy.entities.integration.Integration
+
+        **Examples for options include**:
+        s3 - {key: "", secret: ""};
+        gcs - {key: "", secret: "", content: ""};
+        azureblob - {key: "", secret: "", clientId: "", tenantId: ""};
+        key_value - {key: "", value: ""}
+        aws-sts - {key: "", secret: "", roleArns: ""}
+        aws-cross - {roleArn: ""}
 
         **Example**:
 
         .. code-block:: python
 
-            project.integrations.update(integrations_id='integrations_id', new_name="new_integration_name")
+            project.integrations.update(integrations_id='integrations_id', new_options={roleArn: ""})
         """
         if self.project is None and self.org is None:
             raise exceptions.PlatformException(
                 error='400',
                 message='Must have an organization or project')
+        if integrations_id is None and integration is None:
+            raise exceptions.PlatformException(
+                error='400',
+                message='Must have an integrations_id or integration')
 
         if self.project is not None:
             organization_id = self.project.org.get('id')
@@ -176,7 +199,13 @@ class Integrations:
             organization_id = self.org.id
 
         url_path = '/orgs/{}/integrations/'.format(organization_id)
-        payload = dict(name=new_name, id=integrations_id)
+        payload = dict(integrationId=integrations_id if integrations_id is not None else integration.id)
+        if new_name is not None:
+            payload['name'] = new_name
+        if new_options is not None:
+            if integration is None:
+                integration = self.get(integrations_id=integrations_id)
+            payload['credentials'] = dict(options=new_options, type=integration.type)
 
         success, response = self._client_api.gen_request(req_type='patch',
                                                          path=url_path,

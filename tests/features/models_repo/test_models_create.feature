@@ -53,3 +53,26 @@ Feature: Models repository create testing
     And I clone the model
     And I delete the clone model
     Then artifact is exist in the host
+
+  @DAT-45101
+  Scenario: Create a model without dataset
+    When I push "first" package
+      | codebase_id=None | package_name=test-package | src_path=package_module | inputs=None | outputs=None | type=ml |
+    And I create a model without dataset
+    Then Model object with the same name should be exist
+    And Model object with the same name should be exist in host
+
+  @DAT-45099
+  Scenario: Create a model with filter
+    When I push "first" package
+      | codebase_id=None | package_name=test-package | src_path=package_module | inputs=None | outputs=None | type=ml |
+    And I create a model with a random name
+    Then Model filter should not be empty
+
+  @DAT-45099
+  Scenario: Create a model without filter
+    When I push "first" package
+      | codebase_id=None | package_name=test-package | src_path=package_module | inputs=None | outputs=None | type=ml |
+    And I create a model without filter
+    And I train the model
+    Then "BadRequest" exception should be raised

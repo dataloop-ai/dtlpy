@@ -81,15 +81,19 @@ class Components(entities.DlEntity):
     modules: List[entities.PackageModule] = entities.DlProperty(location=['modules'],
                                                                 _kls='PackageModule')
     services: List[entities.Service] = entities.DlProperty(location=['services'],
-                                                           _kls='Service')
+                                                           # _kls='Service'
+                                                           )
     triggers: List[entities.Trigger] = entities.DlProperty(location=['triggers'],
-                                                           _kls='Trigger')
+                                                           # _kls='Trigger'
+                                                           )
     pipelines: List[entities.Pipeline] = entities.DlProperty(location=['pipelines'],
-                                                             _kls='Pipeline')
+                                                             # _kls='Pipeline'
+                                                             )
     toolbars: List[Toolbar] = entities.DlProperty(location=['toolbars'],
                                                   _kls='Toolbar')
     models: List[entities.Model] = entities.DlProperty(location=['models'],
-                                                       _kls='Model')
+                                                       # _kls='Model'
+                                                       )
 
     @panels.default
     def default_panels(self):
@@ -232,9 +236,9 @@ class Dpk(entities.DlEntity):
 
         ** Example **
         ..code-block:: python
-            versions = dl.dpks.revisions(dpk_id='id')
+            versions = dl.dpks.revisions(dpk_name='name')
         """
-        return self.dpks.revisions(self.id)
+        return self.dpks.revisions(dpk_name=self.name)
 
     @staticmethod
     def _protected_from_json(_json, client_api, project, is_fetched=True):

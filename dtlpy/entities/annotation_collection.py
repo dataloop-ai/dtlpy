@@ -109,8 +109,7 @@ class AnnotationCollection(entities.BaseEntity):
                     self.item is None or 'audio' not in self.item.metadata.get('system').get(
                     'mimetype', '')):
                 if object_id is None:
-                    raise ValueError('Video Annotation must have object_id. '
-                                     'for more information visit: https://dataloop.ai/docs/sdk-create-video-annotation#create-video-annotation')
+                    raise ValueError('Video Annotation must have object_id.')
                 else:
                     if isinstance(object_id, int):
                         object_id = '{}'.format(object_id)

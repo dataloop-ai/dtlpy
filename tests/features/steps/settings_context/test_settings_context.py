@@ -75,3 +75,26 @@ def step_impl(context):
         return False, "No setting found with the name: {}".format(context.service.name)
 
 
+@behave.when(u'I add settings to the project with wrong "{value}" type')
+def step_impl(context, value):
+    try:
+        context.project.settings.create(setting_name="data-pipeline-features",
+                                        setting_value=eval(value),
+                                        setting_value_type=context.dl.SettingsValueTypes.BOOLEAN
+                                        )
+    except Exception as e:
+        context.value = value
+        context.err_message = e.message
+        context.err_status_code = e.status_code
+
+
+@behave.then(u'I expect the correct exception to be thrown')
+def step_impl(context):
+    value = context.value
+    if type(eval(value)) == str:
+        assert f'Invalid input specified, Incorrect value type passed - Passed boolean Expected string' \
+               in context.err_message
+    elif type(eval(value)) == int:
+        assert f'Invalid input specified, Incorrect value type passed - Passed boolean Expected number' \
+               in context.err_message
+    assert context.err_status_code == '422'

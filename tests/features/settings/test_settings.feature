@@ -24,3 +24,13 @@ Feature: Settings Context
     When add settings to the project
     And I get setting by "name"
     Then I check setting got is equal to the one created
+
+  @DAT-46364
+  Scenario Outline: check settings type validation
+    When I create a project by the name of "to-delete-test-setting-validate_type"
+    When I add settings to the project with wrong "<value>" type
+    Then I expect the correct exception to be thrown
+    Examples: Type
+      | value   |
+      | 'boaz'  |
+      | 123     |

@@ -206,11 +206,11 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             annotation_options = entities.ViewAnnotationOptions.INSTANCE
 
         # Download the subset items
-        subsets = dataset.metadata.get("system", dict()).get("subsets", None)
+        subsets = self.model_entity.metadata.get("system", dict()).get("subsets", None)
         if subsets is None:
-            raise ValueError("Dataset (id: {}) must have subsets in metadata.system.subsets".format(dataset.id))
-        for subset, filters_string in subsets.items():
-            filters = entities.Filters(custom_filter=json.loads(filters_string))
+            raise ValueError("Model (id: {}) must have subsets in metadata.system.subsets".format(self.model_entity.id))
+        for subset, filters_dict in subsets.items():
+            filters = entities.Filters(custom_filter=filters_dict)
             data_subset_base_path = os.path.join(data_path, subset)
             if os.path.isdir(data_subset_base_path) and not overwrite:
                 # existing and dont overwrite

@@ -46,8 +46,11 @@ class FeatureSet(entities.BaseEntity):
     def set_repositories(self):
         reps = namedtuple('repositories',
                           field_names=['feature_sets', 'features'])
-        feature_sets_repo = repositories.FeatureSets(client_api=self._client_api)
-        features_repo = repositories.Features(client_api=self._client_api, feature_set=self)
+        feature_sets_repo = repositories.FeatureSets(client_api=self._client_api,
+                                                     project_id=self.project_id)
+        features_repo = repositories.Features(client_api=self._client_api,
+                                              project_id=self.project_id,
+                                              feature_set=self, )
         r = reps(feature_sets=feature_sets_repo,
                  features=features_repo)
         return r

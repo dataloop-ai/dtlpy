@@ -6,6 +6,8 @@ Feature: Tasks repository get method testing
         And I create a dataset with a random name
         And There are items, path = "filters/image.jpg"
             |annotated_type={"box": 3, "polygon": 3}|metadata={"user.good": 3, "user.bad": 3}|
+        When Add Members "annotator1@dataloop.ai" as "annotator"
+        And Add Members "annotator2@dataloop.ai" as "annotator"
 
     @testrail-C4523169
     Scenario: Get - name

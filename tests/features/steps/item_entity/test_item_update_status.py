@@ -41,9 +41,9 @@ def step_impl(context):
     for page in pages:
         for item in page:
             if item.annotated:
-                assert item.metadata['system']['taskStatusLog'][0]["status"]["status"] == "completed", "Failed , Item missing status Completed"
+                assert item.metadata['system']['taskStatusLog'][0]["status"]["status"] == "completed", "Failed, Item missing status completed"
             else:
-                assert item.metadata['system']['taskStatusLog'][0]["status"]["status"] == "discard", "Failed , Item missing status Discarded"
+                assert item.metadata['system']['taskStatusLog'][0]["status"]["status"] == "discard", "Failed, Item missing status discard"
 
 
 @behave.when(u'I update items status to custom task actions "{action_1}" "{action_2}" "{action_3}"')
@@ -74,6 +74,7 @@ def step_impl(context):
 
 
 @behave.then(u'I update item status to "{status}" with task id')
+@behave.when(u'I update item status to "{status}" with task id')
 def step_impl(context, status):
     try:
         context.item.update_status(status=status, task_id=context.task.id)
