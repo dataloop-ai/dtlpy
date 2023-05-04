@@ -75,10 +75,9 @@ class Report:
             remote_path = remote_path[:-1]
 
         filepath = f'/{remote_path}/{remote_name}'
-        report_dataset = dl.datasets.get(dataset_id=dataset.id)
 
         try:
-            report_item = report_dataset.items.get(filepath=filepath)
+            item = dataset.items.get(filepath=filepath)
         except dl.exceptions.NotFound:
             with tempfile.TemporaryDirectory() as tmpdir:
                 filepath = os.path.join(tmpdir, remote_name)
@@ -92,13 +91,13 @@ class Report:
 
         binary = io.BytesIO()
         binary.write(json.dumps(self.prepare()).encode())
-        binary.name = report_item.name
+        binary.name = item.name
         headers_req = dl.client_api.auth
         binary.seek(0)
-        resp = requests.post(url=dl.environment() + '/items/{}/revisions'.format(report_item.id),
+        resp = requests.post(url=dl.environment() + '/items/{}/revisions'.format(item.id),
                              headers=headers_req,
                              files={'file': (binary.name, binary)},
                              )
         if not resp.ok:
             raise ValueError(resp.text)
-        return report_item
+        return item
