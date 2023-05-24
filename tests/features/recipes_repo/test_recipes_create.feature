@@ -1,3 +1,4 @@
+@qa-nightly
 Feature: Recipes repository create service testing
 
     Background: Initiate Platform Interface and create a project
@@ -23,3 +24,9 @@ Feature: Recipes repository create service testing
         When I create a new plain recipe with existing ontology id
         And I update dataset recipe to the new recipe
         Then Dataset recipe in host equals the one created
+
+    @DAT-46014
+    Scenario: Create new recipe with the checkout project
+        When I checkout project
+        And I create a new project recipe
+        Then recipe in host is exist

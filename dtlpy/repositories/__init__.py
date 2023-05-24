@@ -48,3 +48,4 @@ from .settings import Settings
 from .resource_executions import ResourceExecutions
 from .apps import Apps
 from .dpks import Dpks
+from .messages import Messages

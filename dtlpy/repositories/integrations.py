@@ -137,7 +137,7 @@ class Integrations:
             organization_id = self.org.id
 
         url_path = '/orgs/{}/integrations'.format(organization_id)
-        payload = {"type": integrations_type, 'name': name, 'options': options}
+        payload = {"type": integrations_type.value if isinstance(integrations_type, entities.IntegrationType) else integrations_type, 'name': name, 'options': options}
         success, response = self._client_api.gen_request(req_type='post',
                                                          path=url_path,
                                                          json_req=payload)
@@ -145,8 +145,8 @@ class Integrations:
             raise exceptions.PlatformException(response)
         else:
             integration = entities.Integration.from_json(_json=response.json(), client_api=self._client_api)
-        if integration.meatadata and isinstance(integration.meatadata, list) and len(integration.meatadata) > 0:
-            for metadata in integration.meatadata:
+        if integration.metadata and isinstance(integration.metadata, list) and len(integration.metadata) > 0:
+            for metadata in integration.metadata:
                 if metadata['name'] == 'status':
                     integration_status = metadata['value']
                     logger.info('Integration status: {}'.format(integration_status))

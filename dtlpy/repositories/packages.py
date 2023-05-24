@@ -122,7 +122,7 @@ class Packages:
     @_api_reference.add(path='/packages/{id}/revisions', method='get')
     def revisions(self, package: entities.Package = None, package_id: str = None):
         """
-        Get the package revisions history.
+        Get the package revision history.
 
         **Prerequisites**: You must be in the role of an *owner* or *developer*.
 

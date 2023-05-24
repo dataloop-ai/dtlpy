@@ -39,3 +39,12 @@ Feature: Converter coco format
     When I add single root Label "laptop"
     And I convert local "coco" dataset to "dataloop"
     Then The converter do not overwrite the existing label
+
+
+  @DAT-47083
+  Scenario: Convert local coco dataset to dataloop - with empty segmentation
+    Given There is a local "coco" dataset in "converter/emptyseg"
+    When I convert local "coco" dataset to "dataloop"
+    Given Local path in "converter/emptyseg/reverse" is clean
+    When I reverse dataloop dataset to local "coco" in "converter/emptyseg/reverse"
+    Then local "coco" dataset in "converter/emptyseg" is equal to reversed dataset in "converter/emptyseg/reverse"

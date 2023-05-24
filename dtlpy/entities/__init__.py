@@ -71,4 +71,6 @@ from .setting import Role, PlatformEntityType, SettingsValueTypes, SettingsTypes
 from .reflect_dict import ReflectDict
 from .dpk import Dpk, Panel, Toolbar, Components
 from .app import App
+from .app_module import AppModule
 from .resource_execution import ResourceExecution
+from .message import Message, NotificationEventContext

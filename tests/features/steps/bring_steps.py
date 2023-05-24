@@ -242,6 +242,8 @@ from tests.features.steps.projects_repo import projects_interface
 
 from tests.features.steps.annotations_repo import test_annotations_adding_multiple_frames
 from tests.features.steps.drivers_repo import test_drivers_create
+from tests.features.steps.drivers_repo import test_drivers_delete
+from tests.features.steps.notifications import notifications
 
 
 

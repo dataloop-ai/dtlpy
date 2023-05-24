@@ -1,3 +1,4 @@
+@qa-nightly
 Feature: Datasets repository create service testing
 
     Background: Initiate Platform Interface and create a project

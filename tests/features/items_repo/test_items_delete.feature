@@ -1,3 +1,4 @@
+@qa-nightly
 Feature: Items repository delete service testing
 
     Background: Initiate Platform Interface and create a project

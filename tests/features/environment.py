@@ -1,3 +1,5 @@
+import time
+
 from behave import fixture
 from behave import use_fixture
 import os
@@ -5,8 +7,11 @@ import json
 import logging
 from filelock import FileLock
 from dotenv import load_dotenv
+
+
 def before_all(context):
     load_dotenv('.test.env')
+
 
 @fixture
 def after_feature(context, feature):
@@ -15,6 +20,19 @@ def after_feature(context, feature):
             feature.bot.delete()
         except Exception:
             logging.exception('Failed to delete bot')
+
+    if hasattr(feature, 'dataloop_feature_integration'):
+        all_deleted = True
+        time.sleep(7)  # Wait for drivers to delete
+        for integration_id in feature.to_delete_integrations_ids:
+            try:
+                feature.dataloop_feature_project.integrations.delete(integrations_id=integration_id, sure=True, really=True)
+            except feature.dataloop_feature_dl.exceptions.NotFound:
+                pass
+            except:
+                all_deleted = False
+                logging.exception('Failed deleting integration: {}'.format(integration_id))
+        assert all_deleted
 
     if hasattr(feature, 'dataloop_feature_project'):
         try:
@@ -40,6 +58,13 @@ def after_feature(context, feature):
                     json.dump(api_calls, f)
         except Exception:
             logging.exception('Failed to update api calls')
+
+
+@fixture
+def before_feature(context, feature):
+    if 'rc_only' in context.tags and 'rc' not in os.environ.get("DLP_ENV_NAME"):
+        feature.skip("Marked with @rc_only")
+        return
 
 
 def fix_project_with_frozen_datasets(project):
@@ -91,11 +116,11 @@ def after_tag(context, tag):
             use_fixture(delete_converter_dataset, context)
         except Exception:
             logging.exception('Failed to delete converter dataset')
-    elif tag == 'integrations.delete':
+    elif tag == 'datasets.delete':
         try:
-            use_fixture(integrations_delete, context)
+            use_fixture(datasets_delete, context)
         except Exception:
-            logging.exception('Failed to delete integration')
+            logging.exception('Failed to delete dataset')
     elif tag == 'drivers.delete':
         try:
             use_fixture(drivers_delete, context)
@@ -105,7 +130,7 @@ def after_tag(context, tag):
         pass
     elif 'testrail-C' in tag:
         pass
-    elif 'DAT-' in tag or tag == 'wip':
+    elif 'DAT-' in tag or tag == 'wip' or 'qa-' in tag or 'rc_only' in tag:
         pass
     else:
         raise ValueError('unknown tag: {}'.format(tag))
@@ -236,21 +261,6 @@ def delete_services(context):
             logging.exception('Failed deleting service: ')
     assert all_deleted
 
-@fixture
-def integrations_delete(context):
-    if not hasattr(context, 'to_delete_integrations_ids'):
-        return
-
-    all_deleted = True
-    for integration_id in context.to_delete_integrations_ids:
-        try:
-            context.project.integrations.delete(integrations_id=integration_id, sure=True, really=True)
-        except context.dl.exceptions.NotFound:
-            pass
-        except:
-            all_deleted = False
-            logging.exception('Failed deleting integration: {}'.format(integration_id))
-    assert all_deleted
 
 @fixture
 def drivers_delete(context):
@@ -258,6 +268,7 @@ def drivers_delete(context):
         return
 
     all_deleted = True
+    time.sleep(7)  # Wait for datasets to delete
     for driver_id in context.to_delete_drivers_ids:
         try:
             context.project.drivers.delete(driver_id=driver_id, sure=True, really=True)
@@ -266,4 +277,21 @@ def drivers_delete(context):
         except:
             all_deleted = False
             logging.exception('Failed deleting driver: {}'.format(driver_id))
+    assert all_deleted
+
+
+@fixture
+def datasets_delete(context):
+    if not hasattr(context, 'to_delete_datasets_ids'):
+        return
+
+    all_deleted = True
+    for dataset_id in context.to_delete_datasets_ids:
+        try:
+            context.project.datasets.delete(dataset_id=dataset_id, sure=True, really=True)
+        except context.dl.exceptions.NotFound:
+            pass
+        except:
+            all_deleted = False
+            logging.exception('Failed deleting dataset: {}'.format(dataset_id))
     assert all_deleted

@@ -32,7 +32,7 @@ Feature: Annotaions repository download service testing
     When I download items annotations with "json" to "downloaded_annotations/json.json"
     Then Item annotation "json" has been downloaded to "downloaded_annotations"
 
-    @testrail-C4523033
+  @testrail-C4523033
   Scenario: Download item annotations with default
     Given Labels in file: "assets_split/annotations_download/labels.json" are uploaded to test Dataset
     And Item in path "assets_split/annotations_download/0000000162.jpg" is uploaded to "Dataset"
@@ -92,38 +92,38 @@ Feature: Annotaions repository download service testing
     And Item is annotated with annotations in file: "assets_split/annotations_download/0162_annotations.json"
     Then I download the items annotations with ViewAnnotationOptions "MASK" enum to find "downloaded_annotations/mask/0000000162.png"
 
-    @testrail-C4523033
-    Scenario: Download annotation by id
-      Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
-      And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"
-      And Item is annotated with annotations in file: "assets_split/annotations_crud/0162_annotations.json"
-      And There is annotation x
-      And There are no files in folder "downloaded_annotations"
-      When I get the annotation by id
-      Then I download the annotation to "downloaded_annotations/annotation/annotation.png" with "mask" type
-      And annotation file exist in the path "downloaded_annotations/annotation"
+  @testrail-C4523033
+  Scenario: Download annotation by id
+    Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
+    And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"
+    And Item is annotated with annotations in file: "assets_split/annotations_crud/0162_annotations.json"
+    And There is annotation x
+    And There are no files in folder "downloaded_annotations"
+    When I get the annotation by id
+    Then I download the annotation to "downloaded_annotations/annotation/annotation.png" with "mask" type
+    And annotation file exist in the path "downloaded_annotations/annotation"
 
-    @testrail-C4523033
-    Scenario: Download annotation by id VTT
-      Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
-      And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"
-      And Item is annotated with annotations in file: "assets_split/annotations_crud/0162_annotations.json"
-      And There is annotation x
-      And There are no files in folder "downloaded_annotations"
-      When I get the annotation by id
-      Then I download the annotation to "downloaded_annotations/annotation/annotation.vtt" with "vtt" type
-      And annotation file exist in the path "downloaded_annotations/annotation"
+  @testrail-C4523033
+  Scenario: Download annotation by id VTT
+    Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
+    And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"
+    And Item is annotated with annotations in file: "assets_split/annotations_crud/0162_annotations.json"
+    And There is annotation x
+    And There are no files in folder "downloaded_annotations"
+    When I get the annotation by id
+    Then I download the annotation to "downloaded_annotations/annotation/annotation.vtt" with "vtt" type
+    And annotation file exist in the path "downloaded_annotations/annotation"
 
-      @testrail-C4523033
-    Scenario: Download video annotation by id
-      Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
-      And Item in path "assets_split/ann_json_to_object/sample_video.mp4" is uploaded to "Dataset"
-      And Item is annotated with annotations in file: "assets_split/annotations_crud/0162_annotations.json"
-      And There is annotation x
-      And There are no files in folder "downloaded_annotations"
-      When I get the annotation by id
-      Then I download the annotation to "downloaded_annotations/annotation/annotation.mp4" with "mask" type
-      And annotation file exist in the path "downloaded_annotations/annotation"
+  @testrail-C4523033
+  Scenario: Download video annotation by id
+    Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
+    And Item in path "assets_split/ann_json_to_object/sample_video.mp4" is uploaded to "Dataset"
+    And Item is annotated with annotations in file: "assets_split/annotations_crud/0162_annotations.json"
+    And There is annotation x
+    And There are no files in folder "downloaded_annotations"
+    When I get the annotation by id
+    Then I download the annotation to "downloaded_annotations/annotation/annotation.mp4" with "mask" type
+    And annotation file exist in the path "downloaded_annotations/annotation"
 
 
   @testrail-C4523033
@@ -134,3 +134,14 @@ Feature: Annotaions repository download service testing
     And Item is annotated with annotations in file: "assets_split/annotations_download/0162_annotations.json"
     When I download dataset annotations with "img_mask" to "downloaded_annotations/img_mask.png"
     Then dataset "img_mask" folder has been downloaded to "downloaded_annotations"
+
+  @DAT-47547
+  Scenario: Download annotation by id - with out file type
+    Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
+    And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"
+    And Item is annotated with annotations in file: "assets_split/annotations_crud/0162_annotations.json"
+    And There is annotation x
+    And There are no files in folder "downloaded_annotations"
+    When I get the annotation by id
+    Then I download the annotation to "downloaded_annotations/annotation" with "mask" type
+    And annotation file exist in the path "downloaded_annotations/annotation"

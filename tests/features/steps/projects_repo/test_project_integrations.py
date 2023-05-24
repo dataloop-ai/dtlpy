@@ -1,9 +1,8 @@
 import os
 import behave
-import json
 
 
-@behave.when(u'I create "{integration_type}" integration with name "{integration_name}"')
+@behave.given(u'I create "{integration_type}" integration with name "{integration_name}"')
 def step_impl(context, integration_type, integration_name):
     integration_options = {
         "aws": eval(os.environ.get("aws")),
@@ -13,6 +12,7 @@ def step_impl(context, integration_type, integration_name):
         "azureblob": eval(os.environ.get("azureblob"))
         ,
         "aws_sts": eval(os.environ.get("aws_sts")),
+        "azuregen2": eval(os.environ.get("azuregen2")),
         "key_value": {
             'key': os.environ.get('key_value_key', 'default_key'), 'value': os.environ.get('key_value_value', 'default_value')
         }
@@ -22,11 +22,20 @@ def step_impl(context, integration_type, integration_name):
         # Handle AWS integration
         context.integration_type = integration_type.replace('aws', 's3')
 
+        if hasattr(context.feature, 'dataloop_feature_integration'):
+            if context.feature.dataloop_feature_integration.type == integration_type and context.feature.dataloop_feature_integration.name == integration_name:
+                context.integration = context.feature.dataloop_feature_integration
+                return
+
+        # Handle AzureDatalakeGen2 integration
+        context.integration_type = context.integration_type.replace('azuregen2', 'azureblob')
+
         context.integration = context.project.integrations.create(
             integrations_type=context.integration_type,
             name=integration_name,
             options=integration_options[integration_type])
-        context.to_delete_integrations_ids.append(context.integration.id)
+        context.feature.to_delete_integrations_ids.append(context.integration.id)
+        context.feature.dataloop_feature_integration = context.integration
         context.error = None
     except Exception as e:
         context.error = e
@@ -49,6 +58,7 @@ def step_impl(context, integration_name):
 def step_impl(context):
     try:
         context.integration.delete(True, True)
+        context.feature.to_delete_integrations_ids.pop(-1)
         context.error = None
     except Exception as e:
         context.error = e

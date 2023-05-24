@@ -52,7 +52,7 @@ class Integration(entities.BaseEntity):
     created_by = attr.ib()
     update_at = attr.ib()
     _client_api = attr.ib(type=ApiClient, repr=False)
-    meatadata = attr.ib(default=None, repr=False)
+    metadata = attr.ib(default=None, repr=False)
     _project = attr.ib(default=None, repr=False)
 
     @classmethod
@@ -76,7 +76,7 @@ class Integration(entities.BaseEntity):
                    type=_json.get('type', None),
                    org=_json.get('org', None),
                    client_api=client_api,
-                   meatadata=_json.get('metadata', None))
+                   metadata=_json.get('metadata', None))
         inst.is_fetched = is_fetched
         return inst
 

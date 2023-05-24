@@ -128,6 +128,13 @@ Executions
   :members:
   :show-inheritance:
 
+Models
+---------
+
+.. automodule:: dtlpy.repositories.models
+  :members:
+  :show-inheritance:
+
 Pipelines
 ---------
 

@@ -438,12 +438,14 @@ class Model(entities.BaseEntity):
                                  validation_filter=validation_filter,
                                  )
 
-    def train(self):
+    def train(self, service_config=None):
         """
         Train the model in the cloud. This will create a service and will run the adapter's train function as an execution
+
+        :param dict service_config : Service object as dict. Contains the spec of the default service to create.
         :return:
         """
-        return self.models.train(model_id=self.id)
+        return self.models.train(model_id=self.id, service_config=service_config)
 
     def predict(self, item_ids):
         """

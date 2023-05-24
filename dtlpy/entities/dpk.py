@@ -1,10 +1,9 @@
 from collections import namedtuple
-from dataclasses import dataclass
 from typing import List
 import traceback
 import enum
 
-from .. import entities, services, repositories
+from .. import entities, repositories, exceptions
 from ..services.api_client import ApiClient
 
 
@@ -152,6 +151,7 @@ class Dpk(entities.DlEntity):
     # sdk
     client_api: ApiClient
     project: entities.Project
+    _revisions = None
     __repositories = None
 
     @components.default
@@ -228,17 +228,60 @@ class Dpk(entities.DlEntity):
         """
         return self.dpks.delete(self.id)
 
-    def revisions(self):
+    def _get_revision_pages(self, filters: entities.Filters = None) -> entities.PagedEntities:
         """
         returns the available versions of the dpk.
 
+        :param entities.Filters filters: the filters to apply to the search.
         :return the available versions of the dpk.
 
         ** Example **
         ..code-block:: python
             versions = dl.dpks.revisions(dpk_name='name')
         """
-        return self.dpks.revisions(dpk_name=self.name)
+        if filters is None:
+            filters = entities.Filters(resource=entities.FiltersResource.DPK)
+        elif not isinstance(filters, entities.Filters):
+            raise ValueError('Unknown filters type: {!r}'.format(type(filters)))
+        elif filters.resource != entities.FiltersResource.DPK:
+            raise TypeError('Filters resource must to be FiltersResource.DPK. Got: {!r}'.format(filters.resource))
+
+        paged = entities.PagedEntities(items_repository=self,
+                                       filters=filters,
+                                       page_offset=filters.page,
+                                       page_size=filters.page_size,
+                                       client_api=self.client_api,
+                                       list_function=self._list_revisions)
+        paged.get_page()
+        return paged
+
+    def _build_entities_from_response(self, response_items):
+        return self.dpks._build_entities_from_response(response_items=response_items)
+
+    def _list_revisions(self, filters: entities.Filters):
+        url = '/app-registry/{}/revisions'.format(self.name)
+        # request
+        success, response = self.client_api.gen_request(req_type='post',
+                                                        path=url,
+                                                        json_req=filters.prepare())
+        if not success:
+            raise exceptions.PlatformException(response)
+        return response.json()
+
+    @property
+    def revisions(self):
+        """
+        Returns the available versions of the dpk.
+
+        :return List[Dpk]
+
+        ** Example **
+        ..code-block:: python
+        versions = dpk.revisions
+        """
+        if self._revisions is None:
+            self._revisions = self._get_revision_pages()
+        return self._revisions
 
     @staticmethod
     def _protected_from_json(_json, client_api, project, is_fetched=True):

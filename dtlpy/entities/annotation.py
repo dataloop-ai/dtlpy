@@ -610,6 +610,16 @@ class Annotation(entities.BaseEntity):
 
             filepath = annotation.download(filepath='filepath', annotation_format=dl.ViewAnnotationOptions.MASK)
         """
+        _, ext = os.path.splitext(filepath)
+        if ext == '':
+            if annotation_format == ViewAnnotationOptions.JSON:
+                ext = '.json'
+            else:
+                if self.is_video:
+                    ext = '.mp4'
+                else:
+                    ext = '.png'
+            filepath = os.path.join(filepath, self.id + ext)
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         if annotation_format == ViewAnnotationOptions.JSON:
             with open(filepath, 'w') as f:

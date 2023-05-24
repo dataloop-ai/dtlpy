@@ -93,7 +93,14 @@ class Recipes:
             if self._dataset is not None:
                 project_ids = [self._dataset.project.id]
             else:
-                raise exceptions.PlatformException('Must provide project_ids')
+                # get from cache
+                project = self._client_api.state_io.get('project')
+                if project is not None:
+                    # build entity from json
+                    p = entities.Project.from_json(_json=project, client_api=self._client_api)
+                    project_ids = [p.id]
+                else:
+                    raise exceptions.PlatformException('Must provide project_ids')
         if ontology_ids is None:
             ontolgies = repositories.Ontologies(client_api=self._client_api,
                                                 recipe=None)

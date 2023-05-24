@@ -46,11 +46,11 @@ def step_impl(context, action_input):
         outputs=[dl.PipelineNodeIO(input_type=dl.PackageInputType.ITEM,
                                    name='item',
                                    display_name='item',
-                                   action='first-output'),
+                                   actions=['first-output']),
                  dl.PipelineNodeIO(input_type=dl.PackageInputType.ITEM,
                                    name='item',
                                    display_name='item',
-                                   action='second-output')
+                                   actions=['second-output'])
                  ]
     )
 

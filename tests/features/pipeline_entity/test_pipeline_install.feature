@@ -1,3 +1,4 @@
+@qa-nightly
 Feature: Pipeline entity method testing re-installed pipeline
 
     Background: Initiate Platform Interface and create a pipeline

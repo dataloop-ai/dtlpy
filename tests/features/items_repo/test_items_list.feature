@@ -1,3 +1,4 @@
+@qa-nightly
 Feature: Items repository list service testing
 
     Background: Initiate Platform Interface and create a project

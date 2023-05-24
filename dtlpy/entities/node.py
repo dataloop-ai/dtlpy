@@ -1,3 +1,5 @@
+import warnings
+
 import inspect
 import json
 import logging
@@ -35,15 +37,22 @@ class PipelineConnectionPort:
 
 
 class PipelineConnection:
-    def __init__(self, source: PipelineConnectionPort, target: PipelineConnectionPort, filters: entities.Filters):
+    def __init__(self,
+                 source: PipelineConnectionPort,
+                 target: PipelineConnectionPort,
+                 filters: entities.Filters,
+                 action: str = None
+                 ):
         """
         :param PipelineConnectionPort source: the source pipeline connection
         :param PipelineConnectionPort target: the target pipeline connection
         :param entities.Filters filters: condition for the connection between the nodes
+        :param str action: the action that move the input when it happen
         """
         self.source = source
         self.target = target
         self.filters = filters
+        self.action = action
 
     @staticmethod
     def from_json(_json: dict):
@@ -54,6 +63,7 @@ class PipelineConnection:
             source=PipelineConnectionPort.from_json(_json=_json.get('src', None)),
             target=PipelineConnectionPort.from_json(_json=_json.get('tgt', None)),
             filters=condition,
+            action=_json.get('action', None)
         )
 
     def to_json(self):
@@ -61,6 +71,8 @@ class PipelineConnection:
             'src': self.source.to_json(),
             'tgt': self.target.to_json(),
         }
+        if self.action:
+            _json['action'] = self.action
         if self.filters:
             if isinstance(self.filters, entities.Filters):
                 filters = self.filters.prepare(query_only=True).get('filter', dict())
@@ -80,7 +92,8 @@ class PipelineNodeIO:
                  color: tuple = None,
                  port_percentage: int = None,
                  action: str = None,
-                 default_value=None):
+                 default_value=None,
+                 actions: list = None):
         """
         Pipeline Node
 
@@ -92,6 +105,7 @@ class PipelineNodeIO:
         :param int port_percentage: port percentage
         :param str action: the action that move the input when it happen
         :param default_value: default value of the input
+        :param list actions: the actions list that move the input when it happen
         """
         self.port_id = port_id if port_id else str(uuid.uuid4())
         self.input_type = input_type
@@ -100,7 +114,17 @@ class PipelineNodeIO:
         self.display_name = display_name
         self.port_percentage = port_percentage
         self.default_value = default_value
-        self.action = action
+        if action is not None:
+            warnings.warn('action param has been deprecated in version 1.80', DeprecationWarning)
+            if actions is None:
+                actions = []
+            actions.append(action)
+        self.actions = actions
+
+    @property
+    def action(self):
+        warnings.warn('action attribute has been deprecated in version 1.80', DeprecationWarning)
+        return None
 
     @staticmethod
     def from_json(_json: dict):
@@ -112,7 +136,7 @@ class PipelineNodeIO:
             display_name=_json.get('displayName', None),
             port_percentage=_json.get('portPercentage', None),
             default_value=_json.get('defaultValue', None),
-            action=_json.get('action', None),
+            actions=_json.get('actions', None),
         )
 
     def to_json(self):
@@ -125,8 +149,8 @@ class PipelineNodeIO:
             'portPercentage': self.port_percentage,
         }
 
-        if self.action:
-            _json['action'] = self.action
+        if self.actions:
+            _json['actions'] = self.actions
         if self.default_value:
             _json['defaultValue'] = self.default_value
 
@@ -229,19 +253,19 @@ class PipelineNode:
                 "z": 0
             }
 
-    def _default_io(self, action=None) -> PipelineNodeIO:
+    def _default_io(self, actions: list = None) -> PipelineNodeIO:
         """
         Create a default item pipeline input
 
-        :param str action:  the action that move the input when it happen
+        :param str actions:  the action that move the input when it happen
         :return PipelineNodeIO: the default item PipelineNodeIO
         """
         default_io = PipelineNodeIO(port_id=str(uuid.uuid4()),
                                     input_type=entities.PackageInputType.ITEM,
                                     name='item',
                                     color=None,
-                                    display_name=action if action else 'item',
-                                    action=action)
+                                    display_name=actions[0] if actions else 'item',
+                                    actions=actions)
         return default_io
 
     @staticmethod
@@ -294,7 +318,8 @@ class PipelineNode:
                           node,
                           source_port: PipelineNodeIO = None,
                           target_port: PipelineNodeIO = None,
-                          filters: entities.Filters = None) -> PipelineConnection:
+                          filters: entities.Filters = None,
+                          action: str = None) -> PipelineConnection:
         """
         Build connection between the current node and the target node use the given ports
 
@@ -302,6 +327,7 @@ class PipelineNode:
         :param PipelineNodeIO source_port: the source PipelineNodeIO input port
         :param PipelineNodeIO target_port: the target PipelineNodeIO output port
         :param entities.Filters filters: condition for the connection between the nodes
+        :param str action:  the action that move the input when it happen
         :return: the connection between the nodes
         """
         if source_port is None and self.outputs:
@@ -315,14 +341,18 @@ class PipelineNode:
 
         source_connection = PipelineConnectionPort(node_id=self.node_id, port_id=source_port.port_id)
         target_connection = PipelineConnectionPort(node_id=node.node_id, port_id=target_port.port_id)
-        connection = PipelineConnection(source=source_connection, target=target_connection, filters=filters)
+        if action is None and source_port.actions is not None and source_port.actions is not []:
+            action = source_port.actions[0]
+        connection = PipelineConnection(source=source_connection, target=target_connection, filters=filters,
+                                        action=action)
         return connection
 
     def connect(self,
                 node,
                 source_port: PipelineNodeIO = None,
                 target_port: PipelineNodeIO = None,
-                filters=None):
+                filters=None,
+                action: str = None):
         """
         Build connection between the current node and the target node use the given ports
 
@@ -330,6 +360,7 @@ class PipelineNode:
         :param PipelineNodeIO source_port: the source PipelineNodeIO input port
         :param PipelineNodeIO target_port: the target PipelineNodeIO output port
         :param entities.Filters filters: condition for the connection between the nodes
+        :param str action:  the action that move the input when it happen
         :return: the connected node
         """
         if self._pipeline is None:
@@ -337,7 +368,8 @@ class PipelineNode:
         connection = self._build_connection(node=node,
                                             source_port=source_port,
                                             target_port=target_port,
-                                            filters=filters)
+                                            filters=filters,
+                                            action=action)
         self._pipeline.connections.append(connection)
         self._pipeline.nodes.add(node)
         return node
@@ -455,8 +487,8 @@ class CodeNode(PipelineNode):
                  project_id: str,
                  project_name: str,
                  method: Callable,
-                 outputs: list = None,
-                 inputs: list = None,
+                 outputs: List[PipelineNodeIO] = None,
+                 inputs: List[PipelineNodeIO] = None,
                  position: tuple = (1, 1),
                  ):
         """
@@ -583,7 +615,7 @@ class TaskNode(PipelineNode):
 
         inputs = [self._default_io()]
 
-        outputs = [self._default_io(action=action) for action in actions]
+        outputs = [self._default_io(actions=actions)]
 
         if groups is not None:
             if not isinstance(groups, list) or not all(isinstance(group, str) for group in groups):

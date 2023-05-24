@@ -1,3 +1,4 @@
+@qa-nightly
 Feature: Items repository get service testing
 
     Background: Initiate Platform Interface and create a project
@@ -40,3 +41,7 @@ Feature: Items repository get service testing
         When I try to get an item by remote path "**/0000000162.jpg"
         Then "NotFound" exception should be raised
     
+    @testrail-C4523116
+    Scenario: Get dataset items by dataset Id
+        Given There are 2 items by the name of "0000000162.jpg"
+        Then I get items by dataset Id

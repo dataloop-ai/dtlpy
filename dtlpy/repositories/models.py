@@ -390,8 +390,9 @@ class Models:
                      "packageId": from_model.package_id,
                      "configuration": from_model.configuration,
                      "metadata": from_model.metadata}
-        if project_id is not None:
-            from_json['projectId'] = project_id
+        if project_id is None:
+            project_id = self.project.id
+        from_json['projectId'] = project_id
         if dataset is not None:
             if labels is None:
                 labels = list(dataset.labels_flat_dict.keys())
@@ -519,15 +520,20 @@ class Models:
                                         project=self._project,
                                         package=model._package)
 
-    def train(self, model_id: str):
+    def train(self, model_id: str, service_config=None):
         """
         Train the model in the cloud. This will create a service and will run the adapter's train function as an execution
 
         :param model_id: id of the model to train
+        :param dict service_config : Service object as dict. Contains the spec of the default service to create.
         :return:
         """
+        payload = dict()
+        if service_config is not None:
+            payload['serviceConfig'] = service_config
         success, response = self._client_api.gen_request(req_type="post",
-                                                         path=f"/ml/models/{model_id}/train")
+                                                         path=f"/ml/models/{model_id}/train",
+                                                         payload=payload)
         if not success:
             raise exceptions.PlatformException(response)
         return entities.Execution.from_json(_json=response.json(),

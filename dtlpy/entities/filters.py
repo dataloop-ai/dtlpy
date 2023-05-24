@@ -314,7 +314,8 @@ class Filters:
                 self._unique_fields = ['type']
                 self.add(field='type',
                          values=['box', 'class', 'comparison', 'ellipse', 'point', 'segment', 'polyline', 'binary',
-                                 'subtitle', 'cube', 'pose', 'text_mark'], operator=FiltersOperations.IN,
+                                 'subtitle', 'cube', 'cube_3d', 'pose', 'text_mark'],
+                         operator=FiltersOperations.IN,
                          method=FiltersMethod.AND)
 
     def __generate_query(self):

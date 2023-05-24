@@ -68,7 +68,7 @@ pipeline_json = {
                     "name": "completed",
                     "displayName": "completed",
                     "color": "#14a182",
-                    "action": "completed"
+                    "actions": ["completed"]
                 },
                 {
                     "portId": "fc09ca5d-9a13-438b-993a-5518dc67b045",
@@ -76,15 +76,7 @@ pipeline_json = {
                     "name": "completed",
                     "displayName": "done",
                     "color": "#69f4ef",
-                    "action": "done"
-                },
-                {
-                    "portId": "bf0a8702-4998-4b73-ac3c-c6b43b79f8eb",
-                    "type": "Item",
-                    "name": "item",
-                    "displayName": "discard",
-                    "color": "#981c1f",
-                    "action": "discard"
+                    "actions": ["done"]
                 },
                 {
                     "portId": "ee8bbdf2-0e33-4688-af5c-800d88c583d0",
@@ -92,7 +84,7 @@ pipeline_json = {
                     "name": "item",
                     "displayName": "completed",
                     "color": "#d004e4",
-                    "action": "completed"
+                    "actions": ["completed", "discard"]
                 }
             ],
             "metadata": {
@@ -254,14 +246,8 @@ pipeline_json = {
                     "type": "Item",
                     "name": "item",
                     "displayName": "Complete",
-                    "action": "completed"
-                },
-                {
-                    "portId": "f7b3b43a-58bd-4dc1-9b36-98db09cc11fa",
-                    "type": "Item",
-                    "name": "item",
-                    "displayName": "Discard",
-                    "action": "discard"
+                    "actions": ["completed", "discard"]
+
                 }
             ],
             "metadata": {
@@ -329,7 +315,8 @@ pipeline_json = {
                 "nodeId": "039c747d-6ec3-4fbb-8090-6134ecc78ae6",
                 "portId": "0b357d4b-7e60-47a2-922e-7a22a4d7d6fc"
             },
-            "condition": "{}"
+            "condition": "{}",
+            "action": "completed"
         },
         {
             "src": {
@@ -340,7 +327,8 @@ pipeline_json = {
                 "nodeId": "488d660b-9c81-4f12-ad38-7a57bcd3346c",
                 "portId": "5a389b74-077f-4cde-a702-11775398bdb1"
             },
-            "condition": "{}"
+            "condition": "{}",
+            "action": "completed"
         },
         {
             "src": {
@@ -351,7 +339,8 @@ pipeline_json = {
                 "nodeId": "967edc32-1eb3-4cfb-b127-8c3be9005726",
                 "portId": "82dd52bc-7bc4-4baa-8f2c-8654022625e5"
             },
-            "condition": "{}"
+            "condition": "{}",
+            "action": "done"
         }
     ],
     "startNodes": [

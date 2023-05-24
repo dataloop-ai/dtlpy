@@ -1,3 +1,4 @@
+@qa-nightly
 Feature: Projects repository list service testing
 
     Background: Background name

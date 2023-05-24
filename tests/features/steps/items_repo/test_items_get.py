@@ -74,3 +74,12 @@ def step_impl(context, file_name):
         local_path=filepath,
         remote_path=remote_path
     )
+
+
+@behave.then(u'I get items by dataset Id')
+def step_impl(context):
+    success, response = context.dl.client_api.gen_request(
+        req_type="get",
+        path="/datasets/{}/items".format(context.dataset.id)
+    )
+    assert success, "TEST FAILED: Error message: {}".format(response.json())

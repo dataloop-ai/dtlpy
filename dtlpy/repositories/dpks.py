@@ -13,7 +13,6 @@ class Dpks:
     def __init__(self, client_api: ApiClient, project: entities.Project = None):
         self._client_api = client_api
         self._project = project
-        self._revisions = None
 
     @property
     def project(self) -> Optional[entities.Project]:
@@ -158,18 +157,37 @@ class Dpks:
                                    values=dpk_name,
                                    resource=entities.FiltersResource.DPK,
                                    use_defaults=False)
-        if dpk_version is not None:
-            filters.add(field='version', values=dpk_version)
         dpks = self.list(filters=filters)
+        # only latest version returns so should be only one
         if dpks.items_count == 0:
-            raise exceptions.PlatformException(
-                error='404',
-                message='Dpk not found. Name: {}'.format(dpk_name))
+            raise exceptions.PlatformException(error='404',
+                                               message='Dpk not found. Name: {}'.format(dpk_name))
         elif dpks.items_count > 1:
             raise exceptions.PlatformException(
                 error='400',
                 message='More than one dpk found by the name of: {}'.format(dpk_name))
-        return dpks.items[0]
+        dpk: entities.Dpk = dpks.items[0]
+
+        ########################
+        # get specific version #
+        ########################
+        if dpk_version is not None and dpk.version != dpk_version:
+            filters = entities.Filters(field='version',
+                                       values=dpk_version,
+                                       resource=entities.FiltersResource.DPK,
+                                       use_defaults=False)
+            dpk_v = dpk._get_revision_pages(filters=filters)
+            if dpk_v.items_count == 0:
+                raise exceptions.PlatformException(
+                    error='404',
+                    message=f'Dpk version not found. Name: {dpk_name}, version: {dpk_version}')
+            elif dpk_v.items_count > 1:
+                # should never be here - more than one with same name and version
+                raise exceptions.PlatformException(
+                    error='400',
+                    message=f'More than one dpk found with name: {dpk_name}, version: {dpk_version}')
+            dpk = dpk_v.items[0]
+        return dpk
 
     def publish(self, dpk: entities.Dpk = None) -> entities.Dpk:
         """
@@ -224,53 +242,6 @@ class Dpks:
         else:
             raise exceptions.PlatformException(response)
         return success
-
-    def revisions(self, dpk_name: str, filters: entities.Filters = None) -> entities.PagedEntities:
-        """
-        returns the available versions of the dpk.
-
-        :param str dpk_name: the name of the dpk.
-        :param entities.Filters filters: the filters to apply to the search.
-        :return the available versions of the dpk.
-
-        ** Example **
-        ..code-block:: python
-            versions = dl.dpks.revisions(dpk_name='name')
-        """
-        if dpk_name is None:
-            raise ValueError('You must provide dpk_name')
-        self._revisions = dpk_name
-        if filters is None:
-            filters = entities.Filters(resource=entities.FiltersResource.DPK)
-        elif not isinstance(filters, entities.Filters):
-            raise ValueError('Unknown filters type: {!r}'.format(type(filters)))
-        elif filters.resource != entities.FiltersResource.DPK:
-            raise TypeError('Filters resource must to be FiltersResource.DPK. Got: {!r}'.format(filters.resource))
-
-        success, response = self._client_api.gen_request(req_type='post',
-                                                         path="/app-registry/{}/revisions".format(dpk_name))
-        if not success:
-            raise exceptions.PlatformException(response)
-
-        paged = entities.PagedEntities(items_repository=self,
-                                       filters=filters,
-                                       page_offset=filters.page,
-                                       page_size=filters.page_size,
-                                       client_api=self._client_api,
-                                       list_function=self._list_revisions)
-        paged.get_page()
-        return paged
-
-    def _list_revisions(self, filters: entities.Filters):
-        url = '/app-registry/{}/revisions'.format(self._revisions)
-        self._revisions = None
-        # request
-        success, response = self._client_api.gen_request(req_type='post',
-                                                         path=url,
-                                                         json_req=filters.prepare())
-        if not success:
-            raise exceptions.PlatformException(response)
-        return response.json()
 
     def list(self, filters: entities.Filters = None) -> entities.PagedEntities:
         """

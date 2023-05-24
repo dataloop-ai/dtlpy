@@ -28,7 +28,7 @@ Feature: Items advanced browser filters
         When I create filters
         And I add field "annotated" with values "True" and operator "None"
         And I add field "filename" with values "/*" and operator "None"
-        And I join field "creator" with values "oa-test-1@dataloop.ai,oa-test-3@dataloop.ai" and operator "in"
+        And I join field "creator" with values "oa-test-1@dataloop.ai,oa-test-3@dataloop.ai,oa-test-4@dataloop.ai" and operator "in"
         And I join field "label" with values "cat" and operator "in"
         And I list items with filters
         Then I receive "3" items

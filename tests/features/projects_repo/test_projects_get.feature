@@ -1,3 +1,4 @@
+@qa-nightly
 Feature: Projects repository get service testing
 
     Background: Initiate Platform Interface

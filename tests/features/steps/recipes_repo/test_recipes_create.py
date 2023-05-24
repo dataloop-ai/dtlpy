@@ -8,6 +8,21 @@ def step_impl(context):
     context.recipe = context.dataset.recipes.create()
 
 
+@behave.when(u'I create a new project recipe')
+def step_impl(context):
+    context.recipe = context.dl.recipes.create(recipe_name="test-checkout")
+
+
+@behave.then(u'recipe in host is exist')
+def step_impl(context):
+    recipes = context.project.recipes.list()
+    for recipe in recipes.items:
+        if recipe.id == context.recipe.id:
+            assert True
+            return
+    assert False, "recipe not found"
+
+
 @behave.when(u'I update dataset recipe to the new recipe')
 def step_impl(context):
     context.dataset.metadata['system']['recipes'] = [context.recipe.id]

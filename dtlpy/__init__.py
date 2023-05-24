@@ -63,7 +63,7 @@ from . import repositories, exceptions, entities, examples
 from .entities import (
     # main entities
     Project, Dataset, ExpirationOptions, ExportVersion, Trigger, Item, Execution, AnnotationCollection, Annotation,
-    Recipe, IndexDriver, AttributesTypes, AttributesRange, Dpk, App,
+    Recipe, IndexDriver, AttributesTypes, AttributesRange, Dpk, App, AppModule,
     Ontology, Label, Task, TaskPriority, Assignment, Service, Package, Codebase, Model, PackageModule, PackageFunction,
     # annotations
     Box, Cube, Cube3d, Point, Note, Message, Segmentation, Ellipse, Classification, Subtitle, Polyline, Pose,
@@ -101,7 +101,7 @@ from .entities import (
     Driver, S3Driver, GcsDriver, AzureBlobDriver, CacheAction, PodType,
     ExternalStorage, IntegrationType, Role, PlatformEntityType, SettingsValueTypes, SettingsTypes, SettingsSectionNames,
     SettingScope, BaseSetting, UserSetting, Setting, ServiceSample, ExecutionSample, PipelineExecutionSample,
-    ResourceExecution
+    ResourceExecution, Message, NotificationEventContext
 )
 from .ml import BaseModelAdapter
 from .utilities import Converter, BaseServiceRunner, Progress, Context, AnnotationFormat
@@ -158,6 +158,7 @@ drivers = repositories.Drivers(client_api=client_api)
 settings = repositories.Settings(client_api=client_api)
 apps = repositories.Apps(client_api=client_api)
 dpks = repositories.Dpks(client_api=client_api)
+messages = repositories.Messages(client_api=client_api)
 
 try:
     check_sdk.check(version=__version__, client_api=client_api)

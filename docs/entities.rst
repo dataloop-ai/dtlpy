@@ -288,6 +288,13 @@ Execution
   :members:
   :show-inheritance:
 
+Model
+--------
+
+.. automodule:: dtlpy.entities.model
+  :members:
+  :show-inheritance:
+
 Pipeline
 --------
 

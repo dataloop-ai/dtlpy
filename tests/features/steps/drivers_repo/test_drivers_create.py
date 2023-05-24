@@ -1,6 +1,5 @@
-import os
 import behave
-import json
+import time
 
 
 @behave.when(u'I create driver "{driver_type}" with the name "{driver_name}"')
@@ -13,6 +12,7 @@ def step_impl(context, driver_type, driver_name):
     try:
         context.driver_type = driver_type.replace('aws', 's3')
 
+        time.sleep(5)  # Wait for integration
         context.driver = context.project.drivers.create(
             name=driver_name,
             driver_type=context.driver_type,
@@ -34,7 +34,7 @@ def step_impl(context, driver_type, driver_name):
 @behave.then(u'I validate driver with the name "{driver_name}" is created')
 def step_impl(context, driver_name):
     try:
-        context.driver = context.project.drivers.get(integrations_id=context.driver.id)
+        context.driver = context.project.drivers.get(driver_id=context.driver.id)
         context.error = None
     except Exception as e:
         context.error = e
@@ -43,3 +43,30 @@ def step_impl(context, driver_name):
     assert context.driver_type == context.driver.type, "TEST FAILED: Expected - {}, Got - {}".format(context.driver_type, context.driver.type)
 
 
+@behave.when(u'I create dataset "{dataset_name}" with driver entity')
+def step_impl(context, dataset_name):
+    context.dataset = context.project.datasets.create(dataset_name=dataset_name, driver_id=context.driver.id)
+    context.to_delete_datasets_ids.append(context.dataset.id)
+
+
+@behave.when(u'I sync dataset in context')
+def step_impl(context):
+    success = context.dataset.sync()
+    assert success, "TEST FAILED: Failed to sync dataset"
+
+
+@behave.then(u'I validate driver dataset has "{item_count}" items')
+def step_impl(context, item_count):
+    num_try = 18
+    interval = 10
+    finished = False
+    pages = None
+
+    for i in range(num_try):
+        pages = context.dataset.items.list()
+        if pages.items_count == int(item_count):
+            finished = True
+            break
+        time.sleep(interval)
+
+    assert finished, "TEST FAILED: Expected dataset to have {} items, Actual: {}".format(item_count, pages.items_count)

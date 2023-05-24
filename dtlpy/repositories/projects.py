@@ -31,11 +31,26 @@ class Projects:
         """
         :param project_id:
         """
-        success, response = self._client_api.gen_request(req_type='get',
-                                                         path='/projects/{}'.format(project_id), log_error=log_error)
+        success, response = self._client_api.gen_request(
+            req_type='get',
+            path='/projects/{}'.format(project_id),
+            log_error=log_error
+        )
+
+        try:
+            response_json = response.json()
+        except Exception:
+            try:
+                logger.exception('Failed to parse response content: {}'.format(response.text))
+            except Exception:
+                logger.exception('Failed to print response content')
+            raise
+
         if success:
-            project = entities.Project.from_json(client_api=self._client_api,
-                                                 _json=response.json())
+            project = entities.Project.from_json(
+                client_api=self._client_api,
+                _json=response_json
+            )
         else:
             # raise PlatformException(response)
             # TODO because of a bug in gate wrong error is returned so for now manually raise not found

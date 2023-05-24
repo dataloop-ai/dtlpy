@@ -1266,7 +1266,7 @@ class Converter:
         i_annotation = kwargs.get('i_annotation', None)
         try:
             ann = method(**kwargs)
-            if annotations is not None and isinstance(i_annotation, int):
+            if annotations is not None and isinstance(i_annotation, int) and ann is not None:
                 annotations[i_annotation] = ann
         except Exception:
             if annotations is not None and isinstance(i_annotation, int):
@@ -1438,6 +1438,7 @@ class Converter:
         segmentation = annotation.get('segmentation', None)
         iscrowd = annotation.get('iscrowd', None)
         label = self._label_by_category_id(category_id=category_id)
+        ann_def = None
 
         if hasattr(self, '_only_bbox') and self._only_bbox:
             bbox = annotation.get('bbox', None)
@@ -1451,28 +1452,28 @@ class Converter:
             if iscrowd is not None and int(iscrowd) == 1:
                 ann_def = entities.Segmentation(label=label, geo=COCOUtils.rle_to_binary_mask(rle=segmentation))
             else:
-                if len(segmentation) == 1:
+                if segmentation is not None and len(segmentation) == 1:
                     segmentation = segmentation[0]
                     if segmentation:
                         ann_def = entities.Polygon(label=label,
                                                    geo=COCOUtils.rle_to_binary_polygon(segmentation=segmentation))
-                    else:
-                        bbox = annotation.get('bbox', None)
-                        if bbox:
-                            left = bbox[0]
-                            top = bbox[1]
-                            right = left + bbox[2]
-                            bottom = top + bbox[3]
-                            ann_def = entities.Box(top=top, left=left, bottom=bottom, right=right, label=label)
-                        else:
-                            raise Exception('Unable to convert annotation, not coordinates')
 
-                else:
+                elif segmentation is not None and len(segmentation) > 1:
                     # TODO - support conversion of split annotations
                     raise exceptions.PlatformException('400',
                                                        'unable to convert.'
                                                        'Converter does not support split annotations: {}'.format(
                                                            _id))
+                if not segmentation:
+                    bbox = annotation.get('bbox', None)
+                    if bbox:
+                        left = bbox[0]
+                        top = bbox[1]
+                        right = left + bbox[2]
+                        bottom = top + bbox[3]
+                        ann_def = entities.Box(top=top, left=left, bottom=bottom, right=right, label=label)
+                    else:
+                        raise Exception('Unable to convert annotation, not coordinates')
 
         return entities.Annotation.new(annotation_definition=ann_def, item=item)
 

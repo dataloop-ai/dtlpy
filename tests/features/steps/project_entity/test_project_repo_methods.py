@@ -4,6 +4,7 @@ import shutil
 import filecmp
 import random
 
+
 @behave.when(u'I list project entity datasets')
 def step_impl(context):
     context.dataset_list = context.project.list_datasets()
@@ -64,3 +65,8 @@ def step_impl(context):
 @behave.when(u'I reclaim project')
 def step_impl(context):
     context.project = context.dl.projects.get(project_id=context.project.id)
+
+
+@behave.when(u'I checkout project')
+def step_impl(context):
+    context.project.checkout()

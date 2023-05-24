@@ -1,3 +1,4 @@
+@qa-nightly
 @bot.create
 Feature: Executions repository list service testing
 
