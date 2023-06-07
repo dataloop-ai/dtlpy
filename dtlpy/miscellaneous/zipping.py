@@ -47,6 +47,10 @@ class Zipping:
         zip_file = zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED)
         try:
             for root, dirs, files in os.walk(directory):
+                # remove dirs to avoid going file by file
+                for d in dirs:
+                    if spec.match_file(os.path.relpath(os.path.join(root, d), directory)):
+                        dirs.remove(d)
                 for file in files:
                     filepath = os.path.join(root, file)
                     if not spec.match_file(os.path.relpath(filepath, directory)):

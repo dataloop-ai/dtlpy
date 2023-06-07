@@ -24,7 +24,7 @@ def step_impl(context):
 @given(u'I install pipeline in context')
 def step_impl(context):
     try:
-        context.pipeline.install()
+        context.pipeline = context.pipeline.install()
     except Exception as e:
         raise e
 

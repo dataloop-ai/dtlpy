@@ -129,14 +129,6 @@ class Feature(entities.BaseEntity):
             _json['dataType'] = self.data_type
         return _json
 
-    def update(self):
-        """
-        Update Feature Vector changes to platform
-
-        :return: Feature entity
-        """
-        return self.features.update(feature=self)
-
     def delete(self):
         """
         Delete Feature Vector object

@@ -61,18 +61,18 @@ def before_all(context):
         context.dl = context.feature.dataloop_feature_dl
     else:
         # get cookie name
-        feature_name = context.feature.name.replace(' ', '_')
-        api_counter_name = 'api_counter_{}.json'.format(feature_name)
-        api_counter_filepath = os.path.join(os.path.dirname(dl.client_api.cookie_io.COOKIE), api_counter_name)
-        # set counter
-        dl.client_api.set_api_counter(api_counter_filepath)
+        # feature_name = context.feature.name.replace(' ', '_')
+        # api_counter_name = 'api_counter_{}.json'.format(feature_name)
+        # api_counter_filepath = os.path.join(os.path.dirname(dl.client_api.cookie_io.COOKIE), api_counter_name)
+        # # set counter
+        # dl.client_api.set_api_counter(api_counter_filepath)
 
         # set context for run
         context.dl = dl
 
         # reset api counter
-        context.dl.client_api.calls_counter.on()
-        context.dl.client_api.calls_counter.reset()
+        # context.dl.client_api.calls_counter.on()
+        # context.dl.client_api.calls_counter.reset()
 
         # set env to dev
         _, base_env = get_env_from_git_branch()

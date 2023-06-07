@@ -791,7 +791,7 @@ class Tasks:
             if filters is not None:
                 filters._nullify_refs()
 
-    @_api_reference.add(path='annotationtasks/{id}/addToTask', method='post')
+    @_api_reference.add(path='/annotationtasks/{id}/addToTask', method='post')
     def add_items(self,
                   task: entities.Task = None,
                   task_id=None,
@@ -887,7 +887,7 @@ class Tasks:
         assert isinstance(task, entities.Task)
         return task
 
-    @_api_reference.add(path='annotationtasks/{id}/removeFromTask', method='post')
+    @_api_reference.add(path='/annotationtasks/{id}/removeFromTask', method='post')
     def remove_items(self,
                      task: entities.Task = None,
                      task_id=None,

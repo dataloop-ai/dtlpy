@@ -1,13 +1,54 @@
 import subprocess
+import threading
 import traceback
 import json
 import time
 import jwt
-import sys
 import os
 import dtlpy as dl
 import numpy as np
 from multiprocessing.pool import ThreadPool
+from tqdm import tqdm
+import sys
+
+
+class TestState(threading.Thread):
+    def __init__(self):
+        super(TestState, self).__init__()
+        self._stop_event = threading.Event()
+        self.state = dict()
+        self.lock = threading.Lock()
+
+    def run(self):
+        while not self._stop_event.is_set():
+            self.lock.acquire()
+            state = self.state.copy()
+            self.lock.release()
+            message = 'Currently running tests:\n'
+            try:
+                for test in state.values():
+                    message += '{} - {:.2f} seconds\n'.format(test['name'], time.time() - test['start'])
+                print(message)
+            except Exception:
+                print('Failed to print state\n{}'.format(traceback.format_exc()))
+            time.sleep(30)
+
+    def start_test(self, test_name: str):
+        self.lock.acquire()
+        self.state[test_name] = {
+            'start': time.time(),
+            'name': test_name,
+        }
+        self.lock.release()
+
+    def end_test(self, test_name: str):
+        self.lock.acquire()
+        self.state.pop(test_name, None)
+        self.lock.release()
+
+    def stop(self):
+        self._stop_event.set()
+
 
 try:
     # for local import
@@ -30,34 +71,51 @@ def clean_feature_log_file(log_filepath):
         os.remove(os.path.join(directory, 'fail_' + file))
 
 
-def delete_projects(env_name='rc'):
-    start_phrase = 'to-delete-test-'
+def delete_single_project(i_project: dl.Project, i_pbar):
     try:
-        projects = [p for p in dl.projects.list() if (
-                p.creator.startswith('oa-test-1') or p.creator.startswith('oa-test-2') or
-                p.creator.startswith('oa-test-3') or p.creator.startswith('oa-test-4'))]
-        if env_name == 'prod':
-            projects = [p for p in projects if p.name.startswith(start_phrase)]
-
-        for p in projects:
-            try:
-                p.delete(True, True)
-            except:
-                pass
+        i_project.delete(True, True)
     except Exception:
-        print('Failed to delete projects')
+        try:
+            for dataset in i_project.datasets.list():
+                try:
+                    if dataset.readonly:
+                        dataset.set_readonly(False)
+                except Exception:
+                    pass
+            i_project.delete(True, True)
+        except Exception:
+            print('Failed to delete project: {}'.format(i_project.name))
+    i_pbar.update(1)
 
 
-def test_feature_file(w_feature_filename):
+def delete_projects():
+    start_phrase = 'to-delete-test-'
+    projects = [
+        p for p in dl.projects.list() if p.creator.startswith('oa-test-') and p.name.startswith(start_phrase)
+    ]
+
+    projects_pbar = tqdm(total=len(projects), desc='Deleting projects')
+
+    projects_pool = ThreadPool(processes=32)
+    for p in projects:
+        projects_pool.apply_async(delete_single_project, args=(p, projects_pbar))
+
+    projects_pool.close()
+    projects_pool.join()
+
+
+def test_feature_file(w_feature_filename, i_pbar):
     log_path = os.path.join(TEST_DIR, 'logs')
     if not os.path.isdir(log_path):
         os.makedirs(log_path, exist_ok=True)
-    print('Starting feature file: {}'.format(feature_filepath))
     log_filepath = None
     w_i_try = -1
     tic = time.time()
+    stderr = ''
     try:
+        test_state.start_test(w_feature_filename)
         for w_i_try in range(NUM_TRIES):
+            print('Attempt {} for feature file: {}'.format(w_i_try + 1, w_feature_filename))
             log_filepath = os.path.join(log_path,
                                         os.path.basename(w_feature_filename) + '_try_{}.log'.format(w_i_try + 1))
             clean_feature_log_file(log_filepath)
@@ -69,8 +127,8 @@ def test_feature_file(w_feature_filename):
                     '--summary',
                     '--no-capture']
             # need to run a new process to avoid collisions
-            p = subprocess.Popen(cmds)
-            p.communicate(timeout=700)
+            p = subprocess.Popen(cmds, stderr=subprocess.PIPE)
+            _, stderr = p.communicate(timeout=1000)
 
             if p.returncode == 0:
                 break
@@ -100,6 +158,11 @@ def test_feature_file(w_feature_filename):
                                                'log_file': new_log_filepath,
                                                'try': w_i_try,
                                                'avgTime': '{:.2f}[s]'.format(toc / (1 + w_i_try))}
+                print('**** Failed feature file: {} after {} seconds and {} retries.'.format(
+                    w_feature_filename, toc, w_i_try + 1
+                ))
+                print('**** stderr: {}'.format(stderr))
+
     except subprocess.TimeoutExpired:
         results[w_feature_filename] = {'status': False,
                                        'log_file': log_filepath,
@@ -112,9 +175,8 @@ def test_feature_file(w_feature_filename):
                                        'log_file': log_filepath,
                                        'try': w_i_try,
                                        'avgTime': '{:.2f}[s]'.format(-1)}
-
-
-import sys
+    i_pbar.update(1)
+    test_state.end_test(w_feature_filename)
 
 
 def create_project_for_alerts(contributors, project_name):
@@ -177,6 +239,11 @@ if __name__ == '__main__':
     dl.setenv(base_env)
     print('Environment is: {}'.format(base_env))
 
+    print('########################################')
+    print('# Deleting projects')
+    print('########################################')
+    delete_projects()
+
     # set log level
     dl.verbose.logging_level = "warning"
     dl.verbose.print_all_responses = True
@@ -195,19 +262,27 @@ if __name__ == '__main__':
     features_path = os.path.join(TEST_DIR, 'features')
 
     results = dict()
-    # go over all file and run ".feature" files
+    features_to_run = set()
     for path, subdirs, files in os.walk(features_path):
         for filename in files:
             striped, ext = os.path.splitext(filename)
             if ext in ['.feature']:
-                feature_filepath = os.path.join(path, filename)
-                results[filename] = dict()
-                time.sleep(1)
-                pool.apply_async(test_feature_file, kwds={'w_feature_filename': filename})
+                features_to_run.add(os.path.join(path, filename))
+
+    pbar = tqdm(total=len(features_to_run))
+
+    test_state = TestState()
+    test_state.start()
+
+    for feature_filename in features_to_run:
+        results[feature_filename] = dict()
+        time.sleep(.1)
+        pool.apply_async(test_feature_file, kwds={'w_feature_filename': feature_filename, 'i_pbar': pbar})
 
     pool.close()
     pool.join()
-    pool.terminate()
+
+    test_state.stop()
 
     # stop timer
     end_time = time.time()
@@ -270,9 +345,6 @@ if __name__ == '__main__':
             if 'timeout' in result:
                 res_msg += '  timeout'
             print(res_msg)
-
-    # delete projects
-    delete_projects(base_env)
 
     # return success/failure
     if passed:

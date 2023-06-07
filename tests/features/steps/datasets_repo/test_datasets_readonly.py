@@ -4,6 +4,7 @@ import random
 
 
 @behave.when(u'I set dataset readonly mode to "{state}"')
+@behave.given(u'I set dataset readonly mode to "{state}"')
 def step_impl(context, state):
     state = state == 'True'
     context.project.datasets.set_readonly(dataset=context.dataset, state=state)
@@ -53,4 +54,4 @@ def step_impl(context):
     try:
         context.project.delete(True, True)
     except Exception as e:
-        assert 'Failed to perform operation on readonly dataset' in e.args[1]
+        assert f"Failed to delete dataset {context.dataset.id}. internal error" in e.args[1]

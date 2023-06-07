@@ -210,7 +210,7 @@ class Organizations:
             raise exceptions.PlatformException(response)
         return organization
 
-    @_api_reference.add(path='/orgs/{id}', method='get')
+    @_api_reference.add(path='/orgs/{org_id}', method='get')
     def get(self,
             organization_id: str = None,
             organization_name: str = None,

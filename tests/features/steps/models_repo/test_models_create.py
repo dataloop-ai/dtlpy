@@ -14,6 +14,8 @@ def step_impl(context):
         context.dataset = context.project.datasets.get('model_dataset')
     except context.dl.exceptions.NotFound:
         context.dataset = context.project.datasets.create('model_dataset')
+
+
     # create model
     context.model = context.package.models.create(model_name=model_name,
                                                   dataset_id=context.dataset.id,
@@ -53,6 +55,7 @@ def step_impl(context):
 
 
 @behave.when(u'I update model status to "{model_status}"')
+@behave.given(u'I update model status to "{model_status}"')
 def step_impl(context, model_status):
     context.model.status = model_status
     context.model.update()
@@ -79,9 +82,7 @@ def step_impl(context):
 
 @behave.then(u'The project have only one bot')
 def step_impl(context):
-    context.project.open_in_web()
     bots = context.project.bots.list()
-    print(bots)
     assert len(bots) == 1, 'more than one bot was created'
 
 

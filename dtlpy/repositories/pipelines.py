@@ -282,14 +282,12 @@ class Pipelines:
         # get id and name
         if pipeline_id is None:
             if pipeline is None:
-                pipeline = self.get(pipeline_id=pipeline_id, pipeline_name=pipeline_name)
+                pipeline = self.get(pipeline_name=pipeline_name)
             pipeline_id = pipeline.id
 
         # request
-        success, response = self._client_api.gen_request(
-            req_type="delete",
-            path="/pipelines/{}".format(pipeline_id)
-        )
+        success, response = self._client_api.gen_request(req_type="delete",
+                                                         path="/pipelines/{}".format(pipeline_id))
 
         # exception handling
         if not success:
@@ -335,6 +333,33 @@ class Pipelines:
             project=self._project
         )
 
+    def __update_variables(self, pipeline: entities.Pipeline):
+        pipeline_json = pipeline.to_json()
+        variables = pipeline_json['variables']
+
+        for var in variables:
+            if var.get('reference', None) is None:
+                var['reference'] = pipeline.id
+
+        # payload
+        payload = {'variables': variables}
+
+        # request
+        success, response = self._client_api.gen_request(
+            req_type='patch',
+            path='/pipelines/{}/variables'.format(pipeline.id),
+            json_req=payload
+        )
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        # return entity
+        return entities.Pipeline.from_json(
+            _json=response.json(),
+            client_api=self._client_api,
+            project=self._project
+        )
+
     @_api_reference.add(path='/pipelines/{pipelineId}', method='patch')
     def update(self,
                pipeline: entities.Pipeline = None
@@ -362,7 +387,6 @@ class Pipelines:
         if pipeline.settings_changed():
             self.update_settings(pipeline=pipeline, settings=pipeline.settings)
 
-        # request
         success, response = self._client_api.gen_request(
             req_type='patch',
             path='/pipelines/{}'.format(pipeline.id),
@@ -427,7 +451,7 @@ class Pipelines:
         assert isinstance(pipeline, entities.Pipeline)
         return pipeline
 
-    @_api_reference.add(path='/pipelines/{compositionsId}/install', method='post')
+    @_api_reference.add(path='/pipelines/{pipelineId}/install', method='post')
     def install(self, pipeline: entities.Pipeline = None, resume_option: entities.PipelineResumeOption = None):
         """
         Install (start) a pipeline.
@@ -458,7 +482,11 @@ class Pipelines:
         if not success:
             raise exceptions.PlatformException(response)
 
-    @_api_reference.add(path='/pipelines/{compositionsId}/uninstall', method='post')
+        return entities.Pipeline.from_json(client_api=self._client_api,
+                                           _json=response.json(),
+                                           project=self.project)
+
+    @_api_reference.add(path='/pipelines/{pipelineId}/uninstall', method='post')
     def pause(self, pipeline: entities.Pipeline = None, keep_triggers_active: bool = None):
         """
         Pause a pipeline.

@@ -7,7 +7,7 @@ import attr
 from .node import PipelineNode, PipelineConnection, TaskNode, CodeNode, FunctionNode, DatasetNode
 from .. import repositories, entities
 from ..services.api_client import ApiClient
-
+from .package_function import PackageInputType
 logger = logging.getLogger(name='dtlpy')
 
 
@@ -69,6 +69,41 @@ class PipelineSettings:
         if self.default_resume_option is not None:
             _json['lastUpdate'] = self.default_resume_option
 
+        return _json
+
+
+class Variable(entities.DlEntity):
+    """
+    Pipeline Variables
+    """
+    id: str = entities.DlProperty(location=['id'], _type=str)
+    created_at: str = entities.DlProperty(location=['createdAt'], _type=str)
+    updated_at: str = entities.DlProperty(location=['updatedAt'], _type=str)
+    reference: str = entities.DlProperty(location=['reference'], _type=str)
+    creator: str = entities.DlProperty(location=['creator'], _type=str)
+    variable_type: PackageInputType = entities.DlProperty(location=['type'], _type=PackageInputType)
+    name: str = entities.DlProperty(location=['name'], _type=str)
+    value = entities.DlProperty(location=['value'])
+
+    @classmethod
+    def from_json(cls, _json):
+        """
+        Turn platform representation of variable into a pipeline variable entity
+
+        :param dict _json: platform representation of pipeline variable
+        :return: pipeline variable entity
+        :rtype: dtlpy.entities.pipeline.PipelineVariables
+        """
+
+        inst = cls(_dict=_json.copy())
+        return inst
+
+    def to_json(self):
+        """
+        :return: variable of pipeline
+        :rtype: dict
+        """
+        _json = self._dict.copy()
         return _json
 
 
@@ -170,6 +205,8 @@ class Pipeline(entities.BaseEntity):
     org_id = attr.ib()
     connections = attr.ib()
     settings = attr.ib(type=PipelineSettings)
+    variables = attr.ib(type=List[Variable])
+
     status = attr.ib(type=CompositionStatus)
 
     # name change
@@ -229,6 +266,10 @@ class Pipeline(entities.BaseEntity):
                 project = None
 
         connections = [PipelineConnection.from_json(_json=con) for con in _json.get('connections', list())]
+        json_variables = _json.get('variables', list())
+        variables = list()
+        if json_variables:
+            variables = [Variable.from_json(_json=v) for v in json_variables]
         settings = PipelineSettings.from_json(_json=_json.get('settings', dict()))
         inst = cls(
             created_at=_json.get('createdAt', None),
@@ -248,6 +289,7 @@ class Pipeline(entities.BaseEntity):
             description=_json.get('description', None),
             revisions=_json.get('revisions', None),
             settings=settings,
+            variables=variables,
             status=_json.get('status', None),
             original_settings=settings
         )
@@ -297,6 +339,7 @@ class Pipeline(entities.BaseEntity):
                                                         attr.fields(Pipeline).description,
                                                         attr.fields(Pipeline).revisions,
                                                         attr.fields(Pipeline).settings,
+                                                        attr.fields(Pipeline).variables,
                                                         attr.fields(Pipeline)._original_settings
                                                         ))
 
@@ -308,6 +351,8 @@ class Pipeline(entities.BaseEntity):
         _json['orgId'] = self.org_id
         _json['nodes'] = [node.to_json() for node in self.nodes]
         _json['connections'] = [con.to_json() for con in self.connections]
+        if self.variables:
+            _json['variables'] = [v.to_json() for v in self.variables]
         _json['url'] = self.url
 
         settings_json = self.settings.to_json()
@@ -348,7 +393,7 @@ class Pipeline(entities.BaseEntity):
 
         r = reps(
             projects=repositories.Projects(client_api=self._client_api),
-            pipelines=repositories.Pipelines(client_api=self._client_api),
+            pipelines=repositories.Pipelines(client_api=self._client_api, project=self._project),
             pipeline_executions=repositories.PipelineExecutions(
                 client_api=self._client_api, project=self._project, pipeline=self
             ),
@@ -392,6 +437,7 @@ class Pipeline(entities.BaseEntity):
         :return: pipeline entity
         """
         return self.pipelines.update(pipeline=self)
+
 
     def delete(self):
         """

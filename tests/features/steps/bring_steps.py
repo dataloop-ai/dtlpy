@@ -249,3 +249,4 @@ from tests.features.steps.notifications import notifications
 
 from tests.features.steps.annotations_repo import test_annotations_format_json
 from tests.features.steps.xray import test_xray
+from tests.features.steps.pipeline_entity import pipeline_ml

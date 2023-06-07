@@ -55,7 +55,7 @@ class Drivers:
             raise exceptions.PlatformException(response)
         return driver
 
-    @_api_reference.add(path='/drivers?projectId={id}', method='get')
+    @_api_reference.add(path='/drivers', method='get')
     def list(self) -> miscellaneous.List[entities.Driver]:
         """
         Get the project's drivers list.

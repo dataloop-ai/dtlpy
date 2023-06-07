@@ -599,11 +599,11 @@ class Executions:
             if execution.latest_status['status'] not in ['inProgress', 'created', 'in-progress', 'rerun']:
                 break
             elapsed = int(time.time()) - start
-            sleep_time = np.minimum(timeout - elapsed, 2 ** i)
-            time.sleep(sleep_time)
             i += 1
             if i > 18 or elapsed > timeout:
                 break
+            sleep_time = np.minimum(timeout - elapsed, 2 ** i)
+            time.sleep(sleep_time)
         if execution is None:
             raise ValueError('Nothing to wait for')
         if elapsed >= timeout:

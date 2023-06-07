@@ -577,20 +577,22 @@ class Package(entities.DlEntity):
         """
         Create ML metadata for the package
         :param cls: ModelAdapter class, to get the list of available_methods
-        :param available_methods: available user function on the adapter.  ['load', 'save', 'predict', 'train', 'evaluate']
+        :param available_methods: available user function on the adapter.  ['load', 'save', 'predict', 'train']
         :param output_type: annotation type the model create, e.g. dl.AnnotationType.CLASSIFICATION
         :param input_type: input file type the model gets, one of ['image', 'video', 'txt']
         :param default_configuration: default service configuration for the deployed services
         :return:
         """
+        user_implemented_methods = ['load', 'save', 'predict', 'train']
         if available_methods is None:
             # default
-            available_methods = ['predict', 'train', 'evaluate']
+            available_methods = user_implemented_methods
 
         if cls is not None:
+            # TODO dont check if function is on the adapter - check if the functions is implemented (not raise NotImplemented)
             available_methods = [
                 {name: 'BaseModelAdapter' not in getattr(cls, name).__qualname__}
-                for name in ['predict', 'train', 'evaluate']
+                for name in user_implemented_methods
             ]
         if default_configuration is None:
             default_configuration = dict()

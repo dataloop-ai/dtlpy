@@ -204,30 +204,6 @@ class Features:
         else:
             raise exceptions.PlatformException(response)
 
-    @_api_reference.add(path='/features/vectors/{id}', method='patch')
-    def update(self, feature: entities.Feature) -> entities.Feature:
-        """
-        Update Feature Vector changes to platform
-
-        :param entities.Feature feature: Feature object to update
-        :return: dl.Feature entity
-        """
-        # payload
-        payload = feature.to_json()
-
-        # request
-        success, response = self._client_api.gen_request(req_type='patch',
-                                                         path="{}/{}".format(self.URL, feature.id),
-                                                         json_req=payload)
-
-        # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
-
-        # return entity
-        return entities.Feature.from_json(_json=response.json(),
-                                          client_api=self._client_api)
-
     def _build_entities_from_response(self, response_items) -> miscellaneous.List[entities.Item]:
         pool = self._client_api.thread_pools(pool_name='entity.create')
         jobs = [None for _ in range(len(response_items))]

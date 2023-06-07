@@ -56,7 +56,7 @@ class PipelineExecutions:
     ###########
     # methods #
     ###########
-    @_api_reference.add(path='/pipelines/{pipeline_id}/executions/{executionId}', method='get')
+    @_api_reference.add(path='/pipelines/{pipelineId}/executions/{executionId}', method='get')
     def get(self,
             pipeline_execution_id: str,
             pipeline_id: str = None
@@ -215,7 +215,10 @@ class PipelineExecutions:
             pipeline_id = self._pipeline.id
 
         payload = dict()
-        if isinstance(execution_input, dict):
+        if execution_input is None:
+            # support pipeline executions without any input
+            pass
+        elif isinstance(execution_input, dict):
             payload['input'] = execution_input
         else:
             if not isinstance(execution_input, list):

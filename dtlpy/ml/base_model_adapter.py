@@ -28,6 +28,9 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         self.package_name = None
         self.model = None
         self.bucket_path = None
+        # funcs
+        self.item_to_batch_mapping = {'text': self._item_to_text,
+                                      'image': self._item_to_image}
         if model_entity is not None:
             self.load_from_model(model_entity=model_entity)
 
@@ -135,16 +138,24 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         """
         raise NotImplementedError("Please implement 'predict' method in {}".format(self.__class__.__name__))
 
-    def evaluate(self, data_path, on_batch_end_callback: typing.Callable, **kwargs):
-        """ Model evaluation
-
-            Virtual method - need to implement
-
-        :param data_path: local directory with set to predict
-        :param on_batch_end_callback: Callable, run after batch end
-        :return: `list[dl.AnnotationCollection]` each collection is per each image / item in the batch
+    def evaluate(self, model: entities.Model, dataset: entities.Dataset):
         """
-        raise NotImplementedError("Please implement 'evaluate' method in {}".format(self.__class__.__name__))
+        This function evaluates the model prediction on a dataset (with GT annotations).
+        The evaluation process will upload the scores and metrics to the platform.
+
+        :param model: The model to evaluate (annotation.metadata.system.model.name
+        :param dataset: Dataset where the model predicted and uploaded its annotations
+        :return:
+        """
+        try:
+            from dtlpymetrics.scoring import ScoringAndMetrics
+        except (ImportError, ModuleNotFoundError):
+            logger.error('Import Error! Cant import dtlpymetrics. Need install the Dataloop Metrics App (from GitHub)')
+            raise
+        compare_types = model.output_type
+        success, response = ScoringAndMetrics.create_model_score(model=model,
+                                                                 dataset=dataset,
+                                                                 compare_types=compare_types)
 
     def convert_from_dtlpy(self, data_path, **kwargs):
         """ Convert Dataloop structure data to model structured
@@ -160,7 +171,22 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
 
     #################
     # DTLPY METHODS #
-    #################
+    ################
+    def prepare_item_func(self, item: entities.Item):
+        """
+        Prepare the Dataloop item before calling the `predict` function with a batch.
+        A user can override this function to load item differently
+        Default will load the item according the input_type (mapping type to function is in self.item_to_batch_mapping)
+
+        :param item:
+        :return: preprocessed: the var with the loaded item information (e.g. ndarray for image, dict for json files etc)
+        """
+        # Item to batch func
+        if self.model_entity.input_type in self.item_to_batch_mapping:
+            processed = self.item_to_batch_mapping[self.model_entity.input_type](item)
+        else:
+            processed = self._item_to_item(item)
+        return processed
 
     def prepare_data(self,
                      dataset: entities.Dataset,
@@ -225,7 +251,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         self.convert_from_dtlpy(data_path=data_path, **kwargs)
         return root_path, data_path, output_path
 
-    def load_from_model(self, model_entity=None, local_path=None, overwrite=False, **kwargs):
+    def load_from_model(self, model_entity=None, local_path=None, overwrite=True, **kwargs):
         """ Loads a model from given `dl.Model`.
             Reads configurations and instantiate self.model_entity
             Downloads the model_entity bucket (if available)
@@ -288,7 +314,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
     @entities.Package.decorators.function(display_name='Predict Items',
                                           inputs={'items': 'Item[]'},
                                           outputs={'items': 'Item[]', 'annotations': 'Annotation[]'})
-    def predict_items(self, items: list, upload_annotations=True, conf_threshold=0, batch_size=16, **kwargs):
+    def predict_items(self, items: list, upload_annotations=True, conf_threshold=0, batch_size=None, **kwargs):
         """
         Run the predict function on the input list of items (or single) and return the items and the predictions.
         Each prediction is by the model output type (package.output_type) and model_info in the metadata
@@ -300,7 +326,8 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
 
         :return: `List[dl.Item]`, `List[List[dl.Annotation]]`
         """
-
+        if batch_size is None:
+            batch_size = self.configuration.get('batch_size', 4)
         input_type = self.model_entity.input_type
         self.logger.debug(
             "Predicting {} items, using batch size {}. input type: {}".format(len(items), batch_size, input_type))
@@ -308,12 +335,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         annotations = list()
         for i_batch in tqdm.tqdm(range(0, len(items), batch_size), desc='predicting', unit='bt', leave=None):
             batch_items = items[i_batch: i_batch + batch_size]
-            if input_type == 'image':
-                batch = list(pool.map(self._prepare_items_image_batch, batch_items))
-            elif input_type == 'text':
-                batch = list(pool.map(self._prepare_items_text_batch, batch_items))
-            else:
-                raise ValueError('Unknown inputType: {} (from model_entity.input_type'.format(input_type))
+            batch = list(pool.map(self.prepare_item_func, batch_items))
             batch_collections = self.predict(batch, **kwargs)
             if upload_annotations is True:
                 self.logger.debug(
@@ -332,6 +354,8 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
                 else:
                     logger.warning(f'RETURN TYPE MAY BE INVALID: {type(collection)}')
                     annotations.extend(collection)
+            # TODO call the callback
+
         pool.shutdown()
         return items, annotations
 
@@ -339,8 +363,12 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
                                           inputs={'dataset': 'Dataset',
                                                   'filters': 'Json'})
     def predict_dataset(self,
-                        dataset: entities.Dataset, filters: entities.Filters = None,
-                        with_upload=True, cleanup=False, batch_size=16, output_shape=None, **kwargs):
+                        dataset: entities.Dataset,
+                        filters: entities.Filters = None,
+                        with_upload=True,
+                        cleanup=False,
+                        batch_size=None,
+                        **kwargs):
         """
         Predicts all items given
 
@@ -349,27 +377,21 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         :param with_upload: `bool` uploads the predictions back to the given items
         :param cleanup: `bool` if set removes existing predictions with the same package-model name (default: False)
         :param batch_size: `int` size of batch to run a single inference
-        :param output_shape: `tuple` (width, height) of resize needed per image
 
         :return: `List[dl.AnnotationCollection]` where all annotation in the collection are of type package.output_type
                                                  and has prediction fields (model_info)
         """
-        # TODO: do we want to add score filtering here?
-        self.logger.debug(
-            "Predicting dataset (name:{}, id:{}, using batch size {}. Reshaping to: {}".format(dataset.name,
-                                                                                               dataset.id,
-                                                                                               batch_size,
-                                                                                               output_shape))
-        if filters is not None:
+        self.logger.debug("Predicting dataset (name:{}, id:{}, using batch size {}".format(dataset.name,
+                                                                                           dataset.id,
+                                                                                           batch_size))
+        if filters is not None and isinstance(filters, dict):
             filters = entities.Filters(custom_filter=filters)
         pages = dataset.items.list(filters=filters, page_size=batch_size)
-        for page in tqdm.tqdm(pages, total=pages.items_count, desc='predicting', unit='bt', leave=None):
-            self.predict_items(items=page.items,
-                               with_upload=with_upload,
-                               cleanup=cleanup,
-                               batch_size=batch_size,
-                               output_shape=output_shape,
-                               **kwargs)
+        self.predict_items(items=list(pages.all()),
+                           with_upload=with_upload,
+                           cleanup=cleanup,
+                           batch_size=batch_size,
+                           **kwargs)
         return True
 
     @entities.Package.decorators.function(display_name='Train a Model',
@@ -457,7 +479,8 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
     def evaluate_model(self,
                        model: entities.Model,
                        dataset: entities.Dataset,
-                       cleanup=False,
+                       filters: entities.Filters,
+                       #
                        progress: utilities.Progress = None,
                        context: utilities.Context = None):
         """
@@ -466,46 +489,42 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         configuration is as defined in dl.Model.configuration
         upload annotations and calculate metrics vs GT
         """
-        output_path = None
         try:
             logger.info(
                 f"Received model: {model.id} for evaluation on dataset (name: {dataset.name}, id: {dataset.id}")
+            if context is not None:
+                if 'system' not in model.metadata:
+                    model.metadata['system'] = dict()
+                model.metadata['system']['evaluateExecutionId'] = context.execution_id
+            model.update()
             ##########################
             # load model and weights #
             ##########################
-            logger.info("Loading Adapter with: {n} ({i!r})".format(n=model.name, i=model.id))
+            logger.info(f"Loading Adapter with: {model.name} ({model.id!r})")
             self.load_from_model(dataset=dataset,
                                  model_entity=model)
 
-            ################
-            # prepare data #
-            ################
-            root_path, data_path, output_path = self.prepare_data(
-                dataset=dataset,
-                root_path=os.path.join('tmp', model.id)
-            )
-            # Start the Train
-            logger.info("Training {p_name!r} with model {m_name!r} on data {d_path!r}".
-                        format(p_name=self.package_name, m_name=model.id, d_path=data_path))
+            ##############
+            # Predicting #
+            ##############
+            self.predict_dataset(dataset=dataset,
+                                 filters=filters,
+                                 with_upload=True)
+
+            ##############
+            # Evaluating #
+            ##############
             if progress is not None:
-                progress.update(message='starting evaluation')
-
-            def on_batch_end_callback(i_epoch, n_epoch):
-                if progress is not None:
-                    progress.update(progress=int(100 * (i_epoch + 1) / n_epoch),
-                                    message='finished epoch: {}/{}'.format(i_epoch, n_epoch))
-
-            self.evaluate(data_path=data_path,
-                          on_batch_end_callback=on_batch_end_callback)
+                progress.update(message='calculating metrics',
+                                progress=98)
+            self.evaluate(model=model, dataset=dataset)
+            #########
+            # Done! #
+            #########
             if progress is not None:
                 progress.update(message='finishing evaluation',
                                 progress=99)
 
-            ###########
-            # cleanup #
-            ###########
-            if cleanup:
-                shutil.rmtree(output_path, ignore_errors=True)
         except Exception:
             model.status = 'failed'
             model.update()
@@ -522,7 +541,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         :param predictions: `dl.AnnotationCollection`
         :param cleanup: `bool` if set removes existing predictions with the same package-model name
         """
-        if not isinstance(predictions, entities.AnnotationCollection):
+        if not (isinstance(predictions, entities.AnnotationCollection) or isinstance(predictions, list)):
             raise TypeError('predictions was expected to be of type {}, but instead it is {}'.
                             format(entities.AnnotationCollection, type(predictions)))
         model_info_name = "{}-{}".format(self.package_name, self.model_entity.name)
@@ -536,19 +555,36 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         return annotations
 
     @staticmethod
-    def _prepare_items_image_batch(item):
+    def _item_to_image(item):
+        """
+        Preprocess items before cvalling the `predict` functions.
+        Convert item to numpy array
+
+        :param item:
+        :return:
+        """
         buffer = item.download(save_locally=False)
         image = np.asarray(Image.open(buffer))
         return image
 
     @staticmethod
-    def _prepare_items_text_batch(item):
+    def _item_to_item(item):
+        """
+        Default item to batch function.
+        This function should prepare a single item for the predict function, e.g. for images, it loads the image as numpy array
+        :param item:
+        :return:
+        """
+        return item
+
+    @staticmethod
+    def _item_to_text(item):
         buffer = item.download(save_locally=False)
         text = buffer.read().decode()
         return text
 
     @staticmethod
-    def _prepare_uris_image_batch(data_uri):
+    def _uri_to_image(data_uri):
         # data_uri = "data:image/png;base64,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"
         image_b64 = data_uri.split(",")[1]
         binary = base64.b64decode(image_b64)
@@ -575,6 +611,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         import os
         import time
         import json
+
         class DumpHistoryCallback(keras.callbacks.Callback):
             def __init__(self, dump_path):
                 super().__init__()

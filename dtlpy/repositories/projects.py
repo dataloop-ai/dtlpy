@@ -179,7 +179,7 @@ class Projects:
             raise exceptions.PlatformException(response)
         return True
 
-    @_api_reference.add(path='projects /{project_id}/members/{user_id}', method='post')
+    @_api_reference.add(path='/projects/{project_id}/members/{user_id}', method='post')
     def add_member(self, email: str, project_id: str, role: entities.MemberRole = entities.MemberRole.DEVELOPER):
         """
         Add a member to the project.
@@ -213,7 +213,7 @@ class Projects:
 
         return response.json()
 
-    @_api_reference.add(path='projects /{project_id}/members/{user_id}', method='patch')
+    @_api_reference.add(path='/projects/{project_id}/members/{user_id}', method='patch')
     def update_member(self, email: str, project_id: str, role: entities.MemberRole = entities.MemberRole.DEVELOPER):
         """
         Update member's information/details in the project.
@@ -247,7 +247,7 @@ class Projects:
 
         return response.json()
 
-    @_api_reference.add(path='projects /{project_id}/members/{user_id}', method='delete')
+    @_api_reference.add(path='/projects/{project_id}/members/{user_id}', method='delete')
     def remove_member(self, email: str, project_id: str):
         """
         Remove a member from the project.
@@ -273,7 +273,7 @@ class Projects:
 
         return response.json()
 
-    @_api_reference.add(path='projects /{id}/members', method='get')
+    @_api_reference.add(path='/projects/{id}/members', method='get')
     def list_members(self, project: entities.Project, role: entities.MemberRole = None):
         """
         Get a list of the project members.

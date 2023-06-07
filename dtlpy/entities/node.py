@@ -93,6 +93,7 @@ class PipelineNodeIO:
                  port_percentage: int = None,
                  action: str = None,
                  default_value=None,
+                 variable_name: str = None,
                  actions: list = None):
         """
         Pipeline Node
@@ -114,6 +115,8 @@ class PipelineNodeIO:
         self.display_name = display_name
         self.port_percentage = port_percentage
         self.default_value = default_value
+        self.variable_name = variable_name
+
         if action is not None:
             warnings.warn('action param has been deprecated in version 1.80', DeprecationWarning)
             if actions is None:
@@ -136,6 +139,7 @@ class PipelineNodeIO:
             display_name=_json.get('displayName', None),
             port_percentage=_json.get('portPercentage', None),
             default_value=_json.get('defaultValue', None),
+            variable_name=_json.get('variableName', None),
             actions=_json.get('actions', None),
         )
 
@@ -146,6 +150,7 @@ class PipelineNodeIO:
             'name': self.name,
             'color': self.color,
             'displayName': self.display_name,
+            'variableName': self.variable_name,
             'portPercentage': self.port_percentage,
         }
 
@@ -162,6 +167,7 @@ class PipelineNodeType(str, Enum):
     CODE = 'code'
     FUNCTION = 'function'
     STORAGE = 'storage'
+    ML = 'ml'
 
 
 class PipelineNameSpace:

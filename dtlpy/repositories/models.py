@@ -389,7 +389,9 @@ class Models:
         from_json = {"name": model_name,
                      "packageId": from_model.package_id,
                      "configuration": from_model.configuration,
-                     "metadata": from_model.metadata}
+                     "metadata": from_model.metadata,
+                     "outputType": from_model.output_type,
+                     "inputType": from_model.input_type}
         if project_id is None:
             project_id = self.project.id
         from_json['projectId'] = project_id
@@ -426,7 +428,7 @@ class Models:
         new_model = entities.Model.from_json(_json=response.json(),
                                              client_api=self._client_api,
                                              project=self._project,
-                                             package=from_model.package)
+                                             package=from_model._package)
 
         if new_model._dataset is not None and new_model._dataset.readonly is False:
             logger.warning(

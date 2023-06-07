@@ -7,9 +7,9 @@ import dtlpy as dl
 def step_impl(context, action_input):
     """
     Pipeline contain 3 code nodes
-    Code-node#1 contain progress.update(action='qa') and has 2 node outputs with action "qa" and action "discard"
-    Code-node#2 connect to output[0] - action "qa"
-    Code-node#3 connect to output[1] - action "discard"
+    Code-node#1 contain progress.update(action='') and has 2 node outputs with action "first-output" and action "second-output"
+    Code-node#2 connect to output[0] - action "first-output"
+    Code-node#3 connect to output[1] - action "second-output"
     """
     t = time.localtime()
     current_time = time.strftime("%H-%M-%S", t)
@@ -46,11 +46,7 @@ def step_impl(context, action_input):
         outputs=[dl.PipelineNodeIO(input_type=dl.PackageInputType.ITEM,
                                    name='item',
                                    display_name='item',
-                                   actions=['first-output']),
-                 dl.PipelineNodeIO(input_type=dl.PackageInputType.ITEM,
-                                   name='item',
-                                   display_name='item',
-                                   actions=['second-output'])
+                                   actions=['first-output', 'second-output'])
                  ]
     )
 
@@ -78,12 +74,11 @@ def step_impl(context, action_input):
 
     filters = context.dl.Filters()
     filters.add(field='datasetId', values=context.dataset.id)
-    context.pipeline.nodes.add(code_node_1).connect(node=code_node_2, source_port=code_node_1.outputs[0])
-    context.pipeline.nodes[0].connect(node=code_node_3, source_port=code_node_1.outputs[1])
+    context.pipeline.nodes.add(code_node_1).connect(node=code_node_2, source_port=code_node_1.outputs[0], action="first-output")
+    context.pipeline.nodes[0].connect(node=code_node_3, source_port=code_node_1.outputs[0], action="second-output")
     code_node_1.add_trigger(filters=filters)
 
     context.pipeline = context.pipeline.update()
     context.pipeline.install()
 
     time.sleep(5)
-

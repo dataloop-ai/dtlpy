@@ -268,7 +268,7 @@ def drivers_delete(context):
         return
 
     all_deleted = True
-    time.sleep(7)  # Wait for datasets to delete
+    time.sleep(25)  # Wait for datasets to delete
     for driver_id in context.to_delete_drivers_ids:
         try:
             context.project.drivers.delete(driver_id=driver_id, sure=True, really=True)

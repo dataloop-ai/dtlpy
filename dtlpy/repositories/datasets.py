@@ -366,7 +366,7 @@ class Datasets:
         else:
             raise exceptions.PlatformException(response)
 
-    @_api_reference.add(path='/datasets/{}/directoryTree', method='get')
+    @_api_reference.add(path='/datasets/{id}/directoryTree', method='get')
     def directory_tree(self,
                        dataset: entities.Dataset = None,
                        dataset_name: str = None,
@@ -386,7 +386,7 @@ class Datasets:
         **Example**:
 
         .. code-block:: python
-
+            directory_tree = dataset.directory_tree
             directory_tree = project.datasets.directory_tree(dataset='dataset_entity')
         """
         if dataset is None and dataset_name is None and dataset_id is None:

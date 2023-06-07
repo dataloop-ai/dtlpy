@@ -7,9 +7,6 @@ import random
 @behave.given(u'Create a Project "{project_name}"')
 def creating_a_project(context, project_name):
     try:
-        import dtlpy as dl
-        if dl.token_expired():
-            dl.login()
         context.random_num = str(random.randint(1000, 10000))
         project_name = project_name + context.random_num
         context.project = context.dl.projects.create(project_name=project_name)
@@ -21,9 +18,6 @@ def creating_a_project(context, project_name):
 @behave.when(u'Create a Project "{project_name}"')
 def creating_a_project(context, project_name):
     try:
-        import dtlpy as dl
-        if dl.token_expired():
-            dl.login()
         context.random_num = str(random.randint(1000, 10000))
         project_name = project_name + context.random_num
         context.project = context.dl.projects.create(project_name=project_name)

@@ -273,7 +273,7 @@ class Artifacts:
                         # remove the prefix with relpath
                         local_dst = os.path.join(local_path,
                                                  os.path.relpath(m_artifact.filename, model_remote_root))
-                        if not os.path.isfile(local_dst):
+                        if not os.path.isfile(local_dst) or overwrite:
                             # need_to_download
                             # 1. download to temp folder
                             temp_dir = tempfile.mkdtemp()
@@ -294,7 +294,7 @@ class Artifacts:
                     elif isinstance(m_artifact, entities.LinkArtifact):
                         # remove the prefix with relpath
                         local_dst = os.path.join(local_path, m_artifact.filename)
-                        if not os.path.isfile(local_dst):
+                        if not os.path.isfile(local_dst) or overwrite:
                             # need_to_download
                             # 1. download to temp folder
                             temp_dir = tempfile.mkdtemp()

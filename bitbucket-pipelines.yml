@@ -19,6 +19,7 @@ pipelines:
             - echo "$GCP_KEY" >> k.json
             - gcloud auth activate-service-account --key-file=k.json
             - gsutil -m cp -R dist/**  gs://dtlpy/dev/
+            - export DOCKER_BUILDKIT=0
             - chmod +x ./build-docker.sh
             - echo $BITBUCKET_TAG
             - ./build-docker.sh $BITBUCKET_TAG
