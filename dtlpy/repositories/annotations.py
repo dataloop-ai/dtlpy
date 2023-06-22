@@ -133,7 +133,9 @@ class Annotations:
         # prepare request
         success, response = self._client_api.gen_request(req_type="POST",
                                                          path="/datasets/{}/query".format(self._dataset_id),
-                                                         json_req=filters.prepare())
+                                                         json_req=filters.prepare(),
+                                                         headers={'user_query': filters.user_query}
+                                                         )
         if not success:
             raise exceptions.PlatformException(response)
         return response.json()
@@ -165,7 +167,7 @@ class Annotations:
         """
         if self._dataset_id is not None:
             if filters is None:
-                filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION)
+                filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION, user_query=False)
 
             if not filters.resource == entities.FiltersResource.ANNOTATION:
                 raise exceptions.PlatformException(error='400',

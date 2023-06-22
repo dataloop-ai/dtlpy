@@ -138,24 +138,30 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         """
         raise NotImplementedError("Please implement 'predict' method in {}".format(self.__class__.__name__))
 
-    def evaluate(self, model: entities.Model, dataset: entities.Dataset):
+    def evaluate(self, model: entities.Model, dataset: entities.Dataset, filters: entities.Filters):
         """
         This function evaluates the model prediction on a dataset (with GT annotations).
         The evaluation process will upload the scores and metrics to the platform.
 
         :param model: The model to evaluate (annotation.metadata.system.model.name
         :param dataset: Dataset where the model predicted and uploaded its annotations
+        :param filters: Filters to query items on the dataset
         :return:
         """
         try:
             from dtlpymetrics.scoring import ScoringAndMetrics
         except (ImportError, ModuleNotFoundError):
-            logger.error('Import Error! Cant import dtlpymetrics. Need install the Dataloop Metrics App (from GitHub)')
-            raise
+            import subprocess
+            import sys
+            p_url = 'https://storage.googleapis.com/dtlpy/dtlpy-metrics/dtlpymetrics-latest-py3-none-any.whl'
+            subprocess.check_call([sys.executable, "-m", "pip", "install", p_url])
+            from dtlpymetrics.scoring import ScoringAndMetrics
         compare_types = model.output_type
         success, response = ScoringAndMetrics.create_model_score(model=model,
                                                                  dataset=dataset,
                                                                  compare_types=compare_types)
+        if not success:
+            raise ValueError(response)
 
     def convert_from_dtlpy(self, data_path, **kwargs):
         """ Convert Dataloop structure data to model structured
@@ -314,14 +320,14 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
     @entities.Package.decorators.function(display_name='Predict Items',
                                           inputs={'items': 'Item[]'},
                                           outputs={'items': 'Item[]', 'annotations': 'Annotation[]'})
-    def predict_items(self, items: list, upload_annotations=True, conf_threshold=0, batch_size=None, **kwargs):
+    def predict_items(self, items: list, upload_annotations=True, clean_annotations=True, batch_size=None, **kwargs):
         """
         Run the predict function on the input list of items (or single) and return the items and the predictions.
         Each prediction is by the model output type (package.output_type) and model_info in the metadata
 
         :param items: `List[dl.Item]` list of items to predict
         :param upload_annotations: `bool` uploads the predictions on the given items
-        :param conf_threshold: `float` returns and uploads annotation only above this threshold
+        :param clean_annotations: `bool` deletes previous model annotations (predictions) before uploading new ones
         :param batch_size: `int` size of batch to run a single inference
 
         :return: `List[dl.Item]`, `List[List[dl.Annotation]]`
@@ -332,6 +338,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         self.logger.debug(
             "Predicting {} items, using batch size {}. input type: {}".format(len(items), batch_size, input_type))
         pool = ThreadPoolExecutor(max_workers=16)
+
         annotations = list()
         for i_batch in tqdm.tqdm(range(0, len(items), batch_size), desc='predicting', unit='bt', leave=None):
             batch_items = items[i_batch: i_batch + batch_size]
@@ -341,8 +348,10 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
                 self.logger.debug(
                     "Uploading items' annotation for model {!r}.".format(self.model_entity.name))
                 try:
-                    batch_collections = list(pool.map(partial(self._upload_model_annotations),
-                                                      batch_items, batch_collections))
+                    batch_collections = list(pool.map(partial(self._upload_model_annotations,
+                                                              clean_annotations=clean_annotations),
+                                                      batch_items,
+                                                      batch_collections))
                 except Exception as err:
                     self.logger.exception("Failed to upload annotations items.")
 
@@ -422,7 +431,6 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             if context is not None:
                 if 'system' not in model.metadata:
                     model.metadata['system'] = dict()
-                model.metadata['system']['trainExecutionId'] = context.execution_id
             model.update()
 
             ##########################
@@ -471,15 +479,16 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             model.status = 'failed'
             model.update()
             raise
-        return model.id
+        return model
 
     @entities.Package.decorators.function(display_name='Evaluate a Model',
                                           inputs={'model': entities.Model,
-                                                  'dataset': entities.Dataset})
+                                                  'dataset': entities.Dataset,
+                                                  'filters': 'Json'})
     def evaluate_model(self,
                        model: entities.Model,
                        dataset: entities.Dataset,
-                       filters: entities.Filters,
+                       filters: entities.Filters = None,
                        #
                        progress: utilities.Progress = None,
                        context: utilities.Context = None):
@@ -488,54 +497,53 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         data will be downloaded from the dataset and query
         configuration is as defined in dl.Model.configuration
         upload annotations and calculate metrics vs GT
+
+        :param model: Model entity to run prediction
+        :param dataset: Dataset to evaluate
+        :param filters: Filter for specific items from dataset
+        :param progress: dl.Progress for report FaaS progress
+        :param context:
+        :return:
         """
-        try:
-            logger.info(
-                f"Received model: {model.id} for evaluation on dataset (name: {dataset.name}, id: {dataset.id}")
-            if context is not None:
-                if 'system' not in model.metadata:
-                    model.metadata['system'] = dict()
-                model.metadata['system']['evaluateExecutionId'] = context.execution_id
-            model.update()
-            ##########################
-            # load model and weights #
-            ##########################
-            logger.info(f"Loading Adapter with: {model.name} ({model.id!r})")
-            self.load_from_model(dataset=dataset,
-                                 model_entity=model)
+        logger.info(
+            f"Received model: {model.id} for evaluation on dataset (name: {dataset.name}, id: {dataset.id}")
+        ##########################
+        # load model and weights #
+        ##########################
+        logger.info(f"Loading Adapter with: {model.name} ({model.id!r})")
+        self.load_from_model(dataset=dataset,
+                             model_entity=model)
 
-            ##############
-            # Predicting #
-            ##############
-            self.predict_dataset(dataset=dataset,
-                                 filters=filters,
-                                 with_upload=True)
+        ##############
+        # Predicting #
+        ##############
+        logger.info(f"Calling prediction, dataset: {dataset.name!r} ({model.id!r}), filters: {filters}")
+        self.predict_dataset(dataset=dataset,
+                             filters=filters,
+                             with_upload=True)
 
-            ##############
-            # Evaluating #
-            ##############
-            if progress is not None:
-                progress.update(message='calculating metrics',
-                                progress=98)
-            self.evaluate(model=model, dataset=dataset)
-            #########
-            # Done! #
-            #########
-            if progress is not None:
-                progress.update(message='finishing evaluation',
-                                progress=99)
-
-        except Exception:
-            model.status = 'failed'
-            model.update()
-            raise
-        return self.model
+        ##############
+        # Evaluating #
+        ##############
+        logger.info(f"Starting adapter.evaluate()")
+        if progress is not None:
+            progress.update(message='calculating metrics',
+                            progress=98)
+        self.evaluate(model=model,
+                      dataset=dataset,
+                      filters=filters)
+        #########
+        # Done! #
+        #########
+        if progress is not None:
+            progress.update(message='finishing evaluation',
+                            progress=99)
+        return model
 
     # =============
     # INNER METHODS
     # =============
-
-    def _upload_model_annotations(self, item: entities.Item, predictions):
+    def _upload_model_annotations(self, item: entities.Item, predictions, clean_annotations):
         """
         Utility function that upload prediction to dlp platform based on the package.output_type
         :param predictions: `dl.AnnotationCollection`
@@ -544,13 +552,11 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         if not (isinstance(predictions, entities.AnnotationCollection) or isinstance(predictions, list)):
             raise TypeError('predictions was expected to be of type {}, but instead it is {}'.
                             format(entities.AnnotationCollection, type(predictions)))
-        model_info_name = "{}-{}".format(self.package_name, self.model_entity.name)
-        # if cleanup:
-        #     clean_filter = entities.Filters(field='type',
-        #                                     values=self.model_entity.output_type,
-        #                                     resource=entities.FiltersResource.ANNOTATION)
-        #     clean_filter.add(field='metadata.user.model.name', values=model_info_name)
-        #     item.annotations.delete(filters=clean_filter)
+        if clean_annotations:
+            clean_filter = entities.Filters(resource=entities.FiltersResource.ANNOTATION)
+            clean_filter.add(field='metadata.user.model.name', values=self.model_entity.name)
+            # clean_filter.add(field='type', values=self.model_entity.output_type,)
+            item.annotations.delete(filters=clean_filter)
         annotations = item.annotations.upload(annotations=predictions)
         return annotations
 

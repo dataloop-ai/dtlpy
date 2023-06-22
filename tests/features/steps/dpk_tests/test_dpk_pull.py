@@ -5,7 +5,7 @@ import behave
 
 @behave.when(u'I pull the dpk')
 def step_impl(context):
-    context.dpk_path = context.dl.dpks.pull(dpk_id=context.published_dpk.id)
+    context.dpk_path = context.dl.dpks.pull(dpk_id=context.dpk.id)
 
 
 @behave.then(u'I should have a dpk file')

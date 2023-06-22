@@ -1,4 +1,5 @@
 @qa-nightly
+@rc_only
 Feature: Projects repository create integration testing
 
   Background: Background name

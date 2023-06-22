@@ -160,19 +160,22 @@ class Apps:
         paged.get_page()
         return paged
 
-    def update(self, app: entities.App) -> bool:
+    def update(self, app: entities.App = None, app_id: str = None) -> bool:
         """
         Update the current app to the new configuration
 
         :param entities.App app: The app to update.
+        :param str app_id: The app id to update.
         :return bool whether the operation ran successfully or not
 
         **Example**
         .. code-block:: python
             succeed = dl.apps.update(app)
         """
+        if app_id is not None and app is None:
+            app = self.get(app_id=app_id)
         if app is None:
-            raise exceptions.PlatformException(error='400', message='You must provide app')
+            raise exceptions.PlatformException(error='400', message='You must provide app or app_id')
         success, response = self._client_api.gen_request(req_type='put',
                                                          path=f"/apps/{app.id}",
                                                          json_req=app.to_json())

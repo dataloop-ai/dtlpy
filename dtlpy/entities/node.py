@@ -347,7 +347,7 @@ class PipelineNode:
 
         source_connection = PipelineConnectionPort(node_id=self.node_id, port_id=source_port.port_id)
         target_connection = PipelineConnectionPort(node_id=node.node_id, port_id=target_port.port_id)
-        if action is None and source_port.actions is not None and source_port.actions is not []:
+        if action is None and source_port.actions is not None and source_port.actions != []:
             action = source_port.actions[0]
         connection = PipelineConnection(source=source_connection, target=target_connection, filters=filters,
                                         action=action)
@@ -881,7 +881,8 @@ class FunctionNode(PipelineNode):
                                name=single_input.name,
                                color=None,
                                display_name=single_input.name,
-                               default_value=single_input.value))
+                               default_value=single_input.value,
+                               actions=single_input.actions if single_input.actions is not None else []))
         return pipeline_io
 
     @staticmethod

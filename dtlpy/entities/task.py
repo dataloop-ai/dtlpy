@@ -445,7 +445,7 @@ class Task:
                                        items=items,
                                        wait=wait)
 
-    def get_items(self, filters=None):
+    def get_items(self, filters=None, get_consensus_items: bool = False):
         """
         Get the task items
 
@@ -453,7 +453,7 @@ class Task:
         :return: list of the items or PagedEntity output of items
         :rtype: list or dtlpy.entities.paged_entities.PagedEntities
         """
-        return self.tasks.get_items(task_id=self.id, dataset=self.dataset, filters=filters)
+        return self.tasks.get_items(task_id=self.id, dataset=self.dataset, filters=filters, get_consensus_items=get_consensus_items)
 
     def set_status(self, status: str, operation: str, item_ids: List[str]):
         """

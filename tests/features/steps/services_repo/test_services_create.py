@@ -16,6 +16,7 @@ def step_impl(context):
     runtime = None
     execution_timeout = None
     max_attempts = None
+    bot_user = context.bot_user if hasattr(context, "bot_user") else None
 
     params = context.table.headings
     for param in params:
@@ -43,9 +44,15 @@ def step_impl(context):
         elif param[0] == "max_attempts":
             if param[1] != "None":
                 max_attempts = int(param[1])
+        elif param[0] == "bot_user":
+            if param[1] != "None":
+                bot_user = context.project.bots.get(bot_name=param[1])
+            else:
+                bot_user = context.bot_user
+
 
     context.service = context.package.services._create(
-        bot=context.bot_user,
+        bot=bot_user,
         service_name=service_name,
         package=context.package,
         revision=revision,

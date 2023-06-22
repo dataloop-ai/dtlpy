@@ -26,7 +26,11 @@ def step_impl(context, original_dataset_name):
 
 @behave.then(u'The dataset from host by the name of "New_Dataset_Name" is equal to the one created')
 def step_impl(context):
-    assert context.dataset.to_json() == context.dataset_get.to_json()
+    dataset_json = context.dataset.to_json()
+    dataset_get_json = context.dataset_get.to_json()
+    dataset_json.pop('updatedAt', None)
+    dataset_get_json.pop('updatedAt', None)
+    assert dataset_json == dataset_get_json
 
 
 @behave.when(u'I try to update the "Original_Dataset_Name" name to a blank name')

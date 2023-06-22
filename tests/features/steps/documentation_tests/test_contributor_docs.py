@@ -34,3 +34,12 @@ def step_impl(context, member_email, member_role):
 @behave.then(u'Remove Members "{annotator_email}"')
 def step_impl(context, annotator_email):
     context.project.remove_member(email=annotator_email)  # Remove contributor from project
+
+
+@behave.When(u'I try to delete a member by email')
+def step_impl(context):
+    try:
+        context.project.remove_member(email=context.bot.email)
+        context.error = None
+    except Exception as e:
+        context.error = e

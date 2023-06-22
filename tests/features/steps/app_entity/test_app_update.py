@@ -3,7 +3,7 @@ import behave
 
 @behave.when(u'I update the app')
 def step_impl(context):
-    context.app_updated = context.project.apps.update(app_id=context.app.id, pause=True)
+    context.app_updated = context.project.apps.update(app_id=context.app.id)
 
 
 @behave.then(u'The update should success')

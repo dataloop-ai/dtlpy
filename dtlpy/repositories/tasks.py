@@ -963,7 +963,10 @@ class Tasks:
                   task_id: str = None,
                   task_name: str = None,
                   dataset: entities.Dataset = None,
-                  filters: entities.Filters = None) -> entities.PagedEntities:
+                  filters: entities.Filters = None,
+                  get_consensus_items: bool = False,
+                  task: entities.Task = None
+                  ) -> entities.PagedEntities:
         """
         Get the task items to use in your code.
 
@@ -971,8 +974,10 @@ class Tasks:
 
         If a filters param is provided, you will receive a PagedEntity output of the task items. If no filter is provided, you will receive a list of the items.
 
-        :param str task_id: the Id of the task
+        :param str task_id: the id of the task
         :param str task_name: the name of the task
+        :param bool get_consensus_items: get the items from the consensus assignment
+        :param dtlpy.entities.Task task: task object
         :param dtlpy.entities.dataset.Dataset dataset: dataset object that refer to the task
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :return: list of the items or PagedEntity output of items
@@ -984,10 +989,13 @@ class Tasks:
 
             dataset.tasks.get_items(task_id= 'task_id')
         """
-        if task_id is None and task_name is None:
+        if task is None and task_id is None and task_name is None:
             raise exceptions.PlatformException('400', 'Please provide either task_id or task_name')
+
         if task_id is None:
-            task_id = self.get(task_name=task_name).id
+            if task is None:
+                task = self.get(task_name=task_name)
+            task_id = task.id
 
         if dataset is None and self._dataset is None:
             raise exceptions.PlatformException('400', 'Please provide a dataset entity')
@@ -997,6 +1005,16 @@ class Tasks:
         if filters is None:
             filters = entities.Filters(use_defaults=False)
         filters.add(field='metadata.system.refs.id', values=[task_id], operator=entities.FiltersOperations.IN)
+
+        if not get_consensus_items:
+            if task is None:
+                task = self.get(task_id=task_id)
+            if task.metadata.get('system', dict()).get('consensusAssignmentId', None):
+                filters.add(
+                    field='metadata.system.refs.id',
+                    values=task.metadata['system']['consensusAssignmentId'],
+                    operator=entities.FiltersOperations.NOT_EQUAL
+                )
 
         return dataset.items.list(filters=filters)
 

@@ -7,6 +7,6 @@ Feature: Bot Entity repo services
     @testrail-C4523065
     Scenario: Delete bot
         When I create a bot by the name of "some_bot"
-        And I delete the created bot by email
+        And I delete the created bot by "email"
         And I list bots in project
         Then I receive a bots list of "0"

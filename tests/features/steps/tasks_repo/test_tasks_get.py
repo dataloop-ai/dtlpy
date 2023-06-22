@@ -35,8 +35,9 @@ def step_impl(context, total_items):
 
     for i in range(num_try):
         time.sleep(interval)
-        if int(total_items) == context.task.get_items().items_count:
+        if int(total_items) == context.task.get_items(get_consensus_items=True).items_count:
             success = True
             break
 
-    assert success, "TEST FAILED: Task total expected : {} , Actual : {}".format(total_items, context.task.get_items().items_count)
+    assert success, "TEST FAILED: Task total expected : {} , Actual : {}".format(total_items, context.task.get_items(
+        get_consensus_items=True).items_count)

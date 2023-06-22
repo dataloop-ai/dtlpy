@@ -112,7 +112,8 @@ class Downloader:
             # create filters to download annotations
             filters = entities.Filters(field='id',
                                        values=[item.id for item in items],
-                                       operator=entities.FiltersOperations.IN)
+                                       operator=entities.FiltersOperations.IN,
+                                       user_query=False)
 
             # convert to list of list (like pages and page)
             items_to_download = [items]
@@ -120,7 +121,7 @@ class Downloader:
         else:
             # filters
             if filters is None:
-                filters = entities.Filters()
+                filters = entities.Filters(user_query=False)
             # file types
             if file_types is not None:
                 filters.add(field='metadata.system.mimetype', values=file_types, operator=entities.FiltersOperations.IN)
@@ -136,7 +137,7 @@ class Downloader:
                                      operator=annotation_filter_or.operator,
                                      method=entities.FiltersMethod.OR)
             else:
-                annotation_filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION)
+                annotation_filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION, user_query=False)
 
             items_to_download = self.items_repository.list(filters=filters)
             num_items = items_to_download.items_count
@@ -397,7 +398,8 @@ class Downloader:
 
             success, response = dataset._client_api.gen_request(req_type='post',
                                                                 path='/datasets/{}/export'.format(dataset.id),
-                                                                json_req=payload)
+                                                                json_req=payload,
+                                                                headers={'user_query': filters.user_query})
             if not success:
                 raise exceptions.PlatformException(response)
             command = entities.Command.from_json(_json=response.json(),

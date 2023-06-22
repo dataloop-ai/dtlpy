@@ -1,5 +1,6 @@
 import json
 import os
+import random
 
 import behave
 
@@ -12,9 +13,7 @@ def step_impl(context, file_name):
         json_object = json.load(file)
     context.dpk = context.dl.entities.Dpk.from_json(_json=json_object,
                                                     client_api=context.dl.client_api,
-                                                    project=context.dl.entities.Project.from_json({},
-                                                                                                  context.dl.client_api,
-                                                                                                  False)
+                                                    project=context.project
                                                     )
     context.json_object = json_object
 
@@ -50,7 +49,7 @@ def step_impl(context):
     if 'categories' in context.json_object:
         assert context.dpk.categories == context.json_object['categories']
     if 'components' in context.json_object:
-        assert context.dl.entities.Dpk.components_to_json(context.dpk.components)['panels'] == \
+        assert context.dpk.components.panels == \
                context.json_object['components']['panels']
     if 'createdAt' in context.json_object:
         assert context.dpk.created_at == context.json_object['createdAt']
@@ -66,4 +65,6 @@ def step_impl(context):
 
 @behave.given(u"I publish a dpk to the platform")
 def step_impl(context):
+    context.dpk.name = context.dpk.name + str(random.randint(10000, 1000000))
     context.dpk = context.dl.entities.Dpk.publish(context.dpk)
+    context.feature.dpk = context.dpk

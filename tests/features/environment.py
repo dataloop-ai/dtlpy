@@ -21,6 +21,18 @@ def after_feature(context, feature):
         except Exception:
             logging.exception('Failed to delete bot')
 
+    if hasattr(feature, 'app'):
+        try:
+            context.feature.app.uninstall()
+        except Exception:
+            logging.exception('Failed to delete dpk')
+
+    if hasattr(feature, 'dpk'):
+        try:
+            context.feature.dpk.delete()
+        except Exception:
+            logging.exception('Failed to delete dpk')
+
     if hasattr(feature, 'dataloop_feature_integration'):
         all_deleted = True
         time.sleep(7)  # Wait for drivers to delete

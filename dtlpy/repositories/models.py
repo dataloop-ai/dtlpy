@@ -535,7 +535,34 @@ class Models:
             payload['serviceConfig'] = service_config
         success, response = self._client_api.gen_request(req_type="post",
                                                          path=f"/ml/models/{model_id}/train",
-                                                         payload=payload)
+                                                         json_req=payload)
+        if not success:
+            raise exceptions.PlatformException(response)
+        return entities.Execution.from_json(_json=response.json(),
+                                            client_api=self._client_api,
+                                            project=self._project)
+
+    def evaluate(self, model_id: str, dataset_id: str, filters: entities.Filters = None, service_config=None):
+        """
+        Evaluate Model, provide data to evaluate the model on You can also provide specific config for the deployed service
+
+        :param str model_id: Model id to predict
+        :param dict service_config : Service object as dict. Contains the spec of the default service to create.
+        :param str dataset_id: ID of the dataset to evaluate
+        :param entities.Filters filters: dl.Filter entity to run the predictions on
+        :return:
+        """
+
+        payload = {'input': {'datasetId': dataset_id}}
+        if service_config is not None:
+            payload['config'] = {'serviceConfig': service_config}
+        if filters is None:
+            filters = entities.Filters()
+        if filters is not None:
+            payload['input']['datasetQuery'] = filters.prepare()
+        success, response = self._client_api.gen_request(req_type="post",
+                                                         path=f"/ml/models/{model_id}/evaluate",
+                                                         json_req=payload)
         if not success:
             raise exceptions.PlatformException(response)
         return entities.Execution.from_json(_json=response.json(),

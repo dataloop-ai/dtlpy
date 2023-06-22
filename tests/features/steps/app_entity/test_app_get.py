@@ -29,4 +29,4 @@ def step_impl(context):
 
 @behave.then(u'I should get identical results as the json')
 def step_impl(context):
-    assert context.web_app == context.app
+    assert context.app.to_json() == context.web_app.to_json()

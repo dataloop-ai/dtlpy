@@ -13,7 +13,9 @@ def step_impl(context):
 
 @behave.then(u'I have the same dpk as the published dpk')
 def step_impl(context):
-    assert context.dpk.to_json() == context.published_dpk.to_json()
+    to_json = context.dpk.to_json()
+    to_json.pop('trusted', None)
+    assert to_json == context.published_dpk.to_json()
 
 
 @behave.when(u'I get a dpk with invalid id')

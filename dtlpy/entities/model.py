@@ -447,6 +447,20 @@ class Model(entities.BaseEntity):
         """
         return self.models.train(model_id=self.id, service_config=service_config)
 
+    def evaluate(self, dataset_id, filters: entities.Filters = None, service_config=None):
+        """
+        Evaluate Model, provide data to evaluate the model on You can also provide specific config for the deployed service
+
+        :param dict service_config : Service object as dict. Contains the spec of the default service to create.
+        :param str dataset_id: ID of the dataset to evaluate
+        :param entities.Filters filters: dl.Filter entity to run the predictions on
+        :return:
+        """
+        return self.models.evaluate(model_id=self.id,
+                                    dataset_id=dataset_id,
+                                    filters=filters,
+                                    service_config=service_config)
+
     def predict(self, item_ids):
         """
         Run model prediction with items

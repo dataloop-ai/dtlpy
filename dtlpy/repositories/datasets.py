@@ -89,7 +89,7 @@ class Datasets:
 
     def _bulid_folder_filter(self, folder_path, filters=None):
         if filters is None:
-            filters = entities.Filters()
+            filters = entities.Filters(user_query=False)
         if not folder_path.startswith('/'):
             folder_path = '/' + folder_path
         filters.add(field='dir', values=folder_path + '*')
@@ -439,7 +439,7 @@ class Datasets:
                                   with_task_annotations_status=False)
         """
         if filters is None:
-            filters = entities.Filters()
+            filters = entities.Filters(user_query=False)
         elif not isinstance(filters, entities.Filters):
             raise exceptions.PlatformException(
                 error='400',
@@ -460,7 +460,8 @@ class Datasets:
         }
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/datasets/{}/clone'.format(dataset_id),
-                                                         json_req=payload)
+                                                         json_req=payload,
+                                                         headers={'user_query': filters.user_query})
 
         if not success:
             raise exceptions.PlatformException(response)
@@ -794,7 +795,7 @@ class Datasets:
                 )
 
         if filters is None:
-            filters = entities.Filters()
+            filters = entities.Filters(user_query=False)
         if annotation_filters is not None:
             for annotation_filter_and in annotation_filters.and_filter_list:
                 filters.add_join(field=annotation_filter_and.field,
@@ -896,7 +897,7 @@ class Datasets:
                                                  )
         """
         if filters is None:
-            filters = entities.Filters()
+            filters = entities.Filters(user_query=False)
         pages = dataset.items.list(filters=filters)
         total_items = pages.items_count
         pbar = tqdm.tqdm(total=total_items, disable=dataset._client_api.verbose.disable_progress_bar,
