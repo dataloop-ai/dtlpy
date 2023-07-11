@@ -86,7 +86,6 @@ class Filters:
             use_defaults=True,
             context=None,
             page_size=None,
-            user_query=True
     ):
         if page_size is None:
             if resource in [FiltersResource.EXECUTION, FiltersResource.PIPELINE_EXECUTION]:
@@ -106,9 +105,9 @@ class Filters:
         self.sort = dict()
         self.join = None
         self.recursive = True
-        self.user_query = 'true' if user_query else 'false'
 
         # system only - task and assignment attributes
+        self._user_query = 'true'
         self._ref_task = False
         self._ref_assignment = False
         self._ref_op = None

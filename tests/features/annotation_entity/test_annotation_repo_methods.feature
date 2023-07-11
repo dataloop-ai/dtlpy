@@ -6,6 +6,7 @@ Feature: Annotation Entity repo services
         And I create a dataset with a random name
 
     @testrail-C4523044
+    @DAT-46445
     Scenario: Annotation delete
         Given Labels in file: "assets_split/annotation_repo/labels.json" are uploaded to test Dataset
         And Item in path "assets_split/annotation_repo/0000000162.jpg" is uploaded to "Dataset"
@@ -15,6 +16,7 @@ Feature: Annotation Entity repo services
         Then Annotation x does not exist in item
 
     @testrail-C4523044
+    @DAT-46445
     Scenario: Updateing annotations entity
         Given Labels in file: "assets_split/annotation_repo/labels.json" are uploaded to test Dataset
         And Item in path "assets_split/annotation_repo/0000000162.jpg" is uploaded to "Dataset"
@@ -26,6 +28,7 @@ Feature: Annotation Entity repo services
         Then Annotation x in host has label "new_label"
 
     @testrail-C4523044
+    @DAT-46445
     Scenario: Annotation download
         Given Labels in file: "assets_split/annotation_repo/labels.json" are uploaded to test Dataset
         And Item in path "assets_split/annotation_repo/0000000162.jpg" is uploaded to "Dataset"
@@ -38,6 +41,7 @@ Feature: Annotation Entity repo services
         And Item annotation "instance" has been downloaded to "downloaded_annotations"
 
     @testrail-C4523044
+    @DAT-46445
     Scenario: Uploading annotations - Image
         Given Labels in file: "assets_split/annotation_repo/labels.json" are uploaded to test Dataset
         And Item in path "assets_split/annotation_repo/0000000162.jpg" is uploaded to "Dataset"
@@ -46,6 +50,7 @@ Feature: Annotation Entity repo services
         Then Item in host has annotation entity created
 
     @testrail-C4523044
+    @DAT-46445
     Scenario: Uploading annotations - Video
         Given Classes in file: "video_classes.json" are uploaded to test Dataset
         And Item in path "sample_video.mp4" is uploaded to "Dataset"

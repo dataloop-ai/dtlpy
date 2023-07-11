@@ -10,6 +10,7 @@ Feature: Triggers repository types - dataset
     @services.delete
     @packages.delete
     @testrail-C4525044
+    @DAT-46641
     Scenario: Created Dataset Trigger
         Given There is a package (pushed from "triggers/dataset") by the name of "triggers-create"
         And There is a service by the name of "triggers-create" with module name "default_module" saved to context "service"

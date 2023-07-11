@@ -9,6 +9,7 @@
 #    @feature.delete
 #    @feature_set.delete
 #    @testrail-C4523107
+     @DAT-46525
 #    Scenario: To Json
 #        When I create a feature sets with a random name
 #        When I create a feature
@@ -18,6 +19,7 @@
 #    @feature.delete
 #    @feature_set.delete
 #    @testrail-C4523107
+     @DAT-46525
 #    Scenario: get Feature
 #        When I create a feature sets with a random name
 #        When I create a feature
@@ -25,3 +27,4 @@
 #        And I get feature
 #        Then It is equal to feature sets created
 #        Then It is equal to feature created
+

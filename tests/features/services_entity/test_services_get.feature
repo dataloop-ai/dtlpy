@@ -12,7 +12,9 @@ Feature: Services entity methods testing
     @services.delete
     @packages.delete
     @testrail-C4523156
+    @DAT-46605
     Scenario: To Json
         Then Object "Service" to_json() equals to Platform json.
+
 
 

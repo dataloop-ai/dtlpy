@@ -75,7 +75,7 @@ def step_impl(context, execution_number):
     assert context.pipeline.pipeline_executions.list().items_count != 0, "Pipeline not executed found 0 executions"
     context.pipeline = context.project.pipelines.get(context.pipeline.name)
 
-    num_try = 10
+    num_try = 60
     interval = 10
     validate = 0
     executed = False

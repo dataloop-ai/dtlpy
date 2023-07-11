@@ -11,6 +11,7 @@ Feature: Triggers repository list service testing
     @services.delete
     @packages.delete
     @testrail-C4523180
+    @DAT-46649
     Scenario: List when none exist
         When I list triggers
         Then I receive a Trigger list of "0" objects
@@ -18,6 +19,7 @@ Feature: Triggers repository list service testing
     @services.delete
     @packages.delete
     @testrail-C4523180
+    @DAT-46649
     Scenario: List when 1 exist
         Given I create a trigger
             |name=triggers-list|filters=None|resource=Item|action=Created|active=True|executionMode=Once|
@@ -27,6 +29,7 @@ Feature: Triggers repository list service testing
     @services.delete
     @packages.delete
     @testrail-C4523180
+    @DAT-46649
     Scenario: List when 2 exist
         Given I create a trigger
             |name=triggers-list-1|filters=None|resource=Item|action=Created|active=True|executionMode=Once|

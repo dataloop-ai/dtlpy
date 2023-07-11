@@ -6,6 +6,7 @@ Feature: Datasets repository delete service testing
         And I create a project by the name of "datasets_delete"
 
     @testrail-C4523085
+    @DAT-46493
     Scenario: Delete dataset by name
         Given There are no datasets
         And I create a dataset with a random name
@@ -13,6 +14,7 @@ Feature: Datasets repository delete service testing
         Then Dataset with same name does not exists
 
     @testrail-C4523085
+    @DAT-46493
     Scenario: Delete dataset by id
         Given There are no datasets
         And I create a dataset with a random name
@@ -20,10 +22,12 @@ Feature: Datasets repository delete service testing
         Then Dataset with same name does not exists
 
     @testrail-C4523085
+    @DAT-46493
     Scenario: Delete a non-existing dataset
         Given There are no datasets
         And I create a dataset with a random name
         When I try to delete a dataset by the name of "Some Dataset Name"
         Then "NotFound" exception should be raised
         And No dataset was deleted
+
 

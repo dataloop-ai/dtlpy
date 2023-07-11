@@ -7,6 +7,7 @@ Feature: Cli Api
         And I have context random number
 
     @testrail-C4523067
+    @DAT-46475
     Scenario: Api info
         When I perform command:
             |api|info|
@@ -15,6 +16,7 @@ Feature: Cli Api
         And "token" in output
 
     @testrail-C4523067
+    @DAT-46475
     Scenario: Api info
         When I perform command:
             |api|setenv|-e|local|
@@ -22,14 +24,18 @@ Feature: Cli Api
         And "Platform environment: https://localhost:8443/api/v1" in output
 
     @testrail-C4523067
+    @DAT-46475
     Scenario: Api info
         When I perform command:
             |api|setenv|-e|dev|
         Then I succeed
         And "Platform environment: https://dev-gate.dataloop.ai/api/v1" in output
 
+    @setenv.reset
     @testrail-C4523067
+    @DAT-46475
     Scenario: Api info
         When I perform command:
             |api|setenv|-e|some_env|
         Then I dont succeed
+        And "Unknown platform environment: "some_env"" in output

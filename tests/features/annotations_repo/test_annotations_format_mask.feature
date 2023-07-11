@@ -6,6 +6,7 @@ Feature: Annotations format mask
         And I create a dataset by the name of "Dataset_annotations_format_mask" in the project
 
     @testrail-C4532883
+    @DAT-46428
     Scenario: Check all mask download options - image item
         Given I upload an item of type "png image" to the dataset
         And   I upload "box" annotation to the image item
@@ -27,6 +28,7 @@ Feature: Annotations format mask
              | dir2      | annotations_format_mask2 |
 
     @testrail-C4532883
+    @DAT-46428
     Scenario: Check all mask download options - video item
         Given I upload an item of type "mp4 video" to the dataset
         And   I upload "box" annotation to the video item
@@ -46,3 +48,4 @@ Feature: Annotations format mask
              | Parameter | Value                    |
              | dir1      | annotations_format_mask1 |
              | dir2      | annotations_format_mask2 |
+

@@ -7,6 +7,7 @@ Feature: Items repository delete service testing
         And I create a dataset with a random name
 
     @testrail-C4523111
+    @DAT-46532
     Scenario: Delete item by name
         Given There are no items
         And I upload an item by the name of "test_item.jpg"
@@ -14,6 +15,7 @@ Feature: Items repository delete service testing
         Then There are no items
 
     @testrail-C4523111
+    @DAT-46532
     Scenario: Delete item by id
         Given There are no items
         And I upload an item by the name of "test_item.jpg"
@@ -21,6 +23,7 @@ Feature: Items repository delete service testing
         Then There are no items
 
     @testrail-C4523111
+    @DAT-46532
     Scenario: Delete a non-existing item by name
         Given There are no items
         And I upload an item by the name of "test_item.jpg"
@@ -29,10 +32,12 @@ Feature: Items repository delete service testing
         And No item was deleted
 
     @testrail-C4523111
+    @DAT-46532
     Scenario: Delete a non-existing item by id
         Given There are no items
         And I upload an item by the name of "test_item.jpg"
         When I try to delete an item by the id of "Some_id"
         Then "BadRequest" exception should be raised
         And No item was deleted
+
 

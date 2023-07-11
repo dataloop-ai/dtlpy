@@ -10,7 +10,7 @@ def step_impl(context, driver_type, driver_name):
 
     assert hasattr(context, "integration"), "TEST FAILED: Context has no object integration"
     try:
-        context.driver_type = driver_type.replace('aws', 's3')
+        context.driver_type = driver_type
 
         time.sleep(5)  # Wait for integration
         context.driver = context.project.drivers.create(

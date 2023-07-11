@@ -7,6 +7,7 @@ Feature: Items repository update service testing
         And There is an item
 
     @testrail-C4523115
+    @DAT-46536
     Scenario: Update items name
         When I update items name to "/test_name.jpg"
         Then I receive an Item object with name "/test_name.jpg"
@@ -14,6 +15,7 @@ Feature: Items repository update service testing
         And Only name attributes was changed
 
     @testrail-C4523115
+    @DAT-46536
     Scenario: Update items path
         Given And There is an item by the name of "/test_item.jpg"
         When I update items name to "/folder/test_item.jpg"
@@ -22,6 +24,7 @@ Feature: Items repository update service testing
         And PageEntity has directory item "/folder"
 
     @testrail-C4523115
+    @DAT-46536
     Scenario: Update item system metadata - with param system_metadata=True
         When I update item system metadata with system_metadata="True"
         Then Then I receive an Item object
@@ -29,8 +32,10 @@ Feature: Items repository update service testing
         And Only metadata was changed
 
     @testrail-C4523115
+    @DAT-46536
     Scenario: Update item system metadata - with param system_metadata=False
         When I update item system metadata with system_metadata="False"
         Then Then I receive an Item object
         And Item in host was not changed
+
 

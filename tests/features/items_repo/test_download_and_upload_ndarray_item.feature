@@ -9,6 +9,7 @@ Feature: Upload and Download Numpy.Ndarray Item
     And I remove log files
 
   @testrail-C4523109
+  @DAT-46530
   Scenario: Upload jpg Numpy.NdArray item
     Given There are no items
     When I Upload an Numpy.NdArray (context.array) item with the name "0000000162_from_ndarray.jpg"
@@ -16,18 +17,21 @@ Feature: Upload and Download Numpy.Ndarray Item
     And  Log file does not exist
 
   @testrail-C4523109
+  @DAT-46530
   Scenario: Upload png Numpy.NdArray item
     Given There are no items
     When I Upload an Numpy.NdArray (context.array) item with the name "0000000162_from_ndarray.png"
     Then Item is correctly uploaded to platform
 
   @testrail-C4523109
+  @DAT-46530
   Scenario: Upload illegal Numpy.NdArray item
     Given There are no items
     When I Upload an Numpy.NdArray (context.array) item with the name "0000000162_from_ndarray.abc"
     Then There are no items
 
   @testrail-C4523109
+  @DAT-46530
   Scenario: Download Image as Numpy.NdArray
     Given There are no items
     When I Upload an Numpy.NdArray (context.array) item with the name "0000000162_from_ndarray.jpg"
@@ -35,6 +39,7 @@ Feature: Upload and Download Numpy.Ndarray Item
     Then Download Numpy.NdArray item and context.array size equal
 
   @testrail-C4523109
+  @DAT-46530
   Scenario: Download some images as Numpy.NdArray
     Given There are no items
     When I Upload an Numpy.NdArray (context.array) item with the name "0000000162_from_ndarray.jpg"
@@ -42,7 +47,9 @@ Feature: Upload and Download Numpy.Ndarray Item
     Then Download Numpy.NdArray item and context.array size equal
 
   @testrail-C4523109
+  @DAT-46530
   Scenario: Try to Download video as Numpy.NdArray
     Given There is one .mp4 item
     When  Download as Numpy.NdArray the .mp4
     Then  Log file is exist with resource "item.id"
+

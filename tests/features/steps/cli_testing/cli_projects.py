@@ -60,12 +60,12 @@ def step_impl(context, project_name):
 
 @behave.then(u"I succeed")
 def step_impl(context):
-    assert context.return_code == 0
+    assert context.return_code == 0, "TEST FAILED: {}".format(context.err)
 
 
 @behave.when(u"I succeed")
 def step_impl(context):
-    assert context.return_code == 0
+    assert context.return_code == 0, "TEST FAILED: {}".format(context.err)
 
 
 @behave.then(u"I dont succeed")
@@ -76,7 +76,7 @@ def step_impl(context):
 @behave.given(u"I have context random number")
 def step_impl(context):
     if not hasattr(context.feature, 'random'):
-        context.feature.random = str(random.randrange(1000, 100000))
+        context.feature.random = str(random.randrange(1000, 1000000))
     context.random = context.feature.random
 
 

@@ -10,6 +10,7 @@ Feature: Tasks repository delete method testing
     And Add Members "annotator2@dataloop.ai" as "annotator"
 
   @testrail-C4523168
+  @DAT-46623
   Scenario: Delete - by name
     When I create Task
       | task_name=min_params | due_date=auto | assignee_ids=auto |
@@ -17,6 +18,7 @@ Feature: Tasks repository delete method testing
     Then Task has been deleted
 
   @testrail-C4523168
+  @DAT-46623
   Scenario: Delete - by id
     When I create Task
       | task_name=min_params | due_date=auto | assignee_ids=auto |
@@ -25,8 +27,10 @@ Feature: Tasks repository delete method testing
 
 
   @testrail-C4523168
+  @DAT-46623
   Scenario: Delete - by object
     When I create Task
       | task_name=min_params | due_date=auto | assignee_ids=auto |
     And I delete task by "object"
     Then Task has been deleted
+

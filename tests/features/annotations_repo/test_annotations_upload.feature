@@ -6,6 +6,7 @@ Feature: Annotations repository Upload service testing
         And I create a dataset with a random name
 
     @testrail-C4523039
+    @DAT-46433
     Scenario: Upload annotations from file
         Given Labels in file: "assets_split/annotations_upload/labels.json" are uploaded to test Dataset
         And Item in path "assets_split/annotation_collection/0000000162.jpg" is uploaded to "Dataset"
@@ -13,6 +14,7 @@ Feature: Annotations repository Upload service testing
         Then Item should have annotations uploaded
 
     @testrail-C4523039
+    @DAT-46433
     Scenario: Upload a single annotation
         Given Labels in file: "assets_split/annotations_upload/labels.json" are uploaded to test Dataset
         And Item in path "assets_split/annotation_collection/0000000162.jpg" is uploaded to "Dataset"
@@ -25,5 +27,6 @@ Feature: Annotations repository Upload service testing
     #     Given There is an illegal annotation description
     #     When I try to upload annotation description to Item
     #     Then "InternalServerError" exception should be raised
+
 
 

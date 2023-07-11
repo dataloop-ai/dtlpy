@@ -6,11 +6,14 @@ Feature: command Entity repo - test using dataset clone feature
         And I create a dataset with a random name
 
     @testrail-C4523079
+    @DAT-46487
     Scenario: Use command with clone dataset
         Given There are "10" items
         When Dataset is cloning
         Then Cloned dataset has "10" items
 
     @testrail-C4523079
+    @DAT-46487
     Scenario: command error  with clone dataset with same name
         When Dataset is cloning with same name get already exist error
+

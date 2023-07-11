@@ -7,6 +7,16 @@ import json
 import logging
 from filelock import FileLock
 from dotenv import load_dotenv
+import subprocess
+
+
+
+try:
+    # for local import
+    from tests.env_from_git_branch import get_env_from_git_branch
+except ImportError:
+    # for remote import
+    from ..env_from_git_branch import get_env_from_git_branch
 
 
 def before_all(context):
@@ -25,20 +35,31 @@ def after_feature(context, feature):
         try:
             context.feature.app.uninstall()
         except Exception:
-            logging.exception('Failed to delete dpk')
+            logging.exception('Failed to uninstall app')
 
     if hasattr(feature, 'dpk'):
         try:
             context.feature.dpk.delete()
         except Exception:
-            logging.exception('Failed to delete dpk')
+            try:
+                apps = context.dl.apps.list(
+                    filters=context.dl.Filters(use_defaults=False, resource=context.dl.FiltersResource.APP,
+                                               field="dpkName",
+                                               values=context.context.feature.dpk.name))
+                for page in apps:
+                    for app in page:
+                        app.uninstall()
+                context.feature.dpk.delete()
+            except:
+                logging.exception('Failed to delete dpk')
 
     if hasattr(feature, 'dataloop_feature_integration'):
         all_deleted = True
         time.sleep(7)  # Wait for drivers to delete
         for integration_id in feature.to_delete_integrations_ids:
             try:
-                feature.dataloop_feature_project.integrations.delete(integrations_id=integration_id, sure=True, really=True)
+                feature.dataloop_feature_project.integrations.delete(integrations_id=integration_id, sure=True,
+                                                                     really=True)
             except feature.dataloop_feature_dl.exceptions.NotFound:
                 pass
             except:
@@ -138,6 +159,11 @@ def after_tag(context, tag):
             use_fixture(drivers_delete, context)
         except Exception:
             logging.exception('Failed to delete driver')
+    elif tag == 'setenv.reset':
+        try:
+            use_fixture(reset_setenv, context)
+        except Exception:
+            logging.exception('Failed to reset env')
     elif tag == 'frozen_dataset':
         pass
     elif 'testrail-C' in tag:
@@ -307,3 +333,14 @@ def datasets_delete(context):
             all_deleted = False
             logging.exception('Failed deleting dataset: {}'.format(dataset_id))
     assert all_deleted
+
+
+@fixture
+def reset_setenv(context):
+    _, base_env = get_env_from_git_branch()
+    cmds = ["dlp", "api", "setenv", "-e", "{}".format(base_env)]
+    p = subprocess.Popen(cmds, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    context.out, context.err = p.communicate()
+    # save return code
+    context.return_code = p.returncode
+    assert context.return_code == 0, "AFTER TEST FAILED: {}".format(context.err)

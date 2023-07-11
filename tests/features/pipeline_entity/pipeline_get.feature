@@ -7,14 +7,17 @@ Feature: Pipeline entity method testing
 
     @pipelines.delete
     @testrail-C4523143
+    @DAT-46575
     Scenario: To Json
         When I create a pipeline with name "testpipeline"
         Then Object "Pipeline" to_json() equals to Platform json.
 
     @pipelines.delete
     @testrail-C4523143
+    @DAT-46575
     Scenario: get pipeline
         When I create a pipeline with name "testpipeline"
         And I get pipeline by the name of "testpipeline"
         Then I get a pipeline entity
         And It is equal to pipeline created
+

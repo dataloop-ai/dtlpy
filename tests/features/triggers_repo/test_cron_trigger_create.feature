@@ -10,6 +10,7 @@ Feature: Cron Triggers repository create service testing
   @services.delete
   @packages.delete
   @testrail-C4530457
+  @DAT-46633
   Scenario: Get cron execution
     Given There is a package (pushed from "triggers/item") by the name of "triggers-cron"
     And There is a service by the name of "triggers-cron" with module name "default_module" saved to context "service"
@@ -24,4 +25,5 @@ Feature: Cron Triggers repository create service testing
     When I list service executions
     Then I receive a list of "2" executions
     When I delete trigger by "id"
+
 

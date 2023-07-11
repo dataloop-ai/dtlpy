@@ -6,6 +6,7 @@ Feature: Annotaions repository update service testing
         And I create a dataset with a random name
 
     @testrail-C4523035
+    @DAT-46426
     Scenario: Updateing annotations: remove attributes
         Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
         And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"
@@ -16,6 +17,7 @@ Feature: Annotaions repository update service testing
         Then  Item annotations has no attributes
 
     @testrail-C4523035
+    @DAT-46426
     Scenario: Updateing annotations: start and end time
         Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
         And Item in path "sample_video.mp4" is uploaded to "Dataset"
@@ -25,5 +27,6 @@ Feature: Annotaions repository update service testing
         And I set start frame to "20" and end frame to "70"
         When I update annotation
         Then annotation x metadata should be changed accordingly
+
 
 

@@ -243,7 +243,14 @@ class Model(entities.BaseEntity):
     @property
     def package(self):
         if self._package is None:
-            self._package = self.packages.get(package_id=self.package_id)
+            try:
+                self._package = self.packages.get(package_id=self.package_id)
+            except Exception as e:
+                error = e
+                try:
+                    self._package = self.dpks.get(dpk_id=self.package_id)
+                except Exception:
+                    raise error
             self._repositories = self.set_repositories()  # update the repos with the new fetched entity
         assert isinstance(self._package, entities.Package)
         return self._package
@@ -274,7 +281,7 @@ class Model(entities.BaseEntity):
     def set_repositories(self):
         reps = namedtuple('repositories',
                           field_names=['projects', 'datasets', 'packages', 'models', 'ontologies', 'artifacts',
-                                       'metrics'])
+                                       'metrics', 'dpks'])
 
         r = reps(projects=repositories.Projects(client_api=self._client_api),
                  datasets=repositories.Datasets(client_api=self._client_api,
@@ -293,9 +300,9 @@ class Model(entities.BaseEntity):
                                                   project_id=self.project_id,
                                                   model=self),
                  metrics=repositories.Metrics(client_api=self._client_api,
-                                              model=self)
+                                              model=self),
+                 dpks=repositories.Dpks(client_api=self._client_api)
                  )
-
         return r
 
     @property
@@ -321,6 +328,11 @@ class Model(entities.BaseEntity):
     def packages(self):
         assert isinstance(self._repositories.packages, repositories.Packages)
         return self._repositories.packages
+
+    @property
+    def dpks(self):
+        assert isinstance(self._repositories.dpks, repositories.Dpks)
+        return self._repositories.dpks
 
     @property
     def ontologies(self):

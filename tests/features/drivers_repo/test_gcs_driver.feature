@@ -9,6 +9,7 @@ Feature: Driver repository testing - GCS
   @testrail-C4536790
   @datasets.delete
   @drivers.delete
+  @DAT-49273
   Scenario: Create GCS Driver
     When I create driver "gcs" with the name "test-gcs-driver"
       | key         | value          |
@@ -20,6 +21,7 @@ Feature: Driver repository testing - GCS
 
   @testrail-C4533706
   @drivers.delete
+  @DAT-49273
   Scenario: Delete GCS Driver without connected dataset
     When I create driver "gcs" with the name "test-gcs-driver"
       | key         | value          |
@@ -30,6 +32,7 @@ Feature: Driver repository testing - GCS
   @testrail-C4533706
   @datasets.delete
   @drivers.delete
+  @DAT-49273
   Scenario: Delete GCS Driver with connected dataset - Should return error
     When I create driver "gcs" with the name "test-gcs-driver"
       | key         | value          |
@@ -44,6 +47,7 @@ Feature: Driver repository testing - GCS
   @testrail-C4536790
   @datasets.delete
   @drivers.delete
+  @DAT-49273
   Scenario: Create GCS Driver with path directory
     When I create driver "gcs" with the name "test-gcs-driver"
       | key         | value          |

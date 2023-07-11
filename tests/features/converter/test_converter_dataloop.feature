@@ -6,6 +6,7 @@ Feature: Converter dataloop format
 
    @converter.platform_dataset.delete
    @testrail-C4523081
+   @DAT-46489
    Scenario: Convert platform dataloop dataset to yolo
        Given There is a local "dataloop" dataset in "converter/dataloop/local_dataset"
        And There is a platform dataloop dataset from "converter/dataloop/local_dataset"
@@ -15,6 +16,7 @@ Feature: Converter dataloop format
 
    @converter.platform_dataset.delete
    @testrail-C4523081
+   @DAT-46489
    Scenario: Convert platform dataloop dataset to voc
        Given There is a local "dataloop" dataset in "converter/dataloop/local_dataset"
        And There is a platform dataloop dataset from "converter/dataloop/local_dataset"
@@ -24,6 +26,7 @@ Feature: Converter dataloop format
 
   @converter.platform_dataset.delete
   @testrail-C4523081
+  @DAT-46489
   Scenario: Convert platform dataloop dataset to coco
       Given There is a local "dataloop" dataset in "converter/dataloop/local_dataset"
       And There is a platform dataloop dataset from "converter/dataloop/local_dataset"
@@ -31,3 +34,4 @@ Feature: Converter dataloop format
       Then I wait "30"
       When I convert platform dataset to "coco" in path "converter/dataloop/convert"
       Then Converted "coco" dataset in "converter/dataloop/convert/coco.json" is equal to dataset in "converter/coco/dataloop_should_be/coco.json"
+

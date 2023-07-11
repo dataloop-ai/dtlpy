@@ -15,6 +15,7 @@ Feature: Assignments repository redistribute method testing
         And I get the first assignment
 
     @testrail-C4523060
+    @DAT-46467
     Scenario: redistribute
         When I redistribute assignment to "annotator3@dataloop.ai,annotator4@dataloop.ai"
         Then Assignments was redistributed to "annotator3@dataloop.ai,annotator4@dataloop.ai"

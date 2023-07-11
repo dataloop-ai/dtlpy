@@ -9,6 +9,7 @@
 
      @packages.delete
      @testrail-C4523134
+     @DAT-46559
      Scenario: Create package
          When I push "first" package
              |codebase_id=None|package_name=test-package|src_path=packages_create|inputs=None|outputs=None|
@@ -28,3 +29,4 @@
 #         When I push "moduleouput" package
 #             |codebase_id=None|package_name=test-package|src_path=packages_create|inputs=None|outputs=item,item|
 #         Then "InternalServerError" exception should be raised
+

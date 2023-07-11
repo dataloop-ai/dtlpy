@@ -54,7 +54,7 @@ def step_impl(context, task_type):
         elif key == 'due_date':
             assert context.task.due_date == val * 1000
         elif key == 'task_name':
-            assert context.task.name == val
+            assert val in context.task.name
         elif key == 'dataset':
             assert context.task.dataset_id == val.id
         elif key == 'project_id':

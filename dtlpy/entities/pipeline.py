@@ -224,6 +224,7 @@ class Pipeline(entities.BaseEntity):
     _project = attr.ib(repr=False)
     _client_api = attr.ib(type=ApiClient, repr=False)
     _original_settings = attr.ib(repr=False, type=PipelineSettings)
+    _original_variables = attr.ib(repr=False, type=List[Variable])
     _repositories = attr.ib(repr=False)
 
     @staticmethod
@@ -270,6 +271,7 @@ class Pipeline(entities.BaseEntity):
         variables = list()
         if json_variables:
             variables = [Variable.from_json(_json=v) for v in json_variables]
+
         settings = PipelineSettings.from_json(_json=_json.get('settings', dict()))
         inst = cls(
             created_at=_json.get('createdAt', None),
@@ -291,7 +293,8 @@ class Pipeline(entities.BaseEntity):
             settings=settings,
             variables=variables,
             status=_json.get('status', None),
-            original_settings=settings
+            original_settings=settings,
+            original_variables=json_variables,
         )
         for node in _json.get('nodes', list()):
             inst.nodes.add(node=cls.pipeline_node(node))
@@ -314,6 +317,9 @@ class Pipeline(entities.BaseEntity):
 
     def settings_changed(self) -> bool:
         return self.settings.to_json() != self._original_settings.to_json()
+
+    def variables_changed(self) -> bool:
+        return [var.to_json() for var in self.variables] != self._original_variables
 
     def to_json(self):
         """
@@ -340,7 +346,8 @@ class Pipeline(entities.BaseEntity):
                                                         attr.fields(Pipeline).revisions,
                                                         attr.fields(Pipeline).settings,
                                                         attr.fields(Pipeline).variables,
-                                                        attr.fields(Pipeline)._original_settings
+                                                        attr.fields(Pipeline)._original_settings,
+                                                        attr.fields(Pipeline)._original_variables
                                                         ))
 
         _json['projectId'] = self.project_id

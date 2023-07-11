@@ -1,17 +1,19 @@
 import os
 import behave
+import dtlpy
 
 
 @behave.given(u'I create "{integration_type}" integration with name "{integration_name}"')
 def step_impl(context, integration_type, integration_name):
+
     integration_options = {
-        "aws": eval(os.environ.get("aws")),
+        "s3": eval(os.environ.get("aws")),
         "gcs": {
             'key': None, 'secret': None, 'content': os.environ.get('gcs')
         },
         "azureblob": eval(os.environ.get("azureblob"))
         ,
-        "aws_sts": eval(os.environ.get("aws_sts")),
+        "aws-sts": eval(os.environ.get("aws_sts")),
         "azuregen2": eval(os.environ.get("azuregen2")),
         "key_value": {
             'key': os.environ.get('key_value_key', 'default_key'), 'value': os.environ.get('key_value_value', 'default_value')
@@ -19,8 +21,7 @@ def step_impl(context, integration_type, integration_name):
     }
     assert integration_type in integration_options, "TEST FAILED: Wrong integration type: {}".format(integration_type)
     try:
-        # Handle AWS integration
-        context.integration_type = integration_type.replace('aws', 's3')
+        context.integration_type = integration_type
 
         if hasattr(context.feature, 'dataloop_feature_integration'):
             if context.feature.dataloop_feature_integration.type == integration_type and context.feature.dataloop_feature_integration.name == integration_name:

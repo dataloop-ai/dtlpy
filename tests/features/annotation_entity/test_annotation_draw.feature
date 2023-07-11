@@ -6,6 +6,7 @@ Feature: Annotation Entity Draw annotation
         And I create a dataset with a random name
 
     @testrail-C4523042
+    @DAT-46443
     Scenario: Draw - mask
         Given Classes in file: "classes_new.json" are uploaded to test Dataset
         And Dataset ontology has attributes "attr1" and "attr2"
@@ -22,4 +23,5 @@ Feature: Annotation Entity Draw annotation
     #     When Item is annotated with annotations in file: "annotations_new.json"
     #     And I draw to image in "0000000162.jpg" all annotations with param "instance"
     #     Then Annotations drawn equal numpy in "draw_image_instance_should_be.npy"
+
 

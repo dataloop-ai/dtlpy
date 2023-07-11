@@ -6,6 +6,7 @@ Feature: Annotation description with builder - audio item
         And   I create a dataset by the name of "annotations_description_dataset" in the project
 
     @testrail-C4532807
+    @DAT-46439
     Scenario: Upload classification annotation with description
         Given I upload an item of type "mp3 audio" to the dataset
         And   I upload "subtitle" annotation with description "Annotation description" to the audio item

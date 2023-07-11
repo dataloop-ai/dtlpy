@@ -9,6 +9,7 @@ Feature: Service entity debug mode
   @services.delete
   @packages.delete
   @testrail-C4533885
+  @DAT-46606
   Scenario: Update service to debug mode - Should return <html> in response and executions should success
     Given I create a dataset with a random name
     And There are "5" items
@@ -24,6 +25,7 @@ Feature: Service entity debug mode
   @services.delete
   @packages.delete
   @testrail-C4533885
+  @DAT-46606
   Scenario: Update service to regular mode - Should remove the replica
     When I create a service
       | service_name=services-debug | package=services-debug | revision=None | config=None | runtime=None |

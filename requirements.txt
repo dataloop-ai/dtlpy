@@ -20,5 +20,5 @@ pathspec>=0.8.1
 filelock>=3.0.12
 diskcache>=5.4
 redis>=3.5
-pydantic
+pydantic<2
 inquirer

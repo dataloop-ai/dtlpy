@@ -8,9 +8,11 @@ Feature: Webm Converter service testing - failed message
         And Add Members "annotator2@dataloop.ai" as "annotator"
 
     @testrail-C4532774
+    @DAT-46652
     Scenario: Video with wrong FPS should display message and have success execution status
         Given Item in path "webm-converter/failed_video.mp4" is uploaded to "Dataset"
         When I create Task
             | task_name=min_params | due_date=auto | assignee_ids=auto |
         When I wait for video services to finish
         Then I validate execution status item metadata have the right message
+

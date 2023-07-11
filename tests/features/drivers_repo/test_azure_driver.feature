@@ -9,6 +9,7 @@ Feature: Driver repository testing - AZURE
   @testrail-C4536789
   @datasets.delete
   @drivers.delete
+  @DAT-49272
   Scenario: Create Azure Blob Driver
     When I create driver "azureblob" with the name "test-azure-driver"
       | key         | value          |
@@ -20,6 +21,7 @@ Feature: Driver repository testing - AZURE
 
   @testrail-C4533706
   @drivers.delete
+  @DAT-49272
   Scenario: Delete Azure Driver without connected dataset
     When I create driver "azureblob" with the name "test-azure-driver"
       | key         | value          |
@@ -31,6 +33,7 @@ Feature: Driver repository testing - AZURE
   @testrail-C4533706
   @datasets.delete
   @drivers.delete
+  @DAT-49272
   Scenario: Delete Azure Driver with connected dataset - Should return error
     When I create driver "azureblob" with the name "test-azure-driver"
       | key         | value          |
@@ -46,6 +49,7 @@ Feature: Driver repository testing - AZURE
   @testrail-C4536789
   @datasets.delete
   @drivers.delete
+  @DAT-49272
   Scenario: Create Azure DatalakeGe2 Driver
     Given I create "azuregen2" integration with name "test-azure-gen2-integration"
     When I create driver "azureDatalakeGen2" with the name "test-azure-gen2-driver"
@@ -59,6 +63,7 @@ Feature: Driver repository testing - AZURE
   @testrail-C4536789
   @datasets.delete
   @drivers.delete
+  @DAT-49272
   Scenario: Create Azure Blob Driver with path directory
     When I create driver "azureblob" with the name "test-azure-driver"
       | key         | value          |

@@ -16,6 +16,7 @@ Feature: Assignments repository Context testing
         And I get an Assignment
 
     @testrail-C4523054
+    @DAT-46461
     Scenario: Get Assignment from the Project it belong to
         When I get the assignment from project number 1
         Then assignment Project_id is equal to project 1 id
@@ -26,6 +27,7 @@ Feature: Assignments repository Context testing
         And assignment task.id is equal to task 1 id
 
     @testrail-C4523054
+    @DAT-46461
     Scenario: Get Assignment from the Project it not belong to
         When I get the assignment from project number 2
         Then assignment Project_id is equal to project 1 id
@@ -36,6 +38,7 @@ Feature: Assignments repository Context testing
         And assignment task.id is equal to task 1 id
 
     @testrail-C4523054
+    @DAT-46461
     Scenario: Get Assignment from the Dataset it belong to
         When I get the assignment from dataset number 1
         Then assignment Project_id is equal to project 1 id
@@ -46,6 +49,7 @@ Feature: Assignments repository Context testing
         And assignment task.id is equal to task 1 id
 
     @testrail-C4523054
+    @DAT-46461
     Scenario: Get Assignment from the Dataset it not belong to
         When I get the assignment from dataset number 2
         Then assignment Project_id is equal to project 1 id
@@ -56,6 +60,7 @@ Feature: Assignments repository Context testing
         And assignment task.id is equal to task 1 id
 
     @testrail-C4523054
+    @DAT-46461
     Scenario: Get Assignment from the Task it belong to
         Then assignment Project_id is equal to project 1 id
         And assignment Project.id is equal to project 1 id
@@ -65,6 +70,7 @@ Feature: Assignments repository Context testing
         And assignment task.id is equal to task 1 id
 
     @testrail-C4523054
+    @DAT-46461
     Scenario: Get Assignment from the Task it not belong to
         Given  I set Dataset to Dataset 2
         And There are items, path = "filters/image.jpg"

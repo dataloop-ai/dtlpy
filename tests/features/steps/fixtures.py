@@ -101,7 +101,8 @@ def get_value(params, context):
             val = context.second_project.id
     elif key == 'recipe_id':
         if val == 'second':
-            val = context.second_project.datasets.list()[1].get_recipe_ids()[0]
+            assert hasattr(context, "second_dataset"), "TEST FAILED: Test should have second_dataset"
+            val = context.second_dataset.get_recipe_ids()[0]
     elif key == 'available_actions':
         action_status = val.split()
         available_actions_list = list()

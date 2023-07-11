@@ -6,9 +6,11 @@ Feature: Annotaions repository Get service testing
         And I create a dataset with a random name
 
     @testrail-C4525771
+    @DAT-46420
     Scenario: Get an existing annotation by id
         Given Classes in file: "assets_split/annotations_upload/video_classes.json" are uploaded to test Dataset
         And Item in path "assets_split/annotations_upload/sample_video.mp4" is uploaded to "Dataset"
         When Item is annotated with annotations in file: "test_snapshots/snapshots_video_annotations.json"
         And I get the only annotation
         Then Annotation snapshots equal to platform snapshots
+

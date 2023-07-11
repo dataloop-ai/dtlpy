@@ -8,14 +8,17 @@ Feature: Codebase Entity repo services
         And I pack from project.codebases directory by name "codebase_name"
 
     @testrail-C4523078
+    @DAT-46486
     Scenario: Unpack by name
         When I unpack a code base entity by the name of "codebase_name" to "codebases_assets/codebase_entity_unpack"
         Then Unpacked code base equal to code base in "codebases_assets/codebase_entity"
 
     @testrail-C4523078
+    @DAT-46486
     Scenario: List all versions when 2 exist
         When I modify python file - (change version) in path "codebases_assets/codebase_entity/some_code.py"
         Given I pack from project.codebases directory by name "codebase_name"
         When I list versions of code base entity "codebase_name"
         Then I receive a list of "2" versions
+
 

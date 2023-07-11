@@ -11,8 +11,10 @@ Feature: Service repository Execute items input
     @services.delete
     @packages.delete
     @testrail-C4533094
+    @DAT-46607
     Scenario: Create Service
         When I create a service
             |service_name=services-items|package=services-items|revision=None|config=None|runtime=None|
         Then I call service.execute() on items in dataset
         And Execution was executed and finished with status "success"
+

@@ -9,6 +9,7 @@ Feature: Pipeline entity output list method testing
 
     @pipelines.delete
     @testrail-C4528760
+    @DAT-46578
     Scenario: pipeline task node get items list
         When There are "9" items
         And I create a pipeline with code and task node

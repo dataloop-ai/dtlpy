@@ -9,6 +9,7 @@ Feature: Tasks repository create pulling task
     And I save dataset items to context
 
    @testrail-C4533548
+   @DAT-46629
    Scenario: Create - pulling task
        When I create Task
            | task_name=pulling_task | due_date=auto | batch_size=3 | allowed_assignees=auto | max_batch_workload=5 |

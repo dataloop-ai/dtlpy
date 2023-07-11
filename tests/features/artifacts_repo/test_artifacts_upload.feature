@@ -9,6 +9,7 @@ Feature: Artifacts repository upload service testing
 
     @packages.delete
     @testrail-C4523053
+    @DAT-46460
     Scenario: Use with package  - item
         Given Context "artifact_filepath" is "artifacts_repo/artifact_item.jpg"
         And Directory "artifacts_upload" is empty
@@ -20,6 +21,7 @@ Feature: Artifacts repository upload service testing
 
     @packages.delete
     @testrail-C4523053
+    @DAT-46460
     Scenario: Use with package  - folder
         Given Context "artifact_filepath" is "artifacts_repo/artifact_folder"
         And Directory "artifacts_upload" is empty
@@ -31,6 +33,7 @@ Feature: Artifacts repository upload service testing
 
     @packages.delete
     @testrail-C4523053
+    @DAT-46460
     Scenario: Use with package name
         Given Context "artifact_filepath" is "artifacts_repo/artifact_item.jpg"
         And Directory "artifacts_upload" is empty
@@ -43,6 +46,7 @@ Feature: Artifacts repository upload service testing
      @packages.delete
      @services.delete
      @testrail-C4523053
+     @DAT-46460
      Scenario: Use with execution
          Given Context "artifact_filepath" is "artifacts_repo/artifact_item.jpg"
          And Directory "artifacts_upload" is empty
@@ -60,6 +64,7 @@ Feature: Artifacts repository upload service testing
      @packages.delete
      @services.delete
      @testrail-C4523053
+     @DAT-46460
      Scenario: Use with execution id
          Given Context "artifact_filepath" is "artifacts_repo/artifact_item.jpg"
          And Directory "artifacts_upload" is empty
@@ -73,3 +78,4 @@ Feature: Artifacts repository upload service testing
           |sync=False|inputs=Item|
          And I upload "1" artifacts to "execution_id"
          Then I receive an artifact object
+

@@ -11,6 +11,7 @@ Feature: Packages repository create slot testing
   @services.delete
   @packages.delete
   @testrail-C4532930
+  @DAT-46616
   Scenario: Activate UI slot in service - Slot should create in settings
     When I create a service
       | service_name=services-create | package=services-create | revision=None | config=None | runtime=None |
@@ -25,6 +26,7 @@ Feature: Packages repository create slot testing
   @services.delete
   @packages.delete
   @testrail-C4532930
+  @DAT-46616
   Scenario: Update UI slot display_name Should updated in settings
     When I create a service
       | service_name=services-create | package=services-create | revision=None | config=None | runtime=None |
@@ -41,6 +43,7 @@ Feature: Packages repository create slot testing
   @services.delete
   @packages.delete
   @testrail-C4532930
+  @DAT-46616
   Scenario: Update package and UI slot with new function Should updated in settings
     When I create a service
       | service_name=services-create | package=services-create | revision=None | config=None | runtime=None |
@@ -54,4 +57,5 @@ Feature: Packages repository create slot testing
     And I activate UI slot in service
     Then I get setting for context service
     And I validate service UI slot is equal to settings
+
 

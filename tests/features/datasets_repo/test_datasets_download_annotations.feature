@@ -6,6 +6,7 @@ Feature: Datasets repository download_annotations service testing
         And I create a dataset with a random name
 
     @testrail-C4523086
+    @DAT-46494
     Scenario: Download existing annotations
         Given Item in path "0000000162.png" is uploaded to "Dataset"
         And There are a few annotations in the item
@@ -20,5 +21,6 @@ Feature: Datasets repository download_annotations service testing
     #     When I download dataset annotations
     #     Then I get a folder named "json" in assets folder
     #     And The folder named "json" in folder assets is empty
+
 
 

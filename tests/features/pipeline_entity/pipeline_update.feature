@@ -9,8 +9,10 @@ Feature: Pipeline update testing
 
   @pipelines.delete
   @testrail-C4523145
+  @DAT-46582
   Scenario: Update pipeline
     When I create a package and service to pipeline
     And I create a pipeline from json
     And I update pipeline description
     Then Pipeline received equals Pipeline changed except for "description"
+

@@ -7,6 +7,7 @@ Feature: App entity install App
         And publish the app
 
     @testrail-C4524925
+    @DAT-46453
     Scenario: Install a valid app
         When I install the app
         Then I should get the app with the same id

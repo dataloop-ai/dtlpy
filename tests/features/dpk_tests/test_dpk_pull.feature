@@ -6,6 +6,7 @@ Feature: Pull Dpk
     And I publish a dpk to the platform
 
   @testrail-C4524925
+  @DAT-46515
   Scenario: I pull the dpk
     When I pull the dpk
     Then I should have a dpk file

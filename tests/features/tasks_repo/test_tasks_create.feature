@@ -11,6 +11,7 @@ Feature: Tasks repository create method testing
     And Add Members "annotator2@dataloop.ai" as "annotator"
 
   @testrail-C4523167
+  @DAT-46622
   Scenario: Create - minimum params
     When I create Task
       | task_name=min_params | due_date=auto | assignee_ids=auto |
@@ -18,6 +19,7 @@ Feature: Tasks repository create method testing
     And Task has the correct attributes for type "annotation"
 
   @testrail-C4523167
+  @DAT-46622
   Scenario: Create - maximum params - filters
     When I create Task
       | task_name=filters_task | due_date=auto | assignee_ids=auto | workload=None | dataset=auto | task_owner=auto | task_type=annotation | task_parent_id=None | project_id=auto | recipe_id=auto | assignments_ids=None | metadata={"key": "value"} | filters={"filter": {"$and": [{"hidden": false}, {"type": "file"}],"$or": [{"metadata": {"user.good": true}},{"metadata": {"user.bad": true}}]}} | items=None |
@@ -25,6 +27,7 @@ Feature: Tasks repository create method testing
     And Task has the correct attributes for type "annotation"
 
   @testrail-C4523167
+  @DAT-46622
   Scenario: Create - maximum params - items
     When I create Task
       | task_name=items_task | due_date=auto | assignee_ids=None | workload=auto | dataset=auto | task_owner=auto | task_type=annotation | task_parent_id=None | project_id=auto | recipe_id=auto | assignments_ids=None | metadata={"key": "value"} | filters=None | items=3 |
@@ -33,6 +36,7 @@ Feature: Tasks repository create method testing
 
 
   @testrail-C4523167
+  @DAT-46622
   Scenario: Create - task with metadata
     When I create Task
       | task_name=metadata_task | assignee_ids=auto | metadata={"key": "value"} | items=3 |

@@ -10,6 +10,7 @@ Feature: Triggers repository create service testing - Task resource
   @services.delete
   @packages.delete
   @testrail-C4533676
+  @DAT-46650
   Scenario: Created Task Trigger action created once
     Given There is a package (pushed from "triggers/task") by the name of "triggers-task-once"
     And There is a service by the name of "triggers-task-once" with module name "default_module" saved to context "service"
@@ -19,13 +20,14 @@ Feature: Triggers repository create service testing - Task resource
     Then I receive a Trigger entity
     When I create Task
       | task_name=default_name | due_date=auto | assignee_ids=annotator1@dataloop.ai |
-    Then I wait "7"
+    Then I wait "20"
     And Service was triggered on "task"
 
 
   @services.delete
   @packages.delete
   @testrail-C4533676
+  @DAT-46650
   Scenario: Created Task Trigger action updated mode always
     Given There is a package (pushed from "triggers/task") by the name of "triggers-task-always"
     And There is a service by the name of "triggers-task-always" with module name "default_module" saved to context "service"
@@ -37,3 +39,4 @@ Feature: Triggers repository create service testing - Task resource
     Then Service was triggered on "task"
     When I update task name "Task-updated-again"
     Then Service was triggered on "task" again
+

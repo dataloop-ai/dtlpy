@@ -6,14 +6,17 @@ Feature: Ontologies repository get service testing
         And I create a dataset with a random name
 
     @testrail-C4523130
+    @DAT-46553
     Scenario: Get an existing ontology by id
         Given Dataset has ontology
         When I get a ontology by id
         Then I get an Ontology object
 
     @testrail-C4523130
+    @DAT-46553
     Scenario: Get non-existing Ontology by id
         Given Dataset has ontology
         When I try to get Ontology by "some_id"
         Then "BadRequest" exception should be raised
+
 

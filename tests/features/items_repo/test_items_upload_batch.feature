@@ -6,8 +6,10 @@ Feature: Items repository upload_batch service testing
         And I create a dataset with a random name
 
     @testrail-C4523120
+    @DAT-46541
     Scenario: Upload items batch
         When I upload item batch from "upload_batch/to_upload"
         And I download items to local path "upload_batch/to_compare"
         Then Items in "upload_batch/to_upload" should equal items in "upload_batch/to_compare/image"
+
 

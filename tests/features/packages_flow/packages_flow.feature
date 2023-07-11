@@ -10,6 +10,7 @@ Feature: Packages Flow
     @services.delete
     @packages.delete
     @testrail-C4523133
+    @DAT-46558
     Scenario: Standard Flow
         When I generate package by the name of "None" to "package_flow/package_directory"
         And I upload a file in path "package_flow/package_assets/picture1.jpg"

@@ -6,6 +6,7 @@ Feature: Items repository list service testing
     And I create a dataset with a random name
 
   @testrail-C4523108
+  @DAT-46526
   Scenario: List with filters
     Given There are items, path = "filters/image.jpg"
       | directory={"/": 3, "/dir1/": 3, "/dir1/dir2/": 3} | annotated_label={"dog": 3, "cat": 3} | annotated_type={"box": 3, "polygon": 3} | name={"dog":3, "cat":3} | metadata={"user.good": 3, "user.bad": 3} |

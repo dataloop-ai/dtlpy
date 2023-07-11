@@ -11,8 +11,10 @@ Feature: Pipeline entity method testing re-installed pipeline
 
     @pipelines.delete
     @testrail-C4533549
+    @DAT-46587
     Scenario: Remove code node from pipeline should be able to install again
         When I create a pipeline with code node
         And I pause pipeline in context
         And I delete current nodes and add dataset nodes to pipeline
         Then Pipeline status is "Installed"
+

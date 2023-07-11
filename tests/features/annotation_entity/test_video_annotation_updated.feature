@@ -7,6 +7,7 @@ Feature: Annotation Entity update video annotation start time
 
 
     @testrail-C4532496
+    @DAT-46450
     Scenario: Video - Update start time should update in snapshot
         Given Classes in file: "video_classes.json" are uploaded to test Dataset
         And Item in path "sample_video.mp4" is uploaded to "Dataset"
@@ -18,6 +19,7 @@ Feature: Annotation Entity update video annotation start time
 
 
     @testrail-C4532496
+    @DAT-46450
     Scenario: Audio - Update time should update annotation
         Given Classes in file: "classes_new.json" are uploaded to test Dataset
         And Item in path "simple_audio.mp3" is uploaded to "Dataset"

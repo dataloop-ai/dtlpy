@@ -6,6 +6,7 @@ Feature: Datasets repository create service testing
         And I create a project by the name of "datasets_create"
 
     @testrail-C4523084
+    @DAT-46492
     Scenario: Create a dataset with a legal name
         Given There are no datasets
         When I create a dataset with a random name
@@ -20,6 +21,7 @@ Feature: Datasets repository create service testing
     #     And There are no datasets
 
     @testrail-C4523084
+    @DAT-46492
     Scenario: Create a dataset with an existing dataset name
         Given There are no datasets
         And I create a dataset with a random name
@@ -28,6 +30,7 @@ Feature: Datasets repository create service testing
         And No dataset was created
 
     @testrail-C4523084
+    @DAT-46492
     Scenario: Create a dataset with existing recipe
         When I create a dataset with a random name
         Then Dataset object with the same name should be exist

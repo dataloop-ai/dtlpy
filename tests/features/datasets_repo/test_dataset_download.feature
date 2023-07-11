@@ -5,6 +5,7 @@ Feature: Datasets repository download service testing
     And I create a project by the name of "datasets_download"
 
   @testrail-C4523092
+  @DAT-46500
   Scenario: Download dataset with items
     Given I create a dataset with a random name
     And Item in path "0000000162.png" is uploaded to "Dataset"
@@ -16,6 +17,7 @@ Feature: Datasets repository download service testing
     And There is no "log" file in folder "downloaded_dataset"
 
   @testrail-C4523092
+  @DAT-46500
   Scenario: Download dataset with dot in local path
     Given I create a dataset by the name of "dot.dataset1"
     And Item in path "0000000162.png" is uploaded to "Dataset"
@@ -27,6 +29,7 @@ Feature: Datasets repository download service testing
     And There is no "log" file in folder "downloaded.dataset"
 
   @testrail-C4523092
+  @DAT-46500
   Scenario: Download dataset with Overwrite True
     Given I create a dataset with a random name
     And There are no items
@@ -38,6 +41,7 @@ Feature: Datasets repository download service testing
     Then The dataset item will be "overwritten"
 
   @testrail-C4523092
+  @DAT-46500
   Scenario: Download dataset with Overwrite False
     Given I create a dataset with a random name
     And There are no items
@@ -49,6 +53,7 @@ Feature: Datasets repository download service testing
     Then The dataset item will be "not overwritten"
 
   @testrail-C4523092
+  @DAT-46500
   Scenario: Download dataset with dot in local path without item folder
     Given I create a dataset by the name of "dot.datasetnoitem"
     And Item in path "0000000162.png" is uploaded to "Dataset"
@@ -60,6 +65,7 @@ Feature: Datasets repository download service testing
     And There is no "log" file in folder "downloaded.dataset"
 
   @testrail-C4523092
+  @DAT-46500
   Scenario: Download dataset with json items
     Given I create a dataset with a random name
     And Item in path "linked_items-should_be/items/wrong-linked-item.json" is uploaded to "Dataset"
@@ -69,6 +75,7 @@ Feature: Datasets repository download service testing
     And There is no "log" file in folder "linked_items"
 
   @testrail-C4533352
+  @DAT-46500
   Scenario: Download dataset folder
     Given I create a dataset with a random name
     And There are no items
@@ -79,6 +86,7 @@ Feature: Datasets repository download service testing
     Then There are "1" files in "test_items_download"
 
   @testrail-C4533352
+  @DAT-46500
   Scenario: Download dataset folder with sub folder
     Given I create a dataset with a random name
     And There are no items

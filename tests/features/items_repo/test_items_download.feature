@@ -14,6 +14,7 @@ Feature: Items repository download service testing
     #     And Item is correctly downloaded to "test_items_download/items/test_item.jpg" (compared with "0000000162.jpg")
 
   @testrail-C4533354
+  @DAT-46533
   Scenario: Download item by id - save locally
     Given There are no items
     And I upload an item by the name of "test_item.jpg"
@@ -22,6 +23,7 @@ Feature: Items repository download service testing
     Then There are "1" files in "test_items_download"
 
   @testrail-C4523112
+  @DAT-46533
   Scenario: Download item by id - do not save locally
     Given There are no items
     And I upload an item by the name of "test_item.jpg"
@@ -31,6 +33,7 @@ Feature: Items repository download service testing
     Then Item uploaded from data equals initial item uploaded
 
   @testrail-C4533353
+  @DAT-46533
   Scenario: Download folder item
     Given There are no items
     And I upload item by the name of "test_item.jpg" to a remote path "test"
@@ -39,8 +42,10 @@ Feature: Items repository download service testing
     Then There are "1" files in "test_items_download"
     
   @testrail-C4533355
+  @DAT-46533
   Scenario: Download item by id - do not save locally and create dir
       Given There are no items
       And I upload an item by the name of "test_item.jpg"
       When I download the item without saving and create folder
       Then file do not created
+

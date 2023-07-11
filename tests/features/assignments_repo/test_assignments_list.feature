@@ -14,6 +14,7 @@ Feature: Assignments repository list method testing
             | task_name=assignments_list | due_date=auto | assignee_ids=annotator0@dataloop.ai | items=2 |
 
     @testrail-C4523058
+    @DAT-46465
     Scenario: List
         When I list assignments
         Then I receive a list of "1" assignments
@@ -25,3 +26,4 @@ Feature: Assignments repository list method testing
             | assignee_id=annotator2@dataloop.ai | items=2 |
         And I list assignments
         Then I receive a list of "3" assignments
+

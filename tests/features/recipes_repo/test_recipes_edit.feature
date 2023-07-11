@@ -6,7 +6,9 @@ Feature: Recipes repository Update service testing
         And I create a dataset with a random name
 
     @testrail-C4523154
+    @DAT-46602
     Scenario: Update recipe
         When I update recipe
-        Then Recipe in host equals recipe eddited
+        Then Recipe in host equals recipe edited
+
 

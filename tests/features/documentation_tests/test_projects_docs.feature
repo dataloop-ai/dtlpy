@@ -4,6 +4,7 @@ Feature: Projects repository create service testing
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
 
     @testrail-C4523098
+    @DAT-46509
     Scenario: Projects Commands
         When Create a Project "my-new-project"
         Then Get my projects
@@ -11,6 +12,7 @@ Feature: Projects repository create service testing
         And Get a project by project ID
         And Print a Project
         And Delete project by context.project
+
 
 
 

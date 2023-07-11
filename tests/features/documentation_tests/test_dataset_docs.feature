@@ -7,6 +7,7 @@ Feature: Dataset SDK
 
 
     @testrail-C4523097
+    @DAT-46508
     Scenario: Dataset SDK Scenario
         When Get Commands - Get Projects Datasets List
         Then Get Dataset by Name
@@ -14,6 +15,7 @@ Feature: Dataset SDK
         And Print a Dataset
 
     @testrail-C4523097
+    @DAT-46508
     Scenario: Create and Manage Datasets
         When Clone Dataset "clone-dataset"
         And I upload a file in path "assets_split/items_upload/0000000162.jpg"

@@ -30,3 +30,14 @@ def step_impl(context):
 @behave.then(u'I should get identical results as the json')
 def step_impl(context):
     assert context.app.to_json() == context.web_app.to_json()
+
+
+@behave.when(u'I get app by name "{app_name}"')
+def step_impl(context, app_name):
+    context.app = context.project.apps.get(app_name=app_name)
+
+
+@behave.when(u'I set app in context.feature')
+def step_impl(context):
+    context.feature.app = context.app
+

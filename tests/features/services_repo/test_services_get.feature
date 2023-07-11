@@ -12,6 +12,7 @@ Feature: Services repository get service testing
     @services.delete
     @packages.delete
     @testrail-C4523161
+    @DAT-46605
     Scenario: Get by id
         When I get service by id
         Then I receive a Service entity
@@ -20,8 +21,10 @@ Feature: Services repository get service testing
     @services.delete
     @packages.delete
     @testrail-C4523161
+    @DAT-46605
     Scenario: Get by name
         When I get service by name
         Then I receive a Service entity
         And Service received equals to service created
+
 

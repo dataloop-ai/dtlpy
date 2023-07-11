@@ -9,6 +9,7 @@ Feature: Ontology Entity attributes testing
 
 
     @testrail-C4529142
+    @DAT-46554
     Scenario: Add attributes to ontology
         When I add "checkbox" attribute to ontology
             |key=1 | title=test1 | values=['a','b','c'] |
@@ -28,6 +29,7 @@ Feature: Ontology Entity attributes testing
 
 
     @testrail-C4529142
+    @DAT-46554
     Scenario: Delete ontology attributes
         When I add "checkbox" attribute to ontology
             |key=1 | title=test1 | values=['a','b','c'] | scope=all |
@@ -42,6 +44,7 @@ Feature: Ontology Entity attributes testing
 
 
     @testrail-C4529142
+    @DAT-46554
     Scenario: Attributes Edge cases
         # I Add attribute with all params
         When I add "checkbox" attribute to ontology
@@ -51,3 +54,4 @@ Feature: Ontology Entity attributes testing
         When I add "checkbox" attribute to ontology
             |key=1 | title=test1 | values=[1] |
         Then I receive error with status code "400"
+

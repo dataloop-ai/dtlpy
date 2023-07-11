@@ -5,6 +5,7 @@ Feature: Contributor Roles SDK
     And I create a project by the name of "contributor-project"
 
   @testrail-C4523096
+  @DAT-46507
   Scenario: Contributor Roles SDK Scenario project owner
     When List Members
     Then Add Members "annotator1@dataloop.ai" as "owner"
@@ -12,6 +13,7 @@ Feature: Contributor Roles SDK
     And Remove Members "annotator1@dataloop.ai"
 
   @testrail-C4523096
+  @DAT-46507
   Scenario: Contributor Roles SDK Scenario engineer
     When List Members
     Then Add Members "annotator1@dataloop.ai" as "engineer"
@@ -20,6 +22,7 @@ Feature: Contributor Roles SDK
 
 
   @testrail-C4523096
+  @DAT-46507
   Scenario: Contributor Roles SDK Scenario annotation manager
     When List Members
     Then Add Members "annotator1@dataloop.ai" as "annotationManager"
@@ -27,6 +30,7 @@ Feature: Contributor Roles SDK
     And Remove Members "annotator1@dataloop.ai"
 
   @testrail-C4523096
+  @DAT-46507
   Scenario: Contributor Roles SDK Scenario annotator
     When List Members
     Then Add Members "annotator1@dataloop.ai" as "annotator"

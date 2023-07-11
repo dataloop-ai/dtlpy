@@ -10,6 +10,7 @@ Feature: Tasks repository add/get items method testing
         And Add Members "annotator2@dataloop.ai" as "annotator"
 
     @testrail-C4523166
+    @DAT-46621
     Scenario: Get items - by name
         When I create Task
             | task_name=min_params | due_date=auto | assignee_ids=auto |
@@ -17,6 +18,7 @@ Feature: Tasks repository add/get items method testing
         Then I receive task items list of "12" items
 
     @testrail-C4523166
+    @DAT-46621
     Scenario: Get items - by id
         When I create Task
             | task_name=min_params | due_date=auto | assignee_ids=auto |
@@ -24,6 +26,7 @@ Feature: Tasks repository add/get items method testing
         Then I receive task items list of "12" items
 
     @testrail-C4523166
+    @DAT-46621
     Scenario: Add items
       When I create Task
           | task_name=min_params | due_date=auto | assignee_ids=auto | filters={"filter": {"$and": [{"hidden": false}, {"type": "file"}, {"annotated": true}]}} |

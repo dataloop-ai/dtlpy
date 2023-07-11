@@ -12,6 +12,11 @@ def step_impl(context, file_path):
     context.dataset.add_labels(label_list=labels_df["dataloop label"].to_list())
 
 
+@behave.when(u'I upload labels to dataset')
+def step_impl(context, ):
+    context.dataset.add_labels(label_list=list(str(i) for i in range(10)))
+
+
 @behave.then(u'I validate labels in recipe from file "{file_path}"')
 def step_impl(context, file_path):
     file_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], file_path)

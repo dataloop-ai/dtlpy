@@ -6,6 +6,7 @@ Feature: Converter yolo format
         And I create a dataset with a random name
 
     @testrail-C4523083
+    @DAT-46491
     Scenario: Convert local yolo dataset to dataloop
         Given There is a local "yolo" dataset in "converter/yolo/local_dataset"
         When I convert local "yolo" dataset to "dataloop"

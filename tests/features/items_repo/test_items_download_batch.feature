@@ -7,13 +7,16 @@ Feature: Items repository download_batch service testing
         And There are "2" Items
 
     @testrail-C4523114
+    @DAT-46535
     Scenario: Download batch items to buffer
         When I download batched items to buffer
         And I delete all items from host
         Then I can upload items from buffer to host
 
     @testrail-C4523114
+    @DAT-46535
     Scenario: Download items to local
         When I download items to local path "download_batch"
         Then Items are saved in "download_batch/image"
+
 

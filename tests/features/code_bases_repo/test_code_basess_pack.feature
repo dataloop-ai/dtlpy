@@ -6,6 +6,7 @@ Feature: Codebases repository Pack method
         And I create a dataset with a random name
 
     @testrail-C4523072
+    @DAT-46480
     Scenario: Unpack a Codebase (init param: dataset, project, client_api)
         Given Directory "codebases_pack_unpack" is empty
         Given There is a Codebase directory with a python file in path "codebases_assets/codebases_pack"
@@ -14,6 +15,7 @@ Feature: Codebases repository Pack method
         And Codebase in host when downloaded to "codebases_pack_unpack" equals code base in path "codebases_assets/codebases_pack"
 
     @testrail-C4523072
+    @DAT-46480
     Scenario: Pack a Codebase (init param: project, client_api)
         Given Directory "codebases_pack_unpack" is empty
         Given There is a Codebase directory with a python file in path "codebases_assets/codebases_pack"
@@ -23,6 +25,7 @@ Feature: Codebases repository Pack method
         And Codebase in host in dataset "Binaries", when downloaded to "codebases_pack_unpack" equals code base in path "codebases_assets/codebases_pack"
 
     @testrail-C4523072
+    @DAT-46480
     Scenario: Pack a Codebase - new version
         Given There is a Codebase directory with a python file in path "codebases_assets/codebases_pack"
         When I pack directory by name "codebase_name3"
@@ -31,10 +34,12 @@ Feature: Codebases repository Pack method
         Then There should be "2" versions of the code base "codebase_name3" in host
 
     @testrail-C4523072
+    @DAT-46480
     Scenario: Pack a Codebase - new version - nameless
         Given There is a Codebase directory with a python file in path "codebases_assets/codebases_pack"
         When I pack directory - nameless
         And I modify python file - (change version) in path "codebases_assets/codebases_pack/some_code.py"
         And I pack directory - nameless
         Then There should be "2" versions of the code base "codebase" in host
+
 

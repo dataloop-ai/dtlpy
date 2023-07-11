@@ -7,6 +7,7 @@
 #        And I upload an item by the name of "test_item.jpg"
 #
 #    @testrail-C4523106
+     @DAT-46524
 #    Scenario: Delete features set
 #        Given There are no feature sets
 #        When I create a feature sets with a random name
@@ -15,3 +16,4 @@
 #        Then features does not exists
 #        When I delete the features set that was created
 #        Then features set does not exists
+

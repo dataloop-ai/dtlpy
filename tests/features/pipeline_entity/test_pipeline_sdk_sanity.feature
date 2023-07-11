@@ -10,6 +10,7 @@ Feature: Pipeline entity method testing
 #
 #  @pipelines.delete
 ##  @testrail-C4525314
+#    @DAT-46590
 #  Scenario: pipeline sanity all nodes type
 #    When I create a package and service to pipeline
 #    And I create a pipeline from pipeline-sanity
@@ -25,6 +26,7 @@ Feature: Pipeline entity method testing
 #
 #  @pipelines.delete
 ##  @testrail-C4525314
+#    @DAT-46590
 #  Scenario: pipeline delete use sdk
 #    When I create a package and service to pipeline
 #    And I create a pipeline from json

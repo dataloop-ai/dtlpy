@@ -14,6 +14,7 @@ Feature: Artifacts repository list artifact testing
 
   @packages.delete
   @testrail-C4523052
+  @DAT-46459
   Scenario: list package artifacts
     And I list Artifacts with "package_name"
     Then I receive artifacts list of "0" items
@@ -24,6 +25,7 @@ Feature: Artifacts repository list artifact testing
   @packages.delete
   @services.delete
   @testrail-C4523052
+  @DAT-46459
   Scenario: Use with execution
     Given There is a service by the name of "artifacts-upload" with module name "default_module" saved to context "service"
     And I create a dataset with a random name

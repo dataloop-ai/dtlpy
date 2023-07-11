@@ -11,6 +11,7 @@ Feature: Items advanced browser filters
 
 
     @testrail-C4526499
+    @DAT-46527
     Scenario: List with filters
         Given There are items, path = "filters/image.jpg"
             |directory={"/": 3, "/dir1/": 3, "/dir1/dir2/": 3}|annotated_label={"dog": 3, "cat": 3}|annotated_type={"box": 3, "polygon": 3}|name={"dog":3, "cat":3}|metadata={"user.good": 3, "user.bad": 3}|
@@ -55,4 +56,5 @@ Feature: Items advanced browser filters
 #        And I join field "metadata.system.attributes" with values "{}" and operator "None"
 #        And I list items with filters
 #        Then I receive "9" items
+
 

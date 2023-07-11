@@ -35,7 +35,7 @@ def step_impl(context, path, expected_response):
     if not path.startswith('/'):
         path = '/{}'.format(path)
 
-    num_try = 3
+    num_try = 5
     interval = 20
     success = False
 

@@ -10,6 +10,7 @@ Feature: Pipeline entity method testing
 
   @pipelines.delete
   @testrail-C4525314
+  @DAT-46580
   Scenario: pipeline flow
     When I create a package and service to pipeline
     And I create a pipeline from sdk
@@ -18,6 +19,7 @@ Feature: Pipeline entity method testing
 
   @pipelines.delete
   @testrail-C4525314
+  @DAT-46580
   Scenario: pipeline flow pipeline trigger
     When I create a package and service to pipeline
     And I create a pipeline from sdk with pipeline trigger
@@ -26,6 +28,7 @@ Feature: Pipeline entity method testing
 
   @pipelines.delete
   @testrail-C4525314
+  @DAT-46580
   Scenario: pipeline delete use sdk
     When I create a package and service to pipeline
     And I create a pipeline from json
@@ -34,6 +37,7 @@ Feature: Pipeline entity method testing
 
   @pipelines.delete
   @testrail-C4533330
+  @DAT-46580
   Scenario: pipeline with dataset task with new recipe
     When I create a new plain recipe
     When I create a pipeline with task node and new recipe

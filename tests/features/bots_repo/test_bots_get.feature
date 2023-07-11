@@ -6,6 +6,7 @@ Feature: Bots repository get service testing
 
 
     @testrail-C4523063
+    @DAT-46470
     Scenario: Get an existing bot by email
         When I create a bot by the name of "some_bot"
         When I get a bot by the name of "some_bot"

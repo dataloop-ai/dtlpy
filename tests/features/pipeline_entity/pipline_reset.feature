@@ -9,6 +9,7 @@ Feature: Pipeline entity statistics reset testing
 
     @pipelines.delete
     @testrail-C4530417
+    @DAT-46583
     Scenario: reset running pipeline without force
         When I create a package and service to pipeline
         And I create a pipeline from json
@@ -17,6 +18,7 @@ Feature: Pipeline entity statistics reset testing
 
     @pipelines.delete
     @testrail-C4530417
+    @DAT-46583
     Scenario: reset running pipeline with force
         When I create a package and service to pipeline
         And I create a pipeline from json

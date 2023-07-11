@@ -10,6 +10,7 @@ Feature: Triggers repository - Assignment input resource
   @services.delete
   @packages.delete
   @testrail-C4536678
+  @DAT-46638
   Scenario: Created Assignment Trigger action created once
     Given There is a package (pushed from "triggers/assignment") by the name of "triggers-assignment-once"
     And There is a service by the name of "triggers-assignment-once" with module name "default_module" saved to context "service"
@@ -27,6 +28,7 @@ Feature: Triggers repository - Assignment input resource
   @services.delete
   @packages.delete
   @testrail-C4536678
+  @DAT-46638
   Scenario: Created Assignment Trigger action updated mode always
     Given There is a package (pushed from "triggers/assignment") by the name of "triggers-assignment-always"
     And There is a service by the name of "triggers-assignment-always" with module name "default_module" saved to context "service"
@@ -41,3 +43,4 @@ Feature: Triggers repository - Assignment input resource
     Then Service was triggered on "assignment"
     When I update assignment name "assignment-updated-again"
     Then Service was triggered on "assignment" again
+

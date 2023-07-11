@@ -10,18 +10,21 @@ Feature: Services repository delete service testing
 
     @packages.delete
     @testrail-C4523159
+    @DAT-46611
     Scenario: Delete by id
         When I delete service by "id"
         Then There are no services
 
     @packages.delete
     @testrail-C4523159
+    @DAT-46611
     Scenario: Delete by name
         When I delete service by "name"
         Then There are no services
 
     @packages.delete
     @testrail-C4523159
+    @DAT-46611
     Scenario: Delete by entity
         When I delete service by "entity"
         Then There are no services

@@ -8,11 +8,13 @@ Feature: Test App uninstall
         And I install the app
 
     @testrail-C4524925
+    @DAT-46454
     Scenario: Uninstall the app
         Given I uninstall the app
         Then The app shouldn't be in listed
 
     @testrail-C4524925
+    @DAT-46454
     Scenario: I uninstall an invalid app
         Given I uninstall not existed app
         Then I should get an exception error='500'

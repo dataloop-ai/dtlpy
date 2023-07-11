@@ -9,6 +9,7 @@ Feature: Pipeline resource testing
 
   @pipelines.delete
   @testrail-C4528946
+  @DAT-46586
   Scenario: Filter pipeline connector with dataset resource and dataset id values
     When I create filters
     And I add "dataset" filter with "id" and "dataset.id"
@@ -20,6 +21,7 @@ Feature: Pipeline resource testing
 
   @pipelines.delete
   @testrail-C4528946
+  @DAT-46586
   Scenario: Filter pipeline connector with dataset resource and random values
     When I create filters
     And I add "dataset" filter with "id" and "123456"
@@ -27,3 +29,4 @@ Feature: Pipeline resource testing
     And I upload item in "0000000162.jpg" to dataset
     Then I expect that pipeline execution has "1" success executions
     And I pause pipeline in context
+

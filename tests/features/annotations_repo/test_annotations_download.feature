@@ -6,6 +6,7 @@ Feature: Annotaions repository download service testing
     And I create a dataset with a random name
 
   @testrail-C4523033
+  @DAT-46423
   Scenario: Download item annotations with mask
     Given Labels in file: "assets_split/annotations_download/labels.json" are uploaded to test Dataset
     And Item in path "assets_split/annotations_download/0000000162.jpg" is uploaded to "Dataset"
@@ -15,6 +16,7 @@ Feature: Annotaions repository download service testing
     Then Item annotation "mask" has been downloaded to "downloaded_annotations"
 
   @testrail-C4523033
+  @DAT-46423
   Scenario: Download item annotations with instance
     Given Labels in file: "assets_split/annotations_download/labels.json" are uploaded to test Dataset
     And Item in path "assets_split/annotations_download/0000000162.jpg" is uploaded to "Dataset"
@@ -24,6 +26,7 @@ Feature: Annotaions repository download service testing
     Then Item annotation "instance" has been downloaded to "downloaded_annotations"
 
   @testrail-C4523033
+  @DAT-46423
   Scenario: Download item annotations with json
     Given Labels in file: "assets_split/annotations_download/labels.json" are uploaded to test Dataset
     And Item in path "assets_split/annotations_download/0000000162.jpg" is uploaded to "Dataset"
@@ -33,6 +36,7 @@ Feature: Annotaions repository download service testing
     Then Item annotation "json" has been downloaded to "downloaded_annotations"
 
   @testrail-C4523033
+  @DAT-46423
   Scenario: Download item annotations with default
     Given Labels in file: "assets_split/annotations_download/labels.json" are uploaded to test Dataset
     And Item in path "assets_split/annotations_download/0000000162.jpg" is uploaded to "Dataset"
@@ -43,6 +47,7 @@ Feature: Annotaions repository download service testing
 
 
   @testrail-C4523033
+  @DAT-46423
   Scenario: Download item annotations with img_mask
     Given Labels in file: "assets_split/annotations_download/labels.json" are uploaded to test Dataset
     And Item in path "assets_split/annotations_download/0000000162.jpg" is uploaded to "Dataset"
@@ -52,6 +57,7 @@ Feature: Annotaions repository download service testing
     Then Item annotation "img_mask" has been downloaded to "downloaded_annotations"
 
   @testrail-C4523033
+  @DAT-46423
   Scenario: Download item annotations with vtt
     Given Labels in file: "assets_split/annotations_download/labels.json" are uploaded to test Dataset
     And Item in path "assets_split/annotations_download/0000000162.jpg" is uploaded to "Dataset"
@@ -61,6 +67,7 @@ Feature: Annotaions repository download service testing
     Then Item annotation "vtt" has been downloaded to "downloaded_annotations"
 
   @testrail-C4523033
+  @DAT-46423
   Scenario: Download item annotations with No specific ViewAnnotationOptions
     Given Labels in file: "assets_split/annotations_download/labels.json" are uploaded to test Dataset
     And Item in path "assets_split/annotations_download/0000000162.jpg" is uploaded to "Dataset"
@@ -69,6 +76,7 @@ Feature: Annotaions repository download service testing
     Then I download the items annotations with ViewAnnotationOptions "None" enum to find "Unknown annotation download option"
 
   @testrail-C4523033
+  @DAT-46423
   Scenario: Download item annotations with JSON ViewAnnotationsOptions
     Given Labels in file: "assets_split/annotations_download/labels.json" are uploaded to test Dataset
     And Item in path "assets_split/annotations_download/0000000162.jpg" is uploaded to "Dataset"
@@ -77,6 +85,7 @@ Feature: Annotaions repository download service testing
     Then I download the items annotations with ViewAnnotationOptions "JSON" enum to find "downloaded_annotations/json/0000000162.json"
 
   @testrail-C4523033
+  @DAT-46423
   Scenario: Download item annotations with VVT ViewAnnotationOptions
     Given Labels in file: "assets_split/annotations_download/labels.json" are uploaded to test Dataset
     And Item in path "assets_split/annotations_download/0000000162.jpg" is uploaded to "Dataset"
@@ -85,6 +94,7 @@ Feature: Annotaions repository download service testing
     Then I download the items annotations with ViewAnnotationOptions "VTT" enum to find "downloaded_annotations/vvt/0000000162.vtt"
 
   @testrail-C4523033
+  @DAT-46423
   Scenario: Download item annotations with MASK ViewAnnotationOptions
     Given Labels in file: "assets_split/annotations_download/labels.json" are uploaded to test Dataset
     And Item in path "assets_split/annotations_download/0000000162.jpg" is uploaded to "Dataset"
@@ -93,6 +103,7 @@ Feature: Annotaions repository download service testing
     Then I download the items annotations with ViewAnnotationOptions "MASK" enum to find "downloaded_annotations/mask/0000000162.png"
 
   @testrail-C4523033
+  @DAT-46423
   Scenario: Download annotation by id
     Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
     And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"
@@ -104,6 +115,7 @@ Feature: Annotaions repository download service testing
     And annotation file exist in the path "downloaded_annotations/annotation"
 
   @testrail-C4523033
+  @DAT-46423
   Scenario: Download annotation by id VTT
     Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
     And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"
@@ -115,6 +127,7 @@ Feature: Annotaions repository download service testing
     And annotation file exist in the path "downloaded_annotations/annotation"
 
   @testrail-C4523033
+  @DAT-46423
   Scenario: Download video annotation by id
     Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
     And Item in path "assets_split/ann_json_to_object/sample_video.mp4" is uploaded to "Dataset"
@@ -127,6 +140,7 @@ Feature: Annotaions repository download service testing
 
 
   @testrail-C4523033
+  @DAT-46423
   Scenario: Download dataset annotations with img_mask
     Given Labels in file: "assets_split/annotations_download/labels.json" are uploaded to test Dataset
     And Item in path "assets_split/annotations_download/0000000162.jpg" is uploaded to "Dataset"

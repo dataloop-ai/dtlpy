@@ -89,7 +89,7 @@ def step_impl(context, max_attempts):
 
 @behave.given(u'Execution is running')
 def step_impl(context):
-    interval = 4
+    interval = 10
     num_tries = 30
     success = False
     for i in range(num_tries):

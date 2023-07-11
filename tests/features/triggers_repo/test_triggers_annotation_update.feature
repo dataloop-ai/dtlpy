@@ -10,6 +10,7 @@ Feature: Triggers repository types - Annotation
     @services.delete
     @packages.delete
     @testrail-C4525048
+    @DAT-46637
     Scenario: Updated Annotation Trigger Once
         Given There is a package (pushed from "triggers/annotation") by the name of "triggers-update"
         And There is a service by the name of "triggers-update" with module name "default_module" saved to context "service"
@@ -26,6 +27,7 @@ Feature: Triggers repository types - Annotation
     @services.delete
     @packages.delete
     @testrail-C4525048
+    @DAT-46637
     Scenario: Updated Annotation Trigger Always
         Given There is a package (pushed from "triggers/annotation") by the name of "triggers-update"
         And There is a service by the name of "triggers-update" with module name "default_module" saved to context "service"

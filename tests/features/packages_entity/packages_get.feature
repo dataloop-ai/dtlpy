@@ -8,6 +8,7 @@ Feature: Packages entity method testing
 
     @packages.delete
     @testrail-C4523132
+    @DAT-46557
     Scenario: To Json
         When I push "first" package
             |codebase_id=None|package_name=test-package|src_path=packages_get|inputs=None|outputs=None|

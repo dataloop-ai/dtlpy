@@ -10,6 +10,7 @@ Feature: Pipeline pulling task testing
 
   @pipelines.delete
   @testrail-C4532851
+  @DAT-46589
   Scenario: Create pipeline with pulling task - receive the correct task params
     When I create pipeline with pulling task with type "annotation" node and dataset node
       | key                | value |
@@ -22,6 +23,7 @@ Feature: Pipeline pulling task testing
 
   @pipelines.delete
   @testrail-C4532851
+  @DAT-46589
   Scenario: Create pipeline with pulling qa-task - receive the correct qa-task params
     When I create pipeline with pulling task with type "qa" node and dataset node
       | key                | value |
@@ -34,6 +36,7 @@ Feature: Pipeline pulling task testing
 
   @pipelines.delete
   @testrail-C4532851
+  @DAT-46589
   Scenario: Create pipeline with wrong pulling task params - Should rise the correct error
     When I create pipeline with pulling task with type "annotation" node and dataset node
       | key                | value |
@@ -44,6 +47,7 @@ Feature: Pipeline pulling task testing
 
   @pipelines.delete
   @testrail-C4532851
+  @DAT-46589
   Scenario: Create pipeline with pulling task - receive the correct task params
     When I create pipeline with pulling task with type "annotation" node and dataset node
       | key                | value |
@@ -56,4 +60,5 @@ Feature: Pipeline pulling task testing
     When I get Task items by "name"
     Then I receive task items list of "10" items
     And I receive a list of "5" items for each assignment
+
 

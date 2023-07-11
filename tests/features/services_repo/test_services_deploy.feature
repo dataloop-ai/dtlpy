@@ -11,6 +11,7 @@ Feature: Services repository deploy service testing
     @services.delete
     @packages.delete
     @testrail-C4523160
+    @DAT-46612
     Scenario: Deploy
         Given There are no services
         When I deploy a service
@@ -25,6 +26,7 @@ Feature: Services repository deploy service testing
     @services.delete
     @packages.delete
     @testrail-C4523160
+    @DAT-46612
     Scenario: Deploy service from function with tabs
         When I deploy a service from function "service-with-tabs"
         Then I receive a Service entity

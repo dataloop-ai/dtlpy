@@ -11,6 +11,7 @@ Feature: Triggers repository types - Annotation
     @services.delete
     @packages.delete
     @testrail-C4525049
+    @DAT-46636
     Scenario: Updated Annotation Trigger Once
         Given There is a package (pushed from "triggers/annotation") by the name of "triggers-delete"
         And There is a service by the name of "triggers-delete" with module name "default_module" saved to context "service"

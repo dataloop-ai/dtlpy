@@ -14,6 +14,7 @@ Feature: Artifacts repository get artifact testing
 
   @packages.delete
   @testrail-C4523051
+  @DAT-46458
   Scenario: Get by name - item
     When I upload "1" artifacts to "package"
     And I get artifact by "name"
@@ -22,6 +23,7 @@ Feature: Artifacts repository get artifact testing
 
   @packages.delete
   @testrail-C4523051
+  @DAT-46458
   Scenario: Get by artifact name - non-existing
     When I upload "1" artifacts to "package"
     When I get artifact by "wrong_artifact_name"
@@ -29,6 +31,7 @@ Feature: Artifacts repository get artifact testing
 
   @packages.delete
   @testrail-C4523051
+  @DAT-46458
   Scenario: Get by package name - non-existing
     When I upload "1" artifacts to "package"
     When I get artifact by "wrong_package_name"
@@ -36,6 +39,7 @@ Feature: Artifacts repository get artifact testing
 
   @packages.delete
   @testrail-C4523051
+  @DAT-46458
   Scenario: Get by artifact id - non-existing
     When I upload "1" artifacts to "package"
     When I get artifact by "wrong_artifact_id"
@@ -43,6 +47,7 @@ Feature: Artifacts repository get artifact testing
 
   @packages.delete
   @testrail-C4523051
+  @DAT-46458
   Scenario: Get by execution id - non-existing
     When I upload "1" artifacts to "package"
     When I get artifact by "wrong_execution_id"
@@ -50,6 +55,7 @@ Feature: Artifacts repository get artifact testing
 
   @packages.delete
   @testrail-C4523051
+  @DAT-46458
   Scenario: Use with package  - item
     When I upload "1" artifacts to "package"
     And I get artifact by "id"
@@ -58,6 +64,7 @@ Feature: Artifacts repository get artifact testing
 
   @packages.delete
   @testrail-C4523051
+  @DAT-46458
   Scenario: Use with package name
     When I upload "1" artifacts to "package_name"
     And I get artifact by "package_name"
@@ -67,6 +74,7 @@ Feature: Artifacts repository get artifact testing
   @packages.delete
   @services.delete
   @testrail-C4523051
+  @DAT-46458
   Scenario: Use with execution
     Given There is a service by the name of "artifacts-upload" with module name "default_module" saved to context "service"
     And I create a dataset with a random name

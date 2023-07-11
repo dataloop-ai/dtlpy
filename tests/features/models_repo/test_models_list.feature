@@ -6,10 +6,12 @@ Feature: Model repository query testing
         And I create a dataset by the name of "models_dataset" in the project
 
     @testrail-C4525320
+    @DAT-46549
     Scenario: List by model name
         When I push "first" package
              |codebase_id=None|package_name=test-package|src_path=packages_create|inputs=None|outputs=None|
         And I create "6" models
         When I list models with filter field "name" and values "model-num-1"
         Then I get "1" entities
+
 

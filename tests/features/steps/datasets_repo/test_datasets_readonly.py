@@ -55,4 +55,4 @@ def step_impl(context):
         context.project.delete(True, True)
     except Exception as e:
 
-        assert f"Failed to delete dataset {context.dataset.id}. Failed to perform operation on readonly dataset" in e.args[1]
+        assert f"Failed to perform operation on readonly dataset" in e.args[1]

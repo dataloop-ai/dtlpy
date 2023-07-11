@@ -110,7 +110,8 @@ class Items:
 
         """
         if filters is None:
-            filters = entities.Filters(user_query=False)
+            filters = entities.Filters()
+            filters._user_query = 'false'
             filters.add(field='type', values='file')
         pages = self.list(filters=filters)
         num_items = pages.items_count
@@ -149,7 +150,7 @@ class Items:
         success, response = self._client_api.gen_request(req_type="POST",
                                                          path="/datasets/{}/query".format(self.dataset.id),
                                                          json_req=filters.prepare(),
-                                                         headers={'user_query': filters.user_query})
+                                                         headers={'user_query': filters._user_query})
         if not success:
             raise exceptions.PlatformException(response)
         return response.json()
@@ -179,7 +180,8 @@ class Items:
         """
         # default filters
         if filters is None:
-            filters = entities.Filters(user_query=False)
+            filters = entities.Filters()
+            filters._user_query = 'false'
         # assert type filters
         elif not isinstance(filters, entities.Filters):
             raise exceptions.PlatformException(error='400',

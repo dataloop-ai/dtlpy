@@ -11,8 +11,10 @@ Feature: Services repository update service testing
      @services.delete
      @packages.delete
      @testrail-C4523164
+     @DAT-46617
      Scenario: Update service
          When I get service revisions
          And I change service "concurrency" to "17"
          And I update service
          Then Service received equals service changed except for "runtime.concurrency"
+

@@ -13,6 +13,7 @@ Feature: Triggers repository delete service testing
     @services.delete
     @packages.delete
     @testrail-C4523173
+    @DAT-46630
     Scenario: Delete by id
         When I delete trigger by "id"
         Then There are no triggers
@@ -20,6 +21,7 @@ Feature: Triggers repository delete service testing
     @services.delete
     @packages.delete
     @testrail-C4523173
+    @DAT-46630
     Scenario: Delete by name
         When I delete trigger by "name"
         Then There are no triggers
@@ -27,6 +29,7 @@ Feature: Triggers repository delete service testing
     @services.delete
     @packages.delete
     @testrail-C4523173
+    @DAT-46630
     Scenario: Delete by entity
         When I delete trigger by "entity"
         Then There are no triggers

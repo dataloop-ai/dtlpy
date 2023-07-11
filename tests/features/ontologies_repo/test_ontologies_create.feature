@@ -6,18 +6,21 @@ Feature: Ontologies repository create service testing
         And I create a dataset with a random name
 
     @testrail-C4523127
+    @DAT-46550
     Scenario: Create ontology
         When I create a new ontology with labels from file "labels.json"
         And I update dataset ontology to the one created
         Then Dataset ontology in host equal ontology uploaded
 
     @testrail-C4523127
+    @DAT-46550
     Scenario: Create ontology - no project id
         When I create a new ontology with no projectIds, with labels from file "labels.json"
         And I update dataset ontology to the one created
         Then Dataset ontology in host equal ontology uploaded
 
     @testrail-C4523127
+    @DAT-46550
     Scenario: Create ontology with attributes
         When I create a new ontology with labels from file "labels.json" and attributes "['attr1', 'attr2']"
         And I update dataset ontology to the one created
@@ -31,8 +34,10 @@ Feature: Ontologies repository create service testing
     #     Then "Forbidden" exception should be raised
 
     @testrail-C4523127
+    @DAT-46550
     Scenario: Create ontology - wrong project id
         When I try create a new ontology with labels and "some_project_id" from file "labels.json"
         Then "Forbidden" exception should be raised
+
 
 

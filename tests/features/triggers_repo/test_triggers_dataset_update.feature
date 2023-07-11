@@ -10,6 +10,7 @@ Feature: Triggers repository types - dataset
     @services.delete
     @packages.delete
     @testrail-C4525045
+    @DAT-46643
     Scenario: Updated Dataset Trigger Once
         Given There is a package (pushed from "triggers/dataset") by the name of "triggers-update"
         And There is a service by the name of "triggers-update" with module name "default_module" saved to context "service"
@@ -23,6 +24,7 @@ Feature: Triggers repository types - dataset
     @services.delete
     @packages.delete
     @testrail-C4525045
+    @DAT-46643
     Scenario: Updated Dataset Trigger Always
         Given There is a package (pushed from "triggers/dataset") by the name of "triggers-update"
         And There is a service by the name of "triggers-update" with module name "default_module" saved to context "service"
@@ -33,6 +35,7 @@ Feature: Triggers repository types - dataset
         Then Service was triggered on "dataset"
         When I update dataset name to new random name
         Then Service was triggered on "dataset" again
+
 
 
 

@@ -6,6 +6,7 @@ Feature: Converter coco format
     And I create a dataset with a random name
 
   @testrail-C4523080
+  @DAT-46488
   Scenario: Convert local coco dataset to dataloop
     Given There is a local "coco" dataset in "converter/coco/local_dataset"
     When I convert local "coco" dataset to "dataloop"
@@ -14,6 +15,7 @@ Feature: Converter coco format
     Then local "coco" dataset in "converter/coco/local_dataset" is equal to reversed dataset in "converter/coco/reverse"
 
   @testrail-C4523080
+  @DAT-46488
   Scenario: Convert local coco dataset with inner folders to dataloop
     Given There is a local "coco" dataset in "converter/coco/local_dataset_inner"
     When I convert local "coco" dataset to "dataloop"
@@ -22,6 +24,7 @@ Feature: Converter coco format
     Then local "coco" dataset in "converter/coco/local_dataset_inner" is equal to reversed dataset in "converter/coco/reverse"
 
   @testrail-C4523080
+  @DAT-46488
   Scenario: Upload dataset with inner folder using coco converter
     Given I use "COCO" converter to upload items with annotations to the dataset using the given params
       | Parameter              | Value                                                        |
@@ -34,6 +37,7 @@ Feature: Converter coco format
     Then  I use "COCO" format to compare the uploaded annotations with the downloaded annotations
 
   @testrail-C4533546
+  @DAT-46488
   Scenario: Convert local coco dataset do not overwrite the existing labels
     Given There is a local "coco" dataset in "converter/coco/local_dataset"
     When I add single root Label "laptop"

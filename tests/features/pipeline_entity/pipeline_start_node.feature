@@ -10,8 +10,10 @@ Feature: Pipeline entity method testing
 
   @pipelines.delete
   @testrail-C4532486
+  @DAT-46581
   Scenario: pipeline flow
     When I create a package and service to pipeline
     And I create a pipeline from sdk
     And I add a node and connect it to the start node
     Then New node is the start node
+

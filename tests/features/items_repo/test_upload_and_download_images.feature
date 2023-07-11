@@ -6,6 +6,7 @@ Feature: Upload and Download Images
         And I create a dataset with a random name
 
     @testrail-C4529127
+    @DAT-46543
     Scenario: Upload and Download Images PNG
         Given There are no items
         And I get "10" images of type "png"
@@ -14,6 +15,7 @@ Feature: Upload and Download Images
         Then The images werent changed
 
     @testrail-C4529127
+    @DAT-46543
     Scenario: Upload and Download Images JPG
         Given There are no items
         And I get "10" images of type "jpg"
@@ -22,6 +24,7 @@ Feature: Upload and Download Images
         Then The images werent changed
 
     @testrail-C4529127
+    @DAT-46543
     Scenario: Upload and Download Images BMP
         Given There are no items
         And I get "10" images of type "bmp"
@@ -30,6 +33,7 @@ Feature: Upload and Download Images
         Then The images werent changed
 
     @testrail-C4529127
+    @DAT-46543
     Scenario: Download item with Overwrite True
         Given There are no items
         And I get "1" images of type "png"
@@ -39,6 +43,7 @@ Feature: Upload and Download Images
         Then The images will be "overwritten"
 
     @testrail-C4529127
+    @DAT-46543
     Scenario: Download item with Overwrite False
         Given There are no items
         And I get "1" images of type "png"

@@ -10,6 +10,7 @@ Feature: Services repository logs testing
   @services.delete
   @packages.delete
   @testrail-C4523163
+  @DAT-46615
   Scenario: Log
     When I create a service
       | service_name=services-log | package=services-log | revision=None | config=None | runtime=None |
@@ -21,6 +22,7 @@ Feature: Services repository logs testing
   @services.delete
   @packages.delete
   @testrail-C4523163
+  @DAT-46615
   Scenario: Log init
     When I create a service with autoscaler
       | service_name=services-log-init | package=services-log-init | revision=None | config=None | runtime=None |
@@ -30,6 +32,7 @@ Feature: Services repository logs testing
   @services.delete
   @packages.delete
   @testrail-C4533401
+  @DAT-46615
   Scenario: Requirements errors
     When Add requirements "noRequirements" to package
     And I create a service with autoscaler

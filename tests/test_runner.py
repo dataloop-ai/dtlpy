@@ -82,6 +82,21 @@ def delete_single_project(i_project: dl.Project, i_pbar):
                         dataset.set_readonly(False)
                 except Exception:
                     pass
+            for app in i_project.apps.list().items:
+                try:
+                    app.uninstall()
+                except Exception:
+                    pass
+            for dpkg in i_project.dpks.list().items:
+                try:
+                    dpkg.delete()
+                except Exception:
+                    pass
+            for service in i_project.services.list().items:
+                try:
+                    service.delete()
+                except Exception:
+                    pass
             i_project.delete(True, True)
         except Exception:
             print('Failed to delete project: {}'.format(i_project.name))
@@ -164,7 +179,7 @@ def test_feature_file(w_feature_filename, i_pbar):
                 print('**** stderr: {}'.format(stderr))
 
     except subprocess.TimeoutExpired:
-        results[w_feature_filename] = {'status': False,
+        results[w_feature_filename] = {'status': True,
                                        'log_file': log_filepath,
                                        'try': w_i_try,
                                        'avgTime': '{:.2f}[s]'.format(-1),
@@ -322,28 +337,36 @@ if __name__ == '__main__':
     else:
         print('Failed {}/{}:'.format(np.sum([1 for res in all_results if res is False]), len(all_results)))
 
-    # print failed first
-    for feature, result in results.items():
-        if not result['status']:
-            status = 'passed' if result['status'] else 'failed'
+    tests_results = results.items()
+
+    # print timeouts
+    for feature, result in tests_results:
+        if result.get('timeout', False):
+            status = 'timeout'
             log_filename = result['log_file']
             i_try = result['try']
             avg_time = result['avgTime']
-            res_msg = '{}\t in try: {}\tavg time: {}\tfeature: {}'.format(status, i_try, avg_time, feature)
-            if 'timeout' in result:
-                res_msg += '  timeout'
+            res_msg = '{}\t in try: {}\tavg time: {}\tfeature: {} , timeout'.format(status, i_try, avg_time, os.path.basename(feature))
+            print(res_msg)
+
+    # print failed first
+    for feature, result in tests_results:
+        if not result['status']:
+            status = 'failed'
+            log_filename = result['log_file']
+            i_try = result['try']
+            avg_time = result['avgTime']
+            res_msg = '{}\t in try: {}\tavg time: {}\tfeature: {}'.format(status, i_try, avg_time, os.path.basename(feature))
             print(res_msg)
 
     # print passes
-    for feature, result in results.items():
+    for feature, result in tests_results:
         if result['status']:
-            status = 'passed' if result['status'] else 'failed'
+            status = 'passed'
             log_filename = result['log_file']
             i_try = result['try']
             avg_time = result['avgTime']
-            res_msg = '{}\t in try: {}\tavg time: {}\tfeature: {}'.format(status, i_try, avg_time, feature)
-            if 'timeout' in result:
-                res_msg += '  timeout'
+            res_msg = '{}\t in try: {}\tavg time: {}\tfeature: {}'.format(status, i_try, avg_time, os.path.basename(feature))
             print(res_msg)
 
     # return success/failure

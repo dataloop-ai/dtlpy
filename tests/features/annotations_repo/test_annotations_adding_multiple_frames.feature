@@ -7,6 +7,7 @@ Feature: Annotations adding multiple frames
     And I upload an item of type "webm video" to the dataset
 
   @testrail-C4533707
+  @DAT-46419
   Scenario: Annotations with the same object_id wont get overwritten
     When   I upload "5" annotation with the same object id
     Then   I check that I got "5" keyframes

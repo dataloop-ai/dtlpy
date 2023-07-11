@@ -230,5 +230,9 @@ class DlProperty:
         # set value in the dictionary
         _dict = instance._dict
         for key in self.location[:-1]:
-            _dict = _dict.get(key, dict())
+            _tmp_dict = _dict.get(key, None)
+            # create the dict inside to be able to point
+            if _tmp_dict is None:
+                _dict[key] = dict()
+            _dict = _dict.get(key, None)
         _dict[self.location[-1]] = value

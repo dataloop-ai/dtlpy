@@ -96,7 +96,7 @@ from .entities import (
     Workload, WorkloadUnit, ItemAction,
     PipelineExecution, PipelineExecutionNode, Pipeline, PipelineConnection,
     PipelineNode, TaskNode, CodeNode, PipelineStats, PipelineSettings,
-    PipelineNodeType, PipelineNameSpace, PipelineResumeOption,
+    PipelineNodeType, PipelineNameSpace, PipelineResumeOption, Variable, CompositionStatus,
     FunctionNode, DatasetNode, PipelineConnectionPort, PipelineNodeIO, Organization, OrganizationsPlans, Integration,
     Driver, S3Driver, GcsDriver, AzureBlobDriver, CacheAction, PodType,
     ExternalStorage, IntegrationType, Role, PlatformEntityType, SettingsValueTypes, SettingsTypes, SettingsSectionNames,

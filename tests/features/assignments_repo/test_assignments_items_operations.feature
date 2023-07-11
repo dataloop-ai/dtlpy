@@ -8,6 +8,7 @@ Feature: Assignments repository items operations method testing
 
 
     @testrail-C4523057
+    @DAT-46464
     Scenario: Get assignment items operation
         Given There are items, path = "filters/image.jpg"
             |annotated_type={"box": 3, "polygon": 3}|metadata={"user.good": 3, "user.bad": 3}|
@@ -15,4 +16,5 @@ Feature: Assignments repository items operations method testing
         When I create Task
             | task_name=min_params | due_date=auto | assignee_ids=annotator1@dataloop.ai  | items=3 |
         And I get an Assignment
+
 

@@ -134,7 +134,7 @@ class Annotations:
         success, response = self._client_api.gen_request(req_type="POST",
                                                          path="/datasets/{}/query".format(self._dataset_id),
                                                          json_req=filters.prepare(),
-                                                         headers={'user_query': filters.user_query}
+                                                         headers={'user_query': filters._user_query}
                                                          )
         if not success:
             raise exceptions.PlatformException(response)
@@ -167,7 +167,8 @@ class Annotations:
         """
         if self._dataset_id is not None:
             if filters is None:
-                filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION, user_query=False)
+                filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION)
+                filters._user_query = 'false'
 
             if not filters.resource == entities.FiltersResource.ANNOTATION:
                 raise exceptions.PlatformException(error='400',
@@ -584,6 +585,9 @@ class Annotations:
             if isinstance(annotation, str):
                 annotation = json.loads(annotation)
             elif isinstance(annotation, entities.Annotation):
+                if annotation._item is None and self._item is not None:
+                    # if annotation is without item - set one (affects the binary annotation color)
+                    annotation._item = self._item
                 annotation = annotation.to_json()
             elif isinstance(annotation, dict):
                 pass

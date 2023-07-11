@@ -6,6 +6,7 @@ Feature: Annotaions repository List service testing
         And I create a dataset with a random name
 
     @testrail-C4523037
+    @DAT-46431
     Scenario: List all annotations when no annotations exists
         Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
         And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"
@@ -14,6 +15,7 @@ Feature: Annotaions repository List service testing
         Then I receive an empty annotations list
 
     @testrail-C4523037
+    @DAT-46431
     Scenario: List all annotations when annotations exist
         Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
         And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"
@@ -21,3 +23,4 @@ Feature: Annotaions repository List service testing
         When I list all annotations
         Then I receive a list of all annotations
         And The annotations in the list equals the annotations uploaded
+

@@ -10,6 +10,7 @@ Feature: Items task browser filters
         And Add Members "annotator2@dataloop.ai" as "annotator"
 
     @testrail-C4526503
+    @DAT-46528
     Scenario:
         Given There are items, path = "filters/image.jpg"
             |directory={"/": 3, "/dir1/": 3, "/dir1/dir2/": 3}|annotated_label={"dog": 3, "cat": 3}|annotated_type={"box": 3, "polygon": 3}|name={"dog":3, "cat":3}|metadata={"user.good": 3, "user.bad": 3}|

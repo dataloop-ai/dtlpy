@@ -5,6 +5,7 @@ Feature: Datasets repository upload labels
         And I create a project by the name of "datasets_upload_labels"
 
     @testrail-C4530465
+    @DAT-46503
     Scenario: Upload labels to dataset from csv
         When I create a dataset with a random name
         And I upload labels from csv file "label_in_csv.csv"

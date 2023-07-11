@@ -10,8 +10,10 @@ Feature: Pipeline entity method testing
 
     @pipelines.delete
     @testrail-C4523142
+    @DAT-46574
     Scenario: pipeline flow
         When I create a package and service to pipeline
         And I create a pipeline from json
         And I upload item in "0000000162.jpg" to pipe dataset
         Then verify pipeline flow result
+

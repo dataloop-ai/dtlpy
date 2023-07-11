@@ -14,12 +14,14 @@ Feature: Assignments repository get method testing
         And I get an Assignment
 
     @testrail-C4523056
+    @DAT-46463
     Scenario: GET - id
         When I get assignment by "id"
         Then I get an assignment entity
         And Assignment received equals assignment created
 
     @testrail-C4523056
+    @DAT-46463
     Scenario: GET - name
         When I get assignment by "name"
         Then I get an assignment entity

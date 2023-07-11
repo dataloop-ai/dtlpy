@@ -11,8 +11,10 @@ Feature: Services repository update with force=True service testing
      @services.delete
      @packages.delete
      @testrail-C4532327
+     @DAT-46618
      Scenario: Update service
         Given I execute service
         And Execution is running
         When I update service with force="True"
         Then Execution stopped immediately
+

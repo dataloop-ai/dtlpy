@@ -5,6 +5,7 @@ Feature: Bots repository get service testing
     Given I create a project by the name of "bot_delete"
 
   @testrail-C4523062
+  @DAT-46469
   Scenario: Delete bot by email
     When I create a bot by the name of "some_bot"
     And I delete the created bot by "email"
@@ -12,6 +13,7 @@ Feature: Bots repository get service testing
     Then I receive a bots list of "0"
 
   @testrail-C4523062
+  @DAT-46469
   Scenario: Delete bot by id
     When I create a bot by the name of "some_bot"
     And I delete the created bot by "id"
@@ -19,6 +21,7 @@ Feature: Bots repository get service testing
     Then I receive a bots list of "0"
 
   @testrail-C4523062
+  @DAT-46469
   Scenario: Delete a non-existing bot
     When I try to delete a bot by the name of "Some Bot Name"
     Then "NotFound" exception should be raised

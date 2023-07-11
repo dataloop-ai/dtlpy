@@ -6,6 +6,7 @@ Feature: Annotaions repository download service testing
     And I create a dataset with a random name
 
   @testrail-C4532194
+  @DAT-46424
   Scenario: Download item annotations with mask
     Given Labels in file: "assets_split/annotations_download/labels.json" are uploaded to test Dataset
     And Item in path "assets_split/annotations_download/video_test.mp4" is uploaded to "Dataset"
@@ -15,6 +16,7 @@ Feature: Annotaions repository download service testing
     Then video Item annotation "mask" has been downloaded to "downloaded_annotations"
 
   @testrail-C4532194
+  @DAT-46424
   Scenario: Download item annotations with instance
     Given Labels in file: "assets_split/annotations_download/labels.json" are uploaded to test Dataset
     And Item in path "assets_split/annotations_download/video_test.mp4" is uploaded to "Dataset"
@@ -24,6 +26,7 @@ Feature: Annotaions repository download service testing
     Then video Item annotation "instance" has been downloaded to "downloaded_annotations"
 
   @testrail-C4532194
+  @DAT-46424
   Scenario: Download item annotations with json
     Given Labels in file: "assets_split/annotations_download/labels.json" are uploaded to test Dataset
     And Item in path "assets_split/annotations_download/video_test.mp4" is uploaded to "Dataset"
@@ -34,6 +37,7 @@ Feature: Annotaions repository download service testing
 
 
   @testrail-C4532194
+  @DAT-46424
   Scenario: Download item annotations with img_mask
     Given Labels in file: "assets_split/annotations_download/labels.json" are uploaded to test Dataset
     And Item in path "assets_split/annotations_download/video_test.mp4" is uploaded to "Dataset"

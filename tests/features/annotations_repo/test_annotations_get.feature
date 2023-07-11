@@ -6,6 +6,7 @@ Feature: Annotaions repository Get service testing
         And I create a dataset with a random name
 
     @testrail-C4523036
+    @DAT-46430
     Scenario: Get an existing annotation by id
         Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
         And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"
@@ -16,10 +17,12 @@ Feature: Annotaions repository Get service testing
         And Annotation received equals to annotation x
 
     @testrail-C4523036
+    @DAT-46430
     Scenario: Get non-existing annotation
         Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
         And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"
         And Item is annotated with annotations in file: "assets_split/annotations_crud/0162_annotations.json"
         When I try to get a non-existing annotation
         Then "BadRequest" exception should be raised
+
 

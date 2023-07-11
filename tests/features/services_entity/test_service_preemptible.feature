@@ -10,6 +10,7 @@ Feature: Services entity preemptible attribute
   @services.delete
   @packages.delete
   @testrail-C4533503
+  @DAT-46608
   Scenario: Update execution_timeout - Preemptible should updated to False
     When I create a service
       | service_name=services-preemptible | package=services-preemptible | revision=None | config=None | runtime=None | execution_timeout=360000 |
@@ -20,10 +21,12 @@ Feature: Services entity preemptible attribute
   @services.delete
   @packages.delete
   @testrail-C4533503
+  @DAT-46608
   Scenario: Update max_attempts - Preemptible should updated to False
     When I create a service
       | service_name=services-preemptible | package=services-preemptible | revision=None | config=None | runtime=None | max_attempts=1 |
     Then I expect preemptible value to be "False"
     And Object "Service" to_json() equals to Platform json.
+
 
 

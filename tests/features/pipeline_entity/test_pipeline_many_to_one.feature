@@ -10,6 +10,7 @@ Feature: Pipeline resource multiples outputs testing
 
   @pipelines.delete
   @testrail-C4536833
+  @DAT-46587
   Scenario: Multiple outputs - Limit many to one - 1000 execution - Cycle status should get success
     Given I create pipeline from json in path "pipelines_json/output_integers_input_integer_1000.json"
     And I install pipeline in context
@@ -21,6 +22,7 @@ Feature: Pipeline resource multiples outputs testing
 
   @pipelines.delete
   @testrail-C4536833
+  @DAT-46587
   Scenario: Multiple outputs - Limit many to one - 1001 execution - Cycle status should get failed
     Given I create pipeline from json in path "pipelines_json/output_integers_input_integer_1001.json"
     And I install pipeline in context
@@ -29,3 +31,4 @@ Feature: Pipeline resource multiples outputs testing
     When I get pipeline execution in index "0"
     Then Pipeline has "1" cycle executions
     And I validate Cycle execution status is "failed"
+

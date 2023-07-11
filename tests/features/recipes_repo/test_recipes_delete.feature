@@ -6,8 +6,10 @@ Feature: Recipes repository Delete service testing
         And I create a dataset with a random name
 
     @testrail-C4523153
+    @DAT-46601
     Scenario: Delete recipe
         Given Dataset has Recipes
         When I delete recipe
         Then Dataset has no recipes
+
 

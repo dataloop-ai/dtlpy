@@ -27,6 +27,9 @@ class Recipe(entities.BaseEntity):
     examples = attr.ib(repr=False)
     custom_actions = attr.ib(repr=False)
     metadata = attr.ib()
+    created_at = attr.ib()
+    updated_at = attr.ib()
+    updated_by = attr.ib()
 
     # name change
     ui_settings = attr.ib()
@@ -81,7 +84,10 @@ class Recipe(entities.BaseEntity):
             ui_settings=_json.get('uiSettings', None),
             metadata=_json.get('metadata', None),
             examples=_json.get('examples', None),
-            custom_actions=_json.get('customActions', None))
+            custom_actions=_json.get('customActions', None),
+            created_at=_json.get("createdAt", None),
+            updated_at=_json.get("updatedAt", None),
+            updated_by=_json.get("updatedBy", None))
         inst.is_fetched = is_fetched
         return inst
 
@@ -160,11 +166,17 @@ class Recipe(entities.BaseEntity):
                                                               attr.fields(Recipe)._repositories,
                                                               attr.fields(Recipe).custom_actions,
                                                               attr.fields(Recipe).ontology_ids,
+                                                              attr.fields(Recipe).created_at,
+                                                              attr.fields(Recipe).updated_at,
+                                                              attr.fields(Recipe).updated_by,
                                                               ))
         _json['uiSettings'] = self.ui_settings
         _json['projectIds'] = self.project_ids
         _json['customActions'] = self.custom_actions
         _json['ontologyIds'] = self.ontology_ids
+        _json['createdAt'] = self.created_at
+        _json['updatedAt'] = self.updated_at
+        _json['updatedBy'] = self.updated_by
         return _json
 
     @property

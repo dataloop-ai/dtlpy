@@ -11,6 +11,7 @@ Feature: Item Entity update item status
     And Add Members "annotator2@dataloop.ai" as "annotator"
 
   @testrail-C4525318
+  @DAT-46547
   Scenario: Update default status on items in task
     When I create Task
       | task_name=min_params | due_date=auto | assignee_ids=auto |
@@ -19,6 +20,7 @@ Feature: Item Entity update item status
     Then I validate default items status in task
 
   @testrail-C4525318
+  @DAT-46547
   Scenario: Update default status on items in second task with task id
     When I create Task
       | task_name=min_params | due_date=auto | assignee_ids=auto |
@@ -28,6 +30,7 @@ Feature: Item Entity update item status
 
 
   @testrail-C4525318
+  @DAT-46547
   Scenario: Update Custom status on items in task
     When I create Task
       | task_name=min_params | due_date=auto | assignee_ids=auto | available_actions=fix-label fix-ann fix-cor |
@@ -37,6 +40,7 @@ Feature: Item Entity update item status
 #
 #
 #  @testrail-C4523167
+   @DAT-46547
 #  Scenario: Update default status on items in qa task
 #    When I create Task
 #      | task_name=min_params | due_date=auto | assignee_ids=auto |
@@ -47,6 +51,7 @@ Feature: Item Entity update item status
 #
 #
 #  @testrail-C4523167
+   @DAT-46547
 #  Scenario: Update custom status on items in qa task
 #    When I create Task
 #      | task_name=min_params | due_date=auto | assignee_ids=auto |
@@ -54,6 +59,7 @@ Feature: Item Entity update item status
 #    When I update items status to default task actions
 #    When I update items status to default qa task actions
 #    Then I validate custom items status in qa task
+
 
 
 

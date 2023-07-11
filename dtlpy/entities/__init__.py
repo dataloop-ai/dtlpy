@@ -56,7 +56,7 @@ from .bot import Bot
 from .webhook import Webhook, HttpMethod
 from .model import Model, DatasetSubsetType, PlotSample
 from .driver import Driver, S3Driver, GcsDriver, AzureBlobDriver
-from .pipeline import Pipeline, PipelineStats, PipelineResumeOption, PipelineSettings
+from .pipeline import Pipeline, PipelineStats, PipelineResumeOption, PipelineSettings, Variable, CompositionStatus
 from .node import PipelineConnection, PipelineNode, PipelineConnectionPort, PipelineNodeIO, TaskNode, \
     CodeNode, FunctionNode, PipelineNodeType, PipelineNameSpace, DatasetNode
 from .pipeline_execution import PipelineExecution, PipelineExecutionNode

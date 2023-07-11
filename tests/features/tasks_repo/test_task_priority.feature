@@ -9,6 +9,7 @@ Feature: Tasks repository priorities
         And I save dataset items to context
 
     @testrail-C4532755
+    @DAT-46628
     Scenario: Create - LOW priority task
         When I create Task with priority "TaskPriority.LOW"
         Then Task with priority "LOW" got created
@@ -16,6 +17,7 @@ Feature: Tasks repository priorities
         Then Task with priority "LOW" got created
 
     @testrail-C4532755
+    @DAT-46628
     Scenario: Create - MEDIUM priority task
         When I create Task with priority "TaskPriority.MEDIUM"
         Then Task with priority "MEDIUM" got created
@@ -23,8 +25,10 @@ Feature: Tasks repository priorities
         Then Task with priority "MEDIUM" got created
 
     @testrail-C4532755
+    @DAT-46628
     Scenario: Create - HIGH priority task
         When I create Task with priority "TaskPriority.HIGH"
         Then Task with priority "HIGH" got created
         When I create Task with priority "TASK_PRIORITY_HIGH"
         Then Task with priority "HIGH" got created
+

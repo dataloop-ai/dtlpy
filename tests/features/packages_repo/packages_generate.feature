@@ -5,6 +5,7 @@ Feature: Packages repository generate service testing
     And I create a project by the name of "test_packages_generate"
 
   @testrail-C4523135
+  @DAT-46561
   Scenario: Generate package - no given path - nameless
     Given Directory "packages_generate/to_generate" is empty
     And cwd is "packages_generate/to_generate"
@@ -13,6 +14,7 @@ Feature: Packages repository generate service testing
     Then package local files in "packages_generate/to_generate" equal package local files in "packages_generate/to_compare_nameless"
 
   @testrail-C4523135
+  @DAT-46561
   Scenario: Generate package - no given path - by name
     Given Directory "packages_generate/to_generate" is empty
     And cwd is "packages_generate/to_generate"
@@ -21,13 +23,16 @@ Feature: Packages repository generate service testing
     Then Package local files in "packages_generate/to_generate" equal package local files in "packages_generate/to_compare_test_package"
 
   @testrail-C4523135
+  @DAT-46561
   Scenario: Generate package by name
     Given Directory "packages_generate/to_generate" is empty
     When I generate package by the name of "test-package" to "packages_generate/to_generate"
     Then Package local files in "packages_generate/to_generate" equal package local files in "packages_generate/to_compare_test_package"
 
   @testrail-C4523135
+  @DAT-46561
   Scenario: Generate package - nameless
     Given Directory "packages_generate/to_generate" is empty
     When I generate package by the name of "None" to "packages_generate/to_generate"
     Then Package local files in "packages_generate/to_generate" equal package local files in "packages_generate/to_compare_nameless"
+

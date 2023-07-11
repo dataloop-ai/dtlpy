@@ -5,6 +5,7 @@ Feature: Bots repository list service testing
         And I create a project by the name of "bots_list"
 
     @testrail-C4523064
+    @DAT-46471
     Scenario: List one bot
         Given There are no bots in project
         When I create a bot by the name of "first_bot"
@@ -12,9 +13,11 @@ Feature: Bots repository list service testing
         Then I receive a bots list of "1"
 
     @testrail-C4523064
+    @DAT-46471
     Scenario: List two bot
         Given There are no bots in project
         When I create a bot by the name of "first_bot"
         And I create a bot by the name of "second_bot"
         And I list bots in project
         Then I receive a bots list of "2"
+

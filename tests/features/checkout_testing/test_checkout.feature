@@ -9,6 +9,7 @@
    @packages.delete
    @services.delete
    @testrail-C4523066
+   @DAT-46474
    Scenario: Feature entities
      Given Feature: I create a dataset by the name of "Dataset"
      When I checkout
@@ -17,6 +18,7 @@
      And Done setting
 
    @testrail-C4523066
+   @DAT-46474
    Scenario: Projects
      When I checkout
        |project|
@@ -24,6 +26,7 @@
        |project|
 
    @testrail-C4523066
+   @DAT-46474
    Scenario: Dataset
      When I checkout
        |dataset|
@@ -31,6 +34,7 @@
        |dataset|
 
    @testrail-C4523066
+   @DAT-46474
    Scenario: Package
      When I checkout
        |package|
@@ -38,8 +42,10 @@
        |package|
 
     @testrail-C4523066
+    @DAT-46474
     Scenario: Service
      When I checkout
        |service|
      Then I am checked out
        |service|
+

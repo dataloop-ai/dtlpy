@@ -8,6 +8,7 @@ Feature: Packages repository push service testing
 
     @packages.delete
     @testrail-C4523139
+    @DAT-46565
     Scenario: Push local package - no params
         When I push "first" package
             |codebase_id=None|package_name=None|src_path=packages_push|inputs=None|outputs=None|
@@ -18,3 +19,4 @@ Feature: Packages repository push service testing
             |codebase_id=None|package_name=None|src_path=packages_push|inputs=None|outputs=None|
         Then I receive another package entity
         And 1st package and 2nd package only differ in code base id
+

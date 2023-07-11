@@ -6,16 +6,19 @@ Feature: Get a dpk
         And I publish a dpk to the platform
 
     @testrail-C4524925
+    @DAT-46512
     Scenario: Get a valid dpk
         When I get the dpk by id
         Then I have the same dpk as the published dpk
 
     @testrail-C4524925
+    @DAT-46512
     Scenario: Get an invalid dpk
         When I get a dpk with invalid id
         Then I should get an exception
 
     @testrail-C4524925
+    @DAT-46512
     Scenario: Get dpk by name
         When I get the dpk by name
         Then I have the same dpk as the published dpk

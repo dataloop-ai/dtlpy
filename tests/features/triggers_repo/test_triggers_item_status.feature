@@ -11,6 +11,7 @@ Feature: Triggers repository types - itemStatus
     @services.delete
     @packages.delete
     @testrail-C4525051
+    @DAT-46647
     Scenario: Update ItemStatus Trigger once
         Given There is a package (pushed from "triggers/item") by the name of "triggers-update"
         And There is a service by the name of "triggers-update" with module name "default_module" saved to context "service"
@@ -27,6 +28,7 @@ Feature: Triggers repository types - itemStatus
     @services.delete
     @packages.delete
     @testrail-C4525051
+    @DAT-46647
     Scenario: Update ItemStatus Trigger once
         Given There is a package (pushed from "triggers/item") by the name of "triggers-update"
         And There is a service by the name of "triggers-update" with module name "default_module" saved to context "service"
@@ -44,3 +46,4 @@ Feature: Triggers repository types - itemStatus
         Then I receive a task entity
         When I update items status to default task actions with task id
         Then Service was triggered on "item" again
+

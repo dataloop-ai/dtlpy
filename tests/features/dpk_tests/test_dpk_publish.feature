@@ -6,6 +6,7 @@ Feature: publish a dpk
         And I fetch the dpk from 'apps/app.json' file
 
     @testrail-C4524925
+    @DAT-46514
     Scenario: publishing a dpk
         When I publish a dpk to the platform
         Then The user defined properties should have the same values

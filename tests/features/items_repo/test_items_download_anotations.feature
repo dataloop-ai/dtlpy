@@ -6,6 +6,7 @@ Feature: Items repository download annotations testing
     And I create a dataset with a random name
 
   @testrail-C4523113
+  @DAT-46534
   Scenario: Download item annotations with mask
     Given Labels in file: "assets_split/annotations_download/labels.json" are uploaded to test Dataset
     And Item in path "assets_split/annotations_download/0000000162.jpg" is uploaded to "Dataset"
@@ -15,6 +16,7 @@ Feature: Items repository download annotations testing
     Then Item annotation "mask" has been downloaded to "downloaded_annotations/mask"
 
   @testrail-C4523113
+  @DAT-46534
   Scenario: Download item annotations with instance
     Given Labels in file: "assets_split/annotations_download/labels.json" are uploaded to test Dataset
     And Item in path "assets_split/annotations_download/0000000162.jpg" is uploaded to "Dataset"
@@ -24,6 +26,7 @@ Feature: Items repository download annotations testing
     Then Item annotation "instance" has been downloaded to "downloaded_annotations/instance"
 
   @testrail-C4523113
+  @DAT-46534
   Scenario: Download item annotations with json
     Given Labels in file: "assets_split/annotations_download/labels.json" are uploaded to test Dataset
     And Item in path "assets_split/annotations_download/0000000162.jpg" is uploaded to "Dataset"
@@ -33,6 +36,7 @@ Feature: Items repository download annotations testing
     Then Item annotation "json" has been downloaded to "downloaded_annotations/json"
 
   @testrail-C4523113
+  @DAT-46534
   Scenario: Download item annotations with img_mask
     Given Labels in file: "assets_split/annotations_download/labels.json" are uploaded to test Dataset
     And Item in path "assets_split/annotations_download/0000000162.jpg" is uploaded to "Dataset"
@@ -42,6 +46,7 @@ Feature: Items repository download annotations testing
     Then Item annotation "img_mask" has been downloaded to "downloaded_annotations/img_mask"
 
   @testrail-C4523113
+  @DAT-46534
   Scenario: Download item annotations with vtt
     Given Labels in file: "assets_split/annotations_download/labels.json" are uploaded to test Dataset
     And Item in path "assets_split/annotations_download/0000000162.jpg" is uploaded to "Dataset"
@@ -49,3 +54,4 @@ Feature: Items repository download annotations testing
     And Item is annotated with annotations in file: "assets_split/annotations_download/0162_annotations.json"
     When I download items annotations from item with "vtt" to "downloaded_annotations/vtt.jpg"
     Then Item annotation "vtt" has been downloaded to "downloaded_annotations/vtt"
+

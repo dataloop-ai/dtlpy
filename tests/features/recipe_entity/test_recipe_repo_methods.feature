@@ -6,17 +6,20 @@ Feature: Recipes entity methods testing
         And I create a dataset with a random name
 
     @testrail-C4523155
+    @DAT-46603
     Scenario: To Json
         Given Dataset has Recipes
         Then Object "Recipe" to_json() equals to Platform json.
 
     @testrail-C4523155
+    @DAT-46603
     Scenario: add instruction
         Given Dataset has Recipes
         Then Add instruction "sample.pdf" to Recipe
         And instruction are exist
 
     @testrail-C4523155
+    @DAT-46603
     Scenario: add instruction fail
         Given Dataset has Recipes
         Then Add instruction "0000000162.jpg" to Recipe

@@ -6,6 +6,7 @@ Feature: Codebases repository Get method
         And I create a dataset with a random name
 
     @testrail-C4523073
+    @DAT-46481
     Scenario: Get code base by name
         Given There is a Codebase directory with a python file in path "codebases_assets/codebases_get"
         When I pack directory by name "codebase_name1"
@@ -16,6 +17,7 @@ Feature: Codebases repository Get method
         And Codebase received equal code base packet
 
     @testrail-C4523073
+    @DAT-46481
     Scenario: Get code base by id
         Given There is a Codebase directory with a python file in path "codebases_assets/codebases_get"
         When I pack directory by name "codebase_name2"
@@ -26,6 +28,7 @@ Feature: Codebases repository Get method
         And Codebase received equal code base packet
 
     @testrail-C4523073
+    @DAT-46481
     Scenario: Get code base by id - latest
         Given There is a Codebase directory with a python file in path "codebases_assets/codebases_get"
         When I pack directory by name "codebase_name3"
@@ -36,6 +39,7 @@ Feature: Codebases repository Get method
         And Codebase received equal code base packet
 
     @testrail-C4523073
+    @DAT-46481
     Scenario: Get code base by name - no version given
         Given There is a Codebase directory with a python file in path "codebases_assets/codebases_get"
         When I pack directory by name "codebase_name4"
@@ -46,6 +50,7 @@ Feature: Codebases repository Get method
         And Codebase received equal code base packet
 
     @testrail-C4523073
+    @DAT-46481
     Scenario: Get code base by id - all
         Given There is a Codebase directory with a python file in path "codebases_assets/codebases_get"
         When I pack directory by name "codebase_name5"
@@ -54,4 +59,5 @@ Feature: Codebases repository Get method
         When I get by name version "all" of code base "codebase_name5"
         Then I receive a list of Codebase objects
         And Codebase list have length of "2"
+
 

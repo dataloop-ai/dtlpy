@@ -11,6 +11,7 @@ Feature: Recipes repository clone service testing
 
 
     @testrail-C4523151
+    @DAT-46599
     Scenario: Clone recipe and Ontology
         When I clone recipe from  dataset 1 to dataset 2 with ontology
         And I add new label "333" to dataset 2
@@ -19,6 +20,7 @@ Feature: Recipes repository clone service testing
 
 
     @testrail-C4523151
+    @DAT-46599
     Scenario: Clone recipe without Ontology
         When I clone recipe from  dataset 1 to dataset 2 without ontology
         And I add new label "333" to dataset 2

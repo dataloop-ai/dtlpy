@@ -65,7 +65,7 @@ class Features:
         success, response = self._client_api.gen_request(req_type="POST",
                                                          path="{}/query".format(self.URL),
                                                          json_req=filters.prepare(),
-                                                         headers={'user_query': filters.user_query}
+                                                         headers={'user_query': filters._user_query}
                                                          )
         if not success:
             raise exceptions.PlatformException(response)
@@ -82,7 +82,8 @@ class Features:
         """
         # default filters
         if filters is None:
-            filters = entities.Filters(resource=entities.FiltersResource.FEATURE, user_query=False)
+            filters = entities.Filters(resource=entities.FiltersResource.FEATURE)
+            filters._user_query = 'false'
         # assert type filters
         if not isinstance(filters, entities.Filters):
             raise exceptions.PlatformException(error='400',

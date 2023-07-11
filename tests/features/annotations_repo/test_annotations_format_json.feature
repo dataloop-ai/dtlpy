@@ -6,6 +6,7 @@ Feature: Annotations format json
         And I create a dataset by the name of "Dataset_annotations_format_json" in the project
 
     @testrail-C4532882
+    @DAT-46427
     Scenario: Check default download is json
         Given I upload an item of type "png image" to the dataset
         And   I upload "box" annotation to the image item
@@ -17,6 +18,7 @@ Feature: Annotations format json
 
 
     @testrail-C4532882
+    @DAT-46427
     Scenario: Check all json download options - image item
         Given I upload an item of type "png image" to the dataset
         And   I upload "box" annotation to the image item
@@ -55,6 +57,7 @@ Feature: Annotations format json
              | dataset_json_dir | annotations_format_json3/json |
 
     @testrail-C4532882
+    @DAT-46427
     Scenario: Check all json download options - video item
         Given I upload an item of type "webm video" to the dataset
         And   I upload "box" annotation to the video item
@@ -93,6 +96,7 @@ Feature: Annotations format json
              | dataset_json_dir | annotations_format_json3/json |
 
     @testrail-C4532882
+    @DAT-46427
     Scenario: Check all json download options - audio item
         Given I upload an item of type "mp3 audio" to the dataset
         And   I upload "subtitle" annotation to the audio item
@@ -131,6 +135,7 @@ Feature: Annotations format json
              | dataset_json_dir | annotations_format_json3/json |
 
     @testrail-C4532882
+    @DAT-46427
     Scenario: Check all json download options - text item
         Given I upload an item of type "txt text" to the dataset
         And   I upload "text mark" annotation to the text item

@@ -6,6 +6,7 @@ Feature: Codebases repository Init
         And I create a dataset with a random name
 
     @testrail-C4523074
+    @DAT-46482
     Scenario: Init code bases with param: dataset, project, client_api
         When I init code bases with params: project, dataset, client_api
         Then I receive a code bases repository object
@@ -13,6 +14,7 @@ Feature: Codebases repository Init
         And Codebases dataset equal "Dataset"
 
     @testrail-C4523074
+    @DAT-46482
     Scenario: Init code bases with param: project, client_api
         When I init code bases with params: project, client_api
         Then I receive a code bases repository object
@@ -20,13 +22,16 @@ Feature: Codebases repository Init
         And Codebases dataset has name "Binaries"
 
 #    @testrail-C4523074
+     @DAT-46482
 #    Scenario: Init code bases with param: client_api
 #        When I try to init code bases with params: client_api
 #        Then "BadRequest" exception should be raised
 
     @testrail-C4523074
+    @DAT-46482
     Scenario: Init code bases with param: dataset, client_api
         When I init code bases with params: dataset, client_api
         Then I receive a code bases repository object
         And Codebases dataset equal "Dataset"
+
 

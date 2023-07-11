@@ -15,6 +15,7 @@ Feature: Service repository Context testing
     @services.delete
     @packages.delete
     @testrail-C4523157
+    @DAT-46609
     Scenario: Get Service from the project it belong to
         When I get the service from project number 1
         Then Service Project_id is equal to project 1 id
@@ -26,6 +27,7 @@ Feature: Service repository Context testing
     @services.delete
     @packages.delete
     @testrail-C4523157
+    @DAT-46609
     Scenario: Get Service from the project it not belong to
         When I get the service from project number 2
         Then Service Project_id is equal to project 1 id
@@ -37,6 +39,7 @@ Feature: Service repository Context testing
     @services.delete
     @packages.delete
     @testrail-C4523157
+    @DAT-46609
     Scenario: Get Service from the package it belong to
         When I get the service from package number 1
         Then Service Project_id is equal to project 1 id
@@ -48,6 +51,7 @@ Feature: Service repository Context testing
     @services.delete
     @packages.delete
     @testrail-C4523157
+    @DAT-46609
     Scenario: Get Service from the package it belong to
         Given There is a package (pushed from "services/item") by the name of "services-get"
         And I append package to packages
@@ -56,3 +60,4 @@ Feature: Service repository Context testing
         And Service Project.id is equal to project 1 id
         And Service Package_id is equal to package 1 id
         And Service Package.id is equal to package 1 id
+

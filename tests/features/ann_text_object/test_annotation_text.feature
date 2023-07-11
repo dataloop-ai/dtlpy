@@ -7,9 +7,11 @@ Feature: Annotations collection testing
 
 
     @testrail-C4523048
+    @DAT-46451
     Scenario: Annotation a text item
         When I upload a file in path "ann_text_object/tx.txt"
         Then Item exist in host
         When Item is annotated with annotations in file: "ann_text_object/text.json"
         Then Item annotations in host equal annotations in file "ann_text_object/text.json"
         And Object "Annotations" to_json() equals to Platform json.
+

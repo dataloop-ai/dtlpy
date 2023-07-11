@@ -8,6 +8,7 @@ Feature: Pipeline entity DatasetNode triggers method testing
 
   @pipelines.delete
   @testrail-C4533426
+  @DAT-46634
   Scenario: Create pipeline with dataset node > Should build trigger with default and custom filter - Executions should success
     When I create a pipeline with 2 dataset nodes and trigger with filters
       | key                      | value   |

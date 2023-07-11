@@ -9,6 +9,7 @@ Feature: List the dpks
 
 
     @testrail-C4524925
+    @DAT-46513
     Scenario: List the dpks
         When I list the dpks
         Then I should see at least 2 dpks

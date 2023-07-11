@@ -7,12 +7,14 @@ Feature: Cli Projects
         And I have context random number
 
     @testrail-C4523071
+    @DAT-46479
     Scenario: Projects list
         When I perform command:
             |projects|ls|
         Then I succeed
 
     @testrail-C4523071
+    @DAT-46479
     Scenario: Projects Create
         When I perform command:
             |projects|create|-p|to-delete-test-<random>_cli_project|
@@ -21,5 +23,6 @@ Feature: Cli Projects
         And "to-delete-test-<random>_cli_project" in output
 
     @testrail-C4523071
+    @DAT-46479
     Scenario: Finally
         Given I delete the project by the name of "to-delete-test-<random>_cli_project"

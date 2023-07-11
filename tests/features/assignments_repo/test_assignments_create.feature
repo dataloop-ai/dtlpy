@@ -12,6 +12,7 @@ Feature: Assignments repository create method testing
         And Add Members "annotator3@dataloop.ai" as "annotator"
 
     @testrail-C4523055
+    @DAT-46462
     Scenario: Create - minimum params
         When I create Task
             | task_name=min_params | due_date=auto |  assignee_ids=annotator1@dataloop.ai | items=3 |
@@ -21,6 +22,7 @@ Feature: Assignments repository create method testing
         And Assignment has the correct attributes
 
     @testrail-C4523055
+    @DAT-46462
     Scenario: Create - maximum params - filters
         When I create Task
             | task_name=min_params2 | due_date=auto |  assignee_ids=annotator1@dataloop.ai | filters={"filter": {"$and": [{"hidden": false}, {"type": "file"}, {"annotated": true}]}} |
@@ -30,6 +32,7 @@ Feature: Assignments repository create method testing
         And Assignment has the correct attributes
 
     @testrail-C4523055
+    @DAT-46462
     Scenario: Create - maximum params - items
         When I create Task
             | task_name=min_params | due_date=auto |  assignee_ids=annotator1@dataloop.ai | items=3 |

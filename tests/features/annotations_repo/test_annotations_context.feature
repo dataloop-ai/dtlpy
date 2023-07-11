@@ -11,6 +11,7 @@ Feature: Annotation repository Context testing
         And I have a segmentation annotation
 
     @testrail-C4523031
+    @DAT-46421
     Scenario: Get Annotation from the Dataset it belong to
         When I get the annotation from dataset number 1
         Then Annotation dataset_id is equal to dataset 1 id
@@ -19,6 +20,7 @@ Feature: Annotation repository Context testing
         And Annotation item.id is equal to item 1 id
 
     @testrail-C4523031
+    @DAT-46421
     Scenario: Get Annotation from the Dataset it not belong to
         When I get the annotation from dataset number 2
         Then Annotation dataset_id is equal to dataset 1 id
@@ -27,6 +29,7 @@ Feature: Annotation repository Context testing
         And Annotation item.id is equal to item 1 id
 
     @testrail-C4523031
+    @DAT-46421
     Scenario: Get Annotation from the Item it belong to
         When I get the annotation from item number 1
         Then Annotation dataset_id is equal to dataset 1 id
@@ -35,6 +38,7 @@ Feature: Annotation repository Context testing
         And Annotation item.id is equal to item 1 id
 
     @testrail-C4523031
+    @DAT-46421
     Scenario: Get Annotation from the Item it not belong to
         Given I set Dataset to Dataset 2
         And Item in path "0000000162.jpg" is uploaded to "Dataset"

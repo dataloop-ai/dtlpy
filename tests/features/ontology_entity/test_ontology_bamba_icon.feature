@@ -7,6 +7,7 @@ Feature: Ontology Labels with icon
         And Dataset has ontology
 
     @testrail-C4532189
+    @DAT-46555
     Scenario: Add images to labels from different folders
         When I add label "1" to ontology with "labels/1/bamba-icon.jpg"
         When I add label "2" to ontology with "labels/2/bamba-icon.jpg"

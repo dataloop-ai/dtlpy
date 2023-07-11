@@ -13,6 +13,7 @@ Feature: Pipeline entity method testing
 
   @pipelines.delete
   @testrail-C4533385
+  @DAT-46573
   Scenario: pipeline execute batch
     When I create a pipeline with name "test_pipeline_execute"
     And I add a code node to the pipeline
@@ -22,6 +23,7 @@ Feature: Pipeline entity method testing
   @services.delete
   @packages.delete
   @testrail-C4533386
+  @DAT-46573
   Scenario: service execute batch
     Given There is a package (pushed from "services/item_with_init") by the name of "services-flow"
     When I deploy a service with init prams

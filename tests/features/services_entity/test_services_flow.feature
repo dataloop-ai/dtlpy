@@ -12,7 +12,9 @@ Feature: Service repository Context testing
     @services.delete
     @packages.delete
     @testrail-C4532909
+    @DAT-46604
     Scenario: Get Service from the project it belong to
         When I deploy a service with init prams
         Then I execute the service
         Then The execution success with the right output
+

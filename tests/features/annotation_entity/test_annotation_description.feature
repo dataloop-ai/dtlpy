@@ -7,6 +7,7 @@ Feature: Annotation description
 
 
     @testrail-C4532735
+    @DAT-46438
     Scenario: Add and delete annotation description to uploaded item - image item
         Given I upload an item in the path "0000000162.jpg" to the dataset
         And   I upload annotation in the path "0162_annotations.json" to the item

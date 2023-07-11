@@ -7,12 +7,14 @@ Feature: Cli Others
         And I have context random number
 
     @testrail-C4523070
+    @DAT-46478
     Scenario: Exit
         When I perform command:
             |exit|
         Then I succeed
 
     @testrail-C4523070
+    @DAT-46478
     Scenario: Help
         When I perform command:
             |help|
@@ -28,6 +30,7 @@ Feature: Cli Others
         And "CLI for Dataloop" in output
 
     @testrail-C4523070
+    @DAT-46478
     Scenario: Exit
         When I perform command:
             |version|

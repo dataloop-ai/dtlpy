@@ -6,6 +6,7 @@ Feature: Annotations format vtt
         And I create a dataset by the name of "Dataset_annotations_format_vtt" in the project
 
     @testrail-C4532884
+    @DAT-46429
     Scenario: Check all vtt download options
         Given I upload an item of type "mp3 audio" to the dataset
         And   I upload "subtitle" annotation to the audio item
@@ -42,3 +43,4 @@ Feature: Annotations format vtt
              | Parameter        | Value                       |
              | item_json_dir    | annotations_format_vtt2     |
              | dataset_json_dir | annotations_format_vtt3/vtt |
+

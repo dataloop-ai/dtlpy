@@ -6,6 +6,7 @@ Feature: Annotation description with builder - text item
         And   I create a dataset by the name of "annotations_description_dataset" in the project
 
     @testrail-C4532808
+    @DAT-46441
     Scenario: Upload classification annotation with description
         Given I upload an item of type "txt text" to the dataset
         And   I upload "classification" annotation with description "Annotation description" to the text item
@@ -15,6 +16,7 @@ Feature: Annotation description with builder - text item
 
 
     @testrail-C4532808
+    @DAT-46441
     Scenario: Upload point annotation with description
         Given I upload an item of type "txt text" to the dataset
         And   I upload "text mark" annotation with description "Annotation description" to the text item

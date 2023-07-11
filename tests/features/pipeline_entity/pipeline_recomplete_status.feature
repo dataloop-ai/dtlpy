@@ -11,6 +11,7 @@ Feature: Pipeline entity method testing recomplete items
   @pipelines.delete
   @services.delete
   @testrail-C4529141
+  @DAT-46579
   Scenario: pipeline re-complete status for task
     When I create a package and service to pipeline
     And I create a pipeline dataset, task "annotation" and code nodes - repeatable "True"
@@ -27,6 +28,7 @@ Feature: Pipeline entity method testing recomplete items
   @pipelines.delete
   @services.delete
   @testrail-C4529141
+  @DAT-46579
   Scenario: pipeline re-complete status for qa task
     When I create a package and service to pipeline
     And I create a pipeline dataset, task "qa" and code nodes - repeatable "True"
@@ -43,6 +45,7 @@ Feature: Pipeline entity method testing recomplete items
   @pipelines.delete
   @services.delete
   @testrail-C4529141
+  @DAT-46579
   Scenario: pipeline re-complete status for repeatable false task
     When I create a package and service to pipeline
     And I create a pipeline dataset, task "annotation" and code nodes - repeatable "False"
@@ -54,3 +57,4 @@ Feature: Pipeline entity method testing recomplete items
     Then I wait "30"
     And I update item status to "complete" with task id
     And I expect that pipeline execution has "3" success executions
+

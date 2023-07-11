@@ -8,11 +8,13 @@ Feature: Item description testing
 
 
     @testrail-C4532161
+    @DAT-46544
     Scenario: Add description to item
         When  I Add description "Item description" to item
         Then  I validate item.description has "Item description" value
 
     @testrail-C4532161
+    @DAT-46544
     Scenario: Remove field from root
         When  I Add description "Item description" to item
         Then  I validate item.description has "Item description" value
@@ -21,12 +23,14 @@ Feature: Item description testing
         And Return from and to Json functions to the original implementation
 
     @testrail-C4532161
+    @DAT-46544
     Scenario: add field to the root
         When I add new field to the root
         And  new field do not added
         Then Return from and to Json functions to the original implementation
 
     @testrail-C4532161
+    @DAT-46544
     Scenario: Delete root filed will set it to None
         When  I Add description "Item description" to item
         Then  I validate item.description has "Item description" value
@@ -34,6 +38,7 @@ Feature: Item description testing
         Then  I validate item.description is None
 
     @testrail-C4532161
+    @DAT-46544
     Scenario: Removing from no-root
         When I update item system metadata with system_metadata="True"
         Then Then I receive an Item object
@@ -44,6 +49,7 @@ Feature: Item description testing
         And metadata was deleted
 
     @testrail-C4532161
+    @DAT-46544
     Scenario: Set description - all options
         When I Add description "Item description1" to item with "item.description"
         Then I validate item.description has "Item description1" value
@@ -58,6 +64,7 @@ Feature: Item description testing
         Then I validate item.description has "Item description5" value
 
     @testrail-C4532720
+    @DAT-46544
     Scenario: Upload annotation with description
         Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
         And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"

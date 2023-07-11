@@ -9,6 +9,7 @@ Feature: Pipeline resource connectors testing
 
   @pipelines.delete
   @testrail-C4533573
+  @DAT-46585
   Scenario: Code node with 2 outputs - Should pass the output to correct input
     When I create a pipeline with code nodes with 2 outputs and code node with 2 inputs
     And I upload item in "0000000162.jpg" to dataset

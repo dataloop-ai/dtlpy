@@ -10,6 +10,7 @@ Feature: Tasks repository get method testing
         And Add Members "annotator2@dataloop.ai" as "annotator"
 
     @testrail-C4523169
+    @DAT-46624
     Scenario: Get - name
         When I create Task
             | task_name=min_params | due_date=auto | assignee_ids=auto |
@@ -18,6 +19,7 @@ Feature: Tasks repository get method testing
         And Task received equals task created
 
     @testrail-C4523169
+    @DAT-46624
     Scenario: Get - id
         When I create Task
             | task_name=min_params | due_date=auto | assignee_ids=auto |
@@ -26,6 +28,7 @@ Feature: Tasks repository get method testing
         And Task received equals task created
 
     @testrail-C4523169
+    @DAT-46624
     Scenario: Get - not existing - name
         When I create Task
             | task_name=min_params | due_date=auto | assignee_ids=auto |
@@ -33,8 +36,10 @@ Feature: Tasks repository get method testing
         Then "NotFound" exception should be raised
 
     @testrail-C4523169
+    @DAT-46624
     Scenario: Get - not existing - id
         When I create Task
             | task_name=min_params | due_date=auto | assignee_ids=auto |
         And I get task by wrong "id"
         Then "NotFound" exception should be raised
+

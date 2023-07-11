@@ -10,6 +10,7 @@ Feature: Triggers repository types - item
     @services.delete
     @packages.delete
     @testrail-C4525052
+    @DAT-46648
     Scenario: Updated Item Trigger with always
         Given There is a package (pushed from "triggers/item") by the name of "triggers-update"
         And There is a service by the name of "triggers-update" with module name "default_module" saved to context "service"
@@ -23,6 +24,7 @@ Feature: Triggers repository types - item
         And I wait "7"
         When I edit item user metadata
         Then Service was triggered on "item" again
+
 
 
 

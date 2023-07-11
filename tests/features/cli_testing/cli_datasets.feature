@@ -7,6 +7,7 @@ Feature: Cli Datasets
         And I have context random number
 
     @testrail-C4523068
+    @DAT-46476
     Scenario: Datasets Create
         When I perform command:
             |projects|create|-p|to-delete-test-<random>_cli_datasets_project|
@@ -18,6 +19,7 @@ Feature: Cli Datasets
         And I create a dataset by the name of "test_<random>_cli_datasets_dataset" in project "to-delete-test-<random>_cli_datasets_project"
 
     @testrail-C4523068
+    @DAT-46476
     Scenario: Datasets list
         When I perform command:
             |datasets|ls|-p|to-delete-test-<random>_cli_datasets_project|
@@ -25,6 +27,7 @@ Feature: Cli Datasets
         And "test_<random>_cli_datasets_dataset" in output
 
     @testrail-C4523068
+    @DAT-46476
     Scenario: Finally
         Given I delete the project by the name of "to-delete-test-<random>_cli_datasets_project"
         And I clean folder "<rel_path>/cli_dataset_download"

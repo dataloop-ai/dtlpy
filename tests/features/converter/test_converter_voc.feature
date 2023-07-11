@@ -6,6 +6,7 @@ Feature: Converter voc format
         And I create a dataset with a random name
 
     @testrail-C4523082
+    @DAT-46490
     Scenario: Convert local voc dataset to dataloop
         Given There is a local "voc" dataset in "converter/voc/local_dataset_attr"
         When I convert local "voc" dataset to "dataloop"
@@ -14,6 +15,7 @@ Feature: Converter voc format
         Then local "voc" dataset in "converter/voc/local_dataset_attr" is equal to reversed dataset in "converter/voc/reverse"
 
     @testrail-C4523082
+    @DAT-46490
     Scenario: Upload dataset with inner folder using coco converter
         Given I use "VOC" converter to upload items with annotations to the dataset using the given params
             | Parameter              | Value                                                |

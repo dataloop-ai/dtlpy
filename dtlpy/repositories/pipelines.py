@@ -8,7 +8,9 @@ BASIC_PIPELINE = {
     "name": "",
     "projectId": "",
     "nodes": [],
-    "connections": []
+    "connections": [],
+    "startNodes": [],
+    "variables": []
 }
 
 
@@ -380,12 +382,22 @@ class Pipelines:
             pipeline = project.pipelines.update(pipeline='pipeline_entity')
         """
 
+        if pipeline.status == entities.CompositionStatus.INSTALLED:
+            raise exceptions.PlatformException(
+                error='400',
+                message='Cannot update pipeline while it is installed'
+            )
+
         # payload
         payload = pipeline.to_json()
 
         # update settings
         if pipeline.settings_changed():
             self.update_settings(pipeline=pipeline, settings=pipeline.settings)
+
+        # update variables
+        if pipeline.variables_changed():
+            self.__update_variables(pipeline=pipeline)
 
         success, response = self._client_api.gen_request(
             req_type='patch',

@@ -6,6 +6,7 @@ Feature: Annotation Entity Add annotation
         And I create a dataset with a random name
 
     @testrail-C4523041
+    @DAT-46437
     Scenario: Image - using add annotation method
         Given Classes in file: "classes_new.json" are uploaded to test Dataset
         And Item in path "0000000162.jpg" is uploaded to "Dataset"
@@ -14,6 +15,7 @@ Feature: Annotation Entity Add annotation
         Then Item in host has annotation added
 
     @testrail-C4523041
+    @DAT-46437
     Scenario: Video - using add annotation method
         Given Classes in file: "video_classes.json" are uploaded to test Dataset
         And Item in path "sample_video.mp4" is uploaded to "Dataset"
@@ -23,9 +25,11 @@ Feature: Annotation Entity Add annotation
         Then Item in host has annotation added
 
     @testrail-C4523041
+    @DAT-46437
     Scenario: Audio - using add annotation method
         Given Classes in file: "classes_new.json" are uploaded to test Dataset
         And Item in path "simple_audio.mp3" is uploaded to "Dataset"
         When I add annotation to audio using add annotation method
         Then audio in host has annotation added
+
 

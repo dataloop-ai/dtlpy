@@ -6,6 +6,7 @@ Feature: Datasets repository update service testing
         And I create a project by the name of "datasets_edit"
 
     @testrail-C4523087
+    @DAT-46495
      Scenario: Change dataset name to a legal name
          Given There are no datasets
          And I create a dataset by the name of "Original_Dataset_Name"
@@ -22,6 +23,7 @@ Feature: Datasets repository update service testing
 #         Then "BadRequest" exception should be raised
 
     @testrail-C4523087
+    @DAT-46495
      Scenario: Change dataset name to an existing dataset name
          Given There are no datasets
          And I create a dataset by the name of "Existing_Dataset_Name"

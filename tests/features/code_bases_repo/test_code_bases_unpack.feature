@@ -6,6 +6,7 @@ Feature: Codebases repository Unpack method
         And I create a dataset with a random name
 
     @testrail-C4523077
+    @DAT-46485
      Scenario: Unpack by name
          Given There is a Codebase directory with a python file in path "codebases_assets/codebases_unpack"
          And I pack directory by name "codebase_name1"
@@ -13,6 +14,7 @@ Feature: Codebases repository Unpack method
          Then Unpacked code base equal to code base in "codebases_assets/codebases_unpack"
 
     @testrail-C4523077
+    @DAT-46485
      Scenario: Unpack by id
          Given There is a Codebase directory with a python file in path "codebases_assets/codebases_unpack"
          And I pack directory by name "codebase_name2"
@@ -20,6 +22,7 @@ Feature: Codebases repository Unpack method
          Then Unpacked code base equal to code base in "codebases_assets/codebases_unpack"
 
     @testrail-C4523077
+    @DAT-46485
      Scenario: Unpack non-existing by name
          Given There is a Codebase directory with a python file in path "codebases_assets/codebases_unpack"
          And I pack directory by name "codebase_name3"
@@ -27,6 +30,7 @@ Feature: Codebases repository Unpack method
          Then "NotFound" exception should be raised
 
     @testrail-C4523077
+    @DAT-46485
      Scenario: Unpack by non-existing id
          Given There is a Codebase directory with a python file in path "codebases_assets/codebases_unpack"
          And I pack directory by name "codebase_name4"
@@ -34,6 +38,7 @@ Feature: Codebases repository Unpack method
          Then "BadRequest" exception should be raised
 
     @testrail-C4523077
+    @DAT-46485
      Scenario: Unpack - specific version
          Given There is a Codebase directory with a python file in path "codebases_assets/codebases_unpack"
          And I pack directory by name "codebase_name5"
@@ -43,6 +48,7 @@ Feature: Codebases repository Unpack method
          Then Unpacked code base equal to code base in "codebases_assets/codebases_unpack"
 
     @testrail-C4523077
+    @DAT-46485
      Scenario: Unpack - latest version
          Given There is a Codebase directory with a python file in path "codebases_assets/codebases_unpack"
          And I pack directory by name "codebase_name6"
@@ -52,6 +58,7 @@ Feature: Codebases repository Unpack method
          Then Unpacked code base equal to code base in "codebases_assets/codebases_unpack"
 
     @testrail-C4523077
+    @DAT-46485
     Scenario: Unpack - all versions
         Given There is a Codebase directory with a python file in path "codebases_assets/codebases_unpack"
         And I pack directory by name "codebase_name7"
@@ -61,6 +68,7 @@ Feature: Codebases repository Unpack method
         Then I receive all versions in "codebases_assets/codebase_unpack" and they are equal to versions in "codebases_assets/codebases_unpack/some_code.py"
 
     @testrail-C4523077
+    @DAT-46485
     Scenario: Unpack - non-existing version
         Given There is a Codebase directory with a python file in path "codebases_assets/codebases_unpack"
         And I pack directory by name "codebase_name8"
@@ -68,4 +76,5 @@ Feature: Codebases repository Unpack method
         And I pack directory by name "codebase_name8"
         When I try to unpack a code base "codebase_name8" version "5" to "codebases_assets/codebase_unpack"
         Then "NotFound" exception should be raised
+
 

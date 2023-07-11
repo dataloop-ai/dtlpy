@@ -9,6 +9,7 @@ Feature: Executions repository execution creator testing
   @services.delete
   @packages.delete
   @testrail-C4533878
+  @DAT-46521
   Scenario: Created Item Execution - Execution creator should be the current user
     Given There is a package (pushed from "executions/item") by the name of "execution-create"
     And There is a service by the name of "executions-creator" with module name "default_module" saved to context "service"
@@ -23,6 +24,7 @@ Feature: Executions repository execution creator testing
   @services.delete
   @packages.delete
   @testrail-C4533878
+  @DAT-46521
   Scenario: Created Item Execution by trigger event - Execution creator should be piper user
     Given There is a package (pushed from "executions/item") by the name of "execution-create"
     And There is a service by the name of "executions-creator" with module name "default_module" saved to context "service"
@@ -37,6 +39,7 @@ Feature: Executions repository execution creator testing
 
   @pipelines.delete
   @testrail-C4533878
+  @DAT-46521
   Scenario: Pipeline - Created Item Execution - Execution creator should be current user
     Given I create pipeline with the name "pipeline"
     And I create "dataset" node with params
@@ -55,6 +58,7 @@ Feature: Executions repository execution creator testing
 
   @pipelines.delete
   @testrail-C4533878
+  @DAT-46521
   Scenario: Pipeline - Created Item Execution trigger event - Execution creator should be current user
     Given I create pipeline with the name "pipeline"
     And I create "dataset" node with params
@@ -73,3 +77,4 @@ Feature: Executions repository execution creator testing
     Then I validate pipeline execution params include node executions "True"
       | key     | value |
       | creator | piper |
+

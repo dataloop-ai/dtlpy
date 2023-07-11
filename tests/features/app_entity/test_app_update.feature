@@ -8,6 +8,7 @@ Feature: Test app update
         And I install the app
 
     @testrail-C4524925
+    @DAT-46455
     Scenario: I update the app
         When I update the app
         Then The update should success

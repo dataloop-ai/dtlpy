@@ -6,6 +6,7 @@ Feature: Annotation Entity create video annotation from blank
         And I create a dataset with a random name
 
     @testrail-C4523045
+    @DAT-46446
     Scenario: Video - using add annotation method
         Given Classes in file: "video_classes.json" are uploaded to test Dataset
         And Item in path "sample_video.mp4" is uploaded to "Dataset"
@@ -15,6 +16,7 @@ Feature: Annotation Entity create video annotation from blank
         Then Item in host has video annotation added
 
     @testrail-C4523045
+    @DAT-46446
     Scenario: Video - Add annotation to video with fix frame false
         Given Classes in file: "video_classes.json" are uploaded to test Dataset
         And Item in path "sample_video.mp4" is uploaded to "Dataset"
@@ -25,6 +27,7 @@ Feature: Annotation Entity create video annotation from blank
 
 
     @testrail-C4523045
+    @DAT-46446
     Scenario: Video - get annotation from dl
         Given Classes in file: "video_classes.json" are uploaded to test Dataset
         And Item in path "sample_video.mp4" is uploaded to "Dataset"
@@ -35,6 +38,7 @@ Feature: Annotation Entity create video annotation from blank
         Then I validate annotation have frames
 
     @testrail-C4523045
+    @DAT-46446
     Scenario: Video - change attrs for frames
         Given Classes in file: "video_classes.json" are uploaded to test Dataset
         And Item in path "sample_video.mp4" is uploaded to "Dataset"

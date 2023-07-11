@@ -8,6 +8,7 @@ Feature: Packages repository get service testing
 
     @packages.delete
     @testrail-C4523136
+    @DAT-46557
     Scenario: Get package by name
         When I push "first" package
             |codebase_id=None|package_name=test-package|src_path=packages_get|inputs=None|outputs=None|
@@ -17,9 +18,11 @@ Feature: Packages repository get service testing
 
     @packages.delete
     @testrail-C4523136
+    @DAT-46557
     Scenario: Get package by id
         When I push "first" package
             |codebase_id=None|package_name=test-package|src_path=packages_get|inputs=None|outputs=None|
         When I get package by id
         Then I get a package entity
         And It is equal to package created
+

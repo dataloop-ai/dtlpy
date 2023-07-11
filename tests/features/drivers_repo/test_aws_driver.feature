@@ -4,14 +4,15 @@ Feature: Driver repository testing - AWS
   Background: Initiate Platform Interface
     Given Platform Interface is initialized as dlp and Environment is set according to git branch
     And I create a project by the name of "drivers_aws"
-    And I create "aws" integration with name "test-aws-integration"
+    And I create "s3" integration with name "test-aws-integration"
 
 
   @testrail-C4533706
   @datasets.delete
   @drivers.delete
+  @DAT-49271
   Scenario: Create AWS Driver
-    When I create driver "aws" with the name "test-aws-driver"
+    When I create driver "s3" with the name "test-aws-driver"
       | key         | value          |
       | bucket_name | sdk-automation |
       | region      | eu-west-1      |
@@ -22,8 +23,9 @@ Feature: Driver repository testing - AWS
 
   @testrail-C4533706
   @drivers.delete
+  @DAT-49271
   Scenario: Delete AWS Driver without connected dataset
-    When I create driver "aws" with the name "test-aws-driver"
+    When I create driver "s3" with the name "test-aws-driver"
       | key         | value          |
       | bucket_name | sdk-automation |
       | region      | eu-west-1      |
@@ -33,8 +35,9 @@ Feature: Driver repository testing - AWS
   @testrail-C4533706
   @datasets.delete
   @drivers.delete
+  @DAT-49271
   Scenario: Delete AWS Driver with connected dataset - Should return error
-    When I create driver "aws" with the name "test-aws-driver"
+    When I create driver "s3" with the name "test-aws-driver"
       | key         | value          |
       | bucket_name | sdk-automation |
       | region      | eu-west-1      |
@@ -49,8 +52,9 @@ Feature: Driver repository testing - AWS
   @testrail-C4533706
   @datasets.delete
   @drivers.delete
+  @DAT-49271
   Scenario: Create AWS Driver with path directory
-    When I create driver "aws" with the name "test-aws-driver"
+    When I create driver "s3" with the name "test-aws-driver"
       | key         | value          |
       | bucket_name | sdk-automation |
       | region      | eu-west-1      |
@@ -59,3 +63,19 @@ Feature: Driver repository testing - AWS
     When I create dataset "test-aws" with driver entity
     And I sync dataset in context
     Then I validate driver dataset has "4" items
+
+
+  @testrail-C4533706
+  @datasets.delete
+  @drivers.delete
+  @DAT-49271
+  Scenario: Create AWS-sts Driver
+    Given I create "aws-sts" integration with name "test-aws-sts-integration"
+    When I create driver "s3" with the name "test-aws-sts-driver"
+      | key         | value          |
+      | bucket_name | sdk-automation |
+      | region      | eu-west-1      |
+    Then I validate driver with the name "test-aws-sts-driver" is created
+    When I create dataset "test-aws" with driver entity
+    And I sync dataset in context
+    Then I validate driver dataset has "9" items

@@ -10,6 +10,7 @@ Feature: Tasks repository create qa task method testing
         And Add Members "annotator2@dataloop.ai" as "annotator"
 
     @testrail-C4523171
+    @DAT-46626
     Scenario: Create
         When I create Task
             | task_name=qa_test | due_date=auto | assignee_ids=auto | filters={"filter": {"$and": [{"hidden": false}, {"type": "file"}, {"annotated": true}]}} |
@@ -21,6 +22,7 @@ Feature: Tasks repository create qa task method testing
         And Task has the correct attributes for type "qa"
 
     @testrail-C4523171
+    @DAT-46626
     Scenario: Create - qa task with metadata
         Given I save dataset items to context
         When I create Task
@@ -31,3 +33,4 @@ Feature: Tasks repository create qa task method testing
         Then I receive a qa task object
         And Qa task is properly made
         And Task has the correct attributes for type "qa"
+

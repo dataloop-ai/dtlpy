@@ -14,6 +14,7 @@ Feature: Artifacts repository get artifact testing
 
   @packages.delete
   @testrail-C4523050
+  @DAT-46457
   Scenario: Download by artifact name - item
     When I upload "1" artifacts to "package"
     And I download artifact by "name"
@@ -21,6 +22,7 @@ Feature: Artifacts repository get artifact testing
 
   @packages.delete
   @testrail-C4523050
+  @DAT-46457
   Scenario: Download by artifact id - item
     When I upload "1" artifacts to "package"
     And I download artifact by "id"
@@ -28,6 +30,7 @@ Feature: Artifacts repository get artifact testing
 
   @packages.delete
   @testrail-C4523050
+  @DAT-46457
   Scenario: Download by artifact id - folder
     Given Context "artifact_filepath" is "artifacts_repo/artifact_folder"
     When I upload "1" artifacts to "package"
@@ -36,6 +39,7 @@ Feature: Artifacts repository get artifact testing
 
   @packages.delete
   @testrail-C4523050
+  @DAT-46457
   Scenario: Download with package name - item
     When I upload "1" artifacts to "package"
     And I download artifact by "package_name"
@@ -44,6 +48,7 @@ Feature: Artifacts repository get artifact testing
   @packages.delete
   @services.delete
   @testrail-C4523050
+  @DAT-46457
   Scenario: Download with execution id
     Given There is a service by the name of "artifacts-upload" with module name "default_module" saved to context "service"
     And Context has attribute execution_id = True

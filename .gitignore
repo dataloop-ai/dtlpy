@@ -148,3 +148,6 @@ stats.json
 src/
 
 sandbox/
+
+# dlp xray files
+create_test_execution.json

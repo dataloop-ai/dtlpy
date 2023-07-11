@@ -15,8 +15,17 @@ class BaseAnnotationDefinition:
 
         if attributes is None:
             attributes = list()
-        self.attributes = attributes
+        self._attributes = attributes
 
+    @property
+    def attributes(self):
+        return self._attributes
+
+    @attributes.setter
+    def attributes(self, v):
+        if not isinstance(v, list):
+            raise ValueError('Failed to update annotation attributes. Please use annotation.attrubeute to set the required values')
+        self._attributes = v
     @property
     def top(self):
         return self._top

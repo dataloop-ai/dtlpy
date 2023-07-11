@@ -6,6 +6,7 @@ Feature: Datasets repository readonly mode testing
         And I create a project by the name of "datasets_readonly"
 
     @testrail-C4523090
+    @DAT-46498
     Scenario: Set dataset readonly mode to True
         Given There are no datasets
         And I create a dataset with a random name
@@ -15,6 +16,7 @@ Feature: Datasets repository readonly mode testing
         When I set dataset readonly mode to "False"
 
     @testrail-C4523090
+    @DAT-46498
     Scenario: Set and unset readonly mode
         Given There are no datasets
         And I create a dataset with a random name
@@ -26,3 +28,4 @@ Feature: Datasets repository readonly mode testing
         Then Dataset is in readonly mode
         When I set dataset readonly mode to "False"
         Then Dataset is not in readonly mode
+

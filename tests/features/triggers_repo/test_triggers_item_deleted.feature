@@ -11,6 +11,7 @@ Feature: Triggers repository types - item
     @services.delete
     @packages.delete
     @testrail-C4525043
+    @DAT-46646
     Scenario: Deleted Item Trigger with once
         Given There is a package (pushed from "triggers/item") by the name of "triggers-delete"
         And There is a service by the name of "triggers-delete" with module name "default_module" saved to context "service"

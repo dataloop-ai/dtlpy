@@ -7,15 +7,18 @@ Feature: Platform Urls Tests
         And Item in path "0000000162.jpg" is uploaded to "Dataset"
 
     @testrail-C4532781
+    @DAT-46592
     Scenario: Check project platform_url
         Then  I validate the platform url "project.platform_url" works
 
     @testrail-C4532781
+    @DAT-46592
     Scenario: Check dataset platform_url
         Then  I validate the platform url "dataset.platform_url" works
         Then  I validate the platform url "project.dataset.platform_url" works
 
     @testrail-C4532781
+    @DAT-46592
     Scenario: Check item platform_url
         Then  I validate the platform url "item.platform_url" works
         Then  I validate the platform url "dataset.item.platform_url" works

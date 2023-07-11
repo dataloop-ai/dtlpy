@@ -14,6 +14,7 @@ Feature: Artifacts repository get artifact testing
 
   @packages.delete
   @testrail-C4523049
+  @DAT-46456
   Scenario: Delete by name - item
     When I upload "1" artifacts to "package"
     When I delete artifact by "name"
@@ -21,6 +22,7 @@ Feature: Artifacts repository get artifact testing
 
   @packages.delete
   @testrail-C4523049
+  @DAT-46456
   Scenario: Delete with package  - item
     When I upload "1" artifacts to "package"
     When I delete artifact by "id"
@@ -28,6 +30,7 @@ Feature: Artifacts repository get artifact testing
 
   @packages.delete
   @testrail-C4523049
+  @DAT-46456
   Scenario: Delete with package name
     When I upload "1" artifacts to "package"
     When I delete artifact by "package_name"
@@ -36,6 +39,7 @@ Feature: Artifacts repository get artifact testing
   @packages.delete
   @services.delete
   @testrail-C4523049
+  @DAT-46456
   Scenario: Delete with execution
     Given There is a service by the name of "artifacts-upload" with module name "default_module" saved to context "service"
     And I create a dataset with a random name

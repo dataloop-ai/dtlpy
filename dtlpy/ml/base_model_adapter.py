@@ -1,11 +1,9 @@
 import tempfile
 import datetime
 import logging
-import typing
 import shutil
 import base64
 import tqdm
-import json
 import io
 import os
 from PIL import Image
@@ -25,6 +23,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         # entities
         self._model_entity = None
         self._package = None
+        self._base_configuration = dict()
         self.package_name = None
         self.model = None
         self.bucket_path = None
@@ -44,8 +43,10 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         if self._model_entity is not None:
             configuration = self.model_entity.configuration
         # else - load the default from the package
-        else:
+        elif self._package is not None:
             configuration = self.package.metadata.get('system', {}).get('ml', {}).get('defaultConfiguration', {})
+        else:
+            configuration = self._base_configuration
         return configuration
 
     @configuration.setter
