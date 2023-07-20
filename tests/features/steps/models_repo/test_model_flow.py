@@ -65,24 +65,25 @@ def step_impl(context, func):
         context.execution = context.model.__getattribute__(func)()
 
 
-@behave.then(u'model status should be "{status}"')
-def step_impl(context, status):
+@behave.then(u'model status should be "{status}" with execution "{flag}"')
+def step_impl(context, status, flag):
     num_try = 45
     interval = 20
     completed = False
 
-    if isinstance(context.execution, dl.Execution):
-        for i in range(num_try):
-            time.sleep(interval)
-            context.execution = dl.executions.get(execution_id=context.execution.id)
-            if context.execution.latest_status['status'] in ['success', 'failed']:
-                completed = True
-                break
-    else:
-        time.sleep(10)
-        completed = True
+    if eval(flag):
+        if isinstance(context.execution, dl.Execution):
+            for i in range(num_try):
+                time.sleep(interval)
+                context.execution = dl.executions.get(execution_id=context.execution.id)
+                if context.execution.latest_status['status'] in ['success', 'failed']:
+                    completed = True
+                    break
+        else:
+            time.sleep(10)
+            completed = True
+        assert completed, "TEST FAILED: execution was not completed"
 
-    assert completed, "TEST FAILED: execution was not completed"
     context.model = dl.models.get(model_id=context.model.id)
     assert context.model.status == status, f"TEST FAILED: model status is not as expected, expected: {status}, got: {context.model.status}"
 

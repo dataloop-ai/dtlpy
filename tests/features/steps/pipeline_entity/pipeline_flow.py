@@ -271,9 +271,17 @@ def step_impl(context, item_path):
 
 @behave.then(u'verify pipeline flow result')
 def step_impl(context):
-    time.sleep(15)
-    context.item = context.dataset.items.get(item_id=context.item.id)
-    assert context.item.metadata['system'].get('fromPipe', False)
+    interval = 10
+    num_tries = 30
+    fromPipe = False
+    for i in range(num_tries):
+        time.sleep(interval)
+        context.item = context.dataset.items.get(item_id=context.item.id)
+        if context.item.metadata['system'].get('fromPipe', False):
+            fromPipe = True
+            break
+    assert fromPipe, "TEST FAILED: item.metadata['system'] missing fromPipe: True"
+
     time.sleep(20)
     context.item = context.dataset.items.get(item_id=context.item.id)
     ass_id = None
@@ -283,8 +291,8 @@ def step_impl(context):
     context.item.update_status(status='complete', assignment_id=ass_id, clear=False)
     current_num_of_tries = 0
     flag = False
-    while flag is False and current_num_of_tries < 6:
-        time.sleep(10)
+    while flag is False and current_num_of_tries < 12:
+        time.sleep(15)
         context.item = context.dataset.items.get(item_id=context.item.id)
         try:
             if context.item.metadata['user'] == {'Hello': 'World'}:

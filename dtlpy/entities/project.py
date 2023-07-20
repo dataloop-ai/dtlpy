@@ -62,7 +62,7 @@ class Project(entities.BaseEntity):
             'repositories',
             'projects triggers datasets items recipes packages codebases artifacts times_series services '
             'executions assignments tasks bots webhooks models analytics ontologies '
-            'drivers pipelines feature_sets features integrations settings apps dpks'
+            'drivers pipelines feature_sets features integrations settings apps dpks compositions'
         )
         datasets = repositories.Datasets(client_api=self._client_api, project=self)
         return reps(
@@ -94,7 +94,8 @@ class Project(entities.BaseEntity):
                                            resource=self,
                                            resource_type=entities.PlatformEntityType.PROJECT),
             apps=repositories.Apps(client_api=self._client_api, project=self),
-            dpks=repositories.Dpks(client_api=self._client_api, project=self)
+            dpks=repositories.Dpks(client_api=self._client_api, project=self),
+            compositions=repositories.Compositions(client_api=self._client_api, project=self)
         )
 
     @property
@@ -145,10 +146,16 @@ class Project(entities.BaseEntity):
     def apps(self):
         assert isinstance(self._repositories.apps, repositories.Apps)
         return self._repositories.apps
+
     @property
     def dpks(self):
         assert isinstance(self._repositories.dpks, repositories.Dpks)
         return self._repositories.dpks
+
+    @property
+    def compositions(self):
+        assert isinstance(self._repositories.compositions, repositories.Compositions)
+        return self._repositories.compositions
 
     @property
     def projects(self):

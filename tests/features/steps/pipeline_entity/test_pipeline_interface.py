@@ -11,7 +11,7 @@ def step_impl(context, node_type):
         params[row['key']] = row['value']
 
     if node_type == "dataset":
-        context.dataset_node = dl.DatasetNode(
+        context.node = dl.DatasetNode(
             name=params.get('name', context.dataset.name),
             project_id=context.project.id,
             dataset_id=context.dataset.id,
@@ -19,7 +19,20 @@ def step_impl(context, node_type):
             position=eval(params.get('position', "(1, 1)"))
         )
 
-    context.nodes.append(context.dataset_node)
+    elif node_type == 'code':
+        def run(item):
+            return item
+
+        context.node = dl.CodeNode(
+            name=params.get('name', "codenode"),
+            position=eval(params.get('position', "(1, 1)")),
+            project_id=context.project.id,
+            method=run,
+            project_name=context.project.name
+        )
+
+    context.nodes.append(context.node)
+
 
 
 @behave.Given(u'I create pipeline with the name "{pipeline_name}"')
@@ -49,7 +62,7 @@ def step_impl(context):
 
     context.filters = context.dl.Filters()
     for key, val in params.items():
-        context.filters.add(field=key, values=val)
+        context.filters.add(field=key, values=eval(val))
 
     context.pipeline.nodes[0].add_trigger(filters=context.filters)
     context.pipeline = context.pipeline.update()

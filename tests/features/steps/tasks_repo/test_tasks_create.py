@@ -62,7 +62,12 @@ def step_impl(context, task_type):
         elif key == 'recipe_id':
             assert context.task.recipe_id == val
         elif key == 'metadata':
-            assert context.task.metadata[list(val.keys())[0]] == val[list(val.keys())[0]]
+            if "system" in val.keys():
+                assert val['system'].items() <= context.task.metadata['system'].items(), "TEST FAILED: Expected: {}, Got: {}".format(val['system'].items(),
+                                                                                                                                     context.task.metadata['system'].items())
+            else:
+                assert context.task.metadata[list(val.keys())[0]] == val[list(val.keys())[0]], "TEST FAILED: Expected: {}, Got: {}".format(val[list(val.keys())[0]],
+                                                                                                                                           context.task.metadata[list(val.keys())[0]])
         elif key == 'batch_size':
             task_assignments = [assignment.total_items for assignment in context.task.assignments.list()]
             assert all([int(val) == total for total in task_assignments])

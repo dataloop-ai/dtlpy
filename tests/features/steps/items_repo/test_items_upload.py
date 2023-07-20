@@ -31,6 +31,7 @@ def step_impl(context, item_local_path, remote_path):
     item_local_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], item_local_path)
     context.item = context.dataset.items.upload(local_path=item_local_path,
                                                 remote_path=remote_path)
+    context.uploaded_item_with_trigger = context.item
 
 
 @behave.then(u"Item exist in host")

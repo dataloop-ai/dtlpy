@@ -1,4 +1,5 @@
 import random
+import dtlpy as dl
 
 import behave
 
@@ -8,6 +9,11 @@ def step_impl(context):
     context.dpk.name = context.dpk.name + str(random.randint(10000, 1000000))
     context.published_dpk = context.project.dpks.publish(context.dpk)
     context.feature.dpk = context.published_dpk
+
+
+@behave.when(u"I add the context.dataset to the dpk model")
+def step_impl(context):
+    context.dpk.components.models[0]['datasetId'] = context.dataset.id
 
 
 @behave.then(u'The user defined properties should have the same values')
@@ -32,3 +38,12 @@ def step_impl(context):
     assert dpk.created_at is not None
     assert dpk.codebase is not None
     assert dpk.url is not None
+
+
+@behave.when(u'I set the model in the context')
+def step_impl(context):
+    composition = context.project.compositions.get(composition_id=context.app.composition_id)
+    context.model = context.project.models.get(model_id=composition["models"][0]["modelId"])
+
+
+

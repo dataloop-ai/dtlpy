@@ -9,6 +9,10 @@ from filelock import FileLock
 from dotenv import load_dotenv
 import subprocess
 
+from behave.reporter.summary import SummaryReporter
+from behave.formatter.base import StreamOpener
+import sys
+
 
 
 try:
@@ -25,6 +29,8 @@ def before_all(context):
 
 @fixture
 def after_feature(context, feature):
+    print_feature_filename(context, feature)
+
     if hasattr(feature, 'bot'):
         try:
             feature.bot.delete()
@@ -344,3 +350,10 @@ def reset_setenv(context):
     # save return code
     context.return_code = p.returncode
     assert context.return_code == 0, "AFTER TEST FAILED: {}".format(context.err)
+
+
+def print_feature_filename(context, feature):
+    s_r = SummaryReporter(context.config)
+    stream = getattr(sys, s_r.output_stream_name, sys.stderr)
+    p_stream = StreamOpener.ensure_stream_with_encoder(stream)
+    p_stream.write("{}\n".format(feature.filename.split('/')[-1]))

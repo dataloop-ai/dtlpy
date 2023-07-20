@@ -13,11 +13,11 @@ Feature: Models repository flow testing
   @DAT-48263
   Scenario: test flow model
     When i "train" the model
-    Then model status should be "trained"
+    Then model status should be "trained" with execution "True"
     When i "deploy" the model
-    Then model status should be "deployed"
+    Then model status should be "deployed" with execution "True"
     When i "evaluate" the model
-    Then model status should be "deployed"
+    Then model status should be "deployed" with execution "True"
     And Dataset has a scores file
     When i call the precision recall api
     Then i should get a json response

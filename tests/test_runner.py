@@ -284,7 +284,7 @@ if __name__ == '__main__':
             if ext in ['.feature']:
                 features_to_run.add(os.path.join(path, filename))
 
-    pbar = tqdm(total=len(features_to_run))
+    pbar = tqdm(total=len(features_to_run), desc="Features progress")
 
     test_state = TestState()
     test_state.start()
@@ -296,6 +296,7 @@ if __name__ == '__main__':
 
     pool.close()
     pool.join()
+    pbar.close()
 
     test_state.stop()
 

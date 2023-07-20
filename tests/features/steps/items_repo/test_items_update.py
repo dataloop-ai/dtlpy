@@ -26,8 +26,12 @@ def step_impl(context):
     original_item_json.pop("name")
     item_get_json.pop("metadata")
     original_item_json.pop("metadata")
+    item_get_json.pop("updatedAt")
+    original_item_json.pop("updatedAt")
+    item_get_json.pop("updatedBy")
+    original_item_json.pop("updatedBy")
 
-    assert item_get_json == original_item_json
+    assert item_get_json == original_item_json, "TEST FAILED: Expected : {}, Got: {}".format(original_item_json, item_get_json)
 
 
 @behave.then(u'Item in host was changed to "{name}"')

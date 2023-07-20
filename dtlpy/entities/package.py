@@ -480,7 +480,9 @@ class Package(entities.DlEntity):
         Open the package in web platform
 
         """
-        self._client_api._open_in_web(url=self.platform_url)
+        url = self._client_api._get_resource_url(
+            f"projects/{self.project.id}/faas?byCreator=false&byProject=true&byDataloop=false&tab=library&name={self.name}")
+        self._client_api._open_in_web(url=url)
 
     def test(self,
              cwd=None,

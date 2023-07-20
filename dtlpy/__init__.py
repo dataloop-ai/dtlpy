@@ -159,6 +159,7 @@ settings = repositories.Settings(client_api=client_api)
 apps = repositories.Apps(client_api=client_api)
 dpks = repositories.Dpks(client_api=client_api)
 messages = repositories.Messages(client_api=client_api)
+compositions = repositories.Compositions(client_api=client_api)
 
 try:
     check_sdk.check(version=__version__, client_api=client_api)

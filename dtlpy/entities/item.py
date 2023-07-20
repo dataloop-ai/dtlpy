@@ -35,6 +35,8 @@ class Item(entities.BaseEntity):
     dataset_url = attr.ib()
     thumbnail = attr.ib(repr=False)
     created_at = attr.ib()
+    updated_at = attr.ib()
+    updated_by = attr.ib()
     dataset_id = attr.ib()
     annotated = attr.ib(repr=False)
     metadata = attr.ib(repr=False)
@@ -150,6 +152,8 @@ class Item(entities.BaseEntity):
             project_id=project_id,
             description=_json.get('description', None),
             src_item=_json.get('srcItem', None),
+            updated_at=_json.get('updatedAt', None),
+            updated_by=_json.get('updatedBy', None)
         )
         inst.is_fetched = is_fetched
         return inst
@@ -391,6 +395,8 @@ class Item(entities.BaseEntity):
                                                         attr.fields(Item)._project_id,
                                                         attr.fields(Item)._description,
                                                         attr.fields(Item)._src_item,
+                                                        attr.fields(Item).updated_at,
+                                                        attr.fields(Item).updated_by
                                                         ))
 
         _json.update({'annotations': self.annotations_link,
@@ -407,6 +413,10 @@ class Item(entities.BaseEntity):
             _json['description'] = self.description
         if self._src_item is not None:
             _json['srcItem'] = self._src_item
+
+        _json['updatedAt'] = self.updated_at
+        _json['updatedBy'] = self.updated_by
+
         return _json
 
     def download(

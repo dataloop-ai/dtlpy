@@ -114,6 +114,23 @@ def step_impl(context):
     assert isinstance(context.trigger, context.dl.entities.Trigger)
 
 
+@behave.when(u'I set the trigger in the context')
+def step_impl(context):
+    composition = context.project.compositions.get(composition_id=context.app.composition_id)
+    context.trigger = context.project.triggers.get(trigger_id=composition["triggers"][0]["triggerId"])
+    context.service = context.trigger.service
+
+
+@behave.when(u'I set the execution in the context')
+def step_impl(context):
+    context.execution = context.service.executions.list().items[0]
+
+
+@behave.when(u'I set code path "{path}" to context')
+def step_impl(context, path):
+    context.codebase_local_dir = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], path)
+
+
 @behave.then(u'I receive a Trigger entity with function "{function_name}"')
 def step_impl(context, function_name):
     assert isinstance(context.trigger, context.dl.entities.Trigger)
@@ -158,6 +175,11 @@ def step_impl(context, resource_type):
         elif resource_type == 'assignment':
             context.assignment = context.project.assignments.get(assignment_id=context.assignment.id)
             if "name-updated." in context.assignment.name:
+                triggered = True
+                break
+        elif resource_type == 'hidden-item':
+            item = context.dataset.items.get(item_id=context.uploaded_item_with_trigger.id)
+            if item.resource_executions.list().items_count == 1:
                 triggered = True
                 break
         context.dl.logger.debug("Step is running for {:.2f}[s] and now Going to sleep {:.2f}[s]".format((i + 1) * interval,

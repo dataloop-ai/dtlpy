@@ -19,3 +19,8 @@ def step_impl(context):
 @behave.then(u'I expect preemptible value to be "{value}"')
 def step_impl(context, value):
     assert context.service.runtime.preemptible == eval(value), "TEST FAILED: Expected preemptible to be {} , Got {}".format(value, context.service.execution_timeout)
+
+
+@behave.when(u'I get service in index "{service_index}"')
+def step_impl(context, service_index):
+    context.service = context.project.services.list()[0][int(service_index)]

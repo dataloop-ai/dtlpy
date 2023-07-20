@@ -18,6 +18,12 @@ def step_impl(context, file_name):
     context.json_object = json_object
 
 
+@behave.when(u"I add codebase to dpk")
+@behave.given(u"I add codebase to dpk")
+def step_impl(context):
+    context.dpk.codebase = context.codebase
+
+
 @behave.then(u"I have a dpk entity")
 def step_impl(context):
     assert hasattr(context, 'dpk')
