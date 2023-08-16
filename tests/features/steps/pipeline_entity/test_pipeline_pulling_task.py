@@ -22,7 +22,7 @@ def step_impl(context, task_type):
     current_time = time.strftime("%H-%M-%S", t)
     context.pipeline_name = 'pipeline-{}'.format(current_time)
 
-    context.pipeline = context.project.pipelines.create(name=context.pipeline_name)
+    context.pipeline = context.project.pipelines.create(name=context.pipeline_name, project_id=context.project.id)
 
     context.task_name = 'My Task-completed' + current_time
     context.task_node = dl.TaskNode(

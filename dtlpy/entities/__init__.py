@@ -59,7 +59,7 @@ from .driver import Driver, S3Driver, GcsDriver, AzureBlobDriver
 from .pipeline import Pipeline, PipelineStats, PipelineResumeOption, PipelineSettings, Variable, CompositionStatus
 from .node import PipelineConnection, PipelineNode, PipelineConnectionPort, PipelineNodeIO, TaskNode, \
     CodeNode, FunctionNode, PipelineNodeType, PipelineNameSpace, DatasetNode
-from .pipeline_execution import PipelineExecution, PipelineExecutionNode
+from .pipeline_execution import PipelineExecution, PipelineExecutionNode, CycleRerunMethod
 from .feature import Feature, FeatureDataType
 from .feature_set import FeatureSet, FeatureEntityType
 from .organization import Organization, OrganizationsPlans, MemberOrgRole, CacheAction, PodType

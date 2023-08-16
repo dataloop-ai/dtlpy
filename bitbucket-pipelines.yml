@@ -212,9 +212,14 @@ pipelines:
               - select-component
               - Ramsay
               - Piper
+              - Piper-Pipelines
+              - Piper-Faas
+              - Piper-Triggers-Executions
               - Gate
               - Apps
               - Rubiks
+              - Rubiks-Dataset-Recipe
+              - Rubiks-Items-Annotations
               - SDK
               - Woz
               - Roberto
@@ -377,6 +382,54 @@ pipelines:
           artifacts:
             - behave_test_report.json
 
+    "xray-Rubiks-Dataset-Recipe":
+      - variables:
+          - name: DLP_ENV_NAME
+            default: rc
+      - step:
+          image: python:3.11
+          name: Test & Report to XRay
+          script:
+            - AVOID_TESTRAIL=true
+            - python --version
+            - PYTHONPATH=$PWD
+            - pip install --upgrade pip
+            - apt-get -y update && apt-get install -y libgl1-mesa-glx
+            - pip install -r requirements.txt
+            - pip install -r tests/requirements.txt
+            - python setup.py build
+            - python setup.py install
+            - python tests/test_login.py
+            - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
+            - chmod +x ./test.sh
+            - ./test.sh Rubiks-Dataset-Recipe
+          artifacts:
+            - behave_test_report.json
+
+    "xray-Rubiks-Items-Annotations":
+      - variables:
+          - name: DLP_ENV_NAME
+            default: rc
+      - step:
+          image: python:3.11
+          name: Test & Report to XRay
+          script:
+            - AVOID_TESTRAIL=true
+            - python --version
+            - PYTHONPATH=$PWD
+            - pip install --upgrade pip
+            - apt-get -y update && apt-get install -y libgl1-mesa-glx
+            - pip install -r requirements.txt
+            - pip install -r tests/requirements.txt
+            - python setup.py build
+            - python setup.py install
+            - python tests/test_login.py
+            - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
+            - chmod +x ./test.sh
+            - ./test.sh Rubiks-Items-Annotations
+          artifacts:
+            - behave_test_report.json
+
     "xray-SDK":
       - variables:
           - name: DLP_ENV_NAME
@@ -496,6 +549,80 @@ pipelines:
             - ./test.sh Piper
           artifacts:
             - behave_test_report.json
+
+    "xray-Piper-Pipelines":
+      - variables:
+          - name: DLP_ENV_NAME
+            default: rc
+      - step:
+          image: python:3.11
+          name: Test & Report to XRay
+          script:
+            - AVOID_TESTRAIL=true
+            - python --version
+            - PYTHONPATH=$PWD
+            - pip install --upgrade pip
+            - apt-get -y update && apt-get install -y libgl1-mesa-glx
+            - pip install -r requirements.txt
+            - pip install -r tests/requirements.txt
+            - python setup.py build
+            - python setup.py install
+            - python tests/test_login.py
+            - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
+            - chmod +x ./test.sh
+            - ./test.sh Piper-Pipelines
+          artifacts:
+            - behave_test_report.json
+
+    "xray-Piper-Faas":
+      - variables:
+          - name: DLP_ENV_NAME
+            default: rc
+      - step:
+          image: python:3.11
+          name: Test & Report to XRay
+          script:
+            - AVOID_TESTRAIL=true
+            - python --version
+            - PYTHONPATH=$PWD
+            - pip install --upgrade pip
+            - apt-get -y update && apt-get install -y libgl1-mesa-glx
+            - pip install -r requirements.txt
+            - pip install -r tests/requirements.txt
+            - python setup.py build
+            - python setup.py install
+            - python tests/test_login.py
+            - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
+            - chmod +x ./test.sh
+            - ./test.sh Piper-Faas
+          artifacts:
+            - behave_test_report.json
+
+
+    "xray-Piper-Triggers-Executions":
+      - variables:
+          - name: DLP_ENV_NAME
+            default: rc
+      - step:
+          image: python:3.11
+          name: Test & Report to XRay
+          script:
+            - AVOID_TESTRAIL=true
+            - python --version
+            - PYTHONPATH=$PWD
+            - pip install --upgrade pip
+            - apt-get -y update && apt-get install -y libgl1-mesa-glx
+            - pip install -r requirements.txt
+            - pip install -r tests/requirements.txt
+            - python setup.py build
+            - python setup.py install
+            - python tests/test_login.py
+            - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
+            - chmod +x ./test.sh
+            - ./test.sh Piper-Triggers-Executions
+          artifacts:
+            - behave_test_report.json
+
 
     "schedule-tests":
       - step:

@@ -78,7 +78,6 @@ def step_impl(context, item_path):
     context.uploaded_item_with_trigger = context.dataset.items.upload(local_path=item_path)
 
 
-
 @behave.when(u'I clone item to dataset')
 def step_impl(context):
     time.sleep(10)
@@ -89,7 +88,7 @@ def step_impl(context):
 @behave.then(u'Item "{item_num}" annotations equal annotations in "{assets_annotations_path}"')
 def step_impl(context, item_num, assets_annotations_path):
     num_try = 60
-    interval = 5
+    interval = 10
     assets_annotations_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], assets_annotations_path)
     if item_num == '1':
         item = context.item

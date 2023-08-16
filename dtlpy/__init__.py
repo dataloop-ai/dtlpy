@@ -94,7 +94,7 @@ from .entities import (
     ItemLink, UrlLink, LinkTypeEnum,
     Modality, ModalityTypeEnum, ModalityRefTypeEnum,
     Workload, WorkloadUnit, ItemAction,
-    PipelineExecution, PipelineExecutionNode, Pipeline, PipelineConnection,
+    PipelineExecution, CycleRerunMethod, PipelineExecutionNode, Pipeline, PipelineConnection,
     PipelineNode, TaskNode, CodeNode, PipelineStats, PipelineSettings,
     PipelineNodeType, PipelineNameSpace, PipelineResumeOption, Variable, CompositionStatus,
     FunctionNode, DatasetNode, PipelineConnectionPort, PipelineNodeIO, Organization, OrganizationsPlans, Integration,

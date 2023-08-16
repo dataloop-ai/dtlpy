@@ -14,7 +14,8 @@ class Tasks:
     """
     Tasks Repository
 
-    The Tasks class allows the user to manage tasks and their properties. For more information, read in our SDK documentation about `Creating Tasks <https://dataloop.ai/docs/sdk-create-task>`_, `Redistributing and Reassigning Tasks <https://dataloop.ai/docs/sdk-redistribute-task>`_, and `Task Assignment <https://dataloop.ai/docs/sdk-task-assigment>`_.
+    The Tasks class allows the user to manage tasks and their properties.
+    For more information, read in our developers' documentation about `Creating Tasks <https://developers.dataloop.ai/tutorials/task_workflows/create_a_task/chapter/>`_, and `Redistributing and Reassigning Tasks <https://developers.dataloop.ai/tutorials/task_workflows/redistributing_and_reassigning_a_task/chapter/>`_.
     """
 
     def __init__(self,
@@ -887,7 +888,7 @@ class Tasks:
         assert isinstance(task, entities.Task)
         return task
 
-    @_api_reference.add(path='/annotationtasks/{id}/removeFromTask', method='post')
+    # @_api_reference.add(path='/annotationtasks/{id}/removeFromTask', method='post')
     def remove_items(self,
                      task: entities.Task = None,
                      task_id=None,

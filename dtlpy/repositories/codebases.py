@@ -16,7 +16,9 @@ class Codebases:
     """
     Codebase Repository
 
-    The Codebases class allows the user to manage codebases and their properties. The codebase is the code the user uploads for the user's packages to run. Read more about `codebase <https://dataloop.ai/docs/tutorial-ui?#1-codebase>`_ in our FaaS (function as a service).
+    The Codebases class allows the user to manage codebases and their properties.
+    The codebase is the code the user uploads for the user's packages to run.
+    Read more about `codebase <https://developers.dataloop.ai/tutorials/faas/introduction/chapter/>`_ in our FaaS (function as a service).
     """
 
     def __init__(self,

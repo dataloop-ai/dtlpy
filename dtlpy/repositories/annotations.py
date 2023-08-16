@@ -17,9 +17,9 @@ class Annotations:
 
     The Annotation class allows you to manage the annotations of data items. For information on annotations explore our
     documentation at:
-    `Classification SDK <https://dataloop.ai/docs/sdk-classify-item>`_,
-    `Annotation Labels and Attributes <https://dataloop.ai/docs/sdk-annotation-ontology>`_,
-    `Show Video with Annotations <https://dataloop.ai/docs/sdk-show-videos>`_.
+    `Classification SDK <https://developers.dataloop.ai/tutorials/annotations_image/classification_point_and_pose/chapter/>`_,
+    `Annotation Labels and Attributes <https://developers.dataloop.ai/tutorials/data_management/upload_and_manage_annotations/chapter/#set-attributes-on-annotations>`_,
+    `Show Video with Annotations <https://developers.dataloop.ai/tutorials/annotations_video/video_annotations/chapter/>`_.
     """
 
     def __init__(self, client_api: ApiClient, item=None, dataset=None, dataset_id=None):

@@ -1,4 +1,5 @@
 import io
+import time
 import behave
 import os
 import shutil
@@ -103,6 +104,16 @@ def step_impl(context, item_name):
     context.dataset.items.upload(local_path=context.item_data,
                                  local_annotations_path=None,
                                  remote_path=None)
+    # wait for platform attributes
+    while True:
+        time.sleep(3)
+        context.item = context.dataset.items.get(item_id=context.item.id)
+        if "video" in context.item.mimetype:
+            if context.item.fps is not None:
+                break
+        elif context.item.mimetype is not None:
+            break
+
 
 
 @behave.then(u'Item uploaded from data equals initial item uploaded')

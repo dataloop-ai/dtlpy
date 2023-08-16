@@ -415,6 +415,7 @@ class ApiClient:
         self._thread_pools = dict()
         self._event_loop = None
         self._login_domain = None
+        self.__gate_url_for_requests = None
 
         # TODO- remove before release - only for debugging
         self._stopped_pools = list()
@@ -775,6 +776,15 @@ class ApiClient:
             information['token'] = self.token
         return information
 
+    @property
+    def __base_gate_url(self):
+        if self.__gate_url_for_requests is None:
+            self.__gate_url_for_requests = self.environment
+            internal_requests_url = os.environ.get('INTERNAL_REQUESTS_URL', None)
+            if internal_requests_url is not None:
+                self.__gate_url_for_requests = internal_requests_url
+        return self.__gate_url_for_requests
+        
     def export_curl_request(self, req_type, path, headers=None, json_req=None, files=None, data=None):
         curl, prepared = self._build_gen_request(req_type=req_type,
                                                  path=path,
@@ -791,7 +801,7 @@ class ApiClient:
 
         # prepare request
         req = requests.Request(method=req_type,
-                               url=self.environment + path,
+                               url=self.__base_gate_url + path,
                                json=json_req,
                                files=files,
                                data=data,
@@ -1404,7 +1414,10 @@ class ApiClient:
             custom_env = os.environ.get('DTLPY_CUSTOM_ENV', None)
             environment = json.loads(base64.b64decode(custom_env.encode()).decode())
             env = environment.pop('url')
-            self.environments[env] = environment
+            self.environments[env] = environment.get(env, environment)
+            verify_ssl = self.environments[env].get('verify_ssl', None)
+            if verify_ssl is not None and isinstance(verify_ssl, str):
+                self.environments[env]['verify_ssl'] = True if verify_ssl.lower() == 'true' else False
         else:
             matched_env = [env_url for env_url, env_dict in environments.items() if env_dict['alias'] == env]
             if len(matched_env) != 1:

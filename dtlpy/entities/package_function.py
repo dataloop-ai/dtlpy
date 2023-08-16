@@ -71,7 +71,7 @@ class PackageFunction(entities.DlEntity):
 
     @classmethod
     def from_json(cls, _json):
-        inst = cls(_dict=_json.copy())
+        inst = cls(_dict=_json)
         return inst
 
     @outputs.default
@@ -175,5 +175,5 @@ class FunctionIO(entities.DlEntity):
 
     @classmethod
     def from_json(cls, _json):
-        inst = cls(_dict=_json.copy())
+        inst = cls(_dict=_json)
         return inst

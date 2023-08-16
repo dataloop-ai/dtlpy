@@ -10,7 +10,8 @@ class Triggers:
     """
     Triggers Repository
 
-    The Triggers class allows users to manage triggers and their properties. Triggers activate services. See our documentation for more information on `triggers <https://dataloop.ai/docs/faas-trigger>`_.
+    The Triggers class allows users to manage triggers and their properties. Triggers activate services.
+    See our documentation for more information on `triggers <https://developers.dataloop.ai/tutorials/faas/concept/chapter/>`_.
     """
 
     def __init__(self,

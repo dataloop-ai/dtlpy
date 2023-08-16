@@ -9,7 +9,7 @@ class Bots:
     """
     Bots Repository
 
-    The Bots class allows the user to manage bots and their properties. See our documentation for more information on `bots <https://dataloop.ai/docs/faas-bot>`_.
+    The Bots class allows the user to manage bots and their properties.
     """
 
     def __init__(self, client_api: ApiClient, project: entities.Project):

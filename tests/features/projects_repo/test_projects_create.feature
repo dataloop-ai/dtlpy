@@ -15,9 +15,9 @@ Feature: Projects repository create service testing
     @testrail-C4523146
     @DAT-46593
     Scenario: Create project with an existing project name
-        Given I create a project by the name of "to-delete-test-project_create_same_name"
         When I try to create a project by the name of "to-delete-test-project_create_same_name"
-        Then "Conflict" exception should be raised
+        When I try to create a project by the name of "to-delete-test-project_create_same_name"
+        Then "BadRequest" exception should be raised
         And Error message includes "Failed to create project"
 
 

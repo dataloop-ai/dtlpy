@@ -220,7 +220,7 @@ def step_impl(context):
 
     pipeline_json['nodes'][2]['namespace']['projectName'] = context.project.name
 
-    context.pipeline = context.project.pipelines.create(pipeline_json=pipeline_json)
+    context.pipeline = context.project.pipelines.create(pipeline_json=pipeline_json, project_id=context.project.id)
     context.pipeline.install()
     context.to_delete_pipelines_ids.append(context.pipeline.id)
 
@@ -250,7 +250,7 @@ def step_impl(context, name: str):
                 }
             ]
 
-    context.pipeline = context.project.pipelines.create(pipeline_json=pipeline_json)
+    context.pipeline = context.project.pipelines.create(pipeline_json=pipeline_json, project_id=context.project.id)
     context.pipeline.install()
     context.to_delete_pipelines_ids.append(context.pipeline.id)
 
@@ -330,7 +330,7 @@ def step_impl(context):
     current_time = time.strftime("%H-%M-%S", t)
 
     context.dataset_finish = context.project.datasets.create(dataset_name='dataset-' + current_time + "-finish")
-    context.pipeline = context.project.pipelines.create(pipeline_name='sdk-pipeline-sanity')
+    context.pipeline = context.project.pipelines.create(pipeline_name='sdk-pipeline-sanity', project_id=context.project.id)
 
     task_node_1 = dl.TaskNode(
         name='My Task-fix-label' + current_time,
@@ -412,7 +412,7 @@ def step_impl(context):
 @behave.when(u'I create a pipeline with dataset resources')
 def step_impl(context):
     context.pipeline = context.project.pipelines.create(
-        name='sdk-pipeline-sanity-{}'.format(random.randrange(1000, 10000)))
+        name='sdk-pipeline-sanity-{}'.format(random.randrange(1000, 10000)), project_id=context.project.id)
 
     def run_1(item: dl.Item):
         dataset = item.dataset
@@ -459,11 +459,12 @@ def step_impl(context):
 def step_impl(context, type, flag):
     flag = eval(flag)
 
+    num = random.randrange(10000, 100000)
     t = time.localtime()
     current_time = time.strftime("%H-%M-%S", t)
-    pipeline_name = 'pipeline-sdk-{}'.format(current_time)
+    pipeline_name = f'pipeline-sdk-{num}'
 
-    context.pipeline = context.project.pipelines.create(name=pipeline_name)
+    context.pipeline = context.project.pipelines.create(name=pipeline_name, project_id=context.project.id)
 
     dataset_node = dl.DatasetNode(
         name=context.dataset.name,
@@ -569,7 +570,7 @@ def step_impl(context):
     )
 
     context.pipeline_name = 'pipeline-{}'.format(current_time)
-    context.pipeline = context.project.pipelines.create(name='pipeline-sdk-test')
+    context.pipeline = context.project.pipelines.create(name='pipeline-sdk-test', project_id=context.project.id)
     context.dataset_node_1 = context.pipeline.nodes.add(context.dataset_node_1)
     context.dataset_node_1.connect(node=context.dataset_node_2, source_port=context.dataset_node_1.outputs[0],
                                    target_port=context.dataset_node_2.inputs[0])

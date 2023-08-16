@@ -56,7 +56,7 @@ class PipelineExecutions:
     ###########
     # methods #
     ###########
-    @_api_reference.add(path='/pipelines/{pipelineId}/executions/{executionId}', method='get')
+    # @_api_reference.add(path='/pipelines/{pipelineId}/executions/{executionId}', method='get')
     def get(self,
             pipeline_execution_id: str,
             pipeline_id: str = None
@@ -309,3 +309,70 @@ class PipelineExecutions:
         if wait:
             command = command.wait(timeout=0)
         return command
+
+    @_api_reference.add(path='/pipelines/{pipelineId}/executions/rerun', method='post')
+    def rerun(self,
+              pipeline_id: str = None,
+              method: str = None,
+              start_nodes_ids: list = None,
+              filters: entities.Filters = None,
+              wait: bool = True
+              ) -> bool:
+        """
+        Get Pipeline Execution object
+
+        **prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param str pipeline_id: pipeline id
+        :param str method: method to run
+        :param list start_nodes_ids: list of start nodes ids
+        :param filters: Filters entity for a filtering before execute
+        :param bool wait: wait until rerun finish
+        :return: True if success
+        :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            pipeline.pipeline_executions.rerun(pipeline_id='pipeline_id', method=dl.CycleRerunMethod.START_FROM_BEGINNING)
+        """
+
+        if pipeline_id is None and self._pipeline is None:
+            raise exceptions.PlatformException('400', 'Must provide param pipeline_id')
+        elif pipeline_id is None:
+            pipeline_id = self.pipeline.id
+
+        if filters is None:
+            filters = entities.Filters(resource=entities.FiltersResource.PIPELINE_EXECUTION)
+
+        success, response = self._client_api.gen_request(
+            req_type="post",
+            path="/pipelines/{pipeline_id}/executions/rerun".format(
+                pipeline_id=pipeline_id,
+            ),
+            json_req={
+                'pipeline': {
+                    "method": method,
+                    "startNodeIds": start_nodes_ids,
+                },
+                "batch": {
+                    "query": filters.prepare()
+                }
+            }
+        )
+
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        command = entities.Command.from_json(_json=response.json(),
+                                             client_api=self._client_api)
+        if not wait:
+            return command
+        command = command.wait(timeout=0)
+
+        if 'cycleOptions' not in command.spec:
+            raise exceptions.PlatformException(error='400',
+                                               message="cycleOptions key is missing in command response: {!r}"
+                                               .format(response))
+        return True

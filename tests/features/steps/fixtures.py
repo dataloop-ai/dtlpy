@@ -103,6 +103,9 @@ def get_value(params, context):
         if val == 'second':
             assert hasattr(context, "second_dataset"), "TEST FAILED: Test should have second_dataset"
             val = context.second_dataset.get_recipe_ids()[0]
+    elif key == 'assignee_ids':
+        if val and "[" in val:
+            val = eval(val)
     elif key == 'available_actions':
         action_status = val.split()
         available_actions_list = list()
@@ -172,4 +175,3 @@ def get_package_io(params, context):
             val.append(context.dl.FunctionIO(type=context.dl.PACKAGE_INPUT_TYPE_ASSIGNMENT, name=key))
 
     return val
-

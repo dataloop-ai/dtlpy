@@ -1,12 +1,20 @@
 from collections import namedtuple
 import logging
 import traceback
+from enum import Enum
+
 import attr
 
 from .. import repositories, entities
 from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
+
+
+class CycleRerunMethod(str, Enum):
+    START_FROM_NODES = 'startFromNodes',
+    START_FROM_FAILED_EXECUTIONS = 'startFromFailedExecutions',
+    START_FROM_BEGINNING = 'startFromBeginning'
 
 
 class PipelineExecutionNode:
@@ -183,11 +191,13 @@ class PipelineExecution(entities.BaseEntity):
     @_repositories.default
     def set_repositories(self):
         reps = namedtuple('repositories',
-                          field_names=['projects', 'pipelines'])
+                          field_names=['projects', 'pipelines', 'pipeline_executions'])
 
         r = reps(
             projects=repositories.Projects(client_api=self._client_api),
-            pipelines=repositories.Pipelines(client_api=self._client_api),
+            pipelines=repositories.Pipelines(client_api=self._client_api, project=self.project),
+            pipeline_executions=repositories.PipelineExecutions(client_api=self._client_api, project=self.project,
+                                                                pipeline=self.pipeline)
         )
         return r
 
@@ -200,3 +210,39 @@ class PipelineExecution(entities.BaseEntity):
     def pipelines(self):
         assert isinstance(self._repositories.pipelines, repositories.Pipelines)
         return self._repositories.pipelines
+
+    @property
+    def pipeline_executions(self):
+        assert isinstance(self._repositories.pipeline_executions, repositories.PipelineExecutions)
+        return self._repositories.pipeline_executions
+
+    def rerun(self,
+              method: str = None,
+              start_nodes_ids: list = None,
+              wait: bool = True
+              ) -> bool:
+        """
+        Get Pipeline Execution object
+
+        **prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param str method: method to run
+        :param list start_nodes_ids: list of start nodes ids
+        :param bool wait: wait until rerun finish
+        :return: True if success
+        :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            pipeline_executions.rerun(method=dl.CycleRerunMethod.START_FROM_BEGINNING,)
+        """
+        filters = entities.Filters(field='id', values=[self.id], operator=entities.FiltersOperations.IN,
+                                   resource=entities.FiltersResource.PIPELINE_EXECUTION)
+        return self.pipeline_executions.rerun(
+            method=method,
+            start_nodes_ids=start_nodes_ids,
+            filters=filters,
+            wait=wait
+        )

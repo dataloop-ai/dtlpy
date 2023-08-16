@@ -11,7 +11,7 @@ def step_impl(context, new_assignees):
     assignee_ids = new_assignees.split(',')
     workload = context.dl.Workload.generate(assignee_ids=assignee_ids)
     context.before_redistribution_item_ids = [item.id for item in context.assignment.get_items().items]
-    context.redistributed = [ass for ass in context.assignment.redistribute(workload=workload) if ass.annotator in assignee_ids]
+    context.redistributed = [ass for ass in context.assignment.redistribute(workload=workload) if ass.annotator in [ass_id.lower() for ass_id in assignee_ids]]
 
 
 def compare_items_list(items_a, items_b):

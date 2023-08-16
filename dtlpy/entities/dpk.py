@@ -71,7 +71,7 @@ class Panel(entities.DlEntity):
 
     @classmethod
     def from_json(cls, _json):
-        return cls(_dict=_json.copy())
+        return cls(_dict=_json)
 
 
 class Components(entities.DlEntity):
@@ -121,7 +121,7 @@ class Components(entities.DlEntity):
 
     @classmethod
     def from_json(cls, _json):
-        inst = cls(_dict=_json.copy())
+        inst = cls(_dict=_json)
         return inst
 
     def to_json(self):

@@ -6,7 +6,7 @@ import time
 def step_impl(context, resource_type):
     context.trigger_type = resource_type
     num_try = 60
-    interval = 10
+    interval = 15
     triggered = False
 
     for i in range(num_try):

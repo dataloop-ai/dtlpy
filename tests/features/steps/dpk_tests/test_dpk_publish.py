@@ -8,8 +8,10 @@ import behave
 def step_impl(context):
     context.dpk.name = context.dpk.name + str(random.randint(10000, 1000000))
     context.published_dpk = context.project.dpks.publish(context.dpk)
-    context.feature.dpk = context.published_dpk
-
+    if hasattr(context.feature, 'dpks'):
+        context.feature.dpks.append(context.published_dpk)
+    else:
+        context.feature.dpks = [context.published_dpk]
 
 @behave.when(u"I add the context.dataset to the dpk model")
 def step_impl(context):

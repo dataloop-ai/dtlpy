@@ -1,7 +1,7 @@
 import logging
 
 import attr
-
+import typing
 from enum import Enum
 from .. import entities
 
@@ -29,48 +29,37 @@ class UiBindingPanel(str, Enum):
     ALL = "all"
 
 
-@attr.s
-class SlotPostAction:
-    type = attr.ib(type=str)
+class SlotPostAction(entities.DlEntity):
+    type: str = entities.DlProperty(location=['type'],
+                                    _type=str,
+                                    default=SlotPostActionType.NO_ACTION)
 
     @classmethod
     def from_json(cls, _json):
-        return cls(
-            type=_json.get('type', SlotPostActionType.NO_ACTION)
-        )
+        inst = cls(_dict=_json)
+        return inst
 
     def to_json(self):
-        return {'type': self.type}
+        _json = self._dict.copy()
+        return _json
 
 
-@attr.s
-class SlotDisplayScope:
-    resource = attr.ib(type=str)
-    filters = attr.ib(type=entities.Filters, default=None)
-    panel = attr.ib(default=UiBindingPanel.ALL, type=str)
+class SlotDisplayScope(entities.DlEntity):
+    resource: str = entities.DlProperty(location=['resource'],
+                                        _type=str)
+    filters: entities.Filters = entities.DlProperty(location=['filter'],
+                                                    _type=entities.Filters)
+    panel: str = entities.DlProperty(location=['panel'],
+                                     _type=str,
+                                     default=UiBindingPanel.ALL)
 
     @classmethod
     def from_json(cls, _json):
-        resource = _json.get('resource')
-        panel = _json.get('panel', None)
-
-        filters = None
-        if 'filter' in _json:
-            if isinstance(_json['filter'], dict) and len(_json['filter']) > 0:
-                filters = entities.Filters(resource=SlotDisplayScope.__get_resource(resource=resource),
-                                           use_defaults=False,
-                                           custom_filter=_json['filter'].get('filter', _json['filter']))
-            else:
-                filters = _json.get('filter', None)
-
-        return cls(
-            resource=resource,
-            filters=filters,
-            panel=panel
-        )
+        inst = cls(_dict=_json)
+        return inst
 
     @staticmethod
-    def __get_resource(resource: str):
+    def get_resource(resource: str):
         if resource in [SlotDisplayScopeResource.DATASET, SlotDisplayScopeResource.DATASET_QUERY]:
             return entities.FiltersResource.DATASET
         elif resource == SlotDisplayScopeResource.ITEM:
@@ -79,8 +68,7 @@ class SlotDisplayScope:
             return entities.FiltersResource.ANNOTATION
 
     def to_json(self):
-        _json = {'resource': self.resource,
-                 'panel': self.panel}
+        _json = self._dict.copy()
         if isinstance(self.filters, entities.Filters):
             _json['filter'] = self.filters.prepare(query_only=True)['filter']
         elif isinstance(self.filters, dict):
@@ -88,20 +76,33 @@ class SlotDisplayScope:
         return _json
 
 
-@attr.s
-class PackageSlot(entities.BaseEntity):
+class PackageSlot(entities.DlEntity):
     """
     Webhook object
     """
     # platform
-    display_name = attr.ib()
-    display_scopes = attr.ib(type=list)
-    module_name = attr.ib(default='default_module')
-    function_name = attr.ib(default='run')
-    display_icon = attr.ib(repr=False, default=None)
-    post_action = attr.ib(type=SlotPostAction)
-    default_inputs = attr.ib(default=None, type=list)
-    input_options = attr.ib(default=None, type=list)
+    display_name: str = entities.DlProperty(location=['displayName'],
+                                            _type=str)
+    display_scopes: typing.Union[typing.List['entities.SlotDisplayScope'], None] = entities.DlProperty(
+        location=['displayScopes'],
+        _kls='SlotDisplayScope')
+    module_name: str = entities.DlProperty(location=['moduleName'],
+                                           _type=str,
+                                           default='default_module')
+    function_name: str = entities.DlProperty(location=['functionName'],
+                                             _type=str,
+                                             default='run')
+    display_icon: str = entities.DlProperty(location=['displayIcon'],
+                                            _type=str)
+    post_action: SlotPostAction = entities.DlProperty(location=['postAction'],
+                                                      _type=str,
+                                                      _kls='SlotPostAction')
+    default_inputs: typing.Union[typing.List['entities.FunctionIO'], None] = entities.DlProperty(
+        location=['defaultInputs'],
+        _kls='FunctionIO')
+    input_options: list = entities.DlProperty(
+        location=['inputOptions'],
+        _kls='FunctionIO')
 
     @post_action.default
     def post_action_setter(self):
@@ -109,65 +110,9 @@ class PackageSlot(entities.BaseEntity):
 
     @classmethod
     def from_json(cls, _json):
-        post_action = SlotPostAction(type=SlotPostActionType.NO_ACTION)
-        if 'postAction' in _json and _json['postAction'] is not None:
-            post_action = SlotPostAction.from_json(_json.get('postAction'))
-
-        display_scopes = None
-        if 'displayScopes' in _json:
-            display_scopes = list()
-            for display_scope in _json.get('displayScopes'):
-                display_scopes.append(
-                    SlotDisplayScope.from_json(_json=display_scope)
-                )
-
-        return cls(
-            module_name=_json.get('moduleName', None),
-            function_name=_json.get('functionName', None),
-            post_action=post_action,
-            display_icon=_json.get('displayIcon', None),
-            display_name=_json.get('displayName', None),
-            default_inputs=_json.get('defaultInputs', None),
-            input_options=_json.get('inputOptions', None),
-            display_scopes=display_scopes,
-        )
+        inst = cls(_dict=_json)
+        return inst
 
     def to_json(self):
-        _json = attr.asdict(
-            self,
-            filter=attr.filters.exclude(attr.fields(PackageSlot).module_name,
-                                        attr.fields(PackageSlot).function_name,
-                                        attr.fields(PackageSlot).display_icon,
-                                        attr.fields(PackageSlot).display_name,
-                                        attr.fields(PackageSlot).post_action,
-                                        attr.fields(PackageSlot).display_scopes,
-                                        attr.fields(PackageSlot).input_options,
-                                        attr.fields(PackageSlot).default_inputs,
-                                        ),
-        )
-
-        if self.module_name is not None:
-            _json['moduleName'] = self.module_name
-
-        if self.display_name is not None:
-            _json['functionName'] = self.function_name
-
-        if self.display_icon is not None:
-            _json['displayIcon'] = self.display_icon
-
-        if self.display_name is not None:
-            _json['displayName'] = self.display_name
-
-        if self.display_scopes is not None:
-            _json['displayScopes'] = [ds.to_json() for ds in self.display_scopes]
-
-        if self.post_action is not None:
-            _json['postAction'] = self.post_action.to_json()
-
-        if self.input_options is not None:
-            _json['inputOptions'] = self.input_options
-
-        if self.default_inputs is not None:
-            _json['defaultInputs'] = self.default_inputs
-
+        _json = self._dict.copy()
         return _json

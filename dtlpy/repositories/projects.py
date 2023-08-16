@@ -14,7 +14,7 @@ class Projects:
 
     The Projects class allows the user to manage projects and their properties.
 
-    For more information on Projects see the `Dataloop documentation <https://dataloop.ai/docs/project#>`_  and `SDK documentation <https://dataloop.ai/docs/sdk-projects>`_.
+    For more information on Projects see the `Dataloop documentation <https://dataloop.ai/docs/project#>`_.
     """
 
     def __init__(self, client_api: ApiClient, org=None):
@@ -179,7 +179,7 @@ class Projects:
             raise exceptions.PlatformException(response)
         return True
 
-    @_api_reference.add(path='/projects/{project_id}/members/{user_id}', method='post')
+    @_api_reference.add(path='/projects/{projectId}/members/{userId}', method='post')
     def add_member(self, email: str, project_id: str, role: entities.MemberRole = entities.MemberRole.DEVELOPER):
         """
         Add a member to the project.
@@ -213,7 +213,7 @@ class Projects:
 
         return response.json()
 
-    @_api_reference.add(path='/projects/{project_id}/members/{user_id}', method='patch')
+    @_api_reference.add(path='/projects/{projectId}/members/{userId}', method='patch')
     def update_member(self, email: str, project_id: str, role: entities.MemberRole = entities.MemberRole.DEVELOPER):
         """
         Update member's information/details in the project.
@@ -247,7 +247,7 @@ class Projects:
 
         return response.json()
 
-    @_api_reference.add(path='/projects/{project_id}/members/{user_id}', method='delete')
+    @_api_reference.add(path='/projects/{projectId}/members/{userId}', method='delete')
     def remove_member(self, email: str, project_id: str):
         """
         Remove a member from the project.
@@ -273,7 +273,7 @@ class Projects:
 
         return response.json()
 
-    @_api_reference.add(path='/projects/{id}/members', method='get')
+    @_api_reference.add(path='/projects/{projectId}/members', method='get')
     def list_members(self, project: entities.Project, role: entities.MemberRole = None):
         """
         Get a list of the project members.
@@ -354,7 +354,7 @@ class Projects:
             raise exceptions.PlatformException(response)
         return projects
 
-    @_api_reference.add(path='/projects/{id}', method='get')
+    @_api_reference.add(path='/projects/{projectId}', method='get')
     def get(self,
             project_name: str = None,
             project_id: str = None,
@@ -442,7 +442,7 @@ class Projects:
                 logger.warning("failed to add project settings")
         return project
 
-    @_api_reference.add(path='/projects/{id}', method='delete')
+    @_api_reference.add(path='/projects/{projectId}', method='delete')
     def delete(self,
                project_name: str = None,
                project_id: str = None,
@@ -481,7 +481,7 @@ class Projects:
                 error='403',
                 message='Cant delete project from SDK. Please login to platform to delete')
 
-    @_api_reference.add(path='/projects/{id}', method='patch')
+    @_api_reference.add(path='/projects/{projectId}', method='patch')
     def update(self,
                project: entities.Project,
                system_metadata: bool = False) -> entities.Project:

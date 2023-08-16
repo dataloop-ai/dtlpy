@@ -20,7 +20,7 @@ class Messages:
     def __init__(self, client_api: ApiClient):
         self._client_api = client_api
 
-    @_api_reference.add(path='/inbox/message/user', method='get')
+    # @_api_reference.add(path='/inbox/message/user', method='get')
     def _list(self, context: entities.NotificationEventContext = None, checkpoint: dict = None, new_only=True) -> \
             miscellaneous.List[entities.Message]:
         """

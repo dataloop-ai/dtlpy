@@ -3,7 +3,7 @@ import time
 import random
 
 
-@behave.given('I create a project by the name of "{project_name}"')
+@behave.given(u'I create a project by the name of "{project_name}"')
 def step_impl(context, project_name):
     if hasattr(context.feature, 'dataloop_feature_project'):
         context.project = context.feature.dataloop_feature_project

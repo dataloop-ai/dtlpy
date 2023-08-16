@@ -13,7 +13,8 @@ class Executions:
     """
     Service Executions Repository
 
-    The Executions class allows the users to manage executions (executions of services) and their properties. See our documentation for more information about `executions <https://dataloop.ai/docs/faas-execution>`_.
+    The Executions class allows the users to manage executions (executions of services) and their properties.
+    See our documentation for more information about `executions <https://developers.dataloop.ai/tutorials/faas/execution_control/chapter/>`_.
     """
 
     def __init__(self,

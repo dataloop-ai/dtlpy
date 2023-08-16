@@ -37,7 +37,7 @@ def step_impl(context, node_type):
 
 @behave.Given(u'I create pipeline with the name "{pipeline_name}"')
 def step_impl(context, pipeline_name):
-    context.pipeline = context.project.pipelines.create(name='{}-{}'.format(pipeline_name, random.randrange(1000, 10000)))
+    context.pipeline = context.project.pipelines.create(name='{}-{}'.format(pipeline_name, random.randrange(1000, 10000)), project_id=context.project.id)
     context.to_delete_pipelines_ids.append(context.pipeline.id)
 
 

@@ -42,3 +42,11 @@ Feature: Tasks repository create method testing
       | task_name=metadata_task | assignee_ids=auto | metadata={"key": "value"} | items=3 |
     Then I receive a task entity
     And Task has the correct attributes for type "annotation"
+
+  @testrail-C4523167
+  @DAT-50650
+  Scenario: Create - Assignees with capital letters - Should work as expected
+    When I create Task
+      | task_name=metadata_task | assignee_ids=["aNnotator1@dataloop.ai"] | metadata={"key": "value"} | items=3 |
+    Then I receive a task entity
+    And Task has the correct attributes for type "annotation"

@@ -73,6 +73,7 @@ class Dataset(entities.BaseEntity):
     driver = attr.ib(repr=False)
     src_dataset = attr.ib(repr=False)
     _readonly = attr.ib(repr=False)
+    annotations_count = attr.ib()
 
     # api
     _client_api = attr.ib(type=ApiClient, repr=False)
@@ -157,6 +158,7 @@ class Dataset(entities.BaseEntity):
                    created_at=_json.get('createdAt', None),
                    updated_at=_json.get('updatedAt', None),
                    updated_by=_json.get('updatedBy', None),
+                   annotations_count=_json.get("annotationsCount", None),
                    items_count=_json.get('itemsCount', None),
                    annotated=_json.get('annotated', None),
                    readonly=_json.get('readonly', None),
@@ -200,6 +202,7 @@ class Dataset(entities.BaseEntity):
                                                               attr.fields(Dataset).created_at,
                                                               attr.fields(Dataset).updated_at,
                                                               attr.fields(Dataset).updated_by,
+                                                              attr.fields(Dataset).annotations_count,
                                                               attr.fields(Dataset).items_url,
                                                               attr.fields(Dataset).expiration_options,
                                                               attr.fields(Dataset).items_count,
@@ -212,6 +215,7 @@ class Dataset(entities.BaseEntity):
         _json['createdAt'] = self.created_at
         _json['updatedAt'] = self.updated_at
         _json['updatedBy'] = self.updated_by
+        _json['annotationsCount'] = self.annotations_count
         _json['accessLevel'] = self.access_level
         _json['readonly'] = self._readonly
         _json['itemsCount'] = self.items_count

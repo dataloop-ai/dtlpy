@@ -196,6 +196,7 @@ from tests.features.steps.test_cache import test_cache
 from tests.features.steps.settings_context import test_settings_context
 
 from tests.features.steps.pipeline_entity import pipeline_reset
+from tests.features.steps.pipeline_entity import pipeline_rerun_cycles
 
 from tests.features.steps.items_repo import test_upload_and_download_images
 

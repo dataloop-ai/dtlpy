@@ -160,7 +160,7 @@ class Package(entities.DlEntity):
                 logger.warning('Package has been fetched from a project that is not belong to it')
                 project = None
         # Entity
-        inst = cls(_dict=_json.copy())
+        inst = cls(_dict=_json)
         # Platform
         inst._project = project
         inst._client_api = client_api

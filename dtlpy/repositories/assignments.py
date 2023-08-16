@@ -10,7 +10,8 @@ class Assignments:
     """
     Assignments Repository
 
-    The Assignments class allows users to manage assignments and their properties. Read more about `Task Assignment <https://dataloop.ai/docs/sdk-task-assigment>`_ in our SDK documentation.
+    The Assignments class allows users to manage assignments and their properties.
+    Read more about `Task Assignment <https://developers.dataloop.ai/tutorials/task_workflows/create_a_task/chapter/>`_ in our Developers documentation.
     """
 
     def __init__(self,
@@ -378,7 +379,7 @@ class Assignments:
             task_assignments = task.assignments.list()
             workers = list()
             for worker in workload:
-                workers.append(worker.assignee_id)
+                workers.append(worker.assignee_id.lower())
 
             redistributed_assignments = list()
             for ass in task_assignments:

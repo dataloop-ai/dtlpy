@@ -186,3 +186,28 @@ def step_impl(context):
 def step_impl(context, req):
     context.package.requirements = [context.dl.PackageRequirement(name=req)]
     context.package.update()
+
+
+@behave.given(u'I delete dataset Binaries')
+def step_impl(context):
+    datasets = context.project.datasets.list()
+    context.binaries_dataset_ids = list()
+    for dataset in datasets:
+        if dataset.name == 'Binaries':
+            context.binaries_dataset_ids.append(dataset.id)
+            dataset.delete(True, True)
+    datasets = context.project.datasets.list()
+    for dataset in datasets:
+        if dataset.name == 'Binaries':
+            assert False, 'Failed to delete Binaries dataset'
+    context.project = context.dl.projects.get(project_id=context.project.id)
+
+
+@behave.then(u'New Binaries dataset is created')
+def step_impl(context):
+    datasets = context.project.datasets.list()
+    success = False
+    for dataset in datasets:
+        if dataset.name == 'Binaries' and dataset.id not in context.binaries_dataset_ids:
+            success = True
+    assert success, 'Failed to create Binaries dataset'

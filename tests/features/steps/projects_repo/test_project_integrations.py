@@ -1,6 +1,7 @@
 import os
 import behave
 import dtlpy
+import random
 
 
 @behave.given(u'I create "{integration_type}" integration with name "{integration_name}"')
@@ -19,21 +20,23 @@ def step_impl(context, integration_type, integration_name):
             'key': os.environ.get('key_value_key', 'default_key'), 'value': os.environ.get('key_value_value', 'default_value')
         }
     }
+
     assert integration_type in integration_options, "TEST FAILED: Wrong integration type: {}".format(integration_type)
     try:
         context.integration_type = integration_type
 
         if hasattr(context.feature, 'dataloop_feature_integration'):
-            if context.feature.dataloop_feature_integration.type == integration_type and context.feature.dataloop_feature_integration.name == integration_name:
+            if context.feature.dataloop_feature_integration.type == integration_type and integration_name in context.feature.dataloop_feature_integration.name:
                 context.integration = context.feature.dataloop_feature_integration
                 return
 
         # Handle AzureDatalakeGen2 integration
         context.integration_type = context.integration_type.replace('azuregen2', 'azureblob')
-
+        num = random.randint(1000, 10000)
+        context.integration_name = f"{integration_name}-{num}"
         context.integration = context.project.integrations.create(
             integrations_type=context.integration_type,
-            name=integration_name,
+            name=context.integration_name,
             options=integration_options[integration_type])
         context.feature.to_delete_integrations_ids.append(context.integration.id)
         context.feature.dataloop_feature_integration = context.integration
@@ -51,7 +54,7 @@ def step_impl(context, integration_name):
     except Exception as e:
         context.error = e
 
-    assert integration_name == context.integration.name, "TEST FAILED: Expected - {}, Got - {}".format(integration_name, context.integration.name)
+    assert integration_name in context.integration.name, "TEST FAILED: Expected - {}, Got - {}".format(integration_name, context.integration.name)
     assert context.integration_type == context.integration.type, "TEST FAILED: Expected - {}, Got - {}".format(context.integration_type, context.integration.type)
 
 
@@ -65,7 +68,7 @@ def step_impl(context):
         context.error = e
 
 
-@behave.then(u'I validate integration "{integration_name}" not in integrations list')
-def step_impl(context, integration_name):
-    assert integration_name not in [integration['name'] for integration in context.project.integrations.list()], \
-        "TEST FAILED: Failed to delete integration: {}".format(integration_name)
+@behave.then(u'I validate integration not in integrations list by context.integration_name')
+def step_impl(context):
+    assert context.integration_name not in [integration['name'] for integration in context.project.integrations.list()], \
+        "TEST FAILED: Failed to delete integration: {}".format(context.integration_name)

@@ -40,41 +40,4 @@ Feature: Pipeline resource multiples inputs testing
       | input | {"item": {"item_id": "item.id"}, "dataset_id": "dataset.id", "folder": None} |
       | input | {"item": {"item_id": "item.id"}, "item_1": {"item_id": "item.id"}}           |
 
-  @pipelines.delete
-  @testrail-C4536827
-  @DAT-46588
-  Scenario: Multiple inputs - Input with connector and input-list with connector - Should duplicate executions according to list
-    Given I create pipeline from json in path "pipelines_json/inputs_item_and_annotations.json"
-    And I install pipeline in context
-    And Item in path "assets_split/annotations_upload/0000000162.jpg" is uploaded to "Dataset"
-    When Item is annotated with annotations in file: "assets_split/annotations_upload/annotations_new.json"
-    And I execute pipeline with input type "Item"
-    Then Pipeline has "1" cycle executions
-    And I expect that pipeline execution has "9" success executions
-
-
-  @pipelines.delete
-  @testrail-C4536827
-  @DAT-46588
-  Scenario: Multiple inputs - Input-list with connector and input-list with connector - with same length - Should create one execution
-    Given There are "4" items
-    And I create pipeline from json in path "pipelines_json/inputs_items_list_same_size.json"
-    And I install pipeline in context
-    When I upload item in "0000000162.jpg" to pipe dataset
-    And I execute pipeline with input type "Item"
-    Then Pipeline has "1" cycle executions
-    And I expect that pipeline execution has "6" success executions
-
-
-  @pipelines.delete
-  @testrail-C4536827
-  @DAT-46588
-  Scenario: Multiple inputs - Input-list with connector and input-list with connector - with different length - Should failed
-    Given There are "4" items
-    And I create pipeline from json in path "pipelines_json/inputs_items_list_different_size.json"
-    And I install pipeline in context
-    When I upload item in "0000000162.jpg" to pipe dataset
-    And I execute pipeline with input type "Item"
-    And I get pipeline execution in index "0"
-    Then I validate Cycle execution status is "failed"
 

@@ -19,7 +19,7 @@ class Datasets:
     """
     Datasets Repository
 
-    The Datasets class allows the user to manage datasets. Read more about datasets in our `documentation <https://dataloop.ai/docs/dataset>`_ and `SDK documentation <https://dataloop.ai/docs/sdk-create-dataset>`_.
+    The Datasets class allows the user to manage datasets. Read more about datasets in our `documentation <https://dataloop.ai/docs/dataset>`_ and `SDK documentation <https://developers.dataloop.ai/tutorials/data_management/manage_datasets/chapter/>`_.
     """
 
     def __init__(self, client_api: ApiClient, project: entities.Project = None):
@@ -416,7 +416,7 @@ class Datasets:
               with_metadata: bool = True,
               with_task_annotations_status: bool = True):
         """
-        Clone a dataset. Read more about cloning datatsets and items in our `documentation <https://dataloop.ai/docs/clone-merge-dataset#cloned-dataset>`_ and `SDK documentation <https://dataloop.ai/docs/sdk-create-dataset#clone-dataset>`_.
+        Clone a dataset. Read more about cloning datatsets and items in our `documentation <https://dataloop.ai/docs/clone-merge-dataset#cloned-dataset>`_ and `SDK documentation <https://developers.dataloop.ai/tutorials/data_management/data_versioning/chapter/>`_.
 
         **Prerequisites**: You must be in the role of an *owner* or *developer*.
 
@@ -488,7 +488,7 @@ class Datasets:
               with_task_annotations_status: bool = True,
               wait: bool = True):
         """
-        Merge a dataset. See our `SDK docs <https://dataloop.ai/docs/sdk-create-dataset#merge-datasets>`_ for more information.
+        Merge a dataset. See our `SDK docs <https://developers.dataloop.ai/tutorials/data_management/data_versioning/chapter/>`_ for more information.
 
         **Prerequisites**: You must be an *owner* or *developer* to use this method.
 

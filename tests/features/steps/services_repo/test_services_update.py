@@ -98,7 +98,7 @@ def step_impl(context):
             break
         e = context.execution = context.service.executions.get(execution_id=context.execution.id)
         success = e.latest_status['status'] in ['in-progress', 'inProgress']
-    assert success
+    assert success, f"TEST FAILED: latest status - {e.latest_status['status']}"
 
 
 @behave.when(u'I update service with force="{force}"')

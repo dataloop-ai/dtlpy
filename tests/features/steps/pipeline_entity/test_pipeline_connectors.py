@@ -1,6 +1,7 @@
-from behave import when, then, given
+from behave import when
 import time
 import dtlpy as dl
+import random
 
 
 @when(u'I create a pipeline with code nodes with 2 outputs and code node with 2 inputs')
@@ -10,11 +11,10 @@ def step_impl(context):
     Code-node#1 code node have 2 outputs - return item and dataset resources
     Code-node#2 code node have 2 inputs - get item and dataset resources
     """
-    t = time.localtime()
-    current_time = time.strftime("%H-%M-%S", t)
-    context.pipeline_name = 'pipeline-{}'.format(current_time)
+    num = random.randrange(10000, 100000)
+    context.pipeline_name = f'pipeline-sdk-{num}'
 
-    context.pipeline = context.project.pipelines.create(name=context.pipeline_name)
+    context.pipeline = context.project.pipelines.create(name=context.pipeline_name, project_id=context.project.id)
 
     def run_1(item: dl.Item):
         dataset = item.dataset

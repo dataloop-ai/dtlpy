@@ -11,7 +11,8 @@ class Ontologies:
     """
     Ontologies Repository
 
-    The Ontologies class allows users to manage ontologies and their properties. Read more about ontology in our `SDK docs <https://dataloop.ai/docs/sdk-ontology>`_.
+    The Ontologies class allows users to manage ontologies and their properties.
+    Read more about ontology in our `developers docs <https://developers.dataloop.ai/tutorials/recipe_and_ontology/ontology/chapter/>`_.
     """
 
     def __init__(self, client_api: ApiClient,

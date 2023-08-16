@@ -218,7 +218,16 @@ def step_impl(context):
         uploaded_filename = "file" + str(context.items_uploaded) + ".jpg"
         buff.name = uploaded_filename
         context.items_uploaded += 1
-        context.dataset.items.upload(buff, remote_path=None)
+        item = context.dataset.items.upload(buff, remote_path=None)
+        # wait for platform attributes
+        while True:
+            time.sleep(3)
+            item = context.dataset.items.get(item_id=item.id)
+            if "video" in item.mimetype:
+                if item.fps is not None:
+                    break
+            elif item.mimetype is not None:
+                break
 
 
 @behave.then(u"Number of error files should be larger by one")

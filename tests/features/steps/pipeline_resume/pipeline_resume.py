@@ -409,11 +409,12 @@ def step_impl(context):
         dataset=context.dataset,
         service=context.service,
     )
-    context.pipeline = context.project.pipelines.create(pipeline_json=pipeline_payload)
+    context.pipeline = context.project.pipelines.create(pipeline_json=pipeline_payload, project_id=context.project.id)
     context.to_delete_pipelines_ids.append(context.pipeline.id)
 
 
 @behave.given(u'Faas node service is paused')
+@behave.when(u'I pause service in context')
 def step_impl(context):
     context.service.pause()
     context.service = dl.services.get(service_id=context.service.id)

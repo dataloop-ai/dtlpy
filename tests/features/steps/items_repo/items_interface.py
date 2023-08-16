@@ -1,5 +1,6 @@
 import behave
 import os
+import time
 
 
 @behave.given(u'I upload an item in the path "{item_path}" to the dataset')
@@ -40,6 +41,16 @@ def step_impl(context, item_type):
 
     context.item_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], items_types_list[item_type])
     context.item = context.dataset.items.upload(local_path=context.item_path, overwrite=True)
+
+    # wait for platform attributes
+    while True:
+        time.sleep(3)
+        context.item = context.dataset.items.get(item_id=context.item.id)
+        if "video" in context.item.mimetype:
+            if context.item.fps is not None:
+                break
+        elif context.item.mimetype is not None:
+            break
 
 
 @behave.given(u'I upload an item in the path "{item_path}" to "{dataset_name}"')

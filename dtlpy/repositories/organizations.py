@@ -10,7 +10,7 @@ class Organizations:
     """
     Organizations Repository
 
-    Read our `documentation <https://dataloop.ai/docs/org-setup>`_ and `SDK documentation <https://dataloop.ai/docs/sdk-org>`_ to learn more about Organizations in the Dataloop platform.
+    Read our `documentation <https://dataloop.ai/docs/org-setup>`_ to learn more about Organizations in the Dataloop platform.
     """
 
     def __init__(self, client_api: ApiClient):
@@ -115,7 +115,7 @@ class Organizations:
         available_integrations = miscellaneous.List(response.json())
         return available_integrations
 
-    @_api_reference.add(path='/orgs/{org_id}/members', method='get')
+    @_api_reference.add(path='/orgs/{orgId}/members', method='get')
     def list_members(self, organization: entities.Organization = None,
                      organization_id: str = None,
                      organization_name: str = None,
@@ -210,7 +210,7 @@ class Organizations:
             raise exceptions.PlatformException(response)
         return organization
 
-    @_api_reference.add(path='/orgs/{org_id}', method='get')
+    @_api_reference.add(path='/orgs/{orgId}', method='get')
     def get(self,
             organization_id: str = None,
             organization_name: str = None,
@@ -277,7 +277,6 @@ class Organizations:
 
         return organization
 
-    @_api_reference.add(path='/orgs/{org_id}/plan', method='patch')
     def update(self, plan: str,
                organization: entities.Organization = None,
                organization_id: str = None,
@@ -325,7 +324,7 @@ class Organizations:
         else:
             raise exceptions.PlatformException(response)
 
-    @_api_reference.add(path='/orgs/{org_id}/members', method='post')
+    @_api_reference.add(path='/orgs/{orgId}/members', method='post')
     def add_member(self, email: str,
                    role: entities.MemberOrgRole = entities.MemberOrgRole.MEMBER,
                    organization_id: str = None,
@@ -381,7 +380,7 @@ class Organizations:
         else:
             return True
 
-    @_api_reference.add(path='/orgs/{org_id}/members/{user_id}', method='delete')
+    @_api_reference.add(path='/orgs/{orgId}/members/{memberId}', method='delete')
     def delete_member(self, user_id: str,
                       organization_id: str = None,
                       organization_name: str = None,
@@ -434,7 +433,7 @@ class Organizations:
                 error='403',
                 message='Cant delete member from SDK. Please login to platform to delete')
 
-    @_api_reference.add(path='/orgs/{org_id}/members', method='patch')
+    @_api_reference.add(path='/orgs/{orgId}/members', method='patch')
     def update_member(self, email: str,
                       role: entities.MemberOrgRole = entities.MemberOrgRole.MEMBER,
                       organization_id: str = None,

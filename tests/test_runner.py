@@ -143,7 +143,7 @@ def test_feature_file(w_feature_filename, i_pbar):
                     '--no-capture']
             # need to run a new process to avoid collisions
             p = subprocess.Popen(cmds, stderr=subprocess.PIPE)
-            _, stderr = p.communicate(timeout=1000)
+            _, stderr = p.communicate(timeout=600)
 
             if p.returncode == 0:
                 break

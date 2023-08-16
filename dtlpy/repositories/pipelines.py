@@ -259,7 +259,7 @@ class Pipelines:
         if not success:
             raise exceptions.PlatformException(response)
 
-    @_api_reference.add(path='/pipelines/{pipelineId}', method='delete')
+    # @_api_reference.add(path='/pipelines/{pipelineId}', method='delete')
     def delete(self,
                pipeline: entities.Pipeline = None,
                pipeline_name: str = None,

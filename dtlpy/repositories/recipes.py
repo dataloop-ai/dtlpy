@@ -11,7 +11,8 @@ class Recipes:
     """
     Recipes Repository
 
-    The Recipes class allows you to manage recipes and their properties. For more information on Recipes, see our `documentation <https://dataloop.ai/docs/ontology>`_ and `SDK documentation <https://dataloop.ai/docs/sdk-recipe>`_.
+    The Recipes class allows you to manage recipes and their properties.
+    For more information on Recipes, see our `documentation <https://dataloop.ai/docs/ontology>`_ and `developers' documentation <https://developers.dataloop.ai/tutorials/recipe_and_ontology/recipe/chapter/>`_.
     """
 
     def __init__(self,

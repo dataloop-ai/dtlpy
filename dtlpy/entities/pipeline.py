@@ -95,7 +95,7 @@ class Variable(entities.DlEntity):
         :rtype: dtlpy.entities.pipeline.PipelineVariables
         """
 
-        inst = cls(_dict=_json.copy())
+        inst = cls(_dict=_json)
         return inst
 
     def to_json(self):

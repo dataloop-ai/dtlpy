@@ -13,9 +13,11 @@ class Integrations:
     """
     Integrations Repository
 
-    The Integrations class allows you to manage data integrtion from your external storage (e.g., S3, GCS, Azure) into your Dataloop's Dataset storage, as well as sync data in your Dataloop's Datasets with data in your external storage.
+    The Integrations class allows you to manage data integrations from your external storage (e.g., S3, GCS, Azure)
+    into your Dataloop's Dataset storage, as well as sync data in your Dataloop's Datasets with data in your external
+    storage.
 
-    For more information on Organization Storgae Integration see the `Dataloop documentation <https://dataloop.ai/docs/organization-integrations>`_  and `SDK External Storage <https://dataloop.ai/docs/sdk-sync-storage>`_.
+    For more information on Organization Storage Integration see the `Dataloop documentation <https://dataloop.ai/docs/organization-integrations>`_  and `developers' docs <https://developers.dataloop.ai/tutorials/data_management/>`_.
 
     """
 
@@ -48,7 +50,7 @@ class Integrations:
             raise ValueError('Must input a valid Organization entity')
         self._org = org
 
-    @_api_reference.add(path='/orgs/{org_id}/integrations/{id}', method='delete')
+    @_api_reference.add(path='/orgs/{orgId}/integrations/{integrationId}', method='delete')
     def delete(self,
                integrations_id: str,
                sure: bool = False,
@@ -93,7 +95,7 @@ class Integrations:
                 error='403',
                 message='Cant delete integrations from SDK. Please login to platform to delete')
 
-    @_api_reference.add(path='/orgs/{org_id}/integrations', method='post')
+    @_api_reference.add(path='/orgs/{orgId}/integrations', method='post')
     def create(self,
                integrations_type: entities.IntegrationType,
                name: str,
@@ -152,7 +154,7 @@ class Integrations:
                     logger.info('Integration status: {}'.format(integration_status))
         return integration
 
-    @_api_reference.add(path='/orgs/{org_id}/integrations', method='patch')
+    @_api_reference.add(path='/orgs/{orgId}/integrations', method='patch')
     def update(self,
                new_name: str = None,
                integrations_id: str = None,
@@ -215,7 +217,7 @@ class Integrations:
 
         return entities.Integration.from_json(_json=response.json(), client_api=self._client_api)
 
-    @_api_reference.add(path='/orgs/{org_id}/integrations/{id}', method='get')
+    @_api_reference.add(path='/orgs/{orgId}/integrations/{integrationId}', method='get')
     def get(self, integrations_id: str):
         """
         Get organization integrations. Use this method to access your integration and be able to use it in your code.
@@ -250,7 +252,7 @@ class Integrations:
             raise exceptions.PlatformException(response)
         return entities.Integration.from_json(_json=response.json(), client_api=self._client_api)
 
-    @_api_reference.add(path='/orgs/{org_id}/integrations', method='get')
+    @_api_reference.add(path='/orgs/{orgId}/integrations', method='get')
     def list(self, only_available=False):
         """
         List all the organization's integrations with external storage.

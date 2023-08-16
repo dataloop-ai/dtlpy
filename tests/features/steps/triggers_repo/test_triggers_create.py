@@ -114,6 +114,11 @@ def step_impl(context):
     assert isinstance(context.trigger, context.dl.entities.Trigger)
 
 
+@behave.then(u'I receive a CronTrigger entity')
+def step_impl(context):
+    assert isinstance(context.trigger, context.dl.entities.CronTrigger)
+
+
 @behave.when(u'I set the trigger in the context')
 def step_impl(context):
     composition = context.project.compositions.get(composition_id=context.app.composition_id)
@@ -123,7 +128,13 @@ def step_impl(context):
 
 @behave.when(u'I set the execution in the context')
 def step_impl(context):
-    context.execution = context.service.executions.list().items[0]
+    num_try = 6
+    interval = 2
+    for i in range(num_try):
+        time.sleep(interval)
+        if context.service.executions.list().items_count > 0:
+            context.execution = context.service.executions.list().items[0]
+            break
 
 
 @behave.when(u'I set code path "{path}" to context')
@@ -141,24 +152,24 @@ def step_impl(context, function_name):
 def step_impl(context, resource_type):
     context.trigger_type = resource_type
     num_try = 60
-    interval = 10
+    interval = 20
     triggered = False
 
     for i in range(num_try):
         time.sleep(interval)
         if resource_type == 'item':
             item = context.dataset.items.get(item_id=context.uploaded_item_with_trigger.id)
-            if item.resource_executions.list().items_count == 2:
+            if len(item.resource_executions.list()) > 0 and item.resource_executions.list()[0][0].service_name == context.service.name:
                 triggered = True
                 break
         elif resource_type == 'itemclone':
             item = context.dataset.items.get(item_id=context.uploaded_item_with_trigger.id)
-            if item.resource_executions.list().items_count == 1:
+            if len(item.resource_executions.list()) > 0 and item.resource_executions.list()[0][0].service_name == context.service.name:
                 triggered = True
                 break
         elif resource_type == 'annotation':
-            item = context.annotation.item.annotations.get(annotation_id=context.annotation.id)
-            if item.label == "Edited":
+            annotation = context.annotation.item.annotations.get(annotation_id=context.annotation.id)
+            if annotation.label == "Edited":
                 triggered = True
                 break
         elif resource_type == 'dataset':
@@ -179,7 +190,12 @@ def step_impl(context, resource_type):
                 break
         elif resource_type == 'hidden-item':
             item = context.dataset.items.get(item_id=context.uploaded_item_with_trigger.id)
-            if item.resource_executions.list().items_count == 1:
+            if len(item.resource_executions.list()) > 0 and item.resource_executions.list()[0][0].service_name == context.service.name:
+                triggered = True
+                break
+        elif resource_type == 'string':
+            execution = context.service.executions.list()[0][0]
+            if len(execution.input) == 1:
                 triggered = True
                 break
         context.dl.logger.debug("Step is running for {:.2f}[s] and now Going to sleep {:.2f}[s]".format((i + 1) * interval,

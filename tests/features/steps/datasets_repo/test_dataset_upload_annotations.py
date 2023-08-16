@@ -1,5 +1,4 @@
 import time
-
 import behave
 import os
 import json
@@ -32,8 +31,18 @@ def step_impl(context):
 def step_impl(context, item_path, remote_path):
     item_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], item_path)
     context.item = context.dataset.items.upload(local_path=item_path, remote_path=remote_path)
+
     # wait for platform attributes
-    time.sleep(6)
+    while True:
+        time.sleep(3)
+        context.item = context.dataset.items.get(item_id=context.item.id)
+        if "video" in context.item.mimetype:
+            if context.item.fps is not None:
+                break
+        elif context.item.mimetype is not None:
+            break
+
+
     context.item = context.dataset.items.get(item_id=context.item.id)
     if context.item.name.endswith('.mp4') and context.item.fps is None:
         context.item.fps = 25

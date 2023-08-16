@@ -73,4 +73,7 @@ def step_impl(context):
 def step_impl(context):
     context.dpk.name = context.dpk.name + str(random.randint(10000, 1000000))
     context.dpk = context.dl.entities.Dpk.publish(context.dpk)
-    context.feature.dpk = context.dpk
+    if hasattr(context.feature, 'dpks'):
+        context.feature.dpks.append(context.dpk)
+    else:
+        context.feature.dpks = [context.dpk]

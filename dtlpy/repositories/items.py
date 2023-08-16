@@ -10,7 +10,8 @@ class Items:
     """
     Items Repository
 
-    The Items class allows you to manage items in your datasets. For information on actions related to items see `Organizing Your Dataset <https:/dataloop.ai/docs/sdk-organize-dataset>`_, `Item Metadata <https://dataloop.ai/docs/sdk-add-item-metadata>`_, and `Item Metadata-Based Filtering <https://dataloop.ai/docs/sdk-custom-filter-metadata>`_.
+    The Items class allows you to manage items in your datasets.
+    For information on actions related to items see https://developers.dataloop.ai/tutorials/data_management/upload_and_manage_items/chapter/
     """
 
     def __init__(self,
@@ -307,7 +308,7 @@ class Items:
               allow_many: bool = False,
               wait: bool = True):
         """
-        Clone item. Read more about cloning datatsets and items in our `documentation <https://dataloop.ai/docs/clone-merge-dataset#cloned-dataset>`_ and `SDK documentation <https://dataloop.ai/docs/sdk-create-dataset#clone-dataset>`_.
+        Clone item. Read more about cloning datatsets and items in our `documentation <https://dataloop.ai/docs/clone-merge-dataset#cloned-dataset>`_ and `SDK documentation <https://developers.dataloop.ai/tutorials/data_management/data_versioning/chapter/>`_.
 
         **Prerequisites**: You must be in the role of an *owner* or *developer*.
 

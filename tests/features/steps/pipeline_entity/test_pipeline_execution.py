@@ -76,12 +76,13 @@ def step_impl(context, execution_number):
     context.pipeline = context.project.pipelines.get(context.pipeline.name)
 
     num_try = 60
-    interval = 10
+    interval = 15
     validate = 0
     executed = False
 
     for i in range(num_try):
         time.sleep(interval)
+        context.cycles = context.pipeline.pipeline_executions.list().items
         execution_list = context.pipeline.pipeline_executions.list()[0][0].executions
         execution_count = 0
         for ex in execution_list.values():

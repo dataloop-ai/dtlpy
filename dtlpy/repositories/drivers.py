@@ -10,7 +10,8 @@ class Drivers:
     """
     Drivers Repository
     
-    The Drivers class allows users to manage drivers that are used to connect with external storage. Read more about external storage in our `documentation <https://dataloop.ai/docs/storage>`_ and `SDK documentation <https://sdk-docs.dataloop.ai/en/latest/tutorials/data_management/cloud_storage/create_an_external_dataset/chapter.html#external-storage-dataset>`_.
+    The Drivers class allows users to manage drivers that are used to connect with external storage.
+    Read more about external storage in our `documentation <https://dataloop.ai/docs/overview-1>`_ and `developers' docs <https://developers.dataloop.ai/tutorials/data_management/>`_.
     """
 
     def __init__(self, client_api: ApiClient, project: entities.Project = None):

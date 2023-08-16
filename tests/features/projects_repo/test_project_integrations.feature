@@ -18,5 +18,5 @@ Feature: Projects repository create integration testing
   Scenario: Delete key value integration in project
     Given I create "key_value" integration with name "sdk_automation_to_delete"
     When I delete integration in context
-    Then I validate integration "sdk_automation_to_delete" not in integrations list
+    Then I validate integration not in integrations list by context.integration_name
 

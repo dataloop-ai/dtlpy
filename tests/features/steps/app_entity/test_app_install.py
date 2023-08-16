@@ -18,7 +18,10 @@ def step_impl(context, path):
 def step_impl(context):
     context.dpk.name = context.dpk.name + str(random.randint(10000, 1000000))
     context.dpk = context.dpk.publish()
-    context.feature.dpk = context.dpk
+    if hasattr(context.feature, 'dpks'):
+        context.feature.dpks.append(context.dpk)
+    else:
+        context.feature.dpks = [context.dpk]
 
 
 @behave.when(u'I install the app with exception')
@@ -26,7 +29,10 @@ def step_impl(context):
     try:
         context.app = context.dl.entities.App.from_json({}, client_api=context.project._client_api, project=context.project)
         context.app = context.project.apps.install(context.dpk)
-        context.feature.app = context.app
+        if hasattr(context.feature, 'apps'):
+            context.feature.apps.append(context.app)
+        else:
+            context.feature.apps = [context.app]
     except Exception as e:
         context.e = e
 
@@ -38,7 +44,10 @@ def step_impl(context):
 
     }, client_api=context.project._client_api, project=context.project)
     context.app = context.project.apps.install(context.dpk)
-    context.feature.app = context.app
+    if hasattr(context.feature, 'apps'):
+        context.feature.apps.append(context.app)
+    else:
+        context.feature.apps = [context.app]
 
 
 @behave.then(u'I should get the app with the same id')

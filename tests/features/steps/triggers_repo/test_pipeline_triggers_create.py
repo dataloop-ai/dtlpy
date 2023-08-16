@@ -13,7 +13,7 @@ def step_impl(context):
     current_time = time.strftime("%H-%M-%S", t)
     context.pipeline_name = 'pipeline-{}'.format(current_time)
 
-    context.pipeline = context.project.pipelines.create(name=context.pipeline_name)
+    context.pipeline = context.project.pipelines.create(name=context.pipeline_name, project_id=context.project.id)
 
     dataset_node_1 = dl.DatasetNode(
         name="datsset-1",

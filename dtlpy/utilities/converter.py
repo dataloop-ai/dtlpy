@@ -404,8 +404,8 @@ class Converter:
                      'annotations': total_converted_annotations,
                      'categories': categories}
 
-        with open(os.path.join(local_path, 'coco.json'), 'w+') as f:
-            json.dump(coco_json, f)
+        with open(os.path.join(local_path, 'coco.json'), 'w+', encoding='utf-8') as f:
+            json.dump(coco_json, f, ensure_ascii=False)
 
         log_filepath = None
         if reporter.has_errors:

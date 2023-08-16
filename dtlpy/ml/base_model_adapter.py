@@ -1,3 +1,4 @@
+import copy
 import tempfile
 import datetime
 import logging
@@ -10,14 +11,17 @@ from PIL import Image
 from functools import partial
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor
-
-from .. import entities, utilities
+import attr
+from .. import entities, utilities, repositories
 from ..services import service_defaults
+from ..services.api_client import ApiClient
 
 logger = logging.getLogger('ModelAdapter')
 
 
 class BaseModelAdapter(utilities.BaseServiceRunner):
+    _client_api = attr.ib(type=ApiClient, repr=False)
+
     def __init__(self, model_entity: entities.Model = None):
         self.logger = logger
         # entities
@@ -82,12 +86,12 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             self.package = self.model_entity.package
         if self._package is None:
             raise ValueError('Missing Package entity on adapter. please set: "adapter.package=package"')
-        assert isinstance(self._package, entities.Package)
+        assert isinstance(self._package, (entities.Package, entities.Dpk))
         return self._package
 
     @package.setter
     def package(self, package):
-        assert isinstance(package, entities.Package)
+        assert isinstance(package, (entities.Package, entities.Dpk))
         self.package_name = package.name
         self._package = package
 
@@ -271,10 +275,8 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             self.model_entity = model_entity
         if local_path is None:
             local_path = os.path.join(service_defaults.DATALOOP_PATH, "models", self.model_entity.name)
-        # update adapter instance
-        _configuration = self.package.metadata.get('system', {}).get('ml', {}).get('defaultConfiguration', {})
-        _configuration.update(self.model_entity.configuration)
-        self.configuration = _configuration
+        # Load configuration
+        self.configuration = self.model_entity.configuration
         # Download
         self.model_entity.artifacts.download(
             local_path=local_path,
@@ -420,7 +422,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             upload the output the model's bucket (model.bucket)
         """
         if isinstance(model, dict):
-            model = context.package.models.get(model_id=model['model_id'])
+            model = repositories.Models(client_api=self._client_api).get(model_id=model['id'])
         output_path = None
         try:
             logger.info("Received {s} for training".format(s=model.id))

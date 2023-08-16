@@ -47,7 +47,7 @@ def step_impl(context, task_type):
             assert compare_items_list(items_a=task_items, items_b=[item.id for item in val])
         elif key == 'assignee_ids':
             task_assignments = [assignment.annotator for assignment in context.task.assignments.list()]
-            assert compare_items_list(items_a=task_assignments, items_b=val)
+            assert compare_items_list(items_a=task_assignments, items_b=[v.lower() for v in val])
         elif key == 'workload':
             task_assignments = [assignment.annotator for assignment in context.task.assignments.list()]
             assert compare_items_list(items_a=task_assignments, items_b=[w_l.assignee_id for w_l in val])

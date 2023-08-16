@@ -18,7 +18,8 @@ class Services:
     """
     Services Repository
 
-    The Services class allows the user to manage services and their properties. Services are created from the packages users create. See our documentation for more information about `services <https://dataloop.ai/docs/faas-service>`_.
+    The Services class allows the user to manage services and their properties. Services are created from the packages users create.
+    See our documentation for more information about `services <https://developers.dataloop.ai/tutorials/faas/advance/chapter/>`_.
     """
 
     def __init__(self,

@@ -56,7 +56,8 @@ class Packages:
     """
     Packages Repository
 
-    The Packages class allows users to manage packages (code used for running in Dataloop's FaaS) and their properties. Read more about `Packages <https://dataloop.ai/docs/faas-package>`_.
+    The Packages class allows users to manage packages (code used for running in Dataloop's FaaS) and their properties.
+    Read more about `Packages <https://developers.dataloop.ai/tutorials/faas/introduction/chapter/>`_.
     """
 
     def __init__(self, client_api: ApiClient, project: entities.Project = None):
@@ -1181,7 +1182,8 @@ class Packages:
                            execution_mode: entities.TriggerExecutionMode = 'Once',
                            type_t: entities.TriggerType = "Event"):
         """
-        Build a trigger dictionary to trigger FaaS. Read more about `FaaS Triggers <https://dataloop.ai/docs/faas-trigger>`_.
+        Build a trigger dictionary to trigger FaaS.
+        Read more about `FaaS Triggers <https://developers.dataloop.ai/tutorials/faas/auto_annotate/chapter/#trigger-the-service>`_.
 
         **Prerequisites**: You must be in the role of an *owner* or *developer*.
 

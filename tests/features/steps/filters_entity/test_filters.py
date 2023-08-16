@@ -99,6 +99,8 @@ def step_impl(context, item_path):
                     else:
                         i_field_pointer[field] = dict()
                         i_field_pointer = i_field_pointer[field]
+                else:
+                    i_field_pointer = i_field_pointer[field]
             item.update()
 
     pool = ThreadPool(processes=32)

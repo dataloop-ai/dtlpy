@@ -51,7 +51,7 @@ def step_impl(context):
 def step_impl(context, total_items):
     task = context.project.tasks.list()[0]
     num_try = 60
-    interval = 10
+    interval = 15
     finished = False
 
     for i in range(num_try):

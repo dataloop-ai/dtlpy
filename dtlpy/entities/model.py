@@ -252,7 +252,7 @@ class Model(entities.BaseEntity):
                 except Exception:
                     raise error
             self._repositories = self.set_repositories()  # update the repos with the new fetched entity
-        assert isinstance(self._package, entities.Package)
+        assert isinstance(self._package, (entities.Package, entities.Dpk))
         return self._package
 
     @property

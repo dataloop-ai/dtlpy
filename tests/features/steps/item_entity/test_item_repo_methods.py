@@ -1,3 +1,4 @@
+import time
 import behave
 import os
 import json
@@ -64,8 +65,20 @@ def step_impl(context):
     context.item.annotated = True
     context.item = context.item.update()
 
+
 @behave.given(u'I upload item in path "{item_path}" to dataset')
 def step_impl(context, item_path):
     item_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], item_path)
     context.item = context.dataset.items.upload(local_path=item_path)
-    context.item = context.dataset.items.get(item_id=context.item.id)
+
+    # wait for platform attributes
+    while True:
+        time.sleep(3)
+        context.item = context.dataset.items.get(item_id=context.item.id)
+        if "video" in context.item.mimetype:
+            if context.item.fps is not None:
+                break
+        elif context.item.mimetype is not None:
+            break
+
+    # context.item = context.dataset.items.get(item_id=context.item.id)

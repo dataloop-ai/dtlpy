@@ -15,8 +15,8 @@ def step_impl(context):
         pipeline_json['projectId'] = context.project.id
         context.model = context.project.models.list()[0][0]
         pipeline_json['variables'][0]['value'] = context.model.id
-        context.pipeline = context.project.pipelines.create(name='ml-pipeline', project_id=context.project.id,
-                                                            pipeline_json=pipeline_json)
+        context.pipeline = context.project.pipelines.create(name='ml-pipeline',
+                                                            pipeline_json=pipeline_json, project_id=context.project.id)
 
 
 @when('I update the model variable and the pipeline is still installed')

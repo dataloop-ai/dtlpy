@@ -1,7 +1,6 @@
 import time
 
-from behave import fixture
-from behave import use_fixture
+from behave import fixture, use_fixture
 import os
 import json
 import logging
@@ -13,6 +12,7 @@ from behave.reporter.summary import SummaryReporter
 from behave.formatter.base import StreamOpener
 import sys
 
+import dtlpy as dl
 
 
 try:
@@ -37,27 +37,29 @@ def after_feature(context, feature):
         except Exception:
             logging.exception('Failed to delete bot')
 
-    if hasattr(feature, 'app'):
-        try:
-            context.feature.app.uninstall()
-        except Exception:
-            logging.exception('Failed to uninstall app')
-
-    if hasattr(feature, 'dpk'):
-        try:
-            context.feature.dpk.delete()
-        except Exception:
+    if hasattr(feature, 'apps'):
+        for app in context.feature.apps:
             try:
-                apps = context.dl.apps.list(
-                    filters=context.dl.Filters(use_defaults=False, resource=context.dl.FiltersResource.APP,
-                                               field="dpkName",
-                                               values=context.context.feature.dpk.name))
-                for page in apps:
-                    for app in page:
-                        app.uninstall()
-                context.feature.dpk.delete()
-            except:
-                logging.exception('Failed to delete dpk')
+                app.uninstall()
+            except Exception:
+                logging.exception('Failed to uninstall app')
+
+    if hasattr(feature, 'dpks'):
+        for dpk in context.feature.dpks:
+            try:
+                dpk.delete()
+            except Exception:
+                try:
+                    apps = dl.apps.list(
+                        filters=dl.Filters(use_defaults=False, resource=dl.FiltersResource.APP,
+                                           field="dpkName",
+                                           values=dpk.name))
+                    for page in apps:
+                        for app in page:
+                            app.uninstall()
+                    dpk.delete()
+                except:
+                    logging.exception('Failed to delete dpk')
 
     if hasattr(feature, 'dataloop_feature_integration'):
         all_deleted = True
@@ -111,6 +113,13 @@ def fix_project_with_frozen_datasets(project):
     for dataset in datasets:
         if dataset.readonly:
             dataset.set_readonly(False)
+
+
+@fixture
+def before_tag(context, tag):
+    if "skip_test" in tag:
+        dat = tag.split("_")[-1] if "DAT" in tag else ""
+        context.scenario.skip(f"Test mark as SKIPPED, Should be merged after {dat}")
 
 
 @fixture
@@ -174,7 +183,9 @@ def after_tag(context, tag):
         pass
     elif 'testrail-C' in tag:
         pass
-    elif 'DAT-' in tag or tag == 'wip' or 'qa-' in tag or 'rc_only' in tag:
+    elif tag == 'wip':
+        pass
+    elif any(i_tag in tag for i_tag in ['DAT-', 'qa-', 'rc_only', 'skip_test']):
         pass
     else:
         raise ValueError('unknown tag: {}'.format(tag))
