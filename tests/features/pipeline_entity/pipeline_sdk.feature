@@ -9,6 +9,7 @@ Feature: Pipeline entity method testing
 
 
   @pipelines.delete
+  @services.delete
   @testrail-C4525314
   @DAT-46580
   Scenario: pipeline flow
@@ -16,23 +17,23 @@ Feature: Pipeline entity method testing
     And I create a pipeline from sdk
     And I upload item in "0000000162.jpg" to pipe dataset
     Then verify pipeline flow result
+    Then I expect that pipeline execution has "3" success executions
 
   @pipelines.delete
   @testrail-C4525314
   @DAT-46580
   Scenario: pipeline flow pipeline trigger
-    When I create a package and service to pipeline
-    And I create a pipeline from sdk with pipeline trigger
+    When I create a pipeline from sdk with pipeline trigger
     And I upload item in "0000000162.jpg" to pipe dataset
-    Then verify pipeline flow result
+    Then I expect that pipeline execution has "2" success executions
 
   @pipelines.delete
   @testrail-C4525314
   @DAT-46580
   Scenario: pipeline delete use sdk
-    When I create a package and service to pipeline
-    And I create a pipeline from json
-    And I update the pipeline nodes
+    Given I create pipeline from json in path "pipelines_json/pipeline_sanity.json"
+    And I install pipeline in context
+    When I remove node by the name "code" from pipeline
     And check pipeline nodes
 
   @pipelines.delete

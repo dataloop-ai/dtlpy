@@ -70,6 +70,20 @@ def generate_pipeline_json(context, pipeline_json):
         node['name'] = context.dataset.name
         node['metadata']["datasetId"] = context.dataset.id
 
+    task_nodes = [node for node in pipeline_json['nodes'] if node['type'] == 'task']
+    for node in task_nodes:
+        node['projectId'] = context.project.id
+        node['metadata']["recipeTitle"] = context.dataset.recipes.list()[0].title
+        node['metadata']["recipeId"] = context.dataset.recipes.list()[0].id
+        node['metadata']["datasetId"] = context.dataset.id
+        node['metadata']["taskOwner"] = context.dl.info()['user_email']
+        node['metadata']["workload"] = [
+            {
+                "assigneeId": context.dl.info()['user_email'],
+                "load": 100
+            }
+        ]
+
     return pipeline_json
 
 

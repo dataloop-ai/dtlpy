@@ -86,6 +86,7 @@ class Model(entities.BaseEntity):
     metadata = attr.ib()
     input_type = attr.ib()
     output_type = attr.ib()
+    module_name = attr.ib()
 
     url = attr.ib()
     scope = attr.ib()
@@ -182,7 +183,8 @@ class Model(entities.BaseEntity):
             version=_json.get('version', '1.0.0'),
             context=_json.get('context', {}),
             input_type=_json.get('inputType', None),
-            output_type=_json.get('outputType', None)
+            output_type=_json.get('outputType', None),
+            module_name = _json.get('moduleName', None)
         )
         inst.is_fetched = is_fetched
         return inst
@@ -217,6 +219,7 @@ class Model(entities.BaseEntity):
         _json['updatedAt'] = self.updated_at
         _json['inputType'] = self.input_type
         _json['outputType'] = self.output_type
+        _json['moduleName'] = self.module_name
 
         model_artifacts = list()
         for artifact in self.model_artifacts:
@@ -281,7 +284,7 @@ class Model(entities.BaseEntity):
     def set_repositories(self):
         reps = namedtuple('repositories',
                           field_names=['projects', 'datasets', 'packages', 'models', 'ontologies', 'artifacts',
-                                       'metrics', 'dpks'])
+                                       'metrics', 'dpks', 'services'])
 
         r = reps(projects=repositories.Projects(client_api=self._client_api),
                  datasets=repositories.Datasets(client_api=self._client_api,
@@ -301,7 +304,10 @@ class Model(entities.BaseEntity):
                                                   model=self),
                  metrics=repositories.Metrics(client_api=self._client_api,
                                               model=self),
-                 dpks=repositories.Dpks(client_api=self._client_api)
+                 dpks=repositories.Dpks(client_api=self._client_api),
+                 services=repositories.Services(client_api=self._client_api,
+                                                project=self._project,
+                                                project_id=self.project_id),
                  )
         return r
 
@@ -348,6 +354,11 @@ class Model(entities.BaseEntity):
     def metrics(self):
         assert isinstance(self._repositories.metrics, repositories.Metrics)
         return self._repositories.metrics
+
+    @property
+    def services(self):
+        assert isinstance(self._repositories.services, repositories.Services)
+        return self._repositories.services
 
     @property
     def id_to_label_map(self):
@@ -482,12 +493,71 @@ class Model(entities.BaseEntity):
         """
         return self.models.predict(model=self, item_ids=item_ids)
 
-    def deploy(self, service_config=None):
+    def deploy(self, service_config=None) -> entities.Service:
         """
         Deploy a trained model. This will create a service that will execute predictions
 
         :param dict service_config : Service object as dict. Contains the spec of the default service to create.
 
-        :return:
+        :return: dl.Service: The deployed service
         """
         return self.models.deploy(model_id=self.id, service_config=service_config)
+
+    def log(self,
+            service=None,
+            size=None,
+            checkpoint=None,
+            start=None,
+            end=None,
+            follow=False,
+            text=None,
+            execution_id=None,
+            function_name=None,
+            replica_id=None,
+            system=False,
+            view=True,
+            until_completed=True,
+            model_operation: str = None,
+            ):
+        """
+        Get service logs
+
+        :param service: service object
+        :param int size: size
+        :param dict checkpoint: the information from the lst point checked in the service
+        :param str start: iso format time
+        :param str end: iso format time
+        :param bool follow: if true, keep stream future logs
+        :param str text: text
+        :param str execution_id: execution id
+        :param str function_name: function name
+        :param str replica_id: replica id
+        :param bool system: system
+        :param bool view: if true, print out all the logs
+        :param bool until_completed: wait until completed
+        :param str model_operation: model operation action
+        :return: ServiceLog entity
+        :rtype: ServiceLog
+
+        **Example**:
+
+        .. code-block:: python
+
+            service_log = service.log()
+        """
+        return self.services.log(service=service,
+                                 size=size,
+                                 checkpoint=checkpoint,
+                                 start=start,
+                                 end=end,
+                                 follow=follow,
+                                 execution_id=execution_id,
+                                 function_name=function_name,
+                                 replica_id=replica_id,
+                                 system=system,
+                                 text=text,
+                                 view=view,
+                                 until_completed=until_completed,
+                                 model_id=self.id,
+                                 model_operation=model_operation,
+                                 project_id=self.project_id)

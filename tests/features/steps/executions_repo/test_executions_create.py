@@ -136,8 +136,8 @@ def step_impl(context, resource_type):
 @behave.then(u'Execution was executed and finished with status "{execution_status}"')
 def step_impl(context, execution_status):
     success = False
-    num_try = 60
-    interval = 15
+    num_try = 70
+    interval = 10
     for i in range(num_try):
         execution = context.service.executions.get(execution_id=context.execution.id)
         if execution.latest_status['status'] == execution_status:

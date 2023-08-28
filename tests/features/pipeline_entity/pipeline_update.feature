@@ -11,8 +11,15 @@ Feature: Pipeline update testing
   @testrail-C4523145
   @DAT-46582
   Scenario: Update pipeline
-    When I create a package and service to pipeline
-    And I create a pipeline from json
+    Given I create pipeline with the name "pipeline"
+    And I create "dataset" node with params
+      | key      | value |
+      | position | (1,1) |
+    And I create "dataset" node with params
+      | key      | value |
+      | position | (2,2) |
+    When I add and connect all nodes in list to pipeline entity
+    And I install pipeline in context
     And I update pipeline description
     Then Pipeline received equals Pipeline changed except for "description"
 

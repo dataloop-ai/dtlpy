@@ -202,7 +202,7 @@ class Apps:
             raise exceptions.PlatformException(error='400', message='You must provide an app')
 
         if app_name is None:
-            app_name = dpk.name
+            app_name = dpk.display_name
         app = entities.App.from_json(_json={'name': app_name,
                                             'projectId': self.project.id,
                                             'orgId': organization_id,

@@ -54,8 +54,6 @@ def step_impl(context, node_exec_flag):
             assert val == test_value, "TEST FAILED: Expected to get {}, Actual got {}".format(test_value, val)
 
 
-
-
 @behave.then(u'I wait for item to enter task')
 def step_impl(context):
     timeout = 60 * 5 * 1000
@@ -75,23 +73,26 @@ def step_impl(context, execution_number):
     assert context.pipeline.pipeline_executions.list().items_count != 0, "Pipeline not executed found 0 executions"
     context.pipeline = context.project.pipelines.get(context.pipeline.name)
 
-    num_try = 60
-    interval = 15
-    validate = 0
+    num_try = 80
+    interval = 10
     executed = False
-
+    execution_count = 0
     for i in range(num_try):
         time.sleep(interval)
         context.cycles = context.pipeline.pipeline_executions.list().items
-        execution_list = context.pipeline.pipeline_executions.list()[0][0].executions
+        cycle = context.cycles[0]
+        execution_list = cycle.executions
         execution_count = 0
         for ex in execution_list.values():
             execution_count = execution_count + len(ex)
         if execution_count == int(execution_number):
-            validate += 1
-            if validate == 2:
-                executed = True
-                break
+            # validate no other executions were created
+            filters = context.dl.Filters(resource=context.dl.FiltersResource.EXECUTION)
+            filters.add(field='pipeline.executionId', values=cycle.id)
+            filters.add(field='pipeline.id', values=context.pipeline.id)
+            execution_count = context.dl.executions.list(filters=filters).items_count
+            executed = execution_count == int(execution_number)
+            break
 
     assert executed, "TEST FAILED: Pipeline has {} executions instead of {}".format(execution_count, execution_number)
     return executed
@@ -106,21 +107,17 @@ def step_impl(context, num):
 
 @behave.then(u'I validate Cycle execution status is "{status}"')
 def step_impl(context, status):
-    num_try = 10
+    num_try = 60
     interval = 10
-    validate = 0
     executed = False
     context.pipeline_execution_id = context.pipeline_execution.id
 
     for i in range(num_try):
         time.sleep(interval)
         context.pipeline_execution = context.pipeline.pipeline_executions.get(pipeline_execution_id=context.pipeline_execution_id)
-        execution_count = 0
         if context.pipeline_execution.status == status:
-            validate += 1
-            if validate == 2:
-                executed = True
-                break
+            executed = True
+            break
 
     assert executed, "TEST FAILED: Pipeline cycle status is {} Expected to get {}".format(context.pipeline_execution.status, status)
     return executed

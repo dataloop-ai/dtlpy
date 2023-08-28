@@ -1,5 +1,4 @@
 import time
-
 import behave
 import dtlpy as dl
 
@@ -36,37 +35,25 @@ def step_impl(context):
         project_name=context.project.name
     )
 
-    def run2(item):
-        return item
-
-    context.n2 = dl.CodeNode(
+    context.n2 = dl.DatasetNode(
         name='n2',
         position=(4, 2),
         project_id=context.project.id,
-        method=run2,
-        project_name=context.project.name
+        dataset_id=context.dataset.id
     )
 
-    def t1(item):
-        return item
-
-    context.t1 = dl.CodeNode(
+    context.t1 = dl.DatasetNode(
         name='t1',
         position=(2, 3),
         project_id=context.project.id,
-        method=t1,
-        project_name=context.project.name
+        dataset_id=context.dataset.id
     )
 
-    def t1(item):
-        return item
-
-    context.t2 = dl.CodeNode(
+    context.t2 = dl.DatasetNode(
         name='t2',
         position=(2, 4),
         project_id=context.project.id,
-        method=t1,
-        project_name=context.project.name
+        dataset_id=context.dataset.id
     )
 
     context.pipeline.nodes.add(node=context.root).connect(node=context.n1).connect(node=context.n2)
@@ -198,37 +185,25 @@ def step_impl(context):
         project_name=context.project.name
     )
 
-    def run2(item):
-        return item
-
-    context.n2 = dl.CodeNode(
+    context.n2 = dl.DatasetNode(
         name='n2',
         position=(4, 2),
         project_id=context.project.id,
-        method=run2,
-        project_name=context.project.name
+        dataset_id=context.dataset.id
     )
 
-    def t1(item):
-        return item
-
-    context.t1 = dl.CodeNode(
+    context.t1 = dl.DatasetNode(
         name='t1',
         position=(2, 3),
         project_id=context.project.id,
-        method=t1,
-        project_name=context.project.name
+        dataset_id=context.dataset.id
     )
 
-    def t1(item):
-        return item
-
-    context.t2 = dl.CodeNode(
+    context.t2 = dl.DatasetNode(
         name='t2',
         position=(2, 4),
         project_id=context.project.id,
-        method=t1,
-        project_name=context.project.name
+        dataset_id=context.dataset.id
     )
 
     context.pipeline.nodes.add(node=context.root).connect(node=context.n1).connect(node=context.n2)

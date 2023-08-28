@@ -582,6 +582,7 @@ class Tasks:
                max_batch_workload=None,
                allowed_assignees=None,
                priority=entities.TaskPriority.MEDIUM,
+               consensus_task_type=None,
                consensus_percentage=None,
                consensus_assignees=None
                ) -> entities.Task:
@@ -613,6 +614,7 @@ class Tasks:
         :param int max_batch_workload: max_batch_workload: Max items in assignment, use with pulling allocation method. Restrictions - Min batchSize + 2, max batchSize * 2
         :param list allowed_assignees: list the task assignees (contributors) that should be working on the task. Provide a list of users' emails
         :param entities.TaskPriority priority: priority of the task options in entities.TaskPriority
+        :param entities.ConsensusTaskType consensus_task_type: consensus_task_type of the task options in entities.ConsensusTaskType
         :param int consensus_percentage: percentage of items to be copied to multiple annotators (consensus items)
         :param int consensus_assignees: the number of different annotators per item (number of copies per item)
         :return: Task object
@@ -714,6 +716,8 @@ class Tasks:
                 metadata['system'] = {}
             if allowed_assignees is not None or assignee_ids is not None:
                 metadata['system']['allowedAssignees'] = allowed_assignees if allowed_assignees else assignee_ids
+            if consensus_task_type is not None:
+                metadata['system']['consensusTaskType'] = consensus_task_type
             metadata = self._add_task_metadata_params(metadata=metadata,
                                                       input_value=batch_size,
                                                       input_name='batchSize')

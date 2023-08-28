@@ -1409,6 +1409,7 @@ class Packages:
         package_module_cls = getattr(package_module, class_name)
         package_module = package_module_cls(**init_inputs)
         logger.info('Model adapter loaded successfully!')
+        package_module.codebase_path = local_path
         return package_module
 
     @staticmethod

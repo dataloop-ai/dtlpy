@@ -12,8 +12,11 @@ def step_impl(context, resource_type):
     for i in range(num_try):
         time.sleep(interval)
         if resource_type == 'item':
-            item = context.dataset.items.get(item_id=context.uploaded_item_with_trigger.id)
-            if item.resource_executions.list().items_count == 3:
+            filters = context.dl.Filters(resource=context.dl.FiltersResource.EXECUTION)
+            filters.add(field='serviceId', values=context.service.id)
+            filters.add(field='resources.id', values=context.uploaded_item_with_trigger.id)
+            execution_page = context.service.executions.list(filters=filters)
+            if execution_page.items_count == 2:
                 triggered = True
                 break
         elif resource_type == 'annotation':

@@ -9,52 +9,46 @@ Feature: Pipeline entity method testing recomplete items
 
 
   @pipelines.delete
-  @services.delete
   @testrail-C4529141
   @DAT-46579
   Scenario: pipeline re-complete status for task
-    When I create a package and service to pipeline
-    And I create a pipeline dataset, task "annotation" and code nodes - repeatable "True"
+    When I create a pipeline dataset, task "annotation" and dataset nodes - repeatable "True"
     And I upload item in "0000000162.jpg" to pipe dataset
     Then I wait for item to enter task
     And I update item status to "complete" with task id
-    Then I wait "30"
+    Then I wait "20"
     And I remove specific "complete" from item with task id
-    Then I wait "30"
+    Then I wait "20"
     And I update item status to "complete" with task id
     And I expect that pipeline execution has "4" success executions
 
 
   @pipelines.delete
-  @services.delete
   @testrail-C4529141
   @DAT-46579
   Scenario: pipeline re-complete status for qa task
-    When I create a package and service to pipeline
-    And I create a pipeline dataset, task "qa" and code nodes - repeatable "True"
+    When I create a pipeline dataset, task "qa" and dataset nodes - repeatable "True"
     And I upload item in "0000000162.jpg" to pipe dataset
     Then I wait for item to enter task
     And I update item status to "approve" with task id
-    Then I wait "30"
+    Then I wait "20"
     And I remove specific "approve" from item with task id
-    Then I wait "30"
+    Then I wait "20"
     And I update item status to "approve" with task id
     And I expect that pipeline execution has "4" success executions
 
 
   @pipelines.delete
-  @services.delete
   @testrail-C4529141
   @DAT-46579
   Scenario: pipeline re-complete status for repeatable false task
-    When I create a package and service to pipeline
-    And I create a pipeline dataset, task "annotation" and code nodes - repeatable "False"
+    When I create a pipeline dataset, task "annotation" and dataset nodes - repeatable "False"
     And I upload item in "0000000162.jpg" to pipe dataset
-    Then I wait "30"
+    Then I wait "20"
     And I update item status to "complete" with task id
-    Then I wait "30"
+    Then I wait "20"
     And I remove specific "complete" from item with task id
-    Then I wait "30"
+    Then I wait "20"
     And I update item status to "complete" with task id
     And I expect that pipeline execution has "3" success executions
 

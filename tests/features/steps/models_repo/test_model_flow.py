@@ -26,6 +26,7 @@ def step_impl(context, package_name):
                                                             name='https://storage.googleapis.com/dtlpy/dtlpy-metrics/dtlpymetrics-latest-py3-none-any.whl'),
                                                         dl.PackageRequirement(name='matplotlib')],
                                                     service_config={
+                                                        "versions": {"dtlpy": dl.__version__},
                                                         'runtime': dl.KubernetesRuntime(
                                                             runner_image='jjanzic/docker-python3-opencv',
                                                             pod_type=dl.InstanceCatalog.REGULAR_XS,
@@ -65,8 +66,8 @@ def step_impl(context, func):
         context.execution = context.model.__getattribute__(func)()
 
 
-@behave.then(u'model status should be "{status}" with execution "{flag}"')
-def step_impl(context, status, flag):
+@behave.then(u'model status should be "{status}" with execution "{flag}" that has function "{func}"')
+def step_impl(context, status, flag, func):
     num_try = 45
     interval = 20
     completed = False
@@ -76,13 +77,14 @@ def step_impl(context, status, flag):
             for i in range(num_try):
                 time.sleep(interval)
                 context.execution = dl.executions.get(execution_id=context.execution.id)
+                assert context.execution.function_name == func
                 if context.execution.latest_status['status'] in ['success', 'failed']:
                     completed = True
                     break
-        else:
-            time.sleep(10)
-            completed = True
-        assert completed, "TEST FAILED: execution was not completed"
+    else:
+        time.sleep(10)
+        completed = True
+    assert completed, "TEST FAILED: execution was not completed"
 
     context.model = dl.models.get(model_id=context.model.id)
     assert context.model.status == status, f"TEST FAILED: model status is not as expected, expected: {status}, got: {context.model.status}"
@@ -129,3 +131,30 @@ def step_impl(context, item_num):
     for i in range(item_num):
         builder.add(annotation_definition=dl.Box(top=i * 10, left=i * 10, bottom=i * 20, right=i * 20, label=str(i)))
     context.item.annotations.upload(builder)
+
+
+@behave.then(u'Log "{log_message}" is in model.log() with operation "{operation}"')
+def step_impl(context, log_message, operation):
+    num_tries = 60
+    interval_time = 5
+    success = False
+
+    for i in range(num_tries):
+        time.sleep(interval_time)
+        for log in context.model.log(view=False, model_operation=operation):
+            if log_message in log:
+                success = True
+                break
+        if success:
+            break
+
+    assert success
+
+
+@behave.then(u'service metadata has a model id and operation "{operation}"')
+def step_impl(context, operation):
+    service = dl.services.get(service_id=context.execution.service_id)
+    assert service.metadata.get('ml', {}).get(
+        'modelId') == context.model.id, f"TEST FAILED: model id is not in service metadata"
+    assert service.metadata.get('ml', {}).get(
+        'modelOperation') == operation, f"TEST FAILED: model operation is not in service metadata"

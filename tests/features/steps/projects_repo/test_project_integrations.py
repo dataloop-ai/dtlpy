@@ -1,12 +1,14 @@
 import os
+import time
+
 import behave
 import dtlpy
 import random
+import re
 
 
 @behave.given(u'I create "{integration_type}" integration with name "{integration_name}"')
 def step_impl(context, integration_type, integration_name):
-
     integration_options = {
         "s3": eval(os.environ.get("aws")),
         "gcs": {
@@ -18,7 +20,8 @@ def step_impl(context, integration_type, integration_name):
         "azuregen2": eval(os.environ.get("azuregen2")),
         "key_value": {
             'key': os.environ.get('key_value_key', 'default_key'), 'value': os.environ.get('key_value_value', 'default_value')
-        }
+        },
+        "gcp-cross": {}
     }
 
     assert integration_type in integration_options, "TEST FAILED: Wrong integration type: {}".format(integration_type)
@@ -72,3 +75,18 @@ def step_impl(context):
 def step_impl(context):
     assert context.integration_name not in [integration['name'] for integration in context.project.integrations.list()], \
         "TEST FAILED: Failed to delete integration: {}".format(context.integration_name)
+
+
+@behave.then(u'I validate gcp-cross-project has correct service account pattern')
+def step_impl(context):
+    pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+    time.sleep(5)
+    context.integration = context.project.integrations.get(context.integration.id)
+
+    dataloop_service_account = False
+    for metadata_obj in context.integration.metadata:
+        if metadata_obj['name'] == "email":
+            dataloop_service_account = bool(re.match(pattern, metadata_obj['value']))
+            break
+
+    assert dataloop_service_account, f"TEST FAILED: Not found service account , \nIntegration metadata: {context.integration.metadata}"

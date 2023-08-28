@@ -13,6 +13,7 @@ def step_impl(context):
     else:
         context.feature.dpks = [context.published_dpk]
 
+
 @behave.when(u"I add the context.dataset to the dpk model")
 def step_impl(context):
     context.dpk.components.models[0]['datasetId'] = context.dataset.id
@@ -48,4 +49,7 @@ def step_impl(context):
     context.model = context.project.models.get(model_id=composition["models"][0]["modelId"])
 
 
-
+@behave.when(u'I add models list to context.models and expect to get "{total_models}" models')
+def step_impl(context, total_models):
+    context.models = context.project.models.list().items
+    assert len(context.models) == int(total_models)

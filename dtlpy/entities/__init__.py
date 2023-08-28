@@ -48,7 +48,7 @@ from .service import Service, KubernetesAutuscalerType, KubernetesRabbitmqAutosc
 from .execution import Execution, ExecutionStatus
 from .command import Command, CommandsStatus
 from .assignment import Assignment, Workload, WorkloadUnit
-from .task import Task, ItemAction, TaskPriority
+from .task import Task, ItemAction, TaskPriority, ConsensusTaskType
 from .directory_tree import DirectoryTree
 from .similarity import Similarity, MultiView, SimilarityItem, MultiViewItem, SimilarityTypeEnum
 from .user import User

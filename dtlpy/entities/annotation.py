@@ -460,6 +460,18 @@ class Annotation(entities.BaseEntity):
                 color = (255, 255, 255)
         return color
 
+    @color.setter
+    def color(self, color):
+        if self.type == 'binary':
+            if not isinstance(color, tuple) or len(color) != 3:
+                raise ValueError("Color must get tuple of length 3")
+            self.annotation_definition._color = color
+        else:
+            raise exceptions.BadRequest(
+                status_code='400',
+                message='Invalid annotation type - Updating color is only available to binary annotation'
+            )
+
     ####################
     # frame attributes #
     ####################
@@ -1181,8 +1193,6 @@ class Annotation(entities.BaseEntity):
 
             if frame_num is None:
                 frame_num = 0
-            self.current_frame = frame_num
-            self.end_frame = frame_num
 
             frame = FrameAnnotation.new(annotation_definition=annotation_definition,
                                         frame_num=frame_num,
@@ -1192,7 +1202,9 @@ class Annotation(entities.BaseEntity):
 
             self.frames[frame_num] = frame
             self.set_frame(frame_num)
-            self.end_time = self.end_frame / self.fps if self.fps != 0 else 0
+            self.end_time = frame_num / self.fps if self.fps != 0 else 0
+            self.current_frame = frame_num
+            self.end_frame = frame_num
             self.type = annotation_definition.type
 
             return True

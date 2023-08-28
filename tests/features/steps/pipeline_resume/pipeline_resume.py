@@ -33,23 +33,14 @@ pipeline_json = {
                 },
                 "repeatable": True
             },
-            "name": "code",
-            "type": "code",
+            "name": "random_dataset_685QD",
+            "type": "storage",
             "namespace": {
-                "functionName": "run",
-                "projectName": "SoS",
-                "serviceName": "code-vuhtoxin52",
-                "moduleName": "code_module",
-                "packageName": "code-h3np603t56"
+                "functionName": "dataset_handler",
+                "serviceName": "pipeline-utils",
+                "projectName": "DataloopTasks"
             },
             "projectId": "99d634a1-89bf-4d69-b201-807a29140c76",
-            "config": {
-                "package": {
-                    "code": "import dtlpy as dl\n\nclass ServiceRunner:\n\n    def run(self, item):\n        return item\n",
-                    "name": "run",
-                    "type": "code"
-                }
-            }
         },
         {
             "id": "4a8bb1f9-7eb5-484a-8603-773d097f222b",
@@ -371,6 +362,11 @@ def generate_pipeline_json(project: dl.Project, dataloop_project_id: str, datase
 
     for node in pipeline['nodes']:
         node['projectId'] = project.id
+
+    datasets_node = [node for node in pipeline['nodes'] if node['type'] == 'storage']
+    for node in datasets_node:
+        node['name'] = dataset.name
+        node['metadata']["datasetId"] = dataset.id
 
     task_nodes = [node for node in pipeline['nodes'] if node['type'] == 'task']
     for node in task_nodes:

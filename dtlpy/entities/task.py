@@ -9,6 +9,11 @@ from .. import repositories, entities, exceptions
 logger = logging.getLogger(name='dtlpy')
 
 
+class ConsensusTaskType(str, Enum):
+    CONSENSUS = 'consensus'
+    QUALIFICATION = 'qualification'
+    HONEYPOT = 'honeypot'
+
 class TaskPriority(int, Enum):
     LOW = 1
     MEDIUM = 2

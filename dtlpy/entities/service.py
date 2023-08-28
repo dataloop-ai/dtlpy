@@ -220,6 +220,7 @@ class Service(entities.BaseEntity):
     is_global = attr.ib()
     max_attempts = attr.ib()
     mode = attr.ib(repr=False)
+    metadata = attr.ib()
 
     # SDK
     _package = attr.ib(repr=False)
@@ -322,6 +323,7 @@ class Service(entities.BaseEntity):
             secrets=_json.get("secrets", None),
             type=_json.get("type", None),
             mode=_json.get('mode', dict()),
+            metadata=_json.get('metadata', None)
         )
         inst.is_fetched = is_fetched
         return inst
@@ -441,6 +443,7 @@ class Service(entities.BaseEntity):
                 attr.fields(Service).secrets,
                 attr.fields(Service)._type,
                 attr.fields(Service).mode,
+                attr.fields(Service).metadata
             )
         )
 
@@ -481,6 +484,9 @@ class Service(entities.BaseEntity):
         if self.mode:
             _json['mode'] = self.mode
 
+        if self.metadata:
+            _json['metadata'] = self.metadata
+
         return _json
 
     def update(self, force=False):
@@ -511,8 +517,22 @@ class Service(entities.BaseEntity):
         """
         return self.services.status(service_id=self.id)
 
-    def log(self, size=None, checkpoint=None, start=None, end=None, follow=False, text=None,
-            execution_id=None, function_name=None, replica_id=None, system=False, view=True, until_completed=True):
+    def log(self,
+            size=None,
+            checkpoint=None,
+            start=None,
+            end=None,
+            follow=False,
+            text=None,
+            execution_id=None,
+            function_name=None,
+            replica_id=None,
+            system=False,
+            view=True,
+            until_completed=True,
+            model_id: str = None,
+            model_operation: str = None,
+            ):
         """
         Get service logs
 
@@ -528,6 +548,8 @@ class Service(entities.BaseEntity):
         :param bool system: system
         :param bool view: if true, print out all the logs
         :param bool until_completed: wait until completed
+        :param str model_id: model id
+        :param str model_operation: model operation action
         :return: ServiceLog entity
         :rtype: ServiceLog
 
@@ -549,7 +571,9 @@ class Service(entities.BaseEntity):
                                  system=system,
                                  text=text,
                                  view=view,
-                                 until_completed=until_completed)
+                                 until_completed=until_completed,
+                                 model_id=model_id,
+                                 model_operation=model_operation)
 
     def open_in_web(self):
         """

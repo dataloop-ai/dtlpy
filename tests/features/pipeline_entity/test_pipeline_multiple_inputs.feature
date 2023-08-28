@@ -19,9 +19,9 @@ Feature: Pipeline resource multiples inputs testing
     Then Pipeline has "1" cycle executions
     And I expect that pipeline execution has "2" success executions
     And I validate pipeline executions params
-      | key   | value                                                    |
-      | input | {"item": {"item_id": "item.id"}}                         |
-      | input | {"item": {"item_id": "item.id"}, "text" : "Hello World"} |
+      | key   | value                                                                        |
+      | input | {"item": {"item_id": "item.id"}, "dataset_id": "dataset.id", "folder": None} |
+      | input | {"item": {"item_id": "item.id"}, "text" : "Hello World"}                     |
 
   @pipelines.delete
   @testrail-C4536827

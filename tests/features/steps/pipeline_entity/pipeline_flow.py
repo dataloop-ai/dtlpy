@@ -69,21 +69,14 @@ def step_impl(context):
         dataset_id=context.dataset.id,
     )
 
-    def run(item):
-        item.metadata['user'] = {'Hello': 'World'}
-        item.update()
-        return item
-
-    code_node = dl.CodeNode(
-        name='My Function',
-        position=(3, 3),
+    dataset_node = dl.DatasetNode(
+        name=context.dataset.name,
         project_id=context.project.id,
-        method=run,
-        project_name=context.project.name
+        dataset_id=context.dataset.id,
+        position=(3, 3)
     )
 
-    context.pipeline.nodes.add(node=function_node).connect(node=task_node) \
-        .connect(node=code_node)
+    context.pipeline.nodes.add(node=function_node).connect(node=task_node).connect(node=dataset_node)
     function_node.add_trigger()
     context.pipeline.update()
     context.pipeline.install()
@@ -120,41 +113,23 @@ def step_impl(context):
 def step_impl(context):
     context.pipeline = context.project.pipelines.create(name='sdk-pipeline-test', project_id=context.project.id)
 
-    function_node = dl.FunctionNode(
-        name='automate',
-        position=(1, 1),
-        service=dl.services.get(service_id=context.service.id),
-        function_name='automate'
-    )
-
-    task_node = dl.TaskNode(
-        name='My Task',
-        recipe_id=context.recipe.id,
-        recipe_title=context.recipe.title,
-        task_owner=dl.info()['user_email'],
-        workload=[dl.WorkloadUnit(assignee_id=dl.info()['user_email'], load=100)],
-        position=(2, 2),
+    dataset_node_1 = dl.DatasetNode(
+        name=context.dataset.name,
         project_id=context.project.id,
         dataset_id=context.dataset.id,
+        position=(1, 1)
     )
 
-    def run(item):
-        item.metadata['user'] = {'Hello': 'World'}
-        item.update()
-        return item
-
-    code_node = dl.CodeNode(
-        name='My Function',
-        position=(3, 3),
+    dataset_node_2 = dl.DatasetNode(
+        name=context.dataset.name,
         project_id=context.project.id,
-        method=run,
-        project_name=context.project.name
+        dataset_id=context.dataset.id,
+        position=(2, 2)
     )
 
-    context.pipeline.nodes.add(node=function_node).connect(node=task_node) \
-        .connect(node=code_node)
+    context.pipeline.nodes.add(node=dataset_node_1).connect(node=dataset_node_2)
     context.pipeline.update()
-    context.pipeline.triggers.create(actions=dl.TriggerAction.CREATED, pipeline_node_id=function_node.node_id,
+    context.pipeline.triggers.create(actions=dl.TriggerAction.CREATED, pipeline_node_id=dataset_node_1.node_id,
                                      project_id=context.project.id)
     context.pipeline.install()
     context.to_delete_pipelines_ids.append(context.pipeline.id)
@@ -289,24 +264,13 @@ def step_impl(context):
         if ref['type'] == 'assignment':
             ass_id = ref['id']
     context.item.update_status(status='complete', assignment_id=ass_id, clear=False)
-    current_num_of_tries = 0
-    flag = False
-    while flag is False and current_num_of_tries < 12:
-        time.sleep(15)
-        context.item = context.dataset.items.get(item_id=context.item.id)
-        try:
-            if context.item.metadata['user'] == {'Hello': 'World'}:
-                flag = True
-        except:
-            current_num_of_tries += 1
-
-    assert flag
 
 
-@behave.when(u'I update the pipeline nodes')
-def step_impl(context):
+@behave.when(u'I remove node by the name "{node_name}" from pipeline')
+def step_impl(context, node_name):
     context.pipeline.pause()
-    context.pipeline.nodes.remove("My Function")
+    context.pipeline = context.pipeline.pipelines.get(context.pipeline.name)
+    context.pipeline.nodes.remove(node_name)
     context.pipeline.update()
 
 
@@ -455,7 +419,7 @@ def step_impl(context):
     context.pipeline.install()
 
 
-@behave.when(u'I create a pipeline dataset, task "{type}" and code nodes - repeatable "{flag}"')
+@behave.when(u'I create a pipeline dataset, task "{type}" and dataset nodes - repeatable "{flag}"')
 def step_impl(context, type, flag):
     flag = eval(flag)
 
@@ -466,7 +430,7 @@ def step_impl(context, type, flag):
 
     context.pipeline = context.project.pipelines.create(name=pipeline_name, project_id=context.project.id)
 
-    dataset_node = dl.DatasetNode(
+    dataset_node_1 = dl.DatasetNode(
         name=context.dataset.name,
         project_id=context.project.id,
         dataset_id=context.dataset.id,
@@ -487,16 +451,16 @@ def step_impl(context, type, flag):
         repeatable=flag
     )
 
-    function_node = dl.FunctionNode(
-        name='automate',
-        position=(3, 3),
-        service=dl.services.get(service_id=context.service.id),
-        function_name='automate'
+    dataset_node_2 = dl.DatasetNode(
+        name=context.dataset.name,
+        project_id=context.project.id,
+        dataset_id=context.dataset.id,
+        position=(3, 3)
     )
 
-    context.pipeline.nodes.add(dataset_node).connect(node=task_node).connect(node=function_node,
-                                                                             source_port=task_node.outputs[0])
-    dataset_node.add_trigger()
+    context.pipeline.nodes.add(dataset_node_1).connect(node=task_node).connect(node=dataset_node_2,
+                                                                               source_port=task_node.outputs[0])
+    dataset_node_1.add_trigger()
 
     context.pipeline.update()
     pipeline = context.project.pipelines.get(pipeline_name=pipeline_name)

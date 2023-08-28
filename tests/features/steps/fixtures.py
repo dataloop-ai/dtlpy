@@ -74,6 +74,8 @@ def get_value(params, context):
             val = 7
         elif key == 'allowed_assignees':
             val = ['annotator1@dataloop.ai', 'annotator2@dataloop.ai']
+        elif key == 'consensus_task_type':
+            val = 'consensus'
         elif key == 'consensus_percentage':
             val = 100
         elif key == 'consensus_assignees':
@@ -116,6 +118,8 @@ def get_value(params, context):
         val = int(val)
     elif key == 'max_batch_workload':
         val = int(val)
+    elif key == 'consensus_task_type':
+        val = str(val)
     elif key == 'consensus_percentage':
         val = int(val)
     elif key == 'consensus_assignees':

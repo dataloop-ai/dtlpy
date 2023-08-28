@@ -58,7 +58,7 @@ except ImportError:
     from env_from_git_branch import get_env_from_git_branch
 
 TEST_DIR = os.path.dirname(os.path.realpath(__file__))
-NUM_TRIES = 3
+NUM_TRIES = 2
 
 
 def clean_feature_log_file(log_filepath):
@@ -143,7 +143,7 @@ def test_feature_file(w_feature_filename, i_pbar):
                     '--no-capture']
             # need to run a new process to avoid collisions
             p = subprocess.Popen(cmds, stderr=subprocess.PIPE)
-            _, stderr = p.communicate(timeout=600)
+            _, stderr = p.communicate(timeout=700)
 
             if p.returncode == 0:
                 break
@@ -179,7 +179,7 @@ def test_feature_file(w_feature_filename, i_pbar):
                 print('**** stderr: {}'.format(stderr))
 
     except subprocess.TimeoutExpired:
-        results[w_feature_filename] = {'status': True,
+        results[w_feature_filename] = {'status': False,
                                        'log_file': log_filepath,
                                        'try': w_i_try,
                                        'avgTime': '{:.2f}[s]'.format(-1),
@@ -347,7 +347,8 @@ if __name__ == '__main__':
             log_filename = result['log_file']
             i_try = result['try']
             avg_time = result['avgTime']
-            res_msg = '{}\t in try: {}\tavg time: {}\tfeature: {} , timeout'.format(status, i_try, avg_time, os.path.basename(feature))
+            res_msg = '{}\t in try: {}\tavg time: {}\tfeature: {} , timeout'.format(status, i_try, avg_time,
+                                                                                    os.path.basename(feature))
             print(res_msg)
 
     # print failed first
@@ -357,7 +358,8 @@ if __name__ == '__main__':
             log_filename = result['log_file']
             i_try = result['try']
             avg_time = result['avgTime']
-            res_msg = '{}\t in try: {}\tavg time: {}\tfeature: {}'.format(status, i_try, avg_time, os.path.basename(feature))
+            res_msg = '{}\t in try: {}\tavg time: {}\tfeature: {}'.format(status, i_try, avg_time,
+                                                                          os.path.basename(feature))
             print(res_msg)
 
     # print passes
@@ -367,7 +369,8 @@ if __name__ == '__main__':
             log_filename = result['log_file']
             i_try = result['try']
             avg_time = result['avgTime']
-            res_msg = '{}\t in try: {}\tavg time: {}\tfeature: {}'.format(status, i_try, avg_time, os.path.basename(feature))
+            res_msg = '{}\t in try: {}\tavg time: {}\tfeature: {}'.format(status, i_try, avg_time,
+                                                                          os.path.basename(feature))
             print(res_msg)
 
     # return success/failure

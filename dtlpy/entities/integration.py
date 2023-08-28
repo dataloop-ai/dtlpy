@@ -26,6 +26,8 @@ class IntegrationType(str, Enum):
          - AWS STS Integration - for S3 drivers
        * - GCS
          - GCS Integration - for GCS drivers
+       * - GCP_CROSS_PROJECT
+         - GCP CROSS PROJECT Integration - for GCP drivers
        * - AZUREBLOB
          - AZURE BLOB Integration - for S3 AZUREBLOB and AZURE_DATALAKE_GEN2 drivers
        * - KEY_VALUE
@@ -35,6 +37,7 @@ class IntegrationType(str, Enum):
     AWS_CROSS_ACCOUNT = 'aws-cross'
     AWS_STS = 'aws-sts'
     GCS = "gcs"
+    GCS_CROSS = "gcp-cross"
     AZUREBLOB = "azureblob"
     KEY_VALUE = "key_value"
 

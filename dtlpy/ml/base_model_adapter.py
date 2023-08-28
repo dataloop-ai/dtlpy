@@ -282,6 +282,8 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             local_path=local_path,
             overwrite=overwrite
         )
+        if self.package.codebase.type == 'git':
+            local_path = self.codebase_path
         self.configuration.update({'artifacts_path': local_path})
         self.load(local_path, **kwargs)
 

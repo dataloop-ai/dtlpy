@@ -27,6 +27,7 @@ class Project(entities.BaseEntity):
     created_at = attr.ib()
     creator = attr.ib()
     id = attr.ib()
+    url = attr.ib()
     name = attr.ib()
     org = attr.ib(repr=False)
     updated_at = attr.ib(repr=False)
@@ -283,6 +284,7 @@ class Project(entities.BaseEntity):
                    role=_json.get('role', None),
                    org=_json.get('org', None),
                    id=_json.get('id', None),
+                   url=_json.get('url', None),
                    archived=_json.get('archived', None),
                    client_api=client_api)
         inst.is_fetched = is_fetched

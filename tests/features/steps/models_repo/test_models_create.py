@@ -97,6 +97,16 @@ def step_impl(context):
     assert model_get.to_json() == context.model.to_json()
 
 
+@behave.then(u'Model module_name should be "{module_name}"')
+def step_impl(context, module_name):
+    module_name_input = module_name.split(",")
+    if len(module_name_input) > 1:
+        for i in range(len(module_name_input)):
+            assert context.models[i].module_name == module_name_input[i]
+    else:
+        assert context.model.module_name == module_name
+
+
 @behave.when(u'I create a model with the same name')
 def step_impl(context):
     try:

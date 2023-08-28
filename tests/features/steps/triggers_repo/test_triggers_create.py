@@ -158,13 +158,19 @@ def step_impl(context, resource_type):
     for i in range(num_try):
         time.sleep(interval)
         if resource_type == 'item':
-            item = context.dataset.items.get(item_id=context.uploaded_item_with_trigger.id)
-            if len(item.resource_executions.list()) > 0 and item.resource_executions.list()[0][0].service_name == context.service.name:
+            filters = context.dl.Filters(resource=context.dl.FiltersResource.EXECUTION)
+            filters.add(field='serviceId', values=context.service.id)
+            filters.add(field='resources.id', values=context.uploaded_item_with_trigger.id)
+            execution_page = context.service.executions.list(filters=filters)
+            if execution_page.items_count == 1:
                 triggered = True
                 break
         elif resource_type == 'itemclone':
-            item = context.dataset.items.get(item_id=context.uploaded_item_with_trigger.id)
-            if len(item.resource_executions.list()) > 0 and item.resource_executions.list()[0][0].service_name == context.service.name:
+            filters = context.dl.Filters(resource=context.dl.FiltersResource.EXECUTION)
+            filters.add(field='serviceId', values=context.service.id)
+            filters.add(field='resources.id', values=context.uploaded_item_with_trigger.id)
+            execution_page = context.service.executions.list(filters=filters)
+            if execution_page.items_count > 0:
                 triggered = True
                 break
         elif resource_type == 'annotation':
@@ -196,6 +202,7 @@ def step_impl(context, resource_type):
         elif resource_type == 'string':
             execution = context.service.executions.list()[0][0]
             if len(execution.input) == 1:
+                context.execution = context.service.executions.list()[0][0]
                 triggered = True
                 break
         context.dl.logger.debug("Step is running for {:.2f}[s] and now Going to sleep {:.2f}[s]".format((i + 1) * interval,

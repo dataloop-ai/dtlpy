@@ -1,4 +1,3 @@
-import time
 import dtlpy as dl
 import behave
 import random
@@ -34,10 +33,10 @@ def step_impl(context, node_type):
     context.nodes.append(context.node)
 
 
-
 @behave.Given(u'I create pipeline with the name "{pipeline_name}"')
 def step_impl(context, pipeline_name):
-    context.pipeline = context.project.pipelines.create(name='{}-{}'.format(pipeline_name, random.randrange(1000, 10000)), project_id=context.project.id)
+    context.pipeline_name = f'{pipeline_name}-{random.randrange(1000, 10000)}'
+    context.pipeline = context.project.pipelines.create(name=context.pipeline_name, project_id=context.project.id)
     context.to_delete_pipelines_ids.append(context.pipeline.id)
 
 
@@ -66,3 +65,27 @@ def step_impl(context):
 
     context.pipeline.nodes[0].add_trigger(filters=context.filters)
     context.pipeline = context.pipeline.update()
+
+
+@behave.when(u'I update pipeline attributes with params')
+def step_impl(context):
+    context.pipeline = context.pipeline.pipelines.get(pipeline_id=context.pipeline.id)
+    for row in context.table:
+        att = f"context.pipeline.{row['key']}"
+        val = f"'{row['value']}'"
+        exec(f"{att} = {val}")
+
+    context.pipeline = context.pipeline.update()
+
+
+@behave.when(u'I get pipeline in context by id')
+def step_impl(context):
+    context.pipeline = context.pipeline.pipelines.get(pipeline_id=context.pipeline.id)
+
+
+@behave.then(u'I validate pipeline attributes with params')
+def step_impl(context):
+    for row in context.table:
+        att = f"context.pipeline.{row['key']}"
+        val = f"'{row['value']}'"
+        exec(f"assert {att} == {val}, 'TEST FAILED: Expected '+{val}+', Actual '+{att}")

@@ -110,6 +110,7 @@ class Integrations:
         key_value - {key: "", value: ""}
         aws-sts - {key: "", secret: "", roleArns: ""}
         aws-cross - {}
+        gcp-cross - {}
 
         **Prerequisites**: You must be an *owner* in the organization.
 
@@ -179,6 +180,7 @@ class Integrations:
         key_value - {key: "", value: ""}
         aws-sts - {key: "", secret: "", roleArns: ""}
         aws-cross - {roleArn: ""}
+        gcp-cross - {"email: "", "resourceName": ""}
 
         **Example**:
 

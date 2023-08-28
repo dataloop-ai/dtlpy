@@ -259,7 +259,7 @@ class Services:
                                                         'name': service_name},
                                                  client_api=self._client_api,
                                                  project=self._project,
-                                                 package=self,
+                                                 package=self._package,
                                                  is_fetched=False)
 
         assert isinstance(service, entities.Service)
@@ -937,7 +937,11 @@ class Services:
             system=False,
             view=True,
             until_completed=True,
-            log_level='DEBUG'):
+            log_level='DEBUG',
+            model_id: str = None,
+            model_operation: str = None,
+            project_id: str = None
+            ):
         """
         Get service logs.
 
@@ -957,6 +961,9 @@ class Services:
         :param bool view: if true, print out all the logs
         :param bool until_completed: wait until completed
         :param str log_level: the log level to display dl.LoggingLevel
+        :param str model_id: model id
+        :param str model_operation: model operation action
+        :param str project_id: project id
         :return: ServiceLog entity
         :rtype: ServiceLog
 
@@ -966,7 +973,8 @@ class Services:
 
             service_logs = package.services.log(service='service_entity')
         """
-        assert isinstance(service, entities.Service)
+        if not isinstance(service, entities.Service) and model_id is None:
+            raise exceptions.PlatformException('400', 'Must provide service or model_id')
         if isinstance(log_level, str):
             log_level = log_level.upper()
 
@@ -974,9 +982,11 @@ class Services:
             'direction': 'asc',
             'follow': follow,
             'system': system,
-            'serviceId': service.id,
             'logLevel': log_level
         }
+
+        if service is not None:
+            payload['serviceId'] = service.id
 
         if size is not None:
             payload['size'] = size
@@ -1009,6 +1019,15 @@ class Services:
         if end is not None:
             payload['end'] = end
 
+        if model_id is not None:
+            payload['modelId'] = model_id
+
+        if model_operation is not None:
+            payload['modelOperation'] = model_operation
+
+        if project_id is not None:
+            payload['projectId'] = project_id
+
         # request
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/services/logs',
@@ -1026,7 +1045,10 @@ class Services:
                          execution_id=execution_id,
                          function_name=function_name,
                          replica_id=replica_id,
-                         system=system)
+                         system=system,
+                         model_id=model_id,
+                         model_operation=model_operation,
+                         project_id=project_id)
 
         if view:
             log.view(until_completed=until_completed)
@@ -1504,7 +1526,8 @@ class Services:
 
         if mode == entities.CacheAction.APPLY:
             self.__polling_wait(organization=organization, pod_type=pod_type)
-            success, response = self.__enable_cache(url=apply_volume_url_path, organization=organization, pod_type=pod_type)
+            success, response = self.__enable_cache(url=apply_volume_url_path, organization=organization,
+                                                    pod_type=pod_type)
             if not success:
                 raise exceptions.PlatformException(response)
 
@@ -1529,7 +1552,10 @@ class ServiceLog:
                  execution_id=None,
                  function_name=None,
                  replica_id=None,
-                 system=False):
+                 system=False,
+                 model_id=None,
+                 model_operation=None,
+                 project_id=None):
 
         self.logs = _json.get('logs', dict())
         self.checkpoint = _json.get('checkpoint', None)
@@ -1542,6 +1568,9 @@ class ServiceLog:
         self.function_name = function_name
         self.replica_id = replica_id
         self.system = system
+        self.model_id = model_id
+        self.model_operation = model_operation
+        self.project_id = project_id
 
     def get_next_log(self):
         log = self.services.log(service=self.service,
@@ -1552,7 +1581,10 @@ class ServiceLog:
                                 function_name=self.function_name,
                                 replica_id=self.replica_id,
                                 system=self.system,
-                                view=False)
+                                view=False,
+                                model_id=self.model_id,
+                                model_operation=self.model_operation,
+                                project_id=self.project_id)
 
         self.logs = log.logs
         self.checkpoint = log.checkpoint

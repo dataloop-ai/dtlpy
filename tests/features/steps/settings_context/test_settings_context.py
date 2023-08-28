@@ -97,4 +97,4 @@ def step_impl(context):
     elif type(eval(value)) == int:
         assert f'Invalid input specified, Incorrect value type passed - Passed boolean Expected number' \
                in context.err_message
-    assert context.err_status_code == '422'
+    assert context.err_status_code == '400'

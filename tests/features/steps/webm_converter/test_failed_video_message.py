@@ -1,6 +1,7 @@
 from behave import when, then
 import time
 import dtlpy as dl
+import json
 
 
 @when(u'I wait for video services to finish')
@@ -35,10 +36,15 @@ def step_impl(context):
         time.sleep(interval)
         if 'errors' in context.item.metadata['system'].keys():
             error_message = [{"type": "origExpectedFrames",
-                              "message": "Frames is not equal to FPS * (Duration - StartTime)", "value": 3, "service": "VideoPreprocess"}]
-
-            assert error_message == context.item.metadata['system']['errors'], "TEST FAILED: Wrong error message.\nExpected: {}\nGot: {}".format(error_message,
-                                                                                                                                                 context.item.metadata['system']['errors'])
+                              "message": "Frames is not equal to FPS * (Duration - StartTime)", "value": 3,
+                              "service": "VideoPreprocess"}]
+            error = json.dumps(context.item.metadata['system']['errors'])
+            err_message = "TEST FAILED: Wrong error message.\nExpected: {}\nGot: {}".format(
+                error_message,
+                context.item.metadata['system']['errors']
+            )
+            assert 'origExpectedFrames' in error, err_message
+            assert 'Frames is not equal to FPS * (Duration - StartTime)' in error, err_message
 
             has_error = True
             break

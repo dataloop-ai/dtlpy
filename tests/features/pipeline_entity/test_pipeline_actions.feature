@@ -16,6 +16,8 @@ Feature: Pipeline entity method testing actions outputs
         And I upload item in "0000000162.jpg" to dataset
         Then I wait "5"
         And I expect that pipeline execution has "2" success executions
+        And I pause pipeline in context
+
 
     @pipelines.delete
     @testrail-C4533387
@@ -25,6 +27,7 @@ Feature: Pipeline entity method testing actions outputs
         And I upload item in "0000000162.jpg" to dataset
         Then I wait "5"
         And I expect that pipeline execution has "2" success executions
+        And I pause pipeline in context
 
 
     @pipelines.delete

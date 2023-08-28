@@ -582,6 +582,7 @@ class TaskNode(PipelineNode):
                  max_batch_workload=None,
                  priority=entities.TaskPriority.MEDIUM,
                  due_date=None,
+                 consensus_task_type=None,
                  consensus_percentage=None,
                  consensus_assignees=None,
                  groups=None
@@ -603,6 +604,7 @@ class TaskNode(PipelineNode):
         :param int max_batch_workload: Max items in assignment . Restrictions - Min batchSize + 2 , max batchSize * 2 - for create pulling task
         :param entities.TaskPriority priority: priority of the task options in entities.TaskPriority
         :param float due_date: date by which the task should be finished; for example, due_date = datetime.datetime(day= 1, month= 1, year= 2029).timestamp()
+        :param entities.ConsensusTaskType consensus_task_type: consensus_task_type of the task options in entities.ConsensusTaskType
         :param int consensus_percentage: percentage of items to be copied to multiple annotators (consensus items)
         :param int consensus_assignees: the number of different annotators per item (number of copies per item)
         """
@@ -652,6 +654,8 @@ class TaskNode(PipelineNode):
             self.max_batch_workload = max_batch_workload
         if batch_size:
             self.batch_size = batch_size
+        if consensus_task_type:
+            self.consensus_task_type = consensus_task_type
         if consensus_percentage:
             self.consensus_percentage = consensus_percentage
         if consensus_assignees:
@@ -760,6 +764,16 @@ class TaskNode(PipelineNode):
         if not isinstance(max_batch_workload, int):
             raise PlatformException('400', 'Param max_batch_workload must be of type int')
         self.metadata['maxBatchWorkload'] = max_batch_workload
+
+    @property
+    def consensus_task_type(self):
+        return self.metadata['consensusTaskType']
+
+    @consensus_task_type.setter
+    def consensus_task_type(self, consensus_task_type: entities.ConsensusTaskType):
+        if not isinstance(consensus_task_type, str) and not isinstance(consensus_task_type, entities.ConsensusTaskType):
+            raise PlatformException('400', 'Param consensus_task_type must be of type entities.ConsensusTaskType')
+        self.metadata['consensusTaskType'] = consensus_task_type
 
     @property
     def consensus_percentage(self):

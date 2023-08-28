@@ -70,3 +70,15 @@ def step_impl(context, item_count):
         time.sleep(interval)
 
     assert finished, "TEST FAILED: Expected dataset to have {} items, Actual: {}".format(item_count, pages.items_count)
+
+
+@behave.then(u'I stream Item by path "{item_path}"')
+def step_impl(context, item_path):
+    try:
+        item = context.dataset.items.get(filepath=item_path)
+        response = context.dl.client_api.gen_request(req_type="GET", path=item.stream.split("v1")[-1])
+    except Exception as e:
+        context.error = e
+        assert False, "TEST FAILED: Not able to stream the item"
+
+    assert response, f"TEST FAILED: Response is empty"

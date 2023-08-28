@@ -33,6 +33,9 @@ def step_impl(context, entity):
             if 'runtime' in response:
                 if 'autoscaler' not in response['runtime']:
                     response['runtime']['autoscaler'] = None
+        elif entity == 'dataset':
+            entity_to_json.pop('export', None)
+            response.pop('export', None)
         elif entity == 'execution':
             entity_to_json.pop('status')
             response.pop('status')

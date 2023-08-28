@@ -294,7 +294,7 @@ class Models:
             package = self._package
 
         if model_artifacts is None:
-            model_artifacts = [entities.LocalArtifact(local_path=os.getcwd())]
+            model_artifacts = []
 
         if not isinstance(model_artifacts, list):
             raise ValueError('`model_artifacts` must be a list of dl.Artifact entities')
@@ -592,13 +592,13 @@ class Models:
                                             client_api=self._client_api,
                                             project=self._project)
 
-    def deploy(self, model_id: str, service_config=None):
+    def deploy(self, model_id: str, service_config=None) -> entities.Service:
         """
         Deploy a trained model. This will create a service that will execute predictions
 
         :param model_id: id of the model to deploy
         :param dict service_config : Service object as dict. Contains the spec of the default service to create.
-        :return:
+        :return: dl.Service: the deployed service
         """
         payload = dict()
         if service_config is not None:
@@ -609,7 +609,10 @@ class Models:
         if not success:
             raise exceptions.PlatformException(response)
 
-        return True
+        return entities.Service.from_json(_json=response.json(),
+                                          client_api=self._client_api,
+                                          project=self._project,
+                                          package=self._package)
 
 
 class Metrics:

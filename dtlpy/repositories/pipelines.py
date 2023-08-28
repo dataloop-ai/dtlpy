@@ -4,14 +4,9 @@ from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
-BASIC_PIPELINE = {
-    "name": "",
-    "projectId": "",
-    "nodes": [],
-    "connections": [],
-    "startNodes": [],
-    "variables": []
-}
+
+def generate_basic_pipeline():
+    return dict(name="", projectId="", nodes=[], connections=[], startNodes=[], variables=[])
 
 
 class Pipelines:
@@ -440,7 +435,7 @@ class Pipelines:
             pipeline = project.pipelines.create(name='pipeline_name')
         """
         if pipeline_json is None:
-            pipeline_json = BASIC_PIPELINE
+            pipeline_json = generate_basic_pipeline()
 
         if name is not None:
             pipeline_json['name'] = name
