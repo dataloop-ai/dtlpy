@@ -6,8 +6,8 @@ import dtlpy as dl
 import os
 
 
-@behave.when(u'I create a dummy model package by the name of "{package_name}"')
-def step_impl(context, package_name):
+@behave.when(u'I create a dummy model package by the name of "{package_name}" with entry point "{entry_point}"')
+def step_impl(context, package_name, entry_point):
     metadata = dl.Package.get_ml_metadata(
         default_configuration={'weights_filename': 'model.pth',
                                'input_size': 256},
@@ -15,8 +15,8 @@ def step_impl(context, package_name):
     )
     model_repo = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], 'models_flow')
     module = dl.PackageModule.from_entry_point(
-        entry_point=os.path.join(model_repo, 'main.py'))
-    module.entry_point = 'main.py'
+        entry_point=os.path.join(model_repo, entry_point))
+    module.entry_point = entry_point
     context.package = context.project.packages.push(package_name=package_name,
                                                     src_path=model_repo,
                                                     package_type='ml',
@@ -31,7 +31,7 @@ def step_impl(context, package_name):
                                                             runner_image='jjanzic/docker-python3-opencv',
                                                             pod_type=dl.InstanceCatalog.REGULAR_XS,
                                                             autoscaler=dl.KubernetesRabbitmqAutoscaler(
-                                                                min_replicas=0,
+                                                                min_replicas=1,
                                                                 max_replicas=1),
                                                             concurrency=1).to_json()},
                                                     metadata=metadata)
@@ -61,9 +61,21 @@ def step_impl(context, model_name):
 def step_impl(context, func):
     context.model = dl.models.get(model_id=context.model.id)
     if func == 'evaluate':
-        context.execution = context.model.evaluate(dataset_id=context.dataset.id, filters=dl.Filters())
+        service_config = None
+        if hasattr(context, "service_config"):
+            service_config = context.service_config
+        context.execution = context.model.evaluate(dataset_id=context.dataset.id, filters=dl.Filters(),
+                                                   service_config=service_config)
     else:
         context.execution = context.model.__getattribute__(func)()
+
+
+@behave.when(u'i train the model with init param model none')
+def step_impl(context):
+    try:
+        context.execution = context.model.train(service_config={"initParams": {"model_entity": None}})
+    except Exception as e:
+        context.error = e
 
 
 @behave.then(u'model status should be "{status}" with execution "{flag}" that has function "{func}"')
@@ -158,3 +170,8 @@ def step_impl(context, operation):
         'modelId') == context.model.id, f"TEST FAILED: model id is not in service metadata"
     assert service.metadata.get('ml', {}).get(
         'modelOperation') == operation, f"TEST FAILED: model operation is not in service metadata"
+
+
+@behave.when(u'I add service_config to context from dpk model configuration')
+def step_impl(context):
+    context.service_config = context.dpk.components.models[0]['metadata']['system']['ml']['serviceConfig']

@@ -9,7 +9,7 @@ def step_impl(context):
 
 @behave.then(u'I receive a list of "{count}" executions')
 def step_impl(context, count):
-    assert len(context.execution_list.items) == int(count)
+    assert len(context.execution_list.items) == int(count), f"TEST FAILED: Expected {count} , Actual {len(context.execution_list.items)}"
     if int(count) > 0:
         for page in context.execution_list:
             for execution in page:

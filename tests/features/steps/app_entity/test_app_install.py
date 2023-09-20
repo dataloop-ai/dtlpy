@@ -1,7 +1,7 @@
 import json
 import os
 import random
-
+from .. import fixtures
 import behave
 
 
@@ -11,6 +11,17 @@ def step_impl(context, path):
     json_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], path)
     with open(json_path) as f:
         data = json.load(f)
+
+    # Update service runner image to latest dtlpy version if exists
+    val = fixtures.access_nested_dictionary_key(data, ['components', 'services', 'versions', 'dtlpy'])
+    if val:
+        data['components']['services'][0]['versions'].update({"dtlpy": context.dl.__version__})
+
+    # Update service runner image to latest dtlpy version if exists
+    val = fixtures.access_nested_dictionary_key(data, ['components', 'services', 'runtime', 'runnerImage'])
+    if val:
+        data['components']['services'][0]['runtime'].update({"runnerImage": f"dataloop_runner-cpu/main:{context.dl.__version__}.latest"})
+
     context.dpk = context.dl.entities.Dpk.from_json(_json=data, client_api=context.project._client_api, project=context.project)
 
 
@@ -27,12 +38,12 @@ def step_impl(context):
 @behave.when(u'I install the app with exception')
 def step_impl(context):
     try:
-        context.app = context.dl.entities.App.from_json({}, client_api=context.project._client_api, project=context.project)
-        context.app = context.project.apps.install(context.dpk)
+        app = context.dl.entities.App.from_json({}, client_api=context.project._client_api, project=context.project)
+        app = context.project.apps.install(context.dpk)
         if hasattr(context.feature, 'apps'):
-            context.feature.apps.append(context.app)
+            context.feature.apps.append(app)
         else:
-            context.feature.apps = [context.app]
+            context.feature.apps = [app]
     except Exception as e:
         context.e = e
 
@@ -58,3 +69,16 @@ def step_impl(context):
 @behave.then(u"I should get an exception error='{error_code}'")
 def step_impl(context, error_code):
     assert context.e is not None and context.e.status_code == error_code
+
+
+@behave.then(u"I validate service configuration in dpk is equal to service from app")
+def step_impl(context):
+    service_runtime = context.project.services.list()[0][0].runtime.to_json()
+    dpk_runtime = context.dpk.components.services[0]['runtime']
+
+    assert context.dpk.components.services[0]["name"] == context.project.services.list()[0][0].name, f"TEST FAILED: Field name"
+    assert context.dpk.components.services[0]["moduleName"] == context.project.services.list()[0][0].module_name, f"TEST FAILED: Field moduleName"
+    assert dpk_runtime == service_runtime, f"TEST FAILED: Field runtime"
+    assert context.dpk.components.services[0]['executionTimeout'] == context.project.services.list()[0][0].execution_timeout, f"TEST FAILED: Field executionTimeout"
+    assert context.dpk.components.services[0]['onReset'] == context.project.services.list()[0][0].on_reset, f"TEST FAILED: Field onReset"
+    assert context.dpk.components.services[0]['runExecutionAsProcess'] == context.project.services.list()[0][0].run_execution_as_process, f"TEST FAILED: Field runExecutionAsProcess"

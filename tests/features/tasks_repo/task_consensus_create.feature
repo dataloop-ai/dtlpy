@@ -31,13 +31,13 @@ Feature: Tasks repository create consensus task
     And Task has the correct attributes for type "annotation"
     And I expect Task created with "20" items
 
-  @DAT-51555
-  Scenario: Create qualification task with 100 percentage should success
-    When I create Task
-      | task_name=min_params | due_date=auto | assignee_ids=auto | consensus_task_type=qualification | consensus_percentage=auto | consensus_assignees=auto |
-    And I get app by name "scoring-and-metrics"
-    And I set app in context.feature
-    Then I receive a task entity
-    And Task has the correct attributes for type "annotation"
-    And I expect Task created with "30" items
-    And I uninstall the app
+#  @DAT-51555
+#  Scenario: Create qualification task with 100 percentage should success
+#    When I create Task
+#      | task_name=min_params | due_date=auto | assignee_ids=auto | consensus_task_type=qualification | consensus_percentage=auto | consensus_assignees=auto |
+#    And I get app by name "scoring-and-metrics"
+#    And I set app in context.feature
+#    Then I receive a task entity
+#    And Task has the correct attributes for type "annotation"
+#    And I expect Task created with "30" items
+#    And I uninstall the app

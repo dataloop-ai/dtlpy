@@ -1,5 +1,5 @@
 @DAT-49332
-Feature: Pipeline entity method testing
+Feature: Pipeline entity method testing - rerun cycle
 
   Background: Initiate Platform Interface and create a pipeline
     Given Platform Interface is initialized as dlp and Environment is set according to git branch

@@ -12,7 +12,7 @@ def step_impl(context):
 @behave.then(u'I receive "{error}" notification')
 def step_impl(context, error: str):
     success = False
-    timeout = 7 * 60 * 1000
+    timeout = 7 * 60
     start = time.time()
     while time.time() - start < timeout:
         messages = dl.messages._list(context={'project': context.project.id})
@@ -28,7 +28,7 @@ def step_impl(context, error: str):
 
 @behave.then(u'Service is deactivated by system')
 def step_impl(context):
-    timeout = 7 * 60 * 1000
+    timeout = 10 * 60
     start = time.time()
     while time.time() - start < timeout:
         context.service = context.project.services.get(service_id=context.service.id)
@@ -55,3 +55,9 @@ def step_impl(context):
     context.service.package_revision = context.package.version
     context.service = context.service.update()
 
+
+@behave.when(u'Service minimum scale is "{scale}"')
+def step_impl(context, scale: str):
+    scale = int(scale)
+    context.service.runtime.autoscaler.min_replicas = scale
+    context.service = context.service.update()

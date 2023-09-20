@@ -249,7 +249,7 @@ class Annotation(entities.BaseEntity):
     def start_frame(self, val):
         if not isinstance(val, float) and not isinstance(val, int):
             raise ValueError('Must input a valid number')
-        self._start_frame = int(val)
+        self._start_frame = round(val)
         self._start_time = val / self.fps if self.fps else 0
         self.frames.start = self._start_frame
 
@@ -261,7 +261,7 @@ class Annotation(entities.BaseEntity):
     def end_frame(self, val):
         if not isinstance(val, float) and not isinstance(val, int):
             raise ValueError('Must input a valid number')
-        self._end_frame = int(val)
+        self._end_frame = round(val)
         self._end_time = val / self.fps if self.fps else 0
         self.frames.end = self._end_frame
 
@@ -273,7 +273,7 @@ class Annotation(entities.BaseEntity):
     def start_time(self, val):
         if not isinstance(val, float) and not isinstance(val, int):
             raise ValueError('Must input a valid number')
-        self._start_frame = int(val * self.fps if self.fps else 0)
+        self._start_frame = round(val * self.fps if self.fps else 0)
         self._start_time = val
         self.frames.start = self._start_frame
 
@@ -285,7 +285,7 @@ class Annotation(entities.BaseEntity):
     def end_time(self, val):
         if not isinstance(val, float) and not isinstance(val, int):
             raise ValueError('Must input a valid number')
-        self._end_frame = int(val * self.fps if self.fps else 0)
+        self._end_frame = round(val * self.fps if self.fps else 0)
         self._end_time = val
         self.frames.end = self._end_frame
 
@@ -1202,7 +1202,6 @@ class Annotation(entities.BaseEntity):
 
             self.frames[frame_num] = frame
             self.set_frame(frame_num)
-            self.end_time = frame_num / self.fps if self.fps != 0 else 0
             self.current_frame = frame_num
             self.end_frame = frame_num
             self.type = annotation_definition.type
@@ -1246,7 +1245,6 @@ class Annotation(entities.BaseEntity):
             if frame_last == frame_current:
                 self.frames[frame_num]._interpolation = True
         self.end_frame = max(self.last_frame, frame_num)
-        self.end_time = self.end_frame / self.fps
 
         return True
 

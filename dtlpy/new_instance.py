@@ -4,7 +4,7 @@ class Dtlpy:
     from .__version__ import version as __version__
     from .entities import Box, Text, Point, Segmentation, Polygon, Ellipse, Classification, Subtitle, Polyline, \
         Filters, Trigger, Description, \
-        AnnotationCollection, Annotation, Item, Codebase, Filters, Execution, Recipe, Ontology, Label, Similarity, \
+        AnnotationCollection, Annotation, Item, Codebase, Filters, Execution, Recipe, Ontology, Label, \
         ItemLink, UrlLink, PackageModule, PackageFunction, FunctionIO, Modality, Workload, WorkloadUnit
     from .utilities import Converter, BaseServiceRunner, Progress
     from .services.api_client import ApiClient
@@ -78,13 +78,6 @@ class Dtlpy:
         State enum
         """
         OVERLAY = 'overlay'
-
-    class SimilarityTypeEnum:
-        """
-        State enum
-        """
-        ID = 'id'
-        URL = 'url'
 
     class LinkTypeEnum:
         """

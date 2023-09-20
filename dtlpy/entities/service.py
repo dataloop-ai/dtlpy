@@ -583,8 +583,7 @@ class Service(entities.BaseEntity):
         """
         parsed_url = urlsplit(self.platform_url)
         base_url = parsed_url.scheme + "://" + parsed_url.netloc
-        url = '{}/projects/{}/faas?byCreator=false&byProject=true&' \
-              'byDataloop=false&tab=installed&selectedServiceId={}'.format(base_url, self.project_id, self.id)
+        url = '{}/projects/{}/services/{}'.format(base_url, self.project_id, self.id)
         self._client_api._open_in_web(url=url)
 
     def checkout(self):

@@ -191,7 +191,7 @@ def step_impl(context, resource_type):
                 break
         elif resource_type == 'assignment':
             context.assignment = context.project.assignments.get(assignment_id=context.assignment.id)
-            if "name-updated." in context.assignment.name:
+            if "name-updated" in context.assignment.name:
                 triggered = True
                 break
         elif resource_type == 'hidden-item':
@@ -201,7 +201,7 @@ def step_impl(context, resource_type):
                 break
         elif resource_type == 'string':
             execution = context.service.executions.list()[0][0]
-            if len(execution.input) == 1:
+            if len(execution.input) > 0:
                 context.execution = context.service.executions.list()[0][0]
                 triggered = True
                 break

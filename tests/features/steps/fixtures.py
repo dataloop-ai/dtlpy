@@ -179,3 +179,18 @@ def get_package_io(params, context):
             val.append(context.dl.FunctionIO(type=context.dl.PACKAGE_INPUT_TYPE_ASSIGNMENT, name=key))
 
     return val
+
+
+def access_nested_dictionary_key(dict_input, keys):
+    # using for loop to access nested dictionary key safely
+    val = dict_input
+    for key in keys:
+        if key in val:
+            if isinstance(val[key], list):
+                val = val[key][0]
+            else:
+                val = val[key]
+        else:
+            val = None
+            break
+    return val

@@ -280,8 +280,8 @@ class PipelineNode:
         outputs = [PipelineNodeIO.from_json(_json=i_output) for i_output in _json.get('outputs', list())]
         namespace = PipelineNameSpace.from_json(_json.get('namespace', {}))
         metadata = _json.get('metadata', {})
-        position = (metadata['position']['x'] / (1.5 * NODE_SIZE[0]),
-                    metadata['position']['y'] / (1.5 * NODE_SIZE[1]))
+        position = ((metadata['position']['x'] - NODE_SIZE[0] / 2) / (1.7 * NODE_SIZE[0]),
+                    (metadata['position']['y'] - NODE_SIZE[1]) / (1.5 * NODE_SIZE[1]))
         return PipelineNode(
             name=_json.get('name', None),
             node_id=_json.get('id', None),

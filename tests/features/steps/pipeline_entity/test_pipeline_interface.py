@@ -29,6 +29,20 @@ def step_impl(context, node_type):
             method=run,
             project_name=context.project.name
         )
+    elif node_type == 'task':
+        context.task_name = params.get('name', "My Task")
+        context.node = dl.TaskNode(
+            name=context.task_name,
+            recipe_id=context.recipe.id,
+            recipe_title=context.recipe.title,
+            task_owner=params.get('taskOwner', dl.info()['user_email']),
+            workload=[dl.WorkloadUnit(assignee_id=params.get('assigneeId', dl.info()['user_email']), load=100)],
+            position=eval(params.get('position', "(1, 1)")),
+            task_type=params.get('type', "annotation"),
+            project_id=context.project.id,
+            dataset_id=context.dataset.id,
+            repeatable=eval(params.get("repeatable", "True"))
+        )
 
     context.nodes.append(context.node)
 

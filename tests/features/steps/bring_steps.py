@@ -126,6 +126,7 @@ from tests.features.steps.services_repo import test_services_list
 from tests.features.steps.services_repo import test_services_update
 from tests.features.steps.services_repo import test_services_context
 from tests.features.steps.services_repo import test_services_slot
+from tests.features.steps.services_repo import test_services_crashloop
 
 from tests.features.steps.filters_entity import test_filters
 
@@ -135,6 +136,7 @@ from tests.features.steps.executions_repo import test_executions_list
 from tests.features.steps.executions_repo import test_executions_multiple
 from tests.features.steps.executions_repo import test_executions_context
 from tests.features.steps.execution_monitoring import test_execution_monitoring
+from tests.features.steps.executions_repo import test_execution_rerun
 
 from tests.features.steps.bots_repo import test_bots_create
 from tests.features.steps.bots_repo import test_bots_list

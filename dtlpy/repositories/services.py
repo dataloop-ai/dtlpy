@@ -1300,11 +1300,10 @@ class Services:
         method = inspect.signature(func)
         params = list(method.parameters)
         inpts = list()
-        inputs_types = [input_type.lower() for input_type in dir(entities.PackageInputType) if
-                        not input_type.startswith('_') and input_type != 'JSON']
+        inputs_types = {i.name.lower(): i.value for i in list(entities.PackageInputType)}
         for arg in params:
             if arg in inputs_types:
-                inpt_type = arg.capitalize()
+                inpt_type = inputs_types[arg]
             else:
                 inpt_type = entities.PackageInputType.JSON
             inpts.append(entities.FunctionIO(type=inpt_type, name=arg))

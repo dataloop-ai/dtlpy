@@ -32,6 +32,7 @@ class Uploader:
     def __init__(self, items_repository: repositories.Items, output_entity=entities.Item, no_output=False):
         assert isinstance(items_repository, repositories.Items)
         self.items_repository = items_repository
+        self.remote_url = "/datasets/{}/items".format(self.items_repository.dataset.id)
         self.__stop_create_existence_dict = False
         self.mode = 'skip'
         self.num_files = 0
@@ -275,12 +276,6 @@ class Uploader:
             elif isinstance(upload_item_element, entities.Link):
                 upload_elem = upload_element.LinkUploadElement(all_upload_elements=all_upload_elements)
 
-            elif isinstance(upload_item_element, entities.Similarity):
-                upload_elem = upload_element.SimilarityUploadElement(all_upload_elements=all_upload_elements)
-
-            elif isinstance(upload_item_element, entities.MultiView):
-                upload_elem = upload_element.MultiViewUploadElement(all_upload_elements=all_upload_elements)
-
             elif isinstance(upload_item_element, bytes) or \
                     isinstance(upload_item_element, io.BytesIO) or \
                     isinstance(upload_item_element, io.BufferedReader) or \
@@ -295,10 +290,9 @@ class Uploader:
             else:
                 raise PlatformException(
                     error="400",
-                    message="Unknown element type to upload ('local_path'). received type: {}. "
+                    message=f"Unknown element type to upload ('local_path'). received type: {type(upload_item_element)}. "
                             "known types (or list of those types): str (dir, file, url), bytes, io.BytesIO, "
-                            "numpy.ndarray, io.TextIOWrapper, Dataloop.Item, Dataloop.Link, "
-                            "Dataloop.Similarity".format(type(upload_item_element)))
+                            "numpy.ndarray, io.TextIOWrapper, Dataloop.Item, Dataloop.Link")
 
             futures.append(self.upload_single_element(upload_elem))
         return futures
@@ -423,13 +417,12 @@ class Uploader:
             item_size = to_upload.seek(0, 2)
             to_upload.seek(0)
             item_type = 'file'
-        remote_url = "/datasets/{}/items".format(self.items_repository.dataset.id)
         try:
             response = await self.items_repository._client_api.upload_file_async(to_upload=to_upload,
                                                                                  item_type=item_type,
                                                                                  item_size=item_size,
                                                                                  item_metadata=item_metadata,
-                                                                                 remote_url=remote_url,
+                                                                                 remote_url=self.remote_url,
                                                                                  uploaded_filename=uploaded_filename,
                                                                                  remote_path=remote_path,
                                                                                  callback=callback,

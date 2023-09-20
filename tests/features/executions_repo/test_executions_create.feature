@@ -69,3 +69,13 @@ Feature: Executions repository create service testing
       | sync=True | inputs=Item |
     Then I receive an Execution entity
     Then Execution was executed and finished with status "success"
+
+  @services.delete
+  @packages.delete
+  @DAT-53072
+  Scenario: Created Item Execution - with id that ends with e28
+    Given A service that receives items input
+    When I create an execution with "inputs"
+      | sync=True | inputs=e28 |
+    Then I receive an Execution entity
+    Then Execution input is a valid itemId

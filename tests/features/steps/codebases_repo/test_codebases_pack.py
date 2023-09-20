@@ -43,12 +43,13 @@ def step_impl(context):
     )
 
 
+@behave.given(u'I pack directory by name "{codebase_name}"')
 @behave.when(u'I pack directory by name "{codebase_name}"')
 def step_impl(context, codebase_name):
     context.codebase = context.project.codebases.pack(
         directory=context.codebase_local_dir,
         name=codebase_name,
-        description="some description",
+        description="some description"
     )
 
 

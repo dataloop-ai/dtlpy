@@ -98,5 +98,26 @@ def step_impl(context, path):
         pipeline_json=pipeline_json
     )
 
-    context.pipeline = context.project.pipelines.create(pipeline_json=pipeline_payload, project_id=context.project.id)
-    context.to_delete_pipelines_ids.append(context.pipeline.id)
+    try:
+        context.pipeline = context.project.pipelines.create(pipeline_json=pipeline_payload, project_id=context.project.id)
+        context.to_delete_pipelines_ids.append(context.pipeline.id)
+        for node in pipeline_json['nodes']:
+            if node['type'] == 'task':
+                context.task_name = node['name']
+        context.error = None
+    except Exception as e:
+        context.error = e
+
+
+@when(u'I update node input output to infinite loop')
+def step_impl(context):
+    try:
+        context.pipeline.nodes.add(context.nodes[0])
+        context.nodes.pop(0)
+
+        context.pipeline.nodes[0].connect(context.pipeline.nodes[0])
+        context.pipeline.update()
+        context.error = None
+    except Exception as e:
+        context.error = e
+

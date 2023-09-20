@@ -64,7 +64,8 @@ from .entities import (
     # main entities
     Project, Dataset, ExpirationOptions, ExportVersion, Trigger, Item, Execution, AnnotationCollection, Annotation,
     Recipe, IndexDriver, AttributesTypes, AttributesRange, Dpk, App, AppModule,
-    Ontology, Label, Task, TaskPriority, ConsensusTaskType, Assignment, Service, Package, Codebase, Model, PackageModule, PackageFunction,
+    Ontology, Label, Task, TaskPriority, ConsensusTaskType, Assignment, Service, Package, Codebase, Model,
+    PackageModule, PackageFunction,
     # annotations
     Box, Cube, Cube3d, Point, Note, Message, Segmentation, Ellipse, Classification, Subtitle, Polyline, Pose,
     Description,
@@ -81,7 +82,7 @@ from .entities import (
     # roberto
     DatasetSubsetType, PlotSample, ArtifactType, Artifact, ItemArtifact, LinkArtifact, LocalArtifact, EntityScopeLevel,
     # features
-    FeatureEntityType, FeatureDataType, Feature, FeatureSet,
+    FeatureEntityType, Feature, FeatureSet,
     #
     RequirementOperator, PackageRequirement,
     Command, CommandsStatus,
@@ -90,7 +91,6 @@ from .entities import (
     Webhook, HttpMethod,
     ViewAnnotationOptions, AnnotationStatus, AnnotationType,
     ItemStatus, ExecutionStatus, ExportMetadata,
-    Similarity, SimilarityTypeEnum, MultiView,
     ItemLink, UrlLink, LinkTypeEnum,
     Modality, ModalityTypeEnum, ModalityRefTypeEnum,
     Workload, WorkloadUnit, ItemAction,
@@ -301,9 +301,6 @@ EXECUTION_STATUS_CREATED = ExecutionStatus.CREATED
 EXECUTION_STATUS_IN_PROGRESS = ExecutionStatus.IN_PROGRESS
 EXECUTION_STATUS_SUCCESS = ExecutionStatus.SUCCESS
 EXECUTION_STATUS_FAILED = ExecutionStatus.FAILED
-
-SIMILARITY_TYPE_ID = SimilarityTypeEnum.ID
-SIMILARITY_TYPE_URL = SimilarityTypeEnum.URL
 
 LINK_TYPE_ID = LinkTypeEnum.ID
 LINK_TYPE_URL = LinkTypeEnum.URL

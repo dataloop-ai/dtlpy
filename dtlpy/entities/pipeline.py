@@ -267,7 +267,7 @@ class Pipeline(entities.BaseEntity):
                 project = None
 
         connections = [PipelineConnection.from_json(_json=con) for con in _json.get('connections', list())]
-        json_variables = _json.get('variables', list())
+        json_variables = _json.get('variables', None) or list()
         variables = list()
         if json_variables:
             variables = [Variable.from_json(_json=v) for v in json_variables]
@@ -319,7 +319,9 @@ class Pipeline(entities.BaseEntity):
         return self.settings.to_json() != self._original_settings.to_json()
 
     def variables_changed(self) -> bool:
-        return [var.to_json() for var in self.variables] != self._original_variables
+        new_vars = [var.to_json() for var in self.variables]
+        old_vars = self._original_variables or list()
+        return new_vars != old_vars
 
     def to_json(self):
         """

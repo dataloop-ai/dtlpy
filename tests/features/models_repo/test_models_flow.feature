@@ -7,8 +7,6 @@ Feature: Models repository flow testing
     And I upload an item by the name of "test_item.jpg"
     When I upload labels to dataset
     And I upload "5" box annotation to item
-    And I create a dummy model package by the name of "dummymodel"
-    And I create a model form package by the name of "test-model"
 
   @DAT-48263
   @DAT-51111
@@ -16,6 +14,8 @@ Feature: Models repository flow testing
   @DAT-51144
   @DAT-51145
   Scenario: test flow model
+    When I create a dummy model package by the name of "dummymodel" with entry point "main.py"
+    And I create a model form package by the name of "test-model"
     When i "train" the model
     Then service metadata has a model id and operation "train"
     Then model status should be "trained" with execution "True" that has function "train_model"
@@ -29,3 +29,18 @@ Feature: Models repository flow testing
     Then i should get a json response
     Then Log "model training" is in model.log() with operation "train"
     Then Log "model prediction" is in model.log() with operation "evaluate"
+
+  @DAT-50829
+  Scenario: test model - failed
+    When I create a dummy model package by the name of "modelfaild" with entry point "failedmain.py"
+    And I create a model form package by the name of "test-model-failed"
+    When i "train" the model
+    Then model status should be "failed" with execution "True" that has function "train_model"
+
+
+  @DAT-52904
+  Scenario: test flow model - initPrams
+    When I create a dummy model package by the name of "initmodel" with entry point "main.py"
+    And I create a model form package by the name of "test-model-init"
+    When i train the model with init param model none
+    Then model status should be "trained" with execution "True" that has function "train_model"

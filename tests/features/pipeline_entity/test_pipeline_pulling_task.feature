@@ -43,7 +43,7 @@ Feature: Pipeline pulling task testing
       | batch_size         | 10    |
       | max_batch_workload | 7     |
       | priority           | LOW   |
-    Then I expect pipeline error to be "Request failed with status code 400, Failed to create a task"
+    Then I expect pipeline error to be "Failed to create a task"
 
   @pipelines.delete
   @testrail-C4532851

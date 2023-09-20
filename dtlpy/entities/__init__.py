@@ -50,7 +50,6 @@ from .command import Command, CommandsStatus
 from .assignment import Assignment, Workload, WorkloadUnit
 from .task import Task, ItemAction, TaskPriority, ConsensusTaskType
 from .directory_tree import DirectoryTree
-from .similarity import Similarity, MultiView, SimilarityItem, MultiViewItem, SimilarityTypeEnum
 from .user import User
 from .bot import Bot
 from .webhook import Webhook, HttpMethod
@@ -60,7 +59,7 @@ from .pipeline import Pipeline, PipelineStats, PipelineResumeOption, PipelineSet
 from .node import PipelineConnection, PipelineNode, PipelineConnectionPort, PipelineNodeIO, TaskNode, \
     CodeNode, FunctionNode, PipelineNodeType, PipelineNameSpace, DatasetNode
 from .pipeline_execution import PipelineExecution, PipelineExecutionNode, CycleRerunMethod
-from .feature import Feature, FeatureDataType
+from .feature import Feature
 from .feature_set import FeatureSet, FeatureEntityType
 from .organization import Organization, OrganizationsPlans, MemberOrgRole, CacheAction, PodType
 from .analytic import ServiceSample, ExecutionSample, PipelineExecutionSample

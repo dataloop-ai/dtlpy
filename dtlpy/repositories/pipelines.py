@@ -332,7 +332,7 @@ class Pipelines:
 
     def __update_variables(self, pipeline: entities.Pipeline):
         pipeline_json = pipeline.to_json()
-        variables = pipeline_json['variables']
+        variables = pipeline_json.get('variables', list())
 
         for var in variables:
             if var.get('reference', None) is None:

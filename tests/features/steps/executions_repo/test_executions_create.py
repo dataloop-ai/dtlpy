@@ -1,3 +1,4 @@
+import string
 import behave
 import time
 import os
@@ -10,6 +11,7 @@ def step_impl(context, input_type):
     sync = None
     inputs = list()
     with_input_entity = False
+    project_id = None
 
     if input_type != 'None':
         with_input_entity = True
@@ -63,12 +65,24 @@ def step_impl(context, input_type):
                         value=context.execution_json_input,
                         name='config')
                 )
+            elif resource == 'e28':
+                project_id = context.project.id
+                context.item_id = "6500397081943346e28"
+                sync = False
+                execution_inputs.append(
+                    context.dl.FunctionIO(
+                        type=context.dl.PackageInputType.ITEMS,
+                        value=[context.item_id],
+                        name='items')
+                )
 
         context.execution = context.service.executions.create(
             service_id=context.service.id,
             sync=sync,
             execution_input=execution_inputs,
-            timeout=300)
+            timeout=600,
+            project_id=project_id
+        )
     else:
         if inputs:
             resource = inputs[0]
@@ -152,6 +166,29 @@ def step_impl(context, execution_status):
 def step_impl(context, item_path):
     item_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], item_path)
     context.item = context.dataset.items.upload(local_path=item_path)
+
+
+@behave.then(u'Execution input is a valid itemId')
+def step_impl(context):
+    execution = context.execution
+    assert execution.input['items'] == [context.item_id]
+
+
+@behave.given(u'A service that receives items input')
+def step_impl(context):
+    def run(items):
+        return items
+
+    context.service = context.project.services.deploy(
+        service_name='items-input-{}'.format(''.join(random.choice(string.ascii_lowercase) for i in range(5))),
+        func=run,
+        runtime=context.dl.KubernetesRuntime(
+            autoscaler=context.dl.KubernetesRabbitmqAutoscaler(
+                min_replicas=0,
+                max_replicas=0
+            )
+        )
+    )
 
 
 @behave.when(u'I upload item in "{item_path}"')

@@ -48,6 +48,7 @@ class Execution(entities.BaseEntity):
     service_version = attr.ib()
     package_id = attr.ib()
     package_name = attr.ib()
+    package_revision = attr.ib()
 
     # sdk
     _client_api = attr.ib(type=ApiClient, repr=False)
@@ -57,6 +58,7 @@ class Execution(entities.BaseEntity):
 
     # optional
     pipeline = attr.ib(type=dict, default=None, repr=False)
+    model = attr.ib(type=dict, default=None, repr=False)
 
     ################
     # repositories #
@@ -180,7 +182,9 @@ class Execution(entities.BaseEntity):
             service_version=_json.get('serviceVersion', False),
             package_id=_json.get('packageId', None),
             package_name=_json.get('packageName', None),
-            pipeline=_json.get('pipeline', None)
+            pipeline=_json.get('pipeline', None),
+            model=_json.get('model', None),
+            package_revision=_json.get('packageRevision', None),
         )
         inst.is_fetched = is_fetched
         return inst
@@ -216,6 +220,8 @@ class Execution(entities.BaseEntity):
                 attr.fields(Execution).feedback_queue,
                 attr.fields(Execution).sync_reply_to,
                 attr.fields(Execution).pipeline,
+                attr.fields(Execution).model,
+                attr.fields(Execution).package_revision,
             )
         )
 
@@ -236,9 +242,12 @@ class Execution(entities.BaseEntity):
         _json['updatedAt'] = self.updated_at
         _json['feedbackQueue'] = self.feedback_queue
         _json['syncReplyTo '] = self.sync_reply_to
+        _json['packageRevision'] = self.package_revision
 
         if self.pipeline:
             _json['pipeline'] = self.pipeline
+        if self.model:
+            _json['model'] = self.model
 
         return _json
 

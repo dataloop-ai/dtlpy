@@ -22,12 +22,12 @@ Feature: publish a dpk with trigger
     And I uninstall the app
 
 
-  @DAT-50148
-  @skip_test_DAT-50670
+  @DAT-52535
   Scenario: publishing a dpk with cron trigger and input
     Given I fetch the dpk from 'apps/app_include_cron_trigger_with_input.json' file
+    When I update dpk dtlpy to current version for service in index 0
     When I set code path "triggers/cron_string" to context
-    And I pack directory by name "triggers/cron_string"
+    And I pack directory by name "cron_string"
     And I add codebase to dpk
     And I publish a dpk to the platform
     And I install the app

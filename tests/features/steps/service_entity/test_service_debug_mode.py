@@ -49,7 +49,7 @@ def step_impl(context, path, expected_response):
         if success:
             break
         dl.logger.warning("Try number {}".format(num_try + 1))
-        dl.logger.warning("TEST FAILED: Request failed with error message {}".format(response.text))
+        dl.logger.warning("Request failed with error message {}".format(response.text))
         time.sleep(interval)
 
     assert success, "TEST FAILED: Request failed. {}".format(response.text)

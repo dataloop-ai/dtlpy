@@ -133,7 +133,6 @@ class Features:
                version: str = None,
                parent_id: str = None,
                org_id: str = None,
-               refs: dict = None
                ):
         """
         Create a new Feature vector
@@ -145,8 +144,7 @@ class Features:
         :param str version: version of the featureSet generator
         :param str parent_id: optional: parent FeatureSet id - used when FeatureVector is a subFeature
         :param str org_id: the id of the org where featureVector will be created
-        :param str refs: the context of the featureVector (feautureSet must be defined with dataType)
-        :return: Feature vector: 
+        :return: Feature vector:
         """
         if project_id is None:
             if self._project is not None:
@@ -172,8 +170,6 @@ class Features:
             payload['parentId'] = parent_id
         if org_id is not None:
             payload['org'] = org_id
-        if refs is not None:
-            payload['refs'] = refs
 
         success, response = self._client_api.gen_request(req_type="post",
                                                          json_req=payload,

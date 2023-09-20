@@ -77,3 +77,8 @@ def step_impl(context):
         context.feature.dpks.append(context.dpk)
     else:
         context.feature.dpks = [context.dpk]
+
+
+@behave.when(u"I update dpk dtlpy to current version for service in index {i}")
+def step_impl(context, i):
+    context.dpk.components.services[int(i)]['versions'] = {'dtlpy': context.dl.__version__, "verify": True}

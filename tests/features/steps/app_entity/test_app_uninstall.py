@@ -5,6 +5,7 @@ import behave
 @behave.then(u'I uninstall the app')
 def step_impl(context):
     context.project.apps.uninstall(app_id=context.app.id)
+    context.feature.apps.pop(-1)
 
 
 @behave.then(u"The app shouldn't be in listed")

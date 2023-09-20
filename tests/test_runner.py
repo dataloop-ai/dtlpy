@@ -340,20 +340,20 @@ if __name__ == '__main__':
 
     tests_results = results.items()
 
-    # print timeouts
+    # print timeout first
     for feature, result in tests_results:
-        if result.get('timeout', False):
+        if not result['status'] and 'timeout' in result:
             status = 'timeout'
             log_filename = result['log_file']
             i_try = result['try']
             avg_time = result['avgTime']
-            res_msg = '{}\t in try: {}\tavg time: {}\tfeature: {} , timeout'.format(status, i_try, avg_time,
-                                                                                    os.path.basename(feature))
+            res_msg = '{}\t in try: {}\tavg time: {}\tfeature: {}'.format(status, i_try, avg_time,
+                                                                          os.path.basename(feature))
             print(res_msg)
 
     # print failed first
     for feature, result in tests_results:
-        if not result['status']:
+        if not result['status'] and 'timeout' not in result:
             status = 'failed'
             log_filename = result['log_file']
             i_try = result['try']

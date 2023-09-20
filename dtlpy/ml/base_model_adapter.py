@@ -282,9 +282,6 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             local_path=local_path,
             overwrite=overwrite
         )
-        if self.package.codebase.type == 'git':
-            local_path = self.codebase_path
-        self.configuration.update({'artifacts_path': local_path})
         self.load(local_path, **kwargs)
 
     def save_to_model(self, local_path=None, cleanup=False, replace=True, **kwargs):
@@ -489,7 +486,10 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
     @entities.Package.decorators.function(display_name='Evaluate a Model',
                                           inputs={'model': entities.Model,
                                                   'dataset': entities.Dataset,
-                                                  'filters': 'Json'})
+                                                  'filters': 'Json'},
+                                          outputs={'model': entities.Model,
+                                                   'dataset': entities.Dataset
+                                                   })
     def evaluate_model(self,
                        model: entities.Model,
                        dataset: entities.Dataset,
@@ -543,7 +543,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         if progress is not None:
             progress.update(message='finishing evaluation',
                             progress=99)
-        return model
+        return model, dataset
 
     # =============
     # INNER METHODS
