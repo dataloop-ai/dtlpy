@@ -418,7 +418,6 @@ class Codebases:
         value = None
         integration_id = codebase.credentials.get(name, {}).get('id', None)
         key = codebase.credentials.get(name, {}).get('key', None)
-
         if integration_id is not None:
             try:
                 key = self.project.integrations.get(integrations_id=integration_id).name

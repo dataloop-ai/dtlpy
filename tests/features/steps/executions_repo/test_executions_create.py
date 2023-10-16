@@ -144,7 +144,7 @@ def step_impl(context, resource_type):
         if execution.latest_status['status'] == 'failed':
             success = False
             break
-    assert success
+    assert success, f"TEST FAILED: after {round(num_try * interval / 60, 1)} minutes"
 
 
 @behave.then(u'Execution was executed and finished with status "{execution_status}"')
@@ -159,7 +159,7 @@ def step_impl(context, execution_status):
             break
         time.sleep(interval)
 
-    assert success, "TEST FAILED: Execution status is {}".format(execution.latest_status['status'])
+    assert success, f"TEST FAILED: Execution status is {execution.latest_status['status']}, after {round(num_try * interval / 60, 1)} minutes"
 
 
 @behave.given(u'I upload item in "{item_path}" to dataset')

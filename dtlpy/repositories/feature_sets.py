@@ -42,25 +42,48 @@ class FeatureSets:
     ###########
     # methods #
     ###########
-    @_api_reference.add(path='/features/sets', method='get')
-    def list(self):
-        """
-        List of features
 
-        :return: List of features
-        :rtype: list
-        """
-
+    def _list(self, filters: entities.Filters):
         # request
-        success, response = self._client_api.gen_request(req_type='get',
-                                                         path=self.URL)
+        success, response = self._client_api.gen_request(req_type='POST',
+                                                         path='/features/sets/query',
+                                                         json_req=filters.prepare())
         if not success:
             raise exceptions.PlatformException(response)
+        return response.json()
 
-        features = miscellaneous.List([entities.FeatureSet.from_json(_json=_json,
-                                                                     client_api=self._client_api) for _json in
-                                       response.json()])
-        return features
+    @_api_reference.add(path='/features/sets/query', method='post')
+    def list(self, filters: entities.Filters = None) -> entities.PagedEntities:
+        """
+        List Feature Sets
+
+        :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
+        :return: Paged entity
+        :rtype: dtlpy.entities.paged_entities.PagedEntities
+        """
+        # default filters
+        if filters is None:
+            filters = entities.Filters(resource=entities.FiltersResource.FEATURE_SET)
+            if self._project is not None:
+                filters.add(field='projectId', values=self._project.id)
+
+        # assert type filters
+        if not isinstance(filters, entities.Filters):
+            raise exceptions.PlatformException(error='400',
+                                               message='Unknown filters type: {!r}'.format(type(filters)))
+
+        if filters.resource != entities.FiltersResource.FEATURE_SET:
+            raise exceptions.PlatformException(
+                error='400',
+                message='Filters resource must to be FiltersResource.FEATURE_SET. Got: {!r}'.format(filters.resource))
+
+        paged = entities.PagedEntities(items_repository=self,
+                                       filters=filters,
+                                       page_offset=filters.page,
+                                       page_size=filters.page_size,
+                                       client_api=self._client_api)
+        paged.get_page()
+        return paged
 
     @_api_reference.add(path='/features/sets/{id}', method='get')
     def get(self, feature_set_name: str = None, feature_set_id: str = None) -> entities.Feature:

@@ -98,7 +98,7 @@ def step_impl(context):
             break
         e = context.execution = context.service.executions.get(execution_id=context.execution.id)
         success = e.latest_status['status'] in ['in-progress', 'inProgress']
-    assert success, f"TEST FAILED: latest status - {e.latest_status['status']}"
+    assert success, f"TEST FAILED: latest status - {e.latest_status['status']}, After {round(num_tries * interval / 60, 1)} minutes"
 
 
 @behave.when(u'I update service with force="{force}"')
@@ -118,7 +118,7 @@ def step_impl(context):
             break
         e = context.execution = context.service.executions.get(execution_id=context.execution.id)
         success = e.latest_status['status'] == 'failed'
-    assert success
+    assert success, f"TEST FAILED: After {round(num_tries * interval / 60, 1)} minutes"
 
 
 @behave.when(u'I get service revisions')

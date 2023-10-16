@@ -254,7 +254,7 @@ def step_impl(context):
                 found_frames = True
                 break
 
-    assert isinstance(nb_frames, int), "TEST FAILED: nb_frames is not defined"
+    assert isinstance(nb_frames, int), f"TEST FAILED: nb_frames is not defined after {round(num_tries * interval_time / 60, 1)} minutes"
     ann = context.annotation
     label = context.dataset.labels[0]
     for frame in range(nb_frames):

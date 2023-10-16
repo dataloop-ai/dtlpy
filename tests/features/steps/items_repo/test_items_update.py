@@ -93,6 +93,8 @@ def step_impl(context):
     item_get_json = context.item_get.to_json()
     item_get_json.pop("metadata")
     context.original_item_json.pop("metadata")
+    item_get_json.pop("updatedAt")
+    context.original_item_json.pop("updatedAt")
 
     assert item_get_json == context.original_item_json
 

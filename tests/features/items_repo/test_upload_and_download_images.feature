@@ -51,3 +51,9 @@ Feature: Upload and Download Images
         And I overwrite "1" images of type "png"
         And I download the item with Overwrite "False"
         Then The images will be "not overwritten"
+
+    @DAT-54335
+    Scenario: Download item with Overwrite True path
+        Given I upload item by the name of "test_item.jpg" to a remote path "test/1/2/3"
+        When I download the item with Overwrite value "True" to path "qa_22.3"
+        Then check that the new download will be with the same path "qa_22.3"

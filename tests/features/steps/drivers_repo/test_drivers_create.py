@@ -69,7 +69,7 @@ def step_impl(context, item_count):
             break
         time.sleep(interval)
 
-    assert finished, "TEST FAILED: Expected dataset to have {} items, Actual: {}".format(item_count, pages.items_count)
+    assert finished, f"TEST FAILED: Expected dataset to have {item_count} items, Actual: {pages.items_count} after {round(num_try * interval / 60, 1)} minutes"
 
 
 @behave.then(u'I stream Item by path "{item_path}"')

@@ -410,11 +410,12 @@ class Datasets:
     @_api_reference.add(path='/datasets/{id}/clone', method='post')
     def clone(self,
               dataset_id: str,
-              clone_name: str,
+              clone_name: str = None,
               filters: entities.Filters = None,
               with_items_annotations: bool = True,
               with_metadata: bool = True,
-              with_task_annotations_status: bool = True):
+              with_task_annotations_status: bool = True,
+              dst_dataset_id: str = None):
         """
         Clone a dataset. Read more about cloning datatsets and items in our `documentation <https://dataloop.ai/docs/clone-merge-dataset#cloned-dataset>`_ and `SDK documentation <https://developers.dataloop.ai/tutorials/data_management/data_versioning/chapter/>`_.
 
@@ -426,6 +427,7 @@ class Datasets:
         :param bool with_items_annotations: true to clone with items annotations
         :param bool with_metadata: true to clone with metadata
         :param bool with_task_annotations_status: true to clone with task annotations' status
+        :param str dst_dataset_id: destination dataset id
         :return: dataset object
         :rtype: dtlpy.entities.dataset.Dataset
 
@@ -439,6 +441,8 @@ class Datasets:
                                   with_items_annotations=False,
                                   with_task_annotations_status=False)
         """
+        if clone_name is None and dst_dataset_id is None:
+            raise exceptions.PlatformException('400', 'Must provide clone name or destination dataset id')
         if filters is None:
             filters = entities.Filters()
             filters._user_query = 'false'
@@ -460,6 +464,8 @@ class Datasets:
                 "withTaskAnnotationsStatus": with_task_annotations_status
             }
         }
+        if dst_dataset_id is not None:
+            payload['cloneDatasetParams']['targetDatasetId'] = dst_dataset_id
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/datasets/{}/clone'.format(dataset_id),
                                                          json_req=payload,

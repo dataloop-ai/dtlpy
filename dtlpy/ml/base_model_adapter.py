@@ -143,7 +143,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         """
         raise NotImplementedError("Please implement 'predict' method in {}".format(self.__class__.__name__))
 
-    def evaluate(self, model: entities.Model, dataset: entities.Dataset, filters: entities.Filters):
+    def evaluate(self, model: entities.Model, dataset: entities.Dataset, filters: entities.Filters) -> entities.Model:
         """
         This function evaluates the model prediction on a dataset (with GT annotations).
         The evaluation process will upload the scores and metrics to the platform.
@@ -153,20 +153,15 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         :param filters: Filters to query items on the dataset
         :return:
         """
-        try:
-            from dtlpymetrics.scoring import ScoringAndMetrics
-        except (ImportError, ModuleNotFoundError):
-            import subprocess
-            import sys
-            p_url = 'https://storage.googleapis.com/dtlpy/dtlpy-metrics/dtlpymetrics-latest-py3-none-any.whl'
-            subprocess.check_call([sys.executable, "-m", "pip", "install", p_url])
-            from dtlpymetrics.scoring import ScoringAndMetrics
+        import dtlpymetrics
         compare_types = model.output_type
-        success, response = ScoringAndMetrics.create_model_score(model=model,
-                                                                 dataset=dataset,
-                                                                 compare_types=compare_types)
-        if not success:
-            raise ValueError(response)
+        if filters is not None and isinstance(filters, dict):
+            filters = entities.Filters(custom_filter=filters)
+        model = dtlpymetrics.scoring.create_model_score(model=model,
+                                                        dataset=dataset,
+                                                        filters=filters,
+                                                        compare_types=compare_types)
+        return model
 
     def convert_from_dtlpy(self, data_path, **kwargs):
         """ Convert Dataloop structure data to model structured
@@ -534,9 +529,9 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         if progress is not None:
             progress.update(message='calculating metrics',
                             progress=98)
-        self.evaluate(model=model,
-                      dataset=dataset,
-                      filters=filters)
+        model = self.evaluate(model=model,
+                              dataset=dataset,
+                              filters=filters)
         #########
         # Done! #
         #########

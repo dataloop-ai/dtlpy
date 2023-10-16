@@ -27,7 +27,7 @@ author = 'Dataloop Team'
 # The short X.Y version
 version = ''
 # The full version, including alpha/beta/rc tags
-release = '1.84.12'
+release = '1.85.24'
 
 add_module_names = False
 
@@ -216,9 +216,3 @@ intersphinx_mapping = {'https://docs.python.org/': None}
 todo_include_todos = True
 
 autodoc_mock_imports = ["tensorflow", "torch", "imgaug", "torchvision"]
-
-############################
-############################
-from docs import build_tutorials
-
-build_tutorials.main()

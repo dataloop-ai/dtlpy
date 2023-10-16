@@ -14,14 +14,14 @@ def step_impl(context, csv_file):
 
     # Wait for the upload and processing to process all lines
     # CSV file has extra line for the header but also dataset has extra item for the CSV file
-    # Wait for processing to complete with a 5 minute timeout
+    # Wait for processing to complete with a 5-minute timeout
     timeout = 60
     while ((timeout != 0) and (len(context.dataset.items.get_all_items()) < line_count)):
-        print("Waiting for upload and processing to complete...")
+        print(f"Waiting for upload and processing to complete... Running for {10 * (60 - timeout):.2f}[s]")
         time.sleep(10)
         timeout -= 1
 
-    assert timeout!=0, "Timeout. csv load failed to complete after 10 minutes"
+    assert timeout != 0, "Timeout. csv load failed to complete after 10 minutes"
 
 @behave.then(u'description in csv "{csv_file}" equal to the description uploaded')
 def step_impl(context, csv_file):

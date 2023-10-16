@@ -597,7 +597,7 @@ class Executions:
                                                      service=self._service)
             if timeout is None:
                 timeout = execution.service.execution_timeout + 60
-            if execution.latest_status['status'] not in ['inProgress', 'created', 'in-progress', 'rerun']:
+            if execution.latest_status['status'] in ['failed', 'success', 'terminated', 'aborted', 'canceled', 'system-failure']:
                 break
             elapsed = int(time.time()) - start
             i += 1

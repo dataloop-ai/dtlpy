@@ -53,7 +53,7 @@ def step_impl(context, message):
         if terminated:
             break
 
-    assert terminated
+    assert terminated, f"TEST FAILED: after {round(num_tries * interval / 60, 1)} minutes"
 
 
 @behave.then(u'Execution "{on_reset}" on timeout')
@@ -80,4 +80,4 @@ def step_impl(context, on_reset):
             break
         time.sleep(interval)
 
-    assert reset
+    assert reset, f"TEST FAILED: after {round(num_tries * interval / 60, 1)} minutes"

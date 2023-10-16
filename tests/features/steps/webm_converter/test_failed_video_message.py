@@ -22,7 +22,7 @@ def step_impl(context):
             finished = True
             break
 
-    return finished
+    assert finished, f"TEST FAILED: After {round(num_try * interval / 60, 1)} minutes"
 
 
 @then(u'I validate execution status item metadata have the right message')

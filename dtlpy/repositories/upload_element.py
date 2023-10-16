@@ -183,7 +183,7 @@ class MultiViewUploadElement(BaseUploadElement):
 
         remote_filepath = '{}{}'.format(self.remote_path, self.upload_item_element.name)
         self.type = 'collection'
-        self.buffer = self.upload_item_element
+        self.buffer = self.upload_item_element.to_bytes_io()
         self.remote_filepath = remote_filepath
         self.annotations_filepath = self.upload_annotations_element
 
@@ -204,7 +204,28 @@ class SimilarityUploadElement(BaseUploadElement):
             remote_filepath = '{}{}'.format(self.remote_path, self.upload_item_element.name)
 
         self.type = 'collection'
-        self.buffer = self.upload_item_element
+        self.buffer = self.upload_item_element.to_bytes_io()
+        self.remote_filepath = remote_filepath
+        self.annotations_filepath = self.upload_annotations_element
+
+
+class PromptUploadElement(BaseUploadElement):
+
+    def __init__(self, all_upload_elements: dict):
+        super().__init__(all_upload_elements)
+
+        if self.remote_name:
+            self.upload_item_element.name = self.remote_name
+        if self.upload_item_element.name is None:
+            self.upload_item_element.name = '{}_prompt.json'.format(self.upload_item_element.ref)
+
+        if not self.upload_item_element.name.endswith('.json'):
+            remote_filepath = '{}{}.json'.format(self.remote_path, self.upload_item_element.name)
+        else:
+            remote_filepath = '{}{}'.format(self.remote_path, self.upload_item_element.name)
+
+        self.type = 'prompt'
+        self.buffer = self.upload_item_element.to_bytes_io()
         self.remote_filepath = remote_filepath
         self.annotations_filepath = self.upload_annotations_element
 

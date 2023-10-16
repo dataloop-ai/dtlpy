@@ -30,6 +30,14 @@ def step_impl(context):
     context.dataset_count += 1
 
 
+@behave.when(u'I create another dataset with a random name')
+def step_impl(context):
+    rand_str = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(5))
+    dataset_name = 'random_dataset_{}'.format(rand_str)
+    context.new_dataset = context.project.datasets.create(dataset_name=dataset_name)
+    context.dataset_count += 1
+
+
 @behave.then(u'I create a dataset with existing recipe')
 def step_impl(context):
     context.recipe_id = context.dataset.get_recipe_ids()[0]

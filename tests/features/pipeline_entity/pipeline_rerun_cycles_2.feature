@@ -13,7 +13,6 @@ Feature: Pipeline entity method testing - rerun cycle
 
   @pipelines.delete
   Scenario: rerun pipeline cycle from the beginning root case
-    When rerun the cycle from the beginning
     When I execute pipeline on item
     Then Cycle completed with save "True"
     When rerun the cycle from the beginning

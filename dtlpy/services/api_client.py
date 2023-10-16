@@ -1427,6 +1427,7 @@ class ApiClient:
             env = matched_env[0]
         if self.environment != env:
             self.environment = env
+            self.__gate_url_for_requests = None
             # reset local token
             self._token = None
             self.refresh_token_active = True

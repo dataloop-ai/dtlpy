@@ -49,4 +49,4 @@ def step_impl(context, resource_type):
                 triggered = True
                 break
 
-    assert triggered
+    assert triggered, f"TEST FAILED: After {round(num_try * interval / 60, 1)} minutes"

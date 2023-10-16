@@ -232,7 +232,7 @@ class Setting(BaseSetting):
             project=project,
             org=org
         )
-        if 'slots' in setting.metadata:
+        if setting.metadata is not None and 'slots' in setting.metadata:
             for slot in setting.metadata.get('slots', []):
                 for scope in slot.get('displayScopes', []):
                     if 'filter' in scope:

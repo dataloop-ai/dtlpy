@@ -150,7 +150,7 @@ def step_impl(context, log_message):
         if success:
             break
 
-    assert success
+    assert success, f"TEST FAILED: After {round(num_tries * interval_time / 60, 1)} minutes"
 
 
 @behave.when(u'I deploy a service from function "{service_name}"')

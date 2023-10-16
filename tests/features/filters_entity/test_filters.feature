@@ -9,7 +9,7 @@ Feature: Items repository list service testing
   @DAT-46526
   Scenario: List with filters
     Given There are items, path = "filters/image.jpg"
-      | directory={"/": 3, "/dir1/": 3, "/dir1/dir2/": 3} | annotated_label={"dog": 3, "cat": 3} | annotated_type={"box": 3, "polygon": 3} | name={"dog":3, "cat":3} | metadata={"user.good": 3, "user.bad": 3} |
+      | directory={"/": 3, "/dir1/": 3, "/dir1/dir2/": 3} | annotated_label={"dog": 3, "cat": 3} | annotated_type={"box": 3, "polygon": 3} | name={"dog":3, "cat":3} | metadata={"user.good": 3, "user.bad": 3, "spe-cial.ke_ys": 3} |
 
         # single filter
 
@@ -26,7 +26,7 @@ Feature: Items repository list service testing
     When I create filters
     And I add field "filename" with values "/**" and operator "None"
     And I list items with filters
-    Then I receive "33" items
+    Then I receive "36" items
 
     When I create filters
     And I add field "filename" with values "/dir1/dir2/*" and operator "None"
@@ -41,7 +41,7 @@ Feature: Items repository list service testing
     When I create filters
     And I add field "annotated" with values "False" and operator "None"
     And I list items with filters
-    Then I receive "21" items
+    Then I receive "24" items
 
     When I create filters
     And I add field "name" with values "*dog*" and operator "None"
@@ -64,6 +64,16 @@ Feature: Items repository list service testing
     And I add field "metadata.user.bad" with values "True" and operator "None"
     And I list items with filters
     Then I receive "3" items
+
+    When I create filters
+    And I add field "metadata.spe-cial.ke_ys" with values "True" and operator "exists"
+    And I list items with filters
+    Then I receive "3" items
+
+    When I create filters
+    And I add field "metadata.spe-cial.ke_ys" with values "False" and operator "exists"
+    And I list items with filters
+    Then I receive "33" items
 
     # single filter with join
 
@@ -207,7 +217,7 @@ Feature: Items repository list service testing
     Then I receive "0" items
     When I create filters
     And I list items with filters
-    Then I receive "30" items
+    Then I receive "33" items
 
     When I create filters
     And I add field "annotated" with values "True" and operator "None"
@@ -216,4 +226,4 @@ Feature: Items repository list service testing
     When I delete items with filters
     And I create filters
     And I list items with filters
-    Then I receive "21" items
+    Then I receive "24" items

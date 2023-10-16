@@ -276,6 +276,9 @@ class Uploader:
             elif isinstance(upload_item_element, entities.Link):
                 upload_elem = upload_element.LinkUploadElement(all_upload_elements=all_upload_elements)
 
+            elif isinstance(upload_item_element, entities.PromptItem):
+                upload_elem = upload_element.PromptUploadElement(all_upload_elements=all_upload_elements)
+
             elif isinstance(upload_item_element, bytes) or \
                     isinstance(upload_item_element, io.BytesIO) or \
                     isinstance(upload_item_element, io.BufferedReader) or \
@@ -463,8 +466,6 @@ class Uploader:
             elif element.type == 'link':
                 element.buffer = self.link(ref=element.buffer.ref, dataset_id=element.buffer.dataset_id,
                                            type=element.buffer.type, mimetype=element.buffer.mimetype)
-            elif element.type == 'collection':
-                element.buffer = element.buffer.to_bytes_io()
 
             for i_try in range(NUM_TRIES):
                 try:

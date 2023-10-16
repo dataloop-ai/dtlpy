@@ -72,6 +72,18 @@ Feature: Executions repository create service testing
 
   @services.delete
   @packages.delete
+  @DAT-52909
+  Scenario: Check Execution status finish - with sync true
+    Given There is a package (pushed from "executions/status") by the name of "execution-create"
+    And There is a service by the name of "executions-create" with module name "default_module" saved to context "service"
+    And I upload item in "0000000162.jpg" to dataset
+    When I create an execution with "inputs"
+      | sync=True | inputs=Item |
+    Then I receive an Execution entity
+    Then Execution was executed and finished with status "success"
+
+  @services.delete
+  @packages.delete
   @DAT-53072
   Scenario: Created Item Execution - with id that ends with e28
     Given A service that receives items input

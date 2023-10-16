@@ -58,6 +58,7 @@ class AnnotationCollection(entities.BaseEntity):
             object_visible=True,
             metadata=None,
             parent_id=None,
+            prompt_id=None,
             model_info=None):
         """
         Add annotations to collection
@@ -73,6 +74,7 @@ class AnnotationCollection(entities.BaseEntity):
         :param object_visible: video only, does the annotated object is visible
         :param metadata: optional- metadata dictionary for annotation
         :param parent_id: set a parent for this annotation (parent annotation ID)
+        :param prompt_id: Connect the annotation with a specific prompt in a dl.PromptItem
         :param model_info: optional - set model on annotation {'name',:'', 'confidence':0}
         :return:
         """
@@ -90,6 +92,13 @@ class AnnotationCollection(entities.BaseEntity):
                                          }
             metadata['user']['annotation_type'] = 'prediction'
 
+        if prompt_id is not None:
+            if metadata is None:
+                metadata = dict()
+            if 'system' not in metadata:
+                metadata['system'] = dict()
+            metadata['system']['promptId'] = prompt_id
+
         # to support list of definitions with same parameters
         if not isinstance(annotation_definition, list):
             annotation_definition = [annotation_definition]
@@ -106,8 +115,7 @@ class AnnotationCollection(entities.BaseEntity):
                                                  end_time=end_time)
             #  add frame if exists
             if (frame_num is not None or start_time is not None) and (
-                    self.item is None or 'audio' not in self.item.metadata.get('system').get(
-                    'mimetype', '')):
+                    self.item is None or 'audio' not in self.item.metadata.get('system').get('mimetype', '')):
                 if object_id is None:
                     raise ValueError('Video Annotation must have object_id.')
                 else:

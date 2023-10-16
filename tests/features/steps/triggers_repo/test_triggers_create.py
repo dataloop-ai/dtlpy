@@ -208,7 +208,7 @@ def step_impl(context, resource_type):
         context.dl.logger.debug("Step is running for {:.2f}[s] and now Going to sleep {:.2f}[s]".format((i + 1) * interval,
                                                                                                         interval))
 
-    assert triggered
+    assert triggered, f"TEST FAILED: After {round(num_try * interval / 60, 1)} minutes"
 
 
 @behave.given(u'There is a package (pushed from "{package_path}") by the name of "{package_name}"')

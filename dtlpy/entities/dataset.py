@@ -524,8 +524,14 @@ class Dataset(entities.BaseEntity):
                 message='Argument "state" must be bool. input type: {}'.format(type(state)))
         return self.datasets.set_readonly(dataset=self, state=state)
 
-    def clone(self, clone_name, filters=None, with_items_annotations=True, with_metadata=True,
-              with_task_annotations_status=True):
+    def clone(self,
+              clone_name=None,
+              filters=None,
+              with_items_annotations=True,
+              with_metadata=True,
+              with_task_annotations_status=True,
+              dst_dataset_id=None
+              ):
         """
         Clone dataset
 
@@ -536,6 +542,7 @@ class Dataset(entities.BaseEntity):
         :param bool with_items_annotations: clone all item's annotations
         :param bool with_metadata: clone metadata
         :param bool with_task_annotations_status: clone task annotations status
+        :param str dst_dataset_id: destination dataset id
         :return: dataset object
         :rtype: dtlpy.entities.dataset.Dataset
 
@@ -554,7 +561,8 @@ class Dataset(entities.BaseEntity):
                                    clone_name=clone_name,
                                    with_metadata=with_metadata,
                                    with_items_annotations=with_items_annotations,
-                                   with_task_annotations_status=with_task_annotations_status)
+                                   with_task_annotations_status=with_task_annotations_status,
+                                   dst_dataset_id=dst_dataset_id)
 
     def sync(self, wait=True):
         """

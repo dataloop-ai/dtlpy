@@ -105,6 +105,7 @@ from tests.features.steps.packages_repo import packages_name_validation
 from tests.features.steps.packages_flow import packages_flow
 from tests.features.steps.packages_repo import package_slot
 from tests.features.steps.packages_repo import packages_delete
+from tests.features.steps.packages_repo import test_package_module
 
 from tests.features.steps.triggers_repo import test_triggers_create
 from tests.features.steps.triggers_repo import test_triggers_get

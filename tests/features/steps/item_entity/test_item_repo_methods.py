@@ -52,11 +52,11 @@ def step_impl(context, new_path):
 @behave.then(u'Item in host moved to a new directory')
 def step_impl(context):
     if context.new_path.startswith('/'):
-        name  = context.new_path + '/' + context.item_name
+        name = context.new_path + '/' + context.item_name
     elif '.' in context.new_path:
         name = '/' + context.new_path
     else:
-        name  = '/' + context.new_path + '/' + context.item_name
+        name = '/' + context.new_path + '/' + context.item_name
     assert context.moved_item.filename == name
 
 

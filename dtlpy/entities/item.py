@@ -474,7 +474,8 @@ class Item(entities.BaseEntity):
                 local_path = os.path.join(local_path, self.name)
             else:
                 _, ext = os.path.splitext(local_path)
-                if not ext:
+                _, item_ext = os.path.splitext(self.name)
+                if not ext or ext != item_ext:
                     os.makedirs(local_path, exist_ok=True)
                     local_path = os.path.join(local_path, self.name)
 

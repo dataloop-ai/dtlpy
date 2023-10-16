@@ -255,7 +255,7 @@ def step_impl(context):
         if context.item.metadata['system'].get('fromPipe', False):
             fromPipe = True
             break
-    assert fromPipe, "TEST FAILED: item.metadata['system'] missing fromPipe: True"
+    assert fromPipe, f"TEST FAILED: item.metadata['system'] missing fromPipe: True, after {round(num_tries * interval / 60, 1)} minutes"
 
     time.sleep(20)
     context.item = context.dataset.items.get(item_id=context.item.id)
@@ -574,7 +574,7 @@ def step_impl(context):
             entered = True
             break
 
-    assert entered, "TEST FAILED: Item was not move to task"
+    assert entered, f"TEST FAILED: Item was not move to task, after {round(num_try * interval / 60, 1)} minutes"
 
 
 @behave.then(u'Cycle should be completed')

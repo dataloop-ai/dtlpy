@@ -110,7 +110,7 @@ def step_impl(context, annotation_type, annotation_description):
         if context.item.height:
             success = True
             break
-    assert success, "TEST FAILED: Failed to get item height. {}".format(context.item.metadata)
+    assert success, f"TEST FAILED: Failed to get item height. {context.item.metadata} after {round(num_try * interval / 60, 1)} minutes"
 
     mask = np.zeros(shape=(context.item.height, context.item.width), dtype=np.uint8)
     mask[50:50, 150:200] = 1

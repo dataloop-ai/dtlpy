@@ -15,3 +15,8 @@ def step_impl(context, dataset_name):
         time.sleep(5)
 
     context.dataset_name = dataset_name
+
+
+@behave.when('I call datasets.clone using dataset.id')
+def step_imp(context):
+    context.clone_dataset = context.project.datasets.clone(dataset_id=context.dataset.id, dst_dataset_id=context.new_dataset.id)

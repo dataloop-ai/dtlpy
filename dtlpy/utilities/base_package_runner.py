@@ -46,6 +46,7 @@ class Progress:
     """
     Follow the event progress
     """
+
     def update(self,
                status=None,
                progress=0,
@@ -110,16 +111,19 @@ class Context:
 
     def __init__(
             self,
-            execution_dict: dict,
-            service: entities.Service,
-            package: entities.Package,
-            project: entities.Project,
-            event_context: dict,
-            progress: Progress,
-            logger,
-            sdk
+            service: entities.Service = None,
+            package: entities.Package = None,
+            project: entities.Project = None,
+            event_context: dict = None,
+            execution_dict: dict = None,
+            progress: Progress = None,
+            logger=None,
+            sdk=None
     ):
         """
+        A Context entity use DTLPY entities for context in a service runner
+
+
         :param dict execution_dict: the current execution dict in the state
         :param dict service: the current service entity in th state
         :param dict package: the current package entity in th state
@@ -130,20 +134,18 @@ class Context:
         :param sdk: the dtlpy package
         """
         # dtlpy
-        self.logger = logger
-        self.sdk = sdk
-        self.progress = progress
+        self._logger = logger
+        self._sdk = sdk
+        self._progress = progress
 
-        # objects
-        self.service = service
-        self.package = package
-        self.project = project
         self.event = ExecutionEventContext(event_context)
+        if execution_dict is None:
+            execution_dict = dict()
         self.execution_dict = execution_dict
 
         # ids
         self.trigger_id = execution_dict.get('trigger_id', None)
-        self.execution_id = execution_dict['id']
+        self.execution_id = execution_dict.get('id', None)
 
         # pipeline
         pipeline = execution_dict.get('pipeline', dict())
@@ -153,13 +155,31 @@ class Context:
         self.node_id = pipeline.get('nodeId', None)
         self.pipeline_execution_id = pipeline.get('executionId', None)
 
-        # props
+        # objects
+        self._service = service
+        self._package = package
+        self._project = project
         self._task = None
         self._assignment = None
         self._pipeline = None
         self._node = None
         self._execution = None
         self._pipeline_execution = None
+
+    @property
+    def package(self):
+        assert isinstance(self._package, entities.Package), "Missing `package` in context"
+        return self._package
+
+    @property
+    def project(self):
+        assert isinstance(self._project, entities.Project), "Missing `project` in context"
+        return self._project
+
+    @property
+    def service(self):
+        assert isinstance(self._service, entities.Service), "Missing `service` in context"
+        return self._service
 
     @property
     def item_status_creator(self):
@@ -228,3 +248,17 @@ class Context:
                 pipeline_id=self.pipeline_id
             )
         return self._pipeline_execution
+
+    @property
+    def sdk(self):
+        if self._sdk is None:
+            import dtlpy
+            self._sdk = dtlpy
+        return self._sdk
+
+    @property
+    def logger(self):
+        if self._logger is None:
+            import logging
+            self._logger = logging.getLogger("[AgentContext]")
+        return self._logger

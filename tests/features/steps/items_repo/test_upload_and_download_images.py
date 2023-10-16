@@ -93,12 +93,30 @@ def step_impl(context, overwrite_status):
     context.downloaded_images_sizes_list = []
 
     if overwrite_status == "True":
-        item.download(local_path=items_path, overwrite=True)
+        context.file_path = item.download(local_path=items_path, overwrite=True, to_items_folder=False)
     else:
-        item.download(local_path=items_path, overwrite=False)
+        item.download(local_path=items_path, overwrite=False, to_items_folder=False)
 
     with open(items_path + 'stock-image-1' + '.' + context.type_of_images, "rb") as image_file:
         context.downloaded_images_sizes_list.append(base64.b64encode(image_file.read()))
+
+
+@when(u'I download the item with Overwrite value "{overwrite_status}" to path "{file_path}"')
+def step_impl(context, overwrite_status, file_path):
+    items_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], file_path)
+
+    if overwrite_status == "True":
+        context.download_path = context.item.download(local_path=items_path, overwrite=True)
+    else:
+        context.download_path = context.item.download(local_path=items_path, overwrite=False)
+
+
+@then(u'check that the new download will be with the same path "{file_path}"')
+def step_impl(context, file_path):
+    items_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], file_path)
+    download_path = context.item.download(local_path=items_path, overwrite=True)
+    shutil.rmtree(items_path)
+    assert context.download_path == download_path, "The download path is not the same as the previous one"
 
 
 @then(u'The images will be "{is_overwritten}"')

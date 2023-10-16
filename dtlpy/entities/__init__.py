@@ -33,7 +33,7 @@ from .filters import Filters, FiltersKnownFields, FiltersResource, FiltersOperat
 from .recipe import Recipe
 from .ontology import Ontology, AttributesTypes, AttributesRange
 from .annotation_definitions import Box, Cube, Cube3d, Point, Segmentation, Polygon, Ellipse, Classification, \
-    Subtitle, Text, \
+    Subtitle, Text, FreeText, \
     Polyline, Comparison, UndefinedAnnotationType, Note, Message, Description, Pose
 from .label import Label
 from .codebase import Codebase, PackageCodebaseType, ItemCodebase, GitCodebase, FilesystemCodebase, LocalCodebase
@@ -73,3 +73,4 @@ from .app import App
 from .app_module import AppModule
 from .resource_execution import ResourceExecution
 from .message import Message, NotificationEventContext
+from .prompt_item import Prompt, PromptItem, PromptType
