@@ -56,4 +56,4 @@ def step_impl(context, existing_dataset_name):
 
 @behave.given(u'I create a dataset by the name of "{original_dataset_name}"')
 def step_impl(context, original_dataset_name):
-    context.dataset = context.project.datasets.create(dataset_name=original_dataset_name)
+    context.dataset = context.project.datasets.create(dataset_name=original_dataset_name, index_driver=context.index_driver_var)

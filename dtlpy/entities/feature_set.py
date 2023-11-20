@@ -23,7 +23,6 @@ class FeatureSet(entities.BaseEntity):
     # platform
     id = attr.ib()
     name = attr.ib()
-    tags = attr.ib()
     url = attr.ib(repr=False)
     creator = attr.ib(repr=False)
     created_at = attr.ib()
@@ -104,7 +103,6 @@ class FeatureSet(entities.BaseEntity):
             created_at=_json.get('createdAt', None),
             creator=_json.get('creator', None),
             updated_by=_json.get('updatedBy', None),
-            tags=_json.get('tags', None),
             client_api=client_api,
             org_id=_json.get('org', None),
         )
@@ -127,7 +125,6 @@ class FeatureSet(entities.BaseEntity):
                  'createdAt': self.created_at,
                  'updatedBy': self.updated_by,
                  'name': self.name,
-                 'tags': self.tags,
                  'size': self.size,
                  'url': self.url}
         if self.org_id is not None:

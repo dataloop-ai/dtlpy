@@ -584,7 +584,8 @@ class Tasks:
                priority=entities.TaskPriority.MEDIUM,
                consensus_task_type=None,
                consensus_percentage=None,
-               consensus_assignees=None
+               consensus_assignees=None,
+               scoring=True
                ) -> entities.Task:
         """
         Create a new Task (Annotation or QA).
@@ -617,6 +618,7 @@ class Tasks:
         :param entities.ConsensusTaskType consensus_task_type: consensus_task_type of the task options in entities.ConsensusTaskType
         :param int consensus_percentage: percentage of items to be copied to multiple annotators (consensus items)
         :param int consensus_assignees: the number of different annotators per item (number of copies per item)
+        :param bool scoring: create a scoring app in project
         :return: Task object
         :rtype: dtlpy.entities.task.Task
 
@@ -705,7 +707,7 @@ class Tasks:
             payload['spec']['parentTaskId'] = task_parent_id
 
         is_pulling = any([batch_size, max_batch_workload])
-        is_consensus = any([consensus_percentage, consensus_assignees])
+        is_consensus = any([consensus_percentage, consensus_assignees, consensus_task_type])
         if is_pulling and is_consensus:
             raise exceptions.PlatformException(error='400',
                                                message="Consensus can not work as a pulling task")
@@ -730,6 +732,9 @@ class Tasks:
             metadata = self._add_task_metadata_params(metadata=metadata,
                                                       input_value=consensus_assignees,
                                                       input_name='consensusAssignees')
+            metadata = self._add_task_metadata_params(metadata=metadata,
+                                                      input_value=scoring,
+                                                      input_name='scoring')
 
         if metadata is not None:
             payload['metadata'] = metadata

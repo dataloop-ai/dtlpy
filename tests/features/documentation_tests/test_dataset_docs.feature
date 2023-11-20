@@ -19,5 +19,5 @@ Feature: Dataset SDK
     Scenario: Create and Manage Datasets
         When Clone Dataset "clone-dataset"
         And I upload a file in path "assets_split/items_upload/0000000162.jpg"
-        And Clone Item
+        And I clone an item
         Then Merge Datasets "merge-dataset"

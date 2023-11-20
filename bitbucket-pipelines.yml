@@ -624,6 +624,31 @@ pipelines:
             - behave_test_report.json
 
 
+    "xray-Billing":
+      - variables:
+          - name: DLP_ENV_NAME
+            default: rc
+      - step:
+          image: python:3.11
+          name: Test & Report to XRay
+          script:
+            - AVOID_TESTRAIL=true
+            - python --version
+            - PYTHONPATH=$PWD
+            - pip install --upgrade pip
+            - apt-get -y update && apt-get install -y libgl1-mesa-glx
+            - pip install -r requirements.txt
+            - pip install -r tests/requirements.txt
+            - python setup.py build
+            - python setup.py install
+            - python tests/test_login.py
+            - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
+            - chmod +x ./test.sh
+            - ./test.sh Billing
+          artifacts:
+            - behave_test_report.json
+
+
     "schedule-tests":
       - step:
           image: python:3.7.8
@@ -641,14 +666,15 @@ pipelines:
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - python tests/test_runner.py
 
-    private-tenant:
+    custom-variables:
       - variables:
           - name: DLP_ENV_NAME
           - name: AVOID_TESTRAIL
-            default: false
+            default: true
+          - name: INDEX_DRIVER_VAR
       - step:
-          image: python:3.8.4
-          name: Tests-3.8.4
+          image: python:3.10
+          name: Tests-3.10
           script:
             - python --version
             - PYTHONPATH=$PWD

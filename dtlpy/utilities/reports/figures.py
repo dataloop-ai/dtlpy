@@ -6,7 +6,8 @@ NUMBER_TYPES = (int, float, complex)
 
 
 class FigOptions:
-    def __init__(self, rows_per_page: int = None, comments: dict = None, x_title: str = None, y_title: str = None, colors: list = None, direction: str = None):
+    def __init__(self, rows_per_page: int = None, comments: dict = None, x_title: str = None, y_title: str = None,
+                 colors: list = None, direction: str = None):
         self.rows_per_page = rows_per_page
         self.comments = comments
         self.x_title = x_title
@@ -45,7 +46,14 @@ class FigOptions:
 
 
 class Base:
-    def __init__(self, title: str, type: str, labels: list, data: Union[list, np.ndarray], title_href: Optional[str] = None, plot_id: Optional[str] = None, options: Optional[FigOptions] = None):
+    def __init__(self,
+                 title: str,
+                 type: str,
+                 labels: list,
+                 data: Union[list, np.ndarray],
+                 title_href: Optional[str] = None,
+                 plot_id: Optional[str] = None,
+                 options: Optional[FigOptions] = None):
         self.title = title
         self.type = type
         self.title_href = title_href
@@ -99,9 +107,20 @@ class Base:
 
 
 class Table(Base):
-    def __init__(self, title: str,  labels: list, data: Union[list, np.ndarray], title_href: Optional[str] = None, plot_id: Optional[str] = None, options: Optional[FigOptions] = None):
-        super().__init__(title=title, type="table", labels=labels, data=data,
-                         title_href=title_href, plot_id=plot_id, options=options)
+    def __init__(self,
+                 title: str,
+                 labels: list,
+                 data: Union[list, np.ndarray],
+                 title_href: Optional[str] = None,
+                 plot_id: Optional[str] = None,
+                 options: Optional[FigOptions] = None):
+        super().__init__(title=title,
+                         type="table",
+                         labels=labels,
+                         data=data,
+                         title_href=title_href,
+                         plot_id=plot_id,
+                         options=options)
         self._validate_table_data()
 
     def _validate_table_data(self):
@@ -129,35 +148,90 @@ class Table(Base):
 
 
 class Line(Base):
-    def __init__(self, title: str,  labels: list, data: Union[list, np.ndarray], title_href: Optional[str] = None, plot_id: Optional[str] = None, options: Optional[FigOptions] = None):
-        super().__init__(title=title, type="line", labels=labels, data=data,
-                         title_href=title_href, plot_id=plot_id, options=options)
+    def __init__(self,
+                 title: str,
+                 labels: list,
+                 data: Union[list, np.ndarray],
+                 title_href: Optional[str] = None,
+                 plot_id: Optional[str] = None,
+                 options: Optional[FigOptions] = None):
+        super().__init__(title=title,
+                         type="line",
+                         labels=labels,
+                         data=data,
+                         title_href=title_href,
+                         plot_id=plot_id,
+                         options=options)
 
 
 class Scatter(Base):
-    def __init__(self, title: str, data: Union[list, np.ndarray], labels: list = None, title_href: Optional[str] = None, plot_id: Optional[str] = None, options: Optional[FigOptions] = None):
+    def __init__(self,
+                 title: str,
+                 data: Union[list, np.ndarray],
+                 labels: list = None,
+                 title_href: Optional[str] = None,
+                 plot_id: Optional[str] = None,
+                 options: Optional[FigOptions] = None):
         if labels is None:
             labels = list()
-        super().__init__(title=title, type='scatter', labels=labels, data=data,
-                         title_href=title_href, plot_id=plot_id, options=options)
+        super().__init__(title=title,
+                         type='scatter',
+                         labels=labels,
+                         data=data,
+                         title_href=title_href,
+                         plot_id=plot_id,
+                         options=options)
 
 
 class Bar(Base):
-    def __init__(self, title: str,  labels: list, data: Union[list, np.ndarray], title_href: Optional[str] = None, plot_id: Optional[str] = None, options: Optional[FigOptions] = None):
-        super().__init__(title=title, type="bar", labels=labels, data=data,
-                         title_href=title_href, plot_id=plot_id, options=options)
+    def __init__(self,
+                 title: str,
+                 labels: list,
+                 data: Union[list, np.ndarray],
+                 title_href: Optional[str] = None,
+                 plot_id: Optional[str] = None,
+                 options: Optional[FigOptions] = None):
+        super().__init__(title=title,
+                         type="bar",
+                         labels=labels,
+                         data=data,
+                         title_href=title_href,
+                         plot_id=plot_id,
+                         options=options)
 
 
 class Doughnut(Base):
-    def __init__(self, title: str,  labels: list, data: Union[list, np.ndarray], title_href: Optional[str] = None, plot_id: Optional[str] = None, options: Optional[FigOptions] = None):
-        super().__init__(title=title, type="doughnut", labels=labels, data=data,
-                         title_href=title_href, plot_id=plot_id, options=options)
+    def __init__(self,
+                 title: str,
+                 labels: list,
+                 data: Union[list, np.ndarray],
+                 title_href: Optional[str] = None,
+                 plot_id: Optional[str] = None,
+                 options: Optional[FigOptions] = None):
+        super().__init__(title=title,
+                         type="doughnut",
+                         labels=labels,
+                         data=data,
+                         title_href=title_href,
+                         plot_id=plot_id,
+                         options=options)
 
 
 class Pie(Base):
-    def __init__(self, title: str,  labels: list, data: Union[list, np.ndarray], title_href: Optional[str] = None, plot_id: Optional[str] = None, options: Optional[FigOptions] = None):
-        super().__init__(title=title, type='pie', labels=labels, data=data,
-                         title_href=title_href, plot_id=plot_id, options=options)
+    def __init__(self,
+                 title: str,
+                 labels: list,
+                 data: Union[list, np.ndarray],
+                 title_href: Optional[str] = None,
+                 plot_id: Optional[str] = None,
+                 options: Optional[FigOptions] = None):
+        super().__init__(title=title,
+                         type='pie',
+                         labels=labels,
+                         data=data,
+                         title_href=title_href,
+                         plot_id=plot_id,
+                         options=options)
         self._validate_pie_data()
 
     def _validate_pie_data(self):
@@ -176,19 +250,43 @@ class Pie(Base):
 
 
 class Hbar(Base):
-    def __init__(self, title: str,  labels: list, data: Union[list, np.ndarray], title_href: Optional[str] = None, plot_id: Optional[str] = None, options: Optional[FigOptions] = None):
-        super().__init__(title=title, type="hbar", labels=labels, data=data,
-                         title_href=title_href, plot_id=plot_id, options=options)
+    def __init__(self,
+                 title: str,
+                 labels: list,
+                 data: Union[list, np.ndarray],
+                 title_href: Optional[str] = None,
+                 plot_id: Optional[str] = None,
+                 options: Optional[FigOptions] = None):
+        super().__init__(title=title,
+                         type="hbar",
+                         labels=labels,
+                         data=data,
+                         title_href=title_href,
+                         plot_id=plot_id,
+                         options=options)
 
 
 class ConfusionMatrix(Base):
-    def __init__(self, title: str,  labels: list, data: Union[list, np.ndarray], title_href: Optional[str] = None, plot_id: Optional[str] = None, options: Optional[FigOptions] = None, href_map: Optional[list] = None, color_map: Optional[np.ndarray] = None):
+    def __init__(self,
+                 title: str,
+                 labels: list,
+                 data: Union[list, np.ndarray],
+                 title_href: Optional[str] = None,
+                 plot_id: Optional[str] = None,
+                 options: Optional[FigOptions] = None,
+                 href_map: Optional[list] = None,
+                 color_map: Optional[np.ndarray] = None):
         self.xlabel = 'Predicted'
         self.ylabel = 'Actual'
         self.color_map = color_map
         self.href_map = href_map
-        super().__init__(title=title, type="table", labels=labels,
-                         data=data, title_href=title_href, plot_id=plot_id, options=options)
+        super().__init__(title=title,
+                         type="table",
+                         labels=labels,
+                         data=data,
+                         title_href=title_href,
+                         plot_id=plot_id,
+                         options=options)
         self._validate_confusion_matrix_data()
 
     def _validate_confusion_matrix_data(self):

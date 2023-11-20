@@ -27,6 +27,7 @@ from tests.features.steps.datasets_repo import tets_dataset_upload_labels
 from tests.features.steps.dataset_entity import test_dataset_repo_methods
 from tests.features.steps.dataset_entity import test_add_labels_methods
 
+
 from tests.features.steps.annotations_repo import test_annotations_get
 from tests.features.steps.annotations_repo import test_annotations_list
 from tests.features.steps.annotations_repo import test_annotations_delete
@@ -62,6 +63,7 @@ from tests.features.steps.item_entity import test_item_repo_methods
 from tests.features.steps.item_entity import test_item_move
 from tests.features.steps.item_entity import test_item_update_status
 from tests.features.steps.item_entity import test_item_description
+from tests.features.steps.item_entity import test_item_attributes
 
 from tests.features.steps.ontologies_repo import test_ontologies_create
 from tests.features.steps.ontologies_repo import test_ontologies_get
@@ -183,6 +185,7 @@ from tests.features.steps.pipeline_entity import pipeline_get, pipeline_delete, 
 from tests.features.steps.pipeline_resume import pipeline_resume
 from tests.features.steps.pipeline_entity import test_pipeline_interface
 from tests.features.steps.pipeline_entity import test_pipeline_execution
+from tests.features.steps.pipeline_entity import pipeline_validation
 
 from tests.features.steps.features_vectors import test_features_create, test_features_delete
 from tests.features.steps.pipeline_entity import test_pipeline_pulling_task
@@ -255,3 +258,10 @@ from tests.features.steps.notifications import notifications
 from tests.features.steps.annotations_repo import test_annotations_format_json
 from tests.features.steps.xray import test_xray
 from tests.features.steps.pipeline_entity import pipeline_ml
+
+from tests.features.steps.billing_steps import object_creation_steps
+from tests.features.steps.billing_steps import test_get_plan_steps
+from tests.features.steps.billing_steps import test_plan_resources
+from tests.features.steps.billing_steps import Log_in
+
+from tests.features.steps.pipeline_entity import pipeline_node_input_handling

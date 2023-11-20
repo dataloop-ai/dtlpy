@@ -1044,6 +1044,7 @@ class ApiClient:
                                 try:
                                     while True:
                                         chunk = await request.content.read(chunk_size)
+                                        await asyncio.sleep(0)
                                         if not chunk:
                                             break
                                         buffer.write(chunk)

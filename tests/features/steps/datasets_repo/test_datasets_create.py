@@ -26,7 +26,7 @@ def step_impl(context):
 def step_impl(context):
     rand_str = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(5))
     dataset_name = 'random_dataset_{}'.format(rand_str)
-    context.dataset = context.project.datasets.create(dataset_name=dataset_name)
+    context.dataset = context.project.datasets.create(dataset_name=dataset_name, index_driver=context.index_driver_var)
     context.dataset_count += 1
 
 
@@ -34,7 +34,7 @@ def step_impl(context):
 def step_impl(context):
     rand_str = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(5))
     dataset_name = 'random_dataset_{}'.format(rand_str)
-    context.new_dataset = context.project.datasets.create(dataset_name=dataset_name)
+    context.new_dataset = context.project.datasets.create(dataset_name=dataset_name, index_driver=context.index_driver_var)
     context.dataset_count += 1
 
 
@@ -43,7 +43,7 @@ def step_impl(context):
     context.recipe_id = context.dataset.get_recipe_ids()[0]
     rand_str = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(5))
     dataset_name = 'random_dataset_{}'.format(rand_str)
-    context.dataset2 = context.project.datasets.create(dataset_name=dataset_name, recipe_id=context.recipe_id)
+    context.dataset2 = context.project.datasets.create(dataset_name=dataset_name, recipe_id=context.recipe_id, index_driver=context.index_driver_var)
     context.dataset_count += 1
 
 
@@ -66,7 +66,7 @@ def step_impl(context):
 @behave.when(u'When I try to create a dataset with a blank name')
 def step_impl(context):
     try:
-        context.project.datasets.create('')
+        context.project.datasets.create('', index_driver=context.index_driver_var)
         context.error = None
     except Exception as e:
         context.error = e
@@ -88,14 +88,14 @@ def step_impl(context):
 def step_impl(context):
     rand_str = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(5))
     dataset_name = 'random_dataset_{}'.format(rand_str)
-    context.dataset = context.project.datasets.create(dataset_name=dataset_name)
+    context.dataset = context.project.datasets.create(dataset_name=dataset_name, index_driver=context.index_driver_var)
     context.dataset_count += 1
 
 
 @behave.when(u'I try to create a dataset by the same name')
 def step_impl(context):
     try:
-        context.project.datasets.create(dataset_name=context.dataset.name)
+        context.project.datasets.create(dataset_name=context.dataset.name, index_driver=context.index_driver_var)
         context.error = None
     except Exception as e:
         context.error = e

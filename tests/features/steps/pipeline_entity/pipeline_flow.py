@@ -293,7 +293,7 @@ def step_impl(context):
     t = time.localtime()
     current_time = time.strftime("%H-%M-%S", t)
 
-    context.dataset_finish = context.project.datasets.create(dataset_name='dataset-' + current_time + "-finish")
+    context.dataset_finish = context.project.datasets.create(dataset_name='dataset-' + current_time + "-finish", index_driver=context.index_driver_var)
     context.pipeline = context.project.pipelines.create(pipeline_name='sdk-pipeline-sanity', project_id=context.project.id)
 
     task_node_1 = dl.TaskNode(

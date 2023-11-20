@@ -35,7 +35,7 @@ def step_impl(context, package_name, entry_point):
                                                     metadata=metadata)
 
 
-@behave.when(u'I create a model form package by the name of "{model_name}" with status "{status}"')
+@behave.when(u'I create a model from package by the name of "{model_name}" with status "{status}"')
 def step_impl(context, model_name, status):
     context.model = context.package.models.create(model_name=model_name,
                                                   description='model for testing',
@@ -64,6 +64,7 @@ def step_impl(context, func):
             service_config = context.service_config
         context.execution = context.model.evaluate(dataset_id=context.dataset.id, filters=dl.Filters(),
                                                    service_config=service_config)
+        context.to_delete_services_ids.append(context.execution.service_id)
     else:
         context.execution = context.model.__getattribute__(func)()
 
@@ -102,11 +103,12 @@ def step_impl(context, status, flag, func):
 
 @behave.then(u'Dataset has a scores file')
 def step_impl(context):
-    model_filename = f'{context.model.id}.csv'
+    model_csv_filename = f'{context.model.id}.csv'
+    model_json_filename = f'{context.model.id}-interpolated.json'
     filters = dl.Filters(field='hidden', values=True)
-    filters.add(field='name', values=model_filename)
+    filters.add(field='name', values=[model_csv_filename, model_json_filename], operator=dl.FiltersOperations.IN)
     items = context.dataset.items.list(filters=filters)
-    assert items.items_count != 0, f'Found {items.items_count} items with name {model_filename}.'
+    assert items.items_count != 0, f'Found {items.items_count} items with name {model_csv_filename}.'
 
 
 @behave.when(u'i call the precision recall api')
@@ -114,7 +116,7 @@ def step_impl(context):
     payload = {
         'datasetId': context.dataset.id,
         'confThreshold': 0,
-        'iouThreshold': 0,
+        'iouThreshold': 0.3,
         'metric': 'accuracy',
         'modelId': context.model.id,
     }
@@ -130,7 +132,10 @@ def step_impl(context):
     assert isinstance(context.response, dict), f'Failed to call precision recall api, response: {context.response}'
     with open(os.path.join(os.environ["DATALOOP_TEST_ASSETS"], 'models_flow', 'precisionrecall.json'), 'r') as f:
         expected_output = json.load(f)
+
     assert context.response == expected_output, f'results are not as expected, expected: {expected_output}, got: {context.response}'
+    assert len(context.response['recall']) == 202 and len(context.response[
+                                                              'precision']) == 202, f'points are not as expected, expected: 201, got: {len(context.response["recall"])}'
 
 
 @behave.given(u'I upload "{item_num}" box annotation to item')
@@ -193,3 +198,88 @@ def step_impl(context):
         row = row.split('=')
         assert service['runtime'][row[0]] == row[
             1], f"TEST FAILED: service runtime is not as expected, expected: {row[1]}, got: {service['runtime'][row[0]]}"
+
+
+@behave.then(u'i have a model service')
+def step_impl(context):
+    context.service = context.model.services.list().items[0]
+    assert context.service is not None, f"TEST FAILED: service is not in model services"
+    assert context.service.metadata.get('ml', {}).get(
+        'modelId') == context.model.id, f"TEST FAILED: model id is not in service metadata"
+
+
+@behave.when(u'I update the model variable in pipeline to reference to this model')
+def step_impl(context):
+    context.pipeline.variables[0].value = context.model.id
+    context.pipeline = context.pipeline.update()
+
+
+@behave.then(u'the model service id updated')
+def step_impl(context):
+    service = context.model.services.list().items[0]
+    assert service is not None, f"TEST FAILED: service is not in model services"
+    assert service.id == context.service.id, f"TEST FAILED: service id is not as expected, expected: {context.service.id}, got: {service.id}"
+    assert service.metadata.get('ml', {}).get(
+        'modelId') == context.model.id, f"TEST FAILED: model id is not in service metadata"
+
+
+@behave.when(u'i add service id "{service_id}" to model metadata')
+def step_impl(context, service_id):
+    context.model = dl.models.get(model_id=context.model.id)
+    context.model.metadata['system']['deploy']['services'].append(service_id)
+    context.model = context.model.update(True)
+
+
+@behave.when(u'I delete model')
+def step_impl(context):
+    context.model.delete()
+
+
+@behave.then(u'model is deleted')
+def step_impl(context):
+    try:
+        context.model = dl.models.get(model_id=context.model.id)
+        assert False, "TEST FAILED: model is not deleted"
+    except:
+        pass
+
+
+@behave.then(u'model metadata should include operation "{operation}" with filed "{field}" and length "{value}"')
+def step_impl(context, operation, field, value):
+    value = int(value)
+    context.model = dl.models.get(model_id=context.model.id)
+    assert operation in context.model.metadata['system'], f"TEST FAILED: operation {operation} is not in model metadata"
+    assert field in context.model.metadata['system'][operation], f"TEST FAILED: field {field} is not in model metadata"
+    assert len(context.model.metadata['system'][operation][
+                   field]) == value, f"TEST FAILED: field {field} length is not as expected, expected: {value}, got: {len(context.model.metadata['system'][operation][field])}"
+
+
+@behave.when(u'i clone a model')
+def step_impl(context):
+    context.model = context.model.clone(
+        model_name='clone_model',
+        project_id=context.model.project_id,
+        dataset=dl.datasets.get(dataset_id=context.model.dataset_id),
+        status='created'
+    )
+
+
+@behave.then(u'model input should be equal "{input}", and output should be equal "{output}"')
+def step_impl(context, input, output):
+    assert context.model.input_type == input, f"TEST FAILED: model input is not as expected, expected: {input}, got: {context.model.input}"
+    assert context.model.output_type == output, f"TEST FAILED: model output is not as expected, expected: {output}, got: {context.model.output}"
+
+
+@behave.then(u'model do not have operation "{operation}"')
+def step_impl(context, operation):
+    assert operation not in context.model.metadata.get('system',
+                                                       {}), f"TEST FAILED: operation {operation} is in model metadata"
+
+
+@behave.then(u'models with the names "{models_name}" status "{model_status}"')
+def step_impl(context, models_name, model_status):
+    names = models_name.split(",")
+
+    for model in context.project.models.list().items:
+        if model.name in names:
+            assert model.status == model_status, f"TEST FAILED: model {model.id} status is not as expected, expected: {model_status}, got: {model.status}"

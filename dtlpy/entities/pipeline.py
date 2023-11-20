@@ -8,6 +8,8 @@ from .node import PipelineNode, PipelineConnection, TaskNode, CodeNode, Function
 from .. import repositories, entities
 from ..services.api_client import ApiClient
 from .package_function import PackageInputType
+import copy
+
 logger = logging.getLogger(name='dtlpy')
 
 
@@ -270,7 +272,8 @@ class Pipeline(entities.BaseEntity):
         json_variables = _json.get('variables', None) or list()
         variables = list()
         if json_variables:
-            variables = [Variable.from_json(_json=v) for v in json_variables]
+            copy_json_variables = copy.deepcopy(json_variables)
+            variables = [Variable.from_json(_json=v) for v in copy_json_variables]
 
         settings = PipelineSettings.from_json(_json=_json.get('settings', dict()))
         inst = cls(

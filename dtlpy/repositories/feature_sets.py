@@ -65,7 +65,7 @@ class FeatureSets:
         if filters is None:
             filters = entities.Filters(resource=entities.FiltersResource.FEATURE_SET)
             if self._project is not None:
-                filters.add(field='projectId', values=self._project.id)
+                filters.add(field='project', values=self._project.id)
 
         # assert type filters
         if not isinstance(filters, entities.Filters):
@@ -131,7 +131,6 @@ class FeatureSets:
                set_type: str,
                entity_type: entities.FeatureEntityType,
                project_id: str = None,
-               tags: list = None,
                org_id: str = None):
         """
         Create a new Feature Set
@@ -141,12 +140,9 @@ class FeatureSets:
         :param str set_type: string of the feature type: 2d, 3d, modelFC, TSNE,PCA,FFT
         :param entity_type: the entity that feature vector is linked to. Use the enum dl.FeatureEntityType
         :param str project_id: the ID of the project where feature set will be created
-        :param list tags: optional tag per feature  - matched by index
         :param str org_id: the ID of the org where feature set will be created
         :return: Feature Set object
         """
-        if tags is None:
-            tags = list()
         if project_id is None:
             if self._project is None:
                 raise ValueError('Must input a project id')
@@ -155,7 +151,6 @@ class FeatureSets:
 
         payload = {'name': name,
                    'size': size,
-                   'tags': tags,
                    'type': set_type,
                    'project': project_id,
                    'entityType': entity_type}

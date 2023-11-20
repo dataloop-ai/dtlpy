@@ -10,7 +10,7 @@ def step_impl(context, dataset_name):
     else:
         num = random.randint(10000, 100000)
         dataset_name = 'to-delete-test-{}_{}'.format(str(num), dataset_name)
-        context.dataset = context.project.datasets.create(dataset_name=dataset_name)
+        context.dataset = context.project.datasets.create(dataset_name=dataset_name, index_driver=context.index_driver_var)
         context.feature.dataloop_feature_dataset = context.dataset
         time.sleep(5)
 

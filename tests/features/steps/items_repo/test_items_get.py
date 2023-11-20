@@ -1,6 +1,7 @@
 import behave
 import os
 
+
 @behave.given(u"There is an item")
 def step_impl(context):
     filepath = "0000000162.jpg"
@@ -83,3 +84,21 @@ def step_impl(context):
         path="/datasets/{}/items".format(context.dataset.id)
     )
     assert success, "TEST FAILED: Error message: {}".format(response.json())
+
+
+@behave.when(u'I get a consensus item')
+def step_impl(context):
+    context.folder_name = None
+    for dir_name in context.dataset.directory_tree.dir_names:
+        if "/.consensus/" in dir_name:
+            context.folder_name = dir_name
+
+    assert context.folder_name, f"TEST FAILED: Folder doesn't exists in: {context.dataset.directory_tree.dir_names}"
+
+    filters = context.dl.Filters()
+    filters.add(field='dir', values=[context.folder_name], operator='in')
+    filters.add(field='hidden', values=True)
+
+    assert context.dataset.items.list(filters=filters).items_count, "TEST FAILED: No consensus items in dataset"
+
+    context.item = context.dataset.items.list(filters=filters).items[0]

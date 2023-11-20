@@ -13,7 +13,7 @@ def step_impl(context):
     try:
         context.dataset = context.project.datasets.get('model_dataset')
     except context.dl.exceptions.NotFound:
-        context.dataset = context.project.datasets.create('model_dataset')
+        context.dataset = context.project.datasets.create('model_dataset', index_driver=context.index_driver_var)
 
 
     # create model
@@ -45,7 +45,7 @@ def step_impl(context):
         try:
             context.dataset = context.project.datasets.get('model_dataset')
         except context.dl.exceptions.NotFound:
-            context.dataset = context.project.datasets.create('model_dataset')
+            context.dataset = context.project.datasets.create('model_dataset', index_driver=context.index_driver_var)
         # create model
         context.model = context.package.models.create(model_name=model_name,
                                                       dataset_id=context.dataset.id,

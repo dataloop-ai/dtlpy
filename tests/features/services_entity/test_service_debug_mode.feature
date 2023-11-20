@@ -17,7 +17,7 @@ Feature: Service entity debug mode
       | service_name=services-debug | package=services-debug | revision=None | config=None | runtime=None |
     And I update service mode to "debug"
     Then I validate service has "1" instance up
-    And I validate path "services/{service.id}/debug" get response "<html>"
+    And I validate path "services/{service.id}/debug" get response "<html>" interval: "20" tries: "5"
     Then I call service.execute() on items in dataset
     When I update service mode to "regular"
     Then Execution was executed and finished with status "success"
@@ -34,3 +34,18 @@ Feature: Service entity debug mode
     Then I validate service has "1" instance up
     When I update service mode to "regular"
     Then I validate service has "0" instance up
+
+  @services.delete
+  @packages.delete
+  @DAT-54523
+  Scenario: Update service to debug mode and using custom docker- Should return <html> in response and executions should success
+    Given I create a dataset with a random name
+    And There are "5" items
+    When I create a service
+      | service_name=services-debug | package=services-debug | revision=None | config=None | runtime={"runnerImage": "python:3.10"} |
+    And I update service mode to "debug"
+    Then I validate service has "1" instance up
+    And I validate path "services/{service.id}/debug" get response "<html>" interval: "60" tries: "15"
+    Then I call service.execute() on items in dataset
+    When I update service mode to "regular"
+    Then Execution was executed and finished with status "success"

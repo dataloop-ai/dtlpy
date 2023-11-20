@@ -53,5 +53,6 @@ def step_impl(context):
 def step_impl(context):
     try:
         context.project.delete(True, True)
+        assert False, "Success to delete project with readonly dataset"
     except Exception as e:
         assert f"Invalid - Cannot perform operation on readonly dataset" in e.args[1]

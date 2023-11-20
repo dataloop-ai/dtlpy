@@ -16,3 +16,4 @@ from .undefined_annotation import UndefinedAnnotationType
 from .pose import Pose
 from .text import Text
 from .free_text import FreeText
+from .ref_image import RefImage

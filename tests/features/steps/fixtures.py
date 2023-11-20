@@ -80,6 +80,8 @@ def get_value(params, context):
             val = 100
         elif key == 'consensus_assignees':
             val = 2
+        elif key == 'scoring':
+            val = False
 
     if key == 'filters' and val is not None and not isinstance(val, dict):
         filters = context.dl.Filters()
@@ -124,6 +126,8 @@ def get_value(params, context):
         val = int(val)
     elif key == 'consensus_assignees':
         val = int(val)
+    elif key == 'scoring':
+        val = eval(val)
 
     return val
 

@@ -43,4 +43,4 @@ def step_impl(context):
     dataset = context.project.datasets.get(dataset_name='Binaries')
     dataset.delete(True, True)
     time.sleep(4)
-    context.project.codebases.dataset = context.project.datasets.create(dataset_name="Binaries")
+    context.project.codebases.dataset = context.project.datasets.create(dataset_name="Binaries", index_driver=context.index_driver_var)

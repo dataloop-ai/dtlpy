@@ -45,7 +45,7 @@ def step_impl(context, driver_name):
 
 @behave.when(u'I create dataset "{dataset_name}" with driver entity')
 def step_impl(context, dataset_name):
-    context.dataset = context.project.datasets.create(dataset_name=dataset_name, driver_id=context.driver.id)
+    context.dataset = context.project.datasets.create(dataset_name=dataset_name, driver_id=context.driver.id, index_driver=context.index_driver_var)
     context.to_delete_datasets_ids.append(context.dataset.id)
 
 

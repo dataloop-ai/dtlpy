@@ -150,7 +150,7 @@ class KubernetesRuntime(ServiceRuntime):
         self.concurrency = kwargs.get('concurrency', concurrency)
         self.runner_image = kwargs.get('runnerImage', runner_image)
         self._proxy_image = kwargs.get('proxyImage', None)
-        self.single_agent = kwargs.get('singleAgent', False)
+        self.single_agent = kwargs.get('singleAgent', None)
         self.preemptible = kwargs.get('preemptible', None)
 
         self.autoscaler = kwargs.get('autoscaler', autoscaler)
@@ -166,9 +166,11 @@ class KubernetesRuntime(ServiceRuntime):
             'podType': self.pod_type,
             'numReplicas': self.num_replicas,
             'concurrency': self.concurrency,
-            'singleAgent': self.single_agent,
             'autoscaler': None if self.autoscaler is None else self.autoscaler.to_json()
         }
+
+        if self.single_agent is not None:
+            _json['singleAgent'] = self.single_agent
 
         if self.runner_image is not None:
             _json['runnerImage'] = self.runner_image
@@ -352,9 +354,13 @@ class Service(entities.BaseEntity):
     @property
     def package(self):
         if self._package is None:
-            self._package = repositories.Packages(client_api=self._client_api).get(package_id=self.package_id,
-                                                                                   fetch=None)
-        assert isinstance(self._package, entities.Package)
+            try:
+                self._package = repositories.Packages(client_api=self._client_api).get(package_id=self.package_id,
+                                                                                       fetch=None)
+                assert isinstance(self._package, entities.Package)
+            except:
+                self._package = repositories.Dpks(client_api=self._client_api).get(dpk_id=self.package_id)
+                assert isinstance(self._package, entities.Dpk)
         return self._package
 
     @property

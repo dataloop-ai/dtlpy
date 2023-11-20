@@ -1,4 +1,5 @@
 import behave
+from operator import attrgetter
 
 
 @behave.given(u'I init Filters() using the given params')
@@ -67,9 +68,15 @@ def step_impl(context):
             context.field = parameter.cells[1]
 
         if parameter.cells[0] == "values":
-            context.values = parameter.cells[1]
+            if ".id" in parameter.cells[1]:
+                context.values = attrgetter(parameter.cells[1])(context)
+            else:
+                context.values = parameter.cells[1]
 
         if parameter.cells[0] == "operator":
+            if parameter.cells[1] == 'IN' and hasattr(context, 'values'):
+                if not isinstance(context.values, list):
+                    context.values = [context.values]
             context.operator = filters_operations_list[parameter.cells[1]]
 
         if parameter.cells[0] == "method":

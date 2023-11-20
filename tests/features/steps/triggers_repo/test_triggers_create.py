@@ -240,7 +240,7 @@ def step_impl(context, function_name, package_path):
     u'There is a service by the name of "{service_name}" with module name "{module_name}" saved to context "{service_attr_name}"')
 def step_impl(context, service_name, module_name, service_attr_name):
     service_name = '{}-{}'.format(service_name, random.randrange(1000, 10000))
-    runtime = {"gpu": False, "numReplicas": 1, 'concurrency': 1}
+    runtime = context.dl.KubernetesRuntime(autoscaler=context.dl.KubernetesAutoscaler(min_replicas=1)).to_json()
     setattr(context, service_attr_name, context.package.services.deploy(service_name=service_name,
                                                                         bot=context.bot_user,
                                                                         runtime=runtime,

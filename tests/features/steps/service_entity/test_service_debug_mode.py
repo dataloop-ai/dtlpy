@@ -19,7 +19,8 @@ def step_impl(context, instance_number):
 
     for i in range(num_try):
         time.sleep(interval)
-        context.service_instances = context.service.status()['replicaStatus']
+        status = context.service.status()
+        context.service_instances = status['runtimeStatus']
         if len(context.service_instances) == int(instance_number):
             success = True
             break
@@ -29,14 +30,15 @@ def step_impl(context, instance_number):
     assert success, "TEST FAILED: Expected {}, Got {}".format(instance_number, len(context.service_instances))
 
 
-@behave.then(u'I validate path "{path}" get response "{expected_response}"')
-def step_impl(context, path, expected_response):
+@behave.then(u'I validate path "{path}" get response "{expected_response}" interval: "{interval}" tries: "{num_try}"')
+def step_impl(context, path, expected_response, interval=20, num_try=5):
+    interval = int(interval)
+    num_try = int(num_try)
+    """ Get service instances / pods / replicas status """
     assert path.find("{") != -1 and path.find("}") != -1, "Please provide correct template. For example: dataset/{dataset.id}/query"
     if not path.startswith('/'):
         path = '/{}'.format(path)
 
-    num_try = 5
-    interval = 20
     success = False
 
     resource = path[path.find("{") + 1:path.find("}")]

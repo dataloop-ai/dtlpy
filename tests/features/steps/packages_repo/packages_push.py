@@ -205,9 +205,5 @@ def step_impl(context):
 
 @behave.then(u'New Binaries dataset is created')
 def step_impl(context):
-    datasets = context.project.datasets.list()
-    success = False
-    for dataset in datasets:
-        if dataset.name == 'Binaries' and dataset.id not in context.binaries_dataset_ids:
-            success = True
-    assert success, 'Failed to create Binaries dataset'
+    datasets = context.project.datasets.get(dataset_name='Binaries')
+    assert datasets.name == 'Binaries', 'Failed to create Binaries dataset'

@@ -14,7 +14,6 @@ import sys
 
 import dtlpy as dl
 
-
 try:
     # for local import
     from tests.env_from_git_branch import get_env_from_git_branch
@@ -25,7 +24,8 @@ except ImportError:
 
 def before_all(context):
     load_dotenv('.test.env')
-
+    # Get index driver from env var
+    context.index_driver_var = os.environ.get("INDEX_DRIVER_VAR", None)
 
 @fixture
 def after_feature(context, feature):
@@ -83,6 +83,33 @@ def after_feature(context, feature):
         except Exception:
             logging.exception('Failed to delete project')
 
+    if hasattr(context.feature, 'dataloop_feature_org'):
+        try:
+            username = os.environ["TEST_SU_USERNAME"]
+            password = os.environ["TEST_SU_PASSWORD"]
+            login = dl.login_m2m(
+                email=username,
+                password=password
+            )
+            assert login, "TEST FAILED: User login failed"
+            context.dl = dl
+            success, response = dl.client_api.gen_request(req_type='delete',
+                                                          path=f'/orgs/{feature.dataloop_feature_org.id}')
+            if not success:
+                raise dl.exceptions.PlatformException(response)
+            logging.info(f'Organization id {feature.dataloop_feature_org.id} deleted successfully')
+            username = os.environ["TEST_USERNAME"]
+            password = os.environ["TEST_PASSWORD"]
+            login = dl.login_m2m(
+                email=username,
+                password=password
+            )
+            assert login, "TEST FAILED: User login failed"
+            context.dl = dl
+            return True
+        except Exception:
+            logging.exception('Failed to delete organization')
+
     # update api call json
     if hasattr(feature, 'dataloop_feature_dl'):
         try:
@@ -99,6 +126,26 @@ def after_feature(context, feature):
                     json.dump(api_calls, f)
         except Exception:
             logging.exception('Failed to update api calls')
+
+
+@fixture
+def before_scenario(context, scenario):
+    context.scenario.return_to_user = False
+
+
+@fixture
+def after_scenario(context, scenario):
+    if context.scenario.return_to_user == True:
+        username = os.environ["TEST_USERNAME"]
+        password = os.environ["TEST_PASSWORD"]
+        login = dl.login_m2m(
+            email=username,
+            password=password,
+        )
+        assert login, "TEST FAILED: User login failed"
+        print("----------Changed to a Regular user----------")
+        context.scenario.return_to_user = False
+        context.dl = dl
 
 
 @fixture

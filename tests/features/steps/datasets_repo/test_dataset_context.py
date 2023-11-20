@@ -36,7 +36,7 @@ def step_impl(context, datasets_name):
     for dataset_name in datasets_name:
         if datasets_name != '':
             context.datasets_name.append(dataset_name)
-            context.datasets.append(context.projects[i].datasets.create(dataset_name=dataset_name))
+            context.datasets.append(context.projects[i].datasets.create(dataset_name=dataset_name, index_driver=context.index_driver_var))
             i += 1
 
 

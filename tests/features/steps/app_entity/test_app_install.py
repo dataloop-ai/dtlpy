@@ -20,9 +20,11 @@ def step_impl(context, path):
     # Update service runner image to latest dtlpy version if exists
     val = fixtures.access_nested_dictionary_key(data, ['components', 'services', 'runtime', 'runnerImage'])
     if val:
-        data['components']['services'][0]['runtime'].update({"runnerImage": f"dataloop_runner-cpu/main:{context.dl.__version__}.latest"})
+        data['components']['services'][0]['runtime'].update(
+            {"runnerImage": f"dataloop_runner-cpu/main:{context.dl.__version__}.latest"})
 
-    context.dpk = context.dl.entities.Dpk.from_json(_json=data, client_api=context.project._client_api, project=context.project)
+    context.dpk = context.dl.entities.Dpk.from_json(_json=data, client_api=context.project._client_api,
+                                                    project=context.project)
 
 
 @behave.given(u'publish the app')
@@ -76,9 +78,23 @@ def step_impl(context):
     service_runtime = context.project.services.list()[0][0].runtime.to_json()
     dpk_runtime = context.dpk.components.services[0]['runtime']
 
-    assert context.dpk.components.services[0]["name"] == context.project.services.list()[0][0].name, f"TEST FAILED: Field name"
-    assert context.dpk.components.services[0]["moduleName"] == context.project.services.list()[0][0].module_name, f"TEST FAILED: Field moduleName"
+    assert context.dpk.components.services[0]["name"] == context.project.services.list()[0][
+        0].name, f"TEST FAILED: Field name"
+    assert context.dpk.components.services[0]["moduleName"] == context.project.services.list()[0][
+        0].module_name, f"TEST FAILED: Field moduleName"
     assert dpk_runtime == service_runtime, f"TEST FAILED: Field runtime"
-    assert context.dpk.components.services[0]['executionTimeout'] == context.project.services.list()[0][0].execution_timeout, f"TEST FAILED: Field executionTimeout"
-    assert context.dpk.components.services[0]['onReset'] == context.project.services.list()[0][0].on_reset, f"TEST FAILED: Field onReset"
-    assert context.dpk.components.services[0]['runExecutionAsProcess'] == context.project.services.list()[0][0].run_execution_as_process, f"TEST FAILED: Field runExecutionAsProcess"
+    assert context.dpk.components.services[0]['executionTimeout'] == context.project.services.list()[0][
+        0].execution_timeout, f"TEST FAILED: Field executionTimeout"
+    assert context.dpk.components.services[0]['onReset'] == context.project.services.list()[0][
+        0].on_reset, f"TEST FAILED: Field onReset"
+    assert context.dpk.components.services[0]['runExecutionAsProcess'] == context.project.services.list()[0][
+        0].run_execution_as_process, f"TEST FAILED: Field runExecutionAsProcess"
+
+
+@behave.then(u'i can create pipeline function node from the app service')
+def step_impl(context):
+    comp = context.dl.compositions.get(composition_id=context.app.composition_id)
+    s = context.dl.services.get(service_id=comp['spec'][0].get('state', {}).get('serviceId', None))
+    func_node = context.dl.FunctionNode(service=s, name='test', function_name='run')
+    assert func_node is not None
+    assert func_node.service is not None

@@ -639,7 +639,6 @@ class Item(entities.BaseEntity):
         .. code-block:: python
 
             item.update_status(status='complete',
-                               operation='created',
                                task_id='task_id')
 
         """

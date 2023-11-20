@@ -451,7 +451,7 @@ class Annotation(entities.BaseEntity):
         else:
             try:
                 colors = self.dataset._get_ontology().color_map
-            except exceptions.BadRequest:
+            except (exceptions.BadRequest, exceptions.NotFound):
                 colors = None
                 logger.warning('Cant get dataset for annotation color. using default.')
             if colors is not None and self.label in colors:

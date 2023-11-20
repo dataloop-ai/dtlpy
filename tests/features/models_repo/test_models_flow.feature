@@ -13,9 +13,10 @@ Feature: Models repository flow testing
   @DAT-51143
   @DAT-51144
   @DAT-51145
+  @DAT-54702
   Scenario: test flow model
     When I create a dummy model package by the name of "dummymodel" with entry point "main.py"
-    And I create a model form package by the name of "test-model" with status "created"
+    And I create a model from package by the name of "test-model" with status "created"
     When i "train" the model
     Then service metadata has a model id and operation "train"
     Then model status should be "trained" with execution "True" that has function "train_model"
@@ -33,7 +34,7 @@ Feature: Models repository flow testing
   @DAT-50829
   Scenario: test model - failed
     When I create a dummy model package by the name of "modelfaild" with entry point "failedmain.py"
-    And I create a model form package by the name of "test-model-failed" with status "created"
+    And I create a model from package by the name of "test-model-failed" with status "created"
     When i "train" the model
     Then model status should be "failed" with execution "True" that has function "train_model"
 
@@ -41,7 +42,7 @@ Feature: Models repository flow testing
   @DAT-52904
   Scenario: test flow model - initPrams
     When I create a dummy model package by the name of "initmodel" with entry point "main.py"
-    And I create a model form package by the name of "test-model-init" with status "created"
+    And I create a model from package by the name of "test-model-init" with status "created"
     When i train the model with init param model none
     Then model status should be "trained" with execution "True" that has function "train_model"
 
@@ -49,7 +50,7 @@ Feature: Models repository flow testing
   @DAT-53071
   Scenario: test evaluate service updated
     When I create a dummy model package by the name of "dummymodel" with entry point "main.py"
-    And I create a model form package by the name of "test-model-eve" with status "trained"
+    And I create a model from package by the name of "test-model-eve" with status "trained"
     And i add a Service config runtime
       | runnerImage=ImageA | podType=regular-xs |
     When i "evaluate" the model

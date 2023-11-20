@@ -87,7 +87,7 @@ def delete_single_project(i_project: dl.Project, i_pbar):
                     app.uninstall()
                 except Exception:
                     pass
-            for dpkg in i_project.dpks.list().items:
+            for dpkg in i_project.dpks.list(filters=dl.Filters(field='creator', values=dl.info()['user_email'])).items:
                 try:
                     dpkg.delete()
                 except Exception:
@@ -275,14 +275,17 @@ if __name__ == '__main__':
     # run tests
     pool = ThreadPool(processes=4)
     features_path = os.path.join(TEST_DIR, 'features')
+    print(f"Index driver is {os.environ.get('INDEX_DRIVER_VAR', None)}")
+
 
     results = dict()
     features_to_run = set()
     for path, subdirs, files in os.walk(features_path):
-        for filename in files:
-            striped, ext = os.path.splitext(filename)
-            if ext in ['.feature']:
-                features_to_run.add(os.path.join(path, filename))
+        if "billing_repo" not in path:
+            for filename in files:
+                striped, ext = os.path.splitext(filename)
+                if ext in ['.feature']:
+                    features_to_run.add(os.path.join(path, filename))
 
     pbar = tqdm(total=len(features_to_run), desc="Features progress")
 
@@ -379,3 +382,4 @@ if __name__ == '__main__':
         sys.exit(0)
     else:
         sys.exit(1)
+

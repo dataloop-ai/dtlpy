@@ -1,4 +1,4 @@
-Feature: Tasks repository create consensus task
+Feature: Tasks repository create qualification task
 
   Background: Initiate Platform Interface and create a project
     Given Platform Interface is initialized as dlp and Environment is set according to git branch

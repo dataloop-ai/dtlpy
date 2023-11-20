@@ -13,8 +13,8 @@ def creating_a_project(context, f_project_name, s_project_name):
     context.second_project = context.dl.projects.create(project_name="to-delete-test-{}".format(s_project_name))
     context.to_delete_projects_ids.append(context.second_project.id)
     time.sleep(5)  # to sleep because authorization takes time
-    context.first_dataset = context.project.datasets.create(dataset_name='f_project_name')
-    context.second_dataset = context.second_project.datasets.create(dataset_name='s_project_name')
+    context.first_dataset = context.project.datasets.create(dataset_name='f_project_name', index_driver=context.index_driver_var)
+    context.second_dataset = context.second_project.datasets.create(dataset_name='s_project_name', index_driver=context.index_driver_var)
 
 
 @behave.when(u'I upload item in "{item_path}" to both datasets')

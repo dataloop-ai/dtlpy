@@ -5,13 +5,13 @@ import random
 @behave.given(u'Create a Dataset "{dataset_name}"')
 def step_impl(context, dataset_name):
     dataset_name = dataset_name + str(random.randint(10000, 100000))
-    context.dataset = context.project.datasets.create(dataset_name=dataset_name)
+    context.dataset = context.project.datasets.create(dataset_name=dataset_name, index_driver=context.index_driver_var)
 
 
 @behave.when(u'Create a Dataset "{dataset_name}"')
 def step_impl(context, dataset_name):
     dataset_name = dataset_name + str(random.randint(10000, 100000))
-    context.dataset = context.project.datasets.create(dataset_name=dataset_name)
+    context.dataset = context.project.datasets.create(dataset_name=dataset_name, index_driver=context.index_driver_var)
 
 
 @behave.when(u'Get Commands - Get Projects Datasets List')
@@ -50,9 +50,9 @@ def step_impl(context, clone_dataset_name):
                                                   with_task_annotations_status=True)
 
 
-@behave.when(u'Clone Item')
+@behave.when(u'I clone an item')
 def step_impl(context):
-    context.item.clone(with_annotations=True, with_metadata=True, with_task_annotations_status=False)
+    context.cloned_item = context.item.clone(with_annotations=True, with_metadata=True, with_task_annotations_status=False, allow_many=True)
 
 
 @behave.then(u'Merge Datasets "{merge_dataset_name}"')
@@ -66,4 +66,4 @@ def step_impl(context, merge_dataset_name):
 
     project__datasets_list = context.project.datasets.list()
 
-    assert len(project__datasets_list) == 5
+    assert len(project__datasets_list) == 4

@@ -3,7 +3,7 @@ import behave
 import time
 import os
 import random
-
+import dtlpy as dl
 
 @behave.when(u'I create an execution with "{input_type}"')
 def step_impl(context, input_type):
@@ -200,9 +200,9 @@ def step_impl(context, item_path):
 @behave.when(u'I execute pipeline with input type "{input_type}"')
 def step_impl(context, input_type):
     execution_input = list()
-    if input_type == 'Item':
+    if input_type == dl.PackageInputType.ITEM:
         execution_input.append(context.dl.FunctionIO(
-            type='Item',
+            type=dl.PackageInputType.ITEM,
             value={'item_id': context.item.id},
             name='item'))
 

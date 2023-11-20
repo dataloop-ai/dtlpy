@@ -23,3 +23,9 @@ Feature: App entity Install App
     When I install the app
     Then I validate service configuration in dpk is equal to service from app
 
+  @DAT-54655
+  Scenario: Install a valid app
+    Given I have an app entity from "apps/app.json"
+    And publish the app
+    When I install the app
+    Then i can create pipeline function node from the app service

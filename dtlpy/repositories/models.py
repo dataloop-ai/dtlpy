@@ -171,10 +171,10 @@ class Models:
         # default filters
         if filters is None:
             filters = entities.Filters(resource=entities.FiltersResource.MODEL)
-            if self._project is not None:
-                filters.add(field='projectId', values=self._project.id)
-            if self._package is not None:
-                filters.add(field='packageId', values=self._package.id)
+        if self._project is not None:
+            filters.add(field='projectId', values=self._project.id)
+        if self._package is not None:
+            filters.add(field='packageId', values=self._package.id)
 
         # assert type filters
         if not isinstance(filters, entities.Filters):
@@ -211,6 +211,58 @@ class Models:
             metadata['system']['subsets']['validation'] = validation_filter.prepare() if isinstance(validation_filter,
                                                                                                     entities.Filters) else validation_filter
         return metadata
+
+    @staticmethod
+    def add_subset(model: entities.Model, subset_name: str, subset_filter: entities.Filters):
+        """
+        Adds a subset for a model, specifying a subset of the model's dataset that could be used for training or
+        validation.
+
+        :param dtlpy.entities.Model model: the model to which the subset should be added
+        :param str subset_name: the name of the subset
+        :param dtlpy.entities.Filters subset_filter: the filtering operation that this subset performs in the dataset.
+
+        **Example**
+
+        .. code-block:: python
+
+            project.models.add_subset(model=model_entity, subset_name='train', subset_filter=dtlpy.Filters(field='dir', values='/train'))
+            model_entity.metadata['system']['subsets']
+                {'train': <dtlpy.entities.filters.Filters object at 0x1501dfe20>}
+
+        """
+        if 'system' not in model.metadata:
+            model.metadata['system'] = dict()
+        if 'subsets' not in model.metadata['system']:
+            model.metadata['system']['subsets'] = dict()
+        model.metadata['system']['subsets'][subset_name] = subset_filter.prepare()
+        model.update(system_metadata=True)
+
+    @staticmethod
+    def delete_subset(model: entities.Model, subset_name: str):
+        """
+        Removes a subset from a model's metadata.
+
+        :param dtlpy.entities.Model model: the model to which the subset should be added
+        :param str subset_name: the name of the subset
+
+        **Example**
+
+        .. code-block:: python
+
+            project.models.add_subset(model=model_entity, subset_name='train', subset_filter=dtlpy.Filters(field='dir', values='/train'))
+            model_entity.metadata['system']['subsets']
+                {'train': <dtlpy.entities.filters.Filters object at 0x1501dfe20>}
+            project.models.delete_subset(model=model_entity, subset_name='train')
+            model_entity.metadata['system']['subsets']
+                {}
+
+        """
+        if model.metadata.get("system", dict()).get("subsets", dict()).get(subset_name) is None:
+            logger.error(f"Model system metadata incomplete, could not delete subset {subset_name}.")
+        else:
+            _ = model.metadata['system']['subsets'].pop(subset_name)
+            model.update(system_metadata=True)
 
     def create(
             self,
@@ -389,11 +441,15 @@ class Models:
         from_json = {"name": model_name,
                      "packageId": from_model.package_id,
                      "configuration": from_model.configuration,
-                     "metadata": from_model.metadata,
                      "outputType": from_model.output_type,
                      "inputType": from_model.input_type}
         if project_id is None:
-            project_id = self.project.id
+            if dataset is not None:
+                # take dataset project
+                project_id = dataset.project.id
+            else:
+                # take model's project
+                project_id = self.project.id
         from_json['projectId'] = project_id
         if dataset is not None:
             if labels is None:
@@ -415,10 +471,12 @@ class Models:
         if status is not None:
             from_json['status'] = status
 
-        metadata = self._set_model_filter(metadata=from_model.metadata,
-                                          train_filter=train_filter,
-                                          validation_filter=validation_filter)
-        if metadata['system']:
+        metadata = self._set_model_filter(metadata={},
+                                          train_filter=train_filter if train_filter is not None else from_model.metadata.get(
+                                              'system', {}).get('subsets', {}).get('train', None),
+                                          validation_filter=validation_filter if validation_filter is not None else from_model.metadata.get(
+                                              'system', {}).get('subsets', {}).get('validation', None))
+        if metadata:
             from_json['metadata'] = metadata
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/ml/models/{}/clone'.format(from_model.id),

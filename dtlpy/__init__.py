@@ -69,7 +69,7 @@ from .entities import (
     # annotations
     Box, Cube, Cube3d, Point, Note, Message, Segmentation, Ellipse, Classification, Subtitle, Polyline, Pose,
     Description,
-    Polygon, Text, FreeText,
+    Polygon, Text, FreeText, RefImage,
     # filters
     Filters, FiltersKnownFields, FiltersResource, FiltersOperations, FiltersMethod, FiltersOrderByDirection,
     FiltersKnownFields as KnownFields,

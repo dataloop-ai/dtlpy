@@ -146,7 +146,8 @@ def step_impl(_, annotation_format, dest_path, should_be_path):
 def step_impl(context, local_path):
     local_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], local_path)
     dataset = context.platform_dataset = context.dataset = context.project.datasets.create(
-        'platform_dataset_{}'.format(random.randrange(100, 100000)))
+        'platform_dataset_{}'.format(random.randrange(100, 100000))
+        , index_driver=context.index_driver_var)
     dataset.items.upload(local_path=os.path.join(local_path, 'images'),
                          local_annotations_path=os.path.join(local_path, 'labels'))
     dataset.add_labels(['building', 'rock', 'eye', 'hat', ])

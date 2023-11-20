@@ -64,7 +64,7 @@ def step_impl(context, code_path):
 
 @behave.given(u'Feature: I create a dataset by the name of "{dataset_name}"')
 def step_impl(context, dataset_name):
-    context.feature.dataset = context.project.datasets.create(dataset_name=dataset_name)
+    context.feature.dataset = context.project.datasets.create(dataset_name=dataset_name, index_driver=context.index_driver_var)
 
 
 @behave.given(u'Get feature entities')

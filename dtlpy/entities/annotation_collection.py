@@ -75,20 +75,24 @@ class AnnotationCollection(entities.BaseEntity):
         :param metadata: optional- metadata dictionary for annotation
         :param parent_id: set a parent for this annotation (parent annotation ID)
         :param prompt_id: Connect the annotation with a specific prompt in a dl.PromptItem
-        :param model_info: optional - set model on annotation {'name',:'', 'confidence':0}
+        :param model_info: optional - set model on annotation {'confidence':0 [Mandatory], (Float between 0-1)
+                                                               'name',:'' [Optional], ('name' refers to 'model_name')
+                                                               'model_id':''[Optional]}
         :return:
         """
         if model_info is not None:
-            if not isinstance(model_info, dict) or 'name' not in model_info or 'confidence' not in model_info:
-                raise ValueError('"model_info" must be a dict with keys: "name" and "confidence"')
+            if not isinstance(model_info, dict) or 'confidence' not in model_info:
+                raise ValueError('"model_info" must be a dict with key: "confidence"')
             if metadata is None:
                 metadata = dict()
             if 'user' not in metadata:
                 metadata['user'] = dict()
-            metadata['user']['model'] = {'name': model_info['name'],
-                                         'confidence': float(model_info['confidence']),
+            confidence = float(model_info['confidence'])
+            if confidence < 0 or confidence > 1:
+                raise ValueError('"confidence" must be a float between 0 and 1')
+            metadata['user']['model'] = {'confidence': confidence,
+                                         'name': model_info.get('name'),
                                          'model_id': model_info.get('model_id'),
-                                         'snapshot_id': model_info.get('snapshot_id'),
                                          }
             metadata['user']['annotation_type'] = 'prediction'
 
@@ -512,7 +516,7 @@ class AnnotationCollection(entities.BaseEntity):
 
     @classmethod
     def from_json(cls, _json: list, item=None, is_video=None, fps=25, height=None, width=None,
-                  client_api=None, is_audio=None):
+                  client_api=None, is_audio=None) -> 'AnnotationCollection':
         """
         Create an annotation collection object from platform json
 

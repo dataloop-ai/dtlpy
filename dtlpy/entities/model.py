@@ -391,6 +391,46 @@ class Model(entities.BaseEntity):
     ###########
     # methods #
     ###########
+
+    def add_subset(self, subset_name: str, subset_filter: entities.Filters):
+        """
+        Adds a subset for the model, specifying a subset of the model's dataset that could be used for training or
+        validation.
+
+        :param str subset_name: the name of the subset
+        :param dtlpy.entities.Filters subset_filter: the filtering operation that this subset performs in the dataset.
+
+        **Example**
+
+        .. code-block:: python
+
+            model.add_subset(subset_name='train', subset_filter=dtlpy.Filters(field='dir', values='/train'))
+            model.metadata['system']['subsets']
+                {'train': <dtlpy.entities.filters.Filters object at 0x1501dfe20>}
+
+        """
+        self.models.add_subset(self, subset_name, subset_filter)
+
+    def delete_subset(self, subset_name: str):
+        """
+        Removes a subset from the model's metadata.
+
+        :param str subset_name: the name of the subset
+
+        **Example**
+
+        .. code-block:: python
+
+            model.add_subset(subset_name='train', subset_filter=dtlpy.Filters(field='dir', values='/train'))
+            model.metadata['system']['subsets']
+                {'train': <dtlpy.entities.filters.Filters object at 0x1501dfe20>}
+            models.delete_subset(subset_name='train')
+            metadata['system']['subsets']
+                {}
+
+        """
+        self.models.delete_subset(self, subset_name)
+
     def update(self, system_metadata=False):
         """
         Update Models changes to platform

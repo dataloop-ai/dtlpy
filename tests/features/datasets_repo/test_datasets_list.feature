@@ -15,7 +15,7 @@ Feature: Datasets repository list service testing
     @DAT-46497
     Scenario: List all datasets when datasets exist
         Given There are no datasets
-        And I careat a dataset by the name of "Dataset"
+        And I create a dataset by the name of "Dataset" and count
         When I list all datasets
         Then I receive a datasets list of "1" dataset
         And The dataset in the list equals the dataset I created

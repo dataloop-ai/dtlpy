@@ -3,6 +3,7 @@ import random
 
 import behave
 import dtlpy as dl
+import time
 
 
 @behave.given(u'I append package to packages')
@@ -76,3 +77,35 @@ def step_impl(context):
         'string': 'test',
         'dataset': context.dataset.id
     }
+
+
+@behave.when(u'I execute service on "{input}" with type "{input_type}" with name "{name_input}"')
+def step_impl(context, input, input_type, name_input):
+    if input.isdigit():
+        input = eval(input)
+    try:
+        context.execution: dl.Execution = context.service.execute(project_id=context.project.id,
+                                                                  execution_input=dl.FunctionIO(type=input_type,
+                                                                                                value=input,
+                                                                                                name=name_input)
+                                                                  )
+        context.error = None
+    except Exception as e:
+        context.error = e
+        return True
+
+    num_try = 40
+    interval = 10
+    finished = False
+
+    for i in range(num_try):
+        time.sleep(interval)
+        status = context.execution.get_latest_status()
+        if status['status'] in ['success', 'failed']:
+            if "error" in status.keys():
+                context.error = dl.exceptions.PlatformException
+                context.error.message = status['error']
+            finished = True
+            break
+
+    assert finished, f"TEST FAILED: Execution status - {status}"

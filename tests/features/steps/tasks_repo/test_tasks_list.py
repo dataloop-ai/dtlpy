@@ -73,4 +73,5 @@ def step_impl(context):
     context.second_project = context.dl.projects.create(
         '{}-second-project-tasks-list'.format(random.randrange(100, 1000000)))
     context.second_dataset = context.second_project.datasets.create(
-        'second_dataset_{}'.format(random.randrange(100, 1000000)))
+        'second_dataset_{}'.format(random.randrange(100, 1000000))
+        , index_driver=context.index_driver_var)

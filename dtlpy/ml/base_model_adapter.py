@@ -12,7 +12,7 @@ from functools import partial
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor
 import attr
-from .. import entities, utilities, repositories
+from .. import entities, utilities, repositories, exceptions
 from ..services import service_defaults
 from ..services.api_client import ApiClient
 
@@ -36,6 +36,8 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
                                       'image': self._item_to_image}
         if model_entity is not None:
             self.load_from_model(model_entity=model_entity)
+        logger.warning(
+            "in case of a mismatch between 'model.name' and 'model_info.name' in the model adapter, model_info.name will be updated to align with 'model.name'.")
 
     ##################
     # Configurations #
@@ -341,6 +343,11 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             batch_items = items[i_batch: i_batch + batch_size]
             batch = list(pool.map(self.prepare_item_func, batch_items))
             batch_collections = self.predict(batch, **kwargs)
+            _futures = list(pool.map(partial(self._update_predictions_metadata),
+                                     batch_items,
+                                     batch_collections))
+            # Loop over the futures to make sure they are all done to avoid race conditions
+            _ = [_f for _f in _futures]
             if upload_annotations is True:
                 self.logger.debug(
                     "Uploading items' annotation for model {!r}.".format(self.model_entity.name))
@@ -596,6 +603,46 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         binary = base64.b64decode(image_b64)
         image = np.asarray(Image.open(io.BytesIO(binary)))
         return image
+
+    def _update_predictions_metadata(self, item: entities.Item, predictions: entities.AnnotationCollection):
+        """
+        add model_name and model_id to the metadata of the annotations.
+        add model_info to the metadata of the system metadata of the annotation.
+        Add item id to all the annotations in the AnnotationCollection
+
+        :param item: Entity.Item
+        :param predictions: item's AnnotationCollection
+        :return:
+        """
+        for prediction in predictions:
+            if prediction.type == entities.AnnotationType.SEGMENTATION:
+                try:
+                    color = self.model_entity.dataset._get_ontology().color_map.get(prediction.label)
+                except (exceptions.BadRequest, exceptions.NotFound):
+                    color = None
+                    logger.warning("Can't get annotation color from item's dataset, using model's dataset.")
+                if color is None:
+                    try:
+                        color = self.model_entity.dataset._get_ontology().color_map.get(prediction.label)
+                    except (exceptions.BadRequest, exceptions.NotFound):
+                        logger.warning("Can't get annotation color from model's dataset, using default.")
+                        color = prediction.color
+                prediction.color = color
+
+            prediction.item_id = item.id
+            if 'user' in prediction.metadata and 'model' in prediction.metadata['user']:
+                prediction.metadata['user']['model']['model_id'] = self.model_entity.id
+                prediction.metadata['user']['model']['name'] = self.model_entity.name
+            if 'system' not in prediction.metadata:
+                prediction.metadata['system'] = dict()
+            if 'model' not in prediction.metadata['system']:
+                prediction.metadata['system']['model'] = dict()
+            confidence = prediction.metadata.get('user', dict()).get('model', dict()).get('confidence', None)
+            prediction.metadata['system']['model'] = {
+                'model_id': self.model_entity.id,
+                'name': self.model_entity.name,
+                'confidence': confidence
+            }
 
     ##############################
     # Callback Factory functions #

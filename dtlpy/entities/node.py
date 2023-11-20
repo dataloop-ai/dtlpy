@@ -506,9 +506,9 @@ class CodeNode(PipelineNode):
         :param list inputs: list of PipelineNodeIO inputs
         :param tuple position: tuple of the node place
         """
-        if not inputs:
+        if inputs is None:
             inputs = [self._default_io()]
-        if not outputs:
+        if outputs is None:
             outputs = [self._default_io()]
 
         if method is None or not isinstance(method, Callable):
@@ -857,7 +857,12 @@ class FunctionNode(PipelineNode):
         inputs = []
         outputs = []
         package = self.service.package
-        for model in package.modules:
+        modules = []
+        if isinstance(package, entities.Package):
+            modules = package.modules
+        elif isinstance(package, entities.Dpk):
+            modules = package.components.modules
+        for model in modules:
             if model.name == self.service.module_name:
                 for func in model.functions:
                     if func.name == function_name:
