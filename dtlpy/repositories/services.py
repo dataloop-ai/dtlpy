@@ -26,7 +26,7 @@ class Services:
                  client_api: ApiClient,
                  project: entities.Project = None,
                  package: entities.Package = None,
-                 project_id=None):
+                 project_id=None, model_id=None):
         self._client_api = client_api
         self._package = package
         self._project = project
@@ -34,6 +34,7 @@ class Services:
             if project is not None:
                 project_id = project.id
         self._project_id = project_id
+        self._model_id = model_id
         self._settings = repositories.Settings(project=project, client_api=client_api)
 
     ############
@@ -330,7 +331,8 @@ class Services:
             filters.add(field='projectId', values=self._project_id)
         if self._package is not None:
             filters.add(field='packageId', values=self._package.id)
-
+        if self._model_id is not None:
+            filters.add(field='metadata.ml.modelId', values=self._model_id)
         # assert type filters
         if not isinstance(filters, entities.Filters):
             raise exceptions.PlatformException('400', 'Unknown filters type')
