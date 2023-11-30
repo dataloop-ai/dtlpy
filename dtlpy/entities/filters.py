@@ -33,7 +33,7 @@ class FiltersResource(str, Enum):
     MODEL = "models"
     WEBHOOK = "webhooks"
     RECIPE = 'recipe'
-    DATASET = 'dataset'
+    DATASET = 'datasets'
     ONTOLOGY = 'ontology'
     TASK = 'tasks'
     PIPELINE = 'pipeline'

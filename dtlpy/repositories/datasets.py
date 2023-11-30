@@ -165,41 +165,61 @@ class Datasets:
         self._client_api.state_io.put('dataset', dataset.to_json())
         logger.info('Checked out to dataset {}'.format(dataset.name))
 
-    @_api_reference.add(path='/datasets', method='get')
-    def list(self, name=None, creator=None) -> miscellaneous.List[entities.Dataset]:
+    @_api_reference.add(path='/datasets/query', method='post')
+    def list(self, name=None, creator=None, filters: entities.Filters = None) -> miscellaneous.List[entities.Dataset]:
         """
         List all datasets.
 
         **Prerequisites**: You must be an *owner* or *developer* to use this method.
 
         :param str name: list by name
-        :param str creator: list by creator
+        :param str creator: list by 
+        :param dtlpy.entities.filters.Filters filters: Filters entity containing filters parameters
         :return: List of datasets
         :rtype: list
 
         **Example**:
 
         .. code-block:: python
+            filters = dl.Filters(resource='datasets')
+            filters.add(field='readonly', values=False)
 
-            datasets = project.datasets.list(name='name')
+            datasets = project.datasets.list(name='name', filters=filters)
         """
-        url = '/datasets'
 
-        query_params = {
-            'name': name,
-            'creator': creator
-        }
+        success, response = self._client_api.gen_request(
+            path='/datasets/count', req_type='POST', json_req={"projectIds": [self._project.id]})
+        total = response.json()['total']
+
+        if filters is None:
+            filters = entities.Filters(resource='datasets')
+        # assert type filters
+        elif not isinstance(filters, entities.Filters):
+            raise exceptions.PlatformException(error='400',
+                                               message='Unknown filters type: {!r}'.format(type(filters)))
+        if filters.resource != entities.FiltersResource.DATASET:
+            raise exceptions.PlatformException(
+                error='400',
+                message='Filters resource must to be FiltersResource.DATASET. Got: {!r}'.format(filters.resource))
+
+        url = '/datasets/query'
+
+        if name is not None:
+            filters.add(field='name', values=name)
+        if creator is not None:
+            filters.add(field='creator', values=creator)
 
         if self._project is not None:
-            query_params['projects'] = self.project.id
+            filters.context = {"projects": [self._project.id]}
 
-        url += '?{}'.format(urlencode({key: val for key, val in query_params.items() if val is not None}, doseq=True))
+        filters.page_size = total
 
-        success, response = self._client_api.gen_request(req_type='get',
-                                                         path=url)
+        success, response = self._client_api.gen_request(json_req=filters.prepare(), req_type='POST',
+                                                         path=url, headers={'user_query': filters._user_query})
+
         if success:
             pool = self._client_api.thread_pools('entity.create')
-            datasets_json = response.json()
+            datasets_json = response.json()['items']
             jobs = [None for _ in range(len(datasets_json))]
             # return triggers list
             for i_dataset, dataset in enumerate(datasets_json):
@@ -214,7 +234,8 @@ class Datasets:
             # log errors
             _ = [logger.warning(r[1]) for r in results if r[0] is False]
             # return good jobs
-            datasets = miscellaneous.List([r[1] for r in results if r[0] is True])
+            datasets = miscellaneous.List(
+                [r[1] for r in results if r[0] is True])
         else:
             raise exceptions.PlatformException(response)
         return datasets
@@ -734,7 +755,7 @@ class Datasets:
         Download dataset's annotations by filters.
 
         You may filter the dataset both for items and for annotations and download annotations.
-        
+
         Optional -- download annotations as: mask, instance, image mask of the item.
 
         **Prerequisites**: You must be in the role of an *owner* or *developer*.
@@ -882,7 +903,7 @@ class Datasets:
                            ):
         """
         Upload annotations to dataset. 
-        
+
         Example for remote_root_path: If the item filepath is a/b/item and
         remote_root_path is /a the start folder will be b instead of a
 
