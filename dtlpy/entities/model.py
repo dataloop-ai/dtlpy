@@ -184,7 +184,7 @@ class Model(entities.BaseEntity):
             context=_json.get('context', {}),
             input_type=_json.get('inputType', None),
             output_type=_json.get('outputType', None),
-            module_name = _json.get('moduleName', None)
+            module_name=_json.get('moduleName', None)
         )
         inst.is_fetched = is_fetched
         return inst
@@ -307,7 +307,8 @@ class Model(entities.BaseEntity):
                  dpks=repositories.Dpks(client_api=self._client_api),
                  services=repositories.Services(client_api=self._client_api,
                                                 project=self._project,
-                                                project_id=self.project_id),
+                                                project_id=self.project_id,
+                                                model_id=self.id),
                  )
         return r
 
