@@ -1206,7 +1206,7 @@ class ApiClient:
                 total=5,
                 read=5,
                 connect=5,
-                backoff_factor=0.3,
+                backoff_factor=1,
                 # use on any request type
                 allowed_methods=False,
                 # force retry on those status responses

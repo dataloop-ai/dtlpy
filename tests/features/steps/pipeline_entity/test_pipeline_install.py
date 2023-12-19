@@ -1,9 +1,6 @@
-from behave import when, then, given
+from behave import when, then
 import time
 import dtlpy as dl
-import json
-import random
-import os
 
 
 @when(u'I delete current nodes and add dataset nodes to pipeline')
@@ -54,59 +51,6 @@ def step_impl(context, status):
         )
 
         print("Error message: {}".format(response.json()['errorText']['message']))
-
-
-def generate_pipeline_json(context, pipeline_json):
-    pipeline_json['name'] = 'json-pipe-{}'.format(random.randrange(10000, 100000))
-    pipeline_json['creator'] = context.dl.info()['user_email']
-    pipeline_json['projectId'] = context.project.id
-    pipeline_json['orgId'] = context.project.org['id']
-
-    for node in pipeline_json['nodes']:
-        node['projectId'] = context.project.id
-
-    datasets_node = [node for node in pipeline_json['nodes'] if node['type'] == 'storage']
-    for node in datasets_node:
-        node['name'] = context.dataset.name
-        node['metadata']["datasetId"] = context.dataset.id
-
-    task_nodes = [node for node in pipeline_json['nodes'] if node['type'] == 'task']
-    for node in task_nodes:
-        node['projectId'] = context.project.id
-        node['metadata']["recipeTitle"] = context.dataset.recipes.list()[0].title
-        node['metadata']["recipeId"] = context.dataset.recipes.list()[0].id
-        node['metadata']["datasetId"] = context.dataset.id
-        node['metadata']["taskOwner"] = context.dl.info()['user_email']
-        node['metadata']["workload"] = [
-            {
-                "assigneeId": context.dl.info()['user_email'],
-                "load": 100
-            }
-        ]
-
-    return pipeline_json
-
-
-@given(u'I create pipeline from json in path "{path}"')
-def step_impl(context, path):
-    test_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], path)
-    with open(test_path, 'r') as pipeline_path:
-        pipeline_json = json.load(pipeline_path)
-
-    pipeline_payload = generate_pipeline_json(
-        context=context,
-        pipeline_json=pipeline_json
-    )
-
-    try:
-        context.pipeline = context.project.pipelines.create(pipeline_json=pipeline_payload, project_id=context.project.id)
-        context.to_delete_pipelines_ids.append(context.pipeline.id)
-        for node in pipeline_json['nodes']:
-            if node['type'] == 'task':
-                context.task_name = node['name']
-        context.error = None
-    except Exception as e:
-        context.error = e
 
 
 @when(u'I update node input output to infinite loop')

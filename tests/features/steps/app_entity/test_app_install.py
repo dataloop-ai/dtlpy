@@ -12,16 +12,7 @@ def step_impl(context, path):
     with open(json_path) as f:
         data = json.load(f)
 
-    # Update service runner image to latest dtlpy version if exists
-    val = fixtures.access_nested_dictionary_key(data, ['components', 'services', 'versions', 'dtlpy'])
-    if val:
-        data['components']['services'][0]['versions'].update({"dtlpy": context.dl.__version__})
-
-    # Update service runner image to latest dtlpy version if exists
-    val = fixtures.access_nested_dictionary_key(data, ['components', 'services', 'runtime', 'runnerImage'])
-    if val:
-        data['components']['services'][0]['runtime'].update(
-            {"runnerImage": f"dataloop_runner-cpu/main:{context.dl.__version__}.latest"})
+    data = fixtures.update_dtlpy_version(data)
 
     context.dpk = context.dl.entities.Dpk.from_json(_json=data, client_api=context.project._client_api,
                                                     project=context.project)
@@ -75,20 +66,28 @@ def step_impl(context, error_code):
 
 @behave.then(u"I validate service configuration in dpk is equal to service from app")
 def step_impl(context):
-    service_runtime = context.project.services.list()[0][0].runtime.to_json()
-    dpk_runtime = context.dpk.components.services[0]['runtime']
+    context.dpk_service = None
+    if not hasattr(context, "service"):
+        raise AttributeError("Please make sure context has attr 'service'")
+    service_runtime = context.service.runtime.to_json()
+    for service in context.dpk.components.services:
+        if service['name'] == context.service.name:
+            context.dpk_service = service
+            break
+    assert context.dpk_service, "TEST FAILED: Failed to find dpk_service by field service name"
+    dpk_runtime = context.dpk_service['runtime']
+    if "dataloop_runner-cpu" not in dpk_runtime['runnerImage']:
+        dpk_runtime['runnerImage'] = dpk_runtime['runnerImage'].split("/")[-1]
+        service_runtime['runnerImage'] = service_runtime['runnerImage'].split("/")[-1]
 
-    assert context.dpk.components.services[0]["name"] == context.project.services.list()[0][
-        0].name, f"TEST FAILED: Field name"
-    assert context.dpk.components.services[0]["moduleName"] == context.project.services.list()[0][
-        0].module_name, f"TEST FAILED: Field moduleName"
+    assert context.dpk_service["moduleName"] == context.service.module_name, f"TEST FAILED: Field moduleName"
     assert dpk_runtime == service_runtime, f"TEST FAILED: Field runtime"
-    assert context.dpk.components.services[0]['executionTimeout'] == context.project.services.list()[0][
-        0].execution_timeout, f"TEST FAILED: Field executionTimeout"
-    assert context.dpk.components.services[0]['onReset'] == context.project.services.list()[0][
-        0].on_reset, f"TEST FAILED: Field onReset"
-    assert context.dpk.components.services[0]['runExecutionAsProcess'] == context.project.services.list()[0][
-        0].run_execution_as_process, f"TEST FAILED: Field runExecutionAsProcess"
+    assert context.dpk_service['executionTimeout'] == context.service.execution_timeout, f"TEST FAILED: Field executionTimeout"
+    assert context.dpk_service['onReset'] == context.service.on_reset, f"TEST FAILED: Field onReset"
+    assert context.dpk_service['runExecutionAsProcess'] == context.service.run_execution_as_process, f"TEST FAILED: Field runExecutionAsProcess"
+    assert context.dpk_service['versions']['dtlpy'] == context.service.versions['dtlpy'], \
+        f"TEST FAILED: Field versions.dtlpy DPK {context.dpk.components.services[0]['versions']['dtlpy']} " \
+        f"Service {context.service.versions['dtlpy']}"
 
 
 @behave.then(u'i can create pipeline function node from the app service')
@@ -98,3 +97,13 @@ def step_impl(context):
     func_node = context.dl.FunctionNode(service=s, name='test', function_name='run')
     assert func_node is not None
     assert func_node.service is not None
+
+
+@behave.then(u'i compare service config with dpk compute configuration for the operation "{operation}"')
+def step_impl(context, operation):
+    service = context.service
+    dpk = context.dpk
+    model_dpk = context.dpk.components.models[0]
+    compute_configs = context.dpk.components.computeConfigs
+    compute_config = [item for (index, item) in enumerate(compute_configs) if item["name"] == model_dpk["computeConfigs"][operation]][0]
+    assert compute_config["runtime"]["runnerImage"] == service.runtime.runner_image, f"TEST FAILED: Field runnerImage"

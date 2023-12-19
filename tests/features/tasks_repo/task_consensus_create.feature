@@ -15,7 +15,7 @@ Feature: Tasks repository create consensus task
     When I create Task
       | task_name=min_params | due_date=auto | assignee_ids=auto | consensus_percentage=auto | consensus_assignees=auto |
     And I get app by name "scoring-and-metrics"
-    And I set app in context.feature
+    And I add app to context.feature.apps
     Then I receive a task entity
     And Task has the correct attributes for type "annotation"
     And I expect Task created with "30" items
@@ -26,7 +26,7 @@ Feature: Tasks repository create consensus task
     When I create Task
       | task_name=min_params | due_date=auto | assignee_ids=auto | consensus_percentage=50 | consensus_assignees=auto |
     And I get app by name "scoring-and-metrics"
-    And I set app in context.feature
+    And I add app to context.feature.apps
     Then I receive a task entity
     And Task has the correct attributes for type "annotation"
     And I expect Task created with "20" items
@@ -36,7 +36,7 @@ Feature: Tasks repository create consensus task
     When I create Task
       | task_name=min_params | due_date=auto | assignee_ids=auto | consensus_task_type=qualification | consensus_percentage=auto | consensus_assignees=auto |
     And I get app by name "scoring-and-metrics"
-    And I set app in context.feature
+    And I add app to context.feature.apps
     Then I receive a task entity
     And Task has the correct attributes for type "annotation"
     And I expect Task created with "30" items

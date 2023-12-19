@@ -252,7 +252,7 @@ class Recipe(entities.BaseEntity):
                                                message='file Must be pdf')
         for project_id in self.project_ids:
             project = repositories.Projects(client_api=self._client_api).get(project_id=project_id)
-            dataset = project.datasets.get(dataset_name='Binaries')
+            dataset = project.datasets._get_binaries_dataset()
             remote_path = '/.dataloop/recipes/{}/instructions'.format(self.id)
             instruction_item = dataset.items.upload(local_path=annotation_instruction_file,
                                                     remote_path=remote_path,

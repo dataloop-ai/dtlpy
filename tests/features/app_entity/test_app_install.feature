@@ -21,6 +21,7 @@ Feature: App entity Install App
     Given I have an app entity from "apps/app_service_fields.json"
     And publish the app
     When I install the app
+    And I get service by name "hello"
     Then I validate service configuration in dpk is equal to service from app
 
   @DAT-54655

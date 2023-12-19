@@ -17,3 +17,9 @@ def step_impl(context):
     filters = context.dl.Filters(use_defaults=False, field='id', values=context.cloned_item.id)
     items = list(context.item.dataset.items.list(filters=filters).all())
     assert items[0]._src_item == context.item.id, f"TEST FAILED: filter by id _src_item id is {items[0]._src_item} while expected {context.item.id}"
+
+
+@behave.then(u'I validate item is annotated')
+def step_impl(context):
+    item = context.dataset.items.get(item_id=context.item.id)
+    assert item.annotated, "TEST FAILED: Expected item to be annotated"

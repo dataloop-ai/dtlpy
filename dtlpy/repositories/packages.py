@@ -513,17 +513,18 @@ class Packages:
 
         # get package json
         package_from_json = dict()
-        if assets.paths.PACKAGE_FILENAME in os.listdir(src_path):
+        path_files = os.listdir(src_path) if src_path is not None else []
+        if assets.paths.PACKAGE_FILENAME in path_files:
             with open(os.path.join(src_path, assets.paths.PACKAGE_FILENAME), 'r') as f:
                 package_from_json = json.load(f)
 
         if requirements is not None and not isinstance(requirements, list):
             requirements = [requirements]
 
-        if requirements and assets.paths.REQUIREMENTS_FILENAME in os.listdir(src_path):
+        if requirements and assets.paths.REQUIREMENTS_FILENAME in path_files:
             logger.warning('Have both requirements param and requirements file will overwrite the requirements file')
 
-        if not requirements and assets.paths.REQUIREMENTS_FILENAME in os.listdir(src_path):
+        if not requirements and assets.paths.REQUIREMENTS_FILENAME in path_files:
             req_path = os.path.join(src_path, assets.paths.REQUIREMENTS_FILENAME)
             req_from_file = self.build_requirements(filepath=req_path)
             requirements = req_from_file
@@ -709,7 +710,7 @@ class Packages:
                                           client_api=self._client_api,
                                           project=project_to_deploy)
 
-    @_api_reference.add(path='/packages/{ids}', method='delete')
+    @_api_reference.add(path='/packages/{id}', method='delete')
     def delete(self, package: entities.Package = None, package_name=None, package_id=None):
         """
         Delete a Package object.

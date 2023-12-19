@@ -17,7 +17,7 @@ def step_impl(context):
     builder.add(
         annotation_definition=context.dl.Segmentation.from_polygon(
             geo=np.array([[100, 200], [150, 200], [300, 100], [200, 400]]),
-            label='person',
+            label='Person',
             shape=(context.item.height, context.item.width)))
     annotations = builder.upload()
     context.annotation = annotations[0]
@@ -67,3 +67,10 @@ def step_impl(context):
     should_be_geo2 = [[300, 300], [500, 500]]
     assert should_be_geo1 == context.bboxes[0].geo
     assert should_be_geo2 == context.bboxes[1].geo
+
+
+@then(u'annotation color is set to recipe color')
+def step_impl(context):
+    context.dataset = dl.datasets.get(dataset_id=context.dataset.id)
+    context.annotation = context.dataset.annotations.get(annotation_id=context.annotation.id)
+    assert context.annotation.color == context.dataset._get_ontology().color_map[context.annotation.label], 'annotation color is not set to recipe color'

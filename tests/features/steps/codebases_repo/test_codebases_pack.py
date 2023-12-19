@@ -89,9 +89,12 @@ def step_impl(context, original_path, unpack_path):
 
 @behave.then(u'Dataset by the name of "{binaries_dataset_name}" was created')
 def step_impl(context, binaries_dataset_name):
-    context.dataset_binaries = context.project.datasets.get(
-        dataset_name=binaries_dataset_name
-    )
+    if binaries_dataset_name == 'Binaries':
+        context.dataset_binaries = context.project.datasets._get_binaries_dataset()
+    else:
+        context.dataset_binaries = context.project.datasets.get(
+            dataset_name=binaries_dataset_name
+        )
 
 
 @behave.then(

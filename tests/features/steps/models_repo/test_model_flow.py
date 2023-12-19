@@ -77,6 +77,14 @@ def step_impl(context):
         context.error = e
 
 
+@behave.when(u'i predict the model on the item id "{item_id}"')
+def step_impl(context, item_id):
+    try:
+        context.execution = context.model.predict(item_id)
+    except Exception as e:
+        context.error = e
+
+
 @behave.then(u'model status should be "{status}" with execution "{flag}" that has function "{func}"')
 def step_impl(context, status, flag, func):
     num_try = 45
@@ -168,10 +176,10 @@ def step_impl(context, log_message, operation):
 
 @behave.then(u'service metadata has a model id and operation "{operation}"')
 def step_impl(context, operation):
-    service = dl.services.get(service_id=context.execution.service_id)
-    assert service.metadata.get('ml', {}).get(
+    context.service = dl.services.get(service_id=context.execution.service_id)
+    assert context.service.metadata.get('ml', {}).get(
         'modelId') == context.model.id, f"TEST FAILED: model id is not in service metadata"
-    assert service.metadata.get('ml', {}).get(
+    assert context.service.metadata.get('ml', {}).get(
         'modelOperation') == operation, f"TEST FAILED: model operation is not in service metadata"
 
 

@@ -34,6 +34,7 @@ Feature: Models repository create testing
     And I create a model with a random name
     When I rename model to "some_other_name"
     Then model name is "some_other_name"
+    Then "model" has updatedBy field
 
   @DAT-44734
   Scenario: Create a two models with the same bot

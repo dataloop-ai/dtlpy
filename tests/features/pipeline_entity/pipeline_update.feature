@@ -22,6 +22,7 @@ Feature: Pipeline update testing
     And I install pipeline in context
     And I update pipeline description
     Then Pipeline received equals Pipeline changed except for "description"
+    Then "update_pipeline" has updatedBy field
 
 
   @pipelines.delete

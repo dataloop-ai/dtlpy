@@ -92,6 +92,7 @@ class Task:
     available_actions = attr.ib()
     total_items = attr.ib()
     priority = attr.ib()
+    _description = attr.ib()
 
     # sdk
     _client_api = attr.ib(repr=False)
@@ -101,6 +102,18 @@ class Task:
     _dataset = attr.ib(default=None, repr=False)
     _tasks = attr.ib(default=None, repr=False)
     _settings = attr.ib(default=None, repr=False)
+
+    @property
+    def description(self):
+        return self._description
+
+    @description.setter
+    def description(self, description):
+        if not isinstance(description, str):
+            raise ValueError('description should be a string')
+        if self._description is None:
+            self._description = {}
+        self._description['content'] = description
 
     @staticmethod
     def _protected_from_json(_json, client_api, project, dataset):
@@ -176,7 +189,8 @@ class Task:
             created_at=_json.get('createdAt', None),
             available_actions=actions,
             total_items=_json.get('totalItems', None),
-            priority=_json.get('priority', None)
+            priority=_json.get('priority', None),
+            description=_json.get('description', None)
         )
 
     def to_json(self):
@@ -208,6 +222,7 @@ class Task:
                 attr.fields(Task).created_at,
                 attr.fields(Task).total_items,
                 attr.fields(Task)._settings,
+                attr.fields(Task)._description
             )
         )
         _json['projectId'] = self.project_id
@@ -217,6 +232,7 @@ class Task:
         _json['dueDate'] = self.due_date
         _json['totalItems'] = self.total_items
         _json['forReview'] = self.for_review
+        _json['description'] = self.description
 
         if self.available_actions is not None:
             _json['availableActions'] = [action.to_json() for action in self.available_actions]
@@ -472,3 +488,4 @@ class Task:
         :rtype: bool
         """
         return self.tasks.set_status(status=status, operation=operation, item_ids=item_ids, task_id=self.id)
+    

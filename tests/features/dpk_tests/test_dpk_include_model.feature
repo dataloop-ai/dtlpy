@@ -7,7 +7,7 @@ Feature: publish a dpk
 
 
   @DAT-50097
-  Scenario: Publishing a dpk with model
+  Scenario: Publishing a dpk with model adapter
     Given I fetch the dpk from 'apps/app_include_models_adapter.json' file
     When I add the context.dataset to the dpk model
     And I publish a dpk to the platform
@@ -47,9 +47,24 @@ Feature: publish a dpk
     And I set the model in the context
     Then Model object with the same name should be exist
     And model status should be "deployed" with execution "False" that has function "run"
-    When I add service_config to context from dpk model configuration
-    And i "evaluate" the model
+    When i "evaluate" the model
     Then model status should be "deployed" with execution "True" that has function "evaluate_model"
     And Dataset has a scores file
     When i call the precision recall api
     Then i should get a json response
+
+
+  @DAT-50097
+  Scenario: Publishing a dpk with model and compute
+    Given I fetch the dpk from 'apps/app_include_compute_models.json' file
+    When I add the context.dataset to the dpk model
+    And I set code path "models_flow" to context
+    And I pack directory by name "model_flow"
+    And I add codebase to dpk
+    And I publish a dpk to the platform
+    And  I install the app
+    And I set the model in the context
+    Then Model object with the same name should be exist
+    When i "deploy" the model
+    Then i have a model service
+    Then i compare service config with dpk compute configuration for the operation "deploy"

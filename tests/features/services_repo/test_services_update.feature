@@ -17,4 +17,6 @@ Feature: Services repository update service testing
          And I change service "concurrency" to "17"
          And I update service
          Then Service received equals service changed except for "runtime.concurrency"
+         Then "service_update" has updatedBy field
+
 

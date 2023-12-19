@@ -552,7 +552,7 @@ class Uploader:
                 total=3,
                 read=3,
                 connect=3,
-                backoff_factor=0.3,
+                backoff_factor=1,
             )
             adapter = HTTPAdapter(max_retries=retry)
             s.mount('http://', adapter)

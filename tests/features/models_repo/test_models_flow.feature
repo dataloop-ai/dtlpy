@@ -23,8 +23,8 @@ Feature: Models repository flow testing
     When i "deploy" the model
     Then model status should be "deployed" with execution "False" that has function "None"
     When i "evaluate" the model
+    Then service metadata has a model id and operation "evaluate"
     Then model status should be "deployed" with execution "True" that has function "evaluate_model"
-    And service metadata has a model id and operation "evaluate"
     And Dataset has a scores file
     When i call the precision recall api
     Then i should get a json response

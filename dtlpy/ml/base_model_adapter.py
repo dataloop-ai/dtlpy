@@ -1,10 +1,10 @@
-import copy
 import tempfile
 import datetime
 import logging
 import shutil
 import base64
 import tqdm
+import sys
 import io
 import os
 from PIL import Image
@@ -309,8 +309,6 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         if cleanup:
             shutil.rmtree(path=local_path, ignore_errors=True)
             self.logger.info("Clean-up. deleting {}".format(local_path))
-        self.model_entity.status = 'trained'
-        self.model_entity = self.model_entity.update()
 
     # ===============
     # SERVICE METHODS
@@ -339,7 +337,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         pool = ThreadPoolExecutor(max_workers=16)
 
         annotations = list()
-        for i_batch in tqdm.tqdm(range(0, len(items), batch_size), desc='predicting', unit='bt', leave=None):
+        for i_batch in tqdm.tqdm(range(0, len(items), batch_size), desc='predicting', unit='bt', leave=None, file=sys.stdout):
             batch_items = items[i_batch: i_batch + batch_size]
             batch = list(pool.map(self.prepare_item_func, batch_items))
             batch_collections = self.predict(batch, **kwargs)
@@ -415,12 +413,11 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
                     cleanup=False,
                     progress: utilities.Progress = None,
                     context: utilities.Context = None):
-        # FROM PARENT
         """
-            Train on existing model.
-            data will be taken from dl.Model.datasetId
-            configuration is as defined in dl.Model.configuration
-            upload the output the model's bucket (model.bucket)
+        Train on existing model.
+        data will be taken from dl.Model.datasetId
+        configuration is as defined in dl.Model.configuration
+        upload the output the model's bucket (model.bucket)
         """
         if isinstance(model, dict):
             model = repositories.Models(client_api=self._client_api).get(model_id=model['id'])
@@ -469,7 +466,8 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
                                 progress=99)
 
             self.save_to_model(local_path=output_path, replace=True)
-
+            model.status = 'trained'
+            model.update()
             ###########
             # cleanup #
             ###########

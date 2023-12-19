@@ -34,8 +34,10 @@ def step_impl(context):
                 for func in eval(param[1]):
                     function_name = func.get("function_name", "run")
                     description = func.get("description", None)
-                    inputs = fixtures.get_package_io(params=func['inputs'].split(','), context=context) if func.get('inputs') else []
-                    outputs = fixtures.get_package_io(params=func['outputs'].split(','), context=context) if func.get('outputs') else []
+                    inputs = fixtures.get_package_io(params=func['inputs'].split(','), context=context) if func.get(
+                        'inputs') else []
+                    outputs = fixtures.get_package_io(params=func['outputs'].split(','), context=context) if func.get(
+                        'outputs') else []
                     functions.append(dl.PackageFunction(name=function_name,
                                                         inputs=inputs,
                                                         outputs=outputs,
@@ -50,18 +52,27 @@ def step_impl(context):
     )
 
 
-@behave.when(u'I update PackageModule function "{function_index}" input "{inputs_index}"')
-def step_impl(context, function_index, inputs_index):
+@behave.when(u'I update PackageModule function "{function_index}" input "{inputs_index}" use "{source}"')
+def step_impl(context, function_index, inputs_index, source):
     f_i = int(function_index) - 1
     i_i = int(inputs_index) - 1
     assert hasattr(context, "module"), "TEST FAILED: Need to have context module - use 'When I create PackageModule'"
+    if source == 'module':
+        source = context.module
+    elif source == 'package':
+        source = context.package.modules[0]
+
     for row in context.table:
-        setattr(context.module.functions[f_i].inputs[i_i], row['key'], row['value'])
+        setattr(source.functions[f_i].inputs[i_i], row['key'], row['value'])
 
 
 @behave.then(u'I verify PackageModule params')
 def step_impl(context):
-    assert hasattr(context, "module"), "TEST FAILED: Need to have context module - use 'When I create PackageModule'"
+    if not hasattr(context, "module"):
+        if hasattr(context, "package"):
+            context.module = context.package.modules[0]
+        else:
+            assert False, "TEST FAILED: Need to have context module - use 'When I create PackageModule'"
     for row in context.table:
         att = f"context.module.{row['key']}"
         val = f"'{row['value']}'"

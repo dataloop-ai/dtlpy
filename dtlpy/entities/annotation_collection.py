@@ -94,8 +94,6 @@ class AnnotationCollection(entities.BaseEntity):
                                          'name': model_info.get('name'),
                                          'model_id': model_info.get('model_id'),
                                          }
-            metadata['user']['annotation_type'] = 'prediction'
-
         if prompt_id is not None:
             if metadata is None:
                 metadata = dict()

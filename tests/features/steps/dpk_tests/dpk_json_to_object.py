@@ -3,6 +3,7 @@ import os
 import random
 
 import behave
+from .. import fixtures
 
 
 @behave.when(u"I fetch the dpk from '{file_name}' file")
@@ -11,6 +12,9 @@ def step_impl(context, file_name):
     path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], file_name)
     with open(path, 'r') as file:
         json_object = json.load(file)
+
+    json_object = fixtures.update_dtlpy_version(json_object)
+
     context.dpk = context.dl.entities.Dpk.from_json(_json=json_object,
                                                     client_api=context.dl.client_api,
                                                     project=context.project

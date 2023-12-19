@@ -22,7 +22,7 @@ class Artifacts:
                  project_id: str = None,
                  model: entities.Model = None,
                  package: entities.Package = None,
-                 dataset_name='Binaries'):
+                 dataset_name=None):
         self._client_api = client_api
         self._project = project
         self._dataset = dataset
@@ -40,21 +40,15 @@ class Artifacts:
         if self._dataset is None:
             # get dataset from project
             try:
-                self._dataset = self.project.datasets.get(dataset_name=self.dataset_name)
+                if self.dataset_name is None:
+                    self.dataset_name = 'Binaries'
+                    self._dataset = self.project.datasets._get_binaries_dataset()
+                else:
+                    self._dataset = self.project.datasets.get(dataset_name=self.dataset_name)
             except exceptions.NotFound:
-                self._dataset = None
-            if self._dataset is None:
-                logger.debug(
-                    'Dataset for artifacts was not found. Creating... dataset name: {ds!r}. project_id={id}'.format(
-                        ds=self.dataset_name, id=self.project.id))
-                self._dataset = self.project.datasets.create(dataset_name=self.dataset_name)
-                # add system to metadata
-                if 'metadata' not in self._dataset.to_json():
-                    self._dataset.metadata = dict()
-                if 'system' not in self._dataset.metadata:
-                    self._dataset.metadata['system'] = dict()
-                self._dataset.metadata['system']['scope'] = 'system'
-                self.project.datasets.update(dataset=self._dataset, system_metadata=True)
+                raise ValueError(
+                    f'Missing "{self.dataset_name}" dataset in the project. Please contact support for help')
+
         return self._dataset
 
     @property

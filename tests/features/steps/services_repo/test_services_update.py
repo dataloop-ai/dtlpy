@@ -66,6 +66,9 @@ def step_impl(context, updated_attribute):
     updated_to_json.pop('updatedAt', None)
     origin_to_json.pop('updatedAt', None)
 
+    updated_to_json.pop('updatedBy', None)
+    origin_to_json.pop('updatedBy', None)
+
     updated_to_json.pop('version', None)
     origin_to_json.pop('version', None)
 
@@ -131,3 +134,10 @@ def step_impl(context):
     context.package = context.project.packages.get(package_id=context.service.package_id)
     context.service.package_revision = context.package.version
     context.service = context.service.update(True)
+
+
+@behave.then(u'"{resource}" has updatedBy field')
+def step_impl(context, resource: str):
+    resource = getattr(context, resource)
+    assert resource.updated_by is not None
+    assert resource.updated_by == context.dl.info()['user_email']

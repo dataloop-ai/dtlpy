@@ -881,7 +881,7 @@ class Tasks:
                                                  client_api=self._client_api)
             if not wait:
                 return command
-            backoff_factor = 0.1
+            backoff_factor = 2
             if command.type == 'BulkAddToTaskSetting':
                 backoff_factor = 8
             command = command.wait(timeout=0, backoff_factor=backoff_factor)

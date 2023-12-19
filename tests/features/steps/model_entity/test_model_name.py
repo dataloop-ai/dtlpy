@@ -9,6 +9,6 @@ def step_impl(context, model_name):
 
 @behave.then(u'model name is "{model_name}"')
 def step_impl(context, model_name):
-    model = context.dl.models.get(model_id=context.model.id)
-    assert model.name == model_name, "model name is different. from be: {}, from context: {}".format(model.name,
+    context.model = context.dl.models.get(model_id=context.model.id)
+    assert context.model.name == model_name, "model name is different. from be: {}, from context: {}".format(model.name,
                                                                                                      model_name)

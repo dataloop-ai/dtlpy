@@ -58,4 +58,3 @@ def prepare_dataset(dataset: entities.Dataset,
         cloned_dataset.metadata['system']['clone_info'].update({'filters': json.dumps(filters.prepare())})
     cloned_dataset.update(system_metadata=True)
     return cloned_dataset
-    # cloned_dataset.set_readonly(True)

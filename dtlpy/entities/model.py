@@ -105,6 +105,7 @@ class Model(entities.BaseEntity):
     _client_api = attr.ib(type=ApiClient, repr=False)
     _repositories = attr.ib(repr=False)
     _ontology = attr.ib(repr=False, default=None)
+    updated_by = attr.ib(default=None)
 
     @staticmethod
     def _protected_from_json(_json, client_api, project, package, is_fetched=True):
@@ -184,7 +185,8 @@ class Model(entities.BaseEntity):
             context=_json.get('context', {}),
             input_type=_json.get('inputType', None),
             output_type=_json.get('outputType', None),
-            module_name=_json.get('moduleName', None)
+            module_name=_json.get('moduleName', None),
+            updated_by=_json.get('updatedBy', None)
         )
         inst.is_fetched = is_fetched
         return inst
@@ -212,6 +214,7 @@ class Model(entities.BaseEntity):
                                                         attr.fields(Model).updated_at,
                                                         attr.fields(Model).input_type,
                                                         attr.fields(Model).output_type,
+                                                        attr.fields(Model).updated_by
                                                         ))
         _json['packageId'] = self.package_id
         _json['datasetId'] = self.dataset_id
@@ -230,6 +233,10 @@ class Model(entities.BaseEntity):
                 artifact = artifact.to_json(as_artifact=True)
             model_artifacts.append(artifact)
         _json['artifacts'] = model_artifacts
+
+        if self.updated_by:
+            _json['updatedBy'] = self.updated_by
+
         return _json
 
     ############
@@ -308,7 +315,8 @@ class Model(entities.BaseEntity):
                  services=repositories.Services(client_api=self._client_api,
                                                 project=self._project,
                                                 project_id=self.project_id,
-                                                model_id=self.id),
+                                                model_id=self.id,
+                                                model=self),
                  )
         return r
 

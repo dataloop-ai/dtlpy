@@ -267,7 +267,7 @@ class Models:
     def create(
             self,
             model_name: str,
-            dataset_id: str,
+            dataset_id: str = None,
             labels: list = None,
             ontology_id: str = None,
             description: str = None,
@@ -329,21 +329,21 @@ class Models:
         if output_type is None:
             output_type = entities.AnnotationType.CLASSIFICATION
 
+        if package is None and self._package is None:
+            raise exceptions.PlatformException('Must provide a Package or create from package.models')
+        elif package is None:
+            package = self._package
+
         # TODO need to remove the entire project id user interface - need to take it from dataset id (in BE)
         if project_id is None:
             if self._project is None:
                 raise exceptions.PlatformException('Please provide project_id')
             project_id = self._project.id
         else:
-            if project_id != self._project_id:
+            if project_id != self._project_id and not package.is_global:
                 logger.warning(
                     "Note! you are specified project_id {!r} which is different from repository context: {!r}".format(
                         project_id, self._project_id))
-
-        if package is None and self._package is None:
-            raise exceptions.PlatformException('Must provide a Package or create from package.models')
-        elif package is None:
-            package = self._package
 
         if model_artifacts is None:
             model_artifacts = []
@@ -395,15 +395,6 @@ class Models:
                                          client_api=self._client_api,
                                          project=self._project,
                                          package=package)
-
-        if dataset_id is None:
-            logger.warning(
-                "Model {!r} was created without a dataset. This may cause unexpected errors.".format(model.id))
-        else:
-            if model.dataset.readonly is False:
-                logger.warning(
-                    "Model is using an unlocked dataset {!r}. Make it readonly for training reproducibility".format(
-                        model.dataset.name))
 
         return model
 
@@ -487,11 +478,6 @@ class Models:
                                              client_api=self._client_api,
                                              project=self._project,
                                              package=from_model._package)
-
-        if new_model._dataset is not None and new_model._dataset.readonly is False:
-            logger.warning(
-                "Model is using an unlocked dataset {!r}. Make it readonly for training reproducibility".format(
-                    new_model.dataset.name))
 
         return new_model
 

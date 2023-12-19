@@ -235,9 +235,7 @@ class Annotation(entities.BaseEntity):
     def coordinates(self):
         color = None
         if self.type in ['binary']:
-            color = self.annotation_definition._color
-            if color is None:
-                color = self.color
+            color = self.color
         coordinates = self.annotation_definition.to_coordinates(color=color)
         return coordinates
 
@@ -446,16 +444,16 @@ class Annotation(entities.BaseEntity):
     @property
     def color(self):
         # if "dataset" is not in self - this will always get the dataset
-        if self.type == 'binary' and self.annotation_definition._color is not None:
-            color = self.annotation_definition._color
+        try:
+            colors = self.dataset._get_ontology().color_map
+        except (exceptions.BadRequest, exceptions.NotFound):
+            colors = None
+            logger.warning('Cant get dataset for annotation color. using default.')
+        if colors is not None and self.label in colors:
+            color = colors[self.label]
         else:
-            try:
-                colors = self.dataset._get_ontology().color_map
-            except (exceptions.BadRequest, exceptions.NotFound):
-                colors = None
-                logger.warning('Cant get dataset for annotation color. using default.')
-            if colors is not None and self.label in colors:
-                color = colors[self.label]
+            if self.type == 'binary' and self.annotation_definition._color is not None:
+                color = self.annotation_definition._color
             else:
                 color = (255, 255, 255)
         return color

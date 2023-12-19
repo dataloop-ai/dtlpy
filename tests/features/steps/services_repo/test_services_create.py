@@ -16,6 +16,7 @@ def step_impl(context):
     runtime = None
     execution_timeout = None
     max_attempts = None
+    pod_type = None
     bot_user = context.bot_user if hasattr(context, "bot_user") else None
 
     params = context.table.headings
@@ -44,6 +45,9 @@ def step_impl(context):
         elif param[0] == "max_attempts":
             if param[1] != "None":
                 max_attempts = int(param[1])
+        elif param[0] == "pod_type":
+            if param[1] != "None":
+                pod_type = param[1]
         elif param[0] == "bot_user":
             if param[1] != "None":
                 bot_user = context.project.bots.get(bot_name=param[1])
@@ -59,7 +63,8 @@ def step_impl(context):
         init_input=config,
         runtime=runtime,
         execution_timeout=execution_timeout,
-        max_attempts=max_attempts
+        max_attempts=max_attempts,
+        pod_type=pod_type
     )
     context.to_delete_services_ids.append(context.service.id)
     if hasattr(context, "first_service"):

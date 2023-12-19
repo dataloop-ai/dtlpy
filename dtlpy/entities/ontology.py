@@ -396,9 +396,9 @@ class Ontology(entities.BaseEntity):
     def _add_image_label(self, icon_path):
         display_data = dict()
         if self.project is not None:
-            dataset = self.project.datasets.get(dataset_name='Binaries')
+            dataset = self.project.datasets._get_binaries_dataset()
         elif self.dataset is not None:
-            dataset = self.dataset.project.datasets.get(dataset_name='Binaries')
+            dataset = self.dataset.project.datasets._get_binaries_dataset()
         else:
             raise ValueError('must have project or dataset to create with icon path')
         platform_path = "/.dataloop/ontologies/{}/labelDisplayImages/".format(self.id)

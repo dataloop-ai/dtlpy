@@ -15,6 +15,7 @@ Feature: Pipeline entity method testing
         And I create a pipeline from json
         And I update pipeline trigger action
         Then valid trigger updated
+        Then "trigger" has updatedBy field
 
     @pipelines.delete
     @testrail-C4532242

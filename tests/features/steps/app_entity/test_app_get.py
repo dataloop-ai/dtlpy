@@ -37,7 +37,11 @@ def step_impl(context, app_name):
     context.app = context.project.apps.get(app_name=app_name)
 
 
-@behave.when(u'I set app in context.feature')
+@behave.when(u'I add app to context.feature.apps')
 def step_impl(context):
-    context.feature.app = context.app
+    if hasattr(context.feature, "apps"):
+        if context.app.id not in [app.id for app in context.feature.apps]:
+            context.feature.apps.append(context.app)
+    else:
+        context.feature.apps = [context.app]
 

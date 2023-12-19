@@ -26,15 +26,21 @@ class Services:
                  client_api: ApiClient,
                  project: entities.Project = None,
                  package: entities.Package = None,
-                 project_id=None, model_id=None):
+                 project_id=None,
+                 model_id=None,
+                 model: entities.Model = None):
         self._client_api = client_api
         self._package = package
         self._project = project
+        self._model = model
+        if model_id is None:
+            if model is not None:
+                model_id = model.id
+        self._model_id = model_id
         if project_id is None:
             if project is not None:
                 project_id = project.id
         self._project_id = project_id
-        self._model_id = model_id
         self._settings = repositories.Settings(project=project, client_api=client_api)
 
     ############
@@ -78,6 +84,26 @@ class Services:
         if not isinstance(project, entities.Project):
             raise ValueError('Must input a valid Project entity')
         self._project = project
+        self._project_id = project.id
+
+    @property
+    def model(self) -> entities.Model:
+        if self._model is None:
+            if self._model_id is not None:
+                self._model = self.project.models.get(model_id=self._model_id)
+            else:
+                raise exceptions.PlatformException(
+                    error='2001',
+                    message='Cannot perform action WITHOUT model entity in services repository. Please set a model')
+        assert isinstance(self._model, entities.Model)
+        return self._model
+
+    @model.setter
+    def model(self, model: entities.Model):
+        if not isinstance(model, entities.Model):
+            raise ValueError('Must input a valid model entity')
+        self._model = model
+        self._model_id = model.id
 
     @property
     def platform_url(self):
@@ -325,14 +351,13 @@ class Services:
             raise exceptions.PlatformException(
                 error='400',
                 message='Filters resource must to be FiltersResource.SERVICE. Got: {!r}'.format(filters.resource))
-        if self._project is not None:
-            filters.add(field='projectId', values=self._project.id)
-        elif self._project_id is not None:
+        if self._project_id is not None:
             filters.add(field='projectId', values=self._project_id)
-        if self._package is not None:
-            filters.add(field='packageId', values=self._package.id)
         if self._model_id is not None:
             filters.add(field='metadata.ml.modelId', values=self._model_id)
+        if self._package is not None:
+            filters.add(field='packageId', values=self._package.id)
+
         # assert type filters
         if not isinstance(filters, entities.Filters):
             raise exceptions.PlatformException('400', 'Unknown filters type')
@@ -1474,7 +1499,7 @@ class Services:
                                             path=url,
                                             json_req=payload)
 
-    def __polling_wait(self, organization, pod_type, backoff_factor=0.1):
+    def __polling_wait(self, organization, pod_type, backoff_factor=1):
         fs_url_path = '/services/fs-cache?mode={}'.format('get')
         i = 1
         while True:

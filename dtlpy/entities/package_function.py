@@ -95,6 +95,7 @@ class FunctionIO(entities.DlEntity):
     value = entities.DlProperty(location=['value'], _type=str)
     name = entities.DlProperty(location=['name'], _type=str)
     actions = entities.DlProperty(location=['actions'], _type=list)
+    description = entities.DlProperty(location=['description'], _type=str)
 
     def __repr__(self):
         # TODO need to move to DlEntity
@@ -164,6 +165,8 @@ class FunctionIO(entities.DlEntity):
             }
             if self.actions:
                 _json['actions'] = self.actions
+            if self.description:
+                _json['description'] = self.description
         elif resource in ['execution', 'service']:
             _json = {
                 self.name: self.value

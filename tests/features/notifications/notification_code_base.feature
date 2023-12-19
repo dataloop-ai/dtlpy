@@ -9,7 +9,7 @@ Feature: Executions repository create service testing
 
   @services.delete
   @packages.delete
-  @DAT-46787
+  @DAT-44914
   Scenario: Code base error should raise notification
     Given There is a package (pushed from "faas/initError") by the name of "codebase-error"
     And There is a service by the name of "codebase-error" with module name "default_module" saved to context "service"

@@ -1,5 +1,4 @@
 import numpy as np
-import warnings
 import logging
 import time
 import tqdm
@@ -10,7 +9,7 @@ from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
-MAX_SLEEP_TIME = 8
+MAX_SLEEP_TIME = 30
 
 
 class Commands:
@@ -71,15 +70,15 @@ class Commands:
         return entities.Command.from_json(client_api=self._client_api,
                                           _json=response.json())
 
-    def wait(self, command_id, timeout=0, step=None, url=None, backoff_factor=0.1):
+    def wait(self, command_id, timeout=0, step=None, url=None, backoff_factor=1):
         """
         Wait for command to finish
 
         backoff_factor: A backoff factor to apply between attempts after the second try
         {backoff factor} * (2 ** ({number of total retries} - 1))
-        seconds. If the backoff_factor is 0.1, then :func:`.sleep` will sleep
-        for [0.0s, 0.2s, 0.4s, ...] between retries. It will never be longer
-        than 8 sec
+        seconds. If the backoff_factor is 1, then :func:`.sleep` will sleep
+        for [0s, 2s, 4s, ...] between retries. It will never be longer
+        than 30 sec
 
         :param str command_id: Command id to wait to
         :param int timeout: int, seconds to wait until TimeoutError is raised. if 0 - wait until done
@@ -103,7 +102,7 @@ class Commands:
             if not command.in_progress():
                 break
             elapsed = time.time() - start
-            sleep_time = np.min([timeout - elapsed, backoff_factor * (2 ** (num_tries - 1)), MAX_SLEEP_TIME])
+            sleep_time = np.min([timeout - elapsed, backoff_factor * (2 ** num_tries), MAX_SLEEP_TIME])
             num_tries += 1
             logger.debug("Command {!r} is running for {:.2f}[s] and now Going to sleep {:.2f}[s]".format(command.id,
                                                                                                          elapsed,

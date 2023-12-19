@@ -5,6 +5,7 @@ import os
 import random
 import dtlpy as dl
 
+
 @behave.when(u'I create an execution with "{input_type}"')
 def step_impl(context, input_type):
     time.sleep(5)
@@ -157,6 +158,8 @@ def step_impl(context, execution_status):
         if execution.latest_status['status'] == execution_status:
             success = True
             break
+        elif execution.latest_status['status'] != execution_status and execution.latest_status['status'] not in ['in-progress', 'inProgress', 'created', 'pending']:
+            break
         time.sleep(interval)
 
     assert success, f"TEST FAILED: Execution status is {execution.latest_status['status']}, after {round(num_try * interval / 60, 1)} minutes"
@@ -199,12 +202,16 @@ def step_impl(context, item_path):
 
 @behave.when(u'I execute pipeline with input type "{input_type}"')
 def step_impl(context, input_type):
-    execution_input = list()
-    if input_type == dl.PackageInputType.ITEM:
+    if input_type == "None":
+        execution_input = None
+    elif input_type == dl.PackageInputType.ITEM:
+        execution_input = list()
         execution_input.append(context.dl.FunctionIO(
             type=dl.PackageInputType.ITEM,
             value={'item_id': context.item.id},
             name='item'))
+    else:
+        raise ValueError("input_type must be 'None' or 'Item'")
 
     context.execution = context.pipeline.execute(
         execution_input=execution_input)

@@ -50,7 +50,7 @@ def step_impl(context, path, expected_response, interval=20, num_try=5):
                                                       path=path)
         if success:
             break
-        dl.logger.warning("Try number {}".format(num_try + 1))
+        dl.logger.warning("Try number {}".format(i + 1))
         dl.logger.warning("Request failed with error message {}".format(response.text))
         time.sleep(interval)
 

@@ -6,7 +6,7 @@ Feature: Publish multiple models using dpk
     And I create a dataset by the name of "model" in the project
 
   @DAT-52048
-  Scenario: Publishing a dpk with model
+  Scenario: Publishing a dpk with multiple models
     Given I fetch the dpk from 'apps/app_include_multiple_models.json' file
     When I add the context.dataset to the dpk model
     And I publish a dpk to the platform

@@ -6,9 +6,20 @@ def step_impl(context):
     context.service_get = context.project.services.get(service_id=context.service.id)
 
 
+@behave.then(u'Service is archived')
+def step_impl(context):
+    assert context.service_get.archive is True, "TEST FAILED: Expected archived to be True , Got {}".format(
+        context.service_get.archive)
+
+
 @behave.when(u'I get service by name')
 def step_impl(context):
     context.service_get = context.project.services.get(service_name=context.service.name)
+
+
+@behave.when(u'I get service by name "{input_name}"')
+def step_impl(context, input_name):
+    context.service = context.project.services.get(service_name=input_name)
 
 
 @behave.then(u'Service received equals to service created')

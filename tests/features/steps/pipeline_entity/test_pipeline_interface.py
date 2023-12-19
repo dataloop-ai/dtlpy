@@ -1,8 +1,9 @@
 import uuid
-
 import dtlpy as dl
 import behave
 import random
+import os
+import json
 
 
 @behave.given(u'I create "{node_type}" node with params')
@@ -153,3 +154,86 @@ def step_impl(context):
 def step_imp(context, att, val):
     setattr(context.node, att, eval(val))
     context.pipeline.update()
+
+
+def generate_pipeline_json(context, pipeline_json):
+    pipeline_json['name'] = 'json-pipe-{}'.format(random.randrange(10000, 100000))
+    pipeline_json['creator'] = context.dl.info()['user_email']
+    pipeline_json['projectId'] = context.project.id
+    pipeline_json['orgId'] = context.project.org['id']
+
+    for node in pipeline_json['nodes']:
+        node['projectId'] = context.project.id
+
+    datasets_node = [node for node in pipeline_json['nodes'] if node['type'] == 'storage']
+    for node in datasets_node:
+        node['name'] = context.dataset.name
+        node['metadata']["datasetId"] = context.dataset.id
+
+    task_nodes = [node for node in pipeline_json['nodes'] if node['type'] == 'task']
+    for node in task_nodes:
+        node['projectId'] = context.project.id
+        node['metadata']["recipeTitle"] = context.dataset.recipes.list()[0].title
+        node['metadata']["recipeId"] = context.dataset.recipes.list()[0].id
+        node['metadata']["datasetId"] = context.dataset.id
+        node['metadata']["taskOwner"] = context.dl.info()['user_email']
+        node['metadata']["workload"] = [
+            {
+                "assigneeId": context.dl.info()['user_email'],
+                "load": 100
+            }
+        ]
+
+    function_nodes = [node for node in pipeline_json['nodes'] if node['type'] == 'function']
+    for node in function_nodes:
+        node['namespace']['serviceName'] = context.service.name
+        node['namespace']['packageName'] = context.package.name
+        node['namespace']['projectName'] = context.project.name
+
+    ml_nodes = [node for node in pipeline_json['nodes'] if node['type'] == 'ml']
+    for node in ml_nodes:
+        node['namespace']['projectName'] = context.project.name
+        if node['namespace']['functionName'] == "train":
+            node['inputs'][0]['defaultValue'] = context.model.id
+        elif node['namespace']['functionName'] == "predict":
+            node['name'] = context.model.name
+            node['metadata']["modelId"] = context.model.id
+            node['metadata']["modelName"] = context.model.name
+        elif node['namespace']['functionName'] == "evaluate":
+            for node_input in node['inputs']:
+                if node_input['type'] == 'Model':
+                    node_input['defaultValue'] = context.model.id
+                elif node_input['type'] == 'Dataset':
+                    node_input['defaultValue'] = context.dataset.id
+
+    custom_nodes = [node for node in pipeline_json['nodes'] if node['type'] == 'custom']
+    for node in custom_nodes:
+        node['namespace']['projectName'] = context.project.name
+        node['namespace']['packageName'] = context.dpk.name
+        node['projectId'] = context.project.id
+        node['dpkName'] = context.dpk.name
+        node['appName'] = context.dpk.display_name
+
+    return pipeline_json
+
+
+@behave.given(u'I create pipeline from json in path "{path}"')
+def step_impl(context, path):
+    test_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], path)
+    with open(test_path, 'r') as pipeline_path:
+        pipeline_json = json.load(pipeline_path)
+
+    pipeline_payload = generate_pipeline_json(
+        context=context,
+        pipeline_json=pipeline_json
+    )
+
+    try:
+        context.pipeline = context.project.pipelines.create(pipeline_json=pipeline_payload, project_id=context.project.id)
+        context.to_delete_pipelines_ids.append(context.pipeline.id)
+        for node in pipeline_json['nodes']:
+            if node['type'] == 'task':
+                context.task_name = node['name']
+        context.error = None
+    except Exception as e:
+        context.error = e

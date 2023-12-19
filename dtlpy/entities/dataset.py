@@ -244,9 +244,8 @@ class Dataset(entities.BaseEntity):
 
     @readonly.setter
     def readonly(self, state):
-        raise exceptions.PlatformException(
-            error='400',
-            message='Cannot set attribute readonly. Please use "set_readonly({})" method'.format(state))
+        import warnings
+        warnings.warn("`readonly` flag on dataset is deprecated, doing nothing.", DeprecationWarning)
 
     @property
     def labels_flat_dict(self):
@@ -518,11 +517,8 @@ class Dataset(entities.BaseEntity):
 
             dataset.set_readonly(state=True)
         """
-        if not isinstance(state, bool):
-            raise exceptions.PlatformException(
-                error='400',
-                message='Argument "state" must be bool. input type: {}'.format(type(state)))
-        return self.datasets.set_readonly(dataset=self, state=state)
+        import warnings
+        warnings.warn("`readonly` flag on dataset is deprecated, doing nothing.", DeprecationWarning)
 
     def clone(self,
               clone_name=None,

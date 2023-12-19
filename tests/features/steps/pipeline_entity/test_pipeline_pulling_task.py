@@ -52,9 +52,12 @@ def step_impl(context, task_type):
     context.pipeline.nodes.add(context.task_node).connect(node=dataset_node, source_port=context.task_node.outputs[0])
     context.task_node.add_trigger(filters=filters)
 
-    context.pipeline.update()
-    pipeline = context.project.pipelines.get(pipeline_name=context.pipeline_name)
-    pipeline.install()
+    try:
+        context.pipeline.update()
+        pipeline = context.project.pipelines.get(pipeline_name=context.pipeline_name)
+        pipeline.install()
+    except Exception as e:
+        context.error = e
 
     time.sleep(5)
 

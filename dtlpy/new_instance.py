@@ -166,14 +166,16 @@ class Dtlpy:
         REGULAR_S = 'regular-s'
         REGULAR_M = 'regular-m'
         REGULAR_L = 'regular-l'
-        REGULAR_XL = 'regular-xl'
         HIGHMEM_MICRO = 'highmem-micro'
         HIGHMEM_XS = 'highmem-xs'
         HIGHMEM_S = 'highmem-s'
         HIGHMEM_M = 'highmem-m'
         HIGHMEM_L = 'highmem-l'
-        HIGHMEM_XL = 'highmem-xl'
-        GPU_K80_S = 'gpu-k80-s'
+        GPU_K80_S = "gpu-k80-s"
+        GPU_K80_M = "gpu-k80-m"
+        GPU_T4_S = "gpu-t4-s"
+        GPU_T4_M = "gpu-t4-m"
+
 
     class LoggingLevel:
         DEBUG = 'debug'

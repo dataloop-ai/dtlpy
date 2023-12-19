@@ -229,6 +229,8 @@ class Pipeline(entities.BaseEntity):
     _original_variables = attr.ib(repr=False, type=List[Variable])
     _repositories = attr.ib(repr=False)
 
+    updated_by = attr.ib(default=None)
+
     @staticmethod
     def _protected_from_json(_json, client_api, project, is_fetched=True):
         """
@@ -298,6 +300,7 @@ class Pipeline(entities.BaseEntity):
             status=_json.get('status', None),
             original_settings=settings,
             original_variables=json_variables,
+            updated_by=_json.get('updatedBy', None),
         )
         for node in _json.get('nodes', list()):
             inst.nodes.add(node=cls.pipeline_node(node))
@@ -352,7 +355,8 @@ class Pipeline(entities.BaseEntity):
                                                         attr.fields(Pipeline).settings,
                                                         attr.fields(Pipeline).variables,
                                                         attr.fields(Pipeline)._original_settings,
-                                                        attr.fields(Pipeline)._original_variables
+                                                        attr.fields(Pipeline)._original_variables,
+                                                        attr.fields(Pipeline).updated_by,
                                                         ))
 
         _json['projectId'] = self.project_id
@@ -377,6 +381,8 @@ class Pipeline(entities.BaseEntity):
             _json['description'] = self.description
         if self.revisions is not None:
             _json['revisions'] = self.revisions
+        if self.updated_by is not None:
+            _json['updatedBy'] = self.updated_by
 
         return _json
 

@@ -139,7 +139,7 @@ def step_impl(context):
 def step_impl(context):
     context.trigger = context.pipeline.triggers.list()[0][0]
     context.trigger.actions = [dl.TriggerAction.UPDATED]
-    context.trigger.update()
+    context.trigger = context.trigger.update()
 
 
 @behave.then(u'valid trigger updated')
@@ -239,7 +239,7 @@ def step_impl(context, name: str):
 
 @behave.when(u'I upload item in "{item_path}" to pipe dataset')
 def step_impl(context, item_path):
-    time.sleep(30)
+    time.sleep(5)
     item_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], item_path)
     context.item = context.dataset.items.upload(local_path=item_path)
 
@@ -604,8 +604,12 @@ def step_impl(context):
     execution = None
     success = False
     while time.time() - start_time < timeout:
-        context.cycle = context.pipeline.pipeline_executions.list().items[0]
-        if context.cycle.status == 'success':
+        cycles = context.pipeline.pipeline_executions.list().items
+        success = [False for i in cycles]
+        for i in range(len(cycles)):
+            if cycles[i].status == 'success':
+                success[i] = True
+        if all(success):
             success = True
             break
         time.sleep(interval)
@@ -613,13 +617,12 @@ def step_impl(context):
     if success:
         services = context.project.services.list().all()
         for service in services:
-            if service.name.startswith('code'):
-                executions = service.executions.list()
-                assert executions.items_count == 1
-                execution = executions.items[0]
-                break
-
-    assert execution is not None, "TEST FAILED: execution was not found"
-    assert execution.output['taskName'] == context.task.name
-    assert execution.output['pipelineName'] == context.pipeline.name
-    assert execution.output['nodeName'] == [n for n in context.pipeline.nodes if n.node_type == 'code'][0].name
+            executions = service.executions.list()
+            assert executions.items_count == 1
+            execution = executions.items[0]
+            assert execution is not None, "TEST FAILED: execution was not found"
+            assert execution.output['taskName'] == context.task.name
+            assert execution.output['pipelineName'] == context.pipeline.name
+            assert execution.output['nodeName'] == [n for n in context.pipeline.nodes if n.namespace.service_name == service.name][0].name
+            assert execution.output['assignmentName'] == context.task.assignments.list()[0].name
+            assert execution.output['itemStatus'] == context.item_status

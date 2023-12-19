@@ -32,4 +32,9 @@ Feature: Annotation Entity Add annotation
         When I add annotation to audio using add annotation method
         Then audio in host has annotation added
 
-
+    @DAT-56077
+    Scenario: annotation color is set to default
+        Given Item in path "0000000162.jpg" is uploaded to "Dataset"
+        And I have a segmentation annotation
+        And Classes in file: "classes_new.json" are uploaded to test Dataset
+        Then annotation color is set to recipe color

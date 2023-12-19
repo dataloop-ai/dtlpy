@@ -113,6 +113,7 @@ class Filters:
         self._ref_op = None
         self._ref_assignment_id = None
         self._ref_task_id = None
+        self._system_space = None
 
         self._use_defaults = use_defaults
         self.__add_defaults()
@@ -145,6 +146,14 @@ class Filters:
         self._resource = resource
         self.reset()
         self.__add_defaults()
+
+    @property
+    def system_space(self):
+        return self._system_space
+
+    @system_space.setter
+    def system_space(self, val: bool):
+        self._system_space = val
 
     def reset(self):
         self.or_filter_list = list()
@@ -443,7 +452,8 @@ class Filters:
 
         if self.context is not None:
             _json['context'] = self.context
-
+        if self._system_space is not None:
+            _json['systemSpace'] = self._system_space
         return _json
 
     def sort_by(self, field, value: FiltersOrderByDirection = FiltersOrderByDirection.ASCENDING):

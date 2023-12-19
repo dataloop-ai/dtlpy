@@ -1,12 +1,16 @@
-# Feature: Dataset Entity repo services
+ Feature: Create test for dataset directory tree
 
-#    Background: Initiate Platform Interface
-#        Given Platform Interface is initialized as dlp and Environment is set according to git branch
-#        And I create a project by the name of "dataset_repo_methods"
-#        And I create a dataset with a random name
+    Background: Initiate Platform Interface
+        Given Platform Interface is initialized as dlp and Environment is set according to git branch
+        And I create a project by the name of "dataset_dir_tree_test"
 
-#    Scenario: Delete dataset
-#        When I delete a dataset entity
-#        Then Dataset with same name does not exists
+    @DAT-53904
+    Scenario: Create dataset
+        Given I create a dataset named "dir_tree_test"
+        Then dataset.directory_tree.dir_names contains "/"
+        And I upload an item by the name of "test_item.jpg"
+        And I get an item thumbnail response
+        And dataset.directory_tree.dir_names contains "/.dataloop"
+        And dataset.directory_tree.dir_names contains "/.dataloop/thumbnails"
 
 

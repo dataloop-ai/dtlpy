@@ -65,21 +65,9 @@ class Codebases:
         if self._dataset is None:
             # get dataset from project
             try:
-                self._dataset = self.project.datasets.get(dataset_name='Binaries')
+                self._dataset = self.project.datasets._get_binaries_dataset()
             except exceptions.NotFound:
-                self._dataset = None
-            if self._dataset is None:
-                logger.debug(
-                    'Dataset for codebases was not found. Creating... dataset name: "Binaries". project_id={}'.format(
-                        self.project.id))
-                self._dataset = self.project.datasets.create(dataset_name='Binaries')
-                # add system to metadata
-                if 'metadata' not in self._dataset.to_json():
-                    self._dataset.metadata = dict()
-                if 'system' not in self._dataset.metadata:
-                    self._dataset.metadata['system'] = dict()
-                self._dataset.metadata['system']['scope'] = 'system'
-                self.project.datasets.update(dataset=self._dataset, system_metadata=True)
+                raise ValueError('Missing "Binaries" dataset in the project. Please contact support for help')
         assert isinstance(self._dataset, entities.Dataset)
         return self._dataset
 

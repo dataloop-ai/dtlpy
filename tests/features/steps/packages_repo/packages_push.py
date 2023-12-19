@@ -153,6 +153,11 @@ def step_impl(context):
     context.package = context.package.update()
 
 
+@behave.when(u'i update the context module from package')
+def step_impl(context):
+    context.module = context.package.modules[0]
+
+
 @behave.then(u'I expect package version to be "{version}" and revision list size "{revision_size}"')
 def step_impl(context, version, revision_size):
     package_revision_size = len(context.package.revisions)

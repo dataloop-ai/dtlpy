@@ -11,7 +11,7 @@ Feature: Packages entity method testing
   Scenario: Update PackageModule - Should be updated with expected values
     When I create PackageModule with params
       | name=package_module | entry_point=main.py | functions=[{'name':'run','inputs':'item'}] |
-    And I update PackageModule function "1" input "1"
+    And I update PackageModule function "1" input "1" use "module"
       | key  | value  |
       | name | item_1 |
     Then I verify PackageModule params

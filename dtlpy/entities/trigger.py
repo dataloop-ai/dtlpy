@@ -84,6 +84,8 @@ class BaseTrigger(entities.BaseEntity):
     _op_type = attr.ib(default='service')
     _repositories = attr.ib(repr=False)
 
+    updated_by = attr.ib(default=None)
+
     @staticmethod
     def _get_operation(operation):
         op_type = operation.get('type', None)
@@ -243,6 +245,7 @@ class BaseTrigger(entities.BaseEntity):
                                                               attr.fields(BaseTrigger).created_at,
                                                               attr.fields(BaseTrigger).updated_at,
                                                               attr.fields(BaseTrigger).operation,
+                                                              attr.fields(BaseTrigger).updated_by,
                                                               ))
 
         # rename
@@ -251,6 +254,8 @@ class BaseTrigger(entities.BaseEntity):
         _json['updatedAt'] = self.updated_at
         if self.is_global is not None:
             _json['global'] = self.is_global
+        if self.updated_by is not None:
+            _json['updatedBy'] = self.updated_by
         return _json
 
     def delete(self):
@@ -342,7 +347,8 @@ class Trigger(BaseTrigger):
             op_type=operation.get('type', None),
             spec=spec,
             pipeline_id=pipeline_id,
-            operation=operation
+            operation=operation,
+            updated_by=_json.get('updatedBy', None),
         )
 
 

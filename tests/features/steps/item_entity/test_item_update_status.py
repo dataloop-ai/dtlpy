@@ -80,7 +80,7 @@ def step_impl(context):
 def step_impl(context, status):
     try:
         context.item.update_status(status=status, task_id=context.task.id)
-
+        context.item_status = status
     except context.dl.exceptions.PlatformException as e:
         assert False, "Failed to update item_status \n".format(e)
 
@@ -89,7 +89,7 @@ def step_impl(context, status):
 def step_impl(context, status):
     try:
         context.item.update_status(status=status, task_id=context.task.id, clear=True)
-
+        context.item_status = status
     except context.dl.exceptions.PlatformException as e:
         assert False, "Failed to update item_status \n".format(e)
 

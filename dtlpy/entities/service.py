@@ -80,8 +80,6 @@ class InstanceCatalog(str, Enum):
          - regular pod with medium size
        * - REGULAR_L
          - regular pod with large size
-       * - REGULAR_XL
-         - regular pod with extra large size
        * - HIGHMEM_XS
          - highmem pod with extra small size
        * - HIGHMEM_S
@@ -90,25 +88,27 @@ class InstanceCatalog(str, Enum):
          - highmem pod with medium size
        * - HIGHMEM_L
          - highmem pod with large size
-       * - HIGHMEM_XL
-         - highmem pod with extra large size
        * - GPU_K80_S
-         - GPU pod with small size
+         - GPU NVIDIA K80 pod with small size
        * - GPU_K80_M
-         - GPU pod with medium size
+         - GPU NVIDIA K80 pod with medium size
+       * - GPU_T4_S
+         - GPU NVIDIA T4 pod with regular memory
+       * - GPU_T4_M
+         - GPU NVIDIA T4 pod with highmem
     """
     REGULAR_XS = "regular-xs"
     REGULAR_S = "regular-s"
     REGULAR_M = "regular-m"
     REGULAR_L = "regular-l"
-    REGULAR_XL = "regular-xl"
     HIGHMEM_XS = "highmem-xs"
     HIGHMEM_S = "highmem-s"
     HIGHMEM_M = "highmem-m"
     HIGHMEM_L = "highmem-l"
-    HIGHMEM_XL = "highmem-xl"
     GPU_K80_S = "gpu-k80-s"
     GPU_K80_M = "gpu-k80-m"
+    GPU_T4_S = "gpu-t4"
+    GPU_T4_M = "gpu-t4-m"
 
 
 class RuntimeType(str, Enum):
@@ -223,6 +223,7 @@ class Service(entities.BaseEntity):
     max_attempts = attr.ib()
     mode = attr.ib(repr=False)
     metadata = attr.ib()
+    archive = attr.ib(repr=False)
 
     # SDK
     _package = attr.ib(repr=False)
@@ -231,6 +232,7 @@ class Service(entities.BaseEntity):
     # repositories
     _project = attr.ib(default=None, repr=False)
     _repositories = attr.ib(repr=False)
+    updated_by = attr.ib(default=None)
 
     @property
     def createdAt(self):
@@ -265,7 +267,7 @@ class Service(entities.BaseEntity):
         return status, service
 
     @classmethod
-    def from_json(cls, _json: dict, client_api: ApiClient=None, package=None, project=None, is_fetched=True):
+    def from_json(cls, _json: dict, client_api: ApiClient = None, package=None, project=None, is_fetched=True):
         """
         Build a service entity object from a json
 
@@ -325,7 +327,9 @@ class Service(entities.BaseEntity):
             secrets=_json.get("secrets", None),
             type=_json.get("type", None),
             mode=_json.get('mode', dict()),
-            metadata=_json.get('metadata', None)
+            metadata=_json.get('metadata', None),
+            archive=_json.get('archive', None),
+            updated_by=_json.get('updatedBy', None)
         )
         inst.is_fetched = is_fetched
         return inst
@@ -449,7 +453,9 @@ class Service(entities.BaseEntity):
                 attr.fields(Service).secrets,
                 attr.fields(Service)._type,
                 attr.fields(Service).mode,
-                attr.fields(Service).metadata
+                attr.fields(Service).metadata,
+                attr.fields(Service).archive,
+                attr.fields(Service).updated_by,
             )
         )
 
@@ -468,6 +474,9 @@ class Service(entities.BaseEntity):
         _json['onReset'] = self.on_reset
         _json['createdAt'] = self.created_at
         _json['updatedAt'] = self.updated_at
+
+        if self.updated_by is not None:
+            _json['updatedBy'] = self.updated_by
 
         if self.max_attempts is not None:
             _json['maxAttempts'] = self.max_attempts
@@ -493,6 +502,8 @@ class Service(entities.BaseEntity):
         if self.metadata:
             _json['metadata'] = self.metadata
 
+        if self.archive:
+            _json['archive'] = self.archive
         return _json
 
     def update(self, force=False):

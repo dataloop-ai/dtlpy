@@ -258,6 +258,7 @@ from tests.features.steps.notifications import notifications
 from tests.features.steps.annotations_repo import test_annotations_format_json
 from tests.features.steps.xray import test_xray
 from tests.features.steps.pipeline_entity import pipeline_ml
+from tests.features.steps.dataset_entity import test_directory_tree
 
 from tests.features.steps.billing_steps import object_creation_steps
 from tests.features.steps.billing_steps import test_get_plan_steps

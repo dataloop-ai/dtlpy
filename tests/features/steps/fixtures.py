@@ -2,6 +2,7 @@ from behave import fixture
 import os
 import json
 import datetime
+import dtlpy as dl
 
 
 @fixture
@@ -181,6 +182,8 @@ def get_package_io(params, context):
             val.append(context.dl.FunctionIO(type=context.dl.PACKAGE_INPUT_TYPE_TASK, name=key))
         elif key == 'assignment':
             val.append(context.dl.FunctionIO(type=context.dl.PACKAGE_INPUT_TYPE_ASSIGNMENT, name=key))
+        elif key == 'itemWithDescription':
+            val.append(context.dl.FunctionIO(type=context.dl.PACKAGE_INPUT_TYPE_ITEM, name=key, description='item'))
 
     return val
 
@@ -191,10 +194,39 @@ def access_nested_dictionary_key(dict_input, keys):
     for key in keys:
         if key in val:
             if isinstance(val[key], list):
-                val = val[key][0]
+                if val[key]:
+                    val = val[key][0]
+                else:
+                    val = None
+                    break
             else:
                 val = val[key]
         else:
             val = None
             break
     return val
+
+
+def update_dtlpy_version(json_obj):
+    """
+    For DPK
+    Check if component attribute from the list 'component_attributes' is contained the keys: 'versions' / 'runtime'.
+    if True - Check if the obj keys value is 'dtlpy_version' - if True - update to current sdk version
+    if False - Skip to next component attribute
+    Return: json_obj
+    """
+    component_attributes = ["services", "computeConfigs"]
+    for component_att in component_attributes:
+        val = access_nested_dictionary_key(json_obj, ['components', component_att, 'versions', 'dtlpy'])
+        if val:
+            for obj in json_obj['components'][component_att]:
+                if obj['versions']['dtlpy'] == "dtlpy_version":
+                    obj['versions'].update({"dtlpy": dl.__version__})
+
+        val = access_nested_dictionary_key(json_obj, ['components', component_att, 'runtime', 'runnerImage'])
+        if val:
+            for obj in json_obj['components'][component_att]:
+                if "dtlpy_version" in obj['runtime']["runnerImage"]:
+                    obj['runtime'].update({"runnerImage": f"dataloop_runner-cpu/main:{dl.__version__}.latest"})
+
+    return json_obj

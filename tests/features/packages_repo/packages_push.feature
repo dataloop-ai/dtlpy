@@ -19,13 +19,3 @@ Feature: Packages repository push service testing
             |codebase_id=None|package_name=None|src_path=packages_push|inputs=None|outputs=None|
         Then I receive another package entity
         And 1st package and 2nd package only differ in code base id
-
-    @packages.delete
-    @DAT-50555
-    Scenario: Push local package when Binraies dataset was deleted
-        Given I delete dataset Binaries
-        When I push "first" package
-            |codebase_id=None|package_name=None|src_path=packages_push|inputs=None|outputs=None|
-        Then I receive package entity
-        And New Binaries dataset is created
-

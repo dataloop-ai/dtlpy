@@ -94,7 +94,8 @@ class PipelineNodeIO:
                  action: str = None,
                  default_value=None,
                  variable_name: str = None,
-                 actions: list = None):
+                 actions: list = None,
+                 description: str = None):
         """
         Pipeline Node
 
@@ -116,6 +117,7 @@ class PipelineNodeIO:
         self.port_percentage = port_percentage
         self.default_value = default_value
         self.variable_name = variable_name
+        self.description = description
 
         if action is not None:
             warnings.warn('action param has been deprecated in version 1.80', DeprecationWarning)
@@ -141,6 +143,7 @@ class PipelineNodeIO:
             default_value=_json.get('defaultValue', None),
             variable_name=_json.get('variableName', None),
             actions=_json.get('actions', None),
+            description=_json.get('description', None),
         )
 
     def to_json(self):
@@ -158,7 +161,8 @@ class PipelineNodeIO:
             _json['actions'] = self.actions
         if self.default_value:
             _json['defaultValue'] = self.default_value
-
+        if self.description:
+            _json['description'] = self.description
         return _json
 
 

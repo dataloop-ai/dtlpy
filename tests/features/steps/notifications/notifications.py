@@ -41,7 +41,7 @@ def step_impl(context):
 
 @behave.given(u'I delete service code base')
 def step_impl(context):
-    dataset = context.project.datasets.get(dataset_name='Binaries')
+    dataset = context.project.datasets._get_binaries_dataset()
     for item in dataset.items.list().all():
         item.delete()
 

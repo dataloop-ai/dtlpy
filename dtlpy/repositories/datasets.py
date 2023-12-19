@@ -96,6 +96,21 @@ class Datasets:
         filters.add(field='dir', values=folder_path + '*')
         return filters
 
+    def _get_binaries_dataset(self):
+        filters = entities.Filters(resource=entities.FiltersResource.DATASET)
+        filters.add(field='name', values='Binaries')
+        filters.system_space = True
+        datasets = self.list(filters=filters)
+        if len(datasets) == 0:
+            # empty list
+            raise exceptions.PlatformException('404', 'Dataset not found. Name: "Binaries"')
+            # dataset = None
+        elif len(datasets) > 1:
+            raise exceptions.PlatformException('400', 'More than one dataset with same name.')
+        else:
+            dataset = datasets[0]
+        return dataset
+
     @property
     def platform_url(self):
         return self._client_api._get_resource_url("projects/{}/datasets".format(self.project.id))
@@ -173,7 +188,7 @@ class Datasets:
         **Prerequisites**: You must be an *owner* or *developer* to use this method.
 
         :param str name: list by name
-        :param str creator: list by 
+        :param str creator: list by
         :param dtlpy.entities.filters.Filters filters: Filters entity containing filters parameters
         :return: List of datasets
         :rtype: list
@@ -183,16 +198,10 @@ class Datasets:
         .. code-block:: python
             filters = dl.Filters(resource='datasets')
             filters.add(field='readonly', values=False)
-
-            datasets = project.datasets.list(name='name', filters=filters)
+            datasets = project.datasets.list(filters=filters)
         """
-
-        success, response = self._client_api.gen_request(
-            path='/datasets/count', req_type='POST', json_req={"projectIds": [self._project.id]})
-        total = response.json()['total']
-
         if filters is None:
-            filters = entities.Filters(resource='datasets')
+            filters = entities.Filters(resource=entities.FiltersResource.DATASET)
         # assert type filters
         elif not isinstance(filters, entities.Filters):
             raise exceptions.PlatformException(error='400',
@@ -208,36 +217,41 @@ class Datasets:
             filters.add(field='name', values=name)
         if creator is not None:
             filters.add(field='creator', values=creator)
-
         if self._project is not None:
             filters.context = {"projects": [self._project.id]}
+        filters.page_size = 1000
+        filters.page = 0
+        datasets = list()
+        while True:
+            success, response = self._client_api.gen_request(req_type='POST',
+                                                             json_req=filters.prepare(),
+                                                             path=url,
+                                                             headers={'user_query': filters._user_query})
+            if success:
+                pool = self._client_api.thread_pools('entity.create')
+                datasets_json = response.json()['items']
+                jobs = [None for _ in range(len(datasets_json))]
+                # return triggers list
+                for i_dataset, dataset in enumerate(datasets_json):
+                    jobs[i_dataset] = pool.submit(entities.Dataset._protected_from_json,
+                                                  **{'client_api': self._client_api,
+                                                     '_json': dataset,
+                                                     'datasets': self,
+                                                     'project': self.project})
 
-        filters.page_size = total
-
-        success, response = self._client_api.gen_request(json_req=filters.prepare(), req_type='POST',
-                                                         path=url, headers={'user_query': filters._user_query})
-
-        if success:
-            pool = self._client_api.thread_pools('entity.create')
-            datasets_json = response.json()['items']
-            jobs = [None for _ in range(len(datasets_json))]
-            # return triggers list
-            for i_dataset, dataset in enumerate(datasets_json):
-                jobs[i_dataset] = pool.submit(entities.Dataset._protected_from_json,
-                                              **{'client_api': self._client_api,
-                                                 '_json': dataset,
-                                                 'datasets': self,
-                                                 'project': self.project})
-
-            # get all results
-            results = [j.result() for j in jobs]
-            # log errors
-            _ = [logger.warning(r[1]) for r in results if r[0] is False]
-            # return good jobs
-            datasets = miscellaneous.List(
-                [r[1] for r in results if r[0] is True])
-        else:
-            raise exceptions.PlatformException(response)
+                # get all results
+                results = [j.result() for j in jobs]
+                # log errors
+                _ = [logger.warning(r[1]) for r in results if r[0] is False]
+                # return good jobs
+                datasets.extend([r[1] for r in results if r[0] is True])
+                if response.json()['hasNextPage'] is True:
+                    filters.page += 1
+                else:
+                    break
+            else:
+                raise exceptions.PlatformException(response)
+        datasets = miscellaneous.List(datasets)
         return datasets
 
     @_api_reference.add(path='/datasets/{id}', method='get')
@@ -755,7 +769,7 @@ class Datasets:
         Download dataset's annotations by filters.
 
         You may filter the dataset both for items and for annotations and download annotations.
-
+        
         Optional -- download annotations as: mask, instance, image mask of the item.
 
         **Prerequisites**: You must be in the role of an *owner* or *developer*.
@@ -903,7 +917,7 @@ class Datasets:
                            ):
         """
         Upload annotations to dataset. 
-
+        
         Example for remote_root_path: If the item filepath is a/b/item and
         remote_root_path is /a the start folder will be b instead of a
 
@@ -974,10 +988,5 @@ class Datasets:
 
             project.datasets.set_readonly(dataset='dataset_entity', state=True)
         """
-        if dataset.readonly != state:
-            patch = {'readonly': state}
-            self.update(dataset=dataset,
-                        patch=patch)
-            dataset._readonly = state
-        else:
-            logger.warning('Dataset is already "readonly={}". Nothing was done'.format(state))
+        import warnings
+        warnings.warn("`readonly` flag on dataset is deprecated, doing nothing.", DeprecationWarning)
