@@ -39,3 +39,10 @@ def step_impl(context):
         raise dl.exceptions.PlatformException(response)
 
     context.dataset_list = response.json()['items']
+
+
+@behave.given(u'I Add dataset to context.datasets')
+def step_impl(context):
+    if not hasattr(context, "datasets"):
+        context.datasets = list()
+    context.datasets.append(context.dataset)

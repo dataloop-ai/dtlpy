@@ -13,7 +13,10 @@ def step_impl(context, package_name, entry_point):
                                'input_size': 256},
         output_type=dl.AnnotationType.BOX,
     )
-    model_repo = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], 'models_flow')
+    if package_name == "ac-lr-package":
+        model_repo = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], 'model_ac_lr')
+    else:
+        model_repo = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], 'models_flow')
     module = dl.PackageModule.from_entry_point(
         entry_point=os.path.join(model_repo, entry_point))
     module.entry_point = entry_point

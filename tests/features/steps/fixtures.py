@@ -215,7 +215,7 @@ def update_dtlpy_version(json_obj):
     if False - Skip to next component attribute
     Return: json_obj
     """
-    component_attributes = ["services", "computeConfigs"]
+    component_attributes = ["services", "computeConfigs", "modules"]
     for component_att in component_attributes:
         val = access_nested_dictionary_key(json_obj, ['components', component_att, 'versions', 'dtlpy'])
         if val:

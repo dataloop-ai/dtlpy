@@ -156,26 +156,44 @@ def step_imp(context, att, val):
     context.pipeline.update()
 
 
+def check_no_connection_for_input(pipeline_json, node_input):
+    connections = [connection['src']['portId'] for connection in pipeline_json['connections']]
+    # If portId in connection return False
+    if node_input['portId'] in connections:
+        return False
+    return True
+
+
 def generate_pipeline_json(context, pipeline_json):
     pipeline_json['name'] = 'json-pipe-{}'.format(random.randrange(10000, 100000))
     pipeline_json['creator'] = context.dl.info()['user_email']
     pipeline_json['projectId'] = context.project.id
     pipeline_json['orgId'] = context.project.org['id']
 
-    for node in pipeline_json['nodes']:
+    for node in pipeline_json.get('nodes', []):
         node['projectId'] = context.project.id
 
-    datasets_node = [node for node in pipeline_json['nodes'] if node['type'] == 'storage']
-    for node in datasets_node:
-        node['name'] = context.dataset.name
-        node['metadata']["datasetId"] = context.dataset.id
+    datasets_node = [node for node in pipeline_json.get('nodes', []) if node['type'] == 'storage']
+    if not hasattr(context, "datasets"):
+        for node in datasets_node:
+            node['name'] = context.dataset.name
+            node['metadata']["datasetId"] = context.dataset.id
+    else:
+        for index in range(len(datasets_node)):
+            datasets_node[index]['name'] = context.datasets[index].name
+            datasets_node[index]['metadata']["datasetId"] = context.datasets[index].id
 
-    task_nodes = [node for node in pipeline_json['nodes'] if node['type'] == 'task']
+    task_nodes = [node for node in pipeline_json.get('nodes', []) if node['type'] == 'task']
     for node in task_nodes:
         node['projectId'] = context.project.id
-        node['metadata']["recipeTitle"] = context.dataset.recipes.list()[0].title
-        node['metadata']["recipeId"] = context.dataset.recipes.list()[0].id
-        node['metadata']["datasetId"] = context.dataset.id
+        if not hasattr(context, "datasets"):
+            node['metadata']["recipeTitle"] = context.dataset.recipes.list()[0].title
+            node['metadata']["recipeId"] = context.dataset.recipes.list()[0].id
+            node['metadata']["datasetId"] = context.dataset.id
+        else:
+            node['metadata']["recipeTitle"] = context.datasets[0].recipes.list()[0].title
+            node['metadata']["recipeId"] = context.datasets[0].recipes.list()[0].id
+            node['metadata']["datasetId"] = context.datasets[0].id
         node['metadata']["taskOwner"] = context.dl.info()['user_email']
         node['metadata']["workload"] = [
             {
@@ -184,16 +202,16 @@ def generate_pipeline_json(context, pipeline_json):
             }
         ]
 
-    function_nodes = [node for node in pipeline_json['nodes'] if node['type'] == 'function']
+    function_nodes = [node for node in pipeline_json.get('nodes', []) if node['type'] == 'function']
     for node in function_nodes:
         node['namespace']['serviceName'] = context.service.name
         node['namespace']['packageName'] = context.package.name
         node['namespace']['projectName'] = context.project.name
 
-    ml_nodes = [node for node in pipeline_json['nodes'] if node['type'] == 'ml']
+    ml_nodes = [node for node in pipeline_json.get('nodes', []) if node['type'] == 'ml']
     for node in ml_nodes:
         node['namespace']['projectName'] = context.project.name
-        if node['namespace']['functionName'] == "train":
+        if node['namespace']['functionName'] == "train" and check_no_connection_for_input(pipeline_json, node['inputs'][0]):
             node['inputs'][0]['defaultValue'] = context.model.id
         elif node['namespace']['functionName'] == "predict":
             node['name'] = context.model.name
@@ -201,18 +219,25 @@ def generate_pipeline_json(context, pipeline_json):
             node['metadata']["modelName"] = context.model.name
         elif node['namespace']['functionName'] == "evaluate":
             for node_input in node['inputs']:
-                if node_input['type'] == 'Model':
+                if node_input['type'] == 'Model' and check_no_connection_for_input(pipeline_json, node_input):
                     node_input['defaultValue'] = context.model.id
-                elif node_input['type'] == 'Dataset':
+                elif node_input['type'] == 'Dataset' and check_no_connection_for_input(pipeline_json, node_input):
                     node_input['defaultValue'] = context.dataset.id
 
-    custom_nodes = [node for node in pipeline_json['nodes'] if node['type'] == 'custom']
+    custom_nodes = [node for node in pipeline_json.get('nodes', []) if node['type'] == 'custom']
     for node in custom_nodes:
         node['namespace']['projectName'] = context.project.name
         node['namespace']['packageName'] = context.dpk.name
         node['projectId'] = context.project.id
         node['dpkName'] = context.dpk.name
         node['appName'] = context.dpk.display_name
+
+    variables = pipeline_json.get('variables', []) if pipeline_json.get('variables', []) else []
+    for variable in variables:
+        if variable['type'] == "Model":
+            variable['value'] = context.model.id
+        elif variable['type'] == "Dataset":
+            variable['value'] = context.dataset.id
 
     return pipeline_json
 

@@ -30,3 +30,9 @@ def step_impl(context):
         raise e
 
 
+@when(u'I update ml node "{node_name}" to variable "{variable_name}"')
+def step_impl(context, node_name, variable_name):
+    for node in context.pipeline.nodes:
+        if node_name == node.name:
+            node.metadata['variableModel'] = variable_name
+            context.pipeline.update()

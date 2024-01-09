@@ -105,3 +105,23 @@ def step_impl(context, x):
                                                          right=100 + i,
                                                          label='Box'))
     context.item.annotations.upload(builder)
+
+
+@behave.when(u'I have box annotation_definition with params')
+def step_impl(context):
+    params = dict()
+    for row in context.table:
+        params[row['key']] = eval(row['value'])
+
+    keys = ['label', 'top', 'left', 'bottom', 'right']
+    for key in keys:
+        if key not in params.keys():
+            assert False, f"TEST FAILED: Missing {key} in {params.keys()}"
+
+    context.annotation_definition = context.dl.Box(
+        label=params['label'],
+        top=params['top'],
+        left=params['left'],
+        bottom=params['bottom'],
+        right=params['right']
+    )

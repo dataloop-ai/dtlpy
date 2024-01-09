@@ -6,7 +6,7 @@ import dtlpy as dl
 @behave.given(u'I create a dataset named "{dataset_name}"')
 def step_impl(context, dataset_name):
     assert isinstance(dataset_name, str)
-    context.dataset = context.project.datasets.create(dataset_name=dataset_name)
+    context.dataset = context.project.datasets.create(dataset_name=dataset_name, index_driver=context.index_driver_var)
 
 
 @behave.then(u'I get an item thumbnail response')

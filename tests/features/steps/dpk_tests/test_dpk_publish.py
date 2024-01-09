@@ -1,3 +1,5 @@
+import json
+import os
 import random
 import dtlpy as dl
 
@@ -12,6 +14,40 @@ def step_impl(context):
         context.feature.dpks.append(context.published_dpk)
     else:
         context.feature.dpks = [context.published_dpk]
+
+
+@behave.when(u'I add context to the dpk')
+def step_impl(context):
+    dpk_context = {
+        "project": context.project.id
+    }
+    context.dpk.context = dpk_context
+    context.dpk.scope = "organization"
+
+
+@behave.when(u'I add pipeline template "{template_path}" to the dpk')
+def step_impl(context, template_path):
+    pipeline_template_path = template_path
+    path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], pipeline_template_path)
+    with open(path, 'r') as file:
+        json_object = json.load(file)
+    context.dpk.components[json_object["name"]] = {
+        "type": "pipelineTemplate",
+        "spec": json_object
+    }
+
+
+@behave.then(u'The pipeline template "{template}" should be created')
+def step_impl(context, template):
+    pipeline_template_name = context.dpk.components[template]["spec"]["name"]
+    success, response = context.project._client_api.gen_request(req_type='POST', path='/pipelines/templates/query',
+                                                                json_req={
+                                                                    "org": {
+                                                                        "filter": { "$and": [{"name": pipeline_template_name }]}
+                                                                    }
+                                                                })
+    template = response.json()["org"]["items"][0]
+    assert template["name"] == pipeline_template_name
 
 
 @behave.when(u"I add the context.dataset to the dpk model")

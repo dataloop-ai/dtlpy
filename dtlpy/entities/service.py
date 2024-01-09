@@ -502,7 +502,7 @@ class Service(entities.BaseEntity):
         if self.metadata:
             _json['metadata'] = self.metadata
 
-        if self.archive:
+        if self.archive is not None:
             _json['archive'] = self.archive
         return _json
 

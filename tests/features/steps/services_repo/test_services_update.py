@@ -43,16 +43,24 @@ def step_impl(context, attribute, value):
     elif attribute in ['packageRevision']:
         setattr(context.service, attribute, int(value))
     else:
+        if value in ['True', 'False']:
+            value = eval(value)
         setattr(context.service, attribute, value)
 
 
 @behave.when(u'I update service')
 def step_impl(context):
-    context.service_update = context.service.update()
+    try:
+        context.service_update = context.service.update()
+        context.error = None
+    except Exception as e:
+        context.error = e
 
 
 @behave.then(u'Service received equals service changed except for "{updated_attribute}"')
 def step_impl(context, updated_attribute):
+    if not hasattr(context, "service_update"):
+        raise context.error
     updated_to_json = context.service_update.to_json()
     origin_to_json = context.service.to_json()
     if 'runtime' in updated_attribute:

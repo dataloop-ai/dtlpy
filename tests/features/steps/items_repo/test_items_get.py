@@ -1,5 +1,6 @@
 import behave
 import os
+import time
 
 
 @behave.given(u"There is an item")
@@ -102,3 +103,19 @@ def step_impl(context):
     assert context.dataset.items.list(filters=filters).items_count, "TEST FAILED: No consensus items in dataset"
 
     context.item = context.dataset.items.list(filters=filters).items[0]
+
+
+@behave.when(u'Dataset in index "{index}" have "{items_count}" items')
+def step_impl(context, index, items_count):
+    dataset = context.datasets[int(index)]
+    num_try = 12
+    interval = 10
+    finished = False
+
+    for i in range(num_try):
+        if dataset.items.list().items_count == int(items_count):
+            finished = True
+            break
+        time.sleep(interval)
+
+    assert finished, f"TEST FAILED: Expected: {items_count} items , Actual: {dataset.items.list().items_count}"

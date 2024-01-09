@@ -14,6 +14,11 @@ def step_impl(context, file_name):
         json_object = json.load(file)
 
     json_object = fixtures.update_dtlpy_version(json_object)
+    if "context" in json_object.keys():
+        if json_object['context'].get("project", None) is not None:
+            json_object['context']['project'] = context.project.id
+        if json_object['context'].get("organization", None) is not None:
+            json_object['context']['organization'] = context.project.org['id']
 
     context.dpk = context.dl.entities.Dpk.from_json(_json=json_object,
                                                     client_api=context.dl.client_api,

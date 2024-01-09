@@ -207,6 +207,7 @@ class Apps:
                                             'projectId': self.project.id,
                                             'orgId': organization_id,
                                             'dpkName': dpk.name,
+                                            "dpkConfig": dpk.to_json(),
                                             'dpkVersion': dpk.version,
                                             'scope': dpk.scope
                                             },

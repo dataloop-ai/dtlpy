@@ -13,8 +13,7 @@ def step_impl(context):
                 if item.annotated:
                     item.update_status(status=context.dl.ItemStatus.COMPLETED)
                 else:
-                    # item.update_status(status=context.dl.ItemStatus.DISCARDED)
-                    item.update_status(status='discard')
+                    item.update_status(status=context.dl.ItemStatus.DISCARDED)
 
     except context.dl.exceptions.PlatformException as e:
         assert False, "Failed to update item_status \n".format(e)

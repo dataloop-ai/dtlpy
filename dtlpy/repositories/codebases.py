@@ -251,7 +251,8 @@ class Codebases:
              name: str = None,
              extension: str = 'zip',
              description: str = '',
-             ignore_directories: List[str] = None):
+             ignore_directories: List[str] = None,
+             ignore_max_file_size: bool = False):
         """
         Zip a local code directory and post to codebases.
 
@@ -292,7 +293,8 @@ class Codebases:
             # create zipfile
             miscellaneous.Zipping.zip_directory(zip_filename=zip_filename,
                                                 directory=directory,
-                                                ignore_directories=ignore_directories)
+                                                ignore_directories=ignore_directories,
+                                                ignore_max_file_size=ignore_max_file_size)
             zip_md = self.__file_hash(zip_filename)
 
             # get latest version

@@ -1,5 +1,6 @@
 @qa-nightly
 @bot.create
+@rc_only
 Feature: Executions repository create service testing
 
   Background: Initiate Platform Interface and create a project

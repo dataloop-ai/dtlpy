@@ -6,6 +6,11 @@ def step_impl(context):
     context.service_get = context.project.services.get(service_id=context.service.id)
 
 
+@behave.when(u'I set service in context')
+def step_impl(context):
+    context.service = context.project.services.get(service_id=context.service.id)
+
+
 @behave.then(u'Service is archived')
 def step_impl(context):
     assert context.service_get.archive is True, "TEST FAILED: Expected archived to be True , Got {}".format(
@@ -29,7 +34,8 @@ def step_impl(context):
 
 @behave.then(u'I expect preemptible value to be "{value}"')
 def step_impl(context, value):
-    assert context.service.runtime.preemptible == eval(value), "TEST FAILED: Expected preemptible to be {} , Got {}".format(value, context.service.execution_timeout)
+    assert context.service.runtime.preemptible == eval(
+        value), "TEST FAILED: Expected preemptible to be {} , Got {}".format(value, context.service.execution_timeout)
 
 
 @behave.when(u'I get service in index "{service_index}"')

@@ -45,3 +45,10 @@ def step_impl(context):
     else:
         context.feature.apps = [context.app]
 
+
+@behave.when(u'I validate global app by the name "{app_name}" is installed')
+def step_impl(context, app_name):
+    try:
+        context.dl.apps.get(app_name=app_name)
+    except Exception as e:
+        raise e

@@ -13,7 +13,7 @@ def step_impl(context):
 
 @behave.then(u'I receive a Service list of "{count}" objects')
 def step_impl(context, count):
-    assert context.service_list.items_count == int(count)
+    assert context.service_list.items_count == int(count), f"TEST FAILED: Expected {count} , Actual {context.service_list.items_count}"
     if int(count) > 0:
         for page in context.service_list:
             for service in page:

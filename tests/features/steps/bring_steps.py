@@ -27,7 +27,6 @@ from tests.features.steps.datasets_repo import tets_dataset_upload_labels
 from tests.features.steps.dataset_entity import test_dataset_repo_methods
 from tests.features.steps.dataset_entity import test_add_labels_methods
 
-
 from tests.features.steps.annotations_repo import test_annotations_get
 from tests.features.steps.annotations_repo import test_annotations_list
 from tests.features.steps.annotations_repo import test_annotations_delete
@@ -178,6 +177,7 @@ from tests.features.steps.models_repo import test_models_create
 from tests.features.steps.models_repo import test_models_list
 from tests.features.steps.models_repo import test_models_delete
 from tests.features.steps.models_repo import test_model_flow
+from tests.features.steps.models_repo import test_models_get
 
 from tests.features.steps.model_entity import test_model_name
 
@@ -208,8 +208,8 @@ from tests.features.steps.items_repo import test_upload_and_download_images
 
 from tests.features.steps.annotations_repo import test_rotated_box_points
 from tests.features.steps.app_entity import test_app_install, test_app_uninstall, test_app_update, test_app_get
-from tests.features.steps.dpk_tests import dpk_json_to_object, test_dpk_publish, test_dpk_list,\
-    test_dpk_pull, test_dpk_get
+from tests.features.steps.dpk_tests import dpk_json_to_object, test_dpk_publish, test_dpk_list, \
+    test_dpk_pull, test_dpk_get, test_dpk_delete
 
 from tests.features.steps.webm_converter import test_failed_video_message
 
@@ -252,8 +252,6 @@ from tests.features.steps.annotations_repo import test_annotations_adding_multip
 from tests.features.steps.drivers_repo import test_drivers_create
 from tests.features.steps.drivers_repo import test_drivers_delete
 from tests.features.steps.notifications import notifications
-
-
 
 from tests.features.steps.annotations_repo import test_annotations_format_json
 from tests.features.steps.xray import test_xray

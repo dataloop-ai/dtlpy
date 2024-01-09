@@ -64,8 +64,8 @@ class FeatureSets:
         # default filters
         if filters is None:
             filters = entities.Filters(resource=entities.FiltersResource.FEATURE_SET)
-            if self._project is not None:
-                filters.add(field='project', values=self._project.id)
+        if self._project is not None:
+            filters.context = {'projects': [self._project.id]}
 
         # assert type filters
         if not isinstance(filters, entities.Filters):
@@ -106,19 +106,20 @@ class FeatureSets:
                 raise exceptions.PlatformException(
                     error='400',
                     message='feature_set_name must be string')
-
-            feature_sets = [feature_set for feature_set in self.list() if feature_set.name == feature_set_name]
-            if len(feature_sets) == 0:
+            filters = entities.Filters(resource=entities.FiltersResource.FEATURE_SET)
+            filters.add(field='name', values=feature_set_name)
+            feature_sets = self.list(filters=filters)
+            if feature_sets.items_count == 0:
                 raise exceptions.PlatformException(
                     error='404',
                     message='Feature set not found. name: {!r}'.format(feature_set_name))
-            elif len(feature_sets) > 1:
+            elif feature_sets.items_count > 1:
                 # more than one matching project
                 raise exceptions.PlatformException(
                     error='404',
                     message='More than one feature_set with same name. Please "get" by id')
             else:
-                feature_set = feature_sets[0]
+                feature_set = feature_sets.items[0]
         else:
             raise exceptions.PlatformException(
                 error='400',

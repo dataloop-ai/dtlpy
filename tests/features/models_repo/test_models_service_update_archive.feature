@@ -8,8 +8,9 @@ Feature: Models repository delete flow testing
     When I upload labels to dataset
     And I upload "5" box annotation to item
 
-  @DAT-56475
-  Scenario: test model delete services
+
+  @DAT-57724
+  Scenario: test model update archive services
     When I create a dummy model package by the name of "dummymodel" with entry point "main.py"
     And I create a model from package by the name of "test-model" with status "created"
     When i "train" the model
@@ -17,17 +18,11 @@ Feature: Models repository delete flow testing
     Then model status should be "trained" with execution "True" that has function "train_model"
     When I get service by id
     Then Service is archived
-
-    When i "deploy" the model
-    Then model status should be "deployed" with execution "False" that has function "None"
-    And i have a model service
-    When I delete service by "id"
-    When I get service by id
-    Then Service is archived
-
-    When i "evaluate" the model
-    Then model status should be "trained" with execution "True" that has function "evaluate_model"
-    And service metadata has a model id and operation "evaluate"
-    When I delete service by "id"
-    When I get service by id
-    Then Service is archived
+    When I set service in context
+    When I get service revisions
+    And I change service "concurrency" to "17"
+    And I update service
+    Then Service received equals service changed except for "runtime.concurrency"
+    When I change service "archive" to "False"
+    When I update service
+    Then "BadRequest" exception should be raised

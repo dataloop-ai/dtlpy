@@ -1,3 +1,5 @@
+import time
+
 import behave
 import os
 
@@ -63,6 +65,7 @@ def step_impl(context, size):
 @behave.then(u'PageEntity items has next page')
 def step_impl(context):
     assert context.list.has_next_page
+
 
 @behave.then(u'PageEntity items does not have next page')
 def step_impl(context):
@@ -219,3 +222,27 @@ def step_impl(context):
     mp4_item_json.pop('metadata')
     item_in_page_json.pop('metadata')
     assert mp4_item_json == item_in_page_json
+
+
+@behave.when(u'I validate all items is annotated in dataset in index "{index}"')
+@behave.when(u'I validate all items is annotated')
+def step_impl(context, index=None):
+    filters = context.dl.Filters()
+    filters.add(field='annotated', values=False)
+    num_try = 15
+    interval = 15
+    finished = False
+
+    if index:
+        dataset = context.datasets[int(index)]
+    else:
+        dataset = context.dataset
+
+    for i in range(num_try):
+        items_count = dataset.items.list(filters=filters).items_count
+        if items_count == 0:
+            finished = True
+            break
+        time.sleep(interval)
+
+    assert finished, f"TEST FAILED: Not all items annotated , number left - {items_count}"

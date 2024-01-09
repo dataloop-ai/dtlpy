@@ -147,3 +147,14 @@ def step_impl(context):
         assert ann_snap
         assert ann_snap['frame'] == platform_snap['frame']
         assert ann_snap['data'] == platform_snap['data']
+
+
+@behave.when(u'I update items annotations in task with context.annotation_definition')
+def step_impl(context):
+    filters = context.dl.Filters()
+    filters.add(field='annotated', values=True)
+    pages = context.task.get_items(filters=filters)
+    for item in pages.all():
+        for annotation in item.annotations.list():
+            annotation.annotation_definition = context.annotation_definition
+            annotation.update()

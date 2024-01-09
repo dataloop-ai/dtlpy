@@ -189,7 +189,7 @@ class Dpks:
             dpk = dpk_v.items[0]
         return dpk
 
-    def publish(self, dpk: entities.Dpk = None) -> entities.Dpk:
+    def publish(self, dpk: entities.Dpk = None, ignore_max_file_size: bool = False) -> entities.Dpk:
         """
         Upload a dpk entity to the dataloop platform.
 
@@ -216,7 +216,8 @@ class Dpks:
             dpk.codebase = self.project.codebases.pack(directory=os.getcwd(),
                                                        name=dpk.display_name,
                                                        extension='dpk',
-                                                       ignore_directories=['artifacts'])
+                                                       ignore_directories=['artifacts'],
+                                                       ignore_max_file_size=ignore_max_file_size)
 
         success_pack, response_pack = self._client_api.gen_request(req_type='post',
                                                                    json_req=dpk.to_json(),

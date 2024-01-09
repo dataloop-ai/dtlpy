@@ -1,7 +1,8 @@
 from collections import namedtuple
-from typing import List
+from typing import List, Union
 import traceback
 import enum
+
 
 from .. import entities, repositories, exceptions
 from ..services.api_client import ApiClient
@@ -74,25 +75,94 @@ class Panel(entities.DlEntity):
         return cls(_dict=_json)
 
 
+class ToolbarInvoke(entities.DlEntity):
+    type: str = entities.DlProperty(location=['type'], _type=str)
+    panel: str = entities.DlProperty(location=['panel'], _type=str)
+    namespace: str = entities.DlProperty(location=['namespace'], _type=str)
+    source: str = entities.DlProperty(location=['source'], _type=str)
+    input_options: dict = entities.DlProperty(location=['inputOptions'], _type=dict)
+
+    def to_json(self) -> dict:
+        return self._dict.copy()
+
+    @classmethod
+    def from_json(cls, _json):
+        return cls(_dict=_json)
+
+
+class CustomNodeScope(str, enum.Enum):
+    GLOBAL = "global",
+    PROJECT = "project",
+    NODE = 'node'
+
+
+class PipelineNode(entities.DlEntity):
+    display_name: str = entities.DlProperty(location=['displayName'], _type=str)
+    panel: str = entities.DlProperty(location=['panel'], _type=str)
+    invoke: ToolbarInvoke = entities.DlProperty(location=['invoke'], _kls='ToolbarInvoke')
+    icon: str = entities.DlProperty(location=['icon'], _type=str)
+    categories: List[str] = entities.DlProperty(location=['categories'], _type=list)
+    description: str = entities.DlProperty(location=['description'], _type=str)
+    configuration: dict = entities.DlProperty(location=['configuration'], _type=dict)
+    scope: CustomNodeScope = entities.DlProperty(location=['scope'], _type=CustomNodeScope)
+
+    def to_json(self) -> dict:
+        return self._dict.copy()
+
+    @classmethod
+    def from_json(cls, _json):
+        return cls(_dict=_json)
+
+
+class DpkComputeConfig(entities.DlEntity):
+    run_execution_as_process: bool = entities.DlProperty(location=['runExecutionAsProcess'], _type=bool)
+    execution_timeout: int = entities.DlProperty(location=['executionTimeout'], _type=int)
+    drain_time: int = entities.DlProperty(location=['drainTime'], _type=int)
+    on_reset: str = entities.DlProperty(location=['onReset'], _type=str)
+    runtime: dict = entities.DlProperty(location=['runtime'], _type=dict)
+    bot_user_name: str = entities.DlProperty(location=['botUserName'], _type=str)
+    max_attempts: int = entities.DlProperty(location=['maxAttempts'], _type=int)
+    use_user_jwt: bool = entities.DlProperty(location=['useUserJwt'], _type=bool)
+    driver_id: str = entities.DlProperty(location=['driverId'], _type=str)
+    versions: dict = entities.DlProperty(location=['versions'], _type=dict)
+    name: str = entities.DlProperty(location=['name'], _type=str)
+
+    def to_json(self) -> dict:
+        return self._dict.copy()
+
+    @classmethod
+    def from_json(cls, _json):
+        return cls(_dict=_json)
+
+
+class DpkComponentChannel(entities.DlEntity):
+    name: str = entities.DlProperty(location=['name'], _type=str)
+    icon: str = entities.DlProperty(location=['icon'], _type=str)
+    description: str = entities.DlProperty(location=['description'], _type=str)
+    is_global: bool = entities.DlProperty(location=['global'], _type=bool)
+    metadata: dict = entities.DlProperty(location=['metadata'], _type=dict)
+    context: dict = entities.DlProperty(location=['context'], _type=dict)
+    filters: List[dict] = entities.DlProperty(location=['filters'], _type=list)
+
+    def to_json(self) -> dict:
+        return self._dict.copy()
+
+    @classmethod
+    def from_json(cls, _json):
+        return cls(_dict=_json)
+
+
 class Components(entities.DlEntity):
-    panels: List[Panel] = entities.DlProperty(location=['panels'],
-                                              _kls='Panel')
-    modules: List[entities.PackageModule] = entities.DlProperty(location=['modules'],
-                                                                _kls='PackageModule')
-    services: List[entities.Service] = entities.DlProperty(location=['services'],
-                                                           # _kls='Service'
-                                                           )
-    triggers: List[entities.Trigger] = entities.DlProperty(location=['triggers'],
-                                                           # _kls='Trigger'
-                                                           )
-    pipelines: List[entities.Pipeline] = entities.DlProperty(location=['pipelines'],
-                                                             # _kls='Pipeline'
-                                                             )
-    toolbars: List[Toolbar] = entities.DlProperty(location=['toolbars'],
-                                                  _kls='Toolbar')
-    models: List[entities.Model] = entities.DlProperty(location=['models'],
-                                                       # _kls='Model'
-                                                       )
+    panels: List[Panel] = entities.DlProperty(location=['panels'], _kls='Panel')
+    modules: List[entities.PackageModule] = entities.DlProperty(location=['modules'], _kls='PackageModule')
+    services: List[dict] = entities.DlProperty(location=['services'])
+    triggers: List[dict] = entities.DlProperty(location=['triggers'])
+    pipeline_nodes: List[PipelineNode] = entities.DlProperty(location=['pipelineNodes'])
+    toolbars: List[Toolbar] = entities.DlProperty(location=['toolbars'], _kls='Toolbar')
+    models: List[dict] = entities.DlProperty(location=['models'])
+    compute_configs: List[DpkComputeConfig] = entities.DlProperty(location=['computeConfigs'], _kls='DpkComputeConfig')
+    channels: List[DpkComponentChannel] = entities.DlProperty(location=['channels'], _kls='DpkComponentChannel')
+    pipeline_templates: List[dict] = entities.DlProperty(location=['pipelineTemplates'])
 
     @panels.default
     def default_panels(self):
@@ -114,10 +184,36 @@ class Components(entities.DlEntity):
         self._dict['triggers'] = list()
         return self._dict['triggers']
 
-    @pipelines.default
+    @pipeline_nodes.default
     def default_pipelines(self):
         self._dict['pipelines'] = list()
         return self._dict['pipelines']
+
+    @toolbars.default
+    def default_toolbars(self):
+        self._dict['toolbars'] = list()
+        return self._dict['toolbars']
+
+    @models.default
+    def default_models(self):
+        self._dict['models'] = list()
+        return self._dict['models']
+
+    @compute_configs.default
+    def default_compute_configs(self):
+        self._dict['computeConfigs'] = list()
+        return self._dict['computeConfigs']
+
+    @channels.default
+    def default_channels(self):
+        self._dict['channels'] = list()
+        return self._dict['channels']
+
+    @pipeline_templates.default
+    def default_pipeline_templates(self):
+        self._dict['pipelineTemplates'] = list()
+        return self._dict['pipelineTemplates']
+
 
     @classmethod
     def from_json(cls, _json):
@@ -141,7 +237,8 @@ class Dpk(entities.DlEntity):
     icon: str = entities.DlProperty(location=['icon'], _type=str)
     tags: list = entities.DlProperty(location=['tags'], _type=list)
     codebase: str = entities.DlProperty(location=['codebase'], _kls="Codebase")
-    scope: dict = entities.DlProperty(location=['scope'], _type=dict)
+    scope: dict = entities.DlProperty(location=['scope'], _type=str)
+    context: dict = entities.DlProperty(location=['context'], _type=dict)
 
     # defaults
     components: Components = entities.DlProperty(location=['components'], _kls='Components')
@@ -153,11 +250,6 @@ class Dpk(entities.DlEntity):
     project: entities.Project
     _revisions = None
     __repositories = None
-
-    @components.default
-    def default_components(self):
-        self._dict['components'] = dict()
-        return self._dict['components']
 
     ################
     # repositories #
@@ -326,9 +418,29 @@ class Dpk(entities.DlEntity):
         :return: App entity
         :rtype: dtlpy.entities.App
         """
+        components = _json.get('components', dict())
 
-        inst = cls(_dict=_json,
-                   client_api=client_api,
-                   project=project,
-                   is_fetched=is_fetched)
-        return inst
+        keys = list(components.keys())
+        components_version = 'v2'
+        for key in keys:
+            if isinstance(components[key], list):
+                components_version = 'v1'
+                break
+        if components_version == 'v1':
+            return cls(
+                _dict=_json,
+                client_api=client_api,
+                project=project,
+                is_fetched=is_fetched
+            )
+        else:
+            return DpkV2(
+                _dict=_json,
+                client_api=client_api,
+                project=project,
+                is_fetched=is_fetched
+            )
+
+
+class DpkV2(Dpk):
+    components: dict = entities.DlProperty(location=['components'])

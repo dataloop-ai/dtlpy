@@ -9,6 +9,13 @@ def step_impl(context, item_path):
     context.item = context.dataset.items.upload(local_path=context.item_path)
 
 
+@behave.given(u'I upload items in the path "{items_path}" to the dataset in index "{index}"')
+@behave.when(u'I upload items in the path "{items_path}" to the dataset in index "{index}"')
+def step_impl(context, items_path, index):
+    context.items_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], items_path)
+    context.datasets[int(index)].items.upload(local_path=context.items_path)
+
+
 @behave.given(u'I upload an item of type "{item_type}" to the dataset')
 def step_impl(context, item_type):
     items_types_list = {

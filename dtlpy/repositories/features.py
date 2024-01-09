@@ -96,6 +96,9 @@ class Features:
             filters.add(field='featureSetId', values=self._feature_set.id)
         if self._item is not None:
             filters.add(field='entityId', values=self._item.id)
+        if self._project_id is not None:
+            filters.context = {"projects": [self._project_id]}
+
         paged = entities.PagedEntities(items_repository=self,
                                        filters=filters,
                                        page_offset=filters.page,
@@ -129,10 +132,10 @@ class Features:
                value,
                project_id: str = None,
                feature_set_id: str = None,
-               entity_id: str = None,
+               entity=None,
                version: str = None,
                parent_id: str = None,
-               org_id: str = None,
+               org_id: str = None
                ):
         """
         Create a new Feature vector
@@ -140,7 +143,7 @@ class Features:
         :param immutable value: actual vector - immutable (list of floats [1,2,3])
         :param str project_id: the id of the project where feature will be created
         :param str feature_set_id: ref to a featureSet this vector is a part of
-        :param str entity_id: id of the entity the featureVector is linked to (item.id, annotation.id etc)
+        :param entity: the entity the featureVector is linked to (item.id, annotation.id etc)
         :param str version: version of the featureSet generator
         :param str parent_id: optional: parent FeatureSet id - used when FeatureVector is a subFeature
         :param str org_id: the id of the org where featureVector will be created
@@ -161,9 +164,11 @@ class Features:
             feature_set_id = self._feature_set.id
 
         payload = {'project': project_id,
-                   'entityId': entity_id,
+                   'entityId': entity.id,
                    'value': value,
-                   'featureSetId': feature_set_id}
+                   'featureSetId': feature_set_id,
+                   'datasetId': entity.dataset.id}
+
         if version is not None:
             payload['version'] = version
         if parent_id is not None:

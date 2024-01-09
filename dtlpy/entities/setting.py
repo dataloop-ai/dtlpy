@@ -28,6 +28,7 @@ class SettingsValueTypes(str, Enum):
     NUMBER = "number",
     SELECT = "select",
     MULTI_SELECT = "multi-select"
+    STRING = "string"
 
 
 class SettingsTypes(str, Enum):

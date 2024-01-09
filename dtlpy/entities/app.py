@@ -24,6 +24,7 @@ class App(entities.BaseEntity):
     composition_id = attr.ib(type=str)
     scope = attr.ib(type=str)
     routes = attr.ib(type=dict)
+    dpk_config = attr.ib(type=dict)
 
     # sdk
     _project = attr.ib(type=entities.Project, repr=False)
@@ -124,6 +125,9 @@ class App(entities.BaseEntity):
             _json['scope'] = self.scope
         if self.routes != {}:
             _json['routes'] = self.routes
+        if self.dpk_config != {}:
+            _json['dpkConfig'] = self.dpk_config
+
         return _json
 
     @classmethod
@@ -142,6 +146,7 @@ class App(entities.BaseEntity):
             composition_id=_json.get('compositionId', None),
             scope=_json.get('scope', None),
             routes=_json.get('routes', {}),
+            dpk_config=_json.get('dpkConfig', {}),
             client_api=client_api,
             project=project,
         )
