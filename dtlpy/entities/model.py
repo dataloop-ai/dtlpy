@@ -19,6 +19,18 @@ class DatasetSubsetType(str, Enum):
     TEST = 'test'
 
 
+class ModelStatus(str, Enum):
+    """Available types for model status"""
+    CREATED = "created",
+    PRE_TRAINED = "pre-trained",
+    PENDING = "pending",
+    TRAINING = "training",
+    TRAINED = "trained",
+    DEPLOYED = "deployed",
+    FAILED = "failed",
+    CLONING = "cloning"
+
+
 class PlotSample:
     def __init__(self, figure, legend, x, y):
         """
@@ -478,6 +490,7 @@ class Model(entities.BaseEntity):
               tags: list = None,
               train_filter: entities.Filters = None,
               validation_filter: entities.Filters = None,
+              wait=True
               ):
         """
         Clones and creates a new model out of existing one
@@ -493,6 +506,7 @@ class Model(entities.BaseEntity):
         :param list tags:  `list` of `str` - label of the model
         :param dtlpy.entities.filters.Filters train_filter: Filters entity or a dictionary to define the items' scope in the specified dataset_id for the model train
         :param dtlpy.entities.filters.Filters validation_filter: Filters entity or a dictionary to define the items' scope in the specified dataset_id for the model validation
+        :param bool wait: `bool` wait for the model to be ready before returning
 
         :return: dl.Model which is a clone version of the existing model
         """
@@ -508,6 +522,7 @@ class Model(entities.BaseEntity):
                                  tags=tags,
                                  train_filter=train_filter,
                                  validation_filter=validation_filter,
+                                 wait=wait
                                  )
 
     def train(self, service_config=None):
@@ -551,6 +566,14 @@ class Model(entities.BaseEntity):
         :return: dl.Service: The deployed service
         """
         return self.models.deploy(model_id=self.id, service_config=service_config)
+
+    def wait_for_model_ready(self):
+        """
+        Wait for model to be ready
+
+        :return:
+        """
+        return self.models.wait_for_model_ready(model=self)
 
     def log(self,
             service=None,

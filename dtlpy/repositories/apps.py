@@ -183,7 +183,13 @@ class Apps:
             return success
         raise exceptions.PlatformException(response)
 
-    def install(self, dpk: entities.Dpk, app_name: str = None, organization_id: str = None) -> entities.App:
+    def install(self,
+                dpk: entities.Dpk,
+                app_name: str = None,
+                organization_id: str = None,
+                custom_installation: dict = None,
+                scope: entities.AppScope = None
+                ) -> entities.App:
         """
         Install the specified app in the project.
 
@@ -191,6 +197,9 @@ class Apps:
         :param entities.App dpk: the app entity
         :param str app_name: installed app name. default is the dpk name
         :param str organization_id: the organization which you want to apply on the filter.
+        :param dict custom_installation: partial installation.
+        :param str scope: the scope of the app. default is project.
+
         :return the installed app.
         :rtype entities.App
 
@@ -203,13 +212,15 @@ class Apps:
 
         if app_name is None:
             app_name = dpk.display_name
+        if isinstance(scope, entities.AppScope):
+            scope = scope.value
         app = entities.App.from_json(_json={'name': app_name,
                                             'projectId': self.project.id,
                                             'orgId': organization_id,
                                             'dpkName': dpk.name,
-                                            "dpkConfig": dpk.to_json(),
+                                            "customInstallation": custom_installation,
                                             'dpkVersion': dpk.version,
-                                            'scope': dpk.scope
+                                            'scope': scope
                                             },
                                      client_api=self._client_api,
                                      project=self.project)

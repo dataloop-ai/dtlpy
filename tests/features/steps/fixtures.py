@@ -1,8 +1,11 @@
+import time
+
 from behave import fixture
 import os
 import json
 import datetime
 import dtlpy as dl
+from operator import attrgetter
 
 
 @fixture
@@ -230,3 +233,23 @@ def update_dtlpy_version(json_obj):
                     obj['runtime'].update({"runnerImage": f"dataloop_runner-cpu/main:{dl.__version__}.latest"})
 
     return json_obj
+
+
+def gen_request(context, method=None, req=None, num_try=None, interval=None, expected_response=None):
+    if req.get('path', None) and ".id" in req.get('path'):
+        replace_field = req.get('path').split("/")[2]
+        req['path'] = req['path'].replace(replace_field, attrgetter(replace_field)(context))
+    for i in range(num_try):
+        success, response = dl.client_api.gen_request(req_type=method,
+                                                      path=req.get('path', None),
+                                                      data=req.get('data', None),
+                                                      json_req=req.get('json_req', None))
+        if success:
+            if expected_response and expected_response in response.text:
+                break
+        dl.logger.warning("Number of tries {}".format(i + 1))
+        time.sleep(interval)
+
+    if not success:
+        raise dl.exceptions.PlatformException(response)
+    return response

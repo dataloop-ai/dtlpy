@@ -10,7 +10,7 @@ def main(project_name, dataset_name):
             item = dataset.items.upload(local_path=dl.UrlLink(
                 ref=w_url,
                 name='.{}.json'.format(
-                    ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10)))),
+                    ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(10)))),
                 remote_path='/cats',
                 item_metadata=w_metadata)
             return item.id

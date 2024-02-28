@@ -6,6 +6,13 @@ def step_impl(context, package_name):
     context.package_get = context.project.packages.get(package_name=package_name)
 
 
+@behave.when(u'get global model package')
+def step_impl(context):
+    package_filter = context.dl.Filters(field='name', values='testmodel', use_defaults=False,
+                                        resource=context.dl.FiltersResource.PACKAGE)
+    context.package = context.dl.packages.list(filters=package_filter).items[0]
+
+
 @behave.when(u'I get package by id')
 def step_impl(context):
     context.package_get = context.project.packages.get(package_id=context.package.id)

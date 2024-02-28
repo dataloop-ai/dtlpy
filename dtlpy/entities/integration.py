@@ -32,6 +32,8 @@ class IntegrationType(str, Enum):
          - AZURE BLOB Integration - for S3 AZUREBLOB and AZURE_DATALAKE_GEN2 drivers
        * - KEY_VALUE
          - KEY VALUE Integration - for save secrets in the platform
+       * - GCP_WORKLOAD_IDENTITY_FEDERATION
+         - GCP Workload Identity Federation Integration - for GCP drivers
     """
     S3 = "s3"
     AWS_CROSS_ACCOUNT = 'aws-cross'
@@ -40,6 +42,7 @@ class IntegrationType(str, Enum):
     GCS_CROSS = "gcp-cross"
     AZUREBLOB = "azureblob"
     KEY_VALUE = "key_value"
+    GCP_WORKLOAD_IDENTITY_FEDERATION = "gcp-workload-identity-federation"
 
 
 @attr.s
@@ -52,8 +55,9 @@ class Integration(entities.BaseEntity):
     type = attr.ib()
     org = attr.ib()
     created_at = attr.ib()
-    created_by = attr.ib()
+    creator = attr.ib()
     update_at = attr.ib()
+    url = attr.ib()
     _client_api = attr.ib(type=ApiClient, repr=False)
     metadata = attr.ib(default=None, repr=False)
     _project = attr.ib(default=None, repr=False)
@@ -73,13 +77,14 @@ class Integration(entities.BaseEntity):
         """
         inst = cls(id=_json.get('id', None),
                    name=_json.get('name', None),
-                   created_by=_json.get('createdBy', None),
+                   creator=_json.get('creator', None),
                    created_at=_json.get('createdAt', None),
                    update_at=_json.get('updateAt', None),
                    type=_json.get('type', None),
                    org=_json.get('org', None),
                    client_api=client_api,
-                   metadata=_json.get('metadata', None))
+                   metadata=_json.get('metadata', None),
+                   url=_json.get('url', None))
         inst.is_fetched = is_fetched
         return inst
 

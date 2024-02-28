@@ -229,7 +229,7 @@ def step_impl(context):
 def step_impl(context, index=None):
     filters = context.dl.Filters()
     filters.add(field='annotated', values=False)
-    num_try = 15
+    num_try = 20
     interval = 15
     finished = False
 

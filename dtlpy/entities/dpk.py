@@ -3,7 +3,6 @@ from typing import List, Union
 import traceback
 import enum
 
-
 from .. import entities, repositories, exceptions
 from ..services.api_client import ApiClient
 
@@ -214,7 +213,6 @@ class Components(entities.DlEntity):
         self._dict['pipelineTemplates'] = list()
         return self._dict['pipelineTemplates']
 
-
     @classmethod
     def from_json(cls, _json):
         inst = cls(_dict=_json)
@@ -229,7 +227,7 @@ class Dpk(entities.DlEntity):
     id: str = entities.DlProperty(location=['id'], _type=str)
     name: str = entities.DlProperty(location=['name'], _type=str)
     version: str = entities.DlProperty(location=['version'], _type=str)
-    categories: list = entities.DlProperty(location=['categories'], _type=list)
+    attributes: list = entities.DlProperty(location=['attributes'], _type=dict)
     created_at: str = entities.DlProperty(location=['createdAt'], _type=str)
     updated_at: str = entities.DlProperty(location=['updatedAt'], _type=str)
     creator: str = entities.DlProperty(location=['creator'], _type=str)
@@ -239,6 +237,7 @@ class Dpk(entities.DlEntity):
     codebase: str = entities.DlProperty(location=['codebase'], _kls="Codebase")
     scope: dict = entities.DlProperty(location=['scope'], _type=str)
     context: dict = entities.DlProperty(location=['context'], _type=dict)
+    metadata: dict = entities.DlProperty(location=['metadata'], _type=dict)
 
     # defaults
     components: Components = entities.DlProperty(location=['components'], _kls='Components')
@@ -251,6 +250,11 @@ class Dpk(entities.DlEntity):
     _revisions = None
     __repositories = None
 
+    @components.default
+    def default_components(self):
+        self._dict['components'] = dict()
+        return self._dict['components']
+
     ################
     # repositories #
     ################
@@ -258,11 +262,13 @@ class Dpk(entities.DlEntity):
     def _repositories(self):
         if self.__repositories is None:
             reps = namedtuple('repositories',
-                              field_names=['dpks', 'codebases', 'organizations'])
+                              field_names=['dpks', 'codebases', 'organizations', 'services'])
 
             self.__repositories = reps(dpks=repositories.Dpks(client_api=self.client_api, project=self.project),
                                        codebases=repositories.Codebases(client_api=self.client_api),
-                                       organizations=repositories.Organizations(client_api=self.client_api)
+                                       organizations=repositories.Organizations(client_api=self.client_api),
+                                       services=repositories.Services(client_api=self.client_api, project=self.project,
+                                                                      package=self),
                                        )
 
         return self.__repositories
@@ -418,29 +424,9 @@ class Dpk(entities.DlEntity):
         :return: App entity
         :rtype: dtlpy.entities.App
         """
-        components = _json.get('components', dict())
-
-        keys = list(components.keys())
-        components_version = 'v2'
-        for key in keys:
-            if isinstance(components[key], list):
-                components_version = 'v1'
-                break
-        if components_version == 'v1':
-            return cls(
-                _dict=_json,
-                client_api=client_api,
-                project=project,
-                is_fetched=is_fetched
-            )
-        else:
-            return DpkV2(
-                _dict=_json,
-                client_api=client_api,
-                project=project,
-                is_fetched=is_fetched
-            )
-
-
-class DpkV2(Dpk):
-    components: dict = entities.DlProperty(location=['components'])
+        return cls(
+            _dict=_json,
+            client_api=client_api,
+            project=project,
+            is_fetched=is_fetched
+        )

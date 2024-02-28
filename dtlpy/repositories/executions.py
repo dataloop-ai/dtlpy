@@ -285,7 +285,7 @@ class Executions:
         :param str service_id: service id to execute on
         :param filters: Filters entity for a filtering before execute
         :param str function_name: function name to run
-        :param List[FunctionIO] or dict execution_inputs: input dictionary or list of FunctionIO entities
+        :param List[FunctionIO] or dict execution_inputs: input dictionary or list of FunctionIO entities, that represent the extra inputs of the function
         :param bool wait: wait until create task finish
         :return: execution object
         :rtype: dtlpy.entities.execution.Execution
@@ -307,15 +307,18 @@ class Executions:
         if filters is None:
             raise exceptions.PlatformException('400', 'Please provide filter')
 
+        if execution_inputs is None:
+            execution_inputs = dict()
+
         if isinstance(execution_inputs, dict):
-            customer_inputs = execution_inputs
+            extra_inputs = execution_inputs
         else:
             if not isinstance(execution_inputs, list):
                 execution_inputs = [execution_inputs]
             if len(execution_inputs) > 0 and isinstance(execution_inputs[0], entities.FunctionIO):
-                customer_inputs = dict()
+                extra_inputs = dict()
                 for single_input in execution_inputs:
-                    customer_inputs.update(single_input.to_json(resource='execution'))
+                    extra_inputs.update(single_input.to_json(resource='execution'))
             else:
                 raise exceptions.PlatformException('400', 'Unknown input type')
 
@@ -323,7 +326,7 @@ class Executions:
         payload = dict()
         payload['batch'] = dict()
         payload['batch']['query'] = filters.prepare()
-        payload['batch']['args'] = customer_inputs
+        payload['batch']['args'] = extra_inputs
 
         if function_name is not None:
             payload['functionName'] = function_name
@@ -597,7 +600,8 @@ class Executions:
                                                      service=self._service)
             if timeout is None:
                 timeout = execution.service.execution_timeout + 60
-            if execution.latest_status['status'] in ['failed', 'success', 'terminated', 'aborted', 'canceled', 'system-failure']:
+            if execution.latest_status['status'] in ['failed', 'success', 'terminated', 'aborted', 'canceled',
+                                                     'system-failure']:
                 break
             elapsed = int(time.time()) - start
             i += 1

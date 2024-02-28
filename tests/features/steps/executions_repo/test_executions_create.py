@@ -149,7 +149,8 @@ def step_impl(context, resource_type):
 
 
 @behave.then(u'Execution was executed and finished with status "{execution_status}"')
-def step_impl(context, execution_status):
+@behave.then(u'Execution was executed and finished with status "{execution_status}" and message "{message}"')
+def step_impl(context, execution_status, message=None):
     success = False
     num_try = 70
     interval = 10
@@ -157,6 +158,8 @@ def step_impl(context, execution_status):
         execution = context.service.executions.get(execution_id=context.execution.id)
         if execution.latest_status['status'] == execution_status:
             success = True
+            if message:  # message is not None
+                assert execution.latest_status['message'] == message
             break
         elif execution.latest_status['status'] != execution_status and execution.latest_status['status'] not in ['in-progress', 'inProgress', 'created', 'pending']:
             break

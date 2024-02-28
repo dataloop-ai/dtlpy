@@ -70,21 +70,25 @@ def step_impl(context, package_number):
     if codebase_id is not None:
         codebase = context.dl.entities.ItemCodebase(item_id=codebase_id)
 
-    # module = context.dl.entities.DEFAULT_PACKAGE_MODULE
-    package = context.project.packages.push(
-        codebase=codebase,
-        package_name=package_name,
-        modules=modules,
-        src_path=src_path,
-        package_type=package_type
-    )
+    try:
+        package = context.project.packages.push(
+            codebase=codebase,
+            package_name=package_name,
+            modules=modules,
+            src_path=src_path,
+            package_type=package_type
+        )
 
-    context.to_delete_packages_ids.append(package.id)
-    if package_number == 'first':
-        context.first_package = package
-        context.package = package
-    else:
-        context.second_package = package
+        context.to_delete_packages_ids.append(package.id)
+        if package_number == 'first':
+            context.first_package = package
+            context.package = package
+        else:
+            context.second_package = package
+
+        context.error = None
+    except Exception as e:
+        context.error = e
 
 
 @behave.then(u'I receive package entity')
@@ -207,8 +211,3 @@ def step_impl(context):
             assert False, 'Failed to delete Binaries dataset'
     context.project = context.dl.projects.get(project_id=context.project.id)
 
-
-@behave.then(u'New Binaries dataset is created')
-def step_impl(context):
-    datasets = context.project.datasets.get(dataset_name='Binaries')
-    assert datasets.name == 'Binaries', 'Failed to create Binaries dataset'

@@ -16,5 +16,5 @@ Feature: Executions repository create service testing
     And There is a service by the name of "codebase-error" with module name "default_module" saved to context "service"
     And I delete service code base
     When Service minimum scale is "1"
-    Then I receive "CodebaseError" notification
+    Then I receive "CodebaseError" notification with resource "service.id"
     And Service is deactivated by system

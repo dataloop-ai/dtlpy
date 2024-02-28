@@ -512,10 +512,10 @@ class CommandExecutor:
                     return
             name = args.name
             description = args.description
-            categories = args.categories
+            attributes = args.attributes
             icon = args.icon
             scope = args.scope
-            as_array = [name, description, categories, icon, scope]
+            as_array = [name, description, attributes, icon, scope]
             if as_array.count(None) == len(as_array):  # No one value is initialized
                 dir_name = os.path.basename(os.getcwd())
                 questions = [
@@ -524,8 +524,8 @@ class CommandExecutor:
                                   default=dir_name),
                     inquirer.Text(name='description',
                                   message="Enter the description (or enter for empty): "),
-                    inquirer.Text(name='categories',
-                                  message="Enter the categories (comma separated, or enter for empty): ",
+                    inquirer.Text(name='attributes',
+                                  message="Enter the attributes (an object, or enter for empty): ",
                                   default=None),
                     inquirer.Text(name='icon',
                                   message="Enter the path to the icon (or enter for empty): "),
@@ -536,18 +536,16 @@ class CommandExecutor:
                 answers = inquirer.prompt(questions)
                 name = answers.get('name')
                 description = answers.get('description')
-                categories = answers.get('categories')
+                attributes = answers.get('attributes')
                 icon = answers.get('icon')
                 scope = answers.get('scope')
 
-            if categories is None:
-                categories = []
-            else:
-                categories = [c.strip() for c in categories.split(',')]
+            if attributes is not None:
+                attributes = json.loads(attributes)
 
             self.dl.dpks.init(name=name,
                               description=description,
-                              categories=categories,
+                              attributes=attributes,
                               icon=icon,
                               scope=scope)
         elif args.app == 'add':

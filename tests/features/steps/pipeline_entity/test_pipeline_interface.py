@@ -1,9 +1,12 @@
+import time
 import uuid
 import dtlpy as dl
 import behave
 import random
 import os
 import json
+
+from dtlpy.exceptions import NotFound
 
 
 @behave.given(u'I create "{node_type}" node with params')
@@ -157,7 +160,7 @@ def step_imp(context, att, val):
 
 
 def check_no_connection_for_input(pipeline_json, node_input):
-    connections = [connection['src']['portId'] for connection in pipeline_json['connections']]
+    connections = [connection['tgt']['portId'] for connection in pipeline_json['connections']]
     # If portId in connection return False
     if node_input['portId'] in connections:
         return False
@@ -211,7 +214,9 @@ def generate_pipeline_json(context, pipeline_json):
     ml_nodes = [node for node in pipeline_json.get('nodes', []) if node['type'] == 'ml']
     for node in ml_nodes:
         node['namespace']['projectName'] = context.project.name
-        if node['namespace']['functionName'] == "train" and check_no_connection_for_input(pipeline_json, node['inputs'][0]):
+        if not hasattr(context, "model"):
+            break
+        elif node['namespace']['functionName'] == "train" and check_no_connection_for_input(pipeline_json, node['inputs'][0]):
             node['inputs'][0]['defaultValue'] = context.model.id
         elif node['namespace']['functionName'] == "predict":
             node['name'] = context.model.name
@@ -234,7 +239,7 @@ def generate_pipeline_json(context, pipeline_json):
 
     variables = pipeline_json.get('variables', []) if pipeline_json.get('variables', []) else []
     for variable in variables:
-        if variable['type'] == "Model":
+        if variable['type'] == "Model" and hasattr(context, "model"):
             variable['value'] = context.model.id
         elif variable['type'] == "Dataset":
             variable['value'] = context.dataset.id
@@ -262,3 +267,19 @@ def step_impl(context, path):
         context.error = None
     except Exception as e:
         context.error = e
+
+
+@behave.Then(u'I dont get Pipeline Task by name')
+def step_impl(context):
+    flag = False
+    for i in range(10):
+        time.sleep(1)
+        try:
+            context.task = context.project.tasks.get(task_name=(context.task_name + " (" + context.pipeline_name + ")"))
+        except NotFound:
+            flag = True
+            break
+    assert flag, f"TEST FAILED: Task still exist"
+
+
+

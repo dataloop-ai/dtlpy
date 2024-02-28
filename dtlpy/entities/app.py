@@ -1,12 +1,32 @@
 from collections import namedtuple
 import traceback
 import logging
+from enum import Enum
+
 import attr
 
 from .. import entities, repositories
 from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
+
+
+class AppScope(str, Enum):
+    """ The scope of the app.
+
+    .. list-table::
+       :widths: 15 150
+       :header-rows: 1
+
+       * - State
+         - Description
+       * - SYSTEM
+         - Dataloop internal app
+       * - PROJECT
+         - Project app
+    """
+    SYSTEM = 'system'
+    PROJECT = 'project'
 
 
 @attr.s
@@ -24,7 +44,8 @@ class App(entities.BaseEntity):
     composition_id = attr.ib(type=str)
     scope = attr.ib(type=str)
     routes = attr.ib(type=dict)
-    dpk_config = attr.ib(type=dict)
+    custom_installation = attr.ib(type=dict)
+    metadata = attr.ib(type=dict)
 
     # sdk
     _project = attr.ib(type=entities.Project, repr=False)
@@ -125,8 +146,10 @@ class App(entities.BaseEntity):
             _json['scope'] = self.scope
         if self.routes != {}:
             _json['routes'] = self.routes
-        if self.dpk_config != {}:
-            _json['dpkConfig'] = self.dpk_config
+        if self.custom_installation != {}:
+            _json['customInstallation'] = self.custom_installation
+        if self.metadata is not None:
+            _json['metadata'] = self.metadata
 
         return _json
 
@@ -146,9 +169,10 @@ class App(entities.BaseEntity):
             composition_id=_json.get('compositionId', None),
             scope=_json.get('scope', None),
             routes=_json.get('routes', {}),
-            dpk_config=_json.get('dpkConfig', {}),
+            custom_installation=_json.get('customInstallation', {}),
             client_api=client_api,
             project=project,
+            metadata=_json.get('metadata', None)
         )
         app.is_fetched = is_fetched
         return app

@@ -41,6 +41,27 @@ def step_impl(context):
     context.dataset_list = response.json()['items']
 
 
+@behave.when(u'I list datasets "{flag}" binaries dataset')
+def step_impl(context, flag):
+    if flag == "with":
+        value = True
+
+    elif flag == "without":
+        value = False
+
+    else:
+        print('Wrong value - the options are "with" or "without"')
+
+    success, response = dl.client_api.gen_request(req_type='post', path="/datasets/query",
+                                                  json_req={"resource": "datasets",
+                                                            "context": {"datasets": [context.project.id]},
+                                                            "systemSpace": value})
+    if not success:
+        raise dl.exceptions.PlatformException(response)
+
+    context.dataset_list = response.json()['items']
+
+
 @behave.given(u'I Add dataset to context.datasets')
 def step_impl(context):
     if not hasattr(context, "datasets"):

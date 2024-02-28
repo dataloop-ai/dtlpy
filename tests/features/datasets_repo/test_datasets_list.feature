@@ -20,4 +20,18 @@ Feature: Datasets repository list service testing
         Then I receive a datasets list of "1" dataset
         And The dataset in the list equals the dataset I created
 
+    @DAT-63175
+    Scenario: Test Limit the access to the system datasets
+        Given There are no datasets
+        Given I create a dataset by the name of "Dataset" and count
+        When I list datasets "without" binaries dataset
+        Then I receive a datasets list of "1" dataset
+
+    @DAT-63176
+    Scenario: Test access to the system datasets
+        Given There are no datasets
+        Given I create a dataset by the name of "Dataset" and count
+        When I list datasets "with" binaries dataset
+        Then I receive a datasets list of "2" dataset
+
 

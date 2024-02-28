@@ -8,6 +8,8 @@ import dtlpy as dl
 import numpy as np
 from behave_testrail_reporter import TestrailReporter
 import filecmp
+import json
+from .. import fixtures
 
 dl.verbose.disable_progress_bar = True
 
@@ -177,3 +179,23 @@ def step_impl(context):
             context.dir2 = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], parameter.cells[1])
 
     assert compare_directory_files(context.dir1, context.dir2)
+
+
+@behave.when(u'I send "{type}" gen_request with "{key}" params')
+@behave.when(u'I send "{type}" gen_request with "{key}" params and interval: "{interval}" tries: "{num_try}"')
+@behave.then(u'I validate gen_request "{type}" with "{key}" params and interval: "{interval}" tries: "{num_try}" response "{response}"')
+def step_impl(context, type, key, interval=0, num_try=1, response=None):
+    file_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], "api", "api_assets.json")
+    with open(file_path, 'r') as file:
+        json_obj = json.load(file)
+
+    context.req = json_obj.get(key)
+
+    context.response = fixtures.gen_request(context=context, method=type, req=context.req, num_try=int(num_try), interval=int(interval), expected_response=response)
+    if response:
+        assert response in context.response.text, "TEST FAILED: Expected response to include {}. Actual got {}".format(response, context.response.text)
+
+
+@behave.when(u'I validate "{type}" gen_request with "{key}" params')
+def step_impl(context, type, key, interval=5, num_try=1):
+    pass

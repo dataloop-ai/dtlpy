@@ -35,7 +35,7 @@ def step_impl(context):
 
 @behave.when(u'I update dataset name to new random name')
 def step_impl(context):
-    rand_str = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(5))
+    rand_str = ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(5))
     dataset_name = 'random_dataset_{}'.format(rand_str)
     context.dataset.name = dataset_name
     context.dataset.update(True)

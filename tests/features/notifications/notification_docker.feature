@@ -15,5 +15,5 @@
 #    And There is a service by the name of "imagepullback-error" with module name "default_module" saved to context "service"
 #    And Service has wrong docker image
 #    When Service minimum scale is "1"
-#    Then I receive "ImagePullBackOff" notification
+#    Then I receive "ImagePullBackOff" notification with resource "service.id"
 #    And Service is deactivated by system

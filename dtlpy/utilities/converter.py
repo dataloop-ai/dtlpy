@@ -349,6 +349,7 @@ class Converter:
 
     def __convert_dataset_to_coco(self, dataset: entities.Dataset, local_path, filters=None, annotation_filter=None):
         pages = dataset.items.list(filters=filters)
+        logger.info('items count: {}'.format(pages.items_count))
         dataset.download_annotations(local_path=local_path, filters=filters, annotation_filters=annotation_filter)
         path_to_dataloop_annotations_dir = os.path.join(local_path, 'json')
         label_to_id = dataset.instance_map
@@ -368,20 +369,23 @@ class Converter:
         )
         for page in pages:
             for item in page:
-                pool.apply_async(func=self.__single_item_to_coco,
-                                 kwds={
-                                     'item': item,
-                                     'images': images,
-                                     'path_to_dataloop_annotations_dir': path_to_dataloop_annotations_dir,
-                                     'item_id': item_id_counter,
-                                     'reporter': reporter,
-                                     'converted_annotations': converted_annotations,
-                                     'annotation_filter': annotation_filter,
-                                     'label_to_id': label_to_id,
-                                     'categories': categories,
-                                     'pbar': pbar
-                                 })
-                item_id_counter += 1
+                try:
+                    pool.apply_async(func=self.__single_item_to_coco,
+                                     kwds={
+                                         'item': item,
+                                         'images': images,
+                                         'path_to_dataloop_annotations_dir': path_to_dataloop_annotations_dir,
+                                         'item_id': item_id_counter,
+                                         'reporter': reporter,
+                                         'converted_annotations': converted_annotations,
+                                         'annotation_filter': annotation_filter,
+                                         'label_to_id': label_to_id,
+                                         'categories': categories,
+                                         'pbar': pbar
+                                     })
+                    item_id_counter += 1
+                except Exception as e:
+                    logger.error('Failed to convert item: {}'.format(item.id))
 
         pool.close()
         pool.join()
@@ -414,8 +418,11 @@ class Converter:
                 logger.warning(
                     'Converted with some errors. Please see log in {} for more information.'.format(log_filepath))
 
-        logger.info('Total converted: {}'.format(reporter.status_count('success')))
-        logger.info('Total failed: {}'.format(reporter.status_count('failed')))
+        logger.info('Total converted: {}'.format(reporter.success_count))
+        logger.info('Total failed: {}'.format(reporter.failure_count))
+        logger.info('Total skipped: {}'.format(reporter.status_count('skip')))
+        if reporter.success_count + reporter.status_count('skip') + reporter.failure_count != pages.items_count:
+            raise ValueError('Not all items were processed')
 
         return coco_json, reporter.has_errors, log_filepath
 
@@ -501,8 +508,16 @@ class Converter:
                                                  item_id=item_id, i_annotation=pose_idx,
                                                  item_converted_annotations=item_converted_annotations)
 
-    def __single_item_to_coco(self, item: entities.Item, images, path_to_dataloop_annotations_dir, item_id,
-                              converted_annotations, annotation_filter, label_to_id, reporter, categories, pbar=None):
+    def __single_item_to_coco(self, item: entities.Item,
+                              images,
+                              path_to_dataloop_annotations_dir,
+                              item_id,
+                              converted_annotations,
+                              annotation_filter,
+                              label_to_id,
+                              reporter,
+                              categories,
+                              pbar=None):
         try:
             if item.type != 'dir':
                 item = Converter.__get_item_shape(item=item)
@@ -562,11 +577,13 @@ class Converter:
                                        error=errors)
                 else:
                     reporter.set_index(ref=item.id, status='success', success=True)
+            else:
+                reporter.set_index(ref=item.id, status='skipped', success=True)
         except Exception:
             reporter.set_index(ref=item.id, status='failed', success=False,
                                error=traceback.format_exc())
-            raise
-
+            logger.debug('Error converting item: {}\n{}'.format(item.id, traceback.format_exc()))
+            raise Exception('Error converting item: {}\n{}'.format(item.id, traceback.format_exc()))
         if pbar is not None:
             pbar.update()
 

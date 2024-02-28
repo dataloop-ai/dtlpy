@@ -3,7 +3,7 @@ import behave
 
 @behave.when(u'There are no models')
 def step_impl(context):
-    models = context.package.models.list()
+    models = context.project.models.list()
     count = 0
     for model in models.all():
         model.delete()

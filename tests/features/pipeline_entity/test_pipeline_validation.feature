@@ -36,7 +36,7 @@ Feature: Pipeline entity method testing - rerun cycle
     When I add and connect all nodes in list to pipeline entity
     And I add action "test" to connection in index "0"
     Then I receive error with status code "400"
-    And "Invalid input specified, Cannot read property 'includes' of undefined" in error message
+    And "Invalid input specified, Cannot read properties of undefined (reading 'includes')" in error message
 
   @pipelines.delete
   @DAT-54412

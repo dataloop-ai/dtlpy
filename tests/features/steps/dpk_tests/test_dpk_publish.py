@@ -1,7 +1,6 @@
 import json
 import os
 import random
-import dtlpy as dl
 
 import behave
 
@@ -14,6 +13,33 @@ def step_impl(context):
         context.feature.dpks.append(context.published_dpk)
     else:
         context.feature.dpks = [context.published_dpk]
+
+
+@behave.when(u'I try to publish a dpk to the platform')
+def step_impl(context):
+    try:
+        context.dpk.name = context.dpk.name + str(random.randint(10000, 1000000))
+        context.published_dpk = context.project.dpks.publish(context.dpk)
+        if hasattr(context.feature, 'dpks'):
+            context.feature.dpks.append(context.published_dpk)
+        else:
+            context.feature.dpks = [context.published_dpk]
+        context.error = None
+    except Exception as e:
+        context.error = e
+
+
+@behave.when(u'I publish without context')
+def step_impl(context):
+    try:
+        context.dpk.name = context.dpk.name + str(random.randint(10000, 1000000))
+        context.published_dpk = context.dl.dpks.publish(context.dpk)
+        if hasattr(context.feature, 'dpks'):
+            context.feature.dpks.append(context.published_dpk)
+        else:
+            context.feature.dpks = [context.published_dpk]
+    except Exception as e:
+        context.error = e
 
 
 @behave.when(u'I add context to the dpk')
@@ -43,7 +69,8 @@ def step_impl(context, template):
     success, response = context.project._client_api.gen_request(req_type='POST', path='/pipelines/templates/query',
                                                                 json_req={
                                                                     "org": {
-                                                                        "filter": { "$and": [{"name": pipeline_template_name }]}
+                                                                        "filter": {
+                                                                            "$and": [{"name": pipeline_template_name}]}
                                                                     }
                                                                 })
     template = response.json()["org"]["items"][0]
@@ -52,7 +79,8 @@ def step_impl(context, template):
 
 @behave.when(u"I add the context.dataset to the dpk model")
 def step_impl(context):
-    context.dpk.components.models[0]['datasetId'] = context.dataset.id
+    for model in context.dpk.components.models:
+        model['datasetId'] = context.dataset.id
 
 
 @behave.then(u'The user defined properties should have the same values')
@@ -61,7 +89,7 @@ def step_impl(context):
     p_dpk = context.published_dpk
     assert dpk.display_name == p_dpk.display_name
     assert dpk.version if dpk.version else "1.0.0" == p_dpk.version
-    assert dpk.categories == p_dpk.categories
+    assert dpk.attributes == p_dpk.attributes
     assert dpk.icon == p_dpk.icon
     assert dpk.tags == p_dpk.tags
     assert dpk.scope == p_dpk.scope
@@ -89,3 +117,19 @@ def step_impl(context):
 def step_impl(context, total_models):
     context.models = context.project.models.list().items
     assert len(context.models) == int(total_models)
+
+
+@behave.when(u'I increment dpk version')
+def step_impl(context):
+    version = context.dpk.version.split('.')
+    version[2] = str(int(version[2]) + 1)
+    context.dpk.version = '.'.join(version)
+
+
+@behave.when(u'I publish a dpk')
+def step_impl(context):
+    context.dpk = context.project.dpks.publish(context.dpk)
+    if hasattr(context.feature, 'dpks'):
+        context.feature.dpks.append(context.dpk)
+    else:
+        context.feature.dpks = [context.dpk]

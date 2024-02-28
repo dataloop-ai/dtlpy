@@ -36,3 +36,19 @@ def step_impl(context, node_name, variable_name):
         if node_name == node.name:
             node.metadata['variableModel'] = variable_name
             context.pipeline.update()
+
+
+@when(u'I update node name to "{node_name}"')
+def step_impl(context, node_name):
+    context.node = context.pipeline.nodes[0]
+    context.node.name = node_name
+    context.pipeline.update()
+
+
+@then(u'I validate task name changed')
+def step_impl(context):
+    try:
+        pipeline_task_name = "{} ({})".format(context.node.name, context.pipeline.name)
+        context.task = context.project.tasks.get(task_name=pipeline_task_name)
+    except Exception as e:
+        assert False, "Failed to get task with the name: {}\n{}".format(pipeline_task_name, e)

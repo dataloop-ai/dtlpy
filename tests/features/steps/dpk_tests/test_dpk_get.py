@@ -1,10 +1,10 @@
 import behave
 
 
-@behave.when(u'I try get the dpk by id')
-def step_impl(context):
+@behave.when(u'I try get the "{dpk_obj}" by id')
+def step_impl(context, dpk_obj):
     try:
-        context.dpk = context.dl.dpks.get(dpk_id=context.published_dpk.id)
+        context.dpk = context.dl.dpks.get(dpk_id=getattr(context, dpk_obj).id)
         context.error = None
     except Exception as e:
         context.error = e
@@ -28,18 +28,29 @@ def step_impl(context):
 def step_impl(context):
     try:
         context.dpk = context.dl.dpks.get(dpk_id="1")
+        context.error = None
     except Exception as e:
-        context.e = e
+        context.error = e
 
 
 @behave.then(u'I should get an exception')
 def step_impl(context):
-    assert context.e is not None
+    assert context.error is not None
 
 
 @behave.when(u'I get global dpk by name "{dpk_name}"')
 def step_impl(context, dpk_name):
     try:
         context.dpk = context.dl.dpks.get(dpk_name=dpk_name)
+        context.error = None
     except Exception as e:
         raise e
+
+
+@behave.when(u'I try get the "{dpk_obj}" by name')
+def step_impl(context, dpk_obj):
+    try:
+        context.dpk = context.project.dpks.get(dpk_name=getattr(context, dpk_obj).name)
+        context.error = None
+    except Exception as e:
+        context.error = e

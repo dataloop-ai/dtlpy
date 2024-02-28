@@ -14,6 +14,12 @@ def step_impl(context, node_exec_flag):
         if eval(node_exec_flag):
             time.sleep(7)
             context.execution = context.pipeline.pipeline_executions.get(context.execution.id)
+            for i in range(0, 10):
+                if context.execution.status == "pending":
+                    time.sleep(7)
+                    context.execution = context.pipeline.pipeline_executions.get(context.execution.id)
+                else:
+                    break
             assert context.execution.executions, "TEST FAILED: Executions empty.{}".format(context.execution.executions)
             for execution in context.execution.executions.values():
                 assert isinstance(execution, list), "TEST FAILED: execution Should be a list"

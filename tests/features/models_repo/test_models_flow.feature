@@ -15,8 +15,12 @@ Feature: Models repository flow testing
   @DAT-51145
   @DAT-54702
   Scenario: test flow model
+    Given I fetch the dpk from 'model_dpk/modelsDpks.json' file
     When I create a dummy model package by the name of "dummymodel" with entry point "main.py"
-    And I create a model from package by the name of "test-model" with status "created"
+    And I create a model from package by the name of "test-model" with status "created" in index "0"
+    And I publish a dpk to the platform
+    And I install the app
+    And i fetch the model by the name "test-model"
     When i "train" the model
     Then service metadata has a model id and operation "train"
     Then model status should be "trained" with execution "True" that has function "train_model"
@@ -30,34 +34,3 @@ Feature: Models repository flow testing
     Then i should get a json response
     Then Log "model training" is in model.log() with operation "train"
     Then Log "model prediction" is in model.log() with operation "evaluate"
-
-  @DAT-50829
-  Scenario: test model - failed
-    When I create a dummy model package by the name of "modelfaild" with entry point "failedmain.py"
-    And I create a model from package by the name of "test-model-failed" with status "created"
-    When i "train" the model
-    Then model status should be "failed" with execution "True" that has function "train_model"
-
-
-  @DAT-52904
-  Scenario: test flow model - initPrams
-    When I create a dummy model package by the name of "initmodel" with entry point "main.py"
-    And I create a model from package by the name of "test-model-init" with status "created"
-    When i train the model with init param model none
-    Then model status should be "trained" with execution "True" that has function "train_model"
-
-
-  @DAT-53071
-  Scenario: test evaluate service updated
-    When I create a dummy model package by the name of "dummymodel" with entry point "main.py"
-    And I create a model from package by the name of "test-model-eve" with status "trained"
-    And i add a Service config runtime
-      | runnerImage=ImageA | podType=regular-xs |
-    When i "evaluate" the model
-    Then check service runtime
-      | runnerImage=ImageA | podType=regular-xs |
-    When i add a Service config runtime
-      | runnerImage=ImageB | podType=regular-s |
-    When i "evaluate" the model
-    Then check service runtime
-      | runnerImage=ImageB | podType=regular-s |

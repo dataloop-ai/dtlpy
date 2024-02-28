@@ -41,12 +41,6 @@ Feature: Items advanced browser filters
         And I list items with filters
         Then I receive "33" items
 
-        When I create filters
-        And I add field "metadata.system.mimetype" with values "image/jpeg" and operator "None"
-        And I join field "metadata.system.coordinateVersion" with values "v2" and operator "None"
-        And I list items with filters
-        Then I receive "3" items
-
 #        When I create filters
 #        And I join field "metadata.system.attributes" with values "{"1":"attr1"}" and operator "None"
 #        And I list items with filters

@@ -12,8 +12,12 @@ Feature: Pipeline train node Testing
   @pipelines.delete
   @DAT-55921
   Scenario: Create pipeline with train node - Execution should success
+    Given I fetch the dpk from 'model_dpk/modelsDpks.json' file
     When I create a dummy model package by the name of "package-train-node" with entry point "main.py"
-    And I create a model from package by the name of "model-train-node" with status "created"
+    And I create a model from package by the name of "model-train-node" with status "created" in index "0"
+    And I publish a dpk to the platform
+    And I install the app
+    And i fetch the model by the name "model-train-node"
     Given I create pipeline from json in path "pipelines_json/pipeline_train_node.json"
     And I install pipeline in context
     When I execute pipeline with input type "None"

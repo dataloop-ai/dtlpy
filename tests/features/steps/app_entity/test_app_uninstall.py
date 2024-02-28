@@ -2,6 +2,7 @@ import behave
 
 
 @behave.given(u'I uninstall the app')
+@behave.when(u'I uninstall the app')
 @behave.then(u'I uninstall the app')
 def step_impl(context):
     context.project.apps.uninstall(app_id=context.app.id)
@@ -21,5 +22,6 @@ def step_impl(context):
 def step_impl(context):
     try:
         context.project.apps.uninstall(app_id='Hello')
+        context.error = None
     except Exception as e:
-        context.e = e
+        context.error = e

@@ -2,6 +2,7 @@ import json
 import logging
 import os
 from typing import List, Optional
+from pathlib import Path
 
 from .. import exceptions, entities, services, miscellaneous, assets
 from ..services.api_client import ApiClient
@@ -25,27 +26,33 @@ class Dpks:
         self._project = project
 
     def init(self, directory: str = None, name: str = None, description: str = None,
-             categories: List[str] = None, icon: str = None, scope: str = None):
+             attributes: dict = None, icon: str = None, scope: str = None):
         """
         Initialize a dpk project with the specified projects.
 
         :param str directory: the directory where to initialize the project
         :param str name: the name of the dpk.
         :param str description: the description of the dpk.
-        :param str categories: the categories of the dpk.
+        :param str attributes: the attributes of the dpk.
         :param str icon: the icon of the dpk.
         :param str scope: the scope of the dpk.
 
         ** Example **
         .. code-block:: python
-            dl.dpks.init(name='Hello World', description='A description of the dpk', categories=['starter', 'advanced'],
+            dl.dpks.init(name='Hello World', description='A description of the dpk', attributes={
+                "Provider": "Dataloop",
+                "License": "",
+                "Category": "Model",
+                "Computer Vision": "Object Detection",
+                "Media Type": "Image"
+              },
                         icon='path_to_icon', scope='organization')
         """
         if directory is None:
             directory = os.getcwd()
         dpk = entities.Dpk.from_json(_json={'name': miscellaneous.JsonUtils.get_if_absent(name),
                                             'description': miscellaneous.JsonUtils.get_if_absent(description),
-                                            'categories': miscellaneous.JsonUtils.get_if_absent(categories),
+                                            'attributes': miscellaneous.JsonUtils.get_if_absent(attributes),
                                             'icon': miscellaneous.JsonUtils.get_if_absent(icon),
                                             'scope': miscellaneous.JsonUtils.get_if_absent(scope, 'organization'),
                                             'components': dict()
@@ -189,11 +196,17 @@ class Dpks:
             dpk = dpk_v.items[0]
         return dpk
 
-    def publish(self, dpk: entities.Dpk = None, ignore_max_file_size: bool = False) -> entities.Dpk:
+    def publish(self, dpk: entities.Dpk = None, ignore_max_file_size: bool = False, manifest_filepath='dataloop.json') -> entities.Dpk:
         """
         Upload a dpk entity to the dataloop platform.
 
-        :param entities.Dpk dpk: the dpk to publish
+        :param entities.Dpk dpk: Optional. The DPK entity to publish. If None, a new DPK is created
+                             from the manifest file.
+        :param bool ignore_max_file_size: Optional. If True, the maximum file size check is ignored
+                                        during the packaging of the codebase.
+        :param str manifest_filepath: Optional. Path to the manifest file. Can be absolute or relative.
+                                    Defaults to 'dataloop.json'
+
         :return the published dpk
         :rtype dl.entities.Dpk
 
@@ -202,15 +215,30 @@ class Dpks:
         .. code-block:: python
             published_dpk = dl.dpks.publish()
         """
+        manifest_path = Path(manifest_filepath).resolve()
 
         if dpk is None:
-            if not os.path.exists(os.path.abspath('dataloop.json')):
-                raise ValueError('dataloop.json file must be exists in order to publish a dpk')
-            with open('dataloop.json', 'r') as f:
+            if not manifest_path.exists():
+                raise FileNotFoundError(f'{manifest_filepath} file must exist in order to publish a dpk')
+            with open(manifest_filepath, 'r') as f:
                 json_file = json.load(f)
             dpk = entities.Dpk.from_json(_json=json_file,
                                          client_api=self._client_api,
                                          project=self.project)
+
+        if not dpk.context:
+            dpk.context = {}
+        if 'project' not in dpk.context:
+            if not self.project:
+                raise exceptions.PlatformException('400', 'project id must be provided in the context')
+            dpk.context['project'] = self.project.id
+        if 'org' not in dpk.context and dpk.scope == 'organization':
+            if not self.project:
+                raise exceptions.PlatformException('400', 'org id must be provided in the context')
+            dpk.context['org'] = self.project.org['id']
+
+        if self.project and self.project.id != dpk.context['project']:
+            logger.warning("the project id that provide different from the dpk project id")
 
         if dpk.codebase is None:
             dpk.codebase = self.project.codebases.pack(directory=os.getcwd(),

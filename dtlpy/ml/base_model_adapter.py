@@ -252,9 +252,22 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             else:
                 self.logger.debug("Downloading subset {!r} of {}".format(subset,
                                                                          self.model_entity.dataset.name))
+
+                if self.configuration.get("include_model_annotations", False):
+                    annotation_filters = None
+                else:
+                    annotation_filters = entities.Filters(
+                        field="metadata.system.model.name",
+                        values=False,
+                        operator=entities.FiltersOperations.EXISTS,
+                        resource=entities.FiltersResource.ANNOTATION
+                        )
+
                 ret_list = dataset.items.download(filters=filters,
                                                   local_path=data_subset_base_path,
-                                                  annotation_options=annotation_options)
+                                                  annotation_options=annotation_options,
+                                                  annotation_filters=annotation_filters
+                                                  )
 
         self.convert_from_dtlpy(data_path=data_path, **kwargs)
         return root_path, data_path, output_path
@@ -424,6 +437,9 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         output_path = None
         try:
             logger.info("Received {s} for training".format(s=model.id))
+            model = model.wait_for_model_ready()
+            if model.status == 'failed':
+                raise ValueError("Model is in failed state, cannot train.")
 
             ##############
             # Set status #
@@ -615,13 +631,14 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         for prediction in predictions:
             if prediction.type == entities.AnnotationType.SEGMENTATION:
                 try:
-                    color = self.model_entity.dataset._get_ontology().color_map.get(prediction.label)
+                    color = item.dataset._get_ontology().color_map.get(prediction.label, None)
                 except (exceptions.BadRequest, exceptions.NotFound):
                     color = None
                     logger.warning("Can't get annotation color from item's dataset, using model's dataset.")
                 if color is None:
                     try:
-                        color = self.model_entity.dataset._get_ontology().color_map.get(prediction.label)
+                        color = self.model_entity.dataset._get_ontology().color_map.get(prediction.label,
+                                                                                        (255, 255, 255))
                     except (exceptions.BadRequest, exceptions.NotFound):
                         logger.warning("Can't get annotation color from model's dataset, using default.")
                         color = prediction.color

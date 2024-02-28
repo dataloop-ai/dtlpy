@@ -111,6 +111,7 @@ class Integrations:
         aws-sts - {key: "", secret: "", roleArns: ""}
         aws-cross - {}
         gcp-cross - {}
+        gcp-workload-identity-federation - {"secret": "", "content": "{}", "clientId": ""}
 
         **Prerequisites**: You must be an *owner* in the organization.
 

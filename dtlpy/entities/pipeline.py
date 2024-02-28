@@ -506,7 +506,7 @@ class Pipeline(entities.BaseEntity):
         """
         execute a pipeline and return to execute
 
-        :param execution_inputs: list of the dl.FunctionIO or dict of pipeline input - example {'item': 'item_id'}
+        :param execution_inputs: list of the dl.FunctionIO or dict of pipeline input - example {'item': 'item_id'}, that represent the extra inputs of the function
         :param filters: Filters entity for a filtering before execute
         :param bool wait: wait until create task finish
         :return: entities.PipelineExecution object

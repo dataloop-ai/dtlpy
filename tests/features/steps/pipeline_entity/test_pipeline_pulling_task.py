@@ -63,6 +63,7 @@ def step_impl(context, task_type):
 
 
 @behave.when(u'I get task by pipeline task node')
+@behave.then(u'I get task by pipeline task node')
 def step_impl(context):
     try:
         pipeline_task_name = "{} ({})".format(context.task_name, context.pipeline.name)

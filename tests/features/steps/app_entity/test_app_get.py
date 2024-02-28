@@ -1,4 +1,5 @@
 import behave
+import dictdiffer
 
 
 @behave.when(u'I get the app by name')
@@ -15,16 +16,18 @@ def step_impl(context):
 def step_impl(context):
     try:
         context.project.apps.get(app_id="Hola")
+        context.error = None
     except Exception as e:
-        context.e = e
+        context.error = e
 
 
 @behave.when(u'I get the app without parameters')
 def step_impl(context):
     try:
         context.project.apps.get()
+        context.error = None
     except Exception as e:
-        context.e = e
+        context.error = e
 
 
 @behave.then(u'I should get identical results as the json')
@@ -49,6 +52,25 @@ def step_impl(context):
 @behave.when(u'I validate global app by the name "{app_name}" is installed')
 def step_impl(context, app_name):
     try:
-        context.dl.apps.get(app_name=app_name)
+        filters = context.dl.Filters(field='name',
+                                     values=app_name,
+                                     resource=context.dl.FiltersResource.APP,
+                                     use_defaults=False)
+        filters.add(field='scope', values='system')
+        apps = context.dl.apps.list(filters=filters)
+        if len(apps) == 0:
+            raise Exception(f"App {app_name} is not installed")
+        elif len(apps) > 1:
+            raise Exception(f"More than one app with name {app_name} is installed")
+        else:
+            context.app = apps[0]
     except Exception as e:
         raise e
+
+
+@behave.Then(u'I validate app.custom_installation is equal to published.dpk components')
+def step_impl(context):
+    if context.app.custom_installation['components'] == context.published_dpk.to_json()['components']:
+        assert True
+    else:
+        assert False, f"TEST FAILED: {list(dictdiffer.diff(context.app.custom_installation['components'], context.published_dpk.to_json()['components']))}"

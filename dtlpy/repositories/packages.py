@@ -155,7 +155,8 @@ class Packages:
             package_name: str = None,
             package_id: str = None,
             checkout: bool = False,
-            fetch=None) -> entities.Package:
+            fetch=None,
+            log_error=True) -> entities.Package:
         """
         Get Package object to use in your code.
 
@@ -165,6 +166,7 @@ class Packages:
         :param str package_name: package name
         :param bool checkout: set the package as a default package object (cookies)
         :param fetch: optional - fetch entity from platform, default taken from cookie
+        :param bool log_error: log error if package not found
         :return: Package object
         :rtype: dtlpy.entities.package.Package
 
@@ -187,7 +189,8 @@ class Packages:
             if package_id is not None:
                 success, response = self._client_api.gen_request(
                     req_type="get",
-                    path="/packages/{}".format(package_id))
+                    path="/packages/{}".format(package_id),
+                    log_error=log_error)
                 if not success:
                     raise exceptions.PlatformException(response)
                 package = entities.Package.from_json(client_api=self._client_api,

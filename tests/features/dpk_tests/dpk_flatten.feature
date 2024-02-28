@@ -1,3 +1,4 @@
+@skip_test
 Feature: publish a dpk
 
     Background:

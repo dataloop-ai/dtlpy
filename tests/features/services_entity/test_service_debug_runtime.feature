@@ -15,9 +15,10 @@ Feature: Service entity debug mode
     And There are "5" items
     When I create a service
       | service_name=services-debug | package=services-debug | revision=None | config=None | runtime={"runnerImage": "python:3.10"} |
-    And I update service mode to "debug"
+    And I send "post" gen_request with "debug_p" params
+    And I send "post" gen_request with "debug_a" params
     Then I validate service has "1" instance up
-    And I validate path "services/{service.id}/debug" get response "<html>" interval: "60" tries: "15"
+    And I validate gen_request "get" with "debug_check" params and interval: "30" tries: "20" response "true"
     Then I call service.execute() on items in dataset
-    When I update service mode to "regular"
+    When I send "post" gen_request with "terminate" params
     Then Execution was executed and finished with status "success"

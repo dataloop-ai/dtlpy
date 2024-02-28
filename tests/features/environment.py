@@ -153,6 +153,9 @@ def before_feature(context, feature):
     if 'rc_only' in context.tags and 'rc' not in os.environ.get("DLP_ENV_NAME"):
         feature.skip("Marked with @rc_only")
         return
+    if 'skip_test' in context.tags:
+        feature.skip("Marked with @skip_test")
+        return
 
 
 def fix_project_with_frozen_datasets(project):
@@ -166,7 +169,8 @@ def fix_project_with_frozen_datasets(project):
 def before_tag(context, tag):
     if "skip_test" in tag:
         dat = tag.split("_")[-1] if "DAT" in tag else ""
-        context.scenario.skip(f"Test mark as SKIPPED, Should be merged after {dat}")
+        if hasattr(context, "scenario"):
+            context.scenario.skip(f"Test mark as SKIPPED, Should be merged after {dat}")
 
 
 @fixture

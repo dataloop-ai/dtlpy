@@ -1,13 +1,15 @@
-import json
-
+import time
 from typing import List
 import logging
-import os
 
 from .. import entities, repositories, exceptions, miscellaneous
 from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
+
+MIN_INTERVAL = 1
+BACKOFF_FACTOR = 1.2
+MAX_INTERVAL = 12
 
 
 class Models:
@@ -411,6 +413,7 @@ class Models:
               tags: list = None,
               train_filter: entities.Filters = None,
               validation_filter: entities.Filters = None,
+              wait=True,
               ) -> entities.Model:
         """
         Clones and creates a new model out of existing one
@@ -427,6 +430,7 @@ class Models:
         :param list tags:  `list` of `str` - label of the model
         :param dtlpy.entities.filters.Filters train_filter: Filters entity or a dictionary to define the items' scope in the specified dataset_id for the model train
         :param dtlpy.entities.filters.Filters validation_filter: Filters entity or a dictionary to define the items' scope in the specified dataset_id for the model validation
+        :param bool wait: `bool` wait for model to be ready
         :return: dl.Model which is a clone version of the existing model
         """
         from_json = {"name": model_name,
@@ -478,8 +482,23 @@ class Models:
                                              client_api=self._client_api,
                                              project=self._project,
                                              package=from_model._package)
-
+        if wait:
+            new_model = self.wait_for_model_ready(model=new_model)
         return new_model
+
+    def wait_for_model_ready(self, model: entities.Model):
+        """
+        Wait for model to be ready
+
+        :param model: Model entity
+        """
+        sleep_time = MIN_INTERVAL
+        while model.status == entities.ModelStatus.CLONING:
+            model = self.get(model_id=model.id)
+            time.sleep(sleep_time)
+            sleep_time = min(sleep_time * BACKOFF_FACTOR, MAX_INTERVAL)
+            time.sleep(sleep_time)
+        return model
 
     @property
     def platform_url(self):

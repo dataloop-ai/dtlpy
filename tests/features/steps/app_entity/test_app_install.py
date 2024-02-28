@@ -31,23 +31,32 @@ def step_impl(context):
 @behave.when(u'I install the app with exception')
 def step_impl(context):
     try:
+        dpk = context.published_dpk if hasattr(context, "published_dpk") else context.dpk
         app = context.dl.entities.App.from_json({}, client_api=context.project._client_api, project=context.project)
-        app = context.project.apps.install(context.dpk)
+        app = context.project.apps.install(dpk)
         if hasattr(context.feature, 'apps'):
             context.feature.apps.append(app)
         else:
             context.feature.apps = [app]
     except Exception as e:
-        context.e = e
+        context.error = e
 
 
 @behave.when(u'I install the app')
 @behave.given(u'I install the app')
+@behave.when(u'I install the app with custom custom_installation')
 def step_impl(context):
-    context.app = context.dl.entities.App.from_json({
+    if hasattr(context, "custom_installation"):
+        custom_installation = context.custom_installation
+    else:
+        custom_installation = context.dpk.to_json()
 
-    }, client_api=context.project._client_api, project=context.project)
-    context.app = context.project.apps.install(context.dpk)
+    context.app = context.dl.entities.App.from_json(
+        {},
+        client_api=context.project._client_api,
+        project=context.project)
+    dpk = context.published_dpk if hasattr(context, "published_dpk") else context.dpk
+    context.app = context.project.apps.install(dpk=dpk, custom_installation=custom_installation)
     if hasattr(context.feature, 'apps'):
         context.feature.apps.append(context.app)
     else:
@@ -61,7 +70,7 @@ def step_impl(context):
 
 @behave.then(u"I should get an exception error='{error_code}'")
 def step_impl(context, error_code):
-    assert context.e is not None and context.e.status_code == error_code
+    assert context.error is not None and context.error.status_code == error_code
 
 
 @behave.then(u"I validate service configuration in dpk is equal to service from app")
@@ -102,7 +111,6 @@ def step_impl(context):
 @behave.then(u'i compare service config with dpk compute configuration for the operation "{operation}"')
 def step_impl(context, operation):
     service = context.service
-    dpk = context.dpk
     model_dpk = context.dpk.components.models[0]
     compute_configs = context.dpk.components.computeConfigs
     compute_config = [item for (index, item) in enumerate(compute_configs) if item["name"] == model_dpk["computeConfigs"][operation]][0]

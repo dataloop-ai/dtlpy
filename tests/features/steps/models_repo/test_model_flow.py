@@ -1,5 +1,6 @@
 import json
 import time
+import random
 
 import behave
 import dtlpy as dl
@@ -8,54 +9,65 @@ import os
 
 @behave.when(u'I create a dummy model package by the name of "{package_name}" with entry point "{entry_point}"')
 def step_impl(context, package_name, entry_point):
-    metadata = dl.Package.get_ml_metadata(
-        default_configuration={'weights_filename': 'model.pth',
-                               'input_size': 256},
-        output_type=dl.AnnotationType.BOX,
-    )
     if package_name == "ac-lr-package":
-        model_repo = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], 'model_ac_lr')
+        context.codebase_local_dir = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], 'model_ac_lr')
     else:
-        model_repo = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], 'models_flow')
+        context.codebase_local_dir = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], 'models_flow')
     module = dl.PackageModule.from_entry_point(
-        entry_point=os.path.join(model_repo, entry_point))
-    module.entry_point = entry_point
-    context.package = context.project.packages.push(package_name=package_name,
-                                                    src_path=model_repo,
-                                                    package_type='ml',
-                                                    modules=[module],
-                                                    requirements=[
-                                                        dl.PackageRequirement(name='matplotlib')],
-                                                    service_config={
-                                                        "versions": {"dtlpy": dl.__version__},
-                                                        'runtime': dl.KubernetesRuntime(
-                                                            runner_image='jjanzic/docker-python3-opencv',
-                                                            pod_type=dl.InstanceCatalog.REGULAR_XS,
-                                                            autoscaler=dl.KubernetesRabbitmqAutoscaler(
-                                                                min_replicas=1,
-                                                                max_replicas=1),
-                                                            concurrency=1).to_json()},
-                                                    metadata=metadata)
+        entry_point=os.path.join(context.codebase_local_dir, entry_point))
+    context.dpk.components.modules._dict[0] = module.to_json()
+    context.codebase = context.project.codebases.pack(
+        directory=context.codebase_local_dir,
+        name=package_name,
+        description="some description"
+    )
+    context.dpk.codebase = context.codebase
+    context.dpk.components.modules[0].entry_point = entry_point
+    context.dpk.name = f"to_delete_{package_name}_{str(random.randrange(0, 1000))}"
+    context.dpk.display_name = f"to_delete_{package_name}_{str(random.randrange(0, 1000))}"
+
+    context.dpk.components.compute_configs._dict[0] = {
+        "name": "default",
+        "versions": {"dtlpy": dl.__version__},
+        'runtime': dl.KubernetesRuntime(
+            runner_image='jjanzic/docker-python3-opencv',
+            pod_type=dl.InstanceCatalog.REGULAR_XS,
+            autoscaler=dl.KubernetesRabbitmqAutoscaler(
+                min_replicas=1,
+                max_replicas=1),
+            concurrency=1).to_json()
+    }
 
 
-@behave.when(u'I create a model from package by the name of "{model_name}" with status "{status}"')
-def step_impl(context, model_name, status):
-    context.model = context.package.models.create(model_name=model_name,
-                                                  description='model for testing',
-                                                  dataset_id=context.dataset.id,
-                                                  scope='project',
-                                                  model_artifacts=[dl.LinkArtifact(
-                                                      url='https://storage.googleapis.com/model-mgmt-snapshots/ResNet50/model.pth',
-                                                      filename='model.pth')],
-                                                  status=status,
-                                                  configuration={'weights_filename': 'model.pth',
-                                                                 'batch_size': 16,
-                                                                 'num_epochs': 10},
-                                                  project_id=context.project.id,
-                                                  labels=[label.tag for label in context.dataset.labels],
-                                                  train_filter=dl.Filters(),
-                                                  output_type=dl.AnnotationType.BOX
-                                                  )
+@behave.when(u'I create a model from package by the name of "{model_name}" with status "{status}" in index "{index}"')
+def step_impl(context, model_name, status, index):
+    model = {
+        'name': model_name,
+        'description': 'model for testing',
+        'datasetId': context.dataset.id,
+        'moduleName': context.dpk.components.modules[0].name,
+        'scope': 'project',
+        'model_artifacts': [dl.LinkArtifact(
+            url='https://storage.googleapis.com/model-mgmt-snapshots/ResNet50/model.pth',
+            filename='model.pth').to_json()],
+        'status': status,
+        'configuration': {'weights_filename': 'model.pth',
+                          'batch_size': 16,
+                          'num_epochs': 10},
+        'labels': [label.tag for label in context.dataset.labels],
+        'metadata': {'system': {'subsets': {'train': dl.Filters().prepare(),
+                                            'validation': dl.Filters().prepare()}}},
+        'outputType': dl.AnnotationType.BOX,
+    }
+    if int(index) == 0:
+        context.dpk.components.models[int(index)].update(model)
+    else:
+        context.dpk.components.models.append(model)
+
+
+@behave.when(u'i fetch the model by the name "{model_name}"')
+def step_impl(context, model_name):
+    context.model = context.project.models.get(model_name=model_name)
 
 
 @behave.when(u'I "{func}" the model')
@@ -110,6 +122,11 @@ def step_impl(context, status, flag, func):
 
     context.model = dl.models.get(model_id=context.model.id)
     assert context.model.status == status, f"TEST FAILED: model status is not as expected, expected: {status}, got: {context.model.status}"
+
+
+@behave.then(u'model status should be "{status}"')
+def step_impl(context, status):
+    assert context.model_clone.status == status, f"TEST FAILED: model status is not as expected, expected: {status}, got: {context.model_clone.status}"
 
 
 @behave.then(u'Dataset has a scores file')

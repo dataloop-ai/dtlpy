@@ -1260,7 +1260,7 @@ class Services:
             else:
                 project_id = self._project_id
 
-        filters = entities.Filters(resource=entities.FiltersResource.SERVICE)
+        filters = entities.Filters(resource=entities.FiltersResource.SERVICE, use_defaults=False)
         filters.add(field='name', values=service_name)
         if project_id is not None:
             filters.add(field='projectId', values=project_id)

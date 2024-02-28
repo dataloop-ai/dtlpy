@@ -1,6 +1,7 @@
 import time
 import behave
 import dtlpy as dl
+from operator import attrgetter
 
 
 @behave.given(u'Service has wrong docker image')
@@ -9,15 +10,15 @@ def step_impl(context):
     context.service = context.service.update(force=True)
 
 
-@behave.then(u'I receive "{error}" notification')
-def step_impl(context, error: str):
+@behave.then(u'I receive "{error}" notification with resource "{resource_input}"')
+def step_impl(context, error: str, resource_input):
     success = False
     timeout = 7 * 60
     start = time.time()
     while time.time() - start < timeout:
         messages = dl.messages._list(context={'project': context.project.id})
         if len(messages) > 0:
-            ms = [m for m in messages if error in m.notification_code and m.resource_id == context.service.id]
+            ms = [m for m in messages if error in m.notification_code and m.resource_id == attrgetter(resource_input)(context)]
             if len(ms) > 0:
                 success = True
                 break

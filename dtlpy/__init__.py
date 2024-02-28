@@ -63,7 +63,7 @@ from . import repositories, exceptions, entities, examples
 from .entities import (
     # main entities
     Project, Dataset, ExpirationOptions, ExportVersion, Trigger, Item, Execution, AnnotationCollection, Annotation,
-    Recipe, IndexDriver, AttributesTypes, AttributesRange, Dpk, App, AppModule,
+    Recipe, IndexDriver, AttributesTypes, AttributesRange, Dpk, App, AppModule, AppScope,
     Ontology, Label, Task, TaskPriority, ConsensusTaskType, Assignment, Service, Package, Codebase, Model,
     PackageModule, PackageFunction,
     # annotations
@@ -80,7 +80,7 @@ from .entities import (
     InstanceCatalog, PackageInputType, ServiceType, ServiceModeType,
     PackageSlot, SlotPostAction, SlotPostActionType, SlotDisplayScope, SlotDisplayScopeResource, UiBindingPanel,
     # roberto
-    DatasetSubsetType, PlotSample, ArtifactType, Artifact, ItemArtifact, LinkArtifact, LocalArtifact, EntityScopeLevel,
+    DatasetSubsetType, ModelStatus, PlotSample, ArtifactType, Artifact, ItemArtifact, LinkArtifact, LocalArtifact, EntityScopeLevel,
     # features
     FeatureEntityType, Feature, FeatureSet,
     #

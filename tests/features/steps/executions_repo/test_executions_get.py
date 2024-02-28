@@ -1,3 +1,5 @@
+import time
+
 import behave
 import logging
 import json
@@ -43,7 +45,13 @@ def step_impl(context, resource):
     filters.add(field="resource.type", values=resource_att[0])
     filters.add(field="resource.{}".format(resource_att[1]), values="{}".format(attrgetter(resource)(context)))
     filters.resource = context.dl.FiltersResource.EXECUTION
-    context.execution = context.service.executions.list(filters=filters).items[0]
+    for i in range(10):
+        execution_list = context.service.executions.list(filters=filters)
+        if execution_list.items_count != 0:
+            context.execution = execution_list.items[0]
+            break
+        else:
+            time.sleep(10)
 
 
 @behave.then(u"I validate execution params")

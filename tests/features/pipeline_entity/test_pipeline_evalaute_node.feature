@@ -11,8 +11,12 @@ Feature: Pipeline evaluate node Testing
   @pipelines.delete
   @DAT-56168
   Scenario: Create pipeline with evaluate node - Execution should success
+    Given I fetch the dpk from 'model_dpk/modelsDpks.json' file
     When I create a dummy model package by the name of "package-evaluate-node" with entry point "main.py"
-    And I create a model from package by the name of "model-evaluate-node" with status "trained"
+    And I create a model from package by the name of "model-evaluate-node" with status "trained" in index "0"
+    And I publish a dpk to the platform
+    And I install the app
+    And i fetch the model by the name "model-evaluate-node"
     When i "deploy" the model
     Then model status should be "deployed" with execution "False" that has function "None"
     Given I create pipeline from json in path "pipelines_json/pipeline_evaluate_node.json"

@@ -29,7 +29,7 @@ def step_impl(context):
 
 @behave.then(u'I expect Task created with "{total_items}" items')
 def step_impl(context, total_items):
-    num_try = 12
+    num_try = 15
     interval = 10
     success = False
 

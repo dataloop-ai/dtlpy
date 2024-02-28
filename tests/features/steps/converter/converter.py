@@ -215,7 +215,7 @@ def compare_voc(src_path, dest_path, reverse=True):
     src_content = os.listdir(src_path)
     dest_content = os.listdir(dest_path)
 
-    assert len(src_content) == len(dest_content)
+    assert len(src_content) == len(dest_content), f"TEST FAILED: {len(src_content)} == {len(dest_content)}"
 
     for f in src_content:
         src_file = os.path.join(src_path, f)

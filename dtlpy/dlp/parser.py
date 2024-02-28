@@ -368,8 +368,8 @@ def get_parser():
     optional = a.add_argument_group("Optional named arguments")
     optional.add_argument('--name', required=False, dest='name', help="the name of the app")
     optional.add_argument('--description', required=False, dest='description', help="the description of the app")
-    optional.add_argument('--categories', required=False, dest='categories',
-                          help="the categories of the app (comma separated)")
+    optional.add_argument('--attributes', required=False, dest='attributes',
+                          help="the attributes of the app (comma separated)")
     optional.add_argument('--icon', required=False, dest='icon', help="the icon of the app")
     optional.add_argument('--scope', required=False, dest='scope',
                           help="the scope of the app (default is organization)")

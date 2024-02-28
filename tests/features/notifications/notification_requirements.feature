@@ -16,5 +16,5 @@ Feature: Executions repository create service testing
     And There is a service by the name of "requirements-error" with module name "default_module" saved to context "service"
     And I add bad requirements to service
     When Service minimum scale is "1"
-    Then I receive "RequirementsError" notification
+    Then I receive "RequirementsError" notification with resource "service.id"
     And Service is deactivated by system

@@ -1,3 +1,5 @@
+import time
+
 from behave import given, when, then
 
 
@@ -27,3 +29,17 @@ def step_impl(context, pipeline_name):
         context.error = None
     except Exception as e:
         context.error = e
+
+
+@when(u'I delete all nodes')
+def step_impl(context):
+    """
+    Remove all nodes from pipeline
+    """
+
+    context.pipeline = context.project.pipelines.get(pipeline_name=context.pipeline_name)
+
+    for node in context.pipeline.nodes:
+        assert context.pipeline.nodes.remove(node.name), "TEST FAILED: Failed to delete node {}".format(node.name)
+
+    context.pipeline = context.pipeline.update()

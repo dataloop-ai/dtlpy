@@ -8,7 +8,7 @@ Feature: Get a dpk
     @testrail-C4524925
     @DAT-46512
     Scenario: Get a valid dpk
-        When I try get the dpk by id
+        When I try get the "published_dpk" by id
         Then I have the same dpk as the published dpk
 
     @testrail-C4524925

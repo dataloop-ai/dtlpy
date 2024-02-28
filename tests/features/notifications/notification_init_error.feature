@@ -16,5 +16,5 @@ Feature: Executions repository create service testing
     Given There is a package (pushed from "faas/initError") by the name of "init-error"
     And There is a service by the name of "init-error" with module name "default_module" saved to context "service"
     When Service minimum scale is "1"
-    Then I receive "InitError" notification
+    Then I receive "InitError" notification with resource "service.id"
     And Service is deactivated by system

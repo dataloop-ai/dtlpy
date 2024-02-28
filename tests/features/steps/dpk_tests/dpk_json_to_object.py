@@ -4,6 +4,8 @@ import random
 
 import behave
 from .. import fixtures
+from .. pipeline_entity import test_pipeline_interface
+
 
 
 @behave.when(u"I fetch the dpk from '{file_name}' file")
@@ -19,6 +21,9 @@ def step_impl(context, file_name):
             json_object['context']['project'] = context.project.id
         if json_object['context'].get("organization", None) is not None:
             json_object['context']['organization'] = context.project.org['id']
+
+    if "pipelineTemplates" in json_object.get('components', {}).keys():
+        json_object['components']['pipelineTemplates'][0] = test_pipeline_interface.generate_pipeline_json(context, json_object['components']['pipelineTemplates'][0])
 
     context.dpk = context.dl.entities.Dpk.from_json(_json=json_object,
                                                     client_api=context.dl.client_api,
@@ -61,8 +66,8 @@ def step_impl(context):
         assert context.dpk.description == context.json_object['description']
     if 'icon' in context.json_object:
         assert context.dpk.icon == context.json_object['icon']
-    if 'categories' in context.json_object:
-        assert context.dpk.categories == context.json_object['categories']
+    if 'attributes' in context.json_object:
+        assert context.dpk.attributes == context.json_object['attributes']
     if 'components' in context.json_object:
         assert context.dpk.components.panels == \
                context.json_object['components']['panels']
@@ -81,7 +86,7 @@ def step_impl(context):
 @behave.given(u"I publish a dpk to the platform")
 def step_impl(context):
     context.dpk.name = context.dpk.name + str(random.randint(10000, 1000000))
-    context.dpk = context.dl.entities.Dpk.publish(context.dpk)
+    context.dpk = context.project.dpks.publish(context.dpk)
     if hasattr(context.feature, 'dpks'):
         context.feature.dpks.append(context.dpk)
     else:
@@ -91,3 +96,41 @@ def step_impl(context):
 @behave.when(u"I update dpk dtlpy to current version for service in index {i}")
 def step_impl(context, i):
     context.dpk.components.services[int(i)]['versions'] = {'dtlpy': context.dl.__version__, "verify": True}
+
+
+@behave.when(u"I remove the last service from context.custom_installation")
+def step_impl(context):
+    if not hasattr(context, "custom_installation"):
+        raise AttributeError("Please make sure to add 'custom_installation' to 'context', Can use step 'When I create a context.custom_installation var'")
+
+    context.custom_installation.get('components').get('services').pop(-1)
+    context.custom_installation.get('components').get('triggers').pop(-1)
+
+
+@behave.when(u"I add service to context.custom_installation")
+def step_impl(context):
+    if not hasattr(context, "custom_installation"):
+        raise AttributeError("Please make sure to add 'custom_installation' to 'context', Can use step 'When I create a context.custom_installation var'")
+
+    service = context.custom_installation.get('components').get('services')[-1].copy()
+    service['name'] = f"{service.get('name')}-sdk"
+    context.custom_installation.get('components').get('services').append(service)
+
+
+@behave.when(u"I add att '{value}' to dpk service in index '{index}'")
+def step_impl(context, value, index):
+    if "=" in value:
+        value = value.split("=")
+    if "cooldownPeriod" in value:
+        context.dpk.components.services[int(index)]['runtime']['autoscaler'][value[0]] = eval(value[1])
+
+
+@behave.then(u"I validate dpk autoscaler in composition for service in index '{index}'")
+def step_impl(context, index):
+    context.dpk = context.project.dpks.get(dpk_id=context.dpk.id)
+    app_composition = context.project.compositions.get(context.app.composition_id)
+
+    dpk_autoscaler_items = context.dpk.components.services[int(index)]['runtime']['autoscaler'].items()
+    comp_autoscaler_items = app_composition['spec'][int(index)]['runtime']['autoscaler'].items()
+
+    assert dpk_autoscaler_items <= comp_autoscaler_items, f"TEST FAILED: dpk_autoscaler_items is {dpk_autoscaler_items} composition_autoscaler_items is {comp_autoscaler_items}"

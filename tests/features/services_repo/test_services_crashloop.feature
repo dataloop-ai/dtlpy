@@ -13,7 +13,7 @@ Feature: Services repository crashloopbackoff
     Given I upload item in "0000000162.jpg" to dataset
     Given Service that restart once in init
     When service is deployed with num replicas > 0
-    Then I receive "InitError" notification
+    Then I receive "InitError" notification with resource "service.id"
     Then service should stay active
 
 

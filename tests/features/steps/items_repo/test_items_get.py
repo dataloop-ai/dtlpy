@@ -108,7 +108,7 @@ def step_impl(context):
 @behave.when(u'Dataset in index "{index}" have "{items_count}" items')
 def step_impl(context, index, items_count):
     dataset = context.datasets[int(index)]
-    num_try = 12
+    num_try = 16
     interval = 10
     finished = False
 

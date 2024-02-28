@@ -224,6 +224,8 @@ class Service(entities.BaseEntity):
     mode = attr.ib(repr=False)
     metadata = attr.ib()
     archive = attr.ib(repr=False)
+    config = attr.ib(repr=False)
+    settings = attr.ib(repr=False)
 
     # SDK
     _package = attr.ib(repr=False)
@@ -329,7 +331,9 @@ class Service(entities.BaseEntity):
             mode=_json.get('mode', dict()),
             metadata=_json.get('metadata', None),
             archive=_json.get('archive', None),
-            updated_by=_json.get('updatedBy', None)
+            updated_by=_json.get('updatedBy', None),
+            config=_json.get('config', None),
+            settings=_json.get('settings', None),
         )
         inst.is_fetched = is_fetched
         return inst
@@ -360,7 +364,8 @@ class Service(entities.BaseEntity):
         if self._package is None:
             try:
                 self._package = repositories.Packages(client_api=self._client_api).get(package_id=self.package_id,
-                                                                                       fetch=None)
+                                                                                       fetch=None,
+                                                                                       log_error=False)
                 assert isinstance(self._package, entities.Package)
             except:
                 self._package = repositories.Dpks(client_api=self._client_api).get(dpk_id=self.package_id)
@@ -456,6 +461,8 @@ class Service(entities.BaseEntity):
                 attr.fields(Service).metadata,
                 attr.fields(Service).archive,
                 attr.fields(Service).updated_by,
+                attr.fields(Service).config,
+                attr.fields(Service).settings
             )
         )
 
@@ -504,6 +511,13 @@ class Service(entities.BaseEntity):
 
         if self.archive is not None:
             _json['archive'] = self.archive
+
+        if self.config is not None:
+            _json['config'] = self.config
+
+        if self.settings is not None:
+            _json['settings'] = self.settings
+
         return _json
 
     def update(self, force=False):
@@ -687,7 +701,7 @@ class Service(entities.BaseEntity):
 
         :param filters: Filters entity for a filtering before execute
         :param str function_name: function name to run
-        :param List[FunctionIO] or dict execution_inputs: input dictionary or list of FunctionIO entities
+        :param List[FunctionIO] or dict execution_inputs: input dictionary or list of FunctionIO entities, that represent the extra inputs of the function
         :param bool wait: wait until create task finish
         :return: execution object
         :rtype: dtlpy.entities.execution.Execution

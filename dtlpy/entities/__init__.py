@@ -53,7 +53,7 @@ from .directory_tree import DirectoryTree
 from .user import User
 from .bot import Bot
 from .webhook import Webhook, HttpMethod
-from .model import Model, DatasetSubsetType, PlotSample
+from .model import Model, DatasetSubsetType, PlotSample, ModelStatus
 from .driver import Driver, S3Driver, GcsDriver, AzureBlobDriver
 from .pipeline import Pipeline, PipelineStats, PipelineResumeOption, PipelineSettings, Variable, CompositionStatus
 from .node import PipelineConnection, PipelineNode, PipelineConnectionPort, PipelineNodeIO, TaskNode, \
@@ -70,7 +70,7 @@ from .setting import Role, PlatformEntityType, SettingsValueTypes, SettingsTypes
 from .reflect_dict import ReflectDict
 from .dpk import Dpk, Panel, Toolbar, Components, DpkComputeConfig, DpkComponentChannel, PipelineNode, \
     CustomNodeScope, ToolbarInvoke
-from .app import App
+from .app import App, AppScope
 from .app_module import AppModule
 from .resource_execution import ResourceExecution
 from .message import Message, NotificationEventContext
