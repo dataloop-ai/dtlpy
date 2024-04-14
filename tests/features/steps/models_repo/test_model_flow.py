@@ -71,17 +71,25 @@ def step_impl(context, model_name):
 
 
 @behave.when(u'I "{func}" the model')
-def step_impl(context, func):
+@behave.when(u'I "{func}" the model with exception "{flag}"')
+def step_impl(context, func, flag=None):
     context.model = dl.models.get(model_id=context.model.id)
-    if func == 'evaluate':
-        service_config = None
-        if hasattr(context, "service_config"):
-            service_config = context.service_config
-        context.execution = context.model.evaluate(dataset_id=context.dataset.id, filters=dl.Filters(),
-                                                   service_config=service_config)
-        context.to_delete_services_ids.append(context.execution.service_id)
-    else:
-        context.execution = context.model.__getattribute__(func)()
+    try:
+        if func == 'evaluate':
+            service_config = None
+            if hasattr(context, "service_config"):
+                service_config = context.service_config
+            context.execution = context.model.evaluate(dataset_id=context.dataset.id, filters=dl.Filters(),
+                                                       service_config=service_config)
+            context.to_delete_services_ids.append(context.execution.service_id)
+        else:
+            context.execution = context.model.__getattribute__(func)()
+        context.error = None
+    except Exception as e:
+        # If flag is None, Test should be failed and raise error
+        if not flag:
+            raise e
+        context.error = e
 
 
 @behave.when(u'i train the model with init param model none')
@@ -259,6 +267,7 @@ def step_impl(context, service_id):
 
 
 @behave.when(u'I delete model')
+@behave.then(u'I delete model')
 def step_impl(context):
     context.model.delete()
 
@@ -311,3 +320,17 @@ def step_impl(context, models_name, model_status):
     for model in context.project.models.list().items:
         if model.name in names:
             assert model.status == model_status, f"TEST FAILED: model {model.id} status is not as expected, expected: {model_status}, got: {model.status}"
+
+
+@behave.when(u'I remove attributes "{values}" from dpk model in index "{index}"')
+def step_impl(context, values, index=0):
+    model = context.dpk.components.models[int(index)]
+    values = values.split(",")
+    for value in values:
+        if "metadata" in value:
+            if "system" in value:
+                del model['metadata']['system'][value.split('.')[-1]]
+            else:
+                del model['metadata'][value.split('.')[-1]]
+        else:
+            del model[value]

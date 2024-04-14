@@ -46,6 +46,7 @@ class App(entities.BaseEntity):
     routes = attr.ib(type=dict)
     custom_installation = attr.ib(type=dict)
     metadata = attr.ib(type=dict)
+    status = attr.ib(type=entities.CompositionStatus)
 
     # sdk
     _project = attr.ib(type=entities.Project, repr=False)
@@ -97,6 +98,30 @@ class App(entities.BaseEntity):
             succeed = app.update()
         """
         return self.apps.update(self)
+
+    def resume(self):
+        """
+        Resume the current app
+
+        :return bool whether the operation ran successfully or not
+
+        **Example**
+        .. code-block:: python
+            succeed = app.resume()
+        """
+        return self.apps.resume(self)
+
+    def pause(self):
+        """
+        Pause the current app
+
+        :return bool whether the operation ran successfully or not
+
+        **Example**
+        .. code-block:: python
+            succeed = app.pause()
+        """
+        return self.apps.pause(self)
 
     @staticmethod
     def _protected_from_json(_json, client_api, project, is_fetched=True):
@@ -150,6 +175,8 @@ class App(entities.BaseEntity):
             _json['customInstallation'] = self.custom_installation
         if self.metadata is not None:
             _json['metadata'] = self.metadata
+        if self.status is not None:
+            _json['status'] = self.status
 
         return _json
 
@@ -172,7 +199,8 @@ class App(entities.BaseEntity):
             custom_installation=_json.get('customInstallation', {}),
             client_api=client_api,
             project=project,
-            metadata=_json.get('metadata', None)
+            metadata=_json.get('metadata', None),
+            status=_json.get('status', None)
         )
         app.is_fetched = is_fetched
         return app

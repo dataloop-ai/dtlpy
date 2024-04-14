@@ -14,6 +14,7 @@ Feature: Converter yolo format
         When I reverse dataloop dataset to local "yolo" in "converter/yolo/reverse"
         Then local "yolo" dataset in "converter/yolo/local_dataset" is equal to reversed dataset in "converter/yolo/reverse"
 
+    @DAT-46491
     Scenario: Upload dataset with inner folder using coco converter
         Given I use "YOLO" converter to upload items with annotations to the dataset using the given params
             | Parameter              | Value                                                           |

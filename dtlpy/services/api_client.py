@@ -1451,6 +1451,7 @@ class ApiClient:
         :param force: force login. in case login with same user but want to get a new JWT
         :return:
         """
+        logger.warning('dl.login_secret is deprecated. Please use dl.login_m2m instead.')
         return login_secret(api_client=self,
                             email=email,
                             password=password,
@@ -1485,6 +1486,14 @@ class ApiClient:
         :return:
         """
         self.token = token  # this will also set the refresh_token to None
+
+    def login_api_key(self, api_key):
+        """
+        Login using API key
+        :param api_key: a valid API key
+        :return:
+        """
+        self.token = api_key
 
     @property
     def login_domain(self):

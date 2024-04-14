@@ -67,4 +67,4 @@ Feature: publish a dpk
     Then Model object with the same name should be exist
     When i "deploy" the model
     Then i have a model service
-    Then i compare service config with dpk compute configuration for the operation "deploy"
+    Then I compare service config with dpk compute configuration for the operation "deploy"

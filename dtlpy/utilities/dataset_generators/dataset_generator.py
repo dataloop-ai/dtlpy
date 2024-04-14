@@ -250,10 +250,11 @@ class DatasetGenerator:
                                                        entities.AnnotationType.BOX,
                                                        entities.AnnotationType.POLYGON]:
                                 raise ValueError('unsupported annotation type: {}'.format(annotation.type))
+                dtype = object if self.annotation_type == entities.AnnotationType.POLYGON else None
                 # reorder for output
                 item_info.update({entities.AnnotationType.BOX.value: np.asarray(box_coordinates).astype(float),
                                   entities.AnnotationType.CLASSIFICATION.value: np.asarray(classes_ids),
-                                  entities.AnnotationType.POLYGON.value: np.asarray(polygon_coordinates, dtype=object),
+                                  entities.AnnotationType.POLYGON.value: np.asarray(polygon_coordinates, dtype=dtype),
                                   'labels': labels})
                 if len(item_info[entities.AnnotationType.CLASSIFICATION.value]) == 0:
                     logger.debug('Empty annotation (nothing matched label_to_id_map) for image filename: {}'.format(

@@ -118,6 +118,7 @@ class Model(entities.BaseEntity):
     _repositories = attr.ib(repr=False)
     _ontology = attr.ib(repr=False, default=None)
     updated_by = attr.ib(default=None)
+    app = attr.ib(default=None)
 
     @staticmethod
     def _protected_from_json(_json, client_api, project, package, is_fetched=True):
@@ -198,7 +199,8 @@ class Model(entities.BaseEntity):
             input_type=_json.get('inputType', None),
             output_type=_json.get('outputType', None),
             module_name=_json.get('moduleName', None),
-            updated_by=_json.get('updatedBy', None)
+            updated_by=_json.get('updatedBy', None),
+            app=_json.get('app', None)
         )
         inst.is_fetched = is_fetched
         return inst
@@ -226,7 +228,8 @@ class Model(entities.BaseEntity):
                                                         attr.fields(Model).updated_at,
                                                         attr.fields(Model).input_type,
                                                         attr.fields(Model).output_type,
-                                                        attr.fields(Model).updated_by
+                                                        attr.fields(Model).updated_by,
+                                                        attr.fields(Model).app
                                                         ))
         _json['packageId'] = self.package_id
         _json['datasetId'] = self.dataset_id
@@ -248,6 +251,8 @@ class Model(entities.BaseEntity):
 
         if self.updated_by:
             _json['updatedBy'] = self.updated_by
+        if self.app:
+            _json['app'] = self.app
 
         return _json
 

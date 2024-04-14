@@ -38,6 +38,7 @@ Feature: Testing App custom_installation attribute
     And I uninstall the app
 
   @DAT-64311
+  @DAT-62824
   Scenario: Update installed app.custom_installation with new service - Should update composition with new service
     Given I fetch the dpk from 'apps/app_three_services.json' file
     When I publish a dpk to the platform
@@ -48,6 +49,7 @@ Feature: Testing App custom_installation attribute
     And I update an app
     And I wait "4"
     Then I validate app.custom_installation is equal to composition
+    And services should be updated
     And I uninstall the app
 
   @DAT-64312
@@ -58,7 +60,7 @@ Feature: Testing App custom_installation attribute
     And I remove the last service from context.custom_installation
     And I install the app with custom custom_installation
     And I wait "4"
-    And I add att 'cooldownPeriod=500' to dpk service in index '0'
+    And I add att 'cooldownPeriod=500' to dpk 'service' in index '0'
     And I increment dpk version
     And I publish a dpk
     And I increment app dpk_version

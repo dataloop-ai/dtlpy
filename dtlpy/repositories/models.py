@@ -199,7 +199,7 @@ class Models:
     def _set_model_filter(self,
                           metadata: dict,
                           train_filter: entities.Filters = None,
-                          validation_filter: entities.Filters = None, ):
+                          validation_filter: entities.Filters = None):
         if metadata is None:
             metadata = {}
         if 'system' not in metadata:
@@ -285,6 +285,7 @@ class Models:
             output_type=None,
             train_filter: entities.Filters = None,
             validation_filter: entities.Filters = None,
+            app: entities.App = None
     ) -> entities.Model:
         """
         Create a Model entity
@@ -306,6 +307,7 @@ class Models:
         :param str output_type: dl.AnnotationType - the type of annotations the model produces (class, box segment, text, etc)
         :param dtlpy.entities.filters.Filters train_filter: Filters entity or a dictionary to define the items' scope in the specified dataset_id for the model train
         :param dtlpy.entities.filters.Filters validation_filter: Filters entity or a dictionary to define the items' scope in the specified dataset_id for the model validation
+        :param dtlpy.entities.App app: App entity to connect the model to
         :return: Model Entity
 
         **Example**:
@@ -342,10 +344,12 @@ class Models:
                 raise exceptions.PlatformException('Please provide project_id')
             project_id = self._project.id
         else:
-            if project_id != self._project_id and not package.is_global:
-                logger.warning(
-                    "Note! you are specified project_id {!r} which is different from repository context: {!r}".format(
-                        project_id, self._project_id))
+            if project_id != self._project_id:
+                if (isinstance(package, entities.Package) and not package.is_global) or \
+                        (isinstance(package, entities.Dpk) and not package.scope != 'public'):
+                    logger.warning(
+                        "Note! you are specified project_id {!r} which is different from repository context: {!r}".format(
+                            project_id, self._project_id))
 
         if model_artifacts is None:
             model_artifacts = []
@@ -367,6 +371,29 @@ class Models:
             'outputType': output_type,
         }
 
+        if app is not None:
+            if not isinstance(package, entities.Dpk):
+                raise ValueError('package must be a Dpk entity')
+            if app.dpk_name != package.name or app.dpk_version != package.version:
+                raise ValueError('App and package must be the same')
+            component_name = None
+            compute_config = None
+            for model in package.components.models:
+                if model['name'] == model_name:
+                    component_name = model['name']
+                    compute_config = model.get('computeConfigs', None)
+                    break
+            if component_name is None:
+                raise ValueError('Model name not found in package')
+            payload['app'] = {
+                "id": app.id,
+                "componentName": component_name,
+                "dpkName": package.name,
+                "dpkVersion": package.version
+            }
+            if compute_config is not None:
+                payload['app']['computeConfig'] = compute_config
+
         if configuration is not None:
             payload['configuration'] = configuration
 
@@ -380,7 +407,8 @@ class Models:
             payload['status'] = status
 
         if train_filter or validation_filter:
-            metadata = self._set_model_filter(metadata={}, train_filter=train_filter,
+            metadata = self._set_model_filter(metadata={},
+                                              train_filter=train_filter,
                                               validation_filter=validation_filter)
             payload['metadata'] = metadata
 

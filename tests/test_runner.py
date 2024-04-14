@@ -73,33 +73,62 @@ def clean_feature_log_file(log_filepath):
 
 def delete_single_project(i_project: dl.Project, i_pbar):
     try:
-        i_project.delete(True, True)
-    except Exception:
-        try:
-            for dataset in i_project.datasets.list():
-                try:
-                    if dataset.readonly:
-                        dataset.set_readonly(False)
-                except Exception:
-                    pass
-            for app in i_project.apps.list().items:
-                try:
-                    app.uninstall()
-                except Exception:
-                    pass
-            for dpkg in i_project.dpks.list(filters=dl.Filters(field='creator', values=dl.info()['user_email'])).items:
+        for dataset in i_project.datasets.list():
+            try:
+                if dataset.readonly:
+                    dataset.set_readonly(False)
+            except Exception:
+                pass
+        for pipeline in i_project.pipelines.list().items:
+            try:
+                pipeline.delete()
+            except Exception:
+                pass
+        for service in i_project.services.list().items:
+            try:
+                service.delete()
+            except Exception as e:
+                if 'Service cannot be deleted as long as it has running/pending pipeline' in str(e):
+                    services = service.executions.list()
+                    for page in services:
+                        for s in page:
+                            try:
+                                s.terminate()
+                            except Exception as e:
+                                pass
+                pass
+        for model in i_project.models.list().items:
+            try:
+                model.delete()
+            except Exception:
+                pass
+        for app in i_project.apps.list().items:
+            try:
+                app.uninstall()
+            except Exception:
+                pass
+        for dpkg in i_project.dpks.list(filters=dl.Filters(field='creator', values=dl.info()['user_email'],
+                                                           resource=dl.FiltersResource.DPK)).items:
+            try:
+                dpkg.delete()
+            except Exception:
+                apps = dl.apps.list(
+                    filters=dl.Filters(use_defaults=False, resource=dl.FiltersResource.APP,
+                                       field="dpkName",
+                                       values=dpkg.name))
+                for page in apps:
+                    for app in page:
+                        try:
+                            app.uninstall()
+                        except Exception as e:
+                            pass
                 try:
                     dpkg.delete()
-                except Exception:
+                except:
                     pass
-            for service in i_project.services.list().items:
-                try:
-                    service.delete()
-                except Exception:
-                    pass
-            i_project.delete(True, True)
-        except Exception:
-            print('Failed to delete project: {}'.format(i_project.name))
+        i_project.delete(True, True)
+    except Exception:
+        print('Failed to delete project: {}'.format(i_project.name))
     i_pbar.update(1)
 
 
@@ -277,7 +306,6 @@ if __name__ == '__main__':
     features_path = os.path.join(TEST_DIR, 'features')
     print(f"Index driver is {os.environ.get('INDEX_DRIVER_VAR', None)}")
 
-
     results = dict()
     features_to_run = set()
     for path, subdirs, files in os.walk(features_path):
@@ -376,10 +404,11 @@ if __name__ == '__main__':
                                                                           os.path.basename(feature))
             print(res_msg)
 
+    delete_projects()
+
     # return success/failure
     if passed:
         # all True - passed
         sys.exit(0)
     else:
         sys.exit(1)
-

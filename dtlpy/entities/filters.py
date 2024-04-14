@@ -456,6 +456,9 @@ class Filters:
             _json['systemSpace'] = self._system_space
         return _json
 
+    def print(self, indent=2):
+        print(json.dumps(self.prepare(), indent=indent))
+
     def sort_by(self, field, value: FiltersOrderByDirection = FiltersOrderByDirection.ASCENDING):
         """
         sort the filter
@@ -549,3 +552,6 @@ class SingleFilter:
             _json[self.field] = value
 
         return _json
+    
+    def print(self, indent=2):
+        print(json.dumps(self.prepare(), indent=indent))

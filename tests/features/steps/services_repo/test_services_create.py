@@ -38,7 +38,7 @@ def step_impl(context):
             if param[1] != "None":
                 runtime = json.loads(param[1])
             else:
-                runtime = {"gpu": False, "numReplicas": 1, 'concurrency': 1}
+                runtime = {"numReplicas": 1, 'concurrency': 1}
         elif param[0] == "execution_timeout":
             if param[1] != "None":
                 execution_timeout = int(param[1])

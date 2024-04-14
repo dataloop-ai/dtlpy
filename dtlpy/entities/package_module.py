@@ -28,6 +28,7 @@ class PackageModule(entities.DlEntity):
                                                                              _type=list,
                                                                              default=list(),
                                                                              _kls='PackageFunction')
+    compute_config: str = entities.DlProperty(location=['computeConfig'], _type=str, default=None)
 
     def __repr__(self):
         # TODO need to move to DlEntity

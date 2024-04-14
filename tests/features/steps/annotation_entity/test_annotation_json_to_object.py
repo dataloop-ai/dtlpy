@@ -3,6 +3,7 @@ import behave
 import json
 import random as r
 import time
+import dictdiffer
 
 
 @behave.then(u'Object "{entity}" to_json() equals to Platform json.')
@@ -48,13 +49,13 @@ def step_impl(context, entity):
         elif entity == 'project':
             entity_to_json.pop('isBlocked', None)
             response.pop('isBlocked', None)
+        elif entity == 'package':
+            if 'modules' in entity_to_json:
+                for module in entity_to_json['modules']:
+                    module.pop('computeConfig', None)
 
         if entity_to_json != response:
-            logging.error('FAILED: response json is:\n{}\n\nto_json is:\n{}'.format(json.dumps(response,
-                                                                                               indent=2),
-                                                                                    json.dumps(entity_to_json,
-                                                                                               indent=2)))
-            assert False
+            assert False, "TEST FAILED: Different in response and entity_to_json.\n{}".format(list(dictdiffer.diff(response, entity_to_json)))
     else:
         annotations_list = context.item.annotations.list()
         for ann in annotations_list:
@@ -81,11 +82,7 @@ def step_impl(context, entity):
 
             # compare json
             if response != ann_json:
-                logging.error('FAILED: response json is:\n{}\n\nto_json is:\n{}'.format(json.dumps(response,
-                                                                                                   indent=2),
-                                                                                        json.dumps(ann_json,
-                                                                                                   indent=2)))
-                assert False
+                assert False, "TEST FAILED: Different in response and ann_json.\n{}".format(list(dictdiffer.diff(response, ann_json)))
 
 
 @behave.when(u"I create a blank annotation to item")

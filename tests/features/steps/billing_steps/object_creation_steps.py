@@ -5,6 +5,7 @@ import sys
 import time
 
 
+@behave.given('I create "{entity}" name "{name}"')
 @behave.when('I create "{entity}" name "{name}"')
 def step_impl(context, entity, name):
     """

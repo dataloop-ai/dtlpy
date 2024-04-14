@@ -8,9 +8,26 @@ def step_impl(context):
     context.recipe = context.dataset.recipes.create()
 
 
+@behave.when(u'I create a new plain recipe with name "{recipe_name}"')
+def step_impl(context, recipe_name):
+    context.recipe = context.dataset.recipes.create(recipe_name=recipe_name)
+
+
 @behave.when(u'I create a new project recipe')
 def step_impl(context):
     context.recipe = context.dl.recipes.create(recipe_name="test-checkout")
+
+
+@behave.When(u'I query recipes by "{field}" "{value}"')
+def step_impl(context, field, value):
+    recipe_filters = context.dl.Filters(resource=context.dl.FiltersResource.RECIPE)
+    recipe_filters.add(field=field, values=value)
+    context.recipies = context.project.recipes.list(filters=recipe_filters)
+
+
+@behave.When(u'I have "{num}" recipies')
+def step_impl(context, num):
+    assert context.recipies.items_count == int(num) , f"Expected {num} recipes, got {context.recipies.items_count}"
 
 
 @behave.then(u'recipe in host is exist')

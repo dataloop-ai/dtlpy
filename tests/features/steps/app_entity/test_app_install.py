@@ -108,10 +108,28 @@ def step_impl(context):
     assert func_node.service is not None
 
 
-@behave.then(u'i compare service config with dpk compute configuration for the operation "{operation}"')
-def step_impl(context, operation):
+@behave.then(u'I compare service config with dpk compute configuration for the operation "{operation}"')
+@behave.then(u'I compare service config with context.compute_config_item')
+def step_impl(context, operation=None):
     service = context.service
-    model_dpk = context.dpk.components.models[0]
-    compute_configs = context.dpk.components.computeConfigs
-    compute_config = [item for (index, item) in enumerate(compute_configs) if item["name"] == model_dpk["computeConfigs"][operation]][0]
-    assert compute_config["runtime"]["runnerImage"] == service.runtime.runner_image, f"TEST FAILED: Field runnerImage"
+    if operation:
+        model_dpk = context.dpk.components.models[0]
+        compute_configs = context.dpk.components.computeConfigs
+        compute_config = [item for (index, item) in enumerate(compute_configs) if item["name"] == model_dpk["computeConfigs"][operation]][0]
+    else:
+        compute_config = context.compute_config_item
+    assert compute_config["runtime"]["runnerImage"]\
+           == service.runtime.runner_image, f"TEST FAILED: Field runnerImage expected {compute_config['runtime']['runnerImage']} actual on service {service.runtime.runner_image}"
+
+
+@behave.then(u'The dataset component has been installed successfully')
+def step_impl(context):
+    comp = context.dl.compositions.get(composition_id=context.app.composition_id)
+    service = context.dl.services.get(service_id=comp['datasets'][0].get('state', {}).get('serviceId', None))
+    dataset = context.dl.datasets.get(dataset_id=comp["datasets"][0]["datasetId"])
+    execution = context.dl.executions.get(execution_id=comp["datasets"][0]["state"]["executionId"])
+
+    assert comp["datasets"][0]["state"]["dataset"]["id"] == comp["datasets"][0]["datasetId"]
+    assert service is not None
+    assert dataset is not None
+    assert execution is not None

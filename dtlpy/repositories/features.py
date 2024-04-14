@@ -18,6 +18,8 @@ class Features:
                  item: entities.Item = None,
                  annotation: entities.Annotation = None,
                  feature_set: entities.FeatureSet = None):
+        if project is not None and project_id is None:
+            project_id = project.id
         self._project = project
         self._project_id = project_id
         self._item = item
@@ -34,6 +36,9 @@ class Features:
 
     @property
     def project(self) -> entities.Project:
+        if self._project is None and self._project_id is None and self._item is not None:
+            self._project = self._item.project
+            self._project_id = self._project.id
         if self._project is None and self._project_id is not None:
             # get from id
             self._project = repositories.Projects(client_api=self._client_api).get(project_id=self._project_id)
@@ -96,8 +101,9 @@ class Features:
             filters.add(field='featureSetId', values=self._feature_set.id)
         if self._item is not None:
             filters.add(field='entityId', values=self._item.id)
-        if self._project_id is not None:
-            filters.context = {"projects": [self._project_id]}
+        if self._project_id is None:
+            self._project_id = self.project.id
+        filters.context = {"projects": [self._project_id]}
 
         paged = entities.PagedEntities(items_repository=self,
                                        filters=filters,

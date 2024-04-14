@@ -1,5 +1,4 @@
 import behave
-import dictdiffer
 
 
 @behave.then(u'I validate app.custom_installation is equal to composition')
@@ -14,3 +13,13 @@ def step_impl(context):
     assert app_services_names == comp_services_names, f"TEST FAILED: app_services_names is {app_services_names} composition_services_names is {comp_services_names}"
     assert app_triggers_names == comp_triggers_names, f"TEST FAILED: app_triggers_names is {app_triggers_names} composition_triggers_names is {comp_triggers_names}"
 
+
+@behave.then(u'services should be updated')
+def step_impl(context):
+    services = context.project.services.list()
+    for page in services:
+        for service in page:
+            if service.name.endswith('sdk'):
+                assert service.version == '1.0.0', f"TEST FAILED: add new service"
+            else:
+                assert service.version == '1.0.1', f"TEST FAILED: update services, service version is {service.version}"

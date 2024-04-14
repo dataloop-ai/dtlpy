@@ -450,7 +450,8 @@ class Services:
             name: str,
             action: str = 'created',
             support: str = None,
-            docs: str = None
+            docs: str = None,
+            agent_info: dict = None
     ):
         url = "/services/{}/notify".format(service_id)
         payload = {
@@ -458,6 +459,8 @@ class Services:
             'message': message,
             'notificationName': name
         }
+        if agent_info is not None:
+            payload['agentInfo'] = agent_info
 
         if support:
             payload['support'] = support

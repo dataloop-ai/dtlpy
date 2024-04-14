@@ -59,6 +59,9 @@ class CommandExecutor:
         self.dl.login_token(args.token)
         self.dl.info(with_token=False)
 
+    def login_api_key(self, args):
+        self.dl.login_api_key(api_key=args.api_key)
+
     def login_secret(self, args):
         self.login_m2m(args=args)
 
@@ -587,6 +590,18 @@ class CommandExecutor:
         elif args.app == 'update':
             # TODO: I think it changed, not implemented
             logger.info('App updated successfully')
+        elif args.app == 'resume':
+            succeed = self.utils.get_apps_repo(args).resume(app_id=args.app_id)
+            if succeed is True:
+                logger.info('Resumed application successfully')
+            else:
+                logger.info('Application resume failed')
+        elif args.app == 'pause':
+            succeed = self.utils.get_apps_repo(args).pause(app_id=args.app_id)
+            if succeed is True:
+                logger.info('Paused application successfully')
+            else:
+                logger.info('Application pause failed')
         elif args.app == 'install':
             app = self.utils.get_apps_repo(args).install(
                 dpk=self.utils.get_dpks_repo(args).get(dpk_id=args.dpk_id),

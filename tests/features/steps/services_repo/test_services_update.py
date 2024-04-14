@@ -1,4 +1,8 @@
+import string
 import time
+import random
+from multiprocessing.pool import ThreadPool
+
 import behave
 import json
 
@@ -149,3 +153,150 @@ def step_impl(context, resource: str):
     resource = getattr(context, resource)
     assert resource.updated_by is not None
     assert resource.updated_by == context.dl.info()['user_email']
+
+
+def random_5_chars():
+    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=5)) + 'a'
+
+
+long_timeout = 60 * 60 * 5
+
+
+@behave.given(u'I have a paused "{service_type}" service with concurrency "{concurrency}"')
+def step_impl(context, service_type: str, concurrency: str):
+    concurrency = int(concurrency)
+
+    service_name = f'{service_type}-service-{random_5_chars()}'
+
+    def run(item):
+        import time
+        time.sleep(.5)
+        return item
+
+    context.service = context.project.services.deploy(
+        func=run,
+        service_name=service_name,
+        execution_timeout=900 if service_type == 'short-term' else long_timeout,
+        runtime=context.dl.KubernetesRuntime(
+            concurrency=concurrency,
+            autoscaler=context.dl.KubernetesRabbitmqAutoscaler(
+                min_replicas=0,
+                max_replicas=1
+            )
+        )
+    )
+    context.service.pause()
+    context.service = context.dl.services.get(service_id=context.service.id)
+
+
+@behave.given(u'I run "{num_executions}" executions and activate the service')
+def step_impl(context, num_executions: str):
+    num_executions = int(num_executions)
+    item_id = context.dataset.items.list().items[0].id
+    pool = ThreadPool(processes=10)
+    for _ in range(num_executions):
+        pool.apply_async(
+            context.service.execute,
+            kwds={'item_id': item_id, 'project_id': context.project.id}
+        )
+
+    pool.close()
+    pool.join()
+    context.service.resume()
+    context.service = context.dl.services.get(service_id=context.service.id)
+
+
+def create_filter(c):
+    f = c.dl.Filters(resource=c.dl.FiltersResource.EXECUTION)
+    f.add(field='serviceId', values=c.service.id)
+    return f
+
+
+@behave.when(u'I update the service back and forth "{num_times}" times from long-term to short-term')
+def step_impl(context, num_times: str):
+    num_times = int(num_times)
+    context.machine_count = num_times + 1
+    last_count = 0
+    interval = 3
+
+    def is_long_term(service: context.dl.Service):
+        return service.execution_timeout == long_timeout
+
+    def wait_for_some_executions_to_run(last_running_executions_count):
+        max_wait = 60 * 5
+        start_time = time.time()
+        f = create_filter(c=context)
+        f.add(
+            field='latestStatus.status', values=context.dl.ExecutionStatus.CREATED,
+            operator=context.dl.FiltersOperations.NOT_EQUAL
+        )
+        es = context.service.executions.list(filters=f)
+        while es.items_count <= last_running_executions_count and time.time() - start_time < max_wait:
+            es = context.service.executions.list(filters=f)
+            time.sleep(interval)
+
+    for _ in range(num_times):
+        wait_for_some_executions_to_run(last_running_executions_count=last_count)
+        if is_long_term(context.service):
+            context.service.execution_timeout = timeout = 900
+        else:
+            context.service.execution_timeout = timeout = long_timeout
+        context.service = context.service.update()
+        context.service = context.dl.services.get(service_id=context.service.id)
+        assert context.service.execution_timeout == timeout
+        time.sleep(interval)
+        filters = create_filter(c=context)
+        filters.add(
+            field='latestStatus.status', values=context.dl.ExecutionStatus.CREATED,
+            operator=context.dl.FiltersOperations.NOT_EQUAL
+        )
+        executions = context.service.executions.list(filters=filters)
+        last_count = executions.items_count
+
+
+@behave.when(u'I expect all executions to be successful and no execution should have ran twice')
+def step_impl(context):
+    # all success
+    max_wait = 60 * 5
+    start_time = time.time()
+    interval = 3
+
+    while time.time() - start_time < max_wait:
+        filters = create_filter(c=context)
+        filters.add(
+            field='latestStatus.status', values=context.dl.ExecutionStatus.SUCCESS,
+            operator=context.dl.FiltersOperations.NOT_EQUAL
+        )
+        executions = context.service.executions.list(filters=filters)
+        if len(executions.items) == 0:
+            break
+        else:
+            print(f'Waiting for {executions.items_count} executions to finish')
+        time.sleep(interval)
+
+    # all ran once
+    machines = set()
+    filters = create_filter(c=context)
+    pages = context.service.executions.list(filters=filters)
+    statuses = [
+        context.dl.ExecutionStatus.CREATED,
+        'in-progress',
+        context.dl.ExecutionStatus.SUCCESS
+    ]
+    statuses.sort()
+    pattern = '-'.join(statuses)
+    for page in pages:
+        for execution in page:
+            replica_id = execution.latest_status.get('replicaId', None)
+            latest_status = execution.latest_status.get('status', None)
+            if replica_id is not None:
+                machines.add(replica_id)
+            else:
+                assert False, 'Execution status is missing replicaId'
+            assert latest_status == context.dl.ExecutionStatus.SUCCESS
+            e_status_list = [s['status'] for s in execution.status]
+            e_status_list.sort()
+            assert '-'.join(e_status_list) == pattern
+
+    # make sure executions ran on different machines
+    assert len(machines) == context.machine_count

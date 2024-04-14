@@ -1,5 +1,6 @@
 import logging
 import traceback
+import urllib.parse
 
 from .. import entities, miscellaneous, repositories, exceptions, _api_reference
 from ..services.api_client import ApiClient
@@ -198,9 +199,9 @@ class Recipes:
 
     def _list(self, filters: entities.Filters):
         url = filters.generate_url_query_params('/recipes')
-
+        encoded_url = urllib.parse.quote(url, safe='/:?=&')
         # request
-        success, response = self._client_api.gen_request(req_type='get', path=url)
+        success, response = self._client_api.gen_request(req_type='get', path=encoded_url)
         if not success:
             raise exceptions.PlatformException(response)
         return response.json()

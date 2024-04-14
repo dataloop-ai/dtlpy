@@ -57,3 +57,12 @@ def step_impl(context, existing_dataset_name):
 @behave.given(u'I create a dataset by the name of "{original_dataset_name}"')
 def step_impl(context, original_dataset_name):
     context.dataset = context.project.datasets.create(dataset_name=original_dataset_name, index_driver=context.index_driver_var)
+
+
+@behave.when(u'I update dataset metadata "{updated_metadata}"')
+def step_impl(context, updated_metadata):
+    metadata1 = updated_metadata.split(".")
+    metadata2 = metadata1[1].split(":")
+    metadata3 = metadata2[1].strip("'")
+    context.dataset.metadata[metadata1[0]] = {metadata2[0]: metadata3}
+    context.dataset.update()

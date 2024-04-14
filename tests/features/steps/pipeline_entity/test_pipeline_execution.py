@@ -64,7 +64,7 @@ def step_impl(context, node_exec_flag):
 def step_impl(context):
     timeout = 60 * 5 * 1000
     start_time = time.time()
-    success =  False
+    success = False
     while time.time() < start_time + timeout:
         context.item = context.dataset.items.get(item_id=context.item.id)
         if len(context.item.system['refs']) > 1:
@@ -83,6 +83,7 @@ def step_impl(context, execution_number):
     interval = 10
     executed = False
     execution_count = 0
+    pipeline_executions = None
     for i in range(num_try):
         time.sleep(interval)
         context.cycles = context.pipeline.pipeline_executions.list().items
@@ -96,10 +97,13 @@ def step_impl(context, execution_number):
             filters = context.dl.Filters(resource=context.dl.FiltersResource.EXECUTION)
             filters.add(field='pipeline.executionId', values=cycle.id)
             filters.add(field='pipeline.id', values=context.pipeline.id)
-            execution_count = context.dl.executions.list(filters=filters).items_count
+            pipeline_executions = context.dl.executions.list(filters=filters)
+            execution_count = pipeline_executions.items_count
             executed = execution_count == int(execution_number)
             break
 
+    if pipeline_executions and pipeline_executions.items[-1].latest_status['status'] == 'failed':
+        assert False, f"TEST FAILED: Last execution failed with message: {pipeline_executions.items[-1].latest_status['message']}"
     assert executed, "TEST FAILED: Pipeline has {} executions instead of {}".format(execution_count, execution_number)
     return executed
 

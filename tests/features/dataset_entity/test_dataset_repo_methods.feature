@@ -39,4 +39,13 @@ Feature: Dataset Entity repo services
         Then Object "Dataset" to_json() equals to Platform json.
 
 
+    @DAT-68486
+    Scenario: unsearchablePaths
+        When "add" unsearchable paths "metadata.test" to dataset
+        Then "metadata.test" is "added" to dataset schema
+        When "delete" unsearchable paths "metadata.test" to dataset
+        Then "metadata.test" is "deleted" to dataset schema
+
+
+
 

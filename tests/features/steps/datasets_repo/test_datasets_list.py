@@ -1,5 +1,6 @@
 import behave
 import dtlpy as dl
+import fixtures
 
 
 @behave.when(u'I list all datasets')
@@ -67,3 +68,12 @@ def step_impl(context):
     if not hasattr(context, "datasets"):
         context.datasets = list()
     context.datasets.append(context.dataset)
+
+
+@behave.when(u'I get datasets list by params')
+def step_impl(context):
+    context.params = {param.split('=')[0]: fixtures.get_value(params=param.split('='), context=context) for param in
+                      context.table.headings if
+                      fixtures.get_value(params=param.split('='), context=context) is not None}
+    project = context.project
+    context.dataset_list = project.datasets.list(**context.params)

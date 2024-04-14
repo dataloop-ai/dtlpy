@@ -195,6 +195,7 @@ def step_impl(context):
             )
         )
     )
+    context.to_delete_services_ids.append(context.service.id)
 
 
 @behave.when(u'I upload item in "{item_path}"')

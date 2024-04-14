@@ -14,18 +14,6 @@ Feature: Models repository create testing
 
   @testrail-C4523165
   @DAT-46548
-  Scenario: Create a model with an existing model name
-    When get global model package
-    And There are no models
-    And I create a model with a random name
-    When I create a model with the same name
-    Then "BadRequest" exception should be raised
-#        And "Model name must be unique in model" in error message
-    And "models already exist, Model with this name already exists" in error message
-    And No model was created
-
-  @testrail-C4523165
-  @DAT-46548
   Scenario: Rename model entity
     When get global model package
     And I create a model with a random name

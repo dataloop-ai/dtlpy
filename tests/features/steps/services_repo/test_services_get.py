@@ -22,6 +22,7 @@ def step_impl(context):
     context.service_get = context.project.services.get(service_name=context.service.name)
 
 
+@behave.given(u'I get service by name "{input_name}"')
 @behave.when(u'I get service by name "{input_name}"')
 def step_impl(context, input_name):
     context.service = context.project.services.get(service_name=input_name)

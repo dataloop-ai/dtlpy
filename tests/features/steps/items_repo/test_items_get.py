@@ -119,3 +119,23 @@ def step_impl(context, index, items_count):
         time.sleep(interval)
 
     assert finished, f"TEST FAILED: Expected: {items_count} items , Actual: {dataset.items.list().items_count}"
+
+
+@behave.when(u"I get item thumbnail id")
+def step_impl(context):
+    context.item = context.dataset.items.get(item_id=context.item.id)
+    context.item_thumbnail_id = context.item.metadata['system']['thumbnailId']
+
+
+@behave.then(u'I validate item thumbnail id is "{condition}"')
+def step_impl(context, condition):
+    if not hasattr(context, 'item_thumbnail_id'):
+        assert False, "TEST FAILED: Please make sure to run the step - 'When I get item thumbnail id'"
+    context.item = context.dataset.items.get(item_id=context.item.id)
+    error_message = f"TEST FAILED: Item thumbnail is not {condition}"
+    if condition == "different":
+        assert context.item.metadata['system']['thumbnailId'] != context.item_thumbnail_id, error_message
+    elif condition == "equal":
+        assert context.item.metadata['system']['thumbnailId'] == context.item_thumbnail_id, error_message
+    else:
+        raise ValueError("condition must be 'different' or 'equal'")

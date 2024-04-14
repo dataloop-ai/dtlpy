@@ -253,11 +253,78 @@ class Apps:
                 error='400',
                 message='You must provide an identifier in inputs')
         if app_name is not None:
-            app_id = self.__get_by_name(app_name)
+            app = self.__get_by_name(app_name)
+            app_id = app.id
 
         success, response = self._client_api.gen_request(req_type='delete', path='/apps/{}'.format(app_id))
         if not success:
             raise exceptions.PlatformException(response)
 
         logger.debug(f"App deleted successfully (id: {app_id}, name: {app_name}")
+        return success
+
+    def resume(self, app: entities.App = None, app_id: str = None) -> bool:
+        """
+        Activate an app entity.
+
+        Note: You are required to add either app or app_id.
+
+        :param entities.App app: the app entity
+        :param str app_id: optional - the id of the app.
+        :return whether we succeed activating the specified app.
+        :rtype bool
+
+        **Example**
+        .. code-block:: python
+            # succeed = dl.apps.resume(app)
+        """
+        if app_id is not None and app is None:
+            app = self.get(app_id=app_id)
+        if app is None:
+            raise exceptions.PlatformException(error='400', message='You must provide app or app_id')
+
+        if app and app.status == entities.CompositionStatus.INSTALLED:
+            raise exceptions.PlatformException(
+                error='400',
+                message='Application is already active'
+            )
+
+        success, response = self._client_api.gen_request(req_type='post', path='/apps/{}/activate'.format(app.id))
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        logger.debug(f"App resumed successfully (id: {app.id}, name: {app.name}")
+        return success
+
+    def pause(self, app: entities.App = None, app_id: str = None) -> bool:
+        """
+        Pausing an app entity.
+
+        Note: You are required to add either app or app_id.
+
+        :param entities.App app: the app entity
+        :param str app_id: optional - the id of the app.
+        :return whether we succeed pausing the specified app.
+        :rtype bool
+
+        **Example**
+        .. code-block:: python
+            # succeed = dl.apps.pause(app)
+        """
+        if app_id is not None and app is None:
+            app = self.get(app_id=app_id)
+        if app is None:
+            raise exceptions.PlatformException(error='400', message='You must provide app or app_id')
+
+        if app and app.status == entities.CompositionStatus.UNINSTALLED:
+            raise exceptions.PlatformException(
+                error='400',
+                message='Application is already inactive'
+            )
+
+        success, response = self._client_api.gen_request(req_type='post', path='/apps/{}/deactivate'.format(app.id))
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        logger.debug(f"App paused successfully (id: {app.id}, name: {app.name}")
         return success

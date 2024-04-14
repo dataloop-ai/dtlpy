@@ -34,7 +34,8 @@ def step_impl(context):
 def step_impl(context):
     rand_str = ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(5))
     dataset_name = 'random_dataset_{}'.format(rand_str)
-    context.new_dataset = context.project.datasets.create(dataset_name=dataset_name, index_driver=context.index_driver_var)
+    context.new_dataset = context.project.datasets.create(dataset_name=dataset_name,
+                                                          index_driver=context.index_driver_var)
     context.dataset_count += 1
 
 
@@ -43,7 +44,8 @@ def step_impl(context):
     context.recipe_id = context.dataset.get_recipe_ids()[0]
     rand_str = ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(5))
     dataset_name = 'random_dataset_{}'.format(rand_str)
-    context.dataset2 = context.project.datasets.create(dataset_name=dataset_name, recipe_id=context.recipe_id, index_driver=context.index_driver_var)
+    context.dataset2 = context.project.datasets.create(dataset_name=dataset_name, recipe_id=context.recipe_id,
+                                                       index_driver=context.index_driver_var)
     context.dataset_count += 1
 
 
@@ -104,3 +106,30 @@ def step_impl(context):
 @behave.then(u'No dataset was created')
 def step_impl(context):
     assert len(context.project.datasets.list()) == context.dataset_count
+
+
+@behave.given(u'Create "{amount}" datasets in project with the prefix name "{name}"')
+def step_impl(context, amount, name):
+    for i in range(int(amount)):
+        try:
+            context.project.datasets.get(dataset_name=f"{name}-{i}")
+        except context.dl.exceptions.NotFound:
+            context.project.datasets.create(dataset_name=f"{name}-{i}")
+    assert len(context.project.datasets.list()) == int(amount)
+
+
+@behave.when(u'"{action}" unsearchable paths "{paths}" to dataset')
+def step_impl(context, action, paths):
+    if action == 'add':
+        context.dataset.schema.unsearchable_paths.add(paths=[paths])
+    elif action == 'delete':
+        context.dataset.schema.unsearchable_paths.remove(paths=[paths])
+
+
+@behave.then(u'"{paths}" is "{action}" to dataset schema')
+def step_impl(context, action, paths):
+    schema = context.dataset.schema.get()
+    if action == 'added':
+        assert paths in schema.get('items', {}).get('unsearchablePaths', {})
+    elif action == 'deleted':
+        assert paths not in schema.get('items', {}).get('unsearchablePaths', {})

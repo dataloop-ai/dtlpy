@@ -281,7 +281,7 @@ class Dataset(entities.BaseEntity):
     def set_repositories(self):
         reps = namedtuple('repositories',
                           field_names=['items', 'recipes', 'datasets', 'assignments', 'tasks', 'annotations',
-                                       'ontologies', 'features', 'settings'])
+                                       'ontologies', 'features', 'settings', 'schema'])
         if self._project is None:
             datasets = repositories.Datasets(client_api=self._client_api, project=self._project)
             features = repositories.Features(client_api=self._client_api, project=self._project)
@@ -299,6 +299,7 @@ class Dataset(entities.BaseEntity):
             ontologies=repositories.Ontologies(client_api=self._client_api, dataset=self),
             features=features,
             settings=repositories.Settings(client_api=self._client_api, dataset=self),
+            schema=repositories.Schema(client_api=self._client_api, dataset=self)
         )
 
     @property
@@ -345,6 +346,11 @@ class Dataset(entities.BaseEntity):
     def features(self):
         assert isinstance(self._repositories.features, repositories.Features)
         return self._repositories.features
+
+    @property
+    def schema(self):
+        assert isinstance(self._repositories.schema, repositories.Schema)
+        return self._repositories.schema
 
     @property
     def project(self):

@@ -4,9 +4,9 @@ import random
 
 import behave
 from .. import fixtures
-from .. pipeline_entity import test_pipeline_interface
-
-
+from ..pipeline_entity import test_pipeline_interface
+import random
+from operator import attrgetter
 
 @behave.when(u"I fetch the dpk from '{file_name}' file")
 @behave.given(u"I fetch the dpk from '{file_name}' file")
@@ -117,12 +117,31 @@ def step_impl(context):
     context.custom_installation.get('components').get('services').append(service)
 
 
-@behave.when(u"I add att '{value}' to dpk service in index '{index}'")
-def step_impl(context, value, index):
+@behave.when(u"I add att '{value}' to dpk '{component}' in index '{index}'")
+def step_impl(context, value, component, index):
     if "=" in value:
         value = value.split("=")
-    if "cooldownPeriod" in value:
-        context.dpk.components.services[int(index)]['runtime']['autoscaler'][value[0]] = eval(value[1])
+        if '.id' in value[1]:
+            value[1] = attrgetter(value[1])(context)
+        elif '[' in value[1] or '{' in value[1]:
+            value[1] = eval(value[1])
+    else:
+        raise ValueError("Please make sure 'value' structure is 'key=val'")
+
+    if component == 'service':
+        if "cooldownPeriod" in value:
+            context.dpk.components.services[int(index)]['runtime']['autoscaler'][value[0]] = eval(value[1])
+    elif component == 'model':
+        model = context.dpk.components.models[int(index)]
+        if "metadata" in value[0]:
+            if "system" in value[0]:
+                model['metadata']['system'][value[0].split('.')[-1]] = value[1]
+            else:
+                model['metadata'][value[0].split('.')[-1]] = value[1]
+        else:
+            model[value[0]] = value[1]
+    else:
+        raise ValueError("Please provide a valid dpk component")
 
 
 @behave.then(u"I validate dpk autoscaler in composition for service in index '{index}'")

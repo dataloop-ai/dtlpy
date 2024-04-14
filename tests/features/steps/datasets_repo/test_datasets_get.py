@@ -38,3 +38,8 @@ def step_impl(context):
         context.error = None
     except Exception as e:
         context.error = e
+
+
+@behave.when(u'I get dataset by name "{dataset_name}"')
+def step_impl(context, dataset_name):
+    context.dataset = context.project.datasets.get(dataset_name=dataset_name)

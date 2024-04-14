@@ -1,5 +1,6 @@
 import behave
 from operator import attrgetter
+import dtlpy as dl
 
 
 @behave.given(u'I init Filters() using the given params')
@@ -205,3 +206,10 @@ def step_impl(context):
 @behave.when(u'I call Filters.reset()')
 def step_impl(context):
     context.filters.reset()
+
+
+@behave.when(u'I create dataset filters by metadata - "{field}" = "{value}"')
+def step_impl(context, field, value):
+    context.filters = context.dl.Filters(resource=dl.FiltersResource.DATASET)
+    metadata_field = f"metadata.{field}"
+    context.filters.add(field=metadata_field, values=value)

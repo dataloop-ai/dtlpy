@@ -87,7 +87,12 @@ def get_value(params, context):
         elif key == 'scoring':
             val = False
 
-    if key == 'filters' and val is not None and not isinstance(val, dict):
+    elif val == 'current_user':
+        if key == 'creator':
+            val = dl.info()['user_email']
+    if key == 'filters' and val == 'context.filters':
+        val = context.filters
+    elif key == 'filters' and val is not None and not isinstance(val, dict):
         filters = context.dl.Filters()
         filters.custom_filter = json.loads(val)
         val = filters
@@ -186,7 +191,7 @@ def get_package_io(params, context):
         elif key == 'assignment':
             val.append(context.dl.FunctionIO(type=context.dl.PACKAGE_INPUT_TYPE_ASSIGNMENT, name=key))
         elif key == 'itemWithDescription':
-            val.append(context.dl.FunctionIO(type=context.dl.PACKAGE_INPUT_TYPE_ITEM, name=key, description='item'))
+            val.append(context.dl.FunctionIO(type=context.dl.PACKAGE_INPUT_TYPE_ITEM, name='item', description='item'))
 
     return val
 
@@ -218,7 +223,7 @@ def update_dtlpy_version(json_obj):
     if False - Skip to next component attribute
     Return: json_obj
     """
-    component_attributes = ["services", "computeConfigs", "modules"]
+    component_attributes = ["services", "computeConfigs", "modules", "versions"]
     for component_att in component_attributes:
         val = access_nested_dictionary_key(json_obj, ['components', component_att, 'versions', 'dtlpy'])
         if val:
@@ -231,6 +236,11 @@ def update_dtlpy_version(json_obj):
             for obj in json_obj['components'][component_att]:
                 if "dtlpy_version" in obj['runtime']["runnerImage"]:
                     obj['runtime'].update({"runnerImage": f"dataloop_runner-cpu/main:{dl.__version__}.latest"})
+
+        val = access_nested_dictionary_key(json_obj, [component_att, 'dtlpy'])
+        if val:
+            if json_obj[component_att]['dtlpy'] == "dtlpy_version":
+                json_obj[component_att].update({"dtlpy": dl.__version__})
 
     return json_obj
 
@@ -253,3 +263,4 @@ def gen_request(context, method=None, req=None, num_try=None, interval=None, exp
     if not success:
         raise dl.exceptions.PlatformException(response)
     return response
+

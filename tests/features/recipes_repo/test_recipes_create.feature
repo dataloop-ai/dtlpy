@@ -33,3 +33,9 @@ Feature: Recipes repository create service testing
         When I checkout project
         And I create a new project recipe
         Then recipe in host is exist
+
+    @DAT-68612
+    Scenario: list recipes
+        When I create a new plain recipe with name "#recipe1"
+        And I query recipes by "title" "#recipe1"
+        Then recipe in host is exist

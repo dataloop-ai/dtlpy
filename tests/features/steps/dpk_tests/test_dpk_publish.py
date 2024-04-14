@@ -1,7 +1,6 @@
 import json
 import os
 import random
-
 import behave
 
 
@@ -133,3 +132,4 @@ def step_impl(context):
         context.feature.dpks.append(context.dpk)
     else:
         context.feature.dpks = [context.dpk]
+

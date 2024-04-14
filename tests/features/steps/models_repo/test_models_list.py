@@ -16,7 +16,7 @@ def step_impl(context, field, values):
     filters = context.dl.Filters(resource='models',
                                  field=field,
                                  values=values)
-    context.list_results = list(context.package.models.list(filters=filters).all())
+    context.list_results = list(context.project.models.list(filters=filters).all())
 
 
 @behave.then(u'I get "{models_number}" entities')

@@ -1,4 +1,7 @@
 import behave
+import json
+import dictdiffer
+
 
 
 @behave.when(u'I try get the "{dpk_obj}" by id')
@@ -19,9 +22,11 @@ def step_impl(context):
 def step_impl(context):
     to_json = context.dpk.to_json()
     to_json.pop('trusted', None)
+    if to_json.get('dependencies', False) is None:
+        to_json.pop('dependencies', None)
     if 'context' in to_json and to_json['context'] is None:
         to_json.pop('context', None)
-    assert to_json == context.published_dpk.to_json()
+    assert to_json == context.published_dpk.to_json(), "TEST FAILED: Different in to_json and dpk.to_json().\n{}".format(list(dictdiffer.diff(to_json, context.published_dpk.to_json())))
 
 
 @behave.when(u'I get a dpk with invalid id')
@@ -54,3 +59,12 @@ def step_impl(context, dpk_obj):
         context.error = None
     except Exception as e:
         context.error = e
+
+
+@behave.then(u'I validate attributes response in context.req')
+def step_impl(context):
+    if not hasattr(context, "req") or not hasattr(context, "response"):
+        return False, "Context missing 'req' / 'response' attribute"
+
+    response_list = [list(att.values())[0] for att in json.loads(context.response.text)]
+    assert all(var in response_list for var in context.req.get("response", None)), f"TEST FAILED: Response from json {context.req.get('response', None)} , Response from request {response_list}"

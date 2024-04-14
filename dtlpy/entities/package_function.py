@@ -64,6 +64,7 @@ class PackageFunction(entities.DlEntity):
                                                                                           _kls='FunctionIO')
     inputs: typing.Union[typing.List['entities.FunctionIO'], None] = entities.DlProperty(location=['input'],
                                                                                          _kls='FunctionIO')
+    compute_config: str = entities.DlProperty(location=['computeConfig'], _type=str, default=None)
 
     def __repr__(self):
         # TODO need to move to DlEntity

@@ -104,6 +104,7 @@ class PipelineNode(entities.DlEntity):
     description: str = entities.DlProperty(location=['description'], _type=str)
     configuration: dict = entities.DlProperty(location=['configuration'], _type=dict)
     scope: CustomNodeScope = entities.DlProperty(location=['scope'], _type=CustomNodeScope)
+    compute_config: str = entities.DlProperty(location=['computeConfig'], _type=str, default=None)
 
     def to_json(self) -> dict:
         return self._dict.copy()
@@ -238,6 +239,7 @@ class Dpk(entities.DlEntity):
     scope: dict = entities.DlProperty(location=['scope'], _type=str)
     context: dict = entities.DlProperty(location=['context'], _type=dict)
     metadata: dict = entities.DlProperty(location=['metadata'], _type=dict)
+    dependencies: dict = entities.DlProperty(location=['dependencies'], _type=List[dict])
 
     # defaults
     components: Components = entities.DlProperty(location=['components'], _kls='Components')
@@ -264,12 +266,12 @@ class Dpk(entities.DlEntity):
             reps = namedtuple('repositories',
                               field_names=['dpks', 'codebases', 'organizations', 'services'])
 
-            self.__repositories = reps(dpks=repositories.Dpks(client_api=self.client_api, project=self.project),
-                                       codebases=repositories.Codebases(client_api=self.client_api),
-                                       organizations=repositories.Organizations(client_api=self.client_api),
-                                       services=repositories.Services(client_api=self.client_api, project=self.project,
-                                                                      package=self),
-                                       )
+            self.__repositories = reps(
+                dpks=repositories.Dpks(client_api=self.client_api, project=self.project),
+                codebases=repositories.Codebases(client_api=self.client_api),
+                organizations=repositories.Organizations(client_api=self.client_api),
+                services=repositories.Services(client_api=self.client_api, project=self.project, package=self),
+            )
 
         return self.__repositories
 
@@ -287,6 +289,11 @@ class Dpk(entities.DlEntity):
     def dpks(self) -> 'repositories.Dpks':
         assert isinstance(self._repositories.dpks, repositories.Dpks)
         return self._repositories.dpks
+
+    @property
+    def services(self):
+        assert isinstance(self._repositories.services, repositories.Services)
+        return self._repositories.services
 
     ###########
     # methods #
@@ -424,9 +431,11 @@ class Dpk(entities.DlEntity):
         :return: App entity
         :rtype: dtlpy.entities.App
         """
-        return cls(
+        res = cls(
             _dict=_json,
             client_api=client_api,
             project=project,
             is_fetched=is_fetched
         )
+
+        return res

@@ -157,6 +157,8 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         """
         import dtlpymetrics
         compare_types = model.output_type
+        if not filters:
+            filters = entities.Filters()
         if filters is not None and isinstance(filters, dict):
             filters = entities.Filters(custom_filter=filters)
         model = dtlpymetrics.scoring.create_model_score(model=model,
@@ -408,10 +410,13 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         self.logger.debug("Predicting dataset (name:{}, id:{}, using batch size {}".format(dataset.name,
                                                                                            dataset.id,
                                                                                            batch_size))
+        if not filters:
+            filters = entities.Filters()
         if filters is not None and isinstance(filters, dict):
             filters = entities.Filters(custom_filter=filters)
         pages = dataset.items.list(filters=filters, page_size=batch_size)
-        self.predict_items(items=list(pages.all()),
+        items = [item for item in pages.all() if item.type == 'file']
+        self.predict_items(items=items,
                            with_upload=with_upload,
                            cleanup=cleanup,
                            batch_size=batch_size,
@@ -539,6 +544,8 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         # Predicting #
         ##############
         logger.info(f"Calling prediction, dataset: {dataset.name!r} ({model.id!r}), filters: {filters}")
+        if not filters:
+            filters = entities.Filters()
         self.predict_dataset(dataset=dataset,
                              filters=filters,
                              with_upload=True)
@@ -630,18 +637,21 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         """
         for prediction in predictions:
             if prediction.type == entities.AnnotationType.SEGMENTATION:
+                color = None
                 try:
                     color = item.dataset._get_ontology().color_map.get(prediction.label, None)
                 except (exceptions.BadRequest, exceptions.NotFound):
-                    color = None
-                    logger.warning("Can't get annotation color from item's dataset, using model's dataset.")
+                    ...
                 if color is None:
-                    try:
-                        color = self.model_entity.dataset._get_ontology().color_map.get(prediction.label,
-                                                                                        (255, 255, 255))
-                    except (exceptions.BadRequest, exceptions.NotFound):
-                        logger.warning("Can't get annotation color from model's dataset, using default.")
-                        color = prediction.color
+                    if self.model_entity._dataset is not None:
+                        try:
+                            color = self.model_entity.dataset._get_ontology().color_map.get(prediction.label,
+                                                                                            (255, 255, 255))
+                        except (exceptions.BadRequest, exceptions.NotFound):
+                            ...
+                if color is None:
+                    logger.warning("Can't get annotation color from model's dataset, using default.")
+                    color = prediction.color
                 prediction.color = color
 
             prediction.item_id = item.id

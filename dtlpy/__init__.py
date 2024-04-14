@@ -177,6 +177,7 @@ login = client_api.login
 logout = client_api.logout
 login_token = client_api.login_token
 login_secret = client_api.login_secret
+login_api_key = client_api.login_api_key
 login_m2m = client_api.login_m2m
 add_environment = client_api.add_environment
 setenv = client_api.setenv

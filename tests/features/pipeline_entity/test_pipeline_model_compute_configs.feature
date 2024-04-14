@@ -3,6 +3,8 @@ Feature: Test pipeline models compute configs
   Background: Initiate Platform Interface and create a project
     Given Platform Interface is initialized as dlp and Environment is set according to git branch
     And I create a project by the name of "pipeline-compute-configs"
+    And I create a dataset with a random name
+    When I upload labels to dataset
 
 
   @DAT-66085

@@ -30,3 +30,10 @@ Feature: App entity Install App
     And publish the app
     When I install the app
     Then i can create pipeline function node from the app service
+
+  @DAT-68027
+  Scenario: Install a valid app with dataset component
+    Given I have an app entity from "apps/app_dataset_component.json"
+    And publish the app
+    When I install the app
+    Then The dataset component has been installed successfully

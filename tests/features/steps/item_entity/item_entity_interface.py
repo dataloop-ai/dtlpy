@@ -155,3 +155,21 @@ def step_impl(context):
             with_text=context.with_text,
             alpha=context.alpha
         )
+
+
+@behave.when(u'I update item "{att}" with "{value}" system_metadata "{flag}"')
+def step_impl(context, att, value, flag):
+    value = eval(value)
+    flag = eval(flag)
+    if "metadata" in att:
+        att_split = att.split('.')
+        item_metadata = context.item.metadata
+        # Traverse the dictionary using the keys
+        for key in att_split[1:-1]:
+            item_metadata = item_metadata[key]
+        # Update the value at the last key
+        item_metadata[att_split[-1]] = value
+    else:
+        setattr(context.item, att, value)
+
+    context.item.update(flag)

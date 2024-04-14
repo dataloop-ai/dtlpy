@@ -1,4 +1,5 @@
 import behave
+import os
 import dtlpy as dl
 
 
@@ -7,9 +8,12 @@ def step_impl(context):
     context.members_list = context.project.list_members(role=dl.MemberRole.OWNER)  # View all annotators in a project
 
 
+@behave.given(u'Add Members "{member_email}" as "{member_role}"')
 @behave.when(u'Add Members "{member_email}" as "{member_role}"')
 @behave.then(u'Add Members "{member_email}" as "{member_role}"')
 def step_impl(context, member_email, member_role):
+    if member_email == "user":
+        member_email = os.environ["TEST_USERNAME"]
     if member_email not in [member.email for member in context.project.list_members()]:
         context.project.add_member(email=member_email, role=member_role)  # role is optional - default is developer
 

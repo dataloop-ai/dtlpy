@@ -6,8 +6,10 @@ Feature: Pipeline active learning testing
     And I create a project by the name of "pipeline_active_learning"
     And I create a dataset named "Upload-data"
     And I Add dataset to context.datasets
-    And I create a dataset named "Ground-Truth"
+    When I upload labels to dataset
+    Given I create a dataset named "Ground-Truth"
     And I Add dataset to context.datasets
+    When I upload labels to dataset
 
   @pipelines.delete
   @DAT-62553

@@ -1,4 +1,5 @@
 from urllib.parse import urlsplit, urlunsplit
+import base64
 import requests
 import logging
 import json
@@ -89,6 +90,51 @@ def logout(api_client):
     return True
 
 
+def login_html():
+    try:
+        location = os.path.dirname(os.path.realpath(__file__))
+    except NameError:
+        location = './dtlpy/services'
+    filename = os.path.join(location, '..', 'assets', 'lock_open.png')
+
+    if os.path.isfile(filename):
+
+        with open(filename, 'rb') as f:
+            image = f.read()
+
+        html = (
+            "        <!doctype html>\n"
+            "        <html>\n"
+            "        <head>\n"
+            "            <style>\n"
+            "                body {{\n"
+            "                    background-color: #F7F7F9 !important;\n"
+            "                    display: flex;\n"
+            "                    justify-content: center;\n"
+            "                    align-items: center;\n"
+            "                    height: 100vh;\n"
+            "                    width: 100vw;\n"
+            "                    margin: 0;\n"
+            "                }}\n"
+            "                img {{\n"
+            "                    display: block;\n"
+            "                    max-width: 100%;\n"
+            "                    max-height: 100%;\n"
+            "                    margin: auto;\n"
+            "                }}\n"
+            "            </style>\n"
+            "        </head>\n"
+            "        <body>\n"
+            "            <img src='data:image/png;base64,{image}'>\n"
+            "        </body>\n"
+            "        </html>\n"
+        ).format(image=base64.b64encode(image).decode())
+    else:
+        html = "<!doctype html><html><body>Logged in successfully</body></html>"
+
+    return html.encode('utf-8')
+
+
 def login(api_client, auth0_url=None, audience=None, client_id=None, login_domain=None, callback_port=None):
     import webbrowser
     from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -111,24 +157,9 @@ def login(api_client, auth0_url=None, audience=None, client_id=None, login_domai
                 parsed_path = urlparse(self.path)
                 query = parse_qs(parsed_path.query)
                 self.send_response(200)
-
-                # get display image
-                try:
-                    # working directory when running from command line
-                    location = os.path.dirname(os.path.realpath(__file__))
-                except NameError:
-                    # working directory when running from console
-                    location = './dtlpy/services'
-                filename = os.path.join(location, '..', 'assets', 'lock_open.png')
-                if os.path.isfile(filename):
-                    with open(filename, 'rb') as f:
-                        self.send_header('Content-type', 'image/jpg')
-                        self.end_headers()
-                        self.wfile.write(f.read())
-                else:
-                    self.send_header('Content-type', 'text/html')
-                    self.end_headers()
-                    self.wfile.write(bytes("<!doctype html><html><body>Logged in successfully</body></html>", 'utf-8'))
+                self.send_header('Content-type', 'text/html')
+                self.end_headers()
+                self.wfile.write(login_html())
                 self.__class__.id_token = query['id_token'][0]
                 self.__class__.access_token = query['access_token'][0]
                 self.__class__.refresh_token = query['refresh_token'][0]

@@ -209,9 +209,9 @@ from tests.features.steps.pipeline_entity import pipeline_rerun_cycles
 from tests.features.steps.items_repo import test_upload_and_download_images
 
 from tests.features.steps.annotations_repo import test_rotated_box_points
-from tests.features.steps.app_entity import test_app_install, test_app_uninstall, test_app_update, test_app_get
+from tests.features.steps.app_entity import test_app_install, test_app_uninstall, test_app_update, test_app_get, test_app_status
 from tests.features.steps.dpk_tests import dpk_json_to_object, test_dpk_publish, test_dpk_list, \
-    test_dpk_pull, test_dpk_get, test_dpk_delete
+    test_dpk_pull, test_dpk_get, test_dpk_delete, test_dpk_infratructure
 from tests.features.steps.app_entity import test_app_validate
 from tests.features.steps.app_entity import test_app_interface
 
@@ -265,6 +265,7 @@ from tests.features.steps.dataset_entity import test_directory_tree
 
 from tests.features.steps.billing_steps import object_creation_steps
 from tests.features.steps.billing_steps import test_get_plan_steps
+from tests.features.steps.billing_steps import test_delete_org
 from tests.features.steps.billing_steps import test_plan_resources
 from tests.features.steps.billing_steps import Log_in
 

@@ -10,6 +10,7 @@ def step_impl(context, dataset_name):
 
 
 @behave.then(u'I get an item thumbnail response')
+@behave.when(u'I get an item thumbnail response')
 def step_impl(context):
     success, response = dl.client_api.gen_request(req_type='get',
                                                   path=f'/items/{context.item.id}/thumbnail')

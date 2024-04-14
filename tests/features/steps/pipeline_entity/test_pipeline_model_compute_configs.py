@@ -237,6 +237,7 @@ def step_impl(context):
                     "moduleName": "model-adapter-module-config",
                     "description": "test-model-dpk",
                     "scope": "project",
+                    "datasetId": context.dataset.id,
                     "tags": [],
                     "status": "created",
                     "labels": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
@@ -296,6 +297,7 @@ def step_impl(context):
                     "moduleName": "model-adapter-module-config",
                     "description": "test-model-dpk",
                     "scope": "project",
+                    "datasetId": context.dataset.id,
                     "tags": [],
                     "status": "created",
                     "labels": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
@@ -355,9 +357,10 @@ def step_impl(context):
                     "moduleName": "model-adapter-function-config",
                     "description": "test-model-dpk",
                     "scope": "project",
+                    "datasetId": context.dataset.id,
                     "tags": [],
                     "status": "created",
-                    "labels": [],
+                    "labels": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
                     "configuration": {},
                     "inputType": "image",
                     "outputType": "box",
@@ -487,6 +490,10 @@ def step_impl(context):
     }
     dpk = context.dl.Dpk.from_json(_json=dpk_json)
     context.dpk = context.project.dpks.publish(dpk=dpk)
+    if hasattr(context.feature, 'dpks'):
+        context.feature.dpks.append(context.dpk)
+    else:
+        context.feature.dpks = [context.dpk]
 
 
 @given(u'pipeline with train model')
@@ -568,7 +575,8 @@ def step_impl(context):
 
 @when(u'I execute pipeline on model with compute configs')
 def step_impl(context):
-    context.pipeline.execute({"model": context.model_with_compute_configs.id})
+    pipe_execution = context.pipeline.execute({"model": context.model_with_compute_configs.id})
+    assert pipe_execution.status != 'failed', "TEST FAILED: Execution status is 'failed', Please check if pipeline cycle execution has transitionErrors"
 
 
 @then(u'service should use model train compute config')
@@ -581,7 +589,8 @@ def step_impl(context):
 
 @when(u'I execute pipeline on model with config in module')
 def step_impl(context):
-    context.pipeline.execute({"model": context.model_with_config_in_module.id})
+    pipe_execution = context.pipeline.execute({"model": context.model_with_config_in_module.id})
+    assert pipe_execution.status != 'failed', "TEST FAILED: Execution status is 'failed', Please check if pipeline cycle execution has transitionErrors"
 
 
 @then(u'service should use model module compute config')
@@ -594,7 +603,8 @@ def step_impl(context):
 
 @when(u'I execute pipeline on model with config in function')
 def step_impl(context):
-    context.pipeline.execute({"model": context.model_with_config_in_function.id})
+    pipe_execution = context.pipeline.execute({"model": context.model_with_config_in_function.id})
+    assert pipe_execution.status != 'failed', "TEST FAILED: Execution status is 'failed', Please check if pipeline cycle execution has transitionErrors"
 
 
 @then(u'service should use model function compute config')
