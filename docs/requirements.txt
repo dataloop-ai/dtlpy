@@ -1,4 +1,5 @@
 opencv_python==4.2.0.32
+lxml_html_clean
 sphinx-argparse==0.2.5
 sphinxcontrib-websupport==1.1.2
 sphinx-rtd-theme==0.5.1
