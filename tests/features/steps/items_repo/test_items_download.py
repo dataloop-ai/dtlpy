@@ -105,6 +105,8 @@ def step_impl(context, item_name):
                                  local_annotations_path=None,
                                  remote_path=None)
     # wait for platform attributes
+    limit = 10 * 30
+    stat = time.time()
     while True:
         time.sleep(3)
         context.item = context.dataset.items.get(item_id=context.item.id)
@@ -113,7 +115,8 @@ def step_impl(context, item_name):
                 break
         elif context.item.mimetype is not None:
             break
-
+        if time.time() - stat > limit:
+            raise TimeoutError("Timeout while waiting for platform attributes")
 
 
 @behave.then(u'Item uploaded from data equals initial item uploaded')

@@ -25,7 +25,7 @@ class Services:
     def __init__(self,
                  client_api: ApiClient,
                  project: entities.Project = None,
-                 package: entities.Package = None,
+                 package: Union[entities.Package, entities.Dpk] = None,
                  project_id=None,
                  model_id=None,
                  model: entities.Model = None):
@@ -52,12 +52,12 @@ class Services:
             raise exceptions.PlatformException(
                 error='2001',
                 message='Cannot perform action WITHOUT package entity in services repository. Please set a package')
-        assert isinstance(self._package, entities.Package)
+        assert (isinstance(self._package, entities.Package) or isinstance(self._package, entities.Dpk))
         return self._package
 
     @package.setter
-    def package(self, package: entities.Package):
-        if not isinstance(package, entities.Package):
+    def package(self, package: Union[entities.Package, entities.Dpk]):
+        if not isinstance(package, entities.Package) and not isinstance(package, entities.Dpk):
             raise ValueError('Must input a valid package entity')
         self._package = package
 
@@ -605,6 +605,7 @@ class Services:
                 on_reset: str = None,
                 max_attempts: int = None,
                 secrets=None,
+                integrations=None,
                 **kwargs
                 ) -> entities.Service:
         """
@@ -631,6 +632,7 @@ class Services:
         :param int max_attempts: Maximum execution retries in-case of a service reset
         :param bool force: optional - terminate old replicas immediately
         :param list secrets: list of the integrations ids
+        :param list integrations: list of the integrations
         :param kwargs:
         :return: Service object
         :rtype: dtlpy.entities.service.Service
@@ -691,6 +693,11 @@ class Services:
                 secrets = [secrets]
             payload['secrets'] = secrets
 
+        if integrations is not None:
+            if not isinstance(integrations, list):
+                integrations = [integrations]
+            payload['integrations'] = integrations
+
         if runtime is not None:
             if isinstance(runtime, entities.KubernetesRuntime):
                 runtime = runtime.to_json()
@@ -748,7 +755,7 @@ class Services:
         )
 
     @_api_reference.add(path='/services/{id}', method='delete')
-    def delete(self, service_name: str = None, service_id: str = None):
+    def delete(self, service_name: str = None, service_id: str = None, force=False):
         """
         Delete Service object
 
@@ -756,6 +763,7 @@ class Services:
 
         You must provide at least ONE of the following params: service_id, service_name.
 
+        :param force:
         :param str service_name: by name
         :param str service_id: by id
         :return: True
@@ -774,10 +782,14 @@ class Services:
             else:
                 service_id = self.get(service_name=service_name).id
 
+        path = "/services/{}".format(service_id)
+        if force:
+            path = '{}?force=true'.format(path)
+
         # request
         success, response = self._client_api.gen_request(
             req_type="delete",
-            path="/services/{}".format(service_id)
+            path=path
         )
         if not success:
             raise exceptions.PlatformException(response)
@@ -1168,6 +1180,7 @@ class Services:
                on_reset: str = None,
                force: bool = False,
                secrets: list = None,
+               integrations: list = None,
                **kwargs) -> entities.Service:
         """
         Deploy service.
@@ -1196,6 +1209,7 @@ class Services:
         :param str on_reset: what happens on reset
         :param bool force: optional - if true, terminate old replicas immediately
         :param list secrets: list of the integrations ids
+        :param list integrations: list of the integrations
         :param kwargs: list of additional arguments
         :return: Service object
         :rtype: dtlpy.entities.service.Service
@@ -1218,6 +1232,8 @@ class Services:
                                     )
                                 )
         """
+        if package is None and isinstance(package, entities.Dpk):
+            raise exceptions.PlatformException('400', 'cannot deploy dpk package. Please install the app')
         package = package if package is not None else self._package
         if service_name is None:
             get_name = False
@@ -1290,6 +1306,10 @@ class Services:
                 if not isinstance(secrets, list):
                     secrets = [secrets]
                 service.secrets = secrets
+            if integrations is not None:
+                if not isinstance(integrations, list):
+                    integrations = [integrations]
+                service.integrations = integrations
             service = self.update(service=service, force=force)
         else:
             service = self._create(service_name=service_name,
@@ -1312,7 +1332,8 @@ class Services:
                                    drain_time=drain_time,
                                    max_attempts=max_attempts,
                                    on_reset=on_reset,
-                                   secrets=secrets
+                                   secrets=secrets,
+                                   integrations=integrations,
                                    )
         if checkout:
             self.checkout(service=service)

@@ -79,7 +79,7 @@ class Integration(entities.BaseEntity):
                    name=_json.get('name', None),
                    creator=_json.get('creator', None),
                    created_at=_json.get('createdAt', None),
-                   update_at=_json.get('updateAt', None),
+                   update_at=_json.get('updatedAt', None),
                    type=_json.get('type', None),
                    org=_json.get('org', None),
                    client_api=client_api,

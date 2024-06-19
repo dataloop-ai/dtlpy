@@ -43,6 +43,12 @@ logger = logging.getLogger(name='dtlpy')
 threadLock = threading.Lock()
 
 
+def format_message(message):
+    if message:
+        return message.replace('\\n', '\n')
+    return message
+
+
 class VerboseLoggingLevel:
     DEBUG = "debug"
     INFO = "info"
@@ -61,9 +67,9 @@ class PlatformError(Exception):
         if hasattr(resp, 'status_code'):
             msg += '<Response [{}]>'.format(resp.status_code)
         if hasattr(resp, 'reason'):
-            msg += '<Reason [{}]>'.format(resp.reason)
+            msg += '<Reason [{}]>'.format(format_message(resp.reason))
         elif hasattr(resp, 'text'):
-            msg += '<Reason [{}]>'.format(resp.text)
+            msg += '<Reason [{}]>'.format(format_message(resp.text))
         super().__init__(msg)
 
 
@@ -777,7 +783,7 @@ class ApiClient:
         return information
 
     @property
-    def __base_gate_url(self):
+    def base_gate_url(self):
         if self.__gate_url_for_requests is None:
             self.__gate_url_for_requests = self.environment
             internal_requests_url = os.environ.get('INTERNAL_REQUESTS_URL', None)
@@ -801,7 +807,7 @@ class ApiClient:
 
         # prepare request
         req = requests.Request(method=req_type,
-                               url=self.__base_gate_url + path,
+                               url=self.base_gate_url + path,
                                json=json_req,
                                files=files,
                                data=data,
@@ -981,7 +987,7 @@ class ApiClient:
 
         # prepare request
         if is_dataloop:
-            full_url = self.environment + path
+            full_url = self.base_gate_url + path
             headers_req = self._build_request_headers(headers=headers)
         else:
             full_url = path
@@ -1018,7 +1024,7 @@ class ApiClient:
                                    timeout=timeout) as session:
                 try:
                     async with session._request(request=session._client.request,
-                                                url=self.environment + path,
+                                                url=self.base_gate_url + path,
                                                 method=req_type,
                                                 json=json_req,
                                                 data=data,
@@ -1135,7 +1141,7 @@ class ApiClient:
                 form.add_field('file', AsyncUploadStream(buffer=to_upload,
                                                          callback=callback,
                                                          name=uploaded_filename))
-                url = '{}?mode={}'.format(self.environment + remote_url, mode)
+                url = '{}?mode={}'.format(self.base_gate_url + remote_url, mode)
 
                 # use SSL context
                 ssl_context = None
@@ -1218,7 +1224,7 @@ class ApiClient:
                                   pool_connections=np.sum(list(self._thread_pools_names.values())))
             self.session.mount('http://', adapter)
             self.session.mount('https://', adapter)
-        resp = self.session.send(request=prepared, stream=stream, verify=self.verify, timeout=None)
+        resp = self.session.send(request=prepared, stream=stream, verify=self.verify, timeout=120)
 
         with threadLock:
             self.calls_counter.add()
@@ -1337,7 +1343,7 @@ class ApiClient:
         if hasattr(resp, 'reason'):
             msg += '[Reason: {val}]'.format(val=resp.reason)
         if hasattr(resp, 'text'):
-            msg += '[Text: {val}]'.format(val=resp.text)
+            msg += '[Text: {val}]'.format(val=format_message(resp.text))
 
         request_id = resp.headers.get('x-request-id', 'na')
         logger.debug('--- [Request] Start ---')

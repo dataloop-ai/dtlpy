@@ -1,4 +1,3 @@
-@DAT-49332
 Feature: Pipeline entity method testing - rerun cycle
 
   Background: Initiate Platform Interface and create a pipeline
@@ -13,7 +12,7 @@ Feature: Pipeline entity method testing - rerun cycle
 
   @pipelines.delete
   @testrail-C4536833
-  @DAT-46587
+  @DAT-70139
   Scenario: Multiple outputs - rerun cycle
     Given I create pipeline from json in path "pipelines_json/output_integers_input_integer_1000.json"
     And I install pipeline in context
@@ -27,6 +26,7 @@ Feature: Pipeline entity method testing - rerun cycle
     Then the pipeline cycle should be rerun
 
   @pipelines.delete
+  @DAT-70139
   Scenario: rerun pipeline cycle from the beginning root case
     When I execute pipeline on item
     Then Cycle completed with save "True"
@@ -49,6 +49,7 @@ Feature: Pipeline entity method testing - rerun cycle
 
 
   @pipelines.delete
+  @DAT-70139
   Scenario: rerun pipeline cycle from executions
     When I execute pipeline on item
     Then Cycle completed with save "True"

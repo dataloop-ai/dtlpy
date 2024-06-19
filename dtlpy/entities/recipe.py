@@ -262,3 +262,40 @@ class Recipe(entities.BaseEntity):
                                                               'datasetId': dataset.id,
                                                               'name': instruction_item.name}
             self.update(True)
+
+    def upload_annotations_verification_file(self, local_path: str, overwrite: bool = False) -> entities.Item:
+        """
+        Add Annotations Verification js file to the recipe.
+
+        :param str local_path: file path of the annotations verification js file.
+        :param bool overwrite: overwrite exiting file if the local and the remote names are matching
+        :return: annotations verification js item.
+        """
+
+        validation_file_metadata = self.metadata.get("system", dict()).get("validationFile", None)
+        if validation_file_metadata is None:
+            validation_file_metadata = dict()
+
+        remote_name = validation_file_metadata.get("name", None)
+        local_name = os.path.basename(local_path)
+        binaries_dataset = self._project.datasets._get_binaries_dataset()
+        remote_path = f"/.dataloop/recipes/{self.id}/verification/"
+
+        if remote_name is None or overwrite or remote_name != local_name:
+            validation_item = binaries_dataset.items.upload(
+                local_path=local_path,
+                remote_path=remote_path,
+                remote_name=local_name,
+                overwrite=True
+            )
+            self.metadata["system"]["validationFile"] = {
+                "itemId": validation_item.id,
+                "datasetId": binaries_dataset.id,
+                "name": local_name
+            }
+            self.update(system_metadata=True)
+        else:
+            logger.debug(f"Existing Annotations Validation Script was found.")
+            validation_item_id = self.metadata["system"]["validationFile"]["itemId"]
+            validation_item = binaries_dataset.items.get(item_id=validation_item_id)
+        return validation_item

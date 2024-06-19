@@ -75,12 +75,12 @@ def step_impl(context):
 
 @behave.then(u'I expect that pipeline execution has "{execution_number}" success executions')
 def step_impl(context, execution_number):
-    time.sleep(2)
+    time.sleep(.500)
     assert context.pipeline.pipeline_executions.list().items_count != 0, "Pipeline not executed found 0 executions"
     context.pipeline = context.project.pipelines.get(context.pipeline.name)
 
-    num_try = 80
-    interval = 10
+    num_try = 72
+    interval = 5
     executed = False
     execution_count = 0
     pipeline_executions = None
@@ -102,10 +102,18 @@ def step_impl(context, execution_number):
             executed = execution_count == int(execution_number)
             break
 
+
     if pipeline_executions and pipeline_executions.items[-1].latest_status['status'] == 'failed':
         assert False, f"TEST FAILED: Last execution failed with message: {pipeline_executions.items[-1].latest_status['message']}"
     assert executed, "TEST FAILED: Pipeline has {} executions instead of {}".format(execution_count, execution_number)
     return executed
+
+
+@behave.then(u'The pipeline has been executed "{num}" times')
+def step_impl(context, num):
+    time.sleep(2)
+    executions = context.pipeline.pipeline_executions.list().items_count
+    assert executions == int(num), f"TEST FAILED: Pipeline has been executed {executions} times"
 
 
 @behave.when(u'I get pipeline cycle execution in index "{num}"')

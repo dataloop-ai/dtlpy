@@ -22,7 +22,7 @@ def step_impl(context):
 def step_impl(context):
     annotations_get = context.item.annotations.list()
     for annotation in annotations_get:
-        assert annotation.attributes == list()
+        assert not annotation.attributes
 
 
 @behave.given(u"I change annotations attributes to non-existing attributes")
@@ -93,7 +93,7 @@ def step_impl(context):
 @behave.then(u"Annotation should be updated")
 def step_impl(context):
     annotation_get = context.item.annotations.get(context.annotation_x.id)
-    assert annotation_get.attributes == list()
+    assert not annotation_get.attributes
     assert annotation_get.label == "person"
 
 

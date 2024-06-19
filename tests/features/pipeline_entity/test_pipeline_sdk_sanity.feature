@@ -1,4 +1,4 @@
-Feature: Pipeline entity method testing
+# Feature: Pipeline entity method testing
 
 #  Background: Initiate Platform Interface and create a pipeline
 #    Given Platform Interface is initialized as dlp and Environment is set according to git branch
@@ -9,7 +9,7 @@ Feature: Pipeline entity method testing
 #    Then Add Members "annotator1@dataloop.ai"
 #
 #  @pipelines.delete
-##  @testrail-C4525314
+#  @testrail-C4525314
 #    @DAT-46590
 #  Scenario: pipeline sanity all nodes type
 #    When I create a package and service to pipeline

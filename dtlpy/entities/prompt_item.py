@@ -78,6 +78,16 @@ class PromptItem:
                 prompts_json["prompts"][prompt_key] = prompt_values
         return prompts_json
 
+    @classmethod
+    def from_json(cls, _json):
+        inst = cls(name='dummy')
+        for prompt_key, prompt_values in _json["prompts"].items():
+            prompt = Prompt(key=prompt_key)
+            for val in prompt_values:
+                prompt.add(mimetype=val['mimetype'], value=val['value'])
+            inst.prompts.append(prompt)
+        return inst
+
     def to_bytes_io(self):
         byte_io = io.BytesIO()
         byte_io.name = self.name

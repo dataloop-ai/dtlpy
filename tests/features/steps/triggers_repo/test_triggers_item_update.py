@@ -5,8 +5,8 @@ import time
 @behave.then(u'Service was triggered on "{resource_type}" again')
 def step_impl(context, resource_type):
     context.trigger_type = resource_type
-    num_try = 60
-    interval = 15
+    num_try = 30
+    interval = 10
     triggered = False
 
     for i in range(num_try):

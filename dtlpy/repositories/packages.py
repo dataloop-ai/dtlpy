@@ -664,9 +664,12 @@ class Packages:
         :return: Package object
         :rtype: dtlpy.entities.package.Package
         """
-        # if is dtlpy entity convert to dict
-        if modules and isinstance(modules[0], entities.PackageModule):
-            modules = [module.to_json() for module in modules]
+        if modules is not None:
+            if not isinstance(modules, list):
+                modules = [modules]
+
+            if isinstance(modules[0], entities.PackageModule):
+                modules = [module.to_json() for module in modules]
 
         if slots and isinstance(slots[0], entities.PackageSlot):
             slots = [slot.to_json() for slot in slots]

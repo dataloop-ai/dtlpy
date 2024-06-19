@@ -44,7 +44,6 @@ def step_impl(context):
                                                                    'queueLength': 10}}
                                                       )
     context.to_delete_services_ids.append(context.service.id)
-    time.sleep(10)
 
 
 @behave.when(u'I create a pipeline from sdk')
@@ -295,6 +294,7 @@ def step_impl(context):
 
     context.dataset_finish = context.project.datasets.create(dataset_name='dataset-' + current_time + "-finish", index_driver=context.index_driver_var)
     context.pipeline = context.project.pipelines.create(pipeline_name='sdk-pipeline-sanity', project_id=context.project.id)
+    context.to_delete_pipelines_ids.append(context.pipeline.id)
 
     task_node_1 = dl.TaskNode(
         name='My Task-fix-label' + current_time,

@@ -419,27 +419,24 @@ class Annotation(entities.BaseEntity):
         self.annotation_definition.label = label
 
     @property
-    def _use_attributes_2(self):
-        if self.__client_api is None and self._item is None:
-            return os.environ.get("USE_ATTRIBUTE_2", 'false') == 'true'
-        return self._client_api.attributes_mode.use_attributes_2
-
-    @property
     def attributes(self):
-        return self._recipe_2_attributes if self._use_attributes_2 else self.annotation_definition.attributes
+        if self._recipe_2_attributes or not self.annotation_definition.attributes:
+            return self._recipe_2_attributes
+        return self.annotation_definition.attributes
 
     @attributes.setter
     def attributes(self, attributes):
-        if self._use_attributes_2:
-            if not isinstance(attributes, dict):
-                raise ValueError(
-                    'Attributes must be a dict. If you are using v1 attributes please use dl.use_attributes_2(False)')
+        if isinstance(attributes, dict):
             self._recipe_2_attributes = attributes
-        else:
-            if not isinstance(attributes, list):
-                raise ValueError(
-                    'Attributes must be a list. If you are using v2 attributes please use dl.use_attributes_2(True)')
+        elif isinstance(attributes, list):
             self.annotation_definition.attributes = attributes
+        elif attributes is None:
+            if self._recipe_2_attributes:
+                self._recipe_2_attributes = {}
+            if self.annotation_definition.attributes:
+                self.annotation_definition.attributes = []
+        else:
+            raise ValueError('Attributes must be a dictionary or a list')
 
     @property
     def color(self):
@@ -1362,12 +1359,8 @@ class Annotation(entities.BaseEntity):
             object_id = _json['metadata']['system'].get('objectId', object_id)
             status = _json['metadata']['system'].get('status', status)
 
-        if client_api is not None:
-            recipe_2_attributes = client_api.attributes_mode.use_attributes_2
-        else:
-            recipe_2_attributes = False
         named_attributes = metadata.get('system', dict()).get('attributes', None)
-        attributes = named_attributes if recipe_2_attributes else _json.get('attributes', None)
+        attributes = named_attributes if named_attributes else _json.get('attributes', None)
 
         first_frame_attributes = attributes
         first_frame_coordinates = list()
@@ -1598,7 +1591,7 @@ class Annotation(entities.BaseEntity):
         if isinstance(self.annotation_definition, entities.Description):
             _json['metadata']['system']['system'] = True
 
-        if self._use_attributes_2:
+        if self._recipe_2_attributes is not None:
             _json['metadata']['system']['attributes'] = self._recipe_2_attributes
             if 'attributes' in self._platform_dict:
                 _json['attributes'] = self._platform_dict['attributes']
@@ -1685,20 +1678,18 @@ class FrameAnnotation(entities.BaseEntity):
 
     @property
     def attributes(self):
-        return self._recipe_2_attributes if self.annotation._use_attributes_2 else self.annotation_definition.attributes
+        if self._recipe_2_attributes or not self.annotation_definition.attributes:
+            return self._recipe_2_attributes
+        return self.annotation_definition.attributes
 
     @attributes.setter
     def attributes(self, attributes):
-        if self.annotation._use_attributes_2:
-            if not isinstance(attributes, dict):
-                raise ValueError(
-                    'Attributes must be a dict. If you are using v1 attributes please use dl.use_attributes_2(False)')
+        if isinstance(attributes, dict):
             self._recipe_2_attributes = attributes
-        else:
-            if not isinstance(attributes, list):
-                raise ValueError(
-                    'Attributes must be a list. If you are using v2 attributes please use dl.use_attributes_2(True)')
+        elif isinstance(attributes, list):
             self.annotation_definition.attributes = attributes
+        else:
+            raise ValueError('Attributes must be a dictionary or a list')
 
     @property
     def geo(self):
@@ -1879,7 +1870,7 @@ class FrameAnnotation(entities.BaseEntity):
             'data': self.coordinates
         }
 
-        if self.annotation._use_attributes_2:
+        if self.annotation._recipe_2_attributes:
             snapshot_dict['namedAttributes'] = self._recipe_2_attributes
         else:
             snapshot_dict['attributes'] = self.attributes

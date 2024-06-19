@@ -1,4 +1,3 @@
-import typing_extensions
 import functools
 import logging
 import enum
@@ -99,22 +98,6 @@ class DlEntity(object):
         """
         return miscellaneous.List([self]).to_df(show_all=show_all, columns=columns)
 
-    # def __repr__(self):
-    #     string = '{}('.format(self.__class__.__name__)
-    #     for prop in dir(self):
-    #         if isinstance(prop, DlProperty) and prop.repr is True:
-    #             string += '{}={}'.format()
-    #     params = json.dumps(self._dict, indent=4)
-    #     return "{}({})".format(self.__class__.__name__, params)
-
-    # def __repr__(self):
-    #     self.print()
-
-    # def __getattribute__(self, attr):
-    #     if super(BaseEntity, self).__getattribute__(attr) is None:
-    #         pass
-    #     return super(BaseEntity, self).__getattribute__(attr)
-
 
 class DlProperty:
     def __init__(self, location=None, default='NODEFAULT', _type=None, _kls=None):
@@ -207,16 +190,9 @@ class DlProperty:
 
         # instantiate dictionary to the type
         value = self._to_instance(_dict=value)
-
-        # isinstance(value, typing_extensions.get_args(self._type))
         return value
 
     def __set__(self, instance, value):
-        # TODO still not working properly. need to fix this validation
-        # if not isinstance(value, typing_extensions.get_args(self._type)):
-        #     logger.warning(
-        #         f'Incorrect typing for type: {type(instance)}. {self.location} must be of type {self._type}. Received: {type(value)}')
-        _client_api = getattr(instance, 'client_api', None)
 
         # validate - if validator is set
         if self._validator is not None:

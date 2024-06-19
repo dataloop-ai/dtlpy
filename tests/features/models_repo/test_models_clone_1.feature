@@ -23,7 +23,7 @@ Feature: Models repository clone testing
     When i "evaluate" the model
     Then model status should be "deployed" with execution "True" that has function "evaluate_model"
     Then model metadata should include operation "evaluate" with filed "datasets" and length "1"
-    When i clone a model
+    When I clone a model
     Then model input should be equal "image", and output should be equal "box"
     Then model do not have operation "evaluate"
 

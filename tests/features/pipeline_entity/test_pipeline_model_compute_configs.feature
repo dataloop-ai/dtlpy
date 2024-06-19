@@ -8,6 +8,7 @@ Feature: Test pipeline models compute configs
 
 
   @DAT-66085
+  @pipelines.delete
   Scenario: Test pipeline models compute configs - base case
     Given a dpk with models and compute configs
     And an app

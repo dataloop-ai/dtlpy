@@ -14,6 +14,7 @@ class BaseSample:
                  event_type,
                  action,
                  status,
+                 other_keys: dict = None
                  ):
         self.start_time = start_time
         self.end_time = end_time
@@ -23,6 +24,31 @@ class BaseSample:
         self.event_type = event_type
         self.action = action
         self.status = status
+        self.other_keys = other_keys
+
+    def to_json(self):
+        _json = {
+            'startTime': self.start_time,
+            'endTime': self.end_time,
+            'context': {
+                'projectId': self.project_id,
+                'projectOrgId': self.org_id,
+                'pipelineId': self.pipeline_id
+            },
+            'eventType': self.event_type,
+            'action': self.action,
+            'data': {
+                'status': self.status
+            }
+        }
+        if self.other_keys is not None:
+            if 'context' in self.other_keys:
+                _json['context'].update(self.other_keys['context'])
+            if 'data' in self.other_keys:
+                _json['data'].update(self.other_keys['data'])
+            _json.update({k: v for k, v in self.other_keys.items() if k not in ['context', 'data']})
+
+        return _json
 
 
 class ServiceSample(BaseSample):
@@ -47,16 +73,21 @@ class ServiceSample(BaseSample):
                  queue_size=None,
                  num_executions=None,
                  service_type: entities.ServiceType = None,
-                 interval: int = None
+                 interval: int = None,
+                 driver_id: str = None,
+                 other_keys: dict = None
                  ):
-        super().__init__(start_time=start_time,
-                         end_time=end_time,
-                         project_id=project_id,
-                         org_id=org_id,
-                         pipeline_id=pipeline_id,
-                         event_type=event_type,
-                         action=action,
-                         status=status)
+        super().__init__(
+            start_time=start_time,
+            end_time=end_time,
+            project_id=project_id,
+            org_id=org_id,
+            pipeline_id=pipeline_id,
+            event_type=event_type,
+            action=action,
+            status=status,
+            other_keys=other_keys
+        )
         self.user_id = user_id
         self.pipeline_node_id = pipeline_node_id
         self.service_id = service_id
@@ -70,38 +101,32 @@ class ServiceSample(BaseSample):
         self.num_executions = num_executions
         self.service_type = service_type if service_type is not None else entities.ServiceType.REGULAR
         self.interval = interval
+        self.driver_id = driver_id
 
     def to_json(self):
-        _json = {
-            'startTime': self.start_time,
-            'endTime': self.end_time,
-            'context': {
-                'userId': self.user_id,
-                'projectId': self.project_id,
-                'projectOrgId': self.org_id,
-                'pipelineId': self.pipeline_id,
-                'pipelineNodeId': self.pipeline_node_id,
-                'serviceId': self.service_id,
-                'podId': self.pod_id,
-                'podType': self.pod_type,
-                'serviceType': self.service_type
-            },
-            'eventType': self.event_type,
-            'entityType': self.entity_type,
-            'action': self.action,
-            'data': {
-                'status': self.status,
-                'numRestarts': self.num_restarts,
-                'cpu': self.cpu,
-                'ram': self.ram,
-                'queueSize': self.queue_size,
-                'numExecutions': self.num_executions,
-                'interval': self.interval
-            }
-        }
+        _json = super().to_json()
+        _json['context'].update({
+            'userId': self.user_id,
+            'pipelineNodeId': self.pipeline_node_id,
+            'serviceId': self.service_id,
+            'podId': self.pod_id,
+            'podType': self.pod_type,
+            'serviceType': self.service_type
+        })
+        _json['data'].update({
+            'numRestarts': self.num_restarts,
+            'cpu': self.cpu,
+            'ram': self.ram,
+            'queueSize': self.queue_size,
+            'numExecutions': self.num_executions,
+            'interval': self.interval,
+            'driverId': self.driver_id
+        })
+        _json.update({
+            'entityType': self.entity_type
+        })
         _json['context'] = {k: v for k, v in _json['context'].items() if v is not None}
         _json['data'] = {k: v for k, v in _json['data'].items() if v is not None}
-
         return {k: v for k, v in _json.items() if v is not None}
 
     @classmethod
@@ -127,6 +152,8 @@ class ServiceSample(BaseSample):
             queue_size=_json.get('data', {}).get('queueSize', None),
             num_executions=_json.get('data', {}).get('numExecutions', None),
             service_type=_json.get('type', entities.ServiceType.REGULAR),
+            interval=_json.get('data', {}).get('interval', None),
+            driver_id=_json.get('data', {}).get('driverId', None)
         )
         return inst
 
@@ -149,16 +176,20 @@ class ExecutionSample(BaseSample):
                  execution_id=None,
                  trigger_id=None,
                  function_name=None,
-                 duration=None
+                 duration=None,
+                 other_keys: dict = None
                  ):
-        super().__init__(start_time=start_time,
-                         end_time=end_time,
-                         project_id=project_id,
-                         org_id=org_id,
-                         pipeline_id=pipeline_id,
-                         event_type=event_type,
-                         action=action,
-                         status=status)
+        super().__init__(
+            start_time=start_time,
+            end_time=end_time,
+            project_id=project_id,
+            org_id=org_id,
+            pipeline_id=pipeline_id,
+            event_type=event_type,
+            action=action,
+            status=status,
+            other_keys=other_keys
+        )
         self.user_id = user_id
         self.account_id = account_id
         self.pipeline_node_id = pipeline_node_id
@@ -170,30 +201,22 @@ class ExecutionSample(BaseSample):
         self.duration = duration
 
     def to_json(self):
-        _json = {
-            'startTime': self.start_time,
-            'endTime': self.end_time,
-            'context': {
-                'userId': self.user_id,
-                'projectId': self.project_id,
-                'projectOrgId': self.org_id,
-                'accountId': self.account_id,
-                'pipelineId': self.pipeline_id,
-                'pipelineNodeId': self.pipeline_node_id,
-                'pipelineExecutionId': self.pipeline_execution_id,
-                'serviceId': self.service_id,
-                'executionId': self.execution_id,
-                'triggerId': self.trigger_id,
-            },
-            'eventType': self.event_type,
-            'action': self.action,
-            'data': {
-                'status': self.status,
-                'functionName': self.function_name,
-                'duration': self.duration
-            }
-        }
-        return _json
+        _json = super().to_json()
+        _json['context'].update({
+            'userId': self.user_id,
+            'accountId': self.account_id,
+            'pipelineNodeId': self.pipeline_node_id,
+            'pipelineExecutionId': self.pipeline_execution_id,
+            'serviceId': self.service_id,
+            'triggerId': self.trigger_id
+        })
+        _json['data'].update({
+            'functionName': self.function_name,
+            'duration': self.duration
+        })
+        _json['context'] = {k: v for k, v in _json['context'].items() if v is not None}
+        _json['data'] = {k: v for k, v in _json['data'].items() if v is not None}
+        return {k: v for k, v in _json.items() if v is not None}
 
     @classmethod
     def from_json(cls, _json):
@@ -234,15 +257,19 @@ class PipelineExecutionSample(BaseSample):
                  pipeline_execution_id=None,
                  trigger_id=None,
                  node_status=None,
+                 other_keys: dict = None
                  ):
-        super().__init__(start_time=start_time,
-                         end_time=end_time,
-                         project_id=project_id,
-                         org_id=org_id,
-                         pipeline_id=pipeline_id,
-                         event_type=event_type,
-                         action=action,
-                         status=status)
+        super().__init__(
+            start_time=start_time,
+            end_time=end_time,
+            project_id=project_id,
+            org_id=org_id,
+            pipeline_id=pipeline_id,
+            event_type=event_type,
+            action=action,
+            status=status,
+            other_keys=other_keys
+        )
         self.account_id = account_id
         self.pipeline_node_id = pipeline_node_id
         self.pipeline_execution_id = pipeline_execution_id
@@ -250,26 +277,19 @@ class PipelineExecutionSample(BaseSample):
         self.node_status = node_status
 
     def to_json(self):
-        _json = {
-            'startTime': self.start_time,
-            'endTime': self.end_time,
-            'context': {
-                'projectId': self.project_id,
-                'projectOrgId': self.org_id,
-                'accountId': self.account_id,
-                'pipelineId': self.pipeline_id,
-                'pipelineExecutionId': self.pipeline_execution_id,
-                'triggerId': self.trigger_id,
-            },
-            'eventType': self.event_type,
-            'action': self.action,
-            'data': {
-                'status': self.status,
-                'nodeId': self.pipeline_node_id,
-                'nodeStatus': self.node_status
-            }
-        }
-        return _json
+        _json = super().to_json()
+        _json['context'].update({
+            'accountId': self.account_id,
+            'pipelineNodeId': self.pipeline_node_id,
+            'pipelineExecutionId': self.pipeline_execution_id,
+            'triggerId': self.trigger_id
+        })
+        _json['data'].update({
+            'nodeStatus': self.node_status
+        })
+        _json['context'] = {k: v for k, v in _json['context'].items() if v is not None}
+        _json['data'] = {k: v for k, v in _json['data'].items() if v is not None}
+        return {k: v for k, v in _json.items() if v is not None}
 
     @classmethod
     def from_json(cls, _json):

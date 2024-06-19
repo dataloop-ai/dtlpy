@@ -9,6 +9,13 @@ import json
 from dtlpy.exceptions import NotFound
 
 
+@behave.Given(u'I create pipeline with the name "{pipeline_name}"')
+def step_impl(context, pipeline_name):
+    context.pipeline_name = f'{pipeline_name}-{random.randrange(1000, 10000)}'
+    context.pipeline = context.project.pipelines.create(name=context.pipeline_name, project_id=context.project.id)
+    context.to_delete_pipelines_ids.append(context.pipeline.id)
+
+
 @behave.given(u'I create "{node_type}" node with params')
 def step_impl(context, node_type):
     params = dict()
@@ -16,12 +23,18 @@ def step_impl(context, node_type):
         params[row['key']] = row['value']
 
     if node_type == "dataset":
+        data_filters = params.get('data_filters', None)
+        if data_filters:
+            data_filters = context.dl.Filters(custom_filter=json.loads(data_filters))
+
         context.node = dl.DatasetNode(
             name=params.get('name', context.dataset.name),
             project_id=context.project.id,
             dataset_id=params.get('dataset_id', context.dataset.id),
             dataset_folder=params.get('folder', None),
-            position=eval(params.get('position', "(1, 1)"))
+            position=eval(params.get('position', "(1, 1)")),
+            load_existing_data=params.get('load_existing_data', None),
+            data_filters=data_filters,
         )
 
     elif node_type == 'code':
@@ -36,13 +49,13 @@ def step_impl(context, node_type):
             project_name=context.project.name,
             inputs=[dl.PipelineNodeIO(port_id=str(uuid.uuid4()),
                                       input_type=params.get('input_type', "Item"),
-                                      name=params.get('input_name', "Item"),
+                                      name=params.get('input_name', "item"),
                                       color=None,
                                       display_name=params.get('input_display_name', "Item"),
                                       actions=None if not params.get('input_actions') else params.get('input_actions').split(','))],
             outputs=[dl.PipelineNodeIO(port_id=str(uuid.uuid4()),
                                        input_type=params.get('output_type', "Item"),
-                                       name=params.get('output_name', "Item"),
+                                       name=params.get('output_name', "item"),
                                        color=None,
                                        display_name=params.get('output_display_name', "Item"),
                                        actions=None if not params.get('output_actions') else params.get('output_actions').split(','))]
@@ -64,13 +77,6 @@ def step_impl(context, node_type):
         )
 
     context.nodes.append(context.node)
-
-
-@behave.Given(u'I create pipeline with the name "{pipeline_name}"')
-def step_impl(context, pipeline_name):
-    context.pipeline_name = f'{pipeline_name}-{random.randrange(1000, 10000)}'
-    context.pipeline = context.project.pipelines.create(name=context.pipeline_name, project_id=context.project.id)
-    context.to_delete_pipelines_ids.append(context.pipeline.id)
 
 
 @behave.when(u'I add and connect all nodes in list to pipeline entity')
@@ -216,13 +222,16 @@ def generate_pipeline_json(context, pipeline_json):
         node['namespace']['projectName'] = context.project.name
         if not hasattr(context, "model"):
             break
-        elif node['namespace']['functionName'] == "train" and check_no_connection_for_input(pipeline_json, node['inputs'][0]):
-            node['inputs'][0]['defaultValue'] = context.model.id
+        elif node['namespace']['functionName'] == "train":
+            node['metadata']['aiLibraryId'] = context.model.package.id
+            if check_no_connection_for_input(pipeline_json, node['inputs'][0]):
+                node['inputs'][0]['defaultValue'] = context.model.id
         elif node['namespace']['functionName'] == "predict":
             node['name'] = context.model.name
             node['metadata']["modelId"] = context.model.id
             node['metadata']["modelName"] = context.model.name
         elif node['namespace']['functionName'] == "evaluate":
+            node['metadata']['aiLibraryId'] = context.model.package.id
             for node_input in node['inputs']:
                 if node_input['type'] == 'Model' and check_no_connection_for_input(pipeline_json, node_input):
                     node_input['defaultValue'] = context.model.id
@@ -280,6 +289,3 @@ def step_impl(context):
             flag = True
             break
     assert flag, f"TEST FAILED: Task still exist"
-
-
-

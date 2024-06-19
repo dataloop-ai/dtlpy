@@ -419,7 +419,7 @@ def step_impl(context):
                         "autoscaler": {
                             "type": "rabbitmq",
                             "minReplicas": 0,
-                            "maxReplicas": 1,
+                            "maxReplicas": 0,
                             "queueLength": 1000
                         },
                         "runnerImage": "test-compute-deploy"
@@ -434,7 +434,7 @@ def step_impl(context):
                         "autoscaler": {
                             "type": "rabbitmq",
                             "minReplicas": 0,
-                            "maxReplicas": 1,
+                            "maxReplicas": 0,
                             "queueLength": 1000
                         },
                         "runnerImage": "test-compute-train"
@@ -449,7 +449,7 @@ def step_impl(context):
                         "autoscaler": {
                             "type": "rabbitmq",
                             "minReplicas": 0,
-                            "maxReplicas": 1,
+                            "maxReplicas": 0,
                             "queueLength": 1000
                         },
                         "runnerImage": "test-compute-default"
@@ -464,7 +464,7 @@ def step_impl(context):
                         "autoscaler": {
                             "type": "rabbitmq",
                             "minReplicas": 0,
-                            "maxReplicas": 1,
+                            "maxReplicas": 0,
                             "queueLength": 1000
                         },
                         "runnerImage": "test-compute-from-module"
@@ -479,7 +479,7 @@ def step_impl(context):
                         "autoscaler": {
                             "type": "rabbitmq",
                             "minReplicas": 0,
-                            "maxReplicas": 1,
+                            "maxReplicas": 0,
                             "queueLength": 1000
                         },
                         "runnerImage": "test-compute-from-function"
@@ -559,6 +559,7 @@ def step_impl(context):
         name='test-pipeline-{}'.format(random_5_chars()),
         project_id=context.project.id
     )
+    context.to_delete_pipelines_ids.append(context.pipeline.id)
 
 
 @given(u'models are set in context')

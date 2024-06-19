@@ -89,6 +89,9 @@ class Features:
         if filters is None:
             filters = entities.Filters(resource=entities.FiltersResource.FEATURE)
             filters._user_query = 'false'
+        # default sorting
+        if filters.sort == dict():
+            filters.sort_by(field='id')
         # assert type filters
         if not isinstance(filters, entities.Filters):
             raise exceptions.PlatformException(error='400',
@@ -149,7 +152,7 @@ class Features:
         :param immutable value: actual vector - immutable (list of floats [1,2,3])
         :param str project_id: the id of the project where feature will be created
         :param str feature_set_id: ref to a featureSet this vector is a part of
-        :param entity: the entity the featureVector is linked to (item.id, annotation.id etc)
+        :param entity: the entity the featureVector is linked to (item, annotation, etc)
         :param str version: version of the featureSet generator
         :param str parent_id: optional: parent FeatureSet id - used when FeatureVector is a subFeature
         :param str org_id: the id of the org where featureVector will be created

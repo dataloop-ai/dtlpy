@@ -2,6 +2,7 @@ import urllib.parse
 import logging
 import json
 import os
+import io
 from enum import Enum
 
 from .. import exceptions, entities
@@ -139,7 +140,7 @@ class Filters:
 
     @property
     def resource(self):
-        return self._resource
+        return f'{self._resource.value}' if isinstance(self._resource, FiltersResource) else f'{self._resource}'
 
     @resource.setter
     def resource(self, resource):
@@ -474,7 +475,7 @@ class Filters:
         """
         if value not in [FiltersOrderByDirection.ASCENDING, FiltersOrderByDirection.DESCENDING]:
             raise exceptions.PlatformException(error='400', message='Sort can be by ascending or descending order only')
-        self.sort[field] = value
+        self.sort[field] = value.value if isinstance(value, FiltersOrderByDirection) else value
 
     def platform_url(self, resource) -> str:
         """
@@ -488,14 +489,17 @@ class Filters:
         # add the view option
         _json['view'] = 'icons'
         # convert from enum to string
-        _json["resource"] = '{}'.format(_json['resource'])
+        _json["resource"] = f'{_json["resource"]}'
         # convert the dictionary to a json string
-        _json['dqlFilter'] = json.dumps({'filter': _json.pop('filter')})
+        _json['dqlFilter'] = json.dumps({'filter': _json.pop('filter'),
+                                         'join': _json.pop('join'),
+                                         'sort': _json.get('sort')})
         # set the page size as the UI default
         _json['pageSize'] = 100
+        _json['page'] = _json['page']
         # build the url for the dataset data browser
         if isinstance(resource, entities.Dataset):
-            url = resource.platform_url + '/items?{}'.format(urllib.parse.urlencode(_json))
+            url = resource.platform_url + f'?{urllib.parse.urlencode(_json)}'
         else:
             raise NotImplementedError('Not implemented for resource type: {}'.format(type(resource)))
         return url
@@ -510,6 +514,81 @@ class Filters:
             resource._client_api._open_in_web(url=self.platform_url(resource=resource))
         else:
             raise NotImplementedError('Not implemented for resource type: {}'.format(type(resource)))
+
+    def save(self, project: entities.Project, filter_name: str):
+        """
+        Save the current DQL filter to the project
+
+        :param project: dl.Project
+        :param filter_name: the saved filter's name
+        :return: True if success
+        """
+        _json_filter = self.prepare()
+        shebang_dict = {"type": "dql",
+                        "shebang": "dataloop",
+                        "metadata": {
+                            "version": "1.0.0",
+                            "system": {
+                                "mimetype": "dql"
+                            },
+                            "dltype": "filter",
+                            "filterFieldsState": [],
+                            "resource": "items",
+                            "filter": _json_filter.pop('filter'),
+                            "join": _json_filter.pop('join')
+                        }
+                        }
+        b_dataset = project.datasets._get_binaries_dataset()
+        byte_io = io.BytesIO()
+        byte_io.name = filter_name
+        byte_io.write(json.dumps(shebang_dict).encode())
+        byte_io.seek(0)
+        b_dataset.items.upload(local_path=byte_io,
+                               remote_path='/.dataloop/dqlfilters/items',
+                               remote_name=filter_name)
+        return True
+
+    @classmethod
+    def load(cls, project: entities.Project, filter_name: str) -> 'Filters':
+        """
+        Load a saved filter from the project by name
+
+        :param project: dl.Project entity
+        :param filter_name: filter name
+        :return: dl.Filters
+        """
+        b_dataset = project.datasets._get_binaries_dataset()
+        f = entities.Filters(custom_filter={
+            'filter': {'$and': [{'filename': f'/.dataloop/dqlfilters/items/{filter_name}'}]},
+            'page': 0,
+            'pageSize': 1000,
+            'resource': 'items'
+        })
+        pages = b_dataset.items.list(filters=f)
+        if pages.items_count == 0:
+            raise exceptions.NotFound(
+                f'Saved filter not found: {filter_name}. Run `Filters.list()` to list existing filters')
+        with open(pages.items[0].download()) as f:
+            data = json.load(f)
+            custom_filter = data['metadata']['filter']
+            custom_filter['join'] = data['metadata']['join']
+        return cls(custom_filter=custom_filter)
+
+    @staticmethod
+    def list(project: entities.Project) -> list:
+        """
+        List all saved filters for a project
+        :param project: dl.Project entity
+        :return: a list of all the saved filters' names
+        """
+        b_dataset = project.datasets._get_binaries_dataset()
+        f = entities.Filters(use_defaults=False,
+                             field='dir',
+                             values='/.dataloop/dqlfilters/items')
+        pages = b_dataset.items.list(filters=f)
+        all_filter_items = list(pages.all())
+        names = [i.name for i in all_filter_items]
+        return names
 
 
 class SingleFilter:
@@ -552,6 +631,6 @@ class SingleFilter:
             _json[self.field] = value
 
         return _json
-    
+
     def print(self, indent=2):
         print(json.dumps(self.prepare(), indent=indent))

@@ -59,6 +59,11 @@ def step_impl(context):
     context.to_delete_services_ids.append(context.service.id)
 
 
+@behave.then(u'service has integrations')
+def step_impl(context):
+    assert len(context.service.integrations) > 0
+
+
 @behave.then(u'I execute the service')
 def step_impl(context):
     context.execution: dl.Execution = context.service.execute(item_id=context.item.id,

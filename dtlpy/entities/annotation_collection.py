@@ -63,7 +63,7 @@ class AnnotationCollection(entities.BaseEntity):
         """
         Add annotations to collection
 
-        :param annotation_definition: dl.Polygon, dl.Segmentation, dl.Point, dl.Box etc
+        :param annotation_definition: dl.Polygon, dl.Segmentation, dl.Point, dl.Box etc.
         :param object_id: Object id (any id given by user). If video - must input to match annotations between frames
         :param frame_num: video only, number of frame
         :param end_frame_num: video only, the end frame of the annotation
@@ -72,12 +72,12 @@ class AnnotationCollection(entities.BaseEntity):
         :param automated:
         :param fixed: video only, mark frame as fixed
         :param object_visible: video only, does the annotated object is visible
-        :param metadata: optional- metadata dictionary for annotation
+        :param metadata: optional, metadata dictionary for annotation
         :param parent_id: set a parent for this annotation (parent annotation ID)
         :param prompt_id: Connect the annotation with a specific prompt in a dl.PromptItem
-        :param model_info: optional - set model on annotation {'confidence':0 [Mandatory], (Float between 0-1)
-                                                               'name',:'' [Optional], ('name' refers to 'model_name')
-                                                               'model_id':''[Optional]}
+        :param model_info: optional - set model on annotation {'confidence': 0, # [Mandatory], (Float between 0-1)
+                                                               'name': '', # [Optional], ('name' refers to 'model_name')
+                                                               'model_id': ''} # [Optional]
         :return:
         """
         if model_info is not None:
@@ -163,7 +163,7 @@ class AnnotationCollection(entities.BaseEntity):
              annotation_format: entities.ViewAnnotationOptions = entities.ViewAnnotationOptions.MASK,
              label_instance_dict=None,
              color=None,
-             alpha=1,
+             alpha=1.,
              frame_num=None):
         """
         Show annotations according to annotation_format
@@ -188,8 +188,7 @@ class AnnotationCollection(entities.BaseEntity):
 
             image = builder.show(image='ndarray',
                         thickness=1,
-                        annotation_format=dl.VIEW_ANNOTATION_OPTIONS_MASK,
-                        )
+                        annotation_format=dl.VIEW_ANNOTATION_OPTIONS_MASK)
         """
         # if 'video' in self.item.mimetype and (annotation_format != 'json' or annotation_format != ['json']):
         #     raise PlatformException('400', 'Cannot show mask or instance of video item')
@@ -210,7 +209,7 @@ class AnnotationCollection(entities.BaseEntity):
             else:
                 rest_annotations.append(annotation)
         all_annotations = segment_annotations + rest_annotations
-        # gor over all annotations and put the id where the annotations is
+        # gor over all annotations and put the id where the annotations are
         for annotation in all_annotations:
             # get the mask of the annotation
             image = annotation.show(thickness=thickness,
@@ -231,7 +230,7 @@ class AnnotationCollection(entities.BaseEntity):
                      thickness=1,
                      annotation_format=entities.ViewAnnotationOptions.ANNOTATION_ON_IMAGE,
                      with_text=False,
-                     alpha=1):
+                     alpha=1.):
         """
         create a video from frames
 
@@ -240,6 +239,8 @@ class AnnotationCollection(entities.BaseEntity):
         :param thickness: int - thickness of the annotations
         :param annotation_format: str - ViewAnnotationOptions - annotations format
         :param with_text: bool - if True show the label in the output
+        :param float alpha: opacity value [0 1], default 1
+
         """
         try:
             import cv2
@@ -288,7 +289,8 @@ class AnnotationCollection(entities.BaseEntity):
         if reader is not None:
             reader.release()
 
-    def _set_flip_args(self, orientation):
+    @staticmethod
+    def _set_flip_args(orientation):
         try:
             import cv2
         except (ImportError, ModuleNotFoundError):
@@ -329,10 +331,10 @@ class AnnotationCollection(entities.BaseEntity):
         :param int height: height
         :param int width: width
         :param int thickness: thickness
-        :param bool with_text: add a text to the image
+        :param bool with_text: add a text to an image
         :param int orientation: the image orientation
         :param float alpha: opacity value [0 1], default 1
-        :return: file path of the downlaod annotation
+        :return: file path of the download annotation
         :rtype: str
 
         **Example**:
@@ -521,8 +523,8 @@ class AnnotationCollection(entities.BaseEntity):
         :param dict _json: platform json
         :param dtlpy.entities.item.Item item: item
         :param client_api: ApiClient entity
-        :param bool is_video: is video
-        :param fps: video fps
+        :param bool is_video: whether the item is video
+        :param fps: frame rate of the video
         :param float height: height
         :param float width: width
         :param bool is_audio: is audio
@@ -614,19 +616,15 @@ class AnnotationCollection(entities.BaseEntity):
             start_time = datetime.timedelta(hours=float(h), minutes=float(m), seconds=float(s)).total_seconds()
             h, m, s = caption.end.split(':')
             end_time = datetime.timedelta(hours=float(h), minutes=float(m), seconds=float(s)).total_seconds()
-            if self.item.fps is not None:
-                start_frame = round(start_time * self.item.fps)
-            else:
-                raise ValueError('Item do not have fps, please wait for video-preprocess to complete')
             annotation_definition = entities.Subtitle(text=caption.text, label='Text')
             annotation = entities.Annotation.new(
                 annotation_definition=annotation_definition,
-                frame_num=start_frame,
                 item=self.item,
                 start_time=start_time)
 
             annotation.add_frames(annotation_definition=annotation_definition,
-                                  frame_num=start_frame, end_time=end_time)
+                                  start_time=start_time,
+                                  end_time=end_time)
 
             self.annotations.append(annotation)
 

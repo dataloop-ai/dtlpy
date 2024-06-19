@@ -1,4 +1,3 @@
-@DAT-49332
 Feature: Pipeline entity method testing - rerun cycle
 
   Background: Initiate Platform Interface and create a pipeline
@@ -12,6 +11,7 @@ Feature: Pipeline entity method testing - rerun cycle
 
 
   @pipelines.delete
+  @DAT-70140
   Scenario: rerun pipeline cycle from the beginning root case
     When I execute pipeline on item
     Then Cycle completed with save "True"
@@ -21,6 +21,7 @@ Feature: Pipeline entity method testing - rerun cycle
 
 
   @pipelines.delete
+  @DAT-70140
   Scenario: rerun pipeline cycle from the beginning trigger case
     When I upload the file in path "assets_split/items_upload/0000000162.jpg" with remote name "2.jpg"
     Then Cycle completed with save "True"
@@ -30,6 +31,7 @@ Feature: Pipeline entity method testing - rerun cycle
 
 
   @pipelines.delete
+  @DAT-70140
   Scenario: rerun pipeline Execution
     When I execute pipeline on item
     Then Cycle completed with save "True"
@@ -38,6 +40,7 @@ Feature: Pipeline entity method testing - rerun cycle
     Then the pipeline cycle should be rerun
 
   @pipelines.delete
+  @DAT-70140
   Scenario: rerun pipeline Execution from the failed node
     When I execute pipeline on item
     Then Cycle completed with save "True"

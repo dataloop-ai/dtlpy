@@ -14,11 +14,10 @@ Feature: publish a dpk with trigger
     And I add codebase to dpk
     And I publish a dpk to the platform
     And I install the app
-    And I wait "35"
     And I set the trigger in the context
     Then I receive a CronTrigger entity
     When I list service executions
-    Then I receive a list of "1" executions
+    Then I wait until I receive a list of "1" executions
     And I uninstall the app
 
 
@@ -31,7 +30,6 @@ Feature: publish a dpk with trigger
     And I add codebase to dpk
     And I publish a dpk to the platform
     And I install the app
-    And I wait "35"
     And I set the trigger in the context
     Then I receive a CronTrigger entity
     And Service was triggered on "string"

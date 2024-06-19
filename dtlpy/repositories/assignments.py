@@ -117,7 +117,7 @@ class Assignments:
         elif self._project is not None:
             project_ids = [self._project.id]
         else:
-            raise ('400', 'Must provide project')
+            raise exceptions.PlatformException(error='400', message='Must provide project')
 
         project_ids = ','.join(project_ids)
         query.append('projects={}'.format(project_ids))

@@ -309,6 +309,35 @@ class Dpks:
             raise exceptions.PlatformException(response)
         return response.json()
 
+    def get_revisions(self, dpk_id: str, version: str):
+        """
+        Get the revision of a specific dpk.
+
+        :param str dpk_id: the id of the dpk.
+        :param str version: the version of the dpk.
+        :return the entity of the dpk
+        :rtype entities.Dpk
+
+        ** Example **
+        ..coed-block:: python
+            dpk = dl.dpks.get_revisions(dpk_id='id', version='1.0.0')
+        """
+        if dpk_id is None or version is None:
+            raise ValueError('You must provide both dpk_id and version')
+        url = '/app-registry/{}/revisions/{}'.format(dpk_id, version)
+
+        # request
+        success, response = self._client_api.gen_request(req_type='get',
+                                                         path=url)
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        dpk = entities.Dpk.from_json(_json=response.json(),
+                                     client_api=self._client_api,
+                                     project=self._project,
+                                     is_fetched=False)
+        return dpk
+
     def get(self, dpk_name: str = None, dpk_version: str = None, dpk_id: str = None) -> entities.Dpk:
         """
         Get a specific dpk from the platform.

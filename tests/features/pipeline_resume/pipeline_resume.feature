@@ -16,7 +16,7 @@ Feature: Resuming Pipeline
         And Item reached task node
         When I pause pipeline in context
         And I complete item in task
-        And I wait "5"
+        And I wait "10"
         Then Next nodes should not be executed
         When I resume pipeline with resume option "resumeExistingCycles"
         Then Next nodes should be executed

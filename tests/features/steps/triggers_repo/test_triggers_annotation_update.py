@@ -1,6 +1,7 @@
 import behave
 
 
+@behave.when(u'I update annotation label with new name "{label_name}"')
 @behave.then(u'I update annotation label with new name "{label_name}"')
 def step_impl(context, label_name):
     context.annotation.label = label_name

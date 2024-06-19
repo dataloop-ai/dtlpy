@@ -7,6 +7,7 @@ def step_impl(context, package_name):
 
 
 @behave.when(u'get global model package')
+@behave.given(u'get global model package')
 def step_impl(context):
     package_filter = context.dl.Filters(field='name', values='testmodel', use_defaults=False,
                                         resource=context.dl.FiltersResource.PACKAGE)

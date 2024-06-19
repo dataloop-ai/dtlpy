@@ -55,7 +55,8 @@ def step_impl(context, entity):
                     module.pop('computeConfig', None)
 
         if entity_to_json != response:
-            assert False, "TEST FAILED: Different in response and entity_to_json.\n{}".format(list(dictdiffer.diff(response, entity_to_json)))
+            assert False, "TEST FAILED: Different in response and entity_to_json.\n{}".format(
+                list(dictdiffer.diff(response, entity_to_json)))
     else:
         annotations_list = context.item.annotations.list()
         for ann in annotations_list:
@@ -72,6 +73,9 @@ def step_impl(context, entity):
                 ann_json.pop('hash', None)
                 response.pop('hash', None)
 
+            if ann_json.get('attributes', None) is None:
+                ann_json.pop('attributes', None)
+
             # 'segment', 'polyline'  remove metadata because response has no metadata
             # 'box', 'point', 'ellipse' sdk remove the system metadata if empty
             if ann.type in ['segment', 'polyline', 'box', 'point', 'ellipse']:
@@ -82,7 +86,8 @@ def step_impl(context, entity):
 
             # compare json
             if response != ann_json:
-                assert False, "TEST FAILED: Different in response and ann_json.\n{}".format(list(dictdiffer.diff(response, ann_json)))
+                assert False, "TEST FAILED: Different in response and ann_json.\n{}".format(
+                    list(dictdiffer.diff(response, ann_json)))
 
 
 @behave.when(u"I create a blank annotation to item")
@@ -123,6 +128,46 @@ def step_impl(context):
     context.annotation = context.dl.Annotation.new(
         annotation_definition=annotation_definition, item=context.item
     )
+
+
+@behave.when(u'I add annotation with attrs "{key}" "{value}" to item using add annotation method')
+def step_impl(context, key, value):
+    context.dataset = context.dataset.update()
+    item = context.item.update()
+    labels = context.dataset.labels
+    height = item.height
+    if height is None:
+        height = 768
+    width = item.width
+    if width is None:
+        width = 1536
+
+    # box
+    top = r.randrange(0, height)
+    left = r.randrange(0, width)
+    right = left + 100
+    bottom = top + 100
+    annotation_definition = context.dl.Box(
+        top=top,
+        left=left,
+        right=right,
+        bottom=bottom,
+        label=r.choice(labels).tag
+    )
+    context.annotation = context.dl.Annotation.new(
+        annotation_definition=annotation_definition, item=context.item
+    )
+    context.annotation.attributes = {key: value}
+
+
+@behave.then(u'I validate annotation has attribute "{key}" with value "{value}"')
+def step_impl(context, key, value):
+    assert context.annotation.attributes[key] == value, "TEST FAILED: attribute value not equal"
+
+
+@behave.then(u'I validate annotation has no attributes')
+def step_impl(context):
+    assert context.annotation.attributes == {}, f"TEST FAILED: attribute value not equal - {context.annotation.attributes}"
 
 
 @behave.when(u"I add annotation to audio using add annotation method")
@@ -251,7 +296,8 @@ def step_impl(context):
                 found_frames = True
                 break
 
-    assert isinstance(nb_frames, int), f"TEST FAILED: nb_frames is not defined after {round(num_tries * interval_time / 60, 1)} minutes"
+    assert isinstance(nb_frames,
+                      int), f"TEST FAILED: nb_frames is not defined after {round(num_tries * interval_time / 60, 1)} minutes"
     ann = context.annotation
     label = context.dataset.labels[0]
     for frame in range(nb_frames):

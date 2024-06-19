@@ -9,20 +9,25 @@ import re
 
 @behave.given(u'I create "{integration_type}" integration with name "{integration_name}"')
 def step_impl(context, integration_type, integration_name):
-    integration_options = {
-        "s3": eval(os.environ.get("aws")),
-        "gcs": {
+    integration_options = {}
+    if integration_type == 's3':
+        integration_options["s3"] = eval(os.environ.get("aws"))
+    elif integration_type == 'gcs':
+        integration_options["gcs"] = {
             'key': None, 'secret': None, 'content': os.environ.get('gcs')
-        },
-        "azureblob": eval(os.environ.get("azureblob"))
-        ,
-        "aws-sts": eval(os.environ.get("aws_sts")),
-        "azuregen2": eval(os.environ.get("azuregen2")),
-        "key_value": {
+        }
+    elif integration_type == 'azureblob':
+        integration_options["azureblob"] = eval(os.environ.get("azureblob"))
+    elif integration_type == 'aws-sts':
+        integration_options["aws-sts"] = eval(os.environ.get("aws_sts"))
+    elif integration_type == 'azuregen2':
+        integration_options["azuregen2"] = eval(os.environ.get("azuregen2"))
+    elif integration_type == 'key_value':
+        integration_options["key_value"] = {
             'key': os.environ.get('key_value_key', 'default_key'), 'value': os.environ.get('key_value_value', 'default_value')
-        },
-        "gcp-cross": {}
-    }
+        }
+    elif integration_type == 'gcp-cross':
+        integration_options["gcp-cross"] = {}
 
     assert integration_type in integration_options, "TEST FAILED: Wrong integration type: {}".format(integration_type)
     try:
@@ -65,7 +70,8 @@ def step_impl(context, integration_name):
 def step_impl(context):
     try:
         context.integration.delete(True, True)
-        context.feature.to_delete_integrations_ids.pop(-1)
+        if context.feature.to_delete_integrations_ids:
+            context.feature.to_delete_integrations_ids.pop(-1)
         context.error = None
     except Exception as e:
         context.error = e

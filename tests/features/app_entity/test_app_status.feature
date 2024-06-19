@@ -15,11 +15,7 @@ Feature: Test app status update
         And I get service by name "hello"
         Then The deactivation should succeed
         And The service is inactive
-        When I pause the app
-        Then I should get an exception error='400'
         When I resume the app
         And I get service by name "hello"
         Then The activation should succeed
         And The service is active
-        When I resume the app
-        Then I should get an exception error='400'

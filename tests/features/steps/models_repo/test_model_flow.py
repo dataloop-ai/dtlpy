@@ -25,18 +25,30 @@ def step_impl(context, package_name, entry_point):
     context.dpk.components.modules[0].entry_point = entry_point
     context.dpk.name = f"to_delete_{package_name}_{str(random.randrange(0, 1000))}"
     context.dpk.display_name = f"to_delete_{package_name}_{str(random.randrange(0, 1000))}"
-
-    context.dpk.components.compute_configs._dict[0] = {
-        "name": "default",
-        "versions": {"dtlpy": dl.__version__},
-        'runtime': dl.KubernetesRuntime(
-            runner_image='jjanzic/docker-python3-opencv',
-            pod_type=dl.InstanceCatalog.REGULAR_XS,
-            autoscaler=dl.KubernetesRabbitmqAutoscaler(
-                min_replicas=1,
-                max_replicas=1),
-            concurrency=1).to_json()
-    }
+    if (context.dpk.components.compute_configs._dict):
+        context.dpk.components.compute_configs._dict[0].update({
+            "name": "default",
+            "versions": {"dtlpy": dl.__version__},
+            'runtime': dl.KubernetesRuntime(
+                runner_image='jjanzic/docker-python3-opencv',
+                pod_type=dl.InstanceCatalog.REGULAR_XS,
+                autoscaler=dl.KubernetesRabbitmqAutoscaler(
+                    min_replicas=1,
+                    max_replicas=1),
+                concurrency=1).to_json()
+        })
+    else:
+        context.dpk.components.compute_configs._dict[0] = {
+            "name": "default",
+            "versions": {"dtlpy": dl.__version__},
+            'runtime': dl.KubernetesRuntime(
+                runner_image='jjanzic/docker-python3-opencv',
+                pod_type=dl.InstanceCatalog.REGULAR_XS,
+                autoscaler=dl.KubernetesRabbitmqAutoscaler(
+                    min_replicas=1,
+                    max_replicas=1),
+                concurrency=1).to_json()
+        }
 
 
 @behave.when(u'I create a model from package by the name of "{model_name}" with status "{status}" in index "{index}"')
@@ -70,6 +82,28 @@ def step_impl(context, model_name):
     context.model = context.project.models.get(model_name=model_name)
 
 
+@behave.then(u'"{obj_entity}" has app scope')
+def step_impl(context, obj_entity):
+    if not hasattr(context, obj_entity):
+        raise AttributeError(f"Please make sure context has attr '{obj_entity}'")
+
+    assert getattr(context, obj_entity).app, f"TEST FAILED: Expected to have 'app' attribute in context.{obj_entity}"
+
+    assert getattr(context, obj_entity).app[
+               'id'] == context.app.id, f"TEST FAILED: app id is not as expected, expected: {context.app.id}, got: {getattr(context, obj_entity).app['id']}"
+    assert getattr(context, obj_entity).app[
+               'dpkId'] == context.dpk.base_id, f"TEST FAILED: dpk id is not as expected, expected: {context.dpk.base_id}, got: {getattr(context, obj_entity).app['dpkId']}"
+    assert getattr(context, obj_entity).app[
+               'dpkVersion'] == context.dpk.version, f"TEST FAILED: dpk version is not as expected, expected: {context.dpk.version}, got: {getattr(context, obj_entity).app['dpkVersion']}"
+    assert getattr(context, obj_entity).app[
+               'dpkName'] == context.dpk.name, f"TEST FAILED: dpk name is not as expected, expected: {context.dpk.name}, got: {getattr(context, obj_entity).app['dpkName']}"
+
+
+@behave.then(u'service runnerImage is "{runner_image}"')
+def step_impl(context, runner_image):
+    assert context.service.runtime.runner_image == runner_image, f"service runner image expected :{runner_image} got {context.service.runtime.runner_image}"
+
+
 @behave.when(u'I "{func}" the model')
 @behave.when(u'I "{func}" the model with exception "{flag}"')
 def step_impl(context, func, flag=None):
@@ -82,6 +116,8 @@ def step_impl(context, func, flag=None):
             context.execution = context.model.evaluate(dataset_id=context.dataset.id, filters=dl.Filters(),
                                                        service_config=service_config)
             context.to_delete_services_ids.append(context.execution.service_id)
+        elif func == 'deploy':
+            context.service = context.model.__getattribute__(func)()
         else:
             context.execution = context.model.__getattribute__(func)()
         context.error = None
@@ -110,8 +146,8 @@ def step_impl(context, item_id):
 
 @behave.then(u'model status should be "{status}" with execution "{flag}" that has function "{func}"')
 def step_impl(context, status, flag, func):
-    num_try = 45
-    interval = 20
+    num_try = 54
+    interval = 10
     completed = False
 
     if eval(flag):
@@ -291,13 +327,14 @@ def step_impl(context, operation, field, value):
                    field]) == value, f"TEST FAILED: field {field} length is not as expected, expected: {value}, got: {len(context.model.metadata['system'][operation][field])}"
 
 
-@behave.when(u'i clone a model')
-def step_impl(context):
+@behave.when(u'I clone a model')
+@behave.when(u'I clone a model and set status "{model_status}"')
+def step_impl(context, model_status='created'):
     context.model = context.model.clone(
         model_name='clone_model',
         project_id=context.model.project_id,
         dataset=dl.datasets.get(dataset_id=context.model.dataset_id),
-        status='created'
+        status=model_status
     )
 
 

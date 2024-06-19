@@ -9,7 +9,7 @@
 #  @feature.delete
 #  @feature_set.delete
 #  @testrail-C4523105
-   @DAT-46523
+#   @DAT-46523
 #  Scenario: Create a Feature set
 #    When I create a feature sets with a random name
 #    When I create a feature
@@ -21,7 +21,7 @@
 #  @feature.delete
 #  @feature_set.delete
 #  @testrail-C4523105
-   @DAT-46523
+#   @DAT-46523
 #  Scenario: List Feature set
 #    Given There are no feature sets
 #    When I create a feature sets with a random name

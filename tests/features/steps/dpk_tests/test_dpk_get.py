@@ -3,7 +3,6 @@ import json
 import dictdiffer
 
 
-
 @behave.when(u'I try get the "{dpk_obj}" by id')
 def step_impl(context, dpk_obj):
     try:
@@ -18,6 +17,13 @@ def step_impl(context):
     context.dpk = context.dl.dpks.get(dpk_name=context.published_dpk.name)
 
 
+@behave.when(u'i update dpk compute config "{comp_name}" runtime "{filed}" to "{val}"')
+def step_impl(context, comp_name, filed, val):
+    for comp in context.dpk.components.compute_configs:
+        if comp.name == comp_name:
+            comp.runtime[filed] = val
+
+
 @behave.then(u'I have the same dpk as the published dpk')
 def step_impl(context):
     to_json = context.dpk.to_json()
@@ -26,7 +32,8 @@ def step_impl(context):
         to_json.pop('dependencies', None)
     if 'context' in to_json and to_json['context'] is None:
         to_json.pop('context', None)
-    assert to_json == context.published_dpk.to_json(), "TEST FAILED: Different in to_json and dpk.to_json().\n{}".format(list(dictdiffer.diff(to_json, context.published_dpk.to_json())))
+    assert to_json == context.published_dpk.to_json(), "TEST FAILED: Different in to_json and dpk.to_json().\n{}".format(
+        list(dictdiffer.diff(to_json, context.published_dpk.to_json())))
 
 
 @behave.when(u'I get a dpk with invalid id')
@@ -67,4 +74,5 @@ def step_impl(context):
         return False, "Context missing 'req' / 'response' attribute"
 
     response_list = [list(att.values())[0] for att in json.loads(context.response.text)]
-    assert all(var in response_list for var in context.req.get("response", None)), f"TEST FAILED: Response from json {context.req.get('response', None)} , Response from request {response_list}"
+    assert all(var in response_list for var in context.req.get("response",
+                                                               None)), f"TEST FAILED: Response from json {context.req.get('response', None)} , Response from request {response_list}"

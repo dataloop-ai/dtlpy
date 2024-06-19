@@ -1,3 +1,5 @@
+import time
+
 import behave
 
 
@@ -23,3 +25,24 @@ def step_impl(context):
     version = context.app.dpk_version.split('.')
     version[2] = str(int(version[2]) + 1)
     context.app.dpk_version = '.'.join(version)
+
+
+@behave.when(u'I update app auto update to "{flag}"')
+def step_impl(context, flag):
+    context.app.settings['autoUpdate'] = eval(flag)
+    context.app.update()
+
+
+@behave.when(u'I wait for app version to be updated according to dpk version')
+def step_impl(context, ):
+    interval = 8
+    num_try = 3
+    finished = False
+    for i in range(num_try):
+        time.sleep(interval)
+        context.app = context.project.apps.get(app_id=context.app.id)
+        if context.app.dpk_version == context.dpk.version:
+            finished = True
+            break
+
+    assert finished, f"TEST FAILED: App version was not updated, app current version: {context.app.dpk_version}"

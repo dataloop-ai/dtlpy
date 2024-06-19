@@ -47,6 +47,7 @@ class App(entities.BaseEntity):
     custom_installation = attr.ib(type=dict)
     metadata = attr.ib(type=dict)
     status = attr.ib(type=entities.CompositionStatus)
+    settings = attr.ib(type=dict)
 
     # sdk
     _project = attr.ib(type=entities.Project, repr=False)
@@ -55,10 +56,11 @@ class App(entities.BaseEntity):
 
     @_repositories.default
     def set_repositories(self):
-        reps = namedtuple('repositories', field_names=['projects', 'apps'])
+        reps = namedtuple('repositories', field_names=['projects', 'apps', 'compositions'])
         return reps(
             projects=repositories.Projects(client_api=self._client_api),
-            apps=repositories.Apps(client_api=self._client_api, project=self._project)
+            apps=repositories.Apps(client_api=self._client_api, project=self._project),
+            compositions=repositories.Compositions(client_api=self._client_api, project=self._project)
         )
 
     @property
@@ -76,6 +78,11 @@ class App(entities.BaseEntity):
     def apps(self):
         assert isinstance(self._repositories.apps, repositories.Apps)
         return self._repositories.apps
+
+    @property
+    def compositions(self):
+        assert isinstance(self._repositories.compositions, repositories.Compositions)
+        return self._repositories.compositions
 
     def uninstall(self):
         """
@@ -177,6 +184,8 @@ class App(entities.BaseEntity):
             _json['metadata'] = self.metadata
         if self.status is not None:
             _json['status'] = self.status
+        if self.settings != {}:
+            _json['settings'] = self.settings
 
         return _json
 
@@ -200,7 +209,8 @@ class App(entities.BaseEntity):
             client_api=client_api,
             project=project,
             metadata=_json.get('metadata', None),
-            status=_json.get('status', None)
+            status=_json.get('status', None),
+            settings=_json.get('settings', {})
         )
         app.is_fetched = is_fetched
         return app

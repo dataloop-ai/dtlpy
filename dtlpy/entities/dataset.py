@@ -240,7 +240,7 @@ class Dataset(entities.BaseEntity):
 
     @property
     def platform_url(self):
-        return self._client_api._get_resource_url("projects/{}/datasets/{}".format(self.project.id, self.id))
+        return self._client_api._get_resource_url("projects/{}/datasets/{}/items".format(self.project.id, self.id))
 
     @readonly.setter
     def readonly(self, state):

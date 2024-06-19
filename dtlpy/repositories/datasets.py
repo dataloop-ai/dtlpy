@@ -139,7 +139,7 @@ class Datasets:
         if dataset is not None:
             dataset.open_in_web()
         elif dataset_id is not None:
-            self._client_api._open_in_web(url=self.platform_url + '/' + str(dataset_id))
+            self._client_api._open_in_web(url=f'{self.platform_url}/{dataset_id}/items')
         else:
             self._client_api._open_in_web(url=self.platform_url)
 

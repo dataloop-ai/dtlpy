@@ -1,6 +1,7 @@
 from behave import given, when, then
 import random
 import string
+import time
 
 
 def random_5_chars():
@@ -350,22 +351,32 @@ def step_impl(context):
     assert context.pipeline.status == 'Installed'
 
 
-@then(u'service should have pipeline refs')
+@then(u'service should have pipeline refs and cannot be uninstall')
 def step_impl(context):
     context.service = context.project.services.get(service_id=context.service.id)
     refs = context.service.metadata.get('system', {}).get('refs', [])
     pipeline_ref = [ref for ref in refs if ref['id'] == context.pipeline.id]
     assert len(pipeline_ref) == 1
     assert pipeline_ref[0]['metadata']['relation'] == 'usedBy'
+    try:
+        context.service.delete()
+    except context.dl.exceptions.FailedDependency as e:
+        assert e.status_code == '424', f"TEST FAILED: Expected: '{424}' Actual: {e.status_code}"
+        assert f"Unable to delete service '{context.service.name}'" in e.message, f"TEST FAILED: Expected: Unable to delete service '{context.service.name}'\nActual: {e.message}"
 
 
-@then(u'model should have pipeline refs')
+@then(u'model should have pipeline refs and cannot be deleted')
 def step_impl(context):
     context.model = context.project.models.get(model_id=context.model.id)
     refs = context.model.metadata.get('system', {}).get('refs', [])
     pipeline_ref = [ref for ref in refs if ref['id'] == context.pipeline.id]
     assert len(pipeline_ref) == 1
     assert pipeline_ref[0]['metadata']['relation'] == 'usedBy'
+    try:
+        context.model.delete()
+    except context.dl.exceptions.FailedDependency as e:
+        assert e.status_code == '424', f"TEST FAILED: Expected: '{424}' Actual: {e.status_code}"
+        assert f"Unable to delete model '{context.model.name}'" in e.message, f"TEST FAILED: Expected: Unable to delete model '{context.model.name}'\nActual: {e.message}"
 
 
 @then(u'code node package should have pipeline refs')
@@ -379,7 +390,7 @@ def step_impl(context):
     assert pipeline_ref[0]['metadata']['relation'] == 'createdBy'
 
 
-@then(u'code node service should have pipeline refs')
+@then(u'code node service should have pipeline refs and cannot be uninstall')
 def step_impl(context):
     code_node: context.dl.CodeNode = [node for node in context.pipeline.nodes if node.node_type == 'code'][0]
     service_name = code_node.namespace.service_name
@@ -390,24 +401,39 @@ def step_impl(context):
     assert pipeline_ref[0]['metadata']['relation'] == 'createdBy' or pipeline_ref[1]['metadata'][
         'relation'] == 'createdBy'
     assert pipeline_ref[0]['metadata']['relation'] == 'usedBy' or pipeline_ref[1]['metadata']['relation'] == 'usedBy'
+    try:
+        context.service.delete()
+    except context.dl.exceptions.FailedDependency as e:
+        assert e.status_code == '424', f"TEST FAILED: Expected: '{424}' Actual: {e.status_code}"
+        assert f"Unable to delete service '{context.service.name}'" in e.message, f"TEST FAILED: Expected: Unable to delete service '{context.service.name}'\nActual: {e.message}"
 
 
-@then(u'app should have pipeline refs')
+@then(u'app should have pipeline refs and cannot be uninstall')
 def step_impl(context):
     app = context.project.apps.get(app_name=context.app.name)
     refs = app.metadata.get('system', {}).get('refs', [])
     pipeline_ref = [ref for ref in refs if ref['id'] == context.pipeline.id]
     assert len(pipeline_ref) == 1
     assert pipeline_ref[0]['metadata']['relation'] == 'usedBy'
+    try:
+        app.uninstall()
+    except context.dl.exceptions.FailedDependency as e:
+        assert e.status_code == '424', f"TEST FAILED: Expected: '{424}' Actual: {e.status_code}"
+        assert f"Unable to delete app '{app.name}'" in e.message, f"TEST FAILED: Expected: Unable to delete app '{app.name}'\nActual: {e.message}"
 
 
-@then(u'dpk should have pipeline refs')
+@then(u'dpk should have pipeline refs and cannot be deleted')
 def step_impl(context):
     dpk = context.project.dpks.get(dpk_name=context.dpk.name)
     refs = dpk.metadata.get('system', {}).get('refs', [])
     pipeline_ref = [ref for ref in refs if ref['id'] == context.pipeline.id]
     assert len(pipeline_ref) == 1
     assert pipeline_ref[0]['metadata']['relation'] == 'usedBy'
+    try:
+        dpk.delete()
+    except context.dl.exceptions.FailedDependency as e:
+        assert e.status_code == '424', f"TEST FAILED: Expected: '{424}' Actual: {e.status_code}"
+        assert f"Unable to delete dpk '{dpk.display_name}'" in e.message, f"TEST FAILED: Expected: Unable to delete dpk '{dpk.display_name}'\nActual: {e.message}"
 
 
 @when(u'I delete pipeline')
@@ -415,33 +441,334 @@ def step_impl(context):
     context.pipeline = context.pipeline.delete()
 
 
-@then(u'service should not have pipeline refs')
-def step_impl(context):
+@then(u'service should not have pipeline refs and uninstall service "{flag}"')
+def step_impl(context, flag):
     context.service = context.project.services.get(service_id=context.service.id)
     refs = context.service.metadata.get('system', {}).get('refs', [])
     pipeline_ref = [ref for ref in refs if ref['id'] == context.pipeline.id]
     assert len(pipeline_ref) == 0
+    if flag == 'True':
+        try:
+            context.service.delete()
+        except Exception as e:
+            assert False, f"TEST FAILED: {e}"
 
 
-@then(u'model should not have pipeline refs')
-def step_impl(context):
+@then(u'model should not have pipeline refs and delete model "{flag}"')
+def step_impl(context, flag):
     context.model = context.project.models.get(model_id=context.model.id)
     refs = context.model.metadata.get('system', {}).get('refs', [])
     pipeline_ref = [ref for ref in refs if ref['id'] == context.pipeline.id]
     assert len(pipeline_ref) == 0
+    if flag == 'True':
+        try:
+            context.model.delete()
+            context.model_count -= 1
+        except Exception as e:
+            assert False, f"TEST FAILED: {e}"
 
 
-@then(u'app should not have pipeline refs')
-def step_impl(context):
+@then(u'app should not have pipeline refs and uninstall app "{flag}"')
+def step_impl(context, flag):
     app = context.project.apps.get(app_name=context.app.name)
     refs = app.metadata.get('system', {}).get('refs', [])
     pipeline_ref = [ref for ref in refs if ref['id'] == context.pipeline.id]
     assert len(pipeline_ref) == 0
+    if flag == 'True':
+        try:
+            app.uninstall()
+        except Exception as e:
+            assert False, f"TEST FAILED: {e}"
 
 
-@then(u'dpk should not have pipeline refs')
-def step_impl(context):
+@then(u'dpk should not have pipeline refs and delete dpk "{flag}"')
+def step_impl(context, flag):
     dpk = context.project.dpks.get(dpk_name=context.dpk.name)
     refs = dpk.metadata.get('system', {}).get('refs', [])
     pipeline_ref = [ref for ref in refs if ref['id'] == context.pipeline.id]
     assert len(pipeline_ref) == 0
+    if flag == 'True':
+        try:
+            dpk.delete()
+        except Exception as e:
+            assert False, f"TEST FAILED: {e}"
+
+
+@then(u'I Should be able to uninstall service')
+def step_impl(context):
+    context.service = context.project.services.get(service_id=context.service.id)
+    try:
+        context.service.delete()
+    except Exception as e:
+        assert False, f"TEST FAILED: {e}"
+
+
+@then(u'I Should be able to delete model')
+def step_impl(context):
+    context.model = context.project.models.get(model_id=context.model.id)
+    try:
+        context.model.delete()
+        context.model_count -= 1
+    except Exception as e:
+        assert False, f"TEST FAILED: {e}"
+
+
+@then(u'I Should be able to uninstall app')
+def step_impl(context):
+    app = context.project.apps.get(app_name=context.app.name)
+    try:
+        app.uninstall()
+    except Exception as e:
+        assert False, f"TEST FAILED: {e}"
+
+
+@then(u'I Should be able to delete dpk')
+def step_impl(context):
+    dpk = context.project.dpks.get(dpk_name=context.dpk.name)
+    try:
+        dpk.delete()
+    except Exception as e:
+        assert False, f"TEST FAILED: {e}"
+
+
+@given(u'I have a pipeline with train node and evaluate node')
+def step_impl(context):
+    models = context.project.models.list().items
+    context.model_for_train = [m for m in models if m.status == context.dl.ModelStatus.CREATED][0]
+    context.model_for_evaluate = \
+        [m for m in models if m.status in [context.dl.ModelStatus.TRAINED, context.dl.ModelStatus.PRE_TRAINED]][0]
+    pipeline_name = 'pipeline-{}'.format(random_5_chars())
+    pipeline_json = {
+        "name": pipeline_name,
+        "projectId": context.project.id,
+        "nodes": [
+            {
+                "id": "0d1575d6-c222-4916-9743-2f8e3e9d543c",
+                "inputs": [
+                    {
+                        "portId": "794cbcc4-d0bd-4c58-a3be-ce0348e3bc25",
+                        "nodeId": "794cbcc4-d0bd-4c58-a3be-ce0348e3bc25",
+                        "type": "Model",
+                        "name": "model",
+                        "displayName": "model",
+                        "io": "input"
+                    }
+                ],
+                "outputs": [
+                    {
+                        "portId": "a14297d7-75ee-42ff-ba79-26e85e313f3d",
+                        "nodeId": "a14297d7-75ee-42ff-ba79-26e85e313f3d",
+                        "type": "Model",
+                        "name": "model",
+                        "displayName": "model",
+                        "io": "output"
+                    }
+                ],
+                "metadata": {
+                    "position": {
+                        "x": 10172.3515625,
+                        "y": 9719,
+                        "z": 0
+                    },
+                    "repeatable": True
+                },
+                "name": "Train Model",
+                "type": "ml",
+                "namespace": {
+                    "functionName": "train",
+                    "projectName": "Test-Project1",
+                    "serviceName": "model-mgmt-app-train",
+                    "moduleName": "model-mgmt-app-train",
+                    "packageName": "model-mgmt-app"
+                },
+                "projectId": context.project.id
+            },
+            {
+                "id": "c78f7330-5894-460d-802f-28412f621aed",
+                "inputs": [
+                    {
+                        "portId": "d2a0a760-fde2-4c7a-91c7-27d098bbc207",
+                        "nodeId": "d2a0a760-fde2-4c7a-91c7-27d098bbc207",
+                        "type": "Model",
+                        "name": "model",
+                        "displayName": "model",
+                        "io": "input",
+                        "defaultValue": context.model_for_evaluate.id
+                    },
+                    {
+                        "portId": "fc462fe9-95ac-4ed4-9428-5835c344984c",
+                        "nodeId": "fc462fe9-95ac-4ed4-9428-5835c344984c",
+                        "type": "Dataset",
+                        "name": "dataset",
+                        "displayName": "dataset",
+                        "io": "input"
+                    },
+                    {
+                        "portId": "8f3d8f25-3037-468a-918c-49be14287182",
+                        "nodeId": "8f3d8f25-3037-468a-918c-49be14287182",
+                        "type": "Json",
+                        "name": "filters",
+                        "displayName": "filters",
+                        "io": "input"
+                    }
+                ],
+                "outputs": [
+                    {
+                        "portId": "c47079e9-220e-4f7f-b91e-9818dc7c7805",
+                        "nodeId": "c47079e9-220e-4f7f-b91e-9818dc7c7805",
+                        "type": "Model",
+                        "name": "model",
+                        "displayName": "model",
+                        "io": "output"
+                    },
+                    {
+                        "portId": "502caf71-9c93-4214-92ae-8f34e69dc88f",
+                        "nodeId": "502caf71-9c93-4214-92ae-8f34e69dc88f",
+                        "type": "Dataset",
+                        "name": "dataset",
+                        "displayName": "dataset",
+                        "io": "output"
+                    }
+                ],
+                "metadata": {
+                    "position": {
+                        "x": 10172.3515625,
+                        "y": 9896,
+                        "z": 0
+                    }
+                },
+                "name": "Evaluate Model",
+                "type": "ml",
+                "namespace": {
+                    "functionName": "evaluate",
+                    "projectName": "Test-Project1",
+                    "serviceName": "model-mgmt-app-evaluate",
+                    "moduleName": "model-mgmt-app-evaluate",
+                    "packageName": "model-mgmt-app"
+                },
+                "projectId": context.project.id
+            },
+            {
+                "id": "d4fe0be0-243a-49ab-bfbf-678248234729",
+                "inputs": [
+
+                ],
+                "outputs": [
+                    {
+                        "portId": "3134969b-12c8-4e1c-b7e4-42afd61114cc",
+                        "nodeId": "3134969b-12c8-4e1c-b7e4-42afd61114cc",
+                        "type": "Model",
+                        "name": "model",
+                        "displayName": "model",
+                        "io": "output"
+                    },
+                    {
+                        "portId": "8cd0d65d-9398-4ce3-8189-3e9f46d69e03",
+                        "nodeId": "8cd0d65d-9398-4ce3-8189-3e9f46d69e03",
+                        "type": "Dataset",
+                        "name": "dataset",
+                        "displayName": "dataset",
+                        "io": "output"
+                    }
+                ],
+                "metadata": {
+                    "position": {
+                        "x": 9825.3515625,
+                        "y": 9802,
+                        "z": 0
+                    },
+                    "codeApplicationName": "first-{}".format(random_5_chars())
+                },
+                "name": "code",
+                "type": "code",
+                "namespace": {
+                    "functionName": "run",
+                    "projectName": "Test-Project1",
+                    "serviceName": "first",
+                    "moduleName": "code_module",
+                    "packageName": "first"
+                },
+                "projectId": context.project.id,
+                "config": {
+                    "package": {
+                        "code": "import dtlpy as dl\n\n\nclass ServiceRunner:\n\n    def run(self, context: dl.Context):\n        dataset = context.project.datasets.list()[0]\n        model = [m for m in context.project.models.list().items if m.status == 'created'][0]\n        return [model, dataset]",
+                        "name": "run",
+                        "type": "code",
+                        "codebase": {
+                            "type": "item"
+                        }
+                    }
+                }
+            }
+        ],
+        "connections": [
+            {
+                "src": {
+                    "nodeId": "d4fe0be0-243a-49ab-bfbf-678248234729",
+                    "portId": "3134969b-12c8-4e1c-b7e4-42afd61114cc"
+                },
+                "tgt": {
+                    "nodeId": "0d1575d6-c222-4916-9743-2f8e3e9d543c",
+                    "portId": "794cbcc4-d0bd-4c58-a3be-ce0348e3bc25"
+                },
+                "condition": "{}"
+            },
+            {
+                "src": {
+                    "nodeId": "d4fe0be0-243a-49ab-bfbf-678248234729",
+                    "portId": "8cd0d65d-9398-4ce3-8189-3e9f46d69e03"
+                },
+                "tgt": {
+                    "nodeId": "c78f7330-5894-460d-802f-28412f621aed",
+                    "portId": "fc462fe9-95ac-4ed4-9428-5835c344984c"
+                },
+                "condition": "{}"
+            }
+        ],
+        "startNodes": [
+            {
+                "nodeId": "d4fe0be0-243a-49ab-bfbf-678248234729",
+                "type": "root",
+                "id": "68bfab61-7677-4854-a6a6-cb40228a939a"
+            }
+        ]
+    }
+    context.pipeline = context.project.pipelines.create(
+        name=pipeline_name,
+        pipeline_json=pipeline_json,
+        project_id=context.project.id
+    )
+    context.to_delete_pipelines_ids.append(context.pipeline.id)
+
+
+@given(u'I pause pipeline when executions are created')
+def step_impl(context):
+    interval = 5
+    timeout_seconds = 60 * 5
+    start = time.time()
+    while time.time() - start < timeout_seconds:
+        filters = context.dl.Filters(resource=context.dl.FiltersResource.EXECUTION)
+        filters.add(field='pipeline.id', values=context.pipeline.id)
+        executions = context.project.executions.list(filters=filters)
+        if len(executions.items) == 3:
+            context.pipeline.pause()
+            context.pipeline = context.project.pipelines.get(pipeline_id=context.pipeline.id)
+            break
+        time.sleep(interval)
+    assert context.pipeline.status == context.dl.CompositionStatus.UNINSTALLED
+
+
+@then(u'model services should still have refs')
+def step_impl(context):
+    model_services = [s for s in context.project.services.list().items if 'ml' in s.metadata]
+    for model_service in model_services:
+        refs = model_service.metadata.get('system', {}).get('refs', [])
+        pipeline_ref = [ref for ref in refs if ref['id'] == context.pipeline.id]
+        assert pipeline_ref.__len__() == 2, 'model service {} should have 2 refs but has {}'.format(
+            model_service.name, pipeline_ref.__len__())
+        used_by_ref = [ref for ref in pipeline_ref if ref['metadata']['relation'] == 'usedBy']
+        assert used_by_ref.__len__() == 1, 'model service {} should have 1 usedBy ref but has {}'.format(
+            model_service.name, used_by_ref.__len__())
+        created_by_ref = [ref for ref in pipeline_ref if ref['metadata']['relation'] == 'createdBy']
+        assert created_by_ref.__len__() == 1, 'model service {} should have 1 createdBy ref but has {}'.format(
+            model_service.name, created_by_ref.__len__())

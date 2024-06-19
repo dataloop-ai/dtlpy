@@ -20,7 +20,7 @@ Feature: Models repository clone testing 2
     And I publish a dpk to the platform
     And  I install the app
     And I set the model in the context
-    When i clone a model
+    When I clone a model
     Then Model object with the same name should be exist
     When i "train" the model
     Then i have a model service

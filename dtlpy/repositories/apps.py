@@ -280,14 +280,14 @@ class Apps:
         """
         if app_id is not None and app is None:
             app = self.get(app_id=app_id)
+
+            if app and app.status == entities.CompositionStatus.INSTALLED:
+                raise exceptions.PlatformException(
+                    error='400',
+                    message='Application is already active'
+                )
         if app is None:
             raise exceptions.PlatformException(error='400', message='You must provide app or app_id')
-
-        if app and app.status == entities.CompositionStatus.INSTALLED:
-            raise exceptions.PlatformException(
-                error='400',
-                message='Application is already active'
-            )
 
         success, response = self._client_api.gen_request(req_type='post', path='/apps/{}/activate'.format(app.id))
         if not success:
@@ -313,14 +313,14 @@ class Apps:
         """
         if app_id is not None and app is None:
             app = self.get(app_id=app_id)
+
+            if app and app.status == entities.CompositionStatus.UNINSTALLED:
+                raise exceptions.PlatformException(
+                    error='400',
+                    message='Application is already inactive'
+                )
         if app is None:
             raise exceptions.PlatformException(error='400', message='You must provide app or app_id')
-
-        if app and app.status == entities.CompositionStatus.UNINSTALLED:
-            raise exceptions.PlatformException(
-                error='400',
-                message='Application is already inactive'
-            )
 
         success, response = self._client_api.gen_request(req_type='post', path='/apps/{}/deactivate'.format(app.id))
         if not success:

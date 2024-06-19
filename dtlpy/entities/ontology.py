@@ -741,3 +741,64 @@ class Ontology(entities.BaseEntity):
         """
 
         return self.ontologies.delete_attributes(ontology_id=self.id, keys=keys)
+
+    def copy_from(self, ontology_json: dict):
+        """
+        Import ontology to the platform ('ontology' is taken before 'ontology_json')
+
+        :param dict ontology_json: ontology json
+        :return: Ontology object
+        :rtype: dtlpy.entities.ontology.Ontology
+
+        **Example**:
+
+        .. code-block:: python
+
+            ontology = ontology.import_ontology(ontology_json=ontology_json)
+        """
+        # TODO: Add support for import from ontology entity
+        ontology = self.from_json(_json=ontology_json, client_api=self._client_api, recipe=self.recipe)
+        attributes = ontology.attributes
+
+        # params
+        self.labels = ontology.labels
+        for key, value in ontology.metadata.items():
+            if key != "system":
+                self.metadata[key] = value
+
+        if attributes:
+            # Delete irrelevant attribute keys
+            attribute_keys = [attribute.get("key", None) for attribute in attributes]
+            to_delete_keys = [attribute.get("key", None) for attribute in self.attributes
+                              if attribute.get("key", None) not in attribute_keys]
+            self.delete_attributes(keys=to_delete_keys)
+
+            # Update attributes
+            for attribute in attributes:
+                attribute_range = attribute.get("range", None)
+                if attribute_range is not None:
+                    attribute_range = entities.AttributesRange(
+                        min_range=attribute_range.get("min", None),
+                        max_range=attribute_range.get("max", None),
+                        step=attribute_range.get("step", None)
+                    )
+
+                script_data = attribute.get("scriptData", None)
+                if script_data is None:
+                    raise Exception(f"Attribute '{attribute.get('key')}' scriptData is missing in the ontology json!")
+                self.update_attributes(
+                    title=script_data.get("title", None),
+                    key=attribute.get("key", None),
+                    attribute_type=attribute.get("type", None),
+                    scope=attribute.get("scope", None),
+                    optional=script_data.get("optional", None),
+                    values=attribute.get("values", None),
+                    attribute_range=attribute_range
+                )
+        else:
+            logger.warning("No attributes were found (Make sure that you use the correct attributes mode).")
+
+        # defaults
+        self._instance_map = ontology.instance_map
+        self._color_map = ontology.color_map
+        return self.update(system_metadata=True)

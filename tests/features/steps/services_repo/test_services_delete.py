@@ -14,3 +14,22 @@ def step_impl(context, deletion_format):
 @behave.then(u"There are no services")
 def step_impl(context):
     assert context.package.services.list().items_count == 0
+
+
+@behave.when(u'I try to uninstall service')
+def step_impl(context):
+        try:
+            context.service = context.project.services.list().items[0]
+            assert context.service is not None, f"TEST FAILED: Missing service"
+            context.service.delete()
+            context.error = None
+        except Exception as e:
+            context.error = e
+
+
+@behave.when(u'I uninstall service')
+def step_impl(context):
+    context.service = context.project.services.list().items[0]
+    assert context.service is not None, f"TEST FAILED: Missing service"
+    r = context.service.delete()
+    assert r

@@ -49,4 +49,4 @@ def step_impl(context, number_of_keyframes):
 @behave.then(u'I the only frame "{number_of_keyframes}" attribute is updated')
 def step_impl(context, number_of_keyframes):
     assert context.annotation.frames[int(number_of_keyframes)].attributes == ['a'], "The attribute is not updated"
-    assert context.annotation.frames[0].attributes == [], "The attribute is not updated"
+    assert not context.annotation.frames[0].attributes, "The attribute is not updated"

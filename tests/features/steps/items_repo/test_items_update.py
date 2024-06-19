@@ -2,6 +2,8 @@ import behave
 import os
 import time
 import logging
+import json
+from .. import fixtures
 
 
 @behave.when(u'I update items name to "{name}"')
@@ -53,7 +55,7 @@ def step_impl(context, name):
     local_path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], local_path)
     context.item = context.dataset.items.upload(
         local_path=local_path, remote_path=None
-        )
+    )
 
 
 @behave.then(u'PageEntity has directory item "{dir_name}"')
@@ -108,3 +110,25 @@ def step_impl(context):
 @behave.given(u'I add folder "{folder_name}" to context.dataset')
 def step_impl(context, folder_name):
     context.dataset.items.make_dir(directory="/{}".format(folder_name))
+
+
+@behave.when(u'I Show annotation thumbnail for the item')
+def step_impl(context):
+    file_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], "api", "api_assets.json")
+    with open(file_path, 'r') as file:
+        json_obj = json.load(file)
+
+    context.req = json_obj.get("annotation_thumbnail")
+    fixtures.update_nested_structure(context, context.req.get('json_req', None))
+
+    context.response = fixtures.gen_request(context=context, method="post", req=context.req, num_try=1, interval=0)
+
+    response_json = context.response.json()
+    command = context.dl.Command.from_json(_json=response_json,
+                                           client_api=context.dl.client_api)
+    command = command.wait(timeout=0)
+    assert command, f"TEST FAILED: Command failed ID {command.id}"
+    context.item = context.dataset.items.get(item_id=context.item.id)
+    if not hasattr(context, 'thumbnail_id'):
+        context.thumbnail_id = context.item.metadata['system'].get('annotationQueryThumbnailIdMap', {}).get('default')
+

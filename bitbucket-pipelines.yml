@@ -209,7 +209,7 @@ pipelines:
               - Piper-Pipelines
               - Piper-Faas
               - Piper-Triggers-Executions
-              - Gate
+              - Hodor
               - Apps
               - Rubiks
               - Rubiks-Dataset-Recipe
@@ -238,7 +238,7 @@ pipelines:
           artifacts:
             - behave_test_report.json
 
-    "xray-nightly-parallel":
+    "xray-nightly-parallel-archived":
       - variables:
           - name: DLP_ENV_NAME
             default: rc
@@ -264,13 +264,13 @@ pipelines:
       - parallel:
           steps:
             - step:
-                name: Gate
+                name: Hodor
                 script:
                   - echo "Accessing cookie from the default step"
                   - ls -l $ARTIFACTS_PATH
                   - AVOID_TESTRAIL=true
                   - PYTHONPATH=$PWD
-                  - ./test.sh Gate
+                  - ./test.sh Hodor
             - step:
                 name: Apps
                 script:
@@ -280,7 +280,7 @@ pipelines:
                   - PYTHONPATH=$PWD
                   - ./test.sh Apps
 
-    "xray-Gate":
+    "xray-Hodor":
       - variables:
           - name: DLP_ENV_NAME
             default: rc
@@ -300,7 +300,7 @@ pipelines:
             - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - chmod +x ./test.sh
-            - ./test.sh Gate
+            - ./test.sh Hodor
           artifacts:
             - behave_test_report.json
 
@@ -640,6 +640,225 @@ pipelines:
             - ./test.sh Billing
           artifacts:
             - behave_test_report.json
+
+
+    "xray-nightly-parallel-1":
+      - variables:
+          - name: DLP_ENV_NAME
+            default: rc
+      - parallel:
+          - step:
+              image: python:3.11
+              name: Hodor
+              script:
+                - AVOID_TESTRAIL=true
+                - python --version
+                - PYTHONPATH=$PWD
+                - pip install --upgrade pip
+                - apt-get -y update && apt-get install -y libgl1-mesa-glx
+                - pip install -r tests/requirements.txt
+                - python setup.py build
+                - python setup.py install
+                - python tests/test_login.py
+                - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
+                - chmod +x ./test.sh
+                - ./test.sh Hodor
+              artifacts:
+                - behave_test_report.json
+          - step:
+              image: python:3.11
+              name: Woz
+              script:
+                - AVOID_TESTRAIL=true
+                - python --version
+                - PYTHONPATH=$PWD
+                - pip install --upgrade pip
+                - apt-get -y update && apt-get install -y libgl1-mesa-glx
+                - pip install -r tests/requirements.txt
+                - python setup.py build
+                - python setup.py install
+                - python tests/test_login.py
+                - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
+                - chmod +x ./test.sh
+                - ./test.sh Woz
+              artifacts:
+                - behave_test_report.json
+          - step:
+              image: python:3.11
+              name: Ramsay
+              script:
+                - AVOID_TESTRAIL=true
+                - python --version
+                - PYTHONPATH=$PWD
+                - pip install --upgrade pip
+                - apt-get -y update && apt-get install -y libgl1-mesa-glx
+                - pip install -r tests/requirements.txt
+                - python setup.py build
+                - python setup.py install
+                - python tests/test_login.py
+                - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
+                - chmod +x ./test.sh
+                - ./test.sh Ramsay
+              artifacts:
+                - behave_test_report.json
+          - step:
+              image: python:3.11
+              name: SDK
+              script:
+                - AVOID_TESTRAIL=true
+                - python --version
+                - PYTHONPATH=$PWD
+                - pip install --upgrade pip
+                - apt-get -y update && apt-get install -y libgl1-mesa-glx
+                - pip install -r tests/requirements.txt
+                - python setup.py build
+                - python setup.py install
+                - python tests/test_login.py
+                - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
+                - chmod +x ./test.sh
+                - ./test.sh SDK
+              artifacts:
+                - behave_test_report.json
+          - step:
+              image: python:3.11
+              name: Piper-Faas
+              script:
+                - AVOID_TESTRAIL=true
+                - python --version
+                - PYTHONPATH=$PWD
+                - pip install --upgrade pip
+                - apt-get -y update && apt-get install -y libgl1-mesa-glx
+                - pip install -r tests/requirements.txt
+                - python setup.py build
+                - python setup.py install
+                - python tests/test_login.py
+                - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
+                - chmod +x ./test.sh
+                - ./test.sh Piper-Faas
+              artifacts:
+                - behave_test_report.json
+
+
+    "xray-nightly-parallel-2":
+      - variables:
+          - name: DLP_ENV_NAME
+            default: rc
+      - parallel:
+          - step:
+              image: python:3.11
+              name: Piper-Triggers-Executions
+              script:
+                - AVOID_TESTRAIL=true
+                - python --version
+                - PYTHONPATH=$PWD
+                - pip install --upgrade pip
+                - apt-get -y update && apt-get install -y libgl1-mesa-glx
+                - pip install -r tests/requirements.txt
+                - python setup.py build
+                - python setup.py install
+                - python tests/test_login.py
+                - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
+                - chmod +x ./test.sh
+                - ./test.sh Piper-Triggers-Executions
+              artifacts:
+                - behave_test_report.json
+          - step:
+              image: python:3.11
+              name: Apps
+              script:
+                - AVOID_TESTRAIL=true
+                - python --version
+                - PYTHONPATH=$PWD
+                - pip install --upgrade pip
+                - apt-get -y update && apt-get install -y libgl1-mesa-glx
+                - pip install -r tests/requirements.txt
+                - python setup.py build
+                - python setup.py install
+                - python tests/test_login.py
+                - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
+                - chmod +x ./test.sh
+                - ./test.sh Apps
+              artifacts:
+                - behave_test_report.json
+          - step:
+              image: python:3.11
+              name: Rubiks-Items-Annotations
+              script:
+                - AVOID_TESTRAIL=true
+                - python --version
+                - PYTHONPATH=$PWD
+                - pip install --upgrade pip
+                - apt-get -y update && apt-get install -y libgl1-mesa-glx
+                - pip install -r tests/requirements.txt
+                - python setup.py build
+                - python setup.py install
+                - python tests/test_login.py
+                - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
+                - chmod +x ./test.sh
+                - ./test.sh Rubiks-Items-Annotations
+              artifacts:
+                - behave_test_report.json
+          - step:
+              image: python:3.11
+              name: Roberto
+              script:
+                - AVOID_TESTRAIL=true
+                - python --version
+                - PYTHONPATH=$PWD
+                - pip install --upgrade pip
+                - apt-get -y update && apt-get install -y libgl1-mesa-glx
+                - pip install -r tests/requirements.txt
+                - python setup.py build
+                - python setup.py install
+                - python tests/test_login.py
+                - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
+                - chmod +x ./test.sh
+                - ./test.sh Roberto
+              artifacts:
+                - behave_test_report.json
+
+
+    "xray-nightly-parallel-3":
+      - variables:
+          - name: DLP_ENV_NAME
+            default: rc
+      - parallel:
+          - step:
+              image: python:3.11
+              name: Rubiks-Dataset-Recipe
+              script:
+                - AVOID_TESTRAIL=true
+                - python --version
+                - PYTHONPATH=$PWD
+                - pip install --upgrade pip
+                - apt-get -y update && apt-get install -y libgl1-mesa-glx
+                - pip install -r tests/requirements.txt
+                - python setup.py build
+                - python setup.py install
+                - python tests/test_login.py
+                - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
+                - chmod +x ./test.sh
+                - ./test.sh Rubiks-Dataset-Recipe
+              artifacts:
+                - behave_test_report.json
+          - step:
+              image: python:3.11
+              name: Piper-Pipelines
+              script:
+                - AVOID_TESTRAIL=true
+                - python --version
+                - PYTHONPATH=$PWD
+                - pip install --upgrade pip
+                - apt-get -y update && apt-get install -y libgl1-mesa-glx
+                - pip install -r tests/requirements.txt
+                - python setup.py build
+                - python setup.py install
+                - python tests/test_login.py
+                - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
+                - chmod +x ./test.sh
+                - ./test.sh Piper-Pipelines
+              artifacts:
+                - behave_test_report.json
 
 
     "schedule-tests":

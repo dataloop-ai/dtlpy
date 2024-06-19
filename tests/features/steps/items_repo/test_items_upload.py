@@ -220,6 +220,8 @@ def step_impl(context):
         context.items_uploaded += 1
         item = context.dataset.items.upload(buff, remote_path=None)
         # wait for platform attributes
+        limit = 10 * 30
+        stat = time.time()
         while True:
             time.sleep(3)
             item = context.dataset.items.get(item_id=item.id)
@@ -228,6 +230,8 @@ def step_impl(context):
                     break
             elif item.mimetype is not None:
                 break
+            if time.time() - stat > limit:
+                raise TimeoutError("Timeout while waiting for platform attributes")
 
 
 @behave.then(u"Number of error files should be larger by one")

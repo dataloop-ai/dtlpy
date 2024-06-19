@@ -480,8 +480,8 @@ class Uploader:
                             element.item_metadata = {}
                             with open(element.annotations_filepath) as ann_f:
                                 item_metadata = json.load(ann_f)
-                            if 'metadata' in item_metadata and 'user' in item_metadata['metadata']:
-                                element.item_metadata['user'] = item_metadata['metadata']['user']
+                            if 'metadata' in item_metadata:
+                                element.item_metadata = item_metadata['metadata']
                         item, action = await self.__single_async_upload(filepath=element.buffer,
                                                                         mode=mode,
                                                                         item_metadata=element.item_metadata,

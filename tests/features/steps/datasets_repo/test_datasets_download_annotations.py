@@ -12,6 +12,8 @@ def step_impl(context, item_path):
     context.item = context.dataset.items.upload(local_path=item_path)
 
     # wait for platform attributes
+    limit = 10 * 30
+    stat = time.time()
     while True:
         time.sleep(3)
         context.item = context.dataset.items.get(item_id=context.item.id)
@@ -20,6 +22,8 @@ def step_impl(context, item_path):
                 break
         elif context.item.mimetype is not None:
             break
+        if time.time() - stat > limit:
+            raise TimeoutError("Timeout while waiting for platform attributes")
 
     context.item = context.dataset.items.get(item_id=context.item.id)
     if context.item.name.endswith('.mp4') and context.item.fps is None:

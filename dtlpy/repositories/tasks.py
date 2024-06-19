@@ -585,7 +585,8 @@ class Tasks:
                consensus_task_type=None,
                consensus_percentage=None,
                consensus_assignees=None,
-               scoring=True
+               scoring=True,
+               enforce_video_conversion=True,
                ) -> entities.Task:
         """
         Create a new Task (Annotation or QA).
@@ -619,6 +620,7 @@ class Tasks:
         :param int consensus_percentage: percentage of items to be copied to multiple annotators (consensus items)
         :param int consensus_assignees: the number of different annotators per item (number of copies per item)
         :param bool scoring: create a scoring app in project
+        :param bool enforce_video_conversion: Enforce WEBM conversion on video items for frame-accurate annotations. WEBM Conversion will be executed as a project service and incurs compute costs. Service compute resources can be set according to planned workload.
         :return: Task object
         :rtype: dtlpy.entities.task.Task
 
@@ -628,7 +630,8 @@ class Tasks:
 
             dataset.tasks.create(task= 'task_entity',
                                 due_date = datetime.datetime(day= 1, month= 1, year= 2029).timestamp(),
-                                assignee_ids =[ 'annotator1@dataloop.ai', 'annotator2@dataloop.ai'])
+                                assignee_ids =[ 'annotator1@dataloop.ai', 'annotator2@dataloop.ai'],
+                                available_actions=[dl.ItemAction("discard"), dl.ItemAction("to-check")])
         """
 
         if dataset is None and self._dataset is None:
@@ -705,6 +708,9 @@ class Tasks:
 
         if task_parent_id is not None:
             payload['spec']['parentTaskId'] = task_parent_id
+
+        if not enforce_video_conversion:
+            payload['disableWebm'] = not enforce_video_conversion
 
         is_pulling = any([batch_size, max_batch_workload])
         is_consensus = any([consensus_percentage, consensus_assignees, consensus_task_type])

@@ -139,3 +139,28 @@ def step_impl(context, condition):
         assert context.item.metadata['system']['thumbnailId'] == context.item_thumbnail_id, error_message
     else:
         raise ValueError("condition must be 'different' or 'equal'")
+
+
+@behave.then(u'I should see a thumbnail v2 on the item')
+def step_impl(context):
+    """
+    Make sure to run the step - 'I Show annotation thumbnail for the item' before running this step
+    """
+    assert context.item.metadata['system'].get('annotationQueryThumbnailIdMap', {}).get('default') is not None, f"TEST FAILED: No thumbnail v2 on the item {context.item.metadata['system']}"
+    thumbnail_id = context.item.metadata['system']['annotationQueryThumbnailIdMap']['default']
+    try:
+        context.dataset.items.get(item_id=thumbnail_id)
+    except context.dl.exceptions.NotFound:
+        assert False, f"TEST FAILED: Thumbnail v2 not found in dataset items with Id {thumbnail_id}"
+
+
+@behave.then(u'I should not see a thumbnail v2 on the item')
+def step_impl(context):
+    """
+    Make sure to run the step - 'I Show annotation thumbnail for the item' before running this step
+    """
+    assert context.item.metadata['system'].get('annotationQueryThumbnailIdMap', {}).get('default') is None, f"TEST FAILED: Thumbnail v2 on the item {context.item.metadata['system']}"
+    try:
+        context.dataset.items.get(item_id=context.thumbnail_id)
+    except context.dl.exceptions.NotFound:
+        pass

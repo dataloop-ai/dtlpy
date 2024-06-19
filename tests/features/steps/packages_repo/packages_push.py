@@ -96,6 +96,38 @@ def step_impl(context):
     assert 'Package' in str(type(context.first_package))
 
 
+@behave.given(u'I create a package with secrets with entry point "{path}"')
+def step_impl(context, path):
+    modules = [
+        context.dl.PackageModule(name='default_module',
+                                 entry_point='main.py',
+                                 init_inputs=[
+                                     context.dl.FunctionIO(type=context.dl.PackageInputType.STRING, name="test",
+                                                           value='$env(default_key)',
+                                                           integration={"type": "key_value"})],
+                                 functions=[
+                                     context.dl.PackageFunction(
+                                         inputs=[
+                                             context.dl.FunctionIO(type=context.dl.PackageInputType.ITEM, name="item")],
+                                         outputs=[],
+                                         name='run'),
+                                 ])]
+
+    context.package = context.project.packages.push(
+        package_name="secretspackage",
+        src_path=os.path.join(os.environ['DATALOOP_TEST_ASSETS'], path),
+        modules=modules,
+    )
+
+    context.service = context.package.services.deploy(
+        service_name=context.package.name,
+        package=context.package,
+        sdk_version=context.dl.__version__,
+        init_input={'test': '$env(default_key)'},
+        secrets=[context.integration.id]
+    )
+
+
 @behave.then(u'Package entity equals local package in "{path_to_compare}"')
 def step_impl(context, path_to_compare):
     # get package local info
@@ -210,4 +242,3 @@ def step_impl(context):
         if dataset.name == 'Binaries':
             assert False, 'Failed to delete Binaries dataset'
     context.project = context.dl.projects.get(project_id=context.project.id)
-

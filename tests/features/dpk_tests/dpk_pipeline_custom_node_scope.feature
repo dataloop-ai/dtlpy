@@ -18,6 +18,7 @@ Feature: publish a dpk with pipeline Custom Node
 
 
   @DAT-62875
+  @DAT-71931
   Scenario: Install dpk with with scope node - Execution should be success
     Given I fetch the dpk from 'apps/app_scope_node.json' file
     And I create a dataset with a random name
@@ -32,3 +33,6 @@ Feature: publish a dpk with pipeline Custom Node
     When I wait "5"
     And I upload item in "0000000162.jpg" to dataset
     Then I expect that pipeline execution has "1" success executions
+    When I get the pipeline service
+    And set context.published_dpk to context.dpk
+    Then service has app scope

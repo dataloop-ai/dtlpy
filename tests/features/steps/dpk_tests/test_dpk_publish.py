@@ -14,6 +14,22 @@ def step_impl(context):
         context.feature.dpks = [context.published_dpk]
 
 
+@behave.when(u'dpk has base id')
+def step_impl(context):
+    assert context.dpk.base_id is not None
+
+
+@behave.when(u'i save dpk base id')
+def step_impl(context):
+    context.dpk_base_id = context.dpk.base_id
+
+
+@behave.then(u'i check the new dpk hase the same base id')
+def step_impl(context):
+    assert context.dpk_base_id == context.dpk.base_id, "Base id is not the same"
+    assert context.dpk_base_id != context.dpk.id, "Base id is the same as id"
+
+
 @behave.when(u'I try to publish a dpk to the platform')
 def step_impl(context):
     try:
@@ -113,9 +129,13 @@ def step_impl(context):
 
 
 @behave.when(u'I add models list to context.models and expect to get "{total_models}" models')
+@behave.then(u'I expect to get "{total_models}" models in project')
 def step_impl(context, total_models):
-    context.models = context.project.models.list().items
-    assert len(context.models) == int(total_models)
+    filters = context.dl.Filters()
+    filters.resource = context.dl.FiltersResource.MODEL
+    filters.sort_by(field='name', value=context.dl.FiltersOrderByDirection.ASCENDING)
+    context.models = context.project.models.list(filters=filters).items
+    assert len(context.models) == int(total_models), f"Expected {total_models} models, got {len(context.models)}"
 
 
 @behave.when(u'I increment dpk version')
@@ -132,4 +152,3 @@ def step_impl(context):
         context.feature.dpks.append(context.dpk)
     else:
         context.feature.dpks = [context.dpk]
-

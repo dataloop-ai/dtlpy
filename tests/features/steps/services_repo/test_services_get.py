@@ -1,4 +1,5 @@
 import behave
+import time
 
 
 @behave.when(u'I get service by id')
@@ -13,6 +14,11 @@ def step_impl(context):
 
 @behave.then(u'Service is archived')
 def step_impl(context):
+    for x in range(5):
+        context.service_get = context.project.services.get(service_id=context.service_get.id)
+        if context.service_get.archive:
+            break
+        time.sleep(1)
     assert context.service_get.archive is True, "TEST FAILED: Expected archived to be True , Got {}".format(
         context.service_get.archive)
 
@@ -41,4 +47,9 @@ def step_impl(context, value):
 
 @behave.when(u'I get service in index "{service_index}"')
 def step_impl(context, service_index):
-    context.service = context.project.services.list()[0][int(service_index)]
+    context.service = context.project.services.list().items[int(service_index)]
+
+
+@behave.when(u'I get service from context.execution')
+def step_impl(context):
+    context.service = context.project.services.get(service_id=context.execution.service_id)

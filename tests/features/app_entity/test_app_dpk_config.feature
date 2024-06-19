@@ -19,7 +19,7 @@ Feature: Testing App custom_installation attribute
     When I publish a dpk to the platform
     And I create a context.custom_installation var
     And I remove the last service from context.custom_installation
-    And I install the app with custom custom_installation
+    And I install the app with custom_installation "True"
     And I wait "4"
     Then I validate app.custom_installation is equal to composition
     And I uninstall the app
@@ -30,7 +30,7 @@ Feature: Testing App custom_installation attribute
     When I publish a dpk to the platform
     And I create a context.custom_installation var
     And I add service to context.custom_installation
-    And I install the app with custom custom_installation
+    And I install the app with custom_installation "True"
     And I wait "4"
     And I list services in project
     Then I receive a Service list of "4" objects
@@ -58,7 +58,7 @@ Feature: Testing App custom_installation attribute
     When I publish a dpk to the platform
     And I create a context.custom_installation var
     And I remove the last service from context.custom_installation
-    And I install the app with custom custom_installation
+    And I install the app with custom_installation "True"
     And I wait "4"
     And I add att 'cooldownPeriod=500' to dpk 'service' in index '0'
     And I increment dpk version

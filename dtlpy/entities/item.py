@@ -661,6 +661,32 @@ class Item(entities.BaseEntity):
         else:
             raise exceptions.PlatformException('400', 'must provide assignment_id or task_id')
 
+    def status(self, assignment_id: str = None, task_id: str = None):
+        """
+        Get item status
+
+        :param str assignment_id: assignment id
+        :param str task_id: task id
+
+        :return: status
+        :rtype: str
+
+        **Example**:
+
+        .. code-block:: python
+
+            status = item.status(task_id='task_id')
+        """
+        if not assignment_id and not task_id:
+            raise exceptions.PlatformException('400', 'must provide assignment_id or task_id')
+        status = None
+        resource_id = assignment_id if assignment_id else task_id
+        for ref in self.metadata.get('system', dict()).get('refs', []):
+            if ref.get('id') == resource_id:
+                status = ref.get('metadata', {}).get('status', None)
+                break
+        return status
+
     def set_description(self, text: str):
         """
         Update Item description

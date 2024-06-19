@@ -120,7 +120,7 @@ class PipelineNodeIO:
         self.description = description
 
         if action is not None:
-            warnings.warn('action param has been deprecated in version 1.80', DeprecationWarning)
+            warnings.warn('action param has been deprecated in version 1.95', DeprecationWarning)
             if actions is None:
                 actions = []
             actions.append(action)
@@ -128,7 +128,7 @@ class PipelineNodeIO:
 
     @property
     def action(self):
-        warnings.warn('action attribute has been deprecated in version 1.80', DeprecationWarning)
+        warnings.warn('action attribute has been deprecated in version 1.95', DeprecationWarning)
         return None
 
     @staticmethod
@@ -921,12 +921,20 @@ class DatasetNode(PipelineNode):
                  project_id: str,
                  dataset_id: str,
                  dataset_folder: str = None,
+                 load_existing_data: bool = False,
+                 data_filters: entities.Filters = None,
                  position: tuple = (1, 1)):
         """
         :param str name: node name
         :param str project_id: project id
         :param str dataset_id: dataset id
         :param str dataset_folder: folder in dataset to work in it
+        :param bool load_existing_data: optional - enable to automatically load existing data into the
+                                        pipeline (executions) upon activation, based on the defined dataset,
+                                        folder, and data_filters.
+        :param entities.Filters data_filters: optional - filters entity or a dictionary containing filters parameters.
+                                              Use to filter the data items to be loaded when load_existing_data
+                                              is enabled.
         :param tuple position: tuple of the node place
         """
         inputs = [self._default_io()]
@@ -944,6 +952,8 @@ class DatasetNode(PipelineNode):
                          position=position)
         self.dataset_id = dataset_id
         self.dataset_folder = dataset_folder
+        self.load_existing_data = load_existing_data
+        self.data_filters = data_filters
 
     @property
     def dataset_id(self):
@@ -963,6 +973,32 @@ class DatasetNode(PipelineNode):
             if not dataset_folder.startswith("/"):
                 dataset_folder = '/' + dataset_folder
             self.metadata['dir'] = dataset_folder
+
+    @property
+    def load_existing_data(self):
+        return self.metadata.get('triggerToPipeline', {}).get('active', False)
+
+    @load_existing_data.setter
+    def load_existing_data(self, load_existing_data: bool):
+        if load_existing_data:
+            self.metadata.setdefault('triggerToPipeline', {})['active'] = True
+        else:
+            self.metadata.pop('triggerToPipeline', None)
+
+    @property
+    def data_filters(self):
+        data_filters = self.metadata.get('triggerToPipeline', {}).get('filter', None)
+        if data_filters:
+            data_filters = entities.Filters(custom_filter=json.loads(data_filters))
+        return data_filters
+
+    @data_filters.setter
+    def data_filters(self, data_filters: entities.Filters):
+        if data_filters is None:
+            filters = None
+        else:
+            filters = json.dumps(data_filters.prepare(query_only=True).get('filter'))
+        self.metadata.setdefault('triggerToPipeline', {})['filter'] = filters
 
     @staticmethod
     def from_json(_json: dict):

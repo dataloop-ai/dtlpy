@@ -19,6 +19,8 @@ class Assignment(entities.BaseEntity):
     metadata = attr.ib(repr=False)
     id = attr.ib()
     url = attr.ib(repr=False)
+    updated_at = attr.ib(repr=False)
+    updated_by = attr.ib(repr=False)
     task_id = attr.ib(repr=False)
     dataset_id = attr.ib(repr=False)
     annotation_status = attr.ib(repr=False)
@@ -62,6 +64,8 @@ class Assignment(entities.BaseEntity):
             metadata=metadata,
             url=_json.get('url', None),
             id=_json['id'],
+            updated_by=_json.get('updatedBy', None),
+            updated_at=_json.get('updatedAt', None),
             client_api=client_api,
             project=project,
             dataset=dataset,
@@ -143,6 +147,8 @@ class Assignment(entities.BaseEntity):
                                                               attr.fields(Assignment)._dataset,
                                                               attr.fields(Assignment)._task,
                                                               attr.fields(Assignment).annotation_status,
+                                                              attr.fields(Assignment).updated_at,
+                                                              attr.fields(Assignment).updated_by,
                                                               attr.fields(Assignment).item_status,
                                                               attr.fields(Assignment).total_items,
                                                               attr.fields(Assignment).for_review,

@@ -214,6 +214,12 @@ def step_impl(context, input_type):
             type=dl.PackageInputType.ITEM,
             value={'item_id': context.item.id},
             name='item'))
+    elif input_type == dl.PackageInputType.MODEL:
+        execution_input = list()
+        execution_input.append(context.dl.FunctionIO(
+            type=dl.PackageInputType.MODEL,
+            value={'model_id': context.model.id},
+            name='model'))
     else:
         raise ValueError("input_type must be 'None' or 'Item'")
 

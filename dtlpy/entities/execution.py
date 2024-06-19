@@ -13,8 +13,12 @@ logger = logging.getLogger(name='dtlpy')
 class ExecutionStatus(str, Enum):
     SUCCESS = "success"
     FAILED = "failed"
-    IN_PROGRESS = "inProgress"
+    IN_PROGRESS = "in-progress"
     CREATED = "created"
+    TERMINATED = 'terminated',
+    ABORTED = 'aborted'
+    CANCELED = 'canceled'
+    SYSTEM_FAILURE = 'system-failure'
 
 
 @attr.s
@@ -377,3 +381,11 @@ class Execution(entities.BaseEntity):
         :return: Service execution object
         """
         return self.executions.wait(execution_id=self.id)
+
+    def in_progress(self):
+        return self.latest_status['status'] not in [ExecutionStatus.FAILED,
+                                                    ExecutionStatus.SUCCESS,
+                                                    ExecutionStatus.TERMINATED,
+                                                    ExecutionStatus.ABORTED,
+                                                    ExecutionStatus.CANCELED,
+                                                    ExecutionStatus.SYSTEM_FAILURE]

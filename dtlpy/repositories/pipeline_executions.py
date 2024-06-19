@@ -81,7 +81,7 @@ class PipelineExecutions:
         if pipeline_id is None and self._pipeline is None:
             raise exceptions.PlatformException('400', 'Must provide param pipeline_id')
         elif pipeline_id is None:
-            pipeline_id = self.pipeline.id
+            pipeline_id = self._pipeline.id
 
         success, response = self._client_api.gen_request(
             req_type="get",
@@ -93,13 +93,13 @@ class PipelineExecutions:
         if not success:
             raise exceptions.PlatformException(response)
 
-        pipeline = entities.PipelineExecution.from_json(
+        pipeline_execution = entities.PipelineExecution.from_json(
             client_api=self._client_api,
             _json=response.json(),
             pipeline=self._pipeline
         )
 
-        return pipeline
+        return pipeline_execution
 
     def _build_entities_from_response(self, response_items) -> miscellaneous.List[entities.PipelineExecution]:
         pool = self._client_api.thread_pools(pool_name='entity.create')
@@ -175,7 +175,7 @@ class PipelineExecutions:
         #     filters.add(field='projectId', values=self.project.id)
 
         if self._pipeline is not None:
-            filters.add(field='pipelineId', values=self.pipeline.id)
+            filters.add(field='pipelineId', values=self._pipeline.id)
 
         paged = entities.PagedEntities(
             items_repository=self,
@@ -344,7 +344,7 @@ class PipelineExecutions:
         if pipeline_id is None and self._pipeline is None:
             raise exceptions.PlatformException('400', 'Must provide param pipeline_id')
         elif pipeline_id is None:
-            pipeline_id = self.pipeline.id
+            pipeline_id = self._pipeline.id
 
         if filters is None:
             filters = entities.Filters(resource=entities.FiltersResource.PIPELINE_EXECUTION)

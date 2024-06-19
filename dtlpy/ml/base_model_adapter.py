@@ -145,6 +145,16 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         """
         raise NotImplementedError("Please implement 'predict' method in {}".format(self.__class__.__name__))
 
+    def extract_features(self, batch, **kwargs):
+        """ Extract model features on batch of images
+
+            Virtual method - need to implement
+
+        :param batch: `np.ndarray`
+        :return: `list[list]` each feature is per each image / item in the batch
+        """
+        raise NotImplementedError("Please implement 'extract_features' method in {}".format(self.__class__.__name__))
+
     def evaluate(self, model: entities.Model, dataset: entities.Dataset, filters: entities.Filters) -> entities.Model:
         """
         This function evaluates the model prediction on a dataset (with GT annotations).
@@ -263,7 +273,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
                         values=False,
                         operator=entities.FiltersOperations.EXISTS,
                         resource=entities.FiltersResource.ANNOTATION
-                        )
+                    )
 
                 ret_list = dataset.items.download(filters=filters,
                                                   local_path=data_subset_base_path,
@@ -352,7 +362,8 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         pool = ThreadPoolExecutor(max_workers=16)
 
         annotations = list()
-        for i_batch in tqdm.tqdm(range(0, len(items), batch_size), desc='predicting', unit='bt', leave=None, file=sys.stdout):
+        for i_batch in tqdm.tqdm(range(0, len(items), batch_size), desc='predicting', unit='bt', leave=None,
+                                 file=sys.stdout):
             batch_items = items[i_batch: i_batch + batch_size]
             batch = list(pool.map(self.prepare_item_func, batch_items))
             batch_collections = self.predict(batch, **kwargs)
@@ -384,6 +395,72 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
 
         pool.shutdown()
         return items, annotations
+
+    @entities.Package.decorators.function(display_name='Extract Feature',
+                                          inputs={'items': 'Item[]'},
+                                          outputs={'items': 'Item[]', 'features': '[]'})
+    def extract_item_features(self, items: list, upload_features=True, batch_size=None, **kwargs):
+        """
+        Extract feature from an input list of items (or single) and return the items and the feature vector.
+
+        :param items: `List[dl.Item]` list of items to predict
+        :param upload_features: `bool` uploads the features on the given items
+        :param batch_size: `int` size of batch to run a single inference
+
+        :return: `List[dl.Item]`, `List[List[vector]]`
+        """
+        if batch_size is None:
+            batch_size = self.configuration.get('batch_size', 4)
+        input_type = self.model_entity.input_type
+        self.logger.debug(
+            "Predicting {} items, using batch size {}. input type: {}".format(len(items), batch_size, input_type))
+        pool = ThreadPoolExecutor(max_workers=16)
+
+        vectors = list()
+        feature_set_name = self.configuration.get('featureSetName', self.model_entity.name)
+        try:
+            feature_set = self.model_entity.project.feature_sets.get(feature_set_name)
+            logger.info(f'Feature Set found! name: {feature_set_name}')
+        except exceptions.NotFound as e:
+            logger.info('Feature Set not found. creating... ')
+            feature_set = self.model_entity.project.feature_sets.create(name=feature_set_name,
+                                                                        entity_type=entities.FeatureEntityType.ITEM,
+                                                                        project_id=self.model_entity.project_id,
+                                                                        set_type=self.model_entity.name,
+                                                                        size=self.configuration.get('embeddings_size',
+                                                                                                    256))
+            if 'featureSetName' not in self.model_entity.configuration:
+                self.model_entity.configuration['featureSetName'] = feature_set_name
+                self.model_entity.update()
+            logger.info(f'Feature Set created! name: {feature_set.name}, id: {feature_set.id}')
+
+        feature_set_id = feature_set.id
+        project_id = self.model_entity.project_id
+
+        for i_batch in tqdm.tqdm(range(0, len(items), batch_size),
+                                 desc='predicting',
+                                 unit='bt',
+                                 leave=None,
+                                 file=sys.stdout):
+            batch_items = items[i_batch: i_batch + batch_size]
+            batch = list(pool.map(self.prepare_item_func, batch_items))
+            batch_vectors = self.extract_features(batch, **kwargs)
+            batch_features = list()
+            if upload_features is True:
+                self.logger.debug(
+                    "Uploading items' feature vectors for model {!r}.".format(self.model_entity.name))
+                try:
+                    batch_features = list(pool.map(partial(self._upload_model_features,
+                                                           feature_set_id,
+                                                           project_id),
+                                                   batch_items,
+                                                   batch_vectors))
+                except Exception as err:
+                    self.logger.exception("Failed to upload feature vectors to items.")
+
+            vectors.extend(batch_features)
+        pool.shutdown()
+        return items, vectors
 
     @entities.Package.decorators.function(display_name='Predict Dataset with DQL',
                                           inputs={'dataset': 'Dataset',
@@ -571,6 +648,19 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
     # =============
     # INNER METHODS
     # =============
+
+    @staticmethod
+    def _upload_model_features(feature_set_id, project_id, item: entities.Item, vector):
+        try:
+            feature = item.features.create(value=vector,
+                                           project_id=project_id,
+                                           feature_set_id=feature_set_id,
+                                           entity=item)
+            return feature
+        except Exception as e:
+            logger.error(f'Failed to upload feature vector if length {len(vector)} to item {item.id}, Error: {e}')
+            return []
+
     def _upload_model_annotations(self, item: entities.Item, predictions, clean_annotations):
         """
         Utility function that upload prediction to dlp platform based on the package.output_type

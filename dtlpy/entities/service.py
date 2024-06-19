@@ -1,3 +1,4 @@
+import warnings
 from collections import namedtuple
 from enum import Enum
 import traceback
@@ -219,6 +220,7 @@ class Service(entities.BaseEntity):
     on_reset = attr.ib(type=OnResetAction)
     _type = attr.ib(type=ServiceType)
     project_id = attr.ib()
+    org_id = attr.ib()
     is_global = attr.ib()
     max_attempts = attr.ib()
     mode = attr.ib(repr=False)
@@ -235,6 +237,8 @@ class Service(entities.BaseEntity):
     _project = attr.ib(default=None, repr=False)
     _repositories = attr.ib(repr=False)
     updated_by = attr.ib(default=None)
+    app = attr.ib(default=None)
+    integrations = attr.ib(default=None)
 
     @property
     def createdAt(self):
@@ -334,6 +338,9 @@ class Service(entities.BaseEntity):
             updated_by=_json.get('updatedBy', None),
             config=_json.get('config', None),
             settings=_json.get('settings', None),
+            app=_json.get('app', None),
+            integrations=_json.get('integrations', None),
+            org_id=_json.get('orgId', None)
         )
         inst.is_fetched = is_fetched
         return inst
@@ -368,7 +375,19 @@ class Service(entities.BaseEntity):
                                                                                        log_error=False)
                 assert isinstance(self._package, entities.Package)
             except:
-                self._package = repositories.Dpks(client_api=self._client_api).get(dpk_id=self.package_id)
+                dpk_id = None
+                dpk_version = None
+                if self.app and isinstance(self.app, dict):
+                    dpk_id = self.app.get('dpkId', None)
+                    dpk_version = self.app.get('dpkVersion', None)
+                if dpk_id is None:
+                    self._package = repositories.Dpks(client_api=self._client_api, project=self.project).get(
+                        dpk_id=self.package_id)
+                else:
+                    self._package = repositories.Dpks(client_api=self._client_api, project=self.project).get_revisions(
+                        dpk_id=dpk_id,
+                        version=dpk_version)
+
                 assert isinstance(self._package, entities.Dpk)
         return self._package
 
@@ -462,11 +481,15 @@ class Service(entities.BaseEntity):
                 attr.fields(Service).archive,
                 attr.fields(Service).updated_by,
                 attr.fields(Service).config,
-                attr.fields(Service).settings
+                attr.fields(Service).settings,
+                attr.fields(Service).app,
+                attr.fields(Service).integrations,
+                attr.fields(Service).org_id
             )
         )
 
         _json['projectId'] = self.project_id
+        _json['orgId'] = self.org_id
         _json['packageId'] = self.package_id
         _json['initParams'] = self.init_input
         _json['moduleName'] = self.module_name
@@ -517,6 +540,12 @@ class Service(entities.BaseEntity):
 
         if self.settings is not None:
             _json['settings'] = self.settings
+
+        if self.app is not None:
+            _json['app'] = self.app
+
+        if self.integrations is not None:
+            _json['integrations'] = self.integrations
 
         return _json
 

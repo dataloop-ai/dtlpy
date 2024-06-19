@@ -76,6 +76,7 @@ class PipelineExecution(entities.BaseEntity):
 
     # sdk
     _pipeline = attr.ib(repr=False)
+    _project = attr.ib(repr=False)
     _client_api = attr.ib(type=ApiClient, repr=False)
     _repositories = attr.ib(repr=False)
 
@@ -103,7 +104,7 @@ class PipelineExecution(entities.BaseEntity):
         return status, pipeline
 
     @classmethod
-    def from_json(cls, _json, client_api, pipeline, is_fetched=True):
+    def from_json(cls, _json, client_api, pipeline, is_fetched=True) -> 'PipelineExecution':
         """
         Turn platform representation of pipeline_execution into a pipeline_execution entity
 
@@ -112,9 +113,11 @@ class PipelineExecution(entities.BaseEntity):
         :param dtlpy.entities.pipeline.Pipeline pipeline: Pipeline entity
         :param bool is_fetched: is Entity fetched from Platform
         :return: Pipeline entity
-        :rtype: dtlpy.entities.pipeline.Pipeline
+        :rtype: dtlpy.entities.PipelineExecution
         """
+        project = None
         if pipeline is not None:
+            project = pipeline._project
             if pipeline.id != _json.get('pipelineId', None):
                 logger.warning('Pipeline has been fetched from a project that is not belong to it')
                 pipeline = None
@@ -132,6 +135,7 @@ class PipelineExecution(entities.BaseEntity):
             nodes=nodes,
             executions=_json.get('executions', dict()),
             pipeline=pipeline,
+            project=project,
             client_api=client_api,
         )
 
@@ -183,7 +187,10 @@ class PipelineExecution(entities.BaseEntity):
 
     @property
     def project(self):
-        return self.pipeline.project
+        if self._project is None:
+            self._project = self.pipeline.project
+        assert isinstance(self._pipeline.project, entities.Project)
+        return self._pipeline.project
 
     ################
     # repositories #
@@ -195,9 +202,10 @@ class PipelineExecution(entities.BaseEntity):
 
         r = reps(
             projects=repositories.Projects(client_api=self._client_api),
-            pipelines=repositories.Pipelines(client_api=self._client_api, project=self.project),
-            pipeline_executions=repositories.PipelineExecutions(client_api=self._client_api, project=self.project,
-                                                                pipeline=self.pipeline)
+            pipelines=repositories.Pipelines(client_api=self._client_api, project=self._project),
+            pipeline_executions=repositories.PipelineExecutions(client_api=self._client_api,
+                                                                project=self._project,
+                                                                pipeline=self._pipeline)
         )
         return r
 

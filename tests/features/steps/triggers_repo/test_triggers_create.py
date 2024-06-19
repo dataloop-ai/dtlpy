@@ -151,8 +151,8 @@ def step_impl(context, function_name):
 @behave.then(u'Service was triggered on "{resource_type}"')
 def step_impl(context, resource_type):
     context.trigger_type = resource_type
-    num_try = 60
-    interval = 20
+    num_try = 36
+    interval = 5
     triggered = False
 
     for i in range(num_try):
@@ -200,8 +200,12 @@ def step_impl(context, resource_type):
                 triggered = True
                 break
         elif resource_type == 'string':
-            execution = context.service.executions.list()[0][0]
-            if len(execution.input) > 0:
+            execution = None
+            pages = context.service.executions.list()
+            executions = pages.items
+            if len(executions) > 0:
+                execution = executions[0]
+            if execution is not None and len(execution.input) > 0:
                 context.execution = context.service.executions.list()[0][0]
                 triggered = True
                 break

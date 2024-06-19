@@ -129,6 +129,7 @@ from tests.features.steps.services_repo import test_services_update
 from tests.features.steps.services_repo import test_services_context
 from tests.features.steps.services_repo import test_services_slot
 from tests.features.steps.services_repo import test_services_crashloop
+from tests.features.steps.services_repo import test_service_validation
 
 from tests.features.steps.filters_entity import test_filters
 
@@ -139,6 +140,7 @@ from tests.features.steps.executions_repo import test_executions_multiple
 from tests.features.steps.executions_repo import test_executions_context
 from tests.features.steps.execution_monitoring import test_execution_monitoring
 from tests.features.steps.executions_repo import test_execution_rerun
+from tests.features.steps.executions_repo import test_execution_validation
 
 from tests.features.steps.bots_repo import test_bots_create
 from tests.features.steps.bots_repo import test_bots_list
@@ -184,6 +186,7 @@ from tests.features.steps.model_entity import test_model_name
 from tests.features.steps.pipeline_entity import pipeline_get, pipeline_delete, pipeline_update, pipeline_flow, pipeline_output_list, pipeline_execute
 from tests.features.steps.pipeline_resume import pipeline_resume
 from tests.features.steps.pipeline_entity import test_pipeline_interface
+from tests.features.steps.pipeline_entity import test_pipeline_dataset_node_trigger_to_pipeline
 from tests.features.steps.pipeline_entity import test_pipeline_execution
 from tests.features.steps.pipeline_entity import pipeline_validation
 from tests.features.steps.pipeline_entity import test_pipeline_refs
@@ -211,7 +214,7 @@ from tests.features.steps.items_repo import test_upload_and_download_images
 from tests.features.steps.annotations_repo import test_rotated_box_points
 from tests.features.steps.app_entity import test_app_install, test_app_uninstall, test_app_update, test_app_get, test_app_status
 from tests.features.steps.dpk_tests import dpk_json_to_object, test_dpk_publish, test_dpk_list, \
-    test_dpk_pull, test_dpk_get, test_dpk_delete, test_dpk_infratructure
+    test_dpk_pull, test_dpk_get, test_dpk_delete, test_dpk_interface, test_dpk_update, test_dpk_validation
 from tests.features.steps.app_entity import test_app_validate
 from tests.features.steps.app_entity import test_app_interface
 

@@ -7,6 +7,7 @@ from .. import exceptions, entities, repositories, miscellaneous, _api_reference
 from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
+MAX_SLEEP_TIME = 30
 
 
 class Executions:
@@ -562,15 +563,19 @@ class Executions:
         return execution
 
     def wait(self,
-             execution_id: str,
-             timeout: int = None):
+             execution_id: str = None,
+             execution: entities.Execution = None,
+             timeout: int = None,
+             backoff_factor=1):
         """
         Get Service execution object.
 
         **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a service.
 
         :param str execution_id: execution id
+        :param str execution: dl.Execution, optional. must input one of execution or execution_id
         :param int timeout: seconds to wait until TimeoutError is raised. if <=0 - wait until done - by default wait take the service timeout
+        :param float backoff_factor: A backoff factor to apply between attempts after the second try
         :return: Service execution object
         :rtype: dtlpy.entities.execution.Execution
 
@@ -580,40 +585,32 @@ class Executions:
 
             service.executions.wait(execution_id='execution_id')
         """
-        url_path = "/executions/{}".format(execution_id)
+        if execution is None:
+            if execution_id is None:
+                raise ValueError('Must input at least one: [execution, execution_id]')
+            else:
+                execution = self.get(execution_id=execution_id)
         elapsed = 0
         start = int(time.time())
-        if timeout is not None and timeout <= 0:
+        if timeout is None or timeout <= 0:
             timeout = np.inf
 
-        i = 1
-        while True:
-            success, response = self._client_api.gen_request(req_type="get",
-                                                             path=url_path,
-                                                             log_error=False)
-            if not success:
-                raise exceptions.PlatformException(response)
-            # return entity
-            execution = entities.Execution.from_json(client_api=self._client_api,
-                                                     _json=response.json(),
-                                                     project=self._project,
-                                                     service=self._service)
-            if timeout is None:
-                timeout = execution.service.execution_timeout + 60
-            if execution.latest_status['status'] in ['failed', 'success', 'terminated', 'aborted', 'canceled',
-                                                     'system-failure']:
+        num_tries = 1
+        while elapsed < timeout:
+            execution = self.get(execution_id=execution.id)
+            if not execution.in_progress():
                 break
-            elapsed = int(time.time()) - start
-            i += 1
-            if i > 18 or elapsed > timeout:
-                break
-            sleep_time = np.minimum(timeout - elapsed, 2 ** i)
+            elapsed = time.time() - start
+            if elapsed >= timeout:
+                raise TimeoutError(
+                    f"execution wait() got timeout. id: {execution.id!r}, status: {execution.latest_status}")
+            sleep_time = np.min([timeout - elapsed, backoff_factor * (2 ** num_tries), MAX_SLEEP_TIME])
+            num_tries += 1
+            logger.debug("Execution {!r} is running for {:.2f}[s] and now Going to sleep {:.2f}[s]".format(execution.id,
+                                                                                                           elapsed,
+                                                                                                           sleep_time))
             time.sleep(sleep_time)
-        if execution is None:
-            raise ValueError('Nothing to wait for')
-        if elapsed >= timeout:
-            raise TimeoutError("execution wait() got timeout. id: {!r}, status: {}".format(
-                execution.id, execution.latest_status))
+
         return execution
 
     @_api_reference.add(path='/executions/{id}/terminate', method='post')

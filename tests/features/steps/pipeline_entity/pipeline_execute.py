@@ -28,7 +28,7 @@ def step_impl(context):
         filters=dl.Filters(field='dir', values='/test', context={'datasets': [context.dataset.id]}))
 
 
-@behave.when(u'Get the pipeline service')
+@behave.when(u'I get the pipeline service')
 def step_impl(context):
     service_name = context.pipeline.nodes[0].namespace.service_name
     context.service = dl.services.get(service_name=service_name)

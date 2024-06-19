@@ -3,6 +3,8 @@ import threading
 import traceback
 import json
 import time
+from concurrent.futures import ThreadPoolExecutor, wait
+
 import jwt
 import os
 import dtlpy as dl
@@ -10,6 +12,8 @@ import numpy as np
 from multiprocessing.pool import ThreadPool
 from tqdm import tqdm
 import sys
+
+TIMEOUT = 1.8 * 60 * 60
 
 
 class TestState(threading.Thread):
@@ -149,6 +153,18 @@ def delete_projects():
 
 
 def test_feature_file(w_feature_filename, i_pbar):
+    timeout = 8 * 60
+    longer_timeout = 13 * 60
+
+    longer_timeout_features = [
+        'pipeline_active_learning.feature',
+        'test_service_debug_runtime.feature',
+        'test_models_clone_1.feature',
+        'pipeline_rerun_cycles_2.feature',
+        'test_models_context.feature',
+        'test_models_flow.feature'
+    ]
+
     log_path = os.path.join(TEST_DIR, 'logs')
     if not os.path.isdir(log_path):
         os.makedirs(log_path, exist_ok=True)
@@ -172,7 +188,9 @@ def test_feature_file(w_feature_filename, i_pbar):
                     '--no-capture']
             # need to run a new process to avoid collisions
             p = subprocess.Popen(cmds, stderr=subprocess.PIPE)
-            _, stderr = p.communicate(timeout=1200)
+            _, stderr = p.communicate(
+                timeout=longer_timeout if os.path.basename(w_feature_filename) in longer_timeout_features else timeout
+            )
 
             if p.returncode == 0:
                 break
@@ -302,7 +320,7 @@ if __name__ == '__main__':
         assert False, 'Cannot run test on user: "{}". only test users'.format(payload['email'])
 
     # run tests
-    pool = ThreadPool(processes=4)
+    pool = ThreadPoolExecutor(max_workers=12)
     features_path = os.path.join(TEST_DIR, 'features')
     print(f"Index driver is {os.environ.get('INDEX_DRIVER_VAR', None)}")
 
@@ -320,14 +338,23 @@ if __name__ == '__main__':
     test_state = TestState()
     test_state.start()
 
+    _futures = []
     for feature_filename in features_to_run:
         results[feature_filename] = dict()
         time.sleep(.1)
-        pool.apply_async(test_feature_file, kwds={'w_feature_filename': feature_filename, 'i_pbar': pbar})
+        future = pool.submit(test_feature_file, **{'w_feature_filename': feature_filename, 'i_pbar': pbar})
+        _futures.append(future)
 
-    pool.close()
-    pool.join()
+    # Wait for all futures to complete or timeout
+    done, not_done = wait(_futures, timeout=TIMEOUT)
+
+    if not_done:
+        print("Timeout reached. Not all tasks completed within 2 hours.")
+        for future in not_done:
+            future.cancel()
+
     pbar.close()
+    pool.shutdown(wait=False)
 
     test_state.stop()
 
@@ -343,7 +370,7 @@ if __name__ == '__main__':
     api_calls = sum(api_calls.values())
 
     # Summary
-    all_results = [result['status'] for result in results.values()]
+    all_results = [result.get('status', False) for result in results.values()]
     passed = all(all_results)
 
     if not passed:
@@ -351,6 +378,8 @@ if __name__ == '__main__':
             send_alert()
         print('-------------- Logs --------------')
         for feature, result in results.items():
+            if not result:
+                continue
             status = result['status']
             log_filename = result['log_file']
             i_try = result['try']
@@ -373,7 +402,7 @@ if __name__ == '__main__':
 
     # print timeout first
     for feature, result in tests_results:
-        if not result['status'] and 'timeout' in result:
+        if result and not result.get('status', None) and 'timeout' in result:
             status = 'timeout'
             log_filename = result['log_file']
             i_try = result['try']
@@ -384,7 +413,7 @@ if __name__ == '__main__':
 
     # print failed first
     for feature, result in tests_results:
-        if not result['status'] and 'timeout' not in result:
+        if result and not result.get('status', None) and 'timeout' not in result:
             status = 'failed'
             log_filename = result['log_file']
             i_try = result['try']
@@ -393,9 +422,16 @@ if __name__ == '__main__':
                                                                           os.path.basename(feature))
             print(res_msg)
 
+    # print unrun tests
+    for feature, result in tests_results:
+        if not result:
+            status = 'unrun'
+            res_msg = '{}\t in try: {}\tavg time: {}\tfeature: {}'.format(status, 0, 0, os.path.basename(feature))
+            print(res_msg)
+
     # print passes
     for feature, result in tests_results:
-        if result['status']:
+        if result and result.get('status'):
             status = 'passed'
             log_filename = result['log_file']
             i_try = result['try']

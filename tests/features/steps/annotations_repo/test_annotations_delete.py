@@ -41,8 +41,9 @@ def step_impl(context, annotation_type, entity):
     else:
         raise ValueError("Entity {} does not supported".format(entity))
 
-    context.other_annotation_before_delete = len(annotations_list_all)-len(annotations_list_filtered)
-    a=5
+    context.other_annotation_before_delete = len(annotations_list_all) - len(annotations_list_filtered)
+    a = 5
+
 
 @behave.when(u'I delete annotation from type "{annotation_type}" using "{entity}" entity')
 def step_impl(context, annotation_type, entity):
@@ -60,3 +61,8 @@ def step_impl(context):
     filters = context.dl.Filters(resource=context.dl.FiltersResource.ANNOTATION)
     annotations = context.dataset.annotations.list(filters=filters)
     assert len(annotations) == context.other_annotation_before_delete
+
+
+@behave.when(u'I delete annotation')
+def step_impl(context):
+    context.annotation.delete()

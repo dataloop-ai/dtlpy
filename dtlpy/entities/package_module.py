@@ -75,7 +75,20 @@ class PackageModule(entities.DlEntity):
         for cls_name, cls_inst in inspect.getmembers(file_module, predicate=inspect.isclass):
             spec = getattr(cls_inst, '__dtlpy__', None)
             if spec is not None:
+                functions = spec['functions']
+                available_methods = [name for name in ['train', 'predict']
+                                     if 'BaseModelAdapter' not in getattr(cls_inst, name).__qualname__]
+                if "train" not in available_methods:
+                    # remove train_model from functions list if train is not available
+                    functions[:] = [d for d in functions if d.get('name') != "train_model"]
+                if "predict" not in available_methods:
+                    # remove predict_items from functions list if predict is not available
+                    functions[:] = [d for d in functions if d.get('name') != "predict_items"]
+                if "extract_features" not in available_methods:
+                    # remove extract_item_features from functions list if extract_features is not available
+                    functions[:] = [d for d in functions if d.get('name') != "extract_item_features"]
                 spec['entryPoint'] = entry_point
+                spec['functions'] = functions
                 module = cls.from_json(spec)
                 break
         if module is None:

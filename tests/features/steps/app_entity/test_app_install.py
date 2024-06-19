@@ -44,12 +44,14 @@ def step_impl(context):
 
 @behave.when(u'I install the app')
 @behave.given(u'I install the app')
-@behave.when(u'I install the app with custom custom_installation')
-def step_impl(context):
-    if hasattr(context, "custom_installation"):
+@behave.when(u'I install the app with custom_installation "{flag}"')
+def step_impl(context, flag="True"):
+    if hasattr(context, "custom_installation") and eval(flag):
         custom_installation = context.custom_installation
+    elif eval(flag):
+        custom_installation = {"components": context.dpk.to_json().get("components", {}), "dependencies": context.dpk.to_json().get("dependencies", [])}
     else:
-        custom_installation = context.dpk.to_json()
+        custom_installation = None
 
     context.app = context.dl.entities.App.from_json(
         {},
@@ -57,6 +59,20 @@ def step_impl(context):
         project=context.project)
     dpk = context.published_dpk if hasattr(context, "published_dpk") else context.dpk
     context.app = context.project.apps.install(dpk=dpk, custom_installation=custom_installation)
+    if hasattr(context.feature, 'apps'):
+        context.feature.apps.append(context.app)
+    else:
+        context.feature.apps = [context.app]
+
+
+@behave.when(u'I install the app without custom_installation')
+def step_impl(context):
+    context.app = context.dl.entities.App.from_json(
+        {},
+        client_api=context.project._client_api,
+        project=context.project)
+    dpk = context.published_dpk if hasattr(context, "published_dpk") else context.dpk
+    context.app = context.project.apps.install(dpk=dpk)
     if hasattr(context.feature, 'apps'):
         context.feature.apps.append(context.app)
     else:
@@ -91,9 +107,11 @@ def step_impl(context):
 
     assert context.dpk_service["moduleName"] == context.service.module_name, f"TEST FAILED: Field moduleName"
     assert dpk_runtime == service_runtime, f"TEST FAILED: Field runtime"
-    assert context.dpk_service['executionTimeout'] == context.service.execution_timeout, f"TEST FAILED: Field executionTimeout"
+    assert context.dpk_service[
+               'executionTimeout'] == context.service.execution_timeout, f"TEST FAILED: Field executionTimeout"
     assert context.dpk_service['onReset'] == context.service.on_reset, f"TEST FAILED: Field onReset"
-    assert context.dpk_service['runExecutionAsProcess'] == context.service.run_execution_as_process, f"TEST FAILED: Field runExecutionAsProcess"
+    assert context.dpk_service[
+               'runExecutionAsProcess'] == context.service.run_execution_as_process, f"TEST FAILED: Field runExecutionAsProcess"
     assert context.dpk_service['versions']['dtlpy'] == context.service.versions['dtlpy'], \
         f"TEST FAILED: Field versions.dtlpy DPK {context.dpk.components.services[0]['versions']['dtlpy']} " \
         f"Service {context.service.versions['dtlpy']}"
@@ -115,10 +133,11 @@ def step_impl(context, operation=None):
     if operation:
         model_dpk = context.dpk.components.models[0]
         compute_configs = context.dpk.components.computeConfigs
-        compute_config = [item for (index, item) in enumerate(compute_configs) if item["name"] == model_dpk["computeConfigs"][operation]][0]
+        compute_config = [item for (index, item) in enumerate(compute_configs) if
+                          item["name"] == model_dpk["computeConfigs"][operation]][0]
     else:
         compute_config = context.compute_config_item
-    assert compute_config["runtime"]["runnerImage"]\
+    assert compute_config["runtime"]["runnerImage"] \
            == service.runtime.runner_image, f"TEST FAILED: Field runnerImage expected {compute_config['runtime']['runnerImage']} actual on service {service.runtime.runner_image}"
 
 

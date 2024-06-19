@@ -264,3 +264,25 @@ def gen_request(context, method=None, req=None, num_try=None, interval=None, exp
         raise dl.exceptions.PlatformException(response)
     return response
 
+
+def update_nested_structure(context, d):
+    """
+    Recursively search for a value in a nested dictionary or list and update it.
+    """
+    if isinstance(d, dict):
+        for key, value in d.items():
+            if ".id" in value:
+                d[key] = attrgetter(value)(context)
+                return True
+            elif isinstance(value, (dict, list)):
+                if update_nested_structure(context, value):
+                    return True
+    elif isinstance(d, list):
+        for index, item in enumerate(d):
+            if ".id" in item:
+                d[index] = attrgetter(item)(context)
+                return True
+            elif isinstance(item, (dict, list)):
+                if update_nested_structure(context, item):
+                    return True
+    return True

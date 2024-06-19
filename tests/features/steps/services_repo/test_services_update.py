@@ -217,13 +217,13 @@ def step_impl(context, num_times: str):
     num_times = int(num_times)
     context.machine_count = num_times + 1
     last_count = 0
-    interval = 3
+    interval = 1
 
     def is_long_term(service: context.dl.Service):
         return service.execution_timeout == long_timeout
 
     def wait_for_some_executions_to_run(last_running_executions_count):
-        max_wait = 60 * 5
+        max_wait = 60 * 3
         start_time = time.time()
         f = create_filter(c=context)
         f.add(
@@ -293,10 +293,11 @@ def step_impl(context):
                 machines.add(replica_id)
             else:
                 assert False, 'Execution status is missing replicaId'
-            assert latest_status == context.dl.ExecutionStatus.SUCCESS
+            assert latest_status == context.dl.ExecutionStatus.SUCCESS, f"TEST FAILED: Expected {context.dl.ExecutionStatus.SUCCESS}, Actual {latest_status}"
             e_status_list = [s['status'] for s in execution.status]
             e_status_list.sort()
-            assert '-'.join(e_status_list) == pattern
+            assert '-'.join(e_status_list) == pattern, f"TEST FAILED: Expected {pattern}, Actual {'-'.join(e_status_list)}"
 
     # make sure executions ran on different machines
-    assert len(machines) == context.machine_count
+    assert len(machines) == context.machine_count, f"TEST FAILED: Expected {context.machine_count} , Actual {len(machines)}"
+

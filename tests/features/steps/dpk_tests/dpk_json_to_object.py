@@ -8,6 +8,7 @@ from ..pipeline_entity import test_pipeline_interface
 import random
 from operator import attrgetter
 
+
 @behave.when(u"I fetch the dpk from '{file_name}' file")
 @behave.given(u"I fetch the dpk from '{file_name}' file")
 def step_impl(context, file_name):
@@ -23,7 +24,11 @@ def step_impl(context, file_name):
             json_object['context']['organization'] = context.project.org['id']
 
     if "pipelineTemplates" in json_object.get('components', {}).keys():
-        json_object['components']['pipelineTemplates'][0] = test_pipeline_interface.generate_pipeline_json(context, json_object['components']['pipelineTemplates'][0])
+        json_object['components']['pipelineTemplates'][0] = test_pipeline_interface.generate_pipeline_json(context,
+                                                                                                           json_object[
+                                                                                                               'components'][
+                                                                                                               'pipelineTemplates'][
+                                                                                                               0])
 
     context.dpk = context.dl.entities.Dpk.from_json(_json=json_object,
                                                     client_api=context.dl.client_api,
@@ -36,6 +41,18 @@ def step_impl(context, file_name):
 @behave.given(u"I add codebase to dpk")
 def step_impl(context):
     context.dpk.codebase = context.codebase
+
+
+@behave.when(u"I add integration to dpk")
+def step_impl(context):
+    if context.dpk.components.services:
+        for service in context.dpk.components.services:
+            if 'integrations' in service:
+                service['integrations'][0]['id'] = context.integration.id
+    if context.dpk.components.compute_configs:
+        for service in context.dpk.components.compute_configs:
+            if service.integrations:
+                service.integrations[0]['id'] = context.integration.id
 
 
 @behave.then(u"I have a dpk entity")
@@ -101,7 +118,8 @@ def step_impl(context, i):
 @behave.when(u"I remove the last service from context.custom_installation")
 def step_impl(context):
     if not hasattr(context, "custom_installation"):
-        raise AttributeError("Please make sure to add 'custom_installation' to 'context', Can use step 'When I create a context.custom_installation var'")
+        raise AttributeError(
+            "Please make sure to add 'custom_installation' to 'context', Can use step 'When I create a context.custom_installation var'")
 
     context.custom_installation.get('components').get('services').pop(-1)
     context.custom_installation.get('components').get('triggers').pop(-1)
@@ -110,7 +128,8 @@ def step_impl(context):
 @behave.when(u"I add service to context.custom_installation")
 def step_impl(context):
     if not hasattr(context, "custom_installation"):
-        raise AttributeError("Please make sure to add 'custom_installation' to 'context', Can use step 'When I create a context.custom_installation var'")
+        raise AttributeError(
+            "Please make sure to add 'custom_installation' to 'context', Can use step 'When I create a context.custom_installation var'")
 
     service = context.custom_installation.get('components').get('services')[-1].copy()
     service['name'] = f"{service.get('name')}-sdk"
@@ -153,3 +172,4 @@ def step_impl(context, index):
     comp_autoscaler_items = app_composition['spec'][int(index)]['runtime']['autoscaler'].items()
 
     assert dpk_autoscaler_items <= comp_autoscaler_items, f"TEST FAILED: dpk_autoscaler_items is {dpk_autoscaler_items} composition_autoscaler_items is {comp_autoscaler_items}"
+

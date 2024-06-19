@@ -4,7 +4,8 @@ import behave
 @behave.when(u'I resume the app')
 def step_impl(context):
     try:
-        context.app_activated = context.project.apps.resume(app_id=context.app.id)
+        app = context.project.apps.get(app_id=context.app.id)
+        context.app_activated = app.resume()
         context.error = None
     except Exception as e:
         context.error = e
@@ -18,7 +19,8 @@ def step_impl(context):
 @behave.when(u'I pause the app')
 def step_impl(context):
     try:
-        context.app_deactivated = context.project.apps.pause(app_id=context.app.id)
+        app = context.project.apps.get(app_id=context.app.id)
+        context.app_deactivated = app.pause()
         context.error = None
     except Exception as e:
         context.error = e

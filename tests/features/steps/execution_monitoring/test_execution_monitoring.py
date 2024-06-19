@@ -81,3 +81,9 @@ def step_impl(context, on_reset):
         time.sleep(interval)
 
     assert reset, f"TEST FAILED: after {round(num_tries * interval / 60, 1)} minutes"
+
+
+@behave.when(u'I terminate an execution')
+def step_impl(context):
+    context.execution = context.service.executions.list().items[0]
+    context.execution.terminate()

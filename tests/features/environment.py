@@ -27,6 +27,7 @@ def before_all(context):
     # Get index driver from env var
     context.index_driver_var = os.environ.get("INDEX_DRIVER_VAR", None)
 
+
 @fixture
 def after_feature(context, feature):
     print_feature_filename(context, feature)
@@ -57,6 +58,13 @@ def after_feature(context, feature):
                     for page in apps:
                         for app in page:
                             app.uninstall()
+                    models = dl.models.list(
+                        filters=dl.Filters(use_defaults=False, resource=dl.FiltersResource.MODEL,
+                                           field="app.dpkName",
+                                           values=dpk.name))
+                    for page in models:
+                        for model in page:
+                            model.delete()
                     dpk.delete()
                 except:
                     logging.exception('Failed to delete dpk')
@@ -148,6 +156,26 @@ def after_scenario(context, scenario):
         context.dl = dl
 
 
+def get_step_key(step):
+    return '{}: line {}. {}'.format(step.location.filename, step.location.line, step.name)
+
+
+@fixture
+def before_step(context, step):
+    key = get_step_key(step)
+    setattr(context, key, time.time())
+
+
+@fixture
+def after_step(context, step):
+    key = get_step_key(step)
+    start_time = getattr(context, key, None)
+    total_time = time.time() - start_time
+    if total_time > 3:
+        print("######## {}\nStep Duration: {}".format(key, total_time))
+    delattr(context, key)
+
+
 @fixture
 def before_feature(context, feature):
     if 'rc_only' in context.tags and 'rc' not in os.environ.get("DLP_ENV_NAME"):
@@ -168,6 +196,9 @@ def fix_project_with_frozen_datasets(project):
 @fixture
 def before_tag(context, tag):
     if "skip_test" in tag:
+        """
+        For example: @skip_test_DAT-99999
+        """
         dat = tag.split("_")[-1] if "DAT" in tag else ""
         if hasattr(context, "scenario"):
             context.scenario.skip(f"Test mark as SKIPPED, Should be merged after {dat}")
@@ -335,6 +366,11 @@ def delete_pipeline(context):
     while context.to_delete_pipelines_ids:
         pipeline_id = context.to_delete_pipelines_ids.pop(0)
         try:
+            filters = context.dl.Filters(resource=context.dl.FiltersResource.EXECUTION, field='latestStatus.status', values=['created', 'in-progress'], operator='in')
+            filters.add(field='pipeline.id', values=pipeline_id)
+            executions = context.dl.executions.list(filters=filters)
+            for execution in executions.items:
+                execution.terminate()
             context.dl.pipelines.delete(pipeline_id=pipeline_id)
         except context.dl.exceptions.NotFound:
             pass
@@ -418,4 +454,5 @@ def print_feature_filename(context, feature):
     s_r = SummaryReporter(context.config)
     stream = getattr(sys, s_r.output_stream_name, sys.stderr)
     p_stream = StreamOpener.ensure_stream_with_encoder(stream)
-    p_stream.write("{}\n".format(feature.filename.split('/')[-1]))
+    p_stream.write(f"Feature Finished : {feature.filename.split('/')[-1]}\n")
+    p_stream.write(f"Status: {str(feature.status).split('.')[-1]} - Duration: {feature.duration:.2f} seconds\n")

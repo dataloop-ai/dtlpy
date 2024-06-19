@@ -1,3 +1,4 @@
+import time
 import behave
 from operator import attrgetter
 import dtlpy as dl
@@ -9,6 +10,24 @@ def step_impl(context):
 
 @behave.then(u'I receive a list of "{count}" executions')
 def step_impl(context, count):
+    assert len(context.execution_list.items) == int(count), f"TEST FAILED: Expected {count} , Actual {len(context.execution_list.items)}"
+    if int(count) > 0:
+        for page in context.execution_list:
+            for execution in page:
+                assert isinstance(execution, context.dl.entities.Execution)
+
+
+@behave.then(u'I wait until I receive a list of "{count}" executions')
+def step_impl(context, count):
+    interval = 5
+    num_tries = 10
+    for i in range(num_tries):
+        context.execution_list = context.service.executions.list()
+        if len(context.execution_list.items) == int(count):
+            break
+        else:
+            context.execution_list = None
+            time.sleep(interval)
     assert len(context.execution_list.items) == int(count), f"TEST FAILED: Expected {count} , Actual {len(context.execution_list.items)}"
     if int(count) > 0:
         for page in context.execution_list:

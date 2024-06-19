@@ -126,6 +126,7 @@ class DpkComputeConfig(entities.DlEntity):
     driver_id: str = entities.DlProperty(location=['driverId'], _type=str)
     versions: dict = entities.DlProperty(location=['versions'], _type=dict)
     name: str = entities.DlProperty(location=['name'], _type=str)
+    integrations: List[dict] = entities.DlProperty(location=['integrations'], _type=list)
 
     def to_json(self) -> dict:
         return self._dict.copy()
@@ -226,6 +227,7 @@ class Components(entities.DlEntity):
 class Dpk(entities.DlEntity):
     # name change
     id: str = entities.DlProperty(location=['id'], _type=str)
+    base_id: str = entities.DlProperty(location=['baseId'], _type=str)
     name: str = entities.DlProperty(location=['name'], _type=str)
     version: str = entities.DlProperty(location=['version'], _type=str)
     attributes: list = entities.DlProperty(location=['attributes'], _type=dict)
@@ -387,6 +389,19 @@ class Dpk(entities.DlEntity):
         if self._revisions is None:
             self._revisions = self._get_revision_pages()
         return self._revisions
+
+    def get_revisions(self, version: str):
+        """
+        Get the dpk with the specified version.
+
+        :param str version: the version of the dpk to get.
+        :return: Dpk
+
+        ** Example **
+        ..code-block:: python
+        dpk = dpk.get_revisions(version='1.0.0')
+        """
+        return self.dpks.get_revisions(dpk_id=self.base_id, version=version)
 
     @staticmethod
     def _protected_from_json(_json, client_api, project, is_fetched=True):

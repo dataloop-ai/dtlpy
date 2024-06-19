@@ -50,7 +50,7 @@ def step_impl(context, item_type):
     context.item = context.dataset.items.upload(local_path=context.item_path, overwrite=True)
 
     # wait for platform attributes
-    limit = 10 * 60
+    limit = 10 * 30
     stat = time.time()
     while True:
         time.sleep(3)

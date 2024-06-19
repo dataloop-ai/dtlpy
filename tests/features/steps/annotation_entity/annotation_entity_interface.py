@@ -62,3 +62,19 @@ def step_impl(context):
             with_text=context.with_text,
             alpha=context.alpha
         )
+
+
+@behave.when(u'I update annotation attributes with params')
+def step_impl(context):
+    params = dict()
+    for row in context.table:
+        params[row['key']] = row['value']
+
+    context.annotation.attributes = params
+    context.annotation = context.annotation.update(True)
+
+
+@behave.when(u'I update annotation attributes to empty dict')
+def step_impl(context):
+    context.annotation.attributes = {}
+    context.annotation = context.annotation.update(True)

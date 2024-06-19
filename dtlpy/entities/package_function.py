@@ -97,6 +97,8 @@ class FunctionIO(entities.DlEntity):
     name = entities.DlProperty(location=['name'], _type=str)
     actions = entities.DlProperty(location=['actions'], _type=list)
     description = entities.DlProperty(location=['description'], _type=str)
+    integration = entities.DlProperty(location=['integration'], _type=dict)
+    mandatory = entities.DlProperty(location=['mandatory'], _type=bool)
 
     def __repr__(self):
         # TODO need to move to DlEntity

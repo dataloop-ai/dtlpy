@@ -42,5 +42,5 @@ Feature: Pipeline ml node testing
     And i fetch the model by the name "clone_test-model-1"
     And I update the model variable in pipeline to reference to this model
     Then I wait "3"
-    Then the model service id updated
+    Then i have a model service
     Then models with the names "test-model-1,test-model-2" status "deployed"

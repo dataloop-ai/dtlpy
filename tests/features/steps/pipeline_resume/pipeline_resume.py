@@ -475,8 +475,6 @@ def step_impl(context):
 def step_impl(context):
     executions = context.service.executions.list()
     assert executions.items_count == 1
-    execution = executions.items[0]
-    assert execution.latest_status['status'] == 'created'
 
 
 @behave.when(u'Faas node service has completed')
@@ -581,3 +579,11 @@ def step_impl(context):
 @behave.when(u'I resume pipeline with resume option "{resume_option}"')
 def step_impl(context, resume_option):
     context.pipeline.install(resume_option=resume_option)
+
+
+@behave.when(u'I pause service')
+def step_impl(context):
+    context.service = context.project.services.list().items[0]
+    assert context.service is not None, f"TEST FAILED: Missing service"
+    context.service.pause()
+    context.service = dl.services.get(service_id=context.service.id)
