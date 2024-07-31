@@ -6,11 +6,13 @@ import logging
 import attr
 import copy
 import os
-
+import io
 from .. import repositories, entities, exceptions
 from .annotation import ViewAnnotationOptions, ExportVersion
 from ..services.api_client import ApiClient
 from ..services.api_client import client as client_api
+import json
+import requests
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -181,6 +183,18 @@ class Item(entities.BaseEntity):
     @property
     def model(self):
         return self._model
+
+    def __update_item_binary(self, _json):
+        binary = io.BytesIO()
+        binary.write(json.dumps(_json).encode())
+        binary.seek(0)
+        binary.name = self.name
+        resp = requests.post(url=client_api.environment + f'/items/{self.id}/revisions',
+                             headers=client_api.auth,
+                             files={'file': (binary.name, binary)}
+                             )
+        if not resp.ok:
+            raise ValueError(resp.text)
 
     @property
     def project(self):

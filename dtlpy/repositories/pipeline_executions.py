@@ -1,8 +1,12 @@
 import logging
+import time
+import numpy as np
+
 from .. import entities, repositories, exceptions, miscellaneous, services, _api_reference
 from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
+MAX_SLEEP_TIME = 30
 
 
 class PipelineExecutions:
@@ -379,3 +383,52 @@ class PipelineExecutions:
                                                message="cycleOptions key is missing in command response: {!r}"
                                                .format(response))
         return True
+
+    def wait(self,
+             pipeline_execution_id: str = None,
+             pipeline_execution: entities.PipelineExecution = None,
+             timeout: int = None,
+             backoff_factor=1):
+        """
+        Get Service execution object.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a service.
+
+        :param str pipeline_execution_id: pipeline execution id
+        :param str pipeline_execution: dl.PipelineExecution, optional. must input one of pipeline execution or pipeline_execution_id
+        :param int timeout: seconds to wait until TimeoutError is raised. if <=0 - wait until done - by default wait take the service timeout
+        :param float backoff_factor: A backoff factor to apply between attempts after the second try
+        :return: Service execution object
+        :rtype: dtlpy.entities.pipeline_execution.PipelineExecution
+
+        **Example**:
+
+        .. code-block:: python
+
+            pipeline.pipeline_executions.wait(pipeline_execution_id='pipeline_execution_id')
+        """
+        if pipeline_execution is None:
+            if pipeline_execution_id is None:
+                raise ValueError('Must input at least one: [pipeline_execution, pipeline_execution_id]')
+        else:
+            pipeline_execution_id = pipeline_execution.id
+        elapsed = 0
+        start = time.time()
+        if timeout is None or timeout <= 0:
+            timeout = np.inf
+
+        num_tries = 1
+        while elapsed < timeout:
+            pipeline_execution = self.get(pipeline_execution_id=pipeline_execution_id)
+            if not pipeline_execution.in_progress():
+                break
+            elapsed = time.time() - start
+            if elapsed >= timeout:
+                raise TimeoutError(
+                    f"Pipeline execution wait() function timed out. id: {pipeline_execution.id!r}, status: {pipeline_execution.status}.")
+            sleep_time = np.min([timeout - elapsed, backoff_factor * (2 ** num_tries), MAX_SLEEP_TIME])
+            num_tries += 1
+            logger.debug(
+                f"Pipeline execution {pipeline_execution.id!r} has been running for {elapsed:.2f}[s]. Sleeping for {sleep_time:.2f}[s]")
+            time.sleep(sleep_time)
+        return pipeline_execution

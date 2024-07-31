@@ -11,11 +11,16 @@ class FeatureSets:
     """
     URL = '/features/sets'
 
-    def __init__(self, client_api: ApiClient,
+    def __init__(self,
+                 client_api: ApiClient,
                  project_id: str = None,
-                 project: entities.Project = None):
+                 project: entities.Project = None,
+                 model_id: str = None,
+                 model: entities.Model = None):
         self._project = project
         self._project_id = project_id
+        self._model = model
+        self._model_id = model_id
         self._client_api = client_api
 
     ############
@@ -34,10 +39,22 @@ class FeatureSets:
         if self._project is None:
             raise exceptions.PlatformException(
                 error='2001',
-                message='Cannot perform action WITHOUT Project entity in Datasets repository.'
+                message='Cannot perform action WITHOUT Project entity in FeatureSets repository.'
                         ' Please checkout or set a project')
         assert isinstance(self._project, entities.Project)
         return self._project
+
+    @property
+    def model(self) -> entities.Model:
+        if self._model is None and self._model_id is not None:
+            # get from id
+            self._model = repositories.Models(client_api=self._client_api).get(model_id=self._model_id)
+        if self._model is None:
+            raise exceptions.PlatformException(
+                error='2001',
+                message='Cannot perform action WITHOUT Model entity in FeatureSets repository.')
+        assert isinstance(self._model, entities.Model)
+        return self._model
 
     ###########
     # methods #
@@ -132,6 +149,7 @@ class FeatureSets:
                set_type: str,
                entity_type: entities.FeatureEntityType,
                project_id: str = None,
+               model_id: set = None,
                org_id: str = None):
         """
         Create a new Feature Set
@@ -141,6 +159,7 @@ class FeatureSets:
         :param str set_type: string of the feature type: 2d, 3d, modelFC, TSNE,PCA,FFT
         :param entity_type: the entity that feature vector is linked to. Use the enum dl.FeatureEntityType
         :param str project_id: the ID of the project where feature set will be created
+        :param str model_id: the ID of the model that creates the vectors
         :param str org_id: the ID of the org where feature set will be created
         :return: Feature Set object
         """
@@ -154,6 +173,7 @@ class FeatureSets:
                    'size': size,
                    'type': set_type,
                    'project': project_id,
+                   'modelId': model_id,
                    'entityType': entity_type}
         if org_id is not None:
             payload['org'] = org_id

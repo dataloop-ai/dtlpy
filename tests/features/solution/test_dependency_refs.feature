@@ -17,6 +17,7 @@ Feature: DPK with dependencies
     Then I validate app dependencies have "usedBy" relation refs "only"
     When I uninstall the app
     Then I validate app dependencies not have "usedBy" relation refs
+    When I uninstall the app
 
   @DAT-69195
   Scenario: DPK with dependencies App clean-up refs cases - Uninstall and remove dpk

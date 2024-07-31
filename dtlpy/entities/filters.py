@@ -296,9 +296,9 @@ class Filters:
             self.join = dict()
         if 'on' not in self.join:
             if self.resource == FiltersResource.ITEM:
-                self.join['on'] = {'resource': FiltersResource.ANNOTATION, 'local': 'itemId', 'forigen': 'id'}
+                self.join['on'] = {'resource': FiltersResource.ANNOTATION.value, 'local': 'itemId', 'forigen': 'id'}
             else:
-                self.join['on'] = {'resource': FiltersResource.ITEM, 'local': 'id', 'forigen': 'itemId'}
+                self.join['on'] = {'resource': FiltersResource.ITEM.value, 'local': 'id', 'forigen': 'itemId'}
         if 'filter' not in self.join:
             self.join['filter'] = dict()
         join_method = '$' + method

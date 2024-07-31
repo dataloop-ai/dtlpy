@@ -23,6 +23,7 @@ Feature: App entity Install App
     When I install the app
     And I get service by name "hello"
     Then I validate service configuration in dpk is equal to service from app
+    And "service" has app scope
 
   @DAT-54655
   Scenario: Install a valid app

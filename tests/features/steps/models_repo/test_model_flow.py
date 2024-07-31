@@ -51,6 +51,29 @@ def step_impl(context, package_name, entry_point):
         }
 
 
+@behave.when(u'model should be with mltype "{mltype}"')
+@behave.then(u'model should be with mltype "{mltype}"')
+def step_impl(context, mltype):
+    assert context.model.metadata.get('system', {}).get(
+        'mlType').get('subType', {}) == mltype, f"TEST FAILED: model ml_type is {context.model.ml_type} and not {mltype}"
+
+
+@behave.then(u'model should have a new configration')
+def step_impl(context):
+    context.model = dl.models.get(model_id=context.model.id)
+    expected_config = {
+        'system_prompt': 'test',
+        'max_tokens': 100,
+        'temperature': 0.5
+    }
+    assert context.model.configuration['system_prompt'] == expected_config[
+        'system_prompt'], f"TEST FAILED: model configuration is not as expected, expected: {expected_config['system_prompt']}, got: {context.model.configuration['system_prompt']}"
+    assert context.model.configuration['max_tokens'] == expected_config[
+        'max_tokens'], f"TEST FAILED: model configuration is not as expected, expected: {expected_config['max_tokens']}, got: {context.model.configuration['max_tokens']}"
+    assert context.model.configuration['temperature'] == expected_config[
+        'temperature'], f"TEST FAILED: model configuration is not as expected, expected: {expected_config['temperature']}, got: {context.model.configuration['temperature']}"
+
+
 @behave.when(u'I create a model from package by the name of "{model_name}" with status "{status}" in index "{index}"')
 def step_impl(context, model_name, status, index):
     model = {
@@ -83,18 +106,21 @@ def step_impl(context, model_name):
 
 
 @behave.then(u'"{obj_entity}" has app scope')
+@behave.when(u'"{obj_entity}" has app scope')
 def step_impl(context, obj_entity):
     if not hasattr(context, obj_entity):
         raise AttributeError(f"Please make sure context has attr '{obj_entity}'")
 
+    dpk_base_id = context.dpk.base_id if context.dpk.base_id else context.published_dpk.base_id
+    dpk_version = context.dpk.version if context.dpk.version else context.published_dpk.version
     assert getattr(context, obj_entity).app, f"TEST FAILED: Expected to have 'app' attribute in context.{obj_entity}"
 
     assert getattr(context, obj_entity).app[
                'id'] == context.app.id, f"TEST FAILED: app id is not as expected, expected: {context.app.id}, got: {getattr(context, obj_entity).app['id']}"
     assert getattr(context, obj_entity).app[
-               'dpkId'] == context.dpk.base_id, f"TEST FAILED: dpk id is not as expected, expected: {context.dpk.base_id}, got: {getattr(context, obj_entity).app['dpkId']}"
+               'dpkId'] == dpk_base_id, f"TEST FAILED: dpk id is not as expected, expected: {dpk_base_id}, got: {getattr(context, obj_entity).app['dpkId']}"
     assert getattr(context, obj_entity).app[
-               'dpkVersion'] == context.dpk.version, f"TEST FAILED: dpk version is not as expected, expected: {context.dpk.version}, got: {getattr(context, obj_entity).app['dpkVersion']}"
+               'dpkVersion'] == dpk_version, f"TEST FAILED: dpk version is not as expected, expected: {dpk_version}, got: {getattr(context, obj_entity).app['dpkVersion']}"
     assert getattr(context, obj_entity).app[
                'dpkName'] == context.dpk.name, f"TEST FAILED: dpk name is not as expected, expected: {context.dpk.name}, got: {getattr(context, obj_entity).app['dpkName']}"
 

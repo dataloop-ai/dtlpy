@@ -110,7 +110,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
 
         :param local_path: `str` directory path in local FileSystem
         """
-        raise NotImplementedError("Please implement 'load' method in {}".format(self.__class__.__name__))
+        raise NotImplementedError("Please implement `load` method in {}".format(self.__class__.__name__))
 
     def save(self, local_path, **kwargs):
         """ saves configuration and weights locally
@@ -121,7 +121,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
 
         :param local_path: `str` directory path in local FileSystem
         """
-        raise NotImplementedError("Please implement 'save' method in {}".format(self.__class__.__name__))
+        raise NotImplementedError("Please implement `save` method in {}".format(self.__class__.__name__))
 
     def train(self, data_path, output_path, **kwargs):
         """
@@ -133,27 +133,27 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         :param data_path: `str` local File System path to where the data was downloaded and converted at
         :param output_path: `str` local File System path where to dump training mid-results (checkpoints, logs...)
         """
-        raise NotImplementedError("Please implement 'train' method in {}".format(self.__class__.__name__))
+        raise NotImplementedError("Please implement `train` method in {}".format(self.__class__.__name__))
 
     def predict(self, batch, **kwargs):
-        """ Model inference (predictions) on batch of images
+        """ Model inference (predictions) on batch of items
 
             Virtual method - need to implement
 
-        :param batch: `np.ndarray`
+        :param batch: output of the `prepare_item_func` func
         :return: `list[dl.AnnotationCollection]` each collection is per each image / item in the batch
         """
-        raise NotImplementedError("Please implement 'predict' method in {}".format(self.__class__.__name__))
+        raise NotImplementedError("Please implement `predict` method in {}".format(self.__class__.__name__))
 
-    def extract_features(self, batch, **kwargs):
-        """ Extract model features on batch of images
+    def embed(self, batch, **kwargs):
+        """ Extract model embeddings on batch of items
 
             Virtual method - need to implement
 
-        :param batch: `np.ndarray`
-        :return: `list[list]` each feature is per each image / item in the batch
+        :param batch: output of the `prepare_item_func` func
+        :return: `list[list]` a feature vector per each item in the batch
         """
-        raise NotImplementedError("Please implement 'extract_features' method in {}".format(self.__class__.__name__))
+        raise NotImplementedError("Please implement `embed` method in {}".format(self.__class__.__name__))
 
     def evaluate(self, model: entities.Model, dataset: entities.Dataset, filters: entities.Filters) -> entities.Model:
         """
@@ -187,7 +187,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         :param data_path: `str` local File System directory path where we already downloaded the data from dataloop platform
         :return:
         """
-        raise NotImplementedError("Please implement 'convert_from_dtlpy' method in {}".format(self.__class__.__name__))
+        raise NotImplementedError("Please implement `convert_from_dtlpy` method in {}".format(self.__class__.__name__))
 
     #################
     # DTLPY METHODS #
@@ -265,14 +265,26 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
                 self.logger.debug("Downloading subset {!r} of {}".format(subset,
                                                                          self.model_entity.dataset.name))
 
-                if self.configuration.get("include_model_annotations", False):
-                    annotation_filters = None
-                else:
+                if self.model_entity.output_type is not None:
+                    if self.model_entity.output_type in [entities.AnnotationType.SEGMENTATION,
+                                                         entities.AnnotationType.POLYGON]:
+                        model_output_types = [entities.AnnotationType.SEGMENTATION, entities.AnnotationType.POLYGON]
+                    else:
+                        model_output_types = [self.model_entity.output_type]
                     annotation_filters = entities.Filters(
+                        field=entities.FiltersKnownFields.TYPE,
+                        values=model_output_types,
+                        resource=entities.FiltersResource.ANNOTATION,
+                        operator=entities.FiltersOperations.IN
+                    )
+                else:
+                    annotation_filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION)
+
+                if not self.configuration.get("include_model_annotations", False):
+                    annotation_filters.add(
                         field="metadata.system.model.name",
                         values=False,
-                        operator=entities.FiltersOperations.EXISTS,
-                        resource=entities.FiltersResource.ANNOTATION
+                        operator=entities.FiltersOperations.EXISTS
                     )
 
                 ret_list = dataset.items.download(filters=filters,
@@ -396,10 +408,10 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         pool.shutdown()
         return items, annotations
 
-    @entities.Package.decorators.function(display_name='Extract Feature',
+    @entities.Package.decorators.function(display_name='Embed Items',
                                           inputs={'items': 'Item[]'},
                                           outputs={'items': 'Item[]', 'features': '[]'})
-    def extract_item_features(self, items: list, upload_features=True, batch_size=None, **kwargs):
+    def embed_items(self, items: list, upload_features=True, batch_size=None, **kwargs):
         """
         Extract feature from an input list of items (or single) and return the items and the feature vector.
 
@@ -414,17 +426,18 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         input_type = self.model_entity.input_type
         self.logger.debug(
             "Predicting {} items, using batch size {}. input type: {}".format(len(items), batch_size, input_type))
-        pool = ThreadPoolExecutor(max_workers=16)
 
-        vectors = list()
-        feature_set_name = self.configuration.get('featureSetName', self.model_entity.name)
-        try:
-            feature_set = self.model_entity.project.feature_sets.get(feature_set_name)
-            logger.info(f'Feature Set found! name: {feature_set_name}')
-        except exceptions.NotFound as e:
+        # Search for existing feature set for this model id
+        filters = entities.Filters(field='modelId',
+                                   values=self.model_entity.id,
+                                   resource=entities.FiltersResource.FEATURE_SET)
+        pages = self.model_entity.project.feature_sets.list(filters)
+        if pages.items_count == 0:
+            feature_set_name = self.configuration.get('featureSetName', self.model_entity.name)
             logger.info('Feature Set not found. creating... ')
             feature_set = self.model_entity.project.feature_sets.create(name=feature_set_name,
                                                                         entity_type=entities.FeatureEntityType.ITEM,
+                                                                        model_id=self.model_entity.id,
                                                                         project_id=self.model_entity.project_id,
                                                                         set_type=self.model_entity.name,
                                                                         size=self.configuration.get('embeddings_size',
@@ -433,10 +446,16 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
                 self.model_entity.configuration['featureSetName'] = feature_set_name
                 self.model_entity.update()
             logger.info(f'Feature Set created! name: {feature_set.name}, id: {feature_set.id}')
+        elif pages.items_count > 1:
+            raise ValueError(
+                f'More than one feature set for model. model_id: {self.model_entity.id}, feature_sets_ids: {[f.id for f in pages.all()]}')
+        else:
+            feature_set = pages.items[0]
+            logger.info(f'Feature Set found! name: {feature_set.name}, id: {feature_set.id}')
 
-        feature_set_id = feature_set.id
-        project_id = self.model_entity.project_id
-
+        # upload the feature vectors
+        pool = ThreadPoolExecutor(max_workers=16)
+        vectors = list()
         for i_batch in tqdm.tqdm(range(0, len(items), batch_size),
                                  desc='predicting',
                                  unit='bt',
@@ -444,23 +463,59 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
                                  file=sys.stdout):
             batch_items = items[i_batch: i_batch + batch_size]
             batch = list(pool.map(self.prepare_item_func, batch_items))
-            batch_vectors = self.extract_features(batch, **kwargs)
-            batch_features = list()
+            batch_vectors = self.embed(batch, **kwargs)
+            vectors.extend(batch_vectors)
             if upload_features is True:
                 self.logger.debug(
                     "Uploading items' feature vectors for model {!r}.".format(self.model_entity.name))
                 try:
-                    batch_features = list(pool.map(partial(self._upload_model_features,
-                                                           feature_set_id,
-                                                           project_id),
-                                                   batch_items,
-                                                   batch_vectors))
+                    _ = list(pool.map(partial(self._upload_model_features,
+                                              feature_set.id,
+                                              self.model_entity.project_id),
+                                      batch_items,
+                                      batch_vectors))
                 except Exception as err:
                     self.logger.exception("Failed to upload feature vectors to items.")
 
-            vectors.extend(batch_features)
         pool.shutdown()
         return items, vectors
+
+    @entities.Package.decorators.function(display_name='Embed Dataset with DQL',
+                                          inputs={'dataset': 'Dataset',
+                                                  'filters': 'Json'})
+    def embed_dataset(self,
+                      dataset: entities.Dataset,
+                      filters: entities.Filters = None,
+                      upload_features=True,
+                      batch_size=None,
+                      **kwargs):
+        """
+        Extract feature from all items given
+
+        :param dataset: Dataset entity to predict
+        :param filters: Filters entity for a filtering before predicting
+        :param upload_features: `bool` uploads the features back to the given items
+        :param batch_size: `int` size of batch to run a single inference
+
+        :return: `bool` indicating if the prediction process completed successfully
+        """
+        if batch_size is None:
+            batch_size = self.configuration.get('batch_size', 4)
+
+        self.logger.debug("Creating embedings for dataset (name:{}, id:{}, using batch size {}".format(dataset.name,
+                                                                                                       dataset.id,
+                                                                                                       batch_size))
+        if not filters:
+            filters = entities.Filters()
+        if filters is not None and isinstance(filters, dict):
+            filters = entities.Filters(custom_filter=filters)
+        pages = dataset.items.list(filters=filters, page_size=batch_size)
+        items = [item for page in pages for item in page]
+        self.embed_items(items=items,
+                         upload_features=upload_features,
+                         batch_size=batch_size,
+                         **kwargs)
+        return True
 
     @entities.Package.decorators.function(display_name='Predict Dataset with DQL',
                                           inputs={'dataset': 'Dataset',
@@ -481,9 +536,12 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         :param cleanup: `bool` if set removes existing predictions with the same package-model name (default: False)
         :param batch_size: `int` size of batch to run a single inference
 
-        :return: `List[dl.AnnotationCollection]` where all annotation in the collection are of type package.output_type
-                                                 and has prediction fields (model_info)
+        :return: `bool` indicating if the prediction process completed successfully
         """
+
+        if batch_size is None:
+            batch_size = self.configuration.get('batch_size', 4)
+
         self.logger.debug("Predicting dataset (name:{}, id:{}, using batch size {}".format(dataset.name,
                                                                                            dataset.id,
                                                                                            batch_size))
@@ -492,9 +550,9 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         if filters is not None and isinstance(filters, dict):
             filters = entities.Filters(custom_filter=filters)
         pages = dataset.items.list(filters=filters, page_size=batch_size)
-        items = [item for item in pages.all() if item.type == 'file']
+        items = [item for page in pages for item in page]
         self.predict_items(items=items,
-                           with_upload=with_upload,
+                           upload_annotations=with_upload,
                            cleanup=cleanup,
                            batch_size=batch_size,
                            **kwargs)

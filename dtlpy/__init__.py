@@ -35,7 +35,8 @@ if len(logger.handlers) == 0:
         datefmt="%Y-%m-%d %H:%M:%S",
     )
     file_formatter = logging.Formatter(
-        fmt="[%(asctime)s.%(msecs)03d][%(threadName)s][%(levelname).3s][%(name)s:v" + __version__ + "][%(relativepath)-s:%(lineno)-d](%(funcName)-s): %(message)s",
+        fmt="[%(asctime)s.%(msecs)03d][%(threadName)s][%(levelname).3s][%(name)s:v" +
+            __version__ + "][%(relativepath)-s:%(lineno)-d](%(funcName)-s): %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
     package_path = os.path.dirname(__file__)
@@ -80,7 +81,8 @@ from .entities import (
     InstanceCatalog, PackageInputType, ServiceType, ServiceModeType,
     PackageSlot, SlotPostAction, SlotPostActionType, SlotDisplayScope, SlotDisplayScopeResource, UiBindingPanel,
     # roberto
-    DatasetSubsetType, ModelStatus, PlotSample, ArtifactType, Artifact, ItemArtifact, LinkArtifact, LocalArtifact, EntityScopeLevel,
+    DatasetSubsetType, ModelStatus, PlotSample, ArtifactType, Artifact, ItemArtifact, LinkArtifact, LocalArtifact,
+    EntityScopeLevel,
     # features
     FeatureEntityType, Feature, FeatureSet,
     #
@@ -245,6 +247,7 @@ class LoggingLevel:
 #################
 #     ENUMS     #
 #################
+CallbackEvent = client_api.callbacks.CallbackEvent
 LOGGING_LEVEL_DEBUG = LoggingLevel.DEBUG
 LOGGING_LEVEL_WARNING = LoggingLevel.WARNING
 LOGGING_LEVEL_CRITICAL = LoggingLevel.CRITICAL

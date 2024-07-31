@@ -13,6 +13,7 @@ import logging
 import asyncio
 import certifi
 import base64
+import enum
 import time
 import tqdm
 import json
@@ -71,6 +72,33 @@ class PlatformError(Exception):
         elif hasattr(resp, 'text'):
             msg += '<Reason [{}]>'.format(format_message(resp.text))
         super().__init__(msg)
+
+
+
+
+class Callbacks:
+    def __init__(self):
+        self._callbacks = {}
+
+    class CallbackEvent(str, enum.Enum):
+        DATASET_EXPORT = 'datasetExport'
+        ITEMS_UPLOAD = 'itemUpload'
+
+    def add(self, event, func):
+
+        if not callable(func):
+            raise ValueError(f"The provided callback for {event} is not callable")
+        if event not in list(self.CallbackEvent):
+            raise ValueError(f"Unknown event: {event!r}, allowed events are: {list(self.CallbackEvent)}")
+        self._callbacks[event] = func
+
+    def get(self, name):
+        return self._callbacks.get(name)
+
+    def run_on_event(self, event, context, progress):
+        callback = self.get(event)
+        if callback is not None:
+            callback(progress=progress, context=context)
 
 
 class Verbose:
@@ -403,6 +431,7 @@ class ApiClient:
         self._environments = None
         self._environment = None
         self._verbose = None
+        self._callbacks = None
         self._cache_state = None
         self._attributes_mode = None
         self._platform_settings = None
@@ -691,6 +720,21 @@ class ApiClient:
         return self._sdk_cache
 
     @property
+    def callbacks(self):
+        if self._callbacks is None:
+            self._callbacks = Callbacks()
+        assert isinstance(self._callbacks, Callbacks)
+        return self._callbacks
+
+    def add_callback(self, event, func):
+        """
+        function to add callback to the client
+        :param event: dl.CallbackEvent enum, name of the callback
+        :param func: function to call with 2 arguments: progress and context
+        """
+        self.callbacks.add(event, func)
+
+    @property
     def token(self):
         _token = self._token
         if _token is None:
@@ -790,7 +834,7 @@ class ApiClient:
             if internal_requests_url is not None:
                 self.__gate_url_for_requests = internal_requests_url
         return self.__gate_url_for_requests
-        
+
     def export_curl_request(self, req_type, path, headers=None, json_req=None, files=None, data=None):
         curl, prepared = self._build_gen_request(req_type=req_type,
                                                  path=path,
@@ -1128,7 +1172,7 @@ class ApiClient:
                 def callback(bytes_read):
                     pass
 
-        timeout = aiohttp.ClientTimeout(total=0)
+        timeout = aiohttp.ClientTimeout(total=2 * 60)
         async with aiohttp.ClientSession(headers=headers, timeout=timeout) as session:
             try:
                 form = aiohttp.FormData({})
@@ -1491,7 +1535,13 @@ class ApiClient:
         :param token: a valid token
         :return:
         """
-        self.token = token  # this will also set the refresh_token to None
+        current_token = self.token
+        self.token = token
+        success, response = self.gen_request(req_type='get', path='/users/me')
+        if not response.ok:
+            # switch back to before
+            self.token = current_token
+            raise ValueError(f"Invalid API key provided. Error: {response.text}")
 
     def login_api_key(self, api_key):
         """
@@ -1499,7 +1549,13 @@ class ApiClient:
         :param api_key: a valid API key
         :return:
         """
+        current_token = self.token
         self.token = api_key
+        success, response = self.gen_request(req_type='get', path='/users/me')
+        if not response.ok:
+            # switch back to before
+            self.token = current_token
+            raise ValueError(f"Invalid API key provided. Error: {response.text}")
 
     @property
     def login_domain(self):

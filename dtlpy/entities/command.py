@@ -141,7 +141,7 @@ class Command(entities.BaseEntity):
                                entities.CommandsStatus.FINALIZING,
                                entities.CommandsStatus.IN_PROGRESS]
 
-    def wait(self, timeout=0, step=None,  backoff_factor=1):
+    def wait(self, timeout=0, step=None, backoff_factor=1):
         """
         Wait for Command to finish
 
@@ -157,4 +157,5 @@ class Command(entities.BaseEntity):
                                   timeout=timeout,
                                   step=step,
                                   url=self.url,
-                                  backoff_factor=backoff_factor)
+                                  backoff_factor=backoff_factor
+                                  )

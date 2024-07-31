@@ -87,17 +87,25 @@ class Commands:
         :param float backoff_factor: A backoff factor to apply between attempts after the second try
         :return: Command  object
         """
+
         elapsed = 0
         start = time.time()
         if timeout is None or timeout <= 0:
             timeout = np.inf
 
         command = None
-        pbar = tqdm.tqdm(total=100, disable=self._client_api.verbose.disable_progress_bar,
-                         file=sys.stdout, desc='Command Progress')
+        pbar = tqdm.tqdm(total=100,
+                         disable=self._client_api.verbose.disable_progress_bar,
+                         file=sys.stdout,
+                         desc='Command Progress')
         num_tries = 1
         while elapsed < timeout:
             command = self.get(command_id=command_id, url=url)
+            if command.type == 'ExportDatasetAsJson':
+                self._client_api.callbacks.run_on_event(event=self._client_api.callbacks.CallbackEvent.DATASET_EXPORT,
+                                                        context=command.spec,
+                                                        progress=command.progress)
+
             pbar.update(command.progress - pbar.n)
             if not command.in_progress():
                 break

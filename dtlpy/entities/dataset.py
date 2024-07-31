@@ -18,6 +18,11 @@ class IndexDriver(str, Enum):
     V2 = "v2"
 
 
+class ExportType(str, Enum):
+    JSON = "json"
+    ZIP = "zip"
+
+
 class ExpirationOptions:
     """
     ExpirationOptions object
@@ -58,7 +63,6 @@ class Dataset(entities.BaseEntity):
     items_count = attr.ib()
     metadata = attr.ib(repr=False)
     directoryTree = attr.ib(repr=False)
-    export = attr.ib(repr=False)
     expiration_options = attr.ib()
     index_driver = attr.ib()
     enable_sync_with_cloned = attr.ib(repr=False)
@@ -165,7 +169,6 @@ class Dataset(entities.BaseEntity):
                    projects=projects,
                    creator=_json.get('creator', None),
                    items_url=_json.get('items', None),
-                   export=_json.get('export', None),
                    driver=_json.get('driver', None),
                    name=_json.get('name', None),
                    url=_json.get('url', None),
@@ -652,6 +655,53 @@ class Dataset(entities.BaseEntity):
             alpha=alpha,
             export_version=export_version
         )
+
+    def export(self,
+               local_path=None,
+               filters=None,
+               annotation_filters=None,
+               feature_vector_filters=None,
+               include_feature_vectors: bool = False,
+               include_annotations: bool = False,
+               export_type: ExportType = ExportType.JSON,
+               timeout: int = 0):
+        """
+        Export dataset items and annotations.
+
+        **Prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        You must provide at least ONE of the following params: dataset, dataset_name, dataset_id.
+
+        :param str local_path: The local path to save the exported dataset
+        :param Union[dict, dtlpy.entities.filters.Filters] filters: Filters entity or a query dictionary
+        :param dtlpy.entities.filters.Filters annotation_filters: Filters entity
+        :param dtlpy.entities.filters.Filters feature_vector_filters: Filters entity
+        :param bool include_feature_vectors: Include item feature vectors in the export
+        :param bool include_annotations: Include item annotations in the export
+        :param entities.ExportType export_type: Type of export ('json' or 'zip')
+        :param int timeout: Maximum time in seconds to wait for the export to complete
+        :return: Exported item
+        :rtype: dtlpy.entities.item.Item
+
+        **Example**:
+
+        .. code-block:: python
+
+            export_item = dataset.export(filters=filters,
+                                         include_feature_vectors=True,
+                                         include_annotations=True,
+                                         export_type=dl.ExportType.JSON)
+        """
+
+        return self.datasets.export(dataset=self,
+                                    local_path=local_path,
+                                    filters=filters,
+                                    annotation_filters=annotation_filters,
+                                    feature_vector_filters=feature_vector_filters,
+                                    include_feature_vectors=include_feature_vectors,
+                                    include_annotations=include_annotations,
+                                    export_type=export_type,
+                                    timeout=timeout)
 
     def upload_annotations(self,
                            local_path,

@@ -31,6 +31,7 @@ class FeatureSet(entities.BaseEntity):
     set_type = attr.ib()
     entity_type = attr.ib()
     project_id = attr.ib()
+    model_id = attr.ib()
     org_id = attr.ib()
 
     # sdk
@@ -100,6 +101,7 @@ class FeatureSet(entities.BaseEntity):
             size=_json.get('size', None),
             url=_json.get('url', None),
             project_id=_json.get('project', None),
+            model_id=_json.get('modelId', None),
             created_at=_json.get('createdAt', None),
             creator=_json.get('creator', None),
             updated_by=_json.get('updatedBy', None),
@@ -121,6 +123,7 @@ class FeatureSet(entities.BaseEntity):
                  'type': self.set_type,
                  'entityType': self.entity_type,
                  'project': self.project_id,
+                 'modelId': self.model_id,
                  'creator': self.creator,
                  'createdAt': self.created_at,
                  'updatedBy': self.updated_by,

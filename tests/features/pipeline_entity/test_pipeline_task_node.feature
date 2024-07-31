@@ -80,3 +80,21 @@ Feature: Pipeline entity method testing - Task node execution
     And I get task by pipeline task node
     And I update node name to "New Name"
     Then I validate task name changed
+
+
+  @DAT-73857
+  @pipelines.delete
+  Scenario: Pipeline with many to one task node
+    Given I create a dataset with a random name
+    When I upload the file in path "assets_split/items_upload/0000000162.jpg" with remote name "1.jpg"
+    When I upload the file in path "assets_split/items_upload/0000000162.jpg" with remote name "2.jpg"
+    When I upload the file in path "assets_split/items_upload/0000000162.jpg" with remote name "3.jpg"
+    When I upload the file in path "assets_split/items_upload/0000000162.jpg" with remote name "4.jpg"
+    When I upload the file in path "assets_split/items_upload/0000000162.jpg" with remote name "5.jpg"
+    Given a pipeline with task node that receives many to one input
+    Given I install pipeline in context
+    Given I execute the pipeline on item
+    When I set status on some of the input items
+    Then cycle should be inProgress and task node should be inProgress
+    When I set status on all input items
+    Then cycle should be completed and task node should be completed

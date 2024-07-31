@@ -4,10 +4,12 @@ Datasets Repository
 
 import os
 import sys
+import time
 import copy
 import tqdm
 import logging
-from urllib.parse import urlencode
+import json
+from typing import Union
 
 from .. import entities, repositories, miscellaneous, exceptions, services, PlatformException, _api_reference
 from ..services.api_client import ApiClient
@@ -110,6 +112,70 @@ class Datasets:
         else:
             dataset = datasets[0]
         return dataset
+
+    def _resolve_dataset_id(self, dataset, dataset_name, dataset_id):
+        if dataset is None and dataset_name is None and dataset_id is None:
+            raise ValueError('Must provide dataset, dataset name or dataset id')
+        if dataset_id is None:
+            if dataset is None:
+                dataset = self.get(dataset_name=dataset_name)
+            dataset_id = dataset.id
+        return dataset_id
+
+    @staticmethod
+    def _build_payload(filters, include_feature_vectors, include_annotations, export_type, annotation_filters,
+                       feature_vector_filters):
+        valid_list = [e.value for e in entities.ExportType]
+        valid_types = ', '.join(valid_list)
+        if export_type not in ['json', 'zip']:
+            raise ValueError('export_type must be one of the following: {}'.format(valid_types))
+        payload = {'exportType': export_type}
+        if filters is None:
+            filters = entities.Filters()
+
+        if isinstance(filters, entities.Filters):
+            payload['itemsQuery'] = {'filter': filters.prepare()['filter'], 'join': filters.prepare().get("join", {})}
+        elif isinstance(filters, dict):
+            payload['itemsQuery'] = filters
+        else:
+            raise exceptions.BadRequest(message='filters must be of type dict or Filters', status_code=500)
+
+        payload['itemsVectorQuery'] = {}
+        if include_feature_vectors:
+            payload['includeItemVectors'] = True
+            payload['itemsVectorQuery']['select'] = {"datasetId": 1, 'featureSetId': 1, 'value': 1}
+
+        if feature_vector_filters is not None:
+            payload['itemsVectorQuery']['filter'] = feature_vector_filters.prepare()['filter']
+
+        payload['annotations'] = {"include": include_annotations, "convertSemantic": False}
+
+        if annotation_filters is not None:
+            payload['annotationsQuery'] = annotation_filters.prepare()['filter']
+            payload['annotations']['filter'] = True
+
+        return payload
+
+    def _download_exported_item(self, item_id, export_type, local_path=None):
+        export_item = repositories.Items(client_api=self._client_api).get(item_id=item_id)
+        export_item_path = export_item.download(local_path=local_path)
+
+        if export_type == entities.ExportType.ZIP:
+            # unzipping annotations to directory
+            if isinstance(export_item_path, list) or not os.path.isfile(export_item_path):
+                raise exceptions.PlatformException(
+                    error='404',
+                    message='error downloading annotation zip file. see above for more information. item id: {!r}'.format(
+                        export_item.id))
+            try:
+                miscellaneous.Zipping.unzip_directory(zip_filename=export_item_path,
+                                                      to_directory=local_path)
+            except Exception as e:
+                logger.warning("Failed to extract zip file error: {}".format(e))
+            finally:
+                # cleanup
+                if isinstance(export_item_path, str) and os.path.isfile(export_item_path):
+                    os.remove(export_item_path)
 
     @property
     def platform_url(self):
@@ -425,12 +491,7 @@ class Datasets:
             directory_tree = dataset.directory_tree
             directory_tree = project.datasets.directory_tree(dataset='dataset_entity')
         """
-        if dataset is None and dataset_name is None and dataset_id is None:
-            raise exceptions.PlatformException('400', 'Must provide dataset, dataset name or dataset id')
-        if dataset_id is None:
-            if dataset is None:
-                dataset = self.get(dataset_name=dataset_name)
-            dataset_id = dataset.id
+        dataset_id = self._resolve_dataset_id(dataset, dataset_name, dataset_id)
 
         url_path = '/datasets/{}/directoryTree'.format(dataset_id)
 
@@ -518,6 +579,72 @@ class Datasets:
                                                message="returnedModelId key is missing in command response: {!r}"
                                                .format(response))
         return self.get(dataset_id=command.spec['returnedModelId'])
+
+    @_api_reference.add(path='/datasets/{id}/export', method='post')
+    def export(self,
+               dataset: entities.Dataset = None,
+               dataset_name: str = None,
+               dataset_id: str = None,
+               local_path: str = None,
+               filters: Union[dict, entities.Filters] = None,
+               annotation_filters: entities.Filters = None,
+               feature_vector_filters: entities.Filters = None,
+               include_feature_vectors: bool = False,
+               include_annotations: bool = False,
+               export_type: entities.ExportType = entities.ExportType.JSON,
+               timeout: int = 0):
+        """
+        Export dataset items and annotations.
+
+        **Prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        You must provide at least ONE of the following params: dataset, dataset_name, dataset_id.
+
+        :param dtlpy.entities.dataset.Dataset dataset: Dataset object
+        :param str dataset_name: The name of the dataset
+        :param str dataset_id: The ID of the dataset
+        :param str local_path: Local path to save the exported dataset 
+        :param Union[dict, dtlpy.entities.filters.Filters] filters: Filters entity or a query dictionary
+        :param dtlpy.entities.filters.Filters annotation_filters: Filters entity to filter annotations for export       
+        :param dtlpy.entities.filters.Filters feature_vector_filters: Filters entity to filter feature vectors for export
+        :param bool include_feature_vectors: Include item feature vectors in the export
+        :param bool include_annotations: Include item annotations in the export
+        :param entities.ExportType export_type: Type of export ('json' or 'zip')
+        :param int timeout: Maximum time in seconds to wait for the export to complete
+        :return: Exported item
+        :rtype: dtlpy.entities.item.Item
+
+        **Example**:
+
+        .. code-block:: python
+
+            export_item = project.datasets.export(dataset_id='dataset_id',
+                                                  filters=filters,
+                                                  include_feature_vectors=True,
+                                                  include_annotations=True,
+                                                  export_type=dl.ExportType.JSON)
+        """
+        dataset_id = self._resolve_dataset_id(dataset, dataset_name, dataset_id)
+        payload = self._build_payload(filters, include_feature_vectors, include_annotations, export_type,
+                                      annotation_filters, feature_vector_filters)
+
+        success, response = self._client_api.gen_request(req_type='post', path=f'/datasets/{dataset_id}/export',
+                                                         json_req=payload)
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        command = entities.Command.from_json(_json=response.json(),
+                                             client_api=self._client_api)
+
+        time.sleep(2)  # as the command have wrong progress in the beginning
+        command = command.wait(timeout=timeout)
+        if 'outputItemId' not in command.spec:
+            raise exceptions.PlatformException(
+                error='400',
+                message="outputItemId key is missing in command response: {}".format(response))
+        item_id = command.spec['outputItemId']
+        self._download_exported_item(item_id=item_id, export_type=export_type, local_path=local_path)
+        return local_path
 
     @_api_reference.add(path='/datasets/merge', method='post')
     def merge(self,
@@ -769,7 +896,7 @@ class Datasets:
         Download dataset's annotations by filters.
 
         You may filter the dataset both for items and for annotations and download annotations.
-        
+
         Optional -- download annotations as: mask, instance, image mask of the item.
 
         **Prerequisites**: You must be in the role of an *owner* or *developer*.
@@ -917,9 +1044,8 @@ class Datasets:
                            ):
         """
         Upload annotations to dataset. 
-        
-        Example for remote_root_path: If the item filepath is a/b/item and
-        remote_root_path is /a the start folder will be b instead of a
+
+        Example for remote_root_path: If the item filepath is "/a/b/item" and remote_root_path is "/a" - the start folder will be b instead of a
 
         **Prerequisites**: You must have a dataset with items that are related to the annotations. The relationship between the dataset and annotations is shown in the name. You must be in the role of an *owner* or *developer*.
 

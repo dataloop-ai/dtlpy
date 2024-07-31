@@ -256,6 +256,11 @@ def after_tag(context, tag):
             use_fixture(drivers_delete, context)
         except Exception:
             logging.exception('Failed to delete driver')
+    elif tag == 'models.delete':
+        try:
+            use_fixture(models_delete, context)
+        except Exception:
+            logging.exception('Failed to delete model')
     elif tag == 'setenv.reset':
         try:
             use_fixture(reset_setenv, context)
@@ -456,3 +461,27 @@ def print_feature_filename(context, feature):
     p_stream = StreamOpener.ensure_stream_with_encoder(stream)
     p_stream.write(f"Feature Finished : {feature.filename.split('/')[-1]}\n")
     p_stream.write(f"Status: {str(feature.status).split('.')[-1]} - Duration: {feature.duration:.2f} seconds\n")
+
+
+@fixture
+def models_delete(context):
+    all_deleted = True
+    if hasattr(context, 'to_delete_model_ids'):
+        for model_id in context.to_delete_model_ids:
+            try:
+                context.project.models.delete(model_id=model_id)
+            except context.dl.exceptions.NotFound:
+                pass
+            except:
+                all_deleted = False
+                logging.exception('Failed deleting model: {}'.format(model_id))
+
+    for model in context.project.models.list().all():
+        try:
+            model.delete()
+        except context.dl.exceptions.NotFound:
+            pass
+        except:
+            all_deleted = False
+            logging.exception('Failed deleting model: {}'.format(model.id))
+    assert all_deleted

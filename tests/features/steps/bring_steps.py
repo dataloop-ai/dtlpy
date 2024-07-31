@@ -197,6 +197,7 @@ from tests.features.steps.pipeline_entity import test_pipeline_pulling_task
 from tests.features.steps.pipeline_entity import test_pipeline_actions
 from tests.features.steps.pipeline_entity import test_pipeline_install
 from tests.features.steps.pipeline_entity import test_pipeline_connectors
+from tests.features.steps.pipeline_entity import test_pipeline_task_node
 
 from tests.features.steps.documentation_tests import test_projects_docs
 from tests.features.steps.documentation_tests import test_contributor_docs

@@ -668,7 +668,7 @@ class Models:
         :param item_ids: a list of item id to run the prediction.
         :return:
         """
-        if len(model.metadata['system']['deploy']['services']) == 0:
+        if len(model.metadata['system'].get('deploy', {}).get('services', [])) == 0:
             # no services for model
             raise ValueError("Model doesnt have any associated services. Need to deploy before predicting")
         payload = {'input': {'itemIds': item_ids},

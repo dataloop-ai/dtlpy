@@ -876,6 +876,8 @@ pipelines:
             - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - python tests/test_runner.py
+          artifacts:
+            - tests/reports/**
 
     custom-variables:
       - variables:

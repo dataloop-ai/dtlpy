@@ -246,6 +246,13 @@ def generate_pipeline_json(context, pipeline_json):
         node['dpkName'] = context.dpk.name
         node['appName'] = context.dpk.display_name
 
+    code_nodes = [node for node in pipeline_json.get('nodes', []) if node['type'] == 'code']
+    for node in code_nodes:
+        if node.get('metadata'):
+            if node['metadata'].get('serviceConfig'):
+                if node['metadata']['serviceConfig'].get('versions'):
+                    node['metadata']['serviceConfig']['versions']['dtlpy'] = context.dl.__version__
+
     variables = pipeline_json.get('variables', []) if pipeline_json.get('variables', []) else []
     for variable in variables:
         if variable['type'] == "Model" and hasattr(context, "model"):

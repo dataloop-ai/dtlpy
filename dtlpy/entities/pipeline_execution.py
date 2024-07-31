@@ -11,6 +11,16 @@ from ..services.api_client import ApiClient
 logger = logging.getLogger(name='dtlpy')
 
 
+class PipelineExecutionStatus(str, Enum):
+    PENDING = "pending"
+    IN_PROGRESS = "in-progress"
+    FAILED = "failed"
+    SUCCESS = "success"
+    QUEUE = "queue"
+    TERMINATED = "terminated"
+    RERUN = "rerun"
+
+
 class CycleRerunMethod(str, Enum):
     START_FROM_NODES = 'startFromNodes',
     START_FROM_FAILED_EXECUTIONS = 'startFromFailedExecutions',
@@ -254,3 +264,16 @@ class PipelineExecution(entities.BaseEntity):
             filters=filters,
             wait=wait
         )
+
+    def wait(self):
+        """
+        Wait for pipeline execution
+
+        :return: Pipeline execution object
+        """
+        return self.pipeline_executions.wait(pipeline_execution_id=self.id)
+
+    def in_progress(self):
+        return self.status not in [PipelineExecutionStatus.FAILED,
+                                   PipelineExecutionStatus.SUCCESS,
+                                   PipelineExecutionStatus.TERMINATED]

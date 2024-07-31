@@ -23,7 +23,7 @@ Feature: Test App get
     @DAT-46452
     Scenario: Get app with invalid id
         When I get the app with invalid id
-        Then I should get an exception error='500'
+        Then I should get an exception error='404'
 
     @testrail-C4524925
     @DAT-46452

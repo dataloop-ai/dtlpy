@@ -24,6 +24,11 @@ def step_impl(context, comp_name, filed, val):
             comp.runtime[filed] = val
 
 
+@behave.when(u'i update dpk attribute "{filed}" to "{val}"')
+def step_impl(context, filed, val):
+    context.dpk.attributes[filed] = val
+
+
 @behave.then(u'I have the same dpk as the published dpk')
 def step_impl(context):
     to_json = context.dpk.to_json()

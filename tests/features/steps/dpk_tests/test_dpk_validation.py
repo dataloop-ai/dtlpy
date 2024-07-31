@@ -2,11 +2,13 @@ import behave
 import dtlpy as dl
 
 
-def recusive_dependencies(context, dpk, dependencies: list = []):
+def recusive_dependencies(context, dpk, dependencies: list = None):
+    if not dependencies:
+        dependencies = []
     dependencies.append(dpk.name)
     if dpk.dependencies:
         for dep in dpk.dependencies:
-            dpk = context.project.dpks.get(dpk_name=dep['name'])
+            dpk = context.dl.dpks.get(dpk_name=dep['name'])
             recusive_dependencies(context, dpk, dependencies)
     return dependencies
 
@@ -77,8 +79,8 @@ def step_impl(context, ref_relation):
         try:
             filters = dl.Filters(resource='apps')
             filters.add(field='dpkName', values=app_name['name'])
-            app = context.project.apps.list(filters=filters).items[0]
-            for refs in app.metadata['system']['refs']:
+            context.app = context.project.apps.list(filters=filters).items[0]
+            for refs in context.app.metadata['system']['refs']:
                 if refs['type'] == 'app' and refs['id'] == context.app.id and refs['metadata']['relation'] == ref_relation:
                     assert False, f"App '{app_name['name']}' Should not have '{ref_relation}' field"
 

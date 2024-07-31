@@ -32,6 +32,7 @@ Feature: Pipeline entity method testing actions outputs
 
     @pipelines.delete
     @testrail-C4533387
+    @DAT-48153
     Scenario: Pipeline with code node - Null input shouldn't failed the cycle pipeline
         Given I create pipeline from json in path "pipelines_json/variable_input_null.json"
         And I install pipeline in context

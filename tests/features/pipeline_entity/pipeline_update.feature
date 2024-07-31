@@ -20,6 +20,7 @@ Feature: Pipeline update testing
       | position | (2,2) |
     When I add and connect all nodes in list to pipeline entity
     And I install pipeline in context
+    And I pause pipeline in context
     And I update pipeline description
     Then Pipeline received equals Pipeline changed except for "description"
     Then "update_pipeline" has updatedBy field

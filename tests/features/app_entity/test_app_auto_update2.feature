@@ -5,6 +5,7 @@ Feature: Test app umbrella refs - Auto update Pipeline nodes
     And I create a project by the name of "auto-update-refs"
 
   @DAT-72549
+  @DAT-72923
   Scenario: Auto update app model service
     Given I publish a model dpk from file "model_dpk/basicModelDpk.json" package "dummymodel" with status "trained"
     When I install the app without custom_installation
@@ -23,3 +24,4 @@ Feature: Test app umbrella refs - Auto update Pipeline nodes
     And "model" has app scope
     And "service" has app scope
     And service runnerImage is "jjanzic"
+    And model status should be "deployed" with execution "False" that has function "None"

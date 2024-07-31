@@ -1,6 +1,6 @@
 import logging
 
-from .. import entities, exceptions, miscellaneous
+from .. import entities, exceptions, miscellaneous, repositories
 from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
@@ -11,6 +11,7 @@ class Apps:
     def __init__(self, client_api: ApiClient, project: entities.Project = None):
         self._client_api = client_api
         self._project = project
+        self._commands = None
 
     @property
     def project(self) -> entities.Project:
@@ -20,6 +21,12 @@ class Apps:
                 message='Missing "project". need to set a Project entity or use project.apps repository')
         assert isinstance(self._project, entities.Project)
         return self._project
+
+    @property
+    def commands(self) -> repositories.Commands:
+        if self._commands is None:
+            self._commands = repositories.Commands(client_api=self._client_api)
+        return self._commands
 
     @project.setter
     def project(self, project: entities.Project):
@@ -160,12 +167,13 @@ class Apps:
         paged.get_page()
         return paged
 
-    def update(self, app: entities.App = None, app_id: str = None) -> bool:
+    def update(self, app: entities.App = None, app_id: str = None, wait: bool = True) -> bool:
         """
         Update the current app to the new configuration
 
         :param entities.App app: The app to update.
         :param str app_id: The app id to update.
+        :param bool wait: wait for the operation to finish.
         :return bool whether the operation ran successfully or not
 
         **Example**
@@ -179,16 +187,30 @@ class Apps:
         success, response = self._client_api.gen_request(req_type='put',
                                                          path=f"/apps/{app.id}",
                                                          json_req=app.to_json())
-        if success:
-            return success
-        raise exceptions.PlatformException(response)
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        app = entities.App.from_json(
+            _json=response.json(),
+            client_api=self._client_api,
+            project=self.project
+        )
+        if app.metadata:
+            command_id = app.metadata.get('system', {}).get('commands', {}).get('update', None)
+            if wait and app.status == entities.CompositionStatus.UPDATING and command_id is not None:
+                command = self.commands.get(command_id=command_id, url='api/v1/commands/faas/{}'.format(command_id))
+                command.wait()
+                app = self.get(app_id=app.id)
+
+        return success
 
     def install(self,
                 dpk: entities.Dpk,
                 app_name: str = None,
                 organization_id: str = None,
                 custom_installation: dict = None,
-                scope: entities.AppScope = None
+                scope: entities.AppScope = None,
+                wait: bool = True
                 ) -> entities.App:
         """
         Install the specified app in the project.
@@ -199,6 +221,7 @@ class Apps:
         :param str organization_id: the organization which you want to apply on the filter.
         :param dict custom_installation: partial installation.
         :param str scope: the scope of the app. default is project.
+        :param bool wait: wait for the operation to finish.
 
         :return the installed app.
         :rtype entities.App
@@ -229,11 +252,20 @@ class Apps:
                                                          json_req=app.to_json())
         if not success:
             raise exceptions.PlatformException(response)
-        return entities.App.from_json(_json=response.json(),
-                                      client_api=self._client_api,
-                                      project=self.project)
+        app = entities.App.from_json(_json=response.json(),
+                                     client_api=self._client_api,
+                                     project=self.project)
 
-    def uninstall(self, app_id: str = None, app_name: str = None) -> bool:
+        if app.metadata:
+            command_id = app.metadata.get('system', {}).get('commands', {}).get('install', None)
+            if wait and app.status == entities.CompositionStatus.INITIALIZING and command_id is not None:
+                command = self.commands.get(command_id=command_id, url='api/v1/commands/faas/{}'.format(command_id))
+                command.wait()
+                app = self.get(app_id=app.id)
+
+        return app
+
+    def uninstall(self, app_id: str = None, app_name: str = None, wait: bool = True) -> bool:
         """
         Delete an app entity.
 
@@ -241,6 +273,7 @@ class Apps:
 
         :param str app_id: optional - the id of the app.
         :param str app_name: optional - the name of the app.
+        :param bool wait: optional - wait for the operation to finish.
         :return whether we succeed uninstalling the specified app.
         :rtype bool
 
@@ -259,6 +292,19 @@ class Apps:
         success, response = self._client_api.gen_request(req_type='delete', path='/apps/{}'.format(app_id))
         if not success:
             raise exceptions.PlatformException(response)
+
+        try:
+            app = self.get(app_id=app_id)
+        except Exception as e:
+            if e.status_code == '404':
+                return success
+            else:
+                raise e
+        if app.metadata:
+            command_id = app.metadata.get('system', {}).get('commands', {}).get('uninstall', None)
+            if wait and app.status == entities.CompositionStatus.TERMINATING and command_id is not None:
+                command = self.commands.get(command_id=command_id, url='api/v1/commands/faas/{}'.format(command_id))
+                command.wait()
 
         logger.debug(f"App deleted successfully (id: {app_id}, name: {app_name}")
         return success

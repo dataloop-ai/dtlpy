@@ -151,3 +151,5 @@ sandbox/
 
 # dlp xray files
 create_test_execution.json
+
+tests/reports

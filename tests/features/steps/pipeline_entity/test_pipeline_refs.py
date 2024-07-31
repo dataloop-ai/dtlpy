@@ -531,6 +531,83 @@ def step_impl(context):
         assert False, f"TEST FAILED: {e}"
 
 
+@when(u'I create a pipeline with gen ai model')
+def step_impl(context):
+    pipeline_json = {
+        "name": "genmodel-pipeline-{}".format(random_5_chars()),
+        "projectId": context.project.id,
+        "nodes": [
+            {
+                "id": "aad87d60-fe52-45c9-b4a4-b1b0dcfb9212",
+                "inputs": [
+                    {
+                        "portId": "7a1204fe-f49a-4e83-b5ce-3c78d04dbaff",
+                        "nodeId": "7a1204fe-f49a-4e83-b5ce-3c78d04dbaff",
+                        "type": "Item",
+                        "name": "item",
+                        "displayName": "item",
+                        "io": "input"
+                    }
+                ],
+                "outputs": [
+                    {
+                        "portId": "091b20c7-8aed-4374-bdca-f3e6bbebc04b",
+                        "nodeId": "091b20c7-8aed-4374-bdca-f3e6bbebc04b",
+                        "type": "Item",
+                        "name": "item",
+                        "displayName": "item",
+                        "io": "output"
+                    },
+                    {
+                        "portId": "95876159-5dcd-4135-a1e5-5febe3aca526",
+                        "nodeId": "95876159-5dcd-4135-a1e5-5febe3aca526",
+                        "type": "Annotation[]",
+                        "name": "annotations",
+                        "displayName": "annotations",
+                        "io": "output"
+                    }
+                ],
+                "metadata": {
+                    "position": {
+                        "x": 10173.91015625,
+                        "y": 9740,
+                        "z": 0
+                    },
+                    "componentGroupName": "models",
+                    "repeatable": True,
+                    "mlType": "genAi",
+                    "modelId": context.model.id,
+                },
+                "name": "Generate",
+                "type": "ml",
+                "namespace": {
+                    "functionName": "predict",
+                    "projectName": "mohamed",
+                    "serviceName": "model-mgmt-app-predict",
+                    "moduleName": "model-mgmt-app-predict",
+                    "packageName": "model-mgmt-app"
+                },
+                "projectId": context.project.id,
+            }
+        ],
+        "connections": [],
+        "startNodes": [
+            {
+                "nodeId": "aad87d60-fe52-45c9-b4a4-b1b0dcfb9212",
+                "type": "root",
+                "id": "36562b38-895f-4bd5-aeb8-60f2f0b1f826"
+            }
+        ]
+    }
+
+    context.pipeline = context.project.pipelines.create(
+        name=pipeline_json['name'],
+        pipeline_json=pipeline_json,
+        project_id=context.project.id
+    )
+    context.to_delete_pipelines_ids.append(context.pipeline.id)
+
+
 @given(u'I have a pipeline with train node and evaluate node')
 def step_impl(context):
     models = context.project.models.list().items

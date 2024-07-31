@@ -522,6 +522,9 @@ class Uploader:
                                    ref=item.id)
                 if pbar is not None:
                     pbar.update()
+                    self.items_repository._client_api.callbacks.run_on_event(event=self.items_repository._client_api.callbacks.CallbackEvent.ITEMS_UPLOAD,
+                                                                             context={'item_id': item.id, 'dataset_id': item.dataset_id},
+                                                                             progress=round(pbar.n / pbar.total * 100, 0))
             else:
                 if isinstance(element.buffer, str):
                     ref = element.buffer

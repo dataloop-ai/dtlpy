@@ -17,4 +17,4 @@ Feature: Test App uninstall
     @DAT-46454
     Scenario: I uninstall an invalid app
         Given I uninstall not existed app
-        Then I should get an exception error='500'
+        Then I should get an exception error='404'

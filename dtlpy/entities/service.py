@@ -370,11 +370,6 @@ class Service(entities.BaseEntity):
     def package(self):
         if self._package is None:
             try:
-                self._package = repositories.Packages(client_api=self._client_api).get(package_id=self.package_id,
-                                                                                       fetch=None,
-                                                                                       log_error=False)
-                assert isinstance(self._package, entities.Package)
-            except:
                 dpk_id = None
                 dpk_version = None
                 if self.app and isinstance(self.app, dict):
@@ -389,6 +384,11 @@ class Service(entities.BaseEntity):
                         version=dpk_version)
 
                 assert isinstance(self._package, entities.Dpk)
+            except:
+                self._package = repositories.Packages(client_api=self._client_api).get(package_id=self.package_id,
+                                                                                       fetch=None,
+                                                                                       log_error=False)
+                assert isinstance(self._package, entities.Package)
         return self._package
 
     @property

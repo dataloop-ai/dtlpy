@@ -196,7 +196,8 @@ class Dpks:
             dpk = dpk_v.items[0]
         return dpk
 
-    def publish(self, dpk: entities.Dpk = None, ignore_max_file_size: bool = False, manifest_filepath='dataloop.json') -> entities.Dpk:
+    def publish(self, dpk: entities.Dpk = None, ignore_max_file_size: bool = False,
+                manifest_filepath='dataloop.json') -> entities.Dpk:
         """
         Upload a dpk entity to the dataloop platform.
 
@@ -289,6 +290,9 @@ class Dpks:
             raise ValueError('Unknown filters type: {!r}'.format(type(filters)))
         elif filters.resource != entities.FiltersResource.DPK:
             raise ValueError('Filters resource must to be FiltersResource.DPK. Got: {!r}'.format(filters.resource))
+
+        if self._project is not None:
+            filters.add(field='context.project', values=self._project.id)
 
         paged = entities.PagedEntities(items_repository=self,
                                        filters=filters,

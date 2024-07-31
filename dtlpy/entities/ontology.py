@@ -207,7 +207,14 @@ class Ontology(entities.BaseEntity):
 
     @property
     def _use_attributes_2(self):
-        return os.environ.get("USE_ATTRIBUTE_2", 'false') == 'true'
+        if isinstance(self.metadata, dict):
+            attributes = self.metadata.get("attributes", None)
+            if attributes is not None:
+                return True
+            else:
+                if isinstance(self.attributes, list) and len(self.attributes) > 0:
+                    return False
+        return True
 
     @classmethod
     def from_json(cls, _json, client_api, recipe, dataset=None, project=None, is_fetched=True):
@@ -223,10 +230,9 @@ class Ontology(entities.BaseEntity):
         :return: Ontology object
         :rtype: dtlpy.entities.ontology.Ontology
         """
-        if not os.environ.get("USE_ATTRIBUTE_2", 'false') == 'true':
-            attributes = _json.get("attributes", [])
-        else:
-            attributes = _json.get('metadata', {}).get("attributes", [])
+        attributes_v2 = _json.get('metadata', {}).get("attributes", [])
+        attributes_v1 = _json.get("attributes", [])
+        attributes = attributes_v2 if attributes_v2 else attributes_v1
 
         labels = list()
         for root in _json["roots"]:
@@ -744,10 +750,11 @@ class Ontology(entities.BaseEntity):
 
     def copy_from(self, ontology_json: dict):
         """
-        Import ontology to the platform ('ontology' is taken before 'ontology_json')
+        Import ontology to the platform.\n
+        Notice: only the following fields will be updated: `labels`, `attributes`, `instance_map` and `color_map`.
 
-        :param dict ontology_json: ontology json
-        :return: Ontology object
+        :param dict ontology_json: The source ontology json to copy from
+        :return: Ontology object: The updated ontology entity
         :rtype: dtlpy.entities.ontology.Ontology
 
         **Example**:
@@ -756,49 +763,38 @@ class Ontology(entities.BaseEntity):
 
             ontology = ontology.import_ontology(ontology_json=ontology_json)
         """
-        # TODO: Add support for import from ontology entity
-        ontology = self.from_json(_json=ontology_json, client_api=self._client_api, recipe=self.recipe)
-        attributes = ontology.attributes
+        # TODO: Add support for import from ontology entity in the Future
+        if not self._use_attributes_2:
+            raise ValueError("This method is only supported for attributes 2 mode!")
+        new_ontology = self.from_json(_json=ontology_json, client_api=self._client_api, recipe=self.recipe)
 
-        # params
-        self.labels = ontology.labels
-        for key, value in ontology.metadata.items():
-            if key != "system":
-                self.metadata[key] = value
-
-        if attributes:
-            # Delete irrelevant attribute keys
-            attribute_keys = [attribute.get("key", None) for attribute in attributes]
-            to_delete_keys = [attribute.get("key", None) for attribute in self.attributes
-                              if attribute.get("key", None) not in attribute_keys]
-            self.delete_attributes(keys=to_delete_keys)
-
-            # Update attributes
-            for attribute in attributes:
-                attribute_range = attribute.get("range", None)
+        # Update 'labels' and 'attributes'
+        self.labels = new_ontology.labels
+        new_attributes = new_ontology.attributes
+        if isinstance(new_attributes, list):
+            for new_attribute in new_attributes:
+                attribute_range = new_attribute.get("range", None)
                 if attribute_range is not None:
                     attribute_range = entities.AttributesRange(
                         min_range=attribute_range.get("min", None),
                         max_range=attribute_range.get("max", None),
                         step=attribute_range.get("step", None)
                     )
-
-                script_data = attribute.get("scriptData", None)
+                script_data = new_attribute.get("scriptData", None)
                 if script_data is None:
-                    raise Exception(f"Attribute '{attribute.get('key')}' scriptData is missing in the ontology json!")
+                    new_attribute_key = new_attribute.get("key", None)
+                    raise Exception(f"Attribute '{new_attribute_key}' scriptData is missing in the ontology json!")
                 self.update_attributes(
                     title=script_data.get("title", None),
-                    key=attribute.get("key", None),
-                    attribute_type=attribute.get("type", None),
-                    scope=attribute.get("scope", None),
+                    key=new_attribute.get("key", None),
+                    attribute_type=new_attribute.get("type", None),
+                    scope=new_attribute.get("scope", None),
                     optional=script_data.get("optional", None),
-                    values=attribute.get("values", None),
+                    values=new_attribute.get("values", None),
                     attribute_range=attribute_range
                 )
-        else:
-            logger.warning("No attributes were found (Make sure that you use the correct attributes mode).")
 
-        # defaults
-        self._instance_map = ontology.instance_map
-        self._color_map = ontology.color_map
+        # Update 'instance map' and 'color map'
+        self._instance_map = new_ontology.instance_map
+        self._color_map = new_ontology.color_map
         return self.update(system_metadata=True)

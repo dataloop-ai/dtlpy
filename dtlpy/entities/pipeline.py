@@ -456,7 +456,6 @@ class Pipeline(entities.BaseEntity):
         """
         return self.pipelines.update(pipeline=self)
 
-
     def delete(self):
         """
         Delete pipeline object
@@ -560,3 +559,23 @@ class Pipeline(entities.BaseEntity):
         else:
             self.start_nodes = [{"nodeId": node.node_id,
                                  "type": "root", }]
+
+    def update_variables_values(self, **kwargs):
+        """
+        Update pipeline variables values for the given keyword arguments.
+
+        **Example**:
+
+        .. code-block:: python
+            pipeline.update_variables_values(
+                dataset=dataset.id,
+                model=model.id,
+                threshold=0.9
+            )
+            pipeline.update()
+        """
+        keys = kwargs.keys()
+        for variable in self.variables:
+            if variable.name in keys:
+                variable.value = kwargs[variable.name]
+

@@ -221,6 +221,8 @@ class PipelineNode:
                  config: dict = None,
                  position: tuple = (1, 1),
                  app_id: str = None,
+                 dpk_name: str = None,
+                 app_name: str = None,
                  ):
         """
         :param str name: node name
@@ -234,6 +236,8 @@ class PipelineNode:
         :param dict config: for the code node dict in format { package: {code : the_code}}
         :param tuple position: tuple of the node place
         :param str app_id: app id
+        :param str dpk_name: dpk name
+        :param str app_name: app name
         """
         self.name = name
         self.node_id = node_id
@@ -246,6 +250,8 @@ class PipelineNode:
         self.config = config
         self.position = position
         self.app_id = app_id
+        self.dpk_name = dpk_name
+        self.app_name = app_name
         self._pipeline = None
 
     @property
@@ -297,7 +303,9 @@ class PipelineNode:
             project_id=_json.get('projectId', None),
             config=_json.get('config', None),
             position=position,
-            app_id=_json.get('appId', None)
+            app_id=_json.get('appId', None),
+            dpk_name=_json.get('dpkName', None),
+            app_name=_json.get('appName', None),
         )
 
     def to_json(self):
@@ -310,6 +318,8 @@ class PipelineNode:
             'type': self.node_type,
             'namespace': self.namespace.to_json(),
             'projectId': self.project_id,
+            'dpkName': self.dpk_name,
+            'appName': self.app_name,
         }
         if self.config is not None:
             _json['config'] = self.config

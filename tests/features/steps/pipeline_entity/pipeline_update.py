@@ -3,10 +3,20 @@ from behave import when, then, given
 
 @when(u'I update pipeline description')
 def step_impl(context):
-    context.pipeline.pause()
     context.pipeline = context.project.pipelines.get(pipeline_name=context.pipeline.name)
     context.pipeline.description = "up"
     context.update_pipeline = context.pipeline.update()
+
+
+@when(u'i update pipeline model node in index "{node_index}" configration')
+def step_impl(context, node_index):
+    context.pipeline = context.project.pipelines.get(pipeline_name=context.pipeline.name)
+    context.pipeline.nodes[int(node_index)].metadata['modelConfig'] = {
+        'system_prompt': 'test',
+        'max_tokens': 100,
+        'temperature': 0.5
+    }
+    context.pipeline = context.pipeline.update()
 
 
 @then(u'Pipeline received equals Pipeline changed except for "description"')
