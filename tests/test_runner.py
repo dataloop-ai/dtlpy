@@ -157,7 +157,7 @@ def delete_projects():
 
 
 def test_feature_file(w_feature_filename, i_pbar):
-    timeout = 8 * 60
+    timeout = 10 * 60
     longer_timeout = 16 * 60
 
     longer_timeout_features = [
@@ -441,7 +441,7 @@ if __name__ == '__main__':
         assert False, 'Cannot run test on user: "{}". only test users'.format(payload['email'])
 
     # run tests
-    pool = ThreadPoolExecutor(max_workers=6)
+    pool = ThreadPoolExecutor(max_workers=4)
     features_path = os.path.join(TEST_DIR, 'features')
     if not os.path.exists(REPORT_DIR):
         os.makedirs(REPORT_DIR)

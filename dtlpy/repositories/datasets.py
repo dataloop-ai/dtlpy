@@ -95,7 +95,11 @@ class Datasets:
             filters._user_query = 'false'
         if not folder_path.startswith('/'):
             folder_path = '/' + folder_path
-        filters.add(field='dir', values=folder_path + '*')
+        filters.add(field='dir', values=folder_path, method=entities.FiltersMethod.OR)
+        if not folder_path.endswith('*'):
+            if not folder_path.endswith('/'):
+                folder_path += '/'
+            filters.add(field='dir', values=folder_path + '*', method=entities.FiltersMethod.OR)
         return filters
 
     def _get_binaries_dataset(self):
