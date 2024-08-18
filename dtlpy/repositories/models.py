@@ -780,18 +780,15 @@ class Metrics:
         """
         if filters is None:
             filters = entities.Filters(resource=entities.FiltersResource.METRICS)
-            if self._model is not None:
-                filters.add(field='modelId', values=self._model.id)
-        # assert type filters
         if not isinstance(filters, entities.Filters):
             raise exceptions.PlatformException(error='400',
                                                message='Unknown filters type: {!r}'.format(type(filters)))
-
         if filters.resource != entities.FiltersResource.METRICS:
             raise exceptions.PlatformException(
                 error='400',
                 message='Filters resource must to be FiltersResource.METRICS. Got: {!r}'.format(filters.resource))
-
+        if self._model is not None:
+            filters.add(field='modelId', values=self._model.id)
         paged = entities.PagedEntities(items_repository=self,
                                        filters=filters,
                                        page_offset=filters.page,

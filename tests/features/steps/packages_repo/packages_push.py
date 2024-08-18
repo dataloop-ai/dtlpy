@@ -103,7 +103,7 @@ def step_impl(context, path):
                                  entry_point='main.py',
                                  init_inputs=[
                                      context.dl.FunctionIO(type=context.dl.PackageInputType.STRING, name="test",
-                                                           value='$env(default_key)',
+                                                           value='$env(nvidiaUser)',
                                                            integration={"type": "key_value"})],
                                  functions=[
                                      context.dl.PackageFunction(
@@ -123,8 +123,13 @@ def step_impl(context, path):
         service_name=context.package.name,
         package=context.package,
         sdk_version=context.dl.__version__,
-        init_input={'test': '$env(default_key)'},
-        secrets=[context.integration.id]
+        init_input={'test': '$env(nvidiaUser)'},
+        integrations=[{
+            "key": "nvidiaUser",
+            "env": "nvidiaUser",
+            "type": "key_value",
+            "value": context.integration.id
+        }]
     )
 
 

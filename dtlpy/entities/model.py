@@ -158,13 +158,13 @@ class Model(entities.BaseEntity):
         """
         if project is not None:
             if project.id != _json.get('context', {}).get('project', None):
-                logger.warning('Model has been fetched from a project that is not in it projects list')
+                logger.warning("Model's project is different then the input project")
                 project = None
 
         if package is not None:
             if package.id != _json.get('packageId', None):
-                logger.warning('Model has been fetched from a model that is not in it projects list')
-                model = None
+                logger.warning("Model's package is different then the input package")
+                package = None
 
         model_artifacts = [entities.Artifact.from_json(_json=artifact,
                                                        client_api=client_api,

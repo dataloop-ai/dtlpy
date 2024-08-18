@@ -49,7 +49,8 @@ def step_impl(context, flag="True"):
     if hasattr(context, "custom_installation") and eval(flag):
         custom_installation = context.custom_installation
     elif eval(flag):
-        custom_installation = {"components": context.dpk.to_json().get("components", {}), "dependencies": context.dpk.to_json().get("dependencies", [])}
+        custom_installation = {"components": context.dpk.to_json().get("components", {}),
+                               "dependencies": context.dpk.to_json().get("dependencies", [])}
     else:
         custom_installation = None
 
@@ -73,6 +74,25 @@ def step_impl(context):
         project=context.project)
     dpk = context.published_dpk if hasattr(context, "published_dpk") else context.dpk
     context.app = context.project.apps.install(dpk=dpk)
+    if hasattr(context.feature, 'apps'):
+        context.feature.apps.append(context.app)
+    else:
+        context.feature.apps = [context.app]
+
+
+@behave.when(u'I install the app with integration')
+def step_impl(context):
+    context.app = context.dl.entities.App.from_json(
+        {},
+        client_api=context.project._client_api,
+        project=context.project)
+    dpk = context.published_dpk if hasattr(context, "published_dpk") else context.dpk
+    context.app = context.project.apps.install(dpk=dpk, integrations=[{
+        "key": "nvidiaUser",
+        "env": "nvidiaUser",
+        "type": "key_value",
+        "value": context.integration.id,
+    }])
     if hasattr(context.feature, 'apps'):
         context.feature.apps.append(context.app)
     else:

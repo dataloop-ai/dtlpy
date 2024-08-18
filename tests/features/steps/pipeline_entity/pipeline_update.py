@@ -62,3 +62,22 @@ def step_impl(context):
         context.task = context.project.tasks.get(task_name=pipeline_task_name)
     except Exception as e:
         assert False, "Failed to get task with the name: {}\n{}".format(pipeline_task_name, e)
+
+
+@when(u'I add integration to pipeline secrets and update pipeline')
+def step_impl(context):
+    if not hasattr(context, "integration"):
+        raise AttributeError("Please make sure context has attr 'integration'")
+
+    import dtlpy as dl
+
+    pipeline_json = context.pipeline.to_json()
+    pipeline_json.update({'secrets': [context.integration.id]})
+    pipeline_json.pop('id')
+    success, response = dl.client_api.gen_request(
+        req_type='patch',
+        path='/pipelines/{}'.format(context.pipeline.id),
+        json_req=pipeline_json
+    )
+    if not success:
+        raise dl.exceptions.PlatformException(response)

@@ -22,13 +22,13 @@ Feature: DPK single Id
       | key             | value |
       | packageRevision | 1.0.1 |
     And "model" has app scope
+    And i clean the project
 
 
-  @skip_test_DAT-71180
   @DAT-71180
   Scenario: DPK - Models > Update dpk model labels and update app - Model labels should updated
     Given I publish a model dpk from file "model_dpk/modelsDpks.json" package "dummymodel"
-    When I install the app
+    When I install the app without custom_installation
     And I get the dpk by name
     And I remove attributes "labels" from dpk model in index "0"
     And I add att 'labels=["1"]' to dpk 'model' in index '0'

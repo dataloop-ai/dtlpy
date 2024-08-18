@@ -24,7 +24,8 @@ def step_impl(context, integration_type, integration_name):
         integration_options["azuregen2"] = eval(os.environ.get("azuregen2"))
     elif integration_type == 'key_value':
         integration_options["key_value"] = {
-            'key': os.environ.get('key_value_key', 'default_key'), 'value': os.environ.get('key_value_value', 'default_value')
+            'key': os.environ.get('key_value_key', 'default_key'),
+            'value': os.environ.get('key_value_value', 'default_value')
         }
     elif integration_type == 'gcp-cross':
         integration_options["gcp-cross"] = {}
@@ -54,6 +55,26 @@ def step_impl(context, integration_type, integration_name):
         assert False, e
 
 
+@behave.given(u'I create key value integration with key "{key}" value "{value}"')
+def step_impl(context, key, value):
+    integration_options = {
+        'key': key, 'value': value
+    }
+    try:
+        num = random.randint(1000, 10000)
+        context.integration_name = f"{key}-{num}"
+        context.integration = context.project.integrations.create(
+            integrations_type=context.dl.IntegrationType.KEY_VALUE,
+            name=context.integration_name,
+            options=integration_options)
+        context.feature.to_delete_integrations_ids.append(context.integration.id)
+        context.feature.dataloop_feature_integration = context.integration
+        context.error = None
+    except Exception as e:
+        context.error = e
+        assert False, e
+
+
 @behave.then(u'I validate integration with the name "{integration_name}" is created')
 def step_impl(context, integration_name):
     try:
@@ -62,8 +83,10 @@ def step_impl(context, integration_name):
     except Exception as e:
         context.error = e
 
-    assert integration_name in context.integration.name, "TEST FAILED: Expected - {}, Got - {}".format(integration_name, context.integration.name)
-    assert context.integration_type == context.integration.type, "TEST FAILED: Expected - {}, Got - {}".format(context.integration_type, context.integration.type)
+    assert integration_name in context.integration.name, "TEST FAILED: Expected - {}, Got - {}".format(integration_name,
+                                                                                                       context.integration.name)
+    assert context.integration_type == context.integration.type, "TEST FAILED: Expected - {}, Got - {}".format(
+        context.integration_type, context.integration.type)
 
 
 @behave.when(u'I delete integration in context')

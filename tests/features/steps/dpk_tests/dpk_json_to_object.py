@@ -48,11 +48,15 @@ def step_impl(context):
     if context.dpk.components.services:
         for service in context.dpk.components.services:
             if 'integrations' in service:
-                service['integrations'][0]['id'] = context.integration.id
+                service['integrations'][0]['value'] = context.integration.id
     if context.dpk.components.compute_configs:
         for service in context.dpk.components.compute_configs:
             if service.integrations:
-                service.integrations[0]['id'] = context.integration.id
+                service.integrations[0]['value'] = context.integration.id
+    if context.dpk.components.integrations:
+        for integration in context.dpk.components.integrations:
+            if 'value' in integration:
+                integration['value'] = context.integration.id
 
 
 @behave.then(u"I have a dpk entity")
@@ -173,3 +177,22 @@ def step_impl(context, index):
 
     assert dpk_autoscaler_items <= comp_autoscaler_items, f"TEST FAILED: dpk_autoscaler_items is {dpk_autoscaler_items} composition_autoscaler_items is {comp_autoscaler_items}"
 
+
+@behave.given(u'I remove the "{entity}" from integration from the dpk in "{component}" component in index {index}')
+def step_impl(context, entity, component, index):
+    eval(f"context.dpk.components.{component}[{index}]['integrations'][{index}].pop('{entity}')")
+
+
+@behave.given(u'I add "{entity}" to integration from the dpk in "{component}" component in index {index}')
+def step_impl(context, entity, component, index):
+    if "=" in entity:
+        entity = entity.split("=")
+        if '.id' in entity[1]:
+            entity[1] = attrgetter(entity[1])(context)
+        elif '[' in entity[1] or '{' in entity[1]:
+            entity[1] = eval(entity[1])
+        elif entity[1] == "True" or entity[1] == "False":
+            entity[1] = eval(entity[1])
+        eval(f"context.dpk.components.{component}[{index}]['integrations'][{index}].update({{entity[0]: entity[1]}})")
+    else:
+        raise ValueError("Please make sure 'entity' structure is 'key=val'")

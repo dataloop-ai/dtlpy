@@ -59,6 +59,7 @@ class FiltersOperations(str, Enum):
     LESS_THAN = "lt"
     EXISTS = "exists"
     MATCH = "match"
+    NIN = 'nin'
 
 
 class FiltersMethod(str, Enum):

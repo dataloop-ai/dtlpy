@@ -55,7 +55,8 @@ def step_impl(context, package_name, entry_point):
 @behave.then(u'model should be with mltype "{mltype}"')
 def step_impl(context, mltype):
     assert context.model.metadata.get('system', {}).get(
-        'mlType').get('subType', {}) == mltype, f"TEST FAILED: model ml_type is {context.model.ml_type} and not {mltype}"
+        'mlType').get('subType',
+                      {}) == mltype, f"TEST FAILED: model ml_type is {context.model.ml_type} and not {mltype}"
 
 
 @behave.then(u'model should have a new configration')
@@ -123,6 +124,9 @@ def step_impl(context, obj_entity):
                'dpkVersion'] == dpk_version, f"TEST FAILED: dpk version is not as expected, expected: {dpk_version}, got: {getattr(context, obj_entity).app['dpkVersion']}"
     assert getattr(context, obj_entity).app[
                'dpkName'] == context.dpk.name, f"TEST FAILED: dpk name is not as expected, expected: {context.dpk.name}, got: {getattr(context, obj_entity).app['dpkName']}"
+    if hasattr(getattr(context, obj_entity), 'package_revision'):
+        assert getattr(context,
+                       obj_entity).package_revision == dpk_version, f"TEST FAILED: service package version is not as expected, expected: {dpk_version}, got: {getattr(context, obj_entity).package_revision}"
 
 
 @behave.then(u'service runnerImage is "{runner_image}"')
@@ -197,6 +201,34 @@ def step_impl(context, status, flag, func):
 @behave.then(u'model status should be "{status}"')
 def step_impl(context, status):
     assert context.model_clone.status == status, f"TEST FAILED: model status is not as expected, expected: {status}, got: {context.model_clone.status}"
+
+
+@behave.then(u'i clean the project')
+def step_impl(context):
+    i_project = dl.projects.get(project_id=context.project.id)
+    for pipeline in i_project.pipelines.list().items:
+        try:
+            pipeline.delete()
+        except Exception:
+            pass
+    for service in i_project.services.list().items:
+        try:
+            service.delete()
+        except Exception as e:
+            if 'Service cannot be deleted as long as it has running/pending pipeline' in str(e):
+                services = service.executions.list()
+                for page in services:
+                    for s in page:
+                        try:
+                            s.terminate()
+                        except Exception as e:
+                            pass
+            pass
+    for model in i_project.models.list().items:
+        try:
+            model.delete()
+        except Exception:
+            pass
 
 
 @behave.then(u'Dataset has a scores file')
@@ -299,6 +331,7 @@ def step_impl(context):
 
 
 @behave.then(u'i have a model service')
+@behave.when(u'i have a model service')
 def step_impl(context):
     context.service = context.model.services.list().items[0]
     assert context.service is not None, f"TEST FAILED: service is not in model services"

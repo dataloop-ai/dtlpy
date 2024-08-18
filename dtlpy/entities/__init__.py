@@ -58,7 +58,7 @@ from .driver import Driver, S3Driver, GcsDriver, AzureBlobDriver
 from .pipeline import Pipeline, PipelineStats, PipelineResumeOption, PipelineSettings, Variable, CompositionStatus
 from .node import PipelineConnection, PipelineNode, PipelineConnectionPort, PipelineNodeIO, TaskNode, \
     CodeNode, FunctionNode, PipelineNodeType, PipelineNameSpace, DatasetNode
-from .pipeline_execution import PipelineExecution, PipelineExecutionNode, CycleRerunMethod
+from .pipeline_execution import PipelineExecution, PipelineExecutionNode, PipelineExecutionStatus, CycleRerunMethod
 from .feature import Feature
 from .feature_set import FeatureSet, FeatureEntityType
 from .organization import Organization, OrganizationsPlans, MemberOrgRole, CacheAction, PodType
@@ -75,3 +75,6 @@ from .app_module import AppModule
 from .resource_execution import ResourceExecution
 from .message import Message, NotificationEventContext
 from .prompt_item import Prompt, PromptItem, PromptType
+from .compute import ClusterProvider, ComputeType, ComputeStatus, Toleration, DeploymentResource, DeploymentResources, \
+    NodePool, AuthenticationIntegration, Authentication, ComputeCluster, ComputeContext, Compute, KubernetesCompute, \
+    ServiceDriver

@@ -5,6 +5,7 @@ Feature: Test app umbrella refs - Auto update Pipeline nodes
     And I create a project by the name of "auto-update-refs"
 
   @DAT-72128
+  @DAT-75739
   @pipelines.delete
   Scenario: Auto update app with custom node scope node - Should update the node service to latest app version
     Given I publish a pipeline node dpk from file "apps/app_scope_node.json" and with code path "move_item"
@@ -24,7 +25,12 @@ Feature: Test app umbrella refs - Auto update Pipeline nodes
     And I get the pipeline service
     Then "service" has app scope
     And I pause pipeline in context
+    And I install pipeline in context
+    When I get the pipeline service
+    Then "service" has app scope
+    And I pause pipeline in context
     And I uninstall the app
+    And i clean the project
 
   @DAT-72128
   @pipelines.delete
@@ -48,8 +54,10 @@ Feature: Test app umbrella refs - Auto update Pipeline nodes
     Then "service" has app scope
     And I pause pipeline in context
     And I uninstall the app
+    And i clean the project
 
   @DAT-72129
+  @DAT-75739
   @pipelines.delete
   Scenario: Auto update app with cloned model nodes - Should update the nodes service to latest app version
     Given I publish a model dpk from file "model_dpk/modelsDpks.json" package "dummymodel" with status "trained"
@@ -65,17 +73,22 @@ Feature: Test app umbrella refs - Auto update Pipeline nodes
     And I add codebase to dpk
     And I publish a dpk
     And I wait for app version to be updated according to dpk version
-    And I get last model in project
+    And i fetch the model by the name "clone_model"
     And I execute pipeline with input type "Model"
     And I wait "4"
-    And I get service in index "-1"
+    And i have a model service
     Then I validate service response params
       | key             | value |
       | packageRevision | 1.0.1 |
     And "model" has app scope
     And "service" has app scope
     And I pause pipeline in context
+    And I install pipeline in context
+    When I get service in index "-1"
+    Then "service" has app scope
+    And I pause pipeline in context
     And I uninstall the app
+    And i clean the project
 
   @DAT-72310
   Scenario: Auto update app with cloned model deploy service - Should update deploy service to latest app version
@@ -98,4 +111,5 @@ Feature: Test app umbrella refs - Auto update Pipeline nodes
       | packageRevision | 1.0.1 |
     And "model" has app scope
     And "service" has app scope
+    And i clean the project
 

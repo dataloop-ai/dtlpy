@@ -13,9 +13,9 @@ Feature: Dataset storage testing
     Given I create "s3" integration with name "test-aws-integration"
     And I create a dataset with a random name
     When I create driver "s3" with the name "test-aws-driver"
-      | key         | value          |
-      | bucket_name | sdk-automation |
-      | region      | eu-west-1      |
+      | key         | value                  |
+      | bucket_name | sdk-automation-staging |
+      | region      | eu-west-1              |
     Then I validate driver with the name "test-aws-driver" is created
     When I create dataset "test-aws" with driver entity
     Given I init Filters() using the given params

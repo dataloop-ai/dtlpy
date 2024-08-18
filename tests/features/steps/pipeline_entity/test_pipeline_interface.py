@@ -52,13 +52,15 @@ def step_impl(context, node_type):
                                       name=params.get('input_name', "item"),
                                       color=None,
                                       display_name=params.get('input_display_name', "Item"),
-                                      actions=None if not params.get('input_actions') else params.get('input_actions').split(','))],
+                                      actions=None if not params.get('input_actions') else params.get(
+                                          'input_actions').split(','))],
             outputs=[dl.PipelineNodeIO(port_id=str(uuid.uuid4()),
                                        input_type=params.get('output_type', "Item"),
                                        name=params.get('output_name', "item"),
                                        color=None,
                                        display_name=params.get('output_display_name', "Item"),
-                                       actions=None if not params.get('output_actions') else params.get('output_actions').split(','))]
+                                       actions=None if not params.get('output_actions') else params.get(
+                                           'output_actions').split(','))]
 
         )
     elif node_type == 'task':
@@ -74,6 +76,17 @@ def step_impl(context, node_type):
             project_id=context.project.id,
             dataset_id=context.dataset.id,
             repeatable=eval(params.get("repeatable", "True"))
+        )
+    elif node_type == 'faas':
+        if not hasattr(context, 'service'):
+            assert False, "TEST FAILED: Service is not defined , Please make sure to run step 'I deploy a service'"
+        context.node = dl.FunctionNode(
+            name=params.get(context.service.name, "My Function"),
+            service=context.service,
+            function_name=params.get('function_name', "run"),
+            project_id=context.project.id,
+            project_name=context.project.name,
+            position=eval(params.get('position', "(1, 1)"))
         )
 
     context.nodes.append(context.node)
@@ -275,7 +288,8 @@ def step_impl(context, path):
     )
 
     try:
-        context.pipeline = context.project.pipelines.create(pipeline_json=pipeline_payload, project_id=context.project.id)
+        context.pipeline = context.project.pipelines.create(pipeline_json=pipeline_payload,
+                                                            project_id=context.project.id)
         context.to_delete_pipelines_ids.append(context.pipeline.id)
         for node in pipeline_json['nodes']:
             if node['type'] == 'task':

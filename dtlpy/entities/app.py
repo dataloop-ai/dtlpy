@@ -53,6 +53,7 @@ class App(entities.BaseEntity):
     _project = attr.ib(type=entities.Project, repr=False)
     _client_api = attr.ib(type=ApiClient, repr=False)
     _repositories = attr.ib(repr=False)
+    integrations = attr.ib(type=list, default=None)
 
     @_repositories.default
     def set_repositories(self):
@@ -186,6 +187,8 @@ class App(entities.BaseEntity):
             _json['status'] = self.status
         if self.settings != {}:
             _json['settings'] = self.settings
+        if self.integrations is not None:
+            _json['integrations'] = self.integrations
 
         return _json
 
@@ -210,7 +213,8 @@ class App(entities.BaseEntity):
             project=project,
             metadata=_json.get('metadata', None),
             status=_json.get('status', None),
-            settings=_json.get('settings', {})
+            settings=_json.get('settings', {}),
+            integrations=_json.get('integrations', None)
         )
         app.is_fetched = is_fetched
         return app

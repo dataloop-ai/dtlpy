@@ -97,14 +97,18 @@ from .entities import (
     ItemLink, UrlLink, LinkTypeEnum,
     Modality, ModalityTypeEnum, ModalityRefTypeEnum,
     Workload, WorkloadUnit, ItemAction,
-    PipelineExecution, CycleRerunMethod, PipelineExecutionNode, Pipeline, PipelineConnection,
+    PipelineExecution, PipelineExecutionStatus, CycleRerunMethod, PipelineExecutionNode, Pipeline, PipelineConnection,
     PipelineNode, TaskNode, CodeNode, PipelineStats, PipelineSettings,
     PipelineNodeType, PipelineNameSpace, PipelineResumeOption, Variable, CompositionStatus,
     FunctionNode, DatasetNode, PipelineConnectionPort, PipelineNodeIO, Organization, OrganizationsPlans, Integration,
     Driver, S3Driver, GcsDriver, AzureBlobDriver, CacheAction, PodType,
     ExternalStorage, IntegrationType, Role, PlatformEntityType, SettingsValueTypes, SettingsTypes, SettingsSectionNames,
     SettingScope, BaseSetting, UserSetting, Setting, ServiceSample, ExecutionSample, PipelineExecutionSample,
-    ResourceExecution, Message, NotificationEventContext
+    ResourceExecution, Message, NotificationEventContext,
+    # compute
+    ClusterProvider, ComputeType, ComputeStatus, Toleration, DeploymentResource, DeploymentResources,
+    NodePool, AuthenticationIntegration, Authentication, ComputeCluster, ComputeContext, Compute, KubernetesCompute,
+    ServiceDriver
 )
 from .ml import BaseModelAdapter
 from .utilities import Converter, BaseServiceRunner, Progress, Context, AnnotationFormat
@@ -163,6 +167,8 @@ apps = repositories.Apps(client_api=client_api)
 dpks = repositories.Dpks(client_api=client_api)
 messages = repositories.Messages(client_api=client_api)
 compositions = repositories.Compositions(client_api=client_api)
+computes = repositories.Computes(client_api=client_api)
+service_drivers = repositories.ServiceDrivers(client_api=client_api)
 
 try:
     check_sdk.check(version=__version__, client_api=client_api)

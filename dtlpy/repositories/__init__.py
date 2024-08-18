@@ -51,3 +51,4 @@ from .dpks import Dpks
 from .messages import Messages
 from .compositions import Compositions
 from .schema import Schema
+from .computes import Computes, ServiceDrivers

@@ -13,9 +13,9 @@ Feature: Driver repository testing - AWS
   @DAT-49271
   Scenario: Create AWS Driver
     When I create driver "s3" with the name "test-aws-driver"
-      | key         | value          |
-      | bucket_name | sdk-automation |
-      | region      | eu-west-1      |
+      | key         | value                  |
+      | bucket_name | sdk-automation-staging |
+      | region      | eu-west-1              |
     Then I validate driver with the name "test-aws-driver" is created
     When I create dataset "test-aws" with driver entity
     And I sync dataset in context
@@ -26,9 +26,9 @@ Feature: Driver repository testing - AWS
   @DAT-49271
   Scenario: Delete AWS Driver without connected dataset
     When I create driver "s3" with the name "test-aws-driver"
-      | key         | value          |
-      | bucket_name | sdk-automation |
-      | region      | eu-west-1      |
+      | key         | value                  |
+      | bucket_name | sdk-automation-staging |
+      | region      | eu-west-1              |
     And I delete driver by the name "test-aws-driver"
     Then I validate driver "test-aws-driver" not longer in project drivers
 
@@ -38,9 +38,9 @@ Feature: Driver repository testing - AWS
   @DAT-49271
   Scenario: Delete AWS Driver with connected dataset - Should return error
     When I create driver "s3" with the name "test-aws-driver"
-      | key         | value          |
-      | bucket_name | sdk-automation |
-      | region      | eu-west-1      |
+      | key         | value                  |
+      | bucket_name | sdk-automation-staging |
+      | region      | eu-west-1              |
     Then I validate driver with the name "test-aws-driver" is created
     When I create dataset "test-aws" with driver entity
     And I sync dataset in context
@@ -55,10 +55,10 @@ Feature: Driver repository testing - AWS
   @DAT-49271
   Scenario: Create AWS Driver with path directory
     When I create driver "s3" with the name "test-aws-driver"
-      | key         | value          |
-      | bucket_name | sdk-automation |
-      | region      | eu-west-1      |
-      | path        | folder-1       |
+      | key         | value                  |
+      | bucket_name | sdk-automation-staging |
+      | region      | eu-west-1              |
+      | path        | folder-1               |
     Then I validate driver with the name "test-aws-driver" is created
     When I create dataset "test-aws" with driver entity
     And I sync dataset in context

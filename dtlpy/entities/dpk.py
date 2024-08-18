@@ -164,6 +164,7 @@ class Components(entities.DlEntity):
     compute_configs: List[DpkComputeConfig] = entities.DlProperty(location=['computeConfigs'], _kls='DpkComputeConfig')
     channels: List[DpkComponentChannel] = entities.DlProperty(location=['channels'], _kls='DpkComponentChannel')
     pipeline_templates: List[dict] = entities.DlProperty(location=['pipelineTemplates'])
+    integrations: List[dict] = entities.DlProperty(location=['integrations'])
 
     @panels.default
     def default_panels(self):

@@ -53,3 +53,12 @@ def step_impl(context, service_index):
 @behave.when(u'I get service from context.execution')
 def step_impl(context):
     context.service = context.project.services.get(service_id=context.execution.service_id)
+
+
+@behave.then(u'Integration display on service secrets')
+def step_impl(context):
+    if not hasattr(context, "integration"):
+        raise AttributeError("Please make sure context has attr 'integration'")
+
+    assert context.integration.id in context.service.secrets, \
+        f"TEST FAILED: Expected integration to be in service secrets, Actual: {context.service.secrets}"

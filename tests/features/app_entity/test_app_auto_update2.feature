@@ -6,7 +6,8 @@ Feature: Test app umbrella refs - Auto update Pipeline nodes
 
   @DAT-72549
   @DAT-72923
-  Scenario: Auto update app model service
+  @DAT-75739
+  Scenario: Auto update app model service - update code and not update config
     Given I publish a model dpk from file "model_dpk/basicModelDpk.json" package "dummymodel" with status "trained"
     When I install the app without custom_installation
     And I update app auto update to "True"
@@ -23,5 +24,5 @@ Feature: Test app umbrella refs - Auto update Pipeline nodes
       | packageRevision | 1.0.1 |
     And "model" has app scope
     And "service" has app scope
-    And service runnerImage is "jjanzic"
+    And service runnerImage is "jjanzic/docker-python3-opencv"
     And model status should be "deployed" with execution "False" that has function "None"

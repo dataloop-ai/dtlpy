@@ -189,12 +189,11 @@ class Item(entities.BaseEntity):
         binary.write(json.dumps(_json).encode())
         binary.seek(0)
         binary.name = self.name
-        resp = requests.post(url=client_api.environment + f'/items/{self.id}/revisions',
-                             headers=client_api.auth,
-                             files={'file': (binary.name, binary)}
-                             )
-        if not resp.ok:
-            raise ValueError(resp.text)
+        success, resp = client_api.gen_request(req_type='post',
+                                      path=f'/items/{self.id}/revisions',
+                                      files={'file': (binary.name, binary)})
+        if not success:
+            raise exceptions.PlatformException(resp)
 
     @property
     def project(self):

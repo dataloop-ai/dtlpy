@@ -210,7 +210,8 @@ class Apps:
                 organization_id: str = None,
                 custom_installation: dict = None,
                 scope: entities.AppScope = None,
-                wait: bool = True
+                wait: bool = True,
+                integrations: list = None
                 ) -> entities.App:
         """
         Install the specified app in the project.
@@ -222,6 +223,7 @@ class Apps:
         :param dict custom_installation: partial installation.
         :param str scope: the scope of the app. default is project.
         :param bool wait: wait for the operation to finish.
+        :param list integrations: list of integrations to install with the app.
 
         :return the installed app.
         :rtype entities.App
@@ -243,7 +245,8 @@ class Apps:
                                             'dpkName': dpk.name,
                                             "customInstallation": custom_installation,
                                             'dpkVersion': dpk.version,
-                                            'scope': scope
+                                            'scope': scope,
+                                            'integrations': integrations
                                             },
                                      client_api=self._client_api,
                                      project=self.project)

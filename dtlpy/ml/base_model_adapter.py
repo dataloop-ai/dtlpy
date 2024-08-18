@@ -1,3 +1,4 @@
+import dataclasses
 import tempfile
 import datetime
 import logging
@@ -19,10 +20,41 @@ from ..services.api_client import ApiClient
 logger = logging.getLogger('ModelAdapter')
 
 
+@dataclasses.dataclass
+class AdapterDefaults(dict):
+    # for predict items, dataset, evaluate
+    upload_annotations: bool = dataclasses.field(default=True)
+    clean_annotations: bool = dataclasses.field(default=True)
+    # for embeddings
+    upload_features: bool = dataclasses.field(default=True)
+    # for training
+    root_path: str = dataclasses.field(default=None)
+    data_path: str = dataclasses.field(default=None)
+    output_path: str = dataclasses.field(default=None)
+
+    def __post_init__(self):
+        # Initialize the internal dictionary with the dataclass fields
+        self.update(**dataclasses.asdict(self))
+
+    def update(self, **kwargs):
+        for f in dataclasses.fields(AdapterDefaults):
+            if f.name in kwargs:
+                setattr(self, f.name, kwargs[f.name])
+        super().update(**kwargs)
+
+    def resolve(self, key, *args):
+
+        for arg in args:
+            if arg is not None:
+                return arg
+        return self.get(key, None)
+
+
 class BaseModelAdapter(utilities.BaseServiceRunner):
     _client_api = attr.ib(type=ApiClient, repr=False)
 
     def __init__(self, model_entity: entities.Model = None):
+        self.adapter_defaults = AdapterDefaults()
         self.logger = logger
         # entities
         self._model_entity = None
@@ -222,14 +254,18 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         download the specific subset selected to data_path and preforms `self.convert` to the data_path dir
 
         :param dataset: dl.Dataset
-        :param root_path: `str` root directory for training. default is "tmp"
-        :param data_path: `str` dataset directory. default <root_path>/"data"
-        :param output_path: `str` save everything to this folder. default <root_path>/"output"
+        :param root_path: `str` root directory for training. default is "tmp". Can be set using self.adapter_defaults.root_path
+        :param data_path: `str` dataset directory. default <root_path>/"data". Can be set using self.adapter_defaults.data_path
+        :param output_path: `str` save everything to this folder. default <root_path>/"output". Can be set using self.adapter_defaults.output_path
 
         :param bool overwrite: overwrite the data path (download again). default is False
         """
         # define paths
         dataloop_path = os.path.join(os.path.expanduser('~'), '.dataloop')
+        root_path = self.adapter_defaults.resolve("root_path", root_path)
+        data_path = self.adapter_defaults.resolve("data_path", data_path)
+        output_path = self.adapter_defaults.resolve("output_path", output_path)
+
         if root_path is None:
             now = datetime.datetime.now()
             root_path = os.path.join(dataloop_path,
@@ -311,6 +347,8 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             local_path = os.path.join(service_defaults.DATALOOP_PATH, "models", self.model_entity.name)
         # Load configuration
         self.configuration = self.model_entity.configuration
+        # Update the adapter config with the model config to run over defaults if needed
+        self.adapter_defaults.update(**self.configuration)
         # Download
         self.model_entity.artifacts.download(
             local_path=local_path,
@@ -331,6 +369,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         :param cleanup: `bool` if True (default) remove the data from local FileSystem after upload
         :return:
         """
+
         if local_path is None:
             local_path = tempfile.mkdtemp(prefix="model_{}".format(self.model_entity.name))
             self.logger.debug("Using temporary dir at {}".format(local_path))
@@ -354,7 +393,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
     @entities.Package.decorators.function(display_name='Predict Items',
                                           inputs={'items': 'Item[]'},
                                           outputs={'items': 'Item[]', 'annotations': 'Annotation[]'})
-    def predict_items(self, items: list, upload_annotations=True, clean_annotations=True, batch_size=None, **kwargs):
+    def predict_items(self, items: list, upload_annotations=None, clean_annotations=None, batch_size=None, **kwargs):
         """
         Run the predict function on the input list of items (or single) and return the items and the predictions.
         Each prediction is by the model output type (package.output_type) and model_info in the metadata
@@ -368,6 +407,8 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         """
         if batch_size is None:
             batch_size = self.configuration.get('batch_size', 4)
+        upload_annotations = self.adapter_defaults.resolve("upload_annotations", upload_annotations)
+        clean_annotations = self.adapter_defaults.resolve("clean_annotations", clean_annotations)
         input_type = self.model_entity.input_type
         self.logger.debug(
             "Predicting {} items, using batch size {}. input type: {}".format(len(items), batch_size, input_type))
@@ -410,8 +451,8 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
 
     @entities.Package.decorators.function(display_name='Embed Items',
                                           inputs={'items': 'Item[]'},
-                                          outputs={'items': 'Item[]', 'features': '[]'})
-    def embed_items(self, items: list, upload_features=True, batch_size=None, **kwargs):
+                                          outputs={'items': 'Item[]', 'features': 'Json[]'})
+    def embed_items(self, items: list, upload_features=None, batch_size=None, **kwargs):
         """
         Extract feature from an input list of items (or single) and return the items and the feature vector.
 
@@ -423,6 +464,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         """
         if batch_size is None:
             batch_size = self.configuration.get('batch_size', 4)
+        upload_features = self.adapter_defaults.resolve("upload_features", upload_features)
         input_type = self.model_entity.input_type
         self.logger.debug(
             "Predicting {} items, using batch size {}. input type: {}".format(len(items), batch_size, input_type))
@@ -486,7 +528,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
     def embed_dataset(self,
                       dataset: entities.Dataset,
                       filters: entities.Filters = None,
-                      upload_features=True,
+                      upload_features=None,
                       batch_size=None,
                       **kwargs):
         """
@@ -501,8 +543,9 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         """
         if batch_size is None:
             batch_size = self.configuration.get('batch_size', 4)
+        upload_features = self.adapter_defaults.resolve("upload_features", upload_features)
 
-        self.logger.debug("Creating embedings for dataset (name:{}, id:{}, using batch size {}".format(dataset.name,
+        self.logger.debug("Creating embeddings for dataset (name:{}, id:{}, using batch size {}".format(dataset.name,
                                                                                                        dataset.id,
                                                                                                        batch_size))
         if not filters:
@@ -510,7 +553,8 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         if filters is not None and isinstance(filters, dict):
             filters = entities.Filters(custom_filter=filters)
         pages = dataset.items.list(filters=filters, page_size=batch_size)
-        items = [item for page in pages for item in page]
+        # Item type is 'file' only, can be deleted if default filters are added to custom filters
+        items = [item for page in pages for item in page if item.type == 'file']
         self.embed_items(items=items,
                          upload_features=upload_features,
                          batch_size=batch_size,
@@ -523,8 +567,8 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
     def predict_dataset(self,
                         dataset: entities.Dataset,
                         filters: entities.Filters = None,
-                        with_upload=True,
-                        cleanup=False,
+                        upload_annotations=None,
+                        clean_annotations=None,
                         batch_size=None,
                         **kwargs):
         """
@@ -532,8 +576,8 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
 
         :param dataset: Dataset entity to predict
         :param filters: Filters entity for a filtering before predicting
-        :param with_upload: `bool` uploads the predictions back to the given items
-        :param cleanup: `bool` if set removes existing predictions with the same package-model name (default: False)
+        :param upload_annotations: `bool` uploads the predictions back to the given items
+        :param clean_annotations: `bool` if set removes existing predictions with the same package-model name (default: False)
         :param batch_size: `int` size of batch to run a single inference
 
         :return: `bool` indicating if the prediction process completed successfully
@@ -550,10 +594,11 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         if filters is not None and isinstance(filters, dict):
             filters = entities.Filters(custom_filter=filters)
         pages = dataset.items.list(filters=filters, page_size=batch_size)
-        items = [item for page in pages for item in page]
+        # Item type is 'file' only, can be deleted if default filters are added to custom filters
+        items = [item for page in pages for item in page if item.type == 'file']
         self.predict_items(items=items,
-                           upload_annotations=with_upload,
-                           cleanup=cleanup,
+                           upload_annotations=upload_annotations,
+                           clean_annotations=clean_annotations,
                            batch_size=batch_size,
                            **kwargs)
         return True

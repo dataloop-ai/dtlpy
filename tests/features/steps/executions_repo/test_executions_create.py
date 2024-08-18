@@ -148,6 +148,12 @@ def step_impl(context, resource_type):
     assert success, f"TEST FAILED: after {round(num_try * interval / 60, 1)} minutes"
 
 
+@behave.then(u'Execution output is "{execution_output}"')
+def step_impl(context, execution_output):
+    execution = context.service.executions.get(execution_id=context.execution.id)
+    assert execution.output == execution_output, f"Wrong execution result Expected: {execution_output} got: {execution.output}"
+
+
 @behave.then(u'Execution was executed and finished with status "{execution_status}"')
 @behave.then(u'Execution was executed and finished with status "{execution_status}" and message "{message}"')
 def step_impl(context, execution_status, message=None):
@@ -161,7 +167,8 @@ def step_impl(context, execution_status, message=None):
             if message:  # message is not None
                 assert execution.latest_status['message'] == message
             break
-        elif execution.latest_status['status'] != execution_status and execution.latest_status['status'] not in ['in-progress', 'inProgress', 'created', 'pending']:
+        elif execution.latest_status['status'] != execution_status and execution.latest_status['status'] not in [
+            'in-progress', 'inProgress', 'created', 'pending']:
             break
         time.sleep(interval)
 
