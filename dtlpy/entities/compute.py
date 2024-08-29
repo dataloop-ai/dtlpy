@@ -9,6 +9,7 @@ class ClusterProvider(str, Enum):
     AWS = 'aws'
     AZURE = 'azure'
     HPC = 'hpc'
+    LOCAL = 'local'
 
 
 class ComputeType(str, Enum):
@@ -22,18 +23,27 @@ class ComputeStatus(str, Enum):
 
 
 class Toleration:
-    def __init__(self, name: str):
-        self.name = name
+    def __init__(self, effect: str, key: str, operator: str, value: str):
+        self.effect = effect
+        self.key = key
+        self.operator = operator
+        self.value = value
 
     @classmethod
     def from_json(cls, _json):
         return cls(
-            name=_json.get('name')
+            effect=_json.get('effect'),
+            key=_json.get('key'),
+            operator=_json.get('operator'),
+            value=_json.get('value')
         )
 
     def to_json(self):
         return {
-            'name': self.name
+            'effect': self.effect,
+            'key': self.key,
+            'operator': self.operator,
+            'value': self.value
         }
 
 
@@ -85,32 +95,32 @@ class NodePool:
             self,
             name: str,
             is_dl_type_default: bool,
-            dl_type: Optional[str] = None,
+            dl_types: Optional[List[str]] = None,
             tolerations: Optional[List[Toleration]] = None,
             description: str = "",
             node_selector: str = "",
             preemtible: bool = False,
-            deployment_resources_request: DeploymentResources = None
+            deployment_resources: DeploymentResources = None
     ):
         self.name = name
         self.is_dl_type_default = is_dl_type_default
-        self.dl_type = dl_type
+        self.dl_types = dl_types
         self.tolerations = tolerations if tolerations is not None else []
         self.description = description
         self.node_selector = node_selector
         self.preemtible = preemtible
-        self.deployment_resources_request = deployment_resources_request
+        self.deployment_resources = deployment_resources
 
     @classmethod
     def from_json(cls, _json):
         node_pool = cls(
             name=_json.get('name'),
             is_dl_type_default=_json.get('isDlTypeDefault'),
-            dl_type=_json.get('dlType'),
+            dl_types=_json.get('dlTypes'),
             description=_json.get('description'),
             node_selector=_json.get('nodeSelector'),
             preemtible=_json.get('preemtible'),
-            deployment_resources_request=DeploymentResources.from_json(_json.get('deploymentResourcesRequest', dict())),
+            deployment_resources=DeploymentResources.from_json(_json.get('deploymentResources', dict())),
             tolerations=[Toleration.from_json(t) for t in _json.get('tolerations', list())]
         )
 
@@ -123,12 +133,12 @@ class NodePool:
             'description': self.description,
             'nodeSelector': self.node_selector,
             'preemtible': self.preemtible,
-            'deploymentResourcesRequest': self.deployment_resources_request.to_json(),
+            'deploymentResources': self.deployment_resources.to_json(),
             'tolerations': [t.to_json() for t in self.tolerations]
         }
 
-        if self.dl_type is not None:
-            _json['dlType'] = self.dl_type
+        if self.dl_types is not None:
+            _json['dlTypes'] = self.dl_types
 
         return _json
 
@@ -238,6 +248,7 @@ class Compute:
     def __init__(
             self,
             id: str,
+            name: str,
             context: ComputeContext,
             client_api: ApiClient,
             shared_contexts: Optional[List[ComputeContext]] = None,
@@ -248,6 +259,7 @@ class Compute:
             metadata: Optional[Dict] = None,
     ):
         self.id = id
+        self.name = name
         self.context = context
         self.shared_contexts = shared_contexts if shared_contexts is not None else []
         self.global_ = global_
@@ -281,6 +293,7 @@ class Compute:
     def from_json(cls, _json, client_api: ApiClient):
         return cls(
             id=_json.get('id'),
+            name=_json.get('name'),
             context=ComputeContext.from_json(_json.get('context', dict())),
             shared_contexts=[ComputeContext.from_json(sc) for sc in _json.get('sharedContexts', list())],
             global_=_json.get('global'),

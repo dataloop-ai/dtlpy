@@ -7,9 +7,13 @@ import random
 import re
 
 
+@behave.when(u'I create "{integration_type}" integration with name "{integration_name}" and metadata "{metadata}"')
 @behave.given(u'I create "{integration_type}" integration with name "{integration_name}"')
-def step_impl(context, integration_type, integration_name):
+def step_impl(context, integration_type, integration_name, metadata=None):
     integration_options = {}
+    if metadata is not None:
+        metadata = eval(metadata)
+
     if integration_type == 's3':
         integration_options["s3"] = eval(os.environ.get("aws"))
     elif integration_type == 'gcs':
@@ -46,13 +50,21 @@ def step_impl(context, integration_type, integration_name):
         context.integration = context.project.integrations.create(
             integrations_type=context.integration_type,
             name=context.integration_name,
-            options=integration_options[integration_type])
+            options=integration_options[integration_type],
+            metadata=metadata
+        )
         context.feature.to_delete_integrations_ids.append(context.integration.id)
         context.feature.dataloop_feature_integration = context.integration
+        if metadata is not None:
+            for key, value in metadata.items():
+                assert any(item['name'] == key for item in context.integration.metadata), \
+                    f"TEST FAILED: Metadata key {key} not found in integration metadata"
+                assert any(item['value'] == value for item in context.integration.metadata), \
+                    f"TEST FAILED: Metadata value {value} not found in integration metadata"
+
         context.error = None
     except Exception as e:
         context.error = e
-        assert False, e
 
 
 @behave.given(u'I create key value integration with key "{key}" value "{value}"')

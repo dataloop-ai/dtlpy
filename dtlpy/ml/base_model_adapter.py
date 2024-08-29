@@ -234,10 +234,20 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         :return: preprocessed: the var with the loaded item information (e.g. ndarray for image, dict for json files etc)
         """
         # Item to batch func
-        if self.model_entity.input_type in self.item_to_batch_mapping:
+        if isinstance(self.model_entity.input_type, list):
+            if 'text' in self.model_entity.input_type and 'text' in item.mimetype:
+                processed = self._item_to_text(item)
+            elif 'image' in self.model_entity.input_type and 'image' in item.mimetype:
+                processed = self._item_to_image(item)
+            else:
+                processed = self._item_to_item(item)
+
+        elif self.model_entity.input_type in self.item_to_batch_mapping:
             processed = self.item_to_batch_mapping[self.model_entity.input_type](item)
+
         else:
             processed = self._item_to_item(item)
+
         return processed
 
     def prepare_data(self,
@@ -546,8 +556,8 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         upload_features = self.adapter_defaults.resolve("upload_features", upload_features)
 
         self.logger.debug("Creating embeddings for dataset (name:{}, id:{}, using batch size {}".format(dataset.name,
-                                                                                                       dataset.id,
-                                                                                                       batch_size))
+                                                                                                        dataset.id,
+                                                                                                        batch_size))
         if not filters:
             filters = entities.Filters()
         if filters is not None and isinstance(filters, dict):
@@ -806,8 +816,17 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
 
     @staticmethod
     def _item_to_text(item):
-        buffer = item.download(save_locally=False)
-        text = buffer.read().decode()
+        filename = item.download(overwrite=True)
+        text = None
+        if item.mimetype == 'text/plain' or item.mimetype == 'text/markdown':
+            with open(filename, 'r') as f:
+                text = f.read()
+                text = text.replace('\n', ' ')
+        else:
+            logger.warning('Item is not text file. mimetype: {}'.format(item.mimetype))
+            text = item
+        if os.path.exists(filename):
+            os.remove(filename)
         return text
 
     @staticmethod

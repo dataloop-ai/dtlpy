@@ -262,17 +262,7 @@ def step_impl(context):
                                     "input_size": 256
                                 },
                                 "outputType": "box",
-                                "inputType": "image",
-                                "supportedMethods": [
-                                    {
-                                        "load": True,
-                                        "save": True,
-                                        "predict": True,
-                                        "deploy": True,
-                                        "train": True,
-                                        "evaluate": True
-                                    }
-                                ]
+                                "inputType": "image"
                             },
                             "subsets": {
                                 "train": {
@@ -322,17 +312,7 @@ def step_impl(context):
                                     "input_size": 256
                                 },
                                 "outputType": "box",
-                                "inputType": "image",
-                                "supportedMethods": [
-                                    {
-                                        "load": True,
-                                        "save": True,
-                                        "predict": True,
-                                        "deploy": True,
-                                        "train": True,
-                                        "evaluate": True
-                                    }
-                                ]
+                                "inputType": "image"
                             },
                             "subsets": {
                                 "train": {
@@ -378,17 +358,7 @@ def step_impl(context):
                                     "input_size": 256
                                 },
                                 "outputType": "box",
-                                "inputType": "image",
-                                "supportedMethods": [
-                                    {
-                                        "load": True,
-                                        "save": True,
-                                        "predict": True,
-                                        "deploy": True,
-                                        "train": True,
-                                        "evaluate": True
-                                    }
-                                ]
+                                "inputType": "image"
                             },
                             "subsets": {
                                 "train": {

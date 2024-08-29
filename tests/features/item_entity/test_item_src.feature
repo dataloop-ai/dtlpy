@@ -22,3 +22,10 @@ Feature: Get Item _src_item
     Given Item in path "0000000162.jpg" is uploaded to "Dataset"
     When I clone an item
     Then I validate cloned item has the correct src item
+
+
+  @DAT-76433
+  Scenario: clone failed etl item run image pre
+    Given Item in path "faledetl.jpg" is uploaded to "Dataset"
+    When I clone an item
+    Then I validate image pre run on cloned item

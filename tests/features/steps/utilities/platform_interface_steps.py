@@ -79,7 +79,10 @@ def before_all(context):
         # set env to dev
         _, base_env = get_env_from_git_branch()
         if base_env != dl.client_api.environments[dl.client_api.environment]['alias']:
-            context.dl.setenv(base_env)
+            if base_env not in ['rc', 'prod']:
+                context.dl.setenv('custom')
+            else:
+                context.dl.setenv(base_env)
 
         # check token
         payload = None

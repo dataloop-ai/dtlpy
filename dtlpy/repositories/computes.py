@@ -18,6 +18,7 @@ class Computes:
 
     def create(
             self,
+            name: str,
             context: entities.ComputeContext,
             shared_contexts: Optional[List[entities.ComputeContext]],
             cluster: entities.ComputeCluster,
@@ -29,6 +30,7 @@ class Computes:
         """
         Create a new compute
 
+        :param name: Compute name
         :param context: Compute context
         :param shared_contexts: Shared contexts
         :param cluster: Compute cluster
@@ -40,11 +42,12 @@ class Computes:
         """
 
         payload = {
+            'name': name,
             'context': context.to_json(),
             'type': type.value,
             'global': is_global,
             'features': features,
-            shared_contexts: [sc.to_json() for sc in shared_contexts],
+            'shared_contexts': [sc.to_json() for sc in shared_contexts],
             'cluster': cluster.to_json()
         }
 
@@ -64,7 +67,7 @@ class Computes:
         )
 
         if wait:
-            command_id = compute.metadata.get('system', {}).get('create', {}).get('commandId', None)
+            command_id = compute.metadata.get('system', {}).get('commands', {}).get('create', {})
             if command_id is not None:
                 command = self.commands.get(command_id=command_id, url='api/v1/commands/faas/{}'.format(command_id))
                 command.wait()
@@ -144,7 +147,7 @@ class ServiceDrivers:
 
     def __init__(self, client_api: ApiClient):
         self._client_api = client_api
-        self._base_url = '/serviceDriver'
+        self._base_url = '/serviceDrivers'
 
     def create(
             self,
@@ -226,3 +229,35 @@ class ServiceDrivers:
             raise exceptions.PlatformException(response)
 
         return True
+
+    def set_default(self, service_driver_id: str, org_id: str, update_existing_services=False):
+        """
+        Set a service driver as default
+
+        :param service_driver_id: Service driver ID
+        :param org_id: Organization ID
+        :param update_existing_services: Update existing services
+
+        :return: Service driver
+        """
+
+        # request
+        success, response = self._client_api.gen_request(
+            req_type='post',
+            path=self._base_url + '/default',
+            json_req={
+                'organizationId': org_id,
+                'updateExistingServices': update_existing_services,
+                'driverName': service_driver_id
+            }
+        )
+
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        service_driver = entities.ServiceDriver.from_json(
+            _json=response.json(),
+            client_api=self._client_api
+        )
+
+        return service_driver

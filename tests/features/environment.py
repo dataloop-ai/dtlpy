@@ -135,6 +135,13 @@ def after_feature(context, feature):
         except Exception:
             logging.exception('Failed to update api calls')
 
+    if hasattr(feature, 'dataloop_feature_compute'):
+        try:
+            compute = context.feature.dataloop_feature_compute
+            dl.computes.delete(compute_id=compute.id)
+        except Exception:
+            logging.exception('Failed to delete compute')
+
 
 @fixture
 def before_scenario(context, scenario):
@@ -202,6 +209,9 @@ def before_tag(context, tag):
         dat = tag.split("_")[-1] if "DAT" in tag else ""
         if hasattr(context, "scenario"):
             context.scenario.skip(f"Test mark as SKIPPED, Should be merged after {dat}")
+    if 'rc_only' in context.tags and 'rc' not in os.environ.get("DLP_ENV_NAME"):
+        if hasattr(context, "scenario"):
+            context.scenario.skip(f"Test mark as SKIPPED, Should be run only on RC")
 
 
 @fixture

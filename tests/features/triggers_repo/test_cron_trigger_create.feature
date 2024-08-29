@@ -18,10 +18,10 @@ Feature: Cron Triggers repository create service testing
       | name=triggers-create | function_name=run | cron=* * * * * |
     When I list service executions
     Then I receive a list of "0" executions
-    And I wait "60"
+    And I wait "63"
     When I list service executions
     Then I receive a list of "1" executions
-    And I wait "60"
+    And I wait "63"
     When I list service executions
     Then I receive a list of "2" executions
     When I delete trigger by "id"

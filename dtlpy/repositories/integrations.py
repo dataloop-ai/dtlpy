@@ -99,7 +99,8 @@ class Integrations:
     def create(self,
                integrations_type: entities.IntegrationType,
                name: str,
-               options: dict):
+               options: dict,
+               metadata: dict = None):
         """
         Create an integration between an external storage and the organization.
 
@@ -118,6 +119,7 @@ class Integrations:
         :param IntegrationType integrations_type: integrations type dl.IntegrationType
         :param str name: integrations name
         :param dict options: dict of storage secrets
+        :param dict metadata: metadata
         :return: success
         :rtype: bool
 
@@ -142,6 +144,8 @@ class Integrations:
 
         url_path = '/orgs/{}/integrations'.format(organization_id)
         payload = {"type": integrations_type.value if isinstance(integrations_type, entities.IntegrationType) else integrations_type, 'name': name, 'options': options}
+        if metadata is not None:
+            payload['metadata'] = metadata
         success, response = self._client_api.gen_request(req_type='post',
                                                          path=url_path,
                                                          json_req=payload)
@@ -150,9 +154,9 @@ class Integrations:
         else:
             integration = entities.Integration.from_json(_json=response.json(), client_api=self._client_api)
         if integration.metadata and isinstance(integration.metadata, list) and len(integration.metadata) > 0:
-            for metadata in integration.metadata:
-                if metadata['name'] == 'status':
-                    integration_status = metadata['value']
+            for m in integration.metadata:
+                if m['name'] == 'status':
+                    integration_status = m['value']
                     logger.info('Integration status: {}'.format(integration_status))
         return integration
 

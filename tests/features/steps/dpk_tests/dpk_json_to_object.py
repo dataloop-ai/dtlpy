@@ -180,7 +180,10 @@ def step_impl(context, index):
 
 @behave.given(u'I remove the "{entity}" from integration from the dpk in "{component}" component in index {index}')
 def step_impl(context, entity, component, index):
-    eval(f"context.dpk.components.{component}[{index}]['integrations'][{index}].pop('{entity}')")
+    if component == 'integrations':
+        eval(f"context.dpk.components.{component}[{index}].pop('{entity}')")
+    else:
+        eval(f"context.dpk.components.{component}[{index}]['integrations'][{index}].pop('{entity}')")
 
 
 @behave.given(u'I add "{entity}" to integration from the dpk in "{component}" component in index {index}')
@@ -193,6 +196,9 @@ def step_impl(context, entity, component, index):
             entity[1] = eval(entity[1])
         elif entity[1] == "True" or entity[1] == "False":
             entity[1] = eval(entity[1])
-        eval(f"context.dpk.components.{component}[{index}]['integrations'][{index}].update({{entity[0]: entity[1]}})")
+        if component == 'integrations':
+            eval(f"context.dpk.components.{component}[{index}].update({{entity[0]: entity[1]}})")
+        else:
+            eval(f"context.dpk.components.{component}[{index}]['integrations'][{index}].update({{entity[0]: entity[1]}})")
     else:
         raise ValueError("Please make sure 'entity' structure is 'key=val'")

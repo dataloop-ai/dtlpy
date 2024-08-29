@@ -90,7 +90,9 @@ class Filters:
             page_size=None,
     ):
         if page_size is None:
-            if resource in [FiltersResource.EXECUTION, FiltersResource.PIPELINE_EXECUTION]:
+            if resource in [FiltersResource.EXECUTION,
+                            FiltersResource.PIPELINE_EXECUTION,
+                            FiltersResource.DPK]:
                 page_size = 100
             else:
                 page_size = 1000

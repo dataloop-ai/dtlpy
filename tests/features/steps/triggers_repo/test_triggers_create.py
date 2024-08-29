@@ -105,7 +105,6 @@ def step_impl(context):
                                                       trigger_type="Cron",
                                                       name=name,
                                                       start_at=datetime.datetime.now().isoformat(),
-                                                      end_at=datetime.datetime(2024, 8, 23).isoformat(),
                                                       cron=cron)
 
 

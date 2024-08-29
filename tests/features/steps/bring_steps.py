@@ -274,3 +274,4 @@ from tests.features.steps.billing_steps import test_plan_resources
 from tests.features.steps.billing_steps import Log_in
 
 from tests.features.steps.pipeline_entity import pipeline_node_input_handling
+from tests.features.steps.compute import compute

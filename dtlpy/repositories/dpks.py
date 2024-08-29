@@ -256,6 +256,25 @@ class Dpks:
 
         return entities.Dpk.from_json(response_pack.json(), self._client_api, dpk.project)
 
+    def update(self, dpk: entities.Dpk) -> entities.Dpk:
+        """
+        Update the dpk entity in the platform.
+
+        Note: the update will update only attributes, displayName, Icon, description and pipeline template preview
+
+        :param entities.Dpk dpk: the dpk entity to update.
+        :return the updated dpk entity.
+        :rtype entities.Dpk
+        """
+        success, response = self._client_api.gen_request(req_type='patch',
+                                                         path='/app-registry/{}'.format(dpk.id),
+                                                         json_req=dpk.to_json())
+        if not success:
+            raise exceptions.PlatformException(response)
+        res = response.json()
+        logger.info(res.get('message'))
+        return entities.Dpk.from_json(res.get('dpk'), self._client_api, self._project)
+
     def delete(self, dpk_id: str) -> bool:
         """
         Delete the dpk from the app store.

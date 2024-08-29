@@ -1,5 +1,6 @@
 import logging
 import math
+import time
 import tqdm
 import copy
 import sys
@@ -169,6 +170,7 @@ class PagedEntities:
         jobs = list()
         pool = self._client_api.thread_pools('item.page')
         while True:
+            time.sleep(0.01)  # to flush the results
             if page_offset <= total_pages:
                 jobs.append(pool.submit(self.return_page, **{'page_offset': page_offset,
                                                              'page_size': page_size}))

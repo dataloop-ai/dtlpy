@@ -1465,7 +1465,11 @@ class ApiClient:
             custom_env = os.environ.get('DTLPY_CUSTOM_ENV', None)
             environment = json.loads(base64.b64decode(custom_env.encode()).decode())
             env = environment.pop('url')
+            token = None
+            if self.environments.get(env):
+                token = self.environments[env].get('token', None)
             self.environments[env] = environment.get(env, environment)
+            self.environments[env]['token'] = token
             verify_ssl = self.environments[env].get('verify_ssl', None)
             if verify_ssl is not None and isinstance(verify_ssl, str):
                 self.environments[env]['verify_ssl'] = True if verify_ssl.lower() == 'true' else False

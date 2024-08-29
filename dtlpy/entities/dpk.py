@@ -311,6 +311,16 @@ class Dpk(entities.DlEntity):
         """
         return self.dpks.publish(dpk=self)
 
+    def update(self):
+        """
+        Update the dpk attributes to Dataloop platform.
+
+        **Example**
+        .. code-block:: python
+            updated_dpk = dpk.update()
+        """
+        return self.dpks.update(dpk=self)
+
     def pull(self, local_path):
         """
         Pulls the app from the platform as dpk file.

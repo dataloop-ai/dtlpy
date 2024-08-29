@@ -52,7 +52,19 @@ def step_impl(context, clone_dataset_name):
 
 @behave.when(u'I clone an item')
 def step_impl(context):
-    context.cloned_item = context.item.clone(with_annotations=True, with_metadata=True, with_task_annotations_status=False, allow_many=True)
+    context.cloned_item = context.item.clone(with_annotations=True, with_metadata=True,
+                                             with_task_annotations_status=False, allow_many=True)
+
+
+@behave.then(u'I validate image pre run on cloned item')
+def step_impl(context):
+    executions = context.cloned_item.resource_executions.list()
+    image_pre_run = False
+    for page in executions:
+        for execution in page:
+            if execution.package_name == 'image-preprocess':
+                image_pre_run = True
+    assert image_pre_run is True, 'image-preprocess package did not run on cloned item'
 
 
 @behave.then(u'Merge Datasets "{merge_dataset_name}"')
