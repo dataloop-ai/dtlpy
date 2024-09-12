@@ -77,8 +77,8 @@ from .entities import (
     # triggers
     TriggerResource, TriggerAction, TriggerExecutionMode, TriggerType,
     # faas
-    FunctionIO, KubernetesAutuscalerType, KubernetesRabbitmqAutoscaler, KubernetesAutoscaler, KubernetesRuntime,
-    InstanceCatalog, PackageInputType, ServiceType, ServiceModeType,
+    FunctionIO, KubernetesAutoscalerType, KubernetesAutuscalerType, KubernetesRabbitmqAutoscaler, KubernetesAutoscaler, KubernetesRuntime,
+    InstanceCatalog, PackageInputType, ServiceType, ServiceModeType, KubernetesRPSAutoscaler,
     PackageSlot, SlotPostAction, SlotPostActionType, SlotDisplayScope, SlotDisplayScopeResource, UiBindingPanel,
     # roberto
     DatasetSubsetType, ModelStatus, PlotSample, ArtifactType, Artifact, ItemArtifact, LinkArtifact, LocalArtifact,
@@ -316,8 +316,8 @@ EXECUTION_STATUS_FAILED = ExecutionStatus.FAILED
 LINK_TYPE_ID = LinkTypeEnum.ID
 LINK_TYPE_URL = LinkTypeEnum.URL
 
-KUBERNETES_AUTUSCALER_TYPE_CPU = KubernetesAutuscalerType.CPU
-KUBERNETES_AUTUSCALER_TYPE_RABBITMQ = KubernetesAutuscalerType.RABBITMQ
+KUBERNETES_AUTUSCALER_TYPE_CPU = KubernetesAutoscalerType.CPU
+KUBERNETES_AUTUSCALER_TYPE_RABBITMQ = KubernetesAutoscalerType.RABBITMQ
 
 INSTANCE_CATALOG_REGULAR_XS = InstanceCatalog.REGULAR_XS
 INSTANCE_CATALOG_REGULAR_S = InstanceCatalog.REGULAR_S

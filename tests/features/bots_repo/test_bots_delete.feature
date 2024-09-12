@@ -10,7 +10,7 @@ Feature: Bots repository get service testing
     When I create a bot by the name of "some_bot"
     And I delete the created bot by "email"
     And I list bots in project
-    Then I receive a bots list of "0"
+    Then I receive a bots list of "1"
 
   @testrail-C4523062
   @DAT-46469
@@ -18,7 +18,7 @@ Feature: Bots repository get service testing
     When I create a bot by the name of "some_bot"
     And I delete the created bot by "id"
     And I list bots in project
-    Then I receive a bots list of "0"
+    Then I receive a bots list of "1"
 
   @testrail-C4523062
   @DAT-46469

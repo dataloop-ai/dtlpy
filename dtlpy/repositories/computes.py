@@ -1,7 +1,12 @@
+import base64
+import datetime
+import json
+
 from ..services.api_client import ApiClient
 from .. import exceptions, entities, repositories
 from typing import List, Optional, Dict
-
+from ..entities import ComputeCluster, ComputeContext, ComputeType, Project
+from ..entities.integration import IntegrationType
 
 class Computes:
 
@@ -9,12 +14,26 @@ class Computes:
         self._client_api = client_api
         self._base_url = '/compute'
         self._commands = None
+        self._projects = None
+        self._organizations = None
 
     @property
     def commands(self) -> repositories.Commands:
         if self._commands is None:
             self._commands = repositories.Commands(client_api=self._client_api)
         return self._commands
+
+    @property
+    def projects(self):
+        if self._projects is None:
+            self._projects = repositories.Projects(client_api=self._client_api)
+        return self._projects
+
+    @property
+    def organizations(self):
+        if self._organizations is None:
+            self._organizations = repositories.Organizations(client_api=self._client_api)
+        return self._organizations
 
     def create(
             self,
@@ -142,6 +161,59 @@ class Computes:
 
         return True
 
+    @staticmethod
+    def read_file(file_path):
+        try:
+            with open(file_path, 'r') as file:
+                content = file.read()
+            return content
+        except FileNotFoundError:
+            print(f"The file at {file_path} was not found.")
+        except IOError:
+            print(f"An error occurred while reading the file at {file_path}.")
+
+    def decode_and_parse_input(self, file_path):
+        """Decode a base64 encoded string from file a and parse it as JSON."""
+        decoded_bytes = base64.b64decode(self.read_file(file_path))
+        return json.loads(decoded_bytes)
+
+    @staticmethod
+    def create_integration(org, name, auth_data):
+        """Create a new key-value integration within the specified project."""
+        return org.integrations.create(
+            integrations_type=IntegrationType.KEY_VALUE,
+            name=name,
+            options={
+                'key': name,
+                'value': json.dumps(auth_data)
+            }
+        )
+
+    def setup_compute_cluster(self, config, integration, org_id, project=None):
+        """Set up a compute cluster using the provided configuration and integration."""
+        cluster = ComputeCluster.from_setup_json(config, integration)
+        project_id = None
+        if project is not None:
+            project_id = project.id
+        compute = self.create(
+            config['config']['name'],
+            ComputeContext([], org_id, project_id),
+            [],
+            cluster,
+            ComputeType.KUBERNETES)
+        return compute
+
+    def create_from_config_file(self, config_file_path, org_id, project_name: Optional[str] = None):
+        config = self.decode_and_parse_input(config_file_path)
+        project = None
+        if project_name is not None:
+            project = self.projects.get(project_name=project_name)
+        org = self.organizations.get(organization_id=org_id)
+        integration_name = ('cluster_integration_test_' + datetime.datetime.now().isoformat().split('.')[0]
+                            .replace(':', '_'))
+        integration = self.create_integration(org, integration_name, config['authentication'])
+        compute = self.setup_compute_cluster(config, integration, org_id, project)
+        return compute
 
 class ServiceDrivers:
 
@@ -234,7 +306,7 @@ class ServiceDrivers:
         """
         Set a service driver as default
 
-        :param service_driver_id: Service driver ID
+        :param service_driver_id: Compute name
         :param org_id: Organization ID
         :param update_existing_services: Update existing services
 

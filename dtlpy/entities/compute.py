@@ -221,6 +221,18 @@ class ComputeCluster:
             'authentication': self.authentication.to_json()
         }
 
+    @classmethod
+    def from_setup_json(cls, devops_output, integration):
+        node_pools = [NodePool.from_json(n) for n in devops_output['config']['nodePools']]
+        return cls(
+            devops_output['config']['name'],
+            devops_output['config']['endpoint'],
+            devops_output['config']['kubernetesVersion'],
+            ClusterProvider(devops_output['config']['provider']),
+            node_pools,
+   {},
+            Authentication(AuthenticationIntegration(integration.id,integration.type))
+        )
 
 class ComputeContext:
     def __init__(self, labels: List[str], org: str, project: Optional[str] = None):
@@ -284,10 +296,10 @@ class Compute:
         return self._serviceDrivers
 
     def delete(self):
-        return self._computes.delete(compute_id=self.id)
+        return self.computes.delete(compute_id=self.id)
 
     def update(self):
-        return self._computes.update(compute=self)
+        return self.computes.update(compute=self)
 
     @classmethod
     def from_json(cls, _json, client_api: ApiClient):

@@ -26,6 +26,7 @@ Feature: Models repository clone testing
     When I clone a model
     Then model input should be equal "image", and output should be equal "box"
     Then model do not have operation "evaluate"
+    And I clean the project
 
   @DAT-65866
   Scenario: test clone model failed
@@ -37,3 +38,17 @@ Feature: Models repository clone testing
     And i fetch the model by the name "test-model"
     When I clone the model
     Then model status should be "pre-trained"
+    And I clean the project
+
+  @DAT-77435
+  Scenario: test clone model artifact
+    Given I fetch the dpk from 'model_dpk/modelsDpks.json' file
+    When I create a dummy model package by the name of "dummymodel" with entry point "main.py"
+    And I create a model from package by the name of "test-model" with status "trained" in index "0"
+    And I publish a dpk to the platform
+    And I install the app
+    And i fetch the model by the name "test-model"
+    And I upload artifact in "0000000162.jpg"
+    When I clone the model
+    Then src model and clone model should have the same artifact name and different id
+    And I clean the project

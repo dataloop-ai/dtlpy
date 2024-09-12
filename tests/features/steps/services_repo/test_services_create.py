@@ -4,7 +4,8 @@ import behave
 import json
 import time
 
-from dtlpy import FunctionIO, PackageInputType, KubernetesAutuscalerType
+from dtlpy import FunctionIO, PackageInputType, KubernetesAutoscalerType
+
 
 
 @behave.when(u"I create a service")
@@ -102,7 +103,7 @@ def step_impl(context):
             else:
                 runtime = {"gpu": False, "numReplicas": 1, 'concurrency': 1,
                            'autoscaler': {
-                               'type': KubernetesAutuscalerType.RABBITMQ, 'minReplicas': 1,
+                               'type': KubernetesAutoscalerType.RABBITMQ, 'minReplicas': 1,
                                'maxReplicas': 5,
                                'queueLength': 10}}
 

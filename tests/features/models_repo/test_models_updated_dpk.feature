@@ -22,7 +22,7 @@ Feature: DPK single Id
       | key             | value |
       | packageRevision | 1.0.1 |
     And "model" has app scope
-    And i clean the project
+    And I clean the project
 
 
   @DAT-71180
@@ -38,3 +38,5 @@ Feature: DPK single Id
     When i fetch the model by the name "test-model"
     Then "model" has app scope
     Then I validate the context.model has the attribute "labels" with value "['1']"
+    And I clean the project
+

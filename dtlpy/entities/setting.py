@@ -190,7 +190,8 @@ class Setting(BaseSetting):
             hint=None,
             client_api=None,
             project=None,
-            org=None
+            org=None,
+            setting_type=SettingsTypes.USER_SETTINGS
     ):
         super().__init__(
             default_value=default_value,
@@ -199,7 +200,7 @@ class Setting(BaseSetting):
             value_type=value_type,
             scope=scope,
             metadata=metadata,
-            setting_type=SettingsTypes.USER_SETTINGS,
+            setting_type=setting_type,
             client_api=client_api,
             project=project,
             org=org,

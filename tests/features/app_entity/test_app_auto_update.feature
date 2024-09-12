@@ -30,7 +30,7 @@ Feature: Test app umbrella refs - Auto update Pipeline nodes
     Then "service" has app scope
     And I pause pipeline in context
     And I uninstall the app
-    And i clean the project
+    And I clean the project
 
   @DAT-72128
   @pipelines.delete
@@ -54,7 +54,7 @@ Feature: Test app umbrella refs - Auto update Pipeline nodes
     Then "service" has app scope
     And I pause pipeline in context
     And I uninstall the app
-    And i clean the project
+    And I clean the project
 
   @DAT-72129
   @DAT-75739
@@ -88,7 +88,7 @@ Feature: Test app umbrella refs - Auto update Pipeline nodes
     Then "service" has app scope
     And I pause pipeline in context
     And I uninstall the app
-    And i clean the project
+    And I clean the project
 
   @DAT-72310
   Scenario: Auto update app with cloned model deploy service - Should update deploy service to latest app version
@@ -111,5 +111,5 @@ Feature: Test app umbrella refs - Auto update Pipeline nodes
       | packageRevision | 1.0.1 |
     And "model" has app scope
     And "service" has app scope
-    And i clean the project
+    And I clean the project
 

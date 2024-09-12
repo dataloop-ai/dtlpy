@@ -43,7 +43,7 @@ from .package_slot import PackageSlot, SlotPostAction, SlotPostActionType, SlotD
     UiBindingPanel
 from .package_function import PackageFunction, FunctionIO, PackageInputType
 from .time_series import TimeSeries
-from .service import Service, KubernetesAutuscalerType, KubernetesRabbitmqAutoscaler, KubernetesAutoscaler, \
+from .service import Service, KubernetesAutoscalerType, KubernetesAutuscalerType, KubernetesRabbitmqAutoscaler, KubernetesAutoscaler, KubernetesRPSAutoscaler, \
     InstanceCatalog, KubernetesRuntime, ServiceType, ServiceModeType
 from .execution import Execution, ExecutionStatus
 from .command import Command, CommandsStatus

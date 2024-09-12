@@ -156,8 +156,10 @@ class KubernetesRuntime(ServiceRuntime):
 
         self.autoscaler = kwargs.get('autoscaler', autoscaler)
         if self.autoscaler is not None and isinstance(self.autoscaler, dict):
-            if self.autoscaler['type'] == KubernetesAutuscalerType.RABBITMQ:
+            if self.autoscaler['type'] == KubernetesAutoscalerType.RABBITMQ:
                 self.autoscaler = KubernetesRabbitmqAutoscaler(**self.autoscaler)
+            elif self.autoscaler['type'] == KubernetesAutoscalerType.RPS:
+                self.autoscaler = KubernetesRPSAutoscaler(**self.autoscaler)
             else:
                 raise NotImplementedError(
                     'Unknown kubernetes autoscaler type: {}'.format(self.autoscaler['type']))
@@ -228,6 +230,7 @@ class Service(entities.BaseEntity):
     archive = attr.ib(repr=False)
     config = attr.ib(repr=False)
     settings = attr.ib(repr=False)
+    panels = attr.ib(repr=False)
 
     # SDK
     _package = attr.ib(repr=False)
@@ -340,7 +343,8 @@ class Service(entities.BaseEntity):
             settings=_json.get('settings', None),
             app=_json.get('app', None),
             integrations=_json.get('integrations', None),
-            org_id=_json.get('orgId', None)
+            org_id=_json.get('orgId', None),
+            panels=_json.get('panels', None)
         )
         inst.is_fetched = is_fetched
         return inst
@@ -484,7 +488,8 @@ class Service(entities.BaseEntity):
                 attr.fields(Service).settings,
                 attr.fields(Service).app,
                 attr.fields(Service).integrations,
-                attr.fields(Service).org_id
+                attr.fields(Service).org_id,
+                attr.fields(Service).panels
             )
         )
 
@@ -507,6 +512,9 @@ class Service(entities.BaseEntity):
 
         if self.updated_by is not None:
             _json['updatedBy'] = self.updated_by
+
+        if self.panels is not None:
+            _json['panels'] = self.panels
 
         if self.max_attempts is not None:
             _json['maxAttempts'] = self.max_attempts
@@ -806,8 +814,8 @@ class Service(entities.BaseEntity):
         )
 
 
-class KubernetesAutuscalerType(str, Enum):
-    """ The Service Autuscaler Type (RABBITMQ, CPU).
+class KubernetesAutoscalerType(str, Enum):
+    """ The Service Autoscaler Type (RABBITMQ, CPU).
 
     .. list-table::
        :widths: 15 150
@@ -816,21 +824,42 @@ class KubernetesAutuscalerType(str, Enum):
        * - State
          - Description
        * - RABBITMQ
-         - Service Autuscaler will be in RABBITMQ
+         - Service Autoscaler based on service queue length
        * - CPU
-         - Service Autuscaler will be in in local CPU
+         - Service Autoscaler based on service CPU usage
+       * - RPS
+            - Service Autoscaler based on service RPS
     """
     RABBITMQ = 'rabbitmq'
     CPU = 'cpu'
+    RPS = 'rps'
+
+
+# added this class to avoid breaking changes after fixing a spelling mistake in KubernetesAutoscalerType
+class KubernetesAutuscalerTypeMeta(type):
+    def __getattribute__(cls, item):
+        if hasattr(KubernetesAutoscalerType, item):
+            warnings.warn(
+                'KubernetesAutuscalerType is deprecated and will be removed in version 1.97.0, '
+                'use KubernetesAutoscalerType instead',
+                DeprecationWarning
+            )
+            return getattr(KubernetesAutoscalerType, item)
+        else:
+            raise AttributeError(f"KubernetesAutuscalerType has no attribute '{item}'")
+
+
+class KubernetesAutuscalerType(metaclass=KubernetesAutuscalerTypeMeta):
+    pass
 
 
 class KubernetesAutoscaler(entities.BaseEntity):
     MIN_REPLICA_DEFAULT = 0
     MAX_REPLICA_DEFAULT = 1
-    AUTOSCALER_TYPE_DEFAULT = KubernetesAutuscalerType.RABBITMQ
+    AUTOSCALER_TYPE_DEFAULT = KubernetesAutoscalerType.RABBITMQ
 
     def __init__(self,
-                 autoscaler_type: KubernetesAutuscalerType.RABBITMQ = AUTOSCALER_TYPE_DEFAULT,
+                 autoscaler_type: KubernetesAutoscalerType.RABBITMQ = AUTOSCALER_TYPE_DEFAULT,
                  min_replicas=MIN_REPLICA_DEFAULT,
                  max_replicas=MAX_REPLICA_DEFAULT,
                  cooldown_period=None,
@@ -870,7 +899,7 @@ class KubernetesRabbitmqAutoscaler(KubernetesAutoscaler):
                  **kwargs):
         super().__init__(min_replicas=min_replicas,
                          max_replicas=max_replicas,
-                         autoscaler_type=KubernetesAutuscalerType.RABBITMQ,
+                         autoscaler_type=KubernetesAutoscalerType.RABBITMQ,
                          cooldown_period=cooldown_period,
                          polling_interval=polling_interval, **kwargs)
         self.queue_length = kwargs.get('queueLength', queue_length)
@@ -878,4 +907,31 @@ class KubernetesRabbitmqAutoscaler(KubernetesAutoscaler):
     def to_json(self):
         _json = super().to_json()
         _json['queueLength'] = self.queue_length
+        return _json
+
+
+class KubernetesRPSAutoscaler(KubernetesAutoscaler):
+    THRESHOLD_DEFAULT = 10
+    RATE_SECONDS_DEFAULT = 30
+
+    def __init__(self,
+                 min_replicas=KubernetesAutoscaler.MIN_REPLICA_DEFAULT,
+                 max_replicas=KubernetesAutoscaler.MAX_REPLICA_DEFAULT,
+                 threshold=THRESHOLD_DEFAULT,
+                 rate_seconds=RATE_SECONDS_DEFAULT,
+                 cooldown_period=None,
+                 polling_interval=None,
+                 **kwargs):
+        super().__init__(min_replicas=min_replicas,
+                         max_replicas=max_replicas,
+                         autoscaler_type=KubernetesAutoscalerType.RPS,
+                         cooldown_period=cooldown_period,
+                         polling_interval=polling_interval, **kwargs)
+        self.threshold = kwargs.get('threshold', threshold)
+        self.rate_seconds = kwargs.get('rateSeconds', rate_seconds)
+
+    def to_json(self):
+        _json = super().to_json()
+        _json['rateSeconds'] = self.rate_seconds
+        _json['threshold'] = self.threshold
         return _json

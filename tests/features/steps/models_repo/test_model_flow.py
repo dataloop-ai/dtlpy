@@ -106,6 +106,21 @@ def step_impl(context, model_name):
     context.model = context.project.models.get(model_name=model_name)
 
 
+@behave.when(u'I upload artifact in "{item_path}"')
+def step_impl(context, item_path):
+    item_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], item_path)
+    context.item = context.model.artifacts.upload(filepath=item_path)
+    context.model = dl.models.get(model_id=context.model.id)
+
+
+@behave.then(u'src model and clone model should have the same artifact name and different id')
+def step_impl(context):
+    src_arts = dl.items.get(item_id=context.model.model_artifacts[0].id)
+    clone_arts = dl.items.get(item_id=context.model_clone.model_artifacts[0].id)
+    assert src_arts.name == clone_arts.name, f"TEST FAILED: artifact name is not as expected, expected: {src_arts.name}, got: {clone_arts.name}"
+    assert src_arts.id != clone_arts.id, f"TEST FAILED: artifact id is not as expected, expected: {src_arts.id}, got: {clone_arts.id}"
+
+
 @behave.then(u'"{obj_entity}" has app scope')
 @behave.when(u'"{obj_entity}" has app scope')
 def step_impl(context, obj_entity):
@@ -203,7 +218,7 @@ def step_impl(context, status):
     assert context.model_clone.status == status, f"TEST FAILED: model status is not as expected, expected: {status}, got: {context.model_clone.status}"
 
 
-@behave.then(u'i clean the project')
+@behave.then(u'I clean the project')
 def step_impl(context):
     i_project = dl.projects.get(project_id=context.project.id)
     for pipeline in i_project.pipelines.list().items:

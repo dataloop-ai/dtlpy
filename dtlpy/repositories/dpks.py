@@ -287,7 +287,7 @@ class Dpks:
         """
         success, response = self._client_api.gen_request(req_type='delete', path=f'/app-registry/{dpk_id}')
         if success:
-            logger.info('Deleted dpk successfully')
+            logger.info(f'Deleted dpk: {dpk_id} successfully')
         else:
             raise exceptions.PlatformException(response)
         return success

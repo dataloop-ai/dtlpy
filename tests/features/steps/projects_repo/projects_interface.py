@@ -13,7 +13,16 @@ def step_impl(context, project_name):
         context.project = context.dl.projects.create(project_name=project_name)
         context.to_delete_projects_ids.append(context.project.id)
         context.feature.dataloop_feature_project = context.project
-        time.sleep(.200)
+        start = time.time()
+        timeout = 60
+        while (time.time() - start) < timeout:
+            filters = context.dl.Filters(resource=context.dl.FiltersResource.DATASET)
+            filters.add(field='name', values='Binaries')
+            filters.system_space = True
+            datasets = context.project.datasets.list(filters=filters)
+            if len(datasets) > 0:
+                break
+            time.sleep(.200)
 
     context.project_name = context.project.name
     context.dataset_count = 0

@@ -57,7 +57,7 @@ class Commands:
         if url is None:
             url_path = "/commands/{}".format(command_id)
         else:
-            url_path = url.split('v1')[1]
+            url_path = url.split('api/v1')[1]
 
         success, response = self._client_api.gen_request(req_type="get",
                                                          path=url_path)

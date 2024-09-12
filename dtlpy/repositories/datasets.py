@@ -515,7 +515,8 @@ class Datasets:
               with_items_annotations: bool = True,
               with_metadata: bool = True,
               with_task_annotations_status: bool = True,
-              dst_dataset_id: str = None):
+              dst_dataset_id: str = None,
+              target_directory: str = None):
         """
         Clone a dataset. Read more about cloning datatsets and items in our `documentation <https://dataloop.ai/docs/clone-merge-dataset#cloned-dataset>`_ and `SDK documentation <https://developers.dataloop.ai/tutorials/data_management/data_versioning/chapter/>`_.
 
@@ -528,6 +529,7 @@ class Datasets:
         :param bool with_metadata: true to clone with metadata
         :param bool with_task_annotations_status: true to clone with task annotations' status
         :param str dst_dataset_id: destination dataset id
+        :param str target_directory: target directory
         :return: dataset object
         :rtype: dtlpy.entities.dataset.Dataset
 
@@ -555,13 +557,17 @@ class Datasets:
         if copy_filters.has_field('hidden'):
             copy_filters.pop('hidden')
 
+        if target_directory is not None and not target_directory.startswith('/'):
+            target_directory = '/' + target_directory
+
         payload = {
             "name": clone_name,
             "filter": copy_filters.prepare(),
             "cloneDatasetParams": {
                 "withItemsAnnotations": with_items_annotations,
                 "withMetadata": with_metadata,
-                "withTaskAnnotationsStatus": with_task_annotations_status
+                "withTaskAnnotationsStatus": with_task_annotations_status,
+                "targetDirectory": target_directory
             }
         }
         if dst_dataset_id is not None:

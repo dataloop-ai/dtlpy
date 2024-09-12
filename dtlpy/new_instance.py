@@ -22,7 +22,7 @@ class Dtlpy:
         # triggers
         TriggerResource, TriggerAction, TriggerExecutionMode, TriggerType,
         # faas
-        FunctionIO, KubernetesAutuscalerType, KubernetesRabbitmqAutoscaler, KubernetesAutoscaler, KubernetesRuntime,
+        FunctionIO, KubernetesAutoscalerType, KubernetesAutuscalerType, KubernetesRabbitmqAutoscaler, KubernetesAutoscaler, KubernetesRuntime,
         InstanceCatalog, PackageInputType, ServiceType, ServiceModeType,
         PackageSlot, SlotPostAction, SlotPostActionType, SlotDisplayScope, SlotDisplayScopeResource, UiBindingPanel,
         # roberto

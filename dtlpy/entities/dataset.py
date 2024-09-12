@@ -535,7 +535,8 @@ class Dataset(entities.BaseEntity):
               with_items_annotations=True,
               with_metadata=True,
               with_task_annotations_status=True,
-              dst_dataset_id=None
+              dst_dataset_id=None,
+              target_directory=None,
               ):
         """
         Clone dataset
@@ -548,6 +549,7 @@ class Dataset(entities.BaseEntity):
         :param bool with_metadata: clone metadata
         :param bool with_task_annotations_status: clone task annotations status
         :param str dst_dataset_id: destination dataset id
+        :param str target_directory: target directory
         :return: dataset object
         :rtype: dtlpy.entities.dataset.Dataset
 
@@ -567,7 +569,8 @@ class Dataset(entities.BaseEntity):
                                    with_metadata=with_metadata,
                                    with_items_annotations=with_items_annotations,
                                    with_task_annotations_status=with_task_annotations_status,
-                                   dst_dataset_id=dst_dataset_id)
+                                   dst_dataset_id=dst_dataset_id,
+                                   target_directory=target_directory)
 
     def sync(self, wait=True):
         """
