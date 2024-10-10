@@ -59,6 +59,11 @@ def step_impl(context):
 def step_impl(context):
     context.annotation_collection = context.item.annotations.list()
 
+@behave.then(u'"{num}" annotations are upload')
+def step_impl(context, num):
+    num_ann = int(num)
+    assert len(context.item.annotations.list().annotations) == num_ann, "Number of annotations is not as expected"
+
 
 @behave.given(u"I add a few annotations to image")
 def step_impl(context):

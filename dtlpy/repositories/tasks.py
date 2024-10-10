@@ -642,10 +642,19 @@ class Tasks:
             if filters is None and items is None:
                 query = entities.Filters().prepare()
             elif filters is None:
-                if not isinstance(items, list):
-                    items = [items]
+                item_list = list()
+                if isinstance(items, entities.PagedEntities):
+                    for page in items:
+                        for item in page:
+                            item_list.append(item)
+                elif isinstance(items, list):
+                    item_list = items
+                elif isinstance(items, entities.Item):
+                    item_list.append(items)
+                else:
+                    raise exceptions.PlatformException('400', 'Unknown items type')
                 query = entities.Filters(field='id',
-                                         values=[item.id for item in items],
+                                         values=[item.id for item in item_list],
                                          operator=entities.FiltersOperations.IN,
                                          use_defaults=False).prepare()
             else:

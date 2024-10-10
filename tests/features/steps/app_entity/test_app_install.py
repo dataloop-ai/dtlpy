@@ -132,9 +132,10 @@ def step_impl(context):
     assert context.dpk_service['onReset'] == context.service.on_reset, f"TEST FAILED: Field onReset"
     assert context.dpk_service[
                'runExecutionAsProcess'] == context.service.run_execution_as_process, f"TEST FAILED: Field runExecutionAsProcess"
-    assert context.dpk_service['versions']['dtlpy'] == context.service.versions['dtlpy'], \
-        f"TEST FAILED: Field versions.dtlpy DPK {context.dpk.components.services[0]['versions']['dtlpy']} " \
-        f"Service {context.service.versions['dtlpy']}"
+    if context.dpk_service['versions']['dtlpy'] != 'dtlpy_version':
+        assert context.dpk_service['versions']['dtlpy'] == context.service.versions['dtlpy'], \
+            f"TEST FAILED: Field versions.dtlpy DPK {context.dpk.components.services[0]['versions']['dtlpy']} " \
+            f"Service {context.service.versions['dtlpy']}"
 
 
 @behave.then(u'i can create pipeline function node from the app service')

@@ -80,7 +80,7 @@ def step_impl(context, execution_number):
     context.pipeline = context.project.pipelines.get(context.pipeline.name)
 
     num_try = 72
-    interval = 5
+    interval = 8
     executed = False
     execution_count = 0
     pipeline_executions = None

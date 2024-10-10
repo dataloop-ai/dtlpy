@@ -74,8 +74,6 @@ class PlatformError(Exception):
         super().__init__(msg)
 
 
-
-
 class Callbacks:
     def __init__(self):
         self._callbacks = {}
@@ -1172,7 +1170,12 @@ class ApiClient:
                 def callback(bytes_read):
                     pass
 
-        timeout = aiohttp.ClientTimeout(total=2 * 60)
+        timeout = aiohttp.ClientTimeout(
+            total=None,  # Disable overall timeout
+            connect=2 * 60,  # Set connect timeout (in seconds)
+            sock_read=10 * 60,  # Set read timeout for socket read operations
+            sock_connect=2 * 60  # Set timeout for connection setup
+        )
         async with aiohttp.ClientSession(headers=headers, timeout=timeout) as session:
             try:
                 form = aiohttp.FormData({})
@@ -1633,6 +1636,30 @@ class ApiClient:
         if res:
             self._send_login_event(user_type='human', login_type='refresh')
         return res
+
+    def generate_api_key(self, description: str = None, login: bool = False):
+        """
+        Generate an API key for a user
+        :param description: description for the API key
+        :param login: if True, login with the new API key
+        :return: User token
+        """
+        user_email = self.info()['user_email']
+        payload = {
+            'userId': user_email
+        }
+        if description:
+            if not isinstance(description, str):
+                raise ValueError('description should be a string')
+            payload['description'] = description
+        success, response = self.gen_request(req_type='post', path='/apiKeys', json_req=payload)
+        if not success:
+            raise exceptions.PlatformException(response)
+        if login:
+            self.login_api_key(response.json()['jwt'])
+            return True
+
+        return response.json()['jwt']
 
     def _renew_token_with_refresh_token(self):
         renewed = False

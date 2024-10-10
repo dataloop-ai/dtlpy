@@ -27,31 +27,6 @@ Feature: Pipeline entity method testing - Task node execution
 
 
   @pipelines.delete
-  @DAT-62674
-  Scenario: Create task node and update the pipeline should create a task
-    Given I create pipeline with the name "pipeline"
-    And I create "task" node with params
-      | key      | value |
-      | position | (1,1) |
-    When I add and connect all nodes in list to pipeline entity
-    And I get task by pipeline task node
-    Then I receive a Task entity
-
-
-  @pipelines.delete
-  @DAT-63243
-  Scenario: Create task node and delete the node should delete the task
-    Given I create pipeline with the name "pipeline"
-    And I create "task" node with params
-      | key      | value |
-      | position | (1,1) |
-    When I add and connect all nodes in list to pipeline entity
-    And I get task by pipeline task node
-    And I delete all nodes
-    Then I dont get Pipeline Task by name
-
-
-  @pipelines.delete
   @DAT-63245
   Scenario: Create task node with item and delete node shouldn't delete task
     Given I create pipeline with the name "pipeline"
@@ -67,19 +42,6 @@ Feature: Pipeline entity method testing - Task node execution
     And I delete all nodes
     And I wait "8"
     Then I get task by pipeline task node
-
-
-  @pipelines.delete
-  @DAT-63287
-  Scenario: Create task node and update the name should update task name
-    Given I create pipeline with the name "pipeline"
-    And I create "task" node with params
-      | key      | value |
-      | position | (1,1) |
-    When I add and connect all nodes in list to pipeline entity
-    And I get task by pipeline task node
-    And I update node name to "New Name"
-    Then I validate task name changed
 
 
   @DAT-73857

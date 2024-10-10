@@ -3,7 +3,6 @@ Feature: Delete org
 
   Background: Initiate Platform Interface
     Given Platform Interface is initialized as dlp and Environment is set according to git branch
-    Given I fetch "billing_api_calls.json" file from "billing"
     And I log in as a "superuser"
     Given I create "org" name "org_to_delete"
     Given I create a project by the name of "org_to_delete_project"

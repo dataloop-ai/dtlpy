@@ -388,13 +388,12 @@ class Model(entities.BaseEntity):
 
     @property
     def id_to_label_map(self):
+        # default
         if 'id_to_label_map' not in self.configuration:
-            # default
-            if self.ontology_id == 'null' or self.ontology_id is None:
-                self.configuration['id_to_label_map'] = {int(idx): lbl for idx, lbl in enumerate(self.labels)}
-            else:
-                self.configuration['id_to_label_map'] = {int(idx): lbl.tag for idx, lbl in
-                                                         enumerate(self.ontology.labels)}
+            if not (self.dataset_id == 'null' or self.dataset_id is None):
+                self.labels = [label.tag for label in self.dataset.labels]
+            self.configuration['id_to_label_map'] = {int(idx): lbl for idx, lbl in enumerate(self.labels)}
+        # use existing
         else:
             self.configuration['id_to_label_map'] = {int(idx): lbl for idx, lbl in
                                                      self.configuration['id_to_label_map'].items()}

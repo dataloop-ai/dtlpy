@@ -73,3 +73,15 @@ Feature: Annotation Entity repo services
         And I add same frames to video annotation
         Then Item in host has video annotation entity created
         And annotation do not have snapshots
+
+    @DAT-77996
+    Scenario: UpdatedBy annotation validation
+        Given Labels in file: "assets_split/annotation_repo/labels.json" are uploaded to test Dataset
+        And Item in path "assets_split/annotation_repo/0000000162.jpg" is uploaded to "Dataset"
+        And Item is annotated with annotations in file: "assets_split/annotation_repo/0162_annotations.json"
+        And There is annotation x
+        And I change annotation x label to "new_label"
+        When I update annotation entity
+        And I create filters
+        And I add "annotations" filter with "updatedBy" and "dataset.updated_by"
+        Then I verify that I have annotations

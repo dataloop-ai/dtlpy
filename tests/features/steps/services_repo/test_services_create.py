@@ -81,6 +81,7 @@ def step_impl(context):
     revision = None
     config = None
     runtime = None
+    pod_type = None
 
     params = context.table.headings
     for param in params:
@@ -97,6 +98,9 @@ def step_impl(context):
         elif param[0] == "config":
             if param[1] != "None":
                 config = json.loads(param[1])
+        elif param[0] == "pod_type":
+            if param[1] != "None":
+                pod_type = param[1]
         elif param[0] == "runtime":
             if param[1] != "None":
                 runtime = json.loads(param[1])
@@ -113,7 +117,8 @@ def step_impl(context):
         package=context.package,
         revision=revision,
         init_input=config,
-        runtime=runtime
+        runtime=runtime,
+        pod_type=pod_type
     )
     context.to_delete_services_ids.append(context.service.id)
     if hasattr(context, "first_service"):

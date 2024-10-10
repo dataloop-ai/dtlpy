@@ -294,7 +294,7 @@ def check_feature_folder(feature_folder):
         return "Ramsay"
     elif feature_folder in ["pipeline_entity", "pipeline_resume", "packages_entity", "packages_flow", "packages_repo",
                             "services_entity", "services_repo", "execution_monitoring", "executions_repo",
-                            "triggers_repo"]:
+                            "triggers_repo", "compute"]:
         return "Piper"
     elif feature_folder in ["bot_entity", "bots_repo", "integrations_repo", "project_entity", "projects_repo"]:
         return "Hodor"
@@ -441,7 +441,10 @@ if __name__ == '__main__':
         assert False, 'Cannot run test on user: "{}". only test users'.format(payload['email'])
 
     # run tests
-    pool = ThreadPoolExecutor(max_workers=6)
+    max_workers = 6
+    if base_env == 'rc':
+        max_workers = 10
+    pool = ThreadPoolExecutor(max_workers=max_workers)
     features_path = os.path.join(TEST_DIR, 'features')
     if not os.path.exists(REPORT_DIR):
         os.makedirs(REPORT_DIR)

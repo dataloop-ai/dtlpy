@@ -196,6 +196,8 @@ class Filters:
         """
         if method is None:
             method = self.method
+        if 'metadata.system.refs.metadata' in field and self.resource == FiltersResource.ITEM:
+            logger.warning('Filtering by metadata.system.refs.metadata may cause incorrect results. please use match operator')
 
         # create SingleFilter object and add to self.filter_list
         if method == FiltersMethod.OR:

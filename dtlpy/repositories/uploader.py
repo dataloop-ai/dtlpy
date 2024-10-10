@@ -133,11 +133,13 @@ class Uploader:
                                     item_metadata,
                                     export_version: str = entities.ExportVersion.V1,
                                     item_description=None):
-
+        # fix remote path
         if remote_path is None:
-            remote_path = '/'
+            remote_path = "/"
+        if not remote_path.startswith('/'):
+            remote_path = f"/{remote_path}"
         if not remote_path.endswith("/"):
-            remote_path += "/"
+            remote_path = f"{remote_path}/"
         if file_types is not None and not isinstance(file_types, list):
             msg = '"file_types" should be a list of file extension. e.g [".jpg", ".png"]'
             raise PlatformException(error="400", message=msg)

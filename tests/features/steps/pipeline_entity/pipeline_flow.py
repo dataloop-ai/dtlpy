@@ -2,7 +2,6 @@ import os
 import time
 import uuid
 import random
-
 import dtlpy as dl
 import behave
 import json
@@ -292,8 +291,10 @@ def step_impl(context):
     t = time.localtime()
     current_time = time.strftime("%H-%M-%S", t)
 
-    context.dataset_finish = context.project.datasets.create(dataset_name='dataset-' + current_time + "-finish", index_driver=context.index_driver_var)
-    context.pipeline = context.project.pipelines.create(pipeline_name='sdk-pipeline-sanity', project_id=context.project.id)
+    context.dataset_finish = context.project.datasets.create(dataset_name='dataset-' + current_time + "-finish",
+                                                             index_driver=context.index_driver_var)
+    context.pipeline = context.project.pipelines.create(pipeline_name='sdk-pipeline-sanity',
+                                                        project_id=context.project.id)
     context.to_delete_pipelines_ids.append(context.pipeline.id)
 
     task_node_1 = dl.TaskNode(
@@ -623,6 +624,179 @@ def step_impl(context):
             assert execution is not None, "TEST FAILED: execution was not found"
             assert execution.output['taskName'] == context.task.name
             assert execution.output['pipelineName'] == context.pipeline.name
-            assert execution.output['nodeName'] == [n for n in context.pipeline.nodes if n.namespace.service_name == service.name][0].name
+            assert execution.output['nodeName'] == \
+                   [n for n in context.pipeline.nodes if n.namespace.service_name == service.name][0].name
             assert execution.output['assignmentName'] == context.task.assignments.list()[0].name
             assert execution.output['itemStatus'] == context.item_status
+
+
+@behave.given(u'pipeline with 2 nodes')
+def step_impl(context):
+    context.pipeline_json = {
+        "nodes": [
+            {
+                "id": "54a10414-0bbc-4b83-8454-175f905822cf",
+                "inputs": [
+
+                ],
+                "outputs": [
+                    {
+                        "portId": "8c983ca9-ab14-4a27-be46-60a902cf3a62",
+                        "nodeId": "8c983ca9-ab14-4a27-be46-60a902cf3a62",
+                        "type": "Item",
+                        "name": "item",
+                        "displayName": "item",
+                        "io": "output"
+                    }
+                ],
+                "metadata": {
+                    "position": {
+                        "x": 10327.469348772935,
+                        "y": 9879.491191781051,
+                        "z": 0
+                    },
+                    "taskType": "annotation",
+                    "componentGroupName": "automation",
+                    "codeApplicationName": "root",
+                    "repeatable": True
+                },
+                "name": "code",
+                "type": "code",
+                "namespace": {
+                    "functionName": "run",
+                    "projectName": context.project.name,
+                    "serviceName": "root",
+                    "moduleName": "code_module",
+                    "packageName": "root"
+                },
+                "projectId": context.project.id,
+                "config": {
+                    "package": {
+                        "code": "import dtlpy as dl\n\nclass ServiceRunner:\n\n    def run(self):\n        return '67051534634d4937e4fedb16'\n",
+                        "name": "run",
+                        "type": "code",
+                        "codebase": {
+                            "type": "item"
+                        }
+                    }
+                }
+            },
+            {
+                "id": "162131f4-b157-41ad-b7bc-acf6eb03e9d2",
+                "inputs": [
+
+                ],
+                "outputs": [
+                    {
+                        "portId": "685cb42f-4027-4fb5-8264-0f65995fce4a",
+                        "nodeId": "685cb42f-4027-4fb5-8264-0f65995fce4a",
+                        "type": "Item",
+                        "name": "item",
+                        "displayName": "item",
+                        "io": "output"
+                    }
+                ],
+                "metadata": {
+                    "position": {
+                        "x": 10342.000785813001,
+                        "y": 10080.827982708255,
+                        "z": 0
+                    },
+                    "taskType": "annotation",
+                    "componentGroupName": "automation",
+                    "codeApplicationName": "cron",
+                    "repeatable": True
+                },
+                "name": "code",
+                "type": "code",
+                "namespace": {
+                    "functionName": "run",
+                    "projectName": context.project.name,
+                    "serviceName": "cron",
+                    "moduleName": "code_module",
+                    "packageName": "cron"
+                },
+                "projectId": context.project.id,
+                "config": {
+                    "package": {
+                        "code": "import dtlpy as dl\n\nclass ServiceRunner:\n\n    def run(self):\n        return '67051534634d4937e4fedb16'",
+                        "name": "run",
+                        "type": "code",
+                        "codebase": {
+                            "type": "item"
+                        }
+                    }
+                }
+            }
+        ],
+        "connections": [
+
+        ],
+        "startNodes": [
+            {
+                "nodeId": "54a10414-0bbc-4b83-8454-175f905822cf",
+                "type": "root",
+                "id": "812249c5-79a5-4491-b3d6-0c9308bfa2b3"
+            },
+            {
+                "nodeId": "162131f4-b157-41ad-b7bc-acf6eb03e9d2",
+                "type": "trigger",
+                "trigger": {
+                    "type": "Cron",
+                    "spec": {
+                        "cron": "*/30 * * * * *"
+                    },
+                    "name": "code-6514635596702936"
+                },
+                "id": "e29d850b-8830-46f0-945a-14c84f1ef088"
+            }
+        ],
+    }
+
+    start_node = [node for node in context.pipeline_json['startNodes'] if node['type'] == 'root'][0]
+    cron_trigger_node = [
+        node for node in context.pipeline_json['startNodes'] if
+        node['type'] == 'trigger' and node['trigger']['type'] == 'Cron'
+    ][0]
+    context.start_node_id = start_node['nodeId']
+    context.cron_trigger_node_id = cron_trigger_node['nodeId']
+
+
+def random_5_chars():
+    return ''.join(random.choices('abcdefghijklmnopqrstuvwxyz', k=5))
+
+
+@behave.given(u'the node which is not the start node has a cron trigger')
+def step_impl(context):
+    assert context.start_node_id is not None
+    assert context.cron_trigger_node_id is not None
+
+    context.pipeline = context.project.pipelines.create(
+        pipeline_json=context.pipeline_json,
+        name="test-cron-trigger-{}".format(random_5_chars())
+    )
+
+
+@behave.when(u'installing the pipeline')
+def step_impl(context):
+    context.pipeline.install()
+
+
+@behave.then(u'the relevant node should be executed')
+def step_impl(context):
+    timeout = 60 * 5
+    start_time = time.time()
+    success = False
+    while time.time() - start_time < timeout:
+        time.sleep(1)
+        cycles = context.pipeline.pipeline_executions.list().items
+        if cycles:
+            root_service = context.project.services.get(service_name='root')
+            cron_service = context.project.services.get(service_name='cron')
+            root_executions = root_service.executions.list().items
+            cron_executions = cron_service.executions.list().items
+            assert len(root_executions) == 0, 'Root node should not be executed'
+            assert len(cron_executions) == 1, 'Cron node should be executed'
+            success = True
+            break
+    assert success, "TEST FAILED: Cron node was not executed"

@@ -158,3 +158,11 @@ def step_impl(context):
         for annotation in item.annotations.list():
             annotation.annotation_definition = context.annotation_definition
             annotation.update()
+
+
+@behave.then(u'I verify that I have annotations')
+def step_impl(context):
+    filters = context.filters
+    annotations = context.dataset.annotations.list(filters=filters)
+    assert annotations.items_count != 0
+

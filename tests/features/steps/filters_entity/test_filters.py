@@ -540,10 +540,12 @@ def step_impl(context):
 
 @behave.when(u'I add "{resource}" filter with "{field}" and "{values}"')
 def step_impl(context, resource, field, values):
+
     context.filters.resource = resource
     if "." in values:
         try:
             context.filters.add(field=field, values=attrgetter(values)(context))
+
         except Exception as e:
             context.error = e
     else:

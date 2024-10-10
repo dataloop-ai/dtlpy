@@ -567,14 +567,14 @@ class Service(entities.BaseEntity):
         """
         return self.services.update(service=self, force=force)
 
-    def delete(self):
+    def delete(self, force: bool = False):
         """
         Delete Service object
 
         :return: True
         :rtype: bool
         """
-        return self.services.delete(service_id=self.id)
+        return self.services.delete(service_id=self.id, force=force)
 
     def status(self):
         """
@@ -757,6 +757,32 @@ class Service(entities.BaseEntity):
                                                  filters=filters,
                                                  function_name=function_name,
                                                  wait=wait)
+        return execution
+
+    def rerun_batch(self,
+                    filters,
+                    wait=True
+                    ):
+        """
+        rerun a executions on an existing service
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a Filter.
+
+        :param filters: Filters entity for a filtering before rerun
+        :param bool wait: wait until create task finish
+        :return: rerun command
+        :rtype: dtlpy.entities.command.Command
+
+        **Example**:
+
+        .. code-block:: python
+
+            command = service.executions.rerun_batch(
+                        filters=dl.Filters(field='id', values=['executionId'], operator=dl.FiltersOperations.IN, resource=dl.FiltersResource.EXECUTION))
+        """
+        execution = self.executions.rerun_batch(service_id=self.id,
+                                                filters=filters,
+                                                wait=wait)
         return execution
 
     def activate_slots(

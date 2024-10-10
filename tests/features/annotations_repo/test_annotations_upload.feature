@@ -10,7 +10,7 @@ Feature: Annotations repository Upload service testing
     Scenario: Upload annotations from file
         Given Labels in file: "assets_split/annotations_upload/labels.json" are uploaded to test Dataset
         And Item in path "assets_split/annotation_collection/0000000162.jpg" is uploaded to "Dataset"
-        When I upload annotations from file: "assets_split/annotations_upload/0162_annotations.json"
+        When I upload annotations from file: "assets_split/annotations_upload/0162_annotations.json" with merge "False"
         Then Item should have annotations uploaded
 
     @testrail-C4523039

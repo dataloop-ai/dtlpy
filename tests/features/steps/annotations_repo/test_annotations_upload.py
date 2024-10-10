@@ -3,14 +3,33 @@ import json
 import os
 
 
-@behave.when(u'I upload annotations from file: "{file_path}"')
-def step_impl(context, file_path):
+@behave.when(u'I upload annotations from file: "{file_path}" with merge "{merge_ann}"')
+def step_impl(context, file_path, merge_ann):
     file_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], file_path)
-
+    merge_ann = True if merge_ann == 'True' else False
     with open(file_path, "r") as f:
         context.annotations = json.load(f)["annotations"]
-    context.item.annotations.upload(context.annotations)
+    context.item.annotations.upload(context.annotations, merge=merge_ann)
 
+
+@behave.when(u'I save binary annotation coordinates')
+def step_impl(context):
+    context.item = context.project.items.get(item_id=context.item.id)
+    annotations = context.item.annotations.list()
+    for annotation in annotations:
+        if annotation.type == 'binary':
+            context.binary_annotation = annotation
+
+@behave.then(u'binary annotation has been merged')
+def step_impl(context):
+    context.item = context.project.items.get(item_id=context.item.id)
+    annotations = context.item.annotations.list()
+    for annotation in annotations:
+        if annotation.type == 'binary':
+            assert annotation.coordinates != context.binary_annotation.coordinates, 'Binary annotation has not been merged'
+            assert annotation.id == context.binary_annotation.id, 'Binary annotation has not been merged'
+            assert annotation.label == context.binary_annotation.label, 'Binary annotation has not been merged'
+            break
 
 @behave.then(u"Item should have annotations uploaded")
 def step_impl(context):

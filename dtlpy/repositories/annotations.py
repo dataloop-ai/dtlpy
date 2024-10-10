@@ -4,6 +4,9 @@ import logging
 import json
 import jwt
 import os
+from PIL import Image
+from io import BytesIO
+import base64
 
 from .. import entities, exceptions, miscellaneous, _api_reference
 from ..services.api_client import ApiClient
@@ -487,12 +490,9 @@ class Annotations:
                 status = True
                 result = w_annotation
             else:
-                url_path = '/annotations/{}'.format(annotation_id)
-                if system_metadata:
-                    url_path += '?system=true'
-                suc, response = self._client_api.gen_request(req_type='put',
-                                                             path=url_path,
-                                                             json_req=json_req)
+                suc, response = self._update_annotation_req(annotation_json=json_req,
+                                                            system_metadata=system_metadata,
+                                                            annotation_id=annotation_id)
                 if suc:
                     result = entities.Annotation.from_json(_json=response.json(),
                                                            annotations=self,
@@ -506,6 +506,15 @@ class Annotations:
             status = False
             result = traceback.format_exc()
         return status, result
+
+    def _update_annotation_req(self, annotation_json, system_metadata, annotation_id):
+        url_path = '/annotations/{}'.format(annotation_id)
+        if system_metadata:
+            url_path += '?system=true'
+        suc, response = self._client_api.gen_request(req_type='put',
+                                                     path=url_path,
+                                                     json_req=annotation_json)
+        return suc, response
 
     @_api_reference.add(path='/annotations/{annotationId}', method='put')
     def update(self, annotations, system_metadata=False):
@@ -572,11 +581,12 @@ class Annotations:
                 last_frame = frame
         return annotation
 
-    def _create_batches_for_upload(self, annotations):
+    def _create_batches_for_upload(self, annotations, merge=False):
         """
         receives a list of annotations and split them into batches to optimize the upload
 
         :param annotations: list of all annotations
+        :param merge: bool - merge the new binary annotations with the existing annotations
         :return: batch_annotations: list of list of annotation. each batch with size self._upload_batch_size
         """
         annotation_batches = list()
@@ -601,7 +611,106 @@ class Annotations:
                 single_batch = list()
         if len(single_batch) > 0:
             annotation_batches.append(single_batch)
+        if merge and self.item:
+            annotation_batches = self._merge_new_annotations(annotation_batches)
+            annotation_batches = self._merge_to_exits_annotations(annotation_batches)
         return annotation_batches
+
+    def _merge_binary_annotations(self, data_url1, data_url2, item_width, item_height):
+        # Decode base64 data
+        img_data1 = base64.b64decode(data_url1.split(",")[1])
+        img_data2 = base64.b64decode(data_url2.split(",")[1])
+
+        # Convert binary data to images
+        img1 = Image.open(BytesIO(img_data1))
+        img2 = Image.open(BytesIO(img_data2))
+
+        # Create a new image with the target item size
+        merged_img = Image.new('RGBA', (item_width, item_height))
+
+        # Paste both images on the new canvas at their original sizes and positions
+        # Adjust positioning logic if needed (assuming top-left corner for both images here)
+        merged_img.paste(img1, (0, 0), img1)  # Use img1 as a mask to handle transparency
+        merged_img.paste(img2, (0, 0), img2)  # Overlay img2 at the same position
+
+        # Save the merged image to a buffer
+        buffer = BytesIO()
+        merged_img.save(buffer, format="PNG")
+        merged_img_data = buffer.getvalue()
+
+        # Encode the merged image back to a base64 string
+        merged_data_url = "data:image/png;base64," + base64.b64encode(merged_img_data).decode()
+
+        return merged_data_url
+
+    def _merge_new_annotations(self, annotations_batch):
+        """
+        Merge the new binary annotations with the existing annotations
+        :param annotations_batch: list of list of annotation. each batch with size self._upload_batch_size
+        :return: merged_annotations_batch: list of list of annotation. each batch with size self._upload_batch_size
+        """
+        for annotations in annotations_batch:
+            for annotation in annotations:
+                if annotation['type'] == 'binary' and not annotation.get('clean', False):
+                    to_merge = [a for a in annotations if
+                                not a.get('clean', False) and a.get("metadata", {}).get('system', {}).get('objectId',
+                                                                                                          None) ==
+                                annotation.get("metadata", {}).get('system', {}).get('objectId', None) and a['label'] ==
+                                annotation['label']]
+                    if len(to_merge) == 0:
+                        # no annotation to merge with
+                        continue
+                    for a in to_merge:
+                        if a['coordinates'] == annotation['coordinates']:
+                            continue
+                        merged_data_url = self._merge_binary_annotations(a['coordinates'], annotation['coordinates'],
+                                                                         self.item.width, self.item.height)
+                        annotation['coordinates'] = merged_data_url
+                        a['clean'] = True
+        return [[a for a in annotations if not a.get('clean', False)] for annotations in annotations_batch]
+
+    def _merge_to_exits_annotations(self, annotations_batch):
+        filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION, field='type', values='binary')
+        filters.add(field='itemId', values=self.item.id, method=entities.FiltersMethod.AND)
+        exist_annotations = self.list(filters=filters).annotations or list()
+        to_delete = list()
+        for annotations in annotations_batch:
+            for ann in annotations:
+                if ann['type'] == 'binary':
+                    to_merge = [a for a in exist_annotations if
+                                a.object_id == ann.get("metadata", {}).get('system', {}).get('objectId',
+                                                                                             None) and a.label == ann[
+                                    'label']]
+                    if len(to_merge) == 0:
+                        # no annotation to merge with
+                        continue
+                    if to_merge[0].coordinates == ann['coordinates']:
+                        # same annotation
+                        continue
+                    if len(to_merge) > 1:
+                        raise exceptions.PlatformException('400', 'Multiple annotations with the same label')
+                    # merge
+                    exist_annotations.remove(to_merge[0])
+                    merged_data_url = self._merge_binary_annotations(to_merge[0].coordinates, ann['coordinates'],
+                                                                     self.item.width, self.item.height)
+                    json_ann = to_merge[0].to_json()
+                    json_ann['coordinates'] = merged_data_url
+                    suc, response = self._update_annotation_req(annotation_json=json_ann,
+                                                                system_metadata=True,
+                                                                annotation_id=to_merge[0].id)
+                    if not suc:
+                        raise exceptions.PlatformException(response)
+                    if suc:
+                        result = entities.Annotation.from_json(_json=response.json(),
+                                                               annotations=self,
+                                                               dataset=self._dataset,
+                                                               item=self._item)
+                        exist_annotations.append(result)
+                    to_delete.append(ann)
+        if len(to_delete) > 0:
+            annotations_batch = [[a for a in annotations if a not in to_delete] for annotations in annotations_batch]
+
+        return annotations_batch
 
     def _upload_single_batch(self, annotation_batch):
         try:
@@ -650,14 +759,15 @@ class Annotations:
         logger.info('Annotation/s uploaded successfully. num: {}'.format(len(uploaded_annotations)))
         return uploaded_annotations
 
-    async def _async_upload_annotations(self, annotations):
+    async def _async_upload_annotations(self, annotations, merge=False):
         """
         Async function to run from the uploader. will use asyncio to not break the async
-        :param annotations:
+        :param annotations: list of all annotations
+        :param merge: bool - merge the new binary annotations with the existing annotations
         :return:
         """
         async with self._client_api.event_loop.semaphore('annotations.upload'):
-            annotation_batch = self._create_batches_for_upload(annotations=annotations)
+            annotation_batch = self._create_batches_for_upload(annotations=annotations, merge=merge)
             output_annotations = list()
             for annotations_list in annotation_batch:
                 success, response = await self._client_api.gen_async_request(req_type='post',
@@ -679,7 +789,7 @@ class Annotations:
             return result
 
     @_api_reference.add(path='/items/{itemId}/annotations', method='post')
-    def upload(self, annotations) -> entities.AnnotationCollection:
+    def upload(self, annotations, merge=False) -> entities.AnnotationCollection:
         """
         Upload a new annotation/annotations. You must first create the annotation using the annotation *builder* method.
 
@@ -687,6 +797,7 @@ class Annotations:
 
         :param List[dtlpy.entities.annotation.Annotation] or dtlpy.entities.annotation.Annotation annotations: list or
         single annotation of type Annotation
+        :param bool merge: optional - merge the new binary annotations with the existing annotations
         :return: list of annotation objects
         :rtype: entities.AnnotationCollection
 
@@ -718,7 +829,7 @@ class Annotations:
             logger.warning('Annotation upload receives 0 annotations. Not doing anything')
             out_annotations = list()
         else:
-            annotation_batches = self._create_batches_for_upload(annotations=annotations)
+            annotation_batches = self._create_batches_for_upload(annotations=annotations, merge=merge)
             out_annotations = self._upload_annotations_batches(annotation_batches=annotation_batches)
         out_annotations = entities.AnnotationCollection.from_json(_json=out_annotations,
                                                                   item=self.item)

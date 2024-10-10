@@ -638,11 +638,6 @@ class Items:
                                  item_metadata={'Hellow': 'Word'}
                                  )
         """
-        # fix remote path
-        if remote_path is not None:
-            if not remote_path.startswith('/'):
-                remote_path = '/' + remote_path
-
         # initiate and use uploader
         uploader = repositories.Uploader(items_repository=self, output_entity=output_entity, no_output=no_output)
         return uploader.upload(

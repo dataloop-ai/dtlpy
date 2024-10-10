@@ -29,5 +29,28 @@ Feature: Executions repository rerun execution
     Then Execution was executed on "item"
 
 
+  @services.delete
+  @packages.delete
+  @DAT-79211
+  Scenario: Rerun execution batch
+    Given There is a package (pushed from "executions/item") by the name of "execution-rerun"
+    And There is a service by the name of "executions-rerun" with module name "default_module" saved to context "service"
+    And I upload item in "0000000162.jpg" to dataset
+    When I create an execution with "inputs"
+      | sync=False | inputs=Item |
+    Then I receive an Execution entity
+    Then Execution was executed on "item"
+    And I validate execution response params
+      | key             | value |
+      | packageRevision | 1.0.0 |
+    When I update package
+    And I update service to latest package revision
+    And I rerun the execution with batch function
+    Then I validate execution response params
+      | key             | value |
+      | packageRevision | 1.0.1 |
+    Then Execution was executed on "item"
+
+
 
 

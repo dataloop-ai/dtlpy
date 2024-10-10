@@ -17,3 +17,11 @@ Feature: Pipeline entity method testing
     And I add a node and connect it to the start node
     Then New node is the start node
 
+  @pipelines.delete
+  @DAT-79613
+  Scenario: Cron trigger on regular node (not start node)
+    Given pipeline with 2 nodes
+    And the node which is not the start node has a cron trigger
+    When installing the pipeline
+    Then the relevant node should be executed
+

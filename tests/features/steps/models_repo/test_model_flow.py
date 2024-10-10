@@ -11,8 +11,10 @@ import os
 def step_impl(context, package_name, entry_point):
     if package_name == "ac-lr-package":
         context.codebase_local_dir = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], 'model_ac_lr')
+        docker_image = None
     else:
         context.codebase_local_dir = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], 'models_flow')
+        docker_image = 'jjanzic/docker-python3-opencv'
     module = dl.PackageModule.from_entry_point(
         entry_point=os.path.join(context.codebase_local_dir, entry_point))
     context.dpk.components.modules._dict[0] = module.to_json()
@@ -30,24 +32,24 @@ def step_impl(context, package_name, entry_point):
             "name": "default",
             "versions": {"dtlpy": dl.__version__},
             'runtime': dl.KubernetesRuntime(
-                runner_image='jjanzic/docker-python3-opencv',
+                runner_image=docker_image,
                 pod_type=dl.InstanceCatalog.REGULAR_XS,
                 autoscaler=dl.KubernetesRabbitmqAutoscaler(
                     min_replicas=1,
-                    max_replicas=1),
-                concurrency=1).to_json()
+                    max_replicas=5),
+                concurrency=10).to_json()
         })
     else:
         context.dpk.components.compute_configs._dict[0] = {
             "name": "default",
             "versions": {"dtlpy": dl.__version__},
             'runtime': dl.KubernetesRuntime(
-                runner_image='jjanzic/docker-python3-opencv',
+                runner_image=docker_image,
                 pod_type=dl.InstanceCatalog.REGULAR_XS,
                 autoscaler=dl.KubernetesRabbitmqAutoscaler(
                     min_replicas=1,
-                    max_replicas=1),
-                concurrency=1).to_json()
+                    max_replicas=5),
+                concurrency=10).to_json()
         }
 
 

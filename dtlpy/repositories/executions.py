@@ -1,6 +1,8 @@
 import threading
 import logging
 import time
+from copy import deepcopy
+
 import numpy as np
 
 from .. import exceptions, entities, repositories, miscellaneous, _api_reference
@@ -340,6 +342,58 @@ class Executions:
         success, response = self._client_api.gen_request(req_type='post',
                                                          path=url_path,
                                                          json_req=payload)
+        # exception handling
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        response_json = response.json()
+        command = entities.Command.from_json(_json=response_json,
+                                             client_api=self._client_api)
+        if wait:
+            command = command.wait(timeout=0)
+        return command
+
+    @_api_reference.add(path='/executions/rerun', method='post')
+    def rerun_batch(self,
+                    filters,
+                    service_id: str = None,
+                    wait=True
+                    ):
+        """
+        rerun a executions on an existing service
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a Filter.
+
+        :param filters: Filters entity for a filtering before rerun
+        :param str service_id: service id to rerun on
+        :param bool wait: wait until create task finish
+        :return: rerun command
+        :rtype: dtlpy.entities.command.Command
+
+        **Example**:
+
+        .. code-block:: python
+
+            command = service.executions.rerun_batch(
+                        filters=dl.Filters(field='id', values=['executionId'], operator=dl.FiltersOperations.IN, resource=dl.FiltersResource.EXECUTION))
+        """
+        url_path = '/executions/rerun'
+
+        if filters is None:
+            raise exceptions.PlatformException('400', 'Please provide filter')
+
+        if filters.resource != entities.FiltersResource.EXECUTION:
+            raise exceptions.PlatformException(
+                error='400',
+                message='Filters resource must to be FiltersResource.EXECUTION. Got: {!r}'.format(filters.resource))
+
+        if service_id is not None and not filters.has_field('serviceId'):
+            filters = deepcopy(filters)
+            filters.add(field='serviceId', values=service_id, method=entities.FiltersMethod.AND)
+
+        success, response = self._client_api.gen_request(req_type='post',
+                                                         path=url_path,
+                                                         json_req={'query': filters.prepare()['filter']})
         # exception handling
         if not success:
             raise exceptions.PlatformException(response)
