@@ -127,13 +127,13 @@ def step_impl(context):
     context.item_thumbnail_id = context.item.metadata['system']['thumbnailId']
 
 
-@behave.then(u'I validate item thumbnail id is "{condition}"')
+@behave.then(u'I validate item thumbnail id is "{condition}" to the previous thumbnail id')
 def step_impl(context, condition):
     if not hasattr(context, 'item_thumbnail_id'):
         assert False, "TEST FAILED: Please make sure to run the step - 'When I get item thumbnail id'"
     context.item = context.dataset.items.get(item_id=context.item.id)
     error_message = f"TEST FAILED: Item thumbnail is not {condition}"
-    if condition == "different":
+    if condition == "not-equal":
         assert context.item.metadata['system']['thumbnailId'] != context.item_thumbnail_id, error_message
     elif condition == "equal":
         assert context.item.metadata['system']['thumbnailId'] == context.item_thumbnail_id, error_message
@@ -146,7 +146,8 @@ def step_impl(context):
     """
     Make sure to run the step - 'I Show annotation thumbnail for the item' before running this step
     """
-    assert context.item.metadata['system'].get('annotationQueryThumbnailIdMap', {}).get('default') is not None, f"TEST FAILED: No thumbnail v2 on the item {context.item.metadata['system']}"
+    assert context.item.metadata['system'].get('annotationQueryThumbnailIdMap', {}).get(
+        'default') is not None, f"TEST FAILED: No thumbnail v2 on the item {context.item.metadata['system']}"
     thumbnail_id = context.item.metadata['system']['annotationQueryThumbnailIdMap']['default']
     try:
         context.dataset.items.get(item_id=thumbnail_id)
@@ -159,8 +160,21 @@ def step_impl(context):
     """
     Make sure to run the step - 'I Show annotation thumbnail for the item' before running this step
     """
-    assert context.item.metadata['system'].get('annotationQueryThumbnailIdMap', {}).get('default') is None, f"TEST FAILED: Thumbnail v2 on the item {context.item.metadata['system']}"
+    assert context.item.metadata['system'].get('annotationQueryThumbnailIdMap', {}).get(
+        'default') is None, f"TEST FAILED: Thumbnail v2 on the item {context.item.metadata['system']}"
     try:
         context.dataset.items.get(item_id=context.thumbnail_id)
     except context.dl.exceptions.NotFound:
         pass
+
+
+@behave.then(u'I validate "{value}" not in item system metadata')
+def step_impl(context, value):
+    item = context.dataset.items.get(item_id=context.item.id)
+    value = eval(value)
+    # Check if the value key exists in item metadata system key
+    if value.keys() <= item.metadata['system'].keys():
+        for key in value.keys():
+            assert value[key] != item.metadata['system'][
+                key], f"TEST FAILED: {value} found in item system metadata, {item.metadata['system']}"
+

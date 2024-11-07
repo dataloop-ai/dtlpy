@@ -194,16 +194,21 @@ class PipelineExecutions:
         return paged
 
     @_api_reference.add(path='/pipelines/{pipelineId}/execute', method='post')
-    def create(self,
-               pipeline_id: str = None,
-               execution_input=None):
+    def create(
+            self,
+            pipeline_id: str = None,
+            execution_input=None,
+            node_id: str = None
+    ):
         """
-        Execute a pipeline and return the execute.
+        Execute a pipeline.
 
         **prerequisites**: You must be an *owner* or *developer* to use this method.
 
         :param pipeline_id: pipeline id
         :param execution_input: list of the dl.FunctionIO or dict of pipeline input - example {'item': 'item_id'}
+        :param node_id: node id to start from
+
         :return: entities.PipelineExecution object
         :rtype: dtlpy.entities.pipeline_execution.PipelineExecution
 
@@ -234,6 +239,9 @@ class PipelineExecutions:
             else:
                 raise exceptions.PlatformException('400', 'Unknown input type')
 
+        if node_id is not None:
+            payload['nodeId'] = node_id
+
         success, response = self._client_api.gen_request(
             path='/pipelines/{}/execute'.format(pipeline_id),
             req_type='POST',
@@ -249,13 +257,16 @@ class PipelineExecutions:
         return execution
 
     @_api_reference.add(path='/pipelines/{pipelineId}/execute', method='post')
-    def create_batch(self,
-                     pipeline_id: str,
-                     filters,
-                     execution_inputs=None,
-                     wait=True):
+    def create_batch(
+            self,
+            pipeline_id: str,
+            filters,
+            execution_inputs=None,
+            wait=True,
+            node_id: str = None
+    ):
         """
-        Execute a pipeline and return the execute.
+        Create batch executions of a pipeline.
 
         **prerequisites**: You must be an *owner* or *developer* to use this method.
 
@@ -300,6 +311,9 @@ class PipelineExecutions:
         payload['batch'] = dict()
         payload['batch']['query'] = filters.prepare()
         payload['batch']['args'] = extra_input
+
+        if node_id is not None:
+            payload['nodeId'] = node_id
 
         success, response = self._client_api.gen_request(
             path='/pipelines/{}/execute'.format(pipeline_id),

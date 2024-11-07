@@ -1695,10 +1695,13 @@ class ApiClient:
             'refresh_token': refresh_token
         }
         logger.debug("RefreshToken: Refreshing token via {}".format(token_endpoint))
-        resp = requests.request("POST",
-                                token_endpoint,
-                                json=payload,
-                                headers={'content-type': 'application/json'})
+        resp = requests.request(
+            "POST",
+            token_endpoint,
+            json=payload,
+            headers={'content-type': 'application/json'},
+            verify=self.verify
+        )
         if not resp.ok:
             logger.debug('RefreshToken: Failed')
             self.print_bad_response(resp)

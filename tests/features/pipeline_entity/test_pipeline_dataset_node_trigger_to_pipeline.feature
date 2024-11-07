@@ -28,6 +28,14 @@ Feature: Pipeline entity method testing - Dataset node data execution
     And The uploaded item has "2" executions
 
   @pipelines.delete
+  @DAT-80468
+  Scenario: Successful dataset node data execution - without filter - with variable
+    Given I have a pipeline with 2 dataset nodes with variables and triggerToPipeline=true
+    When I install pipeline in context
+    Then All dataset items should run
+
+
+  @pipelines.delete
   @DAT-70527
   Scenario: Successful dataset node data execution - with filter
     Given I create pipeline with the name "pipeline"

@@ -13,5 +13,5 @@ Feature: Item thumbnail feature testing
     And I get item thumbnail id
     And I update item "metadata.system.thumbnailId" with "None" system_metadata "True"
     Then I get an item thumbnail response
-    And I validate item thumbnail id is "different"
+    And I validate item thumbnail id is "not-equal" to the previous thumbnail id
 

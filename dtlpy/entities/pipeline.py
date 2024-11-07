@@ -488,26 +488,35 @@ class Pipeline(entities.BaseEntity):
         """
         return self.pipelines.pause(pipeline=self, keep_triggers_active=keep_triggers_active)
 
-    def execute(self, execution_input=None):
+    def execute(self, execution_input=None, node_id: str = None):
         """
         execute a pipeline and return to execute
 
         :param execution_input: list of the dl.FunctionIO or dict of pipeline input - example {'item': 'item_id'}
+        :param str node_id: node id to execute
         :return: entities.PipelineExecution object
         """
-        execution = self.pipeline_executions.create(pipeline_id=self.id, execution_input=execution_input)
+        execution = self.pipeline_executions.create(
+            pipeline_id=self.id,
+            execution_input=execution_input,
+            node_id=node_id
+        )
         return execution
 
-    def execute_batch(self,
-                      filters,
-                      execution_inputs=None,
-                      wait=True):
+    def execute_batch(
+            self,
+            filters,
+            execution_inputs=None,
+            wait=True,
+            node_id: str = None
+    ):
         """
         execute a pipeline and return to execute
 
         :param execution_inputs: list of the dl.FunctionIO or dict of pipeline input - example {'item': 'item_id'}, that represent the extra inputs of the function
         :param filters: Filters entity for a filtering before execute
         :param bool wait: wait until create task finish
+        :param str node_id: node id to execute
         :return: entities.PipelineExecution object
 
         **Example**:
@@ -518,10 +527,13 @@ class Pipeline(entities.BaseEntity):
                         execution_inputs=dl.FunctionIO(type=dl.PackageInputType.STRING, value='test', name='string'),
                         filters=dl.Filters(field='dir', values='/test', context={'datasets': [dataset.id]))
         """
-        command = self.pipeline_executions.create_batch(pipeline_id=self.id,
-                                                        execution_inputs=execution_inputs,
-                                                        filters=filters,
-                                                        wait=wait)
+        command = self.pipeline_executions.create_batch(
+            pipeline_id=self.id,
+            execution_inputs=execution_inputs,
+            filters=filters,
+            wait=wait,
+            node_id=node_id
+        )
         return command
 
     def reset(self, stop_if_running: bool = False):
@@ -578,4 +590,3 @@ class Pipeline(entities.BaseEntity):
         for variable in self.variables:
             if variable.name in keys:
                 variable.value = kwargs[variable.name]
-

@@ -271,7 +271,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         :param bool overwrite: overwrite the data path (download again). default is False
         """
         # define paths
-        dataloop_path = os.path.join(os.path.expanduser('~'), '.dataloop')
+        dataloop_path = service_defaults.DATALOOP_PATH
         root_path = self.adapter_defaults.resolve("root_path", root_path)
         data_path = self.adapter_defaults.resolve("data_path", data_path)
         output_path = self.adapter_defaults.resolve("output_path", output_path)

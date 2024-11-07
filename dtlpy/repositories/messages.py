@@ -38,13 +38,13 @@ class Messages:
 
             messages = dl.messages.list(context={project: id})
         """
-        user = self._client_api.info()['user_email']
 
+        user = self._client_api.info()['user_email']
         if not user:
             raise exceptions.PlatformException(error='400',
                                                message='No user in JWT, please login')
 
-        url = '/inbox/message/user/{}'.format(user)
+        url = '/inbox/message/user'
 
         query_params = {
             'newOnly': new_only,

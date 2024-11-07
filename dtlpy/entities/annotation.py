@@ -43,6 +43,7 @@ class AnnotationType(str, Enum):
     SEGMENTATION = "binary"
     SUBTITLE = "subtitle"
     TEXT = "text_mark"
+    GIS = "gis"
 
 
 class ViewAnnotationOptions(str, Enum):
@@ -1796,6 +1797,8 @@ class FrameAnnotation(entities.BaseEntity):
             annotation = entities.Note.from_json(_json)
         elif _json['type'] == 'pose':
             annotation = entities.Pose.from_json(_json)
+        elif _json['type'] == 'gis':
+            annotation = entities.Gis.from_json(_json)
         else:
             annotation = entities.UndefinedAnnotationType.from_json(_json)
         return annotation

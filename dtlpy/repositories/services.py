@@ -1069,6 +1069,8 @@ class Services:
 
         if project_id is not None:
             payload['projectId'] = project_id
+        else:
+            payload['projectId'] = service.project_id
 
         # request
         success, response = self._client_api.gen_request(req_type='post',

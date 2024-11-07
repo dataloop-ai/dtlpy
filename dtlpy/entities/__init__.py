@@ -34,7 +34,7 @@ from .recipe import Recipe
 from .ontology import Ontology, AttributesTypes, AttributesRange
 from .annotation_definitions import Box, Cube, Cube3d, Point, Segmentation, Polygon, Ellipse, Classification, \
     Subtitle, Text, FreeText, RefImage, \
-    Polyline, Comparison, UndefinedAnnotationType, Note, Message, Description, Pose
+    Polyline, Comparison, UndefinedAnnotationType, Note, Message, Description, Pose, Gis, GisType
 from .label import Label
 from .codebase import Codebase, PackageCodebaseType, ItemCodebase, GitCodebase, FilesystemCodebase, LocalCodebase
 from .package import Package, RequirementOperator, PackageRequirement
@@ -78,3 +78,4 @@ from .prompt_item import Prompt, PromptItem, PromptType
 from .compute import ClusterProvider, ComputeType, ComputeStatus, Toleration, DeploymentResource, DeploymentResources, \
     NodePool, AuthenticationIntegration, Authentication, ComputeCluster, ComputeContext, Compute, KubernetesCompute, \
     ServiceDriver
+from .gis_item import  ItemGis, Layer

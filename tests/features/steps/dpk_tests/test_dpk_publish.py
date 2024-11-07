@@ -5,8 +5,11 @@ import behave
 
 
 @behave.when(u'I publish a dpk to the platform')
-def step_impl(context):
-    context.dpk.name = context.dpk.name + str(random.randint(10000, 1000000))
+@behave.when(u'I publish a dpk to the platform without random name "{random_name}"')
+def step_impl(context, random_name=True):
+    random_name = True if random_name != 'False' else False
+    if random_name:
+        context.dpk.name = context.dpk.name + str(random.randint(10000, 1000000))
     context.published_dpk = context.project.dpks.publish(context.dpk)
     if hasattr(context.feature, 'dpks'):
         context.feature.dpks.append(context.published_dpk)

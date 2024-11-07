@@ -11,7 +11,9 @@ from operator import attrgetter
 
 @behave.when(u"I fetch the dpk from '{file_name}' file")
 @behave.given(u"I fetch the dpk from '{file_name}' file")
-def step_impl(context, file_name):
+@behave.when(u"I fetch the dpk from '{file_name}' file with fix template '{fix_template}'")
+def step_impl(context, file_name, fix_template="True"):
+    fix_template = True if fix_template != "False" else False
     path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], file_name)
     with open(path, 'r') as file:
         json_object = json.load(file)
@@ -23,7 +25,7 @@ def step_impl(context, file_name):
         if json_object['context'].get("organization", None) is not None:
             json_object['context']['organization'] = context.project.org['id']
 
-    if "pipelineTemplates" in json_object.get('components', {}).keys():
+    if fix_template and "pipelineTemplates" in json_object.get('components', {}).keys():
         json_object['components']['pipelineTemplates'][0] = test_pipeline_interface.generate_pipeline_json(context,
                                                                                                            json_object[
                                                                                                                'components'][

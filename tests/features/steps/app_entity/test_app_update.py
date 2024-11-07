@@ -45,4 +45,17 @@ def step_impl(context, ):
             finished = True
             break
 
+    if context.dpk.metadata:
+        command_id = context.dpk.metadata.get('commands', {}).get('apps', None)
+        if command_id is not None:
+            command = context.dl.commands.get(command_id=command_id, url='api/v1/commands/faas/{}'.format(command_id))
+            command.wait()
+            context.dpk = context.dl.dpks.get(dpk_id=context.dpk.id)
+    if context.app.metadata:
+        command_id = context.app.metadata.get('system', {}).get('commands', {}).get('update', None)
+        if command_id is not None:
+            command = context.dl.commands.get(command_id=command_id, url='api/v1/commands/faas/{}'.format(command_id))
+            command.wait()
+            context.app = context.dl.apps.get(app_id=context.app.id)
+
     assert finished, f"TEST FAILED: App version was not updated, app current version: {context.app.dpk_version}"

@@ -79,7 +79,7 @@ def before_all(context):
         # set env to dev
         _, base_env = get_env_from_git_branch()
         if base_env != dl.client_api.environments[dl.client_api.environment]['alias']:
-            if base_env not in ['rc', 'prod', 'env1']:
+            if base_env not in ['rc', 'prod', 'env1', 'piper']:
                 context.dl.setenv('custom')
             else:
                 context.dl.setenv(base_env)
@@ -198,7 +198,3 @@ def step_impl(context, type, key, interval=0, num_try=1, response=None):
     if response:
         assert response in context.response.text, "TEST FAILED: Expected response to include {}. Actual got {}".format(response, context.response.text)
 
-
-@behave.when(u'I validate "{type}" gen_request with "{key}" params')
-def step_impl(context, type, key, interval=5, num_try=1):
-    pass

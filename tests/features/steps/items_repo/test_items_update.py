@@ -33,7 +33,8 @@ def step_impl(context):
     item_get_json.pop("updatedBy")
     original_item_json.pop("updatedBy")
 
-    assert item_get_json == original_item_json, "TEST FAILED: Expected : {}, Got: {}".format(original_item_json, item_get_json)
+    assert item_get_json == original_item_json, "TEST FAILED: Expected : {}, Got: {}".format(original_item_json,
+                                                                                             item_get_json)
 
 
 @behave.then(u'Item in host was changed to "{name}"')
@@ -132,3 +133,20 @@ def step_impl(context):
     if not hasattr(context, 'thumbnail_id'):
         context.thumbnail_id = context.item.metadata['system'].get('annotationQueryThumbnailIdMap', {}).get('default')
 
+
+@behave.when(u'I try to update item with params')
+def step_impl(context):
+    params = dict()
+    for row in context.table:
+        params[row['key']] = row['value']
+    try:
+        context.item_update = context.dataset.items.update(item=eval(params.get('item', "context.item")),
+                                                           filters=eval(params.get('filters', "None")),
+                                                           update_values=eval(params.get('update_values', "None")),
+                                                           system_update_values=eval(
+                                                               params.get('system_update_values', "None")),
+                                                           system_metadata=eval(params.get('system_metadata', "False")),
+                                                           )
+        context.error = None
+    except Exception as e:
+        context.error = e

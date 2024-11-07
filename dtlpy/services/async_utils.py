@@ -33,9 +33,11 @@ class AsyncThreadEventLoop(threading.Thread):
         self.loop.run_forever()
         logger.debug('Ended event loop with bounded semaphore to {}'.format(self.n))
 
-    def semaphore(self, name):
+    def semaphore(self, name, n=None):
+        if n is None:
+            n = self.n
         if name not in self._semaphores:
-            self._semaphores[name] = asyncio.BoundedSemaphore(self.n)
+            self._semaphores[name] = asyncio.BoundedSemaphore(n)
         return self._semaphores[name]
 
     def stop(self):

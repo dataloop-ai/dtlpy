@@ -42,9 +42,21 @@ def step_impl(context):
             "coordinates": annotation.coordinates,
         }
         # remove 'z' value to match file
-        for coordinate in ann['coordinates']:
-            coordinate.pop('z')
+        if annotation.type != 'gis':
+            for coordinate in ann['coordinates']:
+                coordinate.pop('z')
         assert ann in context.annotations
+
+@behave.then(u"Item should have all gis annotation types uploaded")
+def step_impl(context):
+    expected_annotations_types = ['point', 'polyline', 'polygon', 'box']
+    annotations_list = context.item.annotations.list()
+    for annotation in annotations_list:
+        assert annotation.type == 'gis'
+        assert isinstance(annotation.annotation_definition, context.dl.Gis)
+        expected_annotations_types.remove(annotation.coordinates['geo_type'])
+    assert len(expected_annotations_types) == 0
+
 
 
 @behave.given(u"There is an annotation description")

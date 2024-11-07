@@ -59,10 +59,120 @@ def step_impl(context):
 def step_impl(context):
     context.annotation_collection = context.item.annotations.list()
 
+
 @behave.then(u'"{num}" annotations are upload')
 def step_impl(context, num):
     num_ann = int(num)
     assert len(context.item.annotations.list().annotations) == num_ann, "Number of annotations is not as expected"
+
+
+@behave.when(u"I add a gis annotations to item")
+def step_impl(context):
+    box = context.dl.Gis(
+        annotation_type=context.dl.GisType.BOX,
+        geo=[
+            [
+                [
+                    -118.33545020696846,
+                    33.82643304226775
+                ],
+                [
+                    -118.33544677833854,
+                    33.82643304226775
+                ],
+                [
+                    -118.33544677833854,
+                    33.826421352507026
+                ],
+                [
+                    -118.33545020696846,
+                    33.826421352507026
+                ],
+                [
+                    -118.33545020696846,
+                    33.82643304226775
+                ]
+            ]
+        ], label='car')
+
+    polyline = context.dl.Gis(
+        annotation_type=context.dl.GisType.POLYLINE,
+        geo=[
+            [
+                -118.33542547032158,
+                33.82643633447882
+            ],
+            [
+                -118.33540897336161,
+                33.82643356752507
+            ],
+            [
+                -118.33540897005454,
+                33.82642871822452
+            ],
+            [
+                -118.33541921967488,
+                33.826426863335726
+            ],
+            [
+                -118.33542344940071,
+                33.826436077343644
+            ],
+            [
+                -118.33542639231051,
+                33.82643044674003
+            ],
+            [
+                -118.33541932625792,
+                33.8264323433901
+            ],
+            [
+                -118.33542031749415,
+                33.82644421336565
+            ],
+            [
+                -118.33542236477875,
+                33.82643168077253
+            ]
+        ], label='car')
+    point = context.dl.Gis(
+        annotation_type=context.dl.GisType.POINT,
+        geo=[
+            -118.33540793707832,
+            33.82642046242373
+        ],
+        label='car', )
+
+    polygon = context.dl.Gis(
+        annotation_type=context.dl.GisType.POLYGON,
+        geo=[
+            [
+                [
+                    -118.33543603201835,
+                    33.82641747569975
+                ],
+                [
+                    -118.33541563389792,
+                    33.82641375053887
+                ],
+                [
+                    -118.33542170322828,
+                    33.82639922240139
+                ],
+                [
+                    -118.33544032988657,
+                    33.8264016410096
+                ]
+            ]
+        ], label='car'
+    )
+
+    builder = context.item.annotations.builder()
+    builder.add(annotation_definition=box)
+    builder.add(annotation_definition=point)
+    builder.add(annotation_definition=polyline)
+    builder.add(annotation_definition=polygon)
+    context.item.annotations.upload(annotations=builder)
 
 
 @behave.given(u"I add a few annotations to image")
@@ -73,9 +183,9 @@ def step_impl(context):
     height = context.item.height
     width = context.item.width
     if height is None:
-        height=768
+        height = 768
     if width is None:
-        width=1536
+        width = 1536
 
     # point
     annotation_definition = context.dl.Point(
@@ -224,5 +334,4 @@ def step_impl(context):
                     label=ann.label,
                     attributes=ann.attributes,
                 )
-            ann.add_frame(annotation_definition=annotation_definition, frame_num=i*10)
-
+            ann.add_frame(annotation_definition=annotation_definition, frame_num=i * 10)

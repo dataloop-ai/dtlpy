@@ -34,6 +34,13 @@ def step_impl(context, item_path):
         if context.item.width is None:
             context.item.width = 1536
 
+@behave.given(u'gis item in path "{item_path}" is uploaded to "Dataset"')
+def step_impl(context, item_path):
+    item_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], item_path)
+    context.item_path = item_path
+    gis_item = context.dl.ItemGis.from_local_file(filepath=item_path)
+    context.item = context.dataset.items.upload(local_path=gis_item)
+
 
 @behave.given(u'There are a few annotations in the item')
 def step_impl(context):

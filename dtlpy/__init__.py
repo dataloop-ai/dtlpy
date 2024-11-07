@@ -68,7 +68,7 @@ from .entities import (
     Ontology, Label, Task, TaskPriority, ConsensusTaskType, Assignment, Service, Package, Codebase, Model,
     PackageModule, PackageFunction,
     # annotations
-    Box, Cube, Cube3d, Point, Note, Message, Segmentation, Ellipse, Classification, Subtitle, Polyline, Pose,
+    Box, Cube, Cube3d, Point, Note, Message, Segmentation, Ellipse, Classification, Subtitle, Polyline, Pose, Gis, GisType,
     Description,
     Polygon, Text, FreeText, RefImage,
     # filters
@@ -93,7 +93,7 @@ from .entities import (
     Webhook, HttpMethod,
     ViewAnnotationOptions, AnnotationStatus, AnnotationType,
     ItemStatus, ExecutionStatus, ExportMetadata,
-    PromptItem, Prompt, PromptType,
+    PromptItem, Prompt, PromptType, ItemGis, Layer,
     ItemLink, UrlLink, LinkTypeEnum,
     Modality, ModalityTypeEnum, ModalityRefTypeEnum,
     Workload, WorkloadUnit, ItemAction,

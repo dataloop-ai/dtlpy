@@ -330,7 +330,7 @@ class Filters:
                 self._unique_fields = ['type']
                 self.add(field='type',
                          values=['box', 'class', 'comparison', 'ellipse', 'point', 'segment', 'polyline', 'binary',
-                                 'subtitle', 'cube', 'cube_3d', 'pose', 'text_mark', 'text', 'ref_image'],
+                                 'subtitle', 'cube', 'cube_3d', 'pose', 'text_mark', 'text', 'ref_image', 'gis'],
                          operator=FiltersOperations.IN,
                          method=FiltersMethod.AND)
 

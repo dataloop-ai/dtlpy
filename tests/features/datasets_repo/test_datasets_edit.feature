@@ -34,7 +34,25 @@ Feature: Datasets repository update service testing
          And I create a dataset by the name of "Dataset" in host
 
 
+    @DAT-80166
+    Scenario: Update dataset metadata
+        Given There are no datasets
+        And Create "5" datasets in project with the prefix name "test"
+        When I get dataset by name "test-4"
+        And I update dataset metadata "user.test:'3'"
+        And I create dataset filters by metadata - "user.test" = "3"
+        And I get datasets list by params
+            | filters=context.filters |
+        Then I validate for "dataset" that the updated metadata is "user.test:3"
 
 
-
-    
+    @DAT-80166
+    Scenario: Update dataset metadata.system
+        Given There are no datasets
+        And Create "5" datasets in project with the prefix name "test"
+        When I get dataset by name "test-4"
+        And I update dataset metadata "system.test:'3'"
+        And I create dataset filters by metadata - "system.test" = "3"
+        And I get datasets list by params
+            | filters=context.filters |
+        Then I validate for "dataset" that the updated metadata is "system.test:3"

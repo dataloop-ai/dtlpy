@@ -281,6 +281,12 @@ class Uploader:
             elif isinstance(upload_item_element, entities.PromptItem):
                 upload_elem = upload_element.PromptUploadElement(all_upload_elements=all_upload_elements)
 
+            elif isinstance(upload_item_element, entities.ItemGis):
+                buffer = io.BytesIO(json.dumps(upload_item_element.to_json()).encode('utf-8'))
+                buffer.name = upload_item_element.name
+                all_upload_elements['upload_item_element'] = buffer
+                upload_elem = upload_element.BinaryUploadElement(all_upload_elements=all_upload_elements)
+
             elif isinstance(upload_item_element, bytes) or \
                     isinstance(upload_item_element, io.BytesIO) or \
                     isinstance(upload_item_element, io.BufferedReader) or \
@@ -453,7 +459,7 @@ class Uploader:
         return item, response.headers.get('x-item-op', 'na')
 
     async def __upload_single_item_wrapper(self, element, pbar, reporter, mode):
-        async with self.items_repository._client_api.event_loop.semaphore('items.upload'):
+        async with self.items_repository._client_api.event_loop.semaphore('items.upload', 5):
             # assert isinstance(element, UploadElement)
             item = False
             err = None

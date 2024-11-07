@@ -465,6 +465,11 @@ class Items:
             raise exceptions.PlatformException('400',
                                                'Must provide update_values or system_update_values')
 
+        if item is not None and value_to_update:
+            raise exceptions.PlatformException('400',
+                                               'Cannot provide "update_values" or "system_update_values" with a specific "item" for an individual update. '
+                                               'These parameters are intended only for bulk updates using filters.')
+
         # update item
         if item is not None:
             json_req = miscellaneous.DictDiffer.diff(origin=item._platform_dict,

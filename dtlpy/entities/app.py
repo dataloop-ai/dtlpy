@@ -199,7 +199,7 @@ class App(entities.BaseEntity):
             name=_json.get('name', None),
             url=_json.get('url', None),
             created_at=_json.get('createdAt', None),
-            updated_at=_json.get('updateAt', None),
+            updated_at=_json.get('updatedAt', None),
             creator=_json.get('creator', None),
             project_id=_json.get('projectId', None),
             org_id=_json.get('orgId', None),

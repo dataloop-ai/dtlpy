@@ -312,7 +312,7 @@ class Annotations:
         """
         # get item's annotations
         annotations = self.list()
-        if 'text' in self.item.metadata.get('system').get('mimetype', ''):
+        if 'text' in self.item.metadata.get('system').get('mimetype', '') or 'json' in self.item.metadata.get('system').get('mimetype', ''):
             annotation_format = entities.ViewAnnotationOptions.JSON
         elif 'audio' not in self.item.metadata.get('system').get('mimetype', ''):
             # height/weight
