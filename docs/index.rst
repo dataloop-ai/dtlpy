@@ -18,7 +18,6 @@ Drive your AI to production with end-to-end data management, automation pipeline
    repositories.rst
    entities.rst
    utilities.rst
-   tutorials.rst
 
 
 
