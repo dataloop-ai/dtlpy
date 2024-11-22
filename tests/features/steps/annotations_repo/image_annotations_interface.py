@@ -89,7 +89,33 @@ def step_impl(context, annotation_type):
             attributes=[{"attributes1": "note1"}],
             assignee=context.dl.info()['user_email'],
             creator=context.dl.info()['user_email']
-        )
+        ),
+        "gis-box": context.dl.Gis(
+            annotation_type=context.dl.GisType.BOX,
+            geo=[
+                [
+                    [
+                        -118.33545020696846,
+                        33.82643304226775
+                    ],
+                    [
+                        -118.33544677833854,
+                        33.82643304226775
+                    ],
+                    [
+                        -118.33544677833854,
+                        33.826421352507026
+                    ],
+                    [
+                        -118.33545020696846,
+                        33.826421352507026
+                    ],
+                    [
+                        -118.33545020696846,
+                        33.82643304226775
+                    ]
+                ]
+            ], label='gisbox')
     }
 
     builder = context.item.annotations.builder()

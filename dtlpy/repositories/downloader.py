@@ -602,12 +602,20 @@ class Downloader:
         else:
             return item, '', False
 
-    def __video_validation(self, item, downloaded_file):
+    def __file_validation(self, item, downloaded_file):
         res = False
-        size_diff = os.stat(downloaded_file).st_size - item.metadata['system']['size']
+        resume = True
+        if isinstance(downloaded_file, io.BytesIO):
+            file_size = downloaded_file.getbuffer().nbytes
+        else:
+            file_size = os.stat(downloaded_file).st_size
+        expected_size = item.metadata['system']['size']
+        size_diff = file_size - expected_size
         if size_diff == 0:
             res = True
-        return res
+        if size_diff > 0:
+            resume = False
+        return res, file_size, resume
 
     def __thread_download(self,
                           item,
@@ -650,131 +658,164 @@ class Downloader:
 
         item, url, is_url = self.__get_link_source(item=item)
 
+        # save as byte stream
+        data = io.BytesIO()
         if need_to_download:
-            if not is_url:
-                headers = {'x-dl-sanitize': '0'}
-                result, response = self.items_repository._client_api.gen_request(req_type="get",
-                                                                                 headers=headers,
-                                                                                 path="/items/{}/stream".format(
-                                                                                     item.id),
-                                                                                 stream=True,
-                                                                                 dataset_id=item.dataset_id)
-                if not result:
-                    raise PlatformException(response)
-            else:
-                _, ext = os.path.splitext(item.metadata['system']['shebang']['linkInfo']['ref'].split('?')[0])
-                local_filepath += ext
-                response = self.get_url_stream(url=url)
-
-            if save_locally:
-                # save to file
-                if not os.path.exists(os.path.dirname(local_filepath)):
-                    # create folder if not exists
-                    os.makedirs(os.path.dirname(local_filepath), exist_ok=True)
-
-                # decide if create progress bar for item
-                total_length = response.headers.get("content-length")
-                one_file_pbar = None
-                try:
-                    one_file_progress_bar = total_length is not None and int(
-                        total_length) > 10e6  # size larger than 10 MB
-                    if one_file_progress_bar:
-                        one_file_pbar = tqdm.tqdm(total=int(total_length),
-                                                  unit='B',
-                                                  unit_scale=True,
-                                                  unit_divisor=1024,
-                                                  position=1,
-                                                  file=sys.stdout,
-                                                  disable=self.items_repository._client_api.verbose.disable_progress_bar,
-                                                  desc='Download Item')
-                except Exception as err:
-                    one_file_progress_bar = False
-                    logger.debug('Cant decide downloaded file length, bar will not be presented: {}'.format(err))
-
-                # start download
-                if self.items_repository._client_api.sdk_cache.use_cache and \
-                        self.items_repository._client_api.cache is not None:
-                    response_output = os.path.normpath(response.content)
-                    if isinstance(response_output, bytes):
-                        response_output = response_output.decode('utf-8')[1:-1]
-
-                    if os.path.isfile(os.path.normpath(response_output)):
-                        if response_output != local_filepath:
-                            source_path = os.path.normpath(response_output)
-                            shutil.copyfile(source_path, local_filepath)
+            chunk_resume = {0: 0}
+            start_point = 0
+            download_done = False
+            while chunk_resume.get(start_point, '') != 3 and not download_done:
+                if not is_url:
+                    headers = {'x-dl-sanitize': '0', 'Range': 'bytes={}-'.format(start_point)}
+                    result, response = self.items_repository._client_api.gen_request(req_type="get",
+                                                                                     headers=headers,
+                                                                                     path="/items/{}/stream".format(
+                                                                                         item.id),
+                                                                                     stream=True,
+                                                                                     dataset_id=item.dataset_id)
+                    if not result:
+                        raise PlatformException(response)
                 else:
+                    _, ext = os.path.splitext(item.metadata['system']['shebang']['linkInfo']['ref'].split('?')[0])
+                    local_filepath += ext
+                    response = self.get_url_stream(url=url)
+
+                if save_locally:
+                    # save to file
+                    if not os.path.exists(os.path.dirname(local_filepath)):
+                        # create folder if not exists
+                        os.makedirs(os.path.dirname(local_filepath), exist_ok=True)
+
+                    # decide if create progress bar for item
+                    total_length = response.headers.get("content-length")
+                    one_file_pbar = None
                     try:
-                        temp_file_path = local_filepath + '.download'
-                        with open(temp_file_path, "wb") as f:
+                        one_file_progress_bar = total_length is not None and int(
+                            total_length) > 10e6  # size larger than 10 MB
+                        if one_file_progress_bar:
+                            one_file_pbar = tqdm.tqdm(total=int(total_length),
+                                                      unit='B',
+                                                      unit_scale=True,
+                                                      unit_divisor=1024,
+                                                      position=1,
+                                                      file=sys.stdout,
+                                                      disable=self.items_repository._client_api.verbose.disable_progress_bar,
+                                                      desc='Download Item')
+                    except Exception as err:
+                        one_file_progress_bar = False
+                        logger.debug('Cant decide downloaded file length, bar will not be presented: {}'.format(err))
+
+                    # start download
+                    if self.items_repository._client_api.sdk_cache.use_cache and \
+                            self.items_repository._client_api.cache is not None:
+                        response_output = os.path.normpath(response.content)
+                        if isinstance(response_output, bytes):
+                            response_output = response_output.decode('utf-8')[1:-1]
+
+                        if os.path.isfile(os.path.normpath(response_output)):
+                            if response_output != local_filepath:
+                                source_path = os.path.normpath(response_output)
+                                shutil.copyfile(source_path, local_filepath)
+                    else:
+                        try:
+                            temp_file_path = local_filepath + '.download'
+                            with open(temp_file_path, "ab") as f:
+                                try:
+                                    for chunk in response.iter_content(chunk_size=chunk_size):
+                                        if chunk:  # filter out keep-alive new chunks
+                                            f.write(chunk)
+                                            if one_file_progress_bar:
+                                                one_file_pbar.update(len(chunk))
+                                except Exception as err:
+                                    pass
+                            file_validation, start_point, chunk_resume = self.__get_next_chunk(item=item,
+                                                                                              download_progress=temp_file_path,
+                                                                                              chunk_resume=chunk_resume)
+                            if file_validation:
+                                shutil.move(temp_file_path, local_filepath)
+                                download_done = True
+                            else:
+                                if not is_url:
+                                    continue
+                                else:
+                                    raise PlatformException(
+                                        error="400",
+                                        message='Downloaded file is corrupted. Please try again. If the issue repeats please contact support.')
+                        except Exception as err:
+                            if os.path.isfile(temp_file_path):
+                                os.remove(temp_file_path)
+                            raise err
+                    if one_file_progress_bar:
+                        one_file_pbar.close()
+                    # save to output variable
+                    data = local_filepath
+                    # if image - can download annotation mask
+                    if item.annotated and annotation_options:
+                        self._download_img_annotations(item=item,
+                                                       img_filepath=local_filepath,
+                                                       annotation_options=annotation_options,
+                                                       annotation_filters=annotation_filters,
+                                                       local_path=local_path,
+                                                       overwrite=overwrite,
+                                                       thickness=thickness,
+                                                       alpha=alpha,
+                                                       with_text=with_text,
+                                                       export_version=export_version
+                                                       )
+                else:
+                    if self.items_repository._client_api.sdk_cache.use_cache and \
+                            self.items_repository._client_api.cache is not None:
+                        response_output = os.path.normpath(response.content)
+                        if isinstance(response_output, bytes):
+                            response_output = response_output.decode('utf-8')[1:-1]
+
+                        if os.path.isfile(response_output):
+                            source_file = response_output
+                            with open(source_file, 'wb') as f:
+                                data = f.read()
+                    else:
+                        try:
                             for chunk in response.iter_content(chunk_size=chunk_size):
                                 if chunk:  # filter out keep-alive new chunks
-                                    f.write(chunk)
-                                    if one_file_progress_bar:
-                                        one_file_pbar.update(len(chunk))
-                        # TODO remove this after the BE fix
-                        if self.__video_validation(item=item,
-                                                   downloaded_file=temp_file_path) or is_url:
-                            shutil.move(temp_file_path, local_filepath)
-                        else:
-                            os.remove(temp_file_path)
+                                    data.write(chunk)
+                            file_validation, start_point, chunk_resume = self.__get_next_chunk(item=item,
+                                                                                              download_progress=data,
+                                                                                              chunk_resume=chunk_resume)
+                            if file_validation:
+                                download_done = True
+                            else:
+                                continue
+                        except Exception as err:
+                            raise err
+                    # go back to the beginning of the stream
+                    data.seek(0)
+                    data.name = item.name
+                    if not save_locally and to_array:
+                        if 'image' not in item.mimetype:
                             raise PlatformException(
-                                error=500,
-                                message='The downloaded file is corrupted. Please try again. If the issue repeats please contact support.')
-                    except Exception as err:
-                        if os.path.isfile(temp_file_path):
-                            os.remove(temp_file_path)
-                        raise err
-                if one_file_progress_bar:
-                    one_file_pbar.close()
-                # save to output variable
-                data = local_filepath
-                # if image - can download annotation mask
-                if item.annotated and annotation_options:
-                    self._download_img_annotations(item=item,
-                                                   img_filepath=local_filepath,
-                                                   annotation_options=annotation_options,
-                                                   annotation_filters=annotation_filters,
-                                                   local_path=local_path,
-                                                   overwrite=overwrite,
-                                                   thickness=thickness,
-                                                   alpha=alpha,
-                                                   with_text=with_text,
-                                                   export_version=export_version
-                                                   )
-            else:
-                # save as byte stream
-                data = io.BytesIO()
-                if self.items_repository._client_api.sdk_cache.use_cache and \
-                        self.items_repository._client_api.cache is not None:
-                    response_output = os.path.normpath(response.content)
-                    if isinstance(response_output, bytes):
-                        response_output = response_output.decode('utf-8')[1:-1]
+                                error="400",
+                                message='Download element type numpy.ndarray support for image only. '
+                                        'Item Id: {} is {} type'.format(item.id, item.mimetype))
 
-                    if os.path.isfile(response_output):
-                        source_file = response_output
-                        with open(source_file, 'wb') as f:
-                            data = f.read()
-                else:
-                    try:
-                        for chunk in response.iter_content(chunk_size=chunk_size):
-                            if chunk:  # filter out keep-alive new chunks
-                                data.write(chunk)
-                    except Exception as err:
-                        raise err
-                # go back to the beginning of the stream
-                data.seek(0)
-                data.name = item.name
-                if not save_locally and to_array:
-                    if 'image' not in item.mimetype:
-                        raise PlatformException(
-                            error="400",
-                            message='Download element type numpy.ndarray support for image only. '
-                                    'Item Id: {} is {} type'.format(item.id, item.mimetype))
-
-                    data = np.array(Image.open(data))
+                        data = np.array(Image.open(data))
         else:
             data = local_filepath
         return data
+
+    def __get_next_chunk(self, item, download_progress, chunk_resume):
+        size_validation, file_size, resume = self.__file_validation(item=item,
+                                                                    downloaded_file=download_progress)
+        start_point = file_size
+        if not size_validation:
+            if chunk_resume.get(start_point, None) is None:
+                chunk_resume = {start_point: 1}
+            else:
+                chunk_resume[start_point] += 1
+            if chunk_resume[start_point] == 3 or not resume:
+                raise PlatformException(
+                    error=500,
+                    message='The downloaded file is corrupted. Please try again. If the issue repeats please contact support.')
+        return size_validation, start_point, chunk_resume
 
     def __default_local_path(self):
 

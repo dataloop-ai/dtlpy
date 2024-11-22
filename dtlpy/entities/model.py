@@ -307,7 +307,7 @@ class Model(entities.BaseEntity):
     @_repositories.default
     def set_repositories(self):
         reps = namedtuple('repositories',
-                          field_names=['projects', 'datasets', 'packages', 'models', 'ontologies', 'artifacts',
+                          field_names=['projects', 'datasets', 'models', 'packages', 'ontologies', 'artifacts',
                                        'metrics', 'dpks', 'services'])
 
         r = reps(projects=repositories.Projects(client_api=self._client_api),
@@ -552,14 +552,34 @@ class Model(entities.BaseEntity):
                                     filters=filters,
                                     service_config=service_config)
 
-    def predict(self, item_ids):
+    def predict(self, item_ids=None, dataset_id=None):
         """
         Run model prediction with items
 
         :param item_ids: a list of item id to run the prediction.
+        :param dataset_id: dataset id to run the prediction on
         :return:
         """
-        return self.models.predict(model=self, item_ids=item_ids)
+        return self.models.predict(model=self, item_ids=item_ids, dataset_id=dataset_id)
+
+    def embed(self, item_ids):
+        """
+        Run model embed with items
+
+        :param item_ids: a list of item id to run the embed.
+        :return:
+        """
+        return self.models.embed(model=self, item_ids=item_ids)
+
+    def embed_datasets(self, dataset_ids, attach_trigger=False):
+        """
+        Run model embed with datasets
+
+        :param dataset_ids: a list of dataset id to run the embed.
+        :param attach_trigger: bool - True, if you want to activate the trigger
+        :return:
+        """
+        return self.models.embed_datasets(model=self, dataset_ids=dataset_ids, attach_trigger=attach_trigger)
 
     def deploy(self, service_config=None) -> entities.Service:
         """

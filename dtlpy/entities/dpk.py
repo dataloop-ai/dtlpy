@@ -59,6 +59,7 @@ class Toolbar(entities.DlEntity):
 
 class Panel(entities.DlEntity):
     name = entities.DlProperty(location=['name'], _type=str)
+    path = entities.DlProperty(location=['path'], _type=str, default=None)
     min_role = entities.DlProperty(location=['minRole'], _type=list)
     supported_slots = entities.DlProperty(location=['supportedSlots'], _type=list)
 

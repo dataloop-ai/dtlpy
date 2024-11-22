@@ -36,6 +36,8 @@ class AsyncThreadEventLoop(threading.Thread):
     def semaphore(self, name, n=None):
         if n is None:
             n = self.n
+        else:
+            n = min(n, self.n)
         if name not in self._semaphores:
             self._semaphores[name] = asyncio.BoundedSemaphore(n)
         return self._semaphores[name]
@@ -94,17 +96,32 @@ class AsyncResponseError(AsyncResponse):
 
 
 class AsyncUploadStream(io.IOBase):
-    def __init__(self, buffer, callback=None, name=''):
+    def __init__(self, buffer, callback=None, name='', chunk_timeout=10, max_retries=3):
         self.buffer = buffer
         self.buffer.seek(0)
         self.callback = callback
         self._name = name
+        self.chunk_timeout = chunk_timeout
+        self.max_retries = max_retries
 
     @property
     def name(self):
         return self._name
 
+    async def async_read(self, size):
+        retries = 0
+        while retries < self.max_retries:
+            try:
+                data = await asyncio.wait_for(asyncio.to_thread(self.buffer.read, size), timeout=self.chunk_timeout)
+                if self.callback is not None:
+                    self.callback(size)
+                return data
+            except asyncio.TimeoutError:
+                retries += 1
+                logger.warning(
+                    f"Chunk read timed out after {self.chunk_timeout} seconds. Retrying {retries}/{self.max_retries}...")
+
+        raise Exception(f"Chunk read failed after {self.max_retries} retries due to timeouts")
+
     def read(self, size):
-        if self.callback is not None:
-            self.callback(size)
-        return self.buffer.read(size)
+        return asyncio.run(self.async_read(size))

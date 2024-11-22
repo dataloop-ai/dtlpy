@@ -2,7 +2,6 @@ import os
 import time
 
 import behave
-import dtlpy
 import random
 import re
 
@@ -110,6 +109,15 @@ def step_impl(context):
         context.error = None
     except Exception as e:
         context.error = e
+
+
+@behave.then(u'i got the dpk required integration')
+def step_impl(context):
+    success, resp = context.dl.client_api.gen_request(req_type='get',
+                                                      path=f'/app-registry/{context.published_dpk.id}/requirements')
+    assert success, f"TEST FAILED: Failed to get dpk requirements: {resp}"
+    dpk_integrations = resp.json().get(context.published_dpk.id, {}).get('integrations', {})
+    assert dpk_integrations, f"TEST FAILED: No integrations found in dpk requirements"
 
 
 @behave.then(u'I validate integration not in integrations list by context.integration_name')

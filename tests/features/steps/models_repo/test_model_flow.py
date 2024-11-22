@@ -3,6 +3,7 @@ import time
 import random
 
 import behave
+
 import dtlpy as dl
 import os
 
@@ -150,6 +151,42 @@ def step_impl(context, obj_entity):
 def step_impl(context, runner_image):
     assert context.service.runtime.runner_image == runner_image, f"service runner image expected :{runner_image} got {context.service.runtime.runner_image}"
 
+
+@behave.when(u'I run model embed datasets')
+def step_impl(context):
+    try:
+        context.model = dl.models.get(model_id=context.model.id)
+        all_datasets = context.project.datasets.list()
+        dataset_ids = [dataset.id for dataset in all_datasets]
+        context.command = context.model.embed_datasets(dataset_ids=dataset_ids, attach_trigger=True)
+    except Exception as err:
+        pass
+
+
+
+@behave.then(u'command massage is in model')
+def step_impl(context):
+    model = dl.models.get(model_id=context.model.id)
+    err_msg = model.metadata.get('system', {}).get('embedDatasets', {}).get('error', None)
+    assert err_msg, f"TEST FAILED: command message is not in model metadata"
+
+
+@behave.then(u'model service has "{executions_num}" executions and "{triggers_num}" triggers')
+def step_impl(context, executions_num, triggers_num):
+    context.model = dl.models.get(model_id=context.model.id)
+    services = context.model.services.list().items[0]
+    executions = services.executions.list().items
+    triggers = services.triggers.list().items
+    assert len(executions) == int(
+        executions_num), f"TEST FAILED: Expected {executions_num}, Actual executions in service {len(executions)}"
+    assert len(triggers) == int(
+        triggers_num), f"TEST FAILED: Expected {triggers_num}, Actual triggers in service {len(triggers)}"
+
+@behave.when(u'i change model status to "{status}"')
+def step_impl(context, status):
+    context.model = dl.models.get(model_id=context.model.id)
+    context.model.status = status
+    context.model = context.model.update()
 
 @behave.when(u'I "{func}" the model')
 @behave.when(u'I "{func}" the model with exception "{flag}"')

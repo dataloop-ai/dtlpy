@@ -1170,12 +1170,7 @@ class ApiClient:
                 def callback(bytes_read):
                     pass
 
-        timeout = aiohttp.ClientTimeout(
-            total=None,  # Disable overall timeout
-            connect=2 * 60,  # Set connect timeout (in seconds)
-            sock_read=10 * 60,  # Set read timeout for socket read operations
-            sock_connect=2 * 60  # Set timeout for connection setup
-        )
+        timeout = aiohttp.ClientTimeout(total=0)
         async with aiohttp.ClientSession(headers=headers, timeout=timeout) as session:
             try:
                 form = aiohttp.FormData({})
@@ -1187,7 +1182,8 @@ class ApiClient:
                     form.add_field('description', item_description)
                 form.add_field('file', AsyncUploadStream(buffer=to_upload,
                                                          callback=callback,
-                                                         name=uploaded_filename))
+                                                         name=uploaded_filename,
+                                                         chunk_timeout=2 * 60))
                 url = '{}?mode={}'.format(self.base_gate_url + remote_url, mode)
 
                 # use SSL context

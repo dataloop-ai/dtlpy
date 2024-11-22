@@ -24,6 +24,7 @@ class BaseUploadElement:
         self.filename = all_upload_elements['filename']
         self.export_version = all_upload_elements['export_version']
         self.item_description = all_upload_elements['item_description']
+        self.driver_path = all_upload_elements['driver_path']
 
 
 class BinaryUploadElement(BaseUploadElement):
@@ -101,6 +102,16 @@ class ExternalItemUploadElement(BaseUploadElement):
         else:
             annotations_filepath = None
         # append to list
+        if self.remote_path is None:
+            split_dir = os.path.dirname(filepath).split('//')
+            if len(split_dir) > 1:
+                split_dir = split_dir[1] + '/'
+            if self.driver_path == '/':
+                self.driver_path = None
+            if self.driver_path and split_dir.startswith(self.driver_path):
+                self.remote_path = split_dir.replace(self.driver_path, '')
+            else:
+                self.remote_path = split_dir
         remote_filepath = self.remote_path + self.remote_name
         self.type = 'external_file'
         self.buffer = filepath

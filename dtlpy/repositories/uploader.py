@@ -135,10 +135,13 @@ class Uploader:
                                     item_description=None):
         # fix remote path
         if remote_path is None:
-            remote_path = "/"
-        if not remote_path.startswith('/'):
+            if isinstance(local_path, str) and local_path.startswith('external://'):
+                remote_path = None
+            else:
+                remote_path = "/"
+        if remote_path and not remote_path.startswith('/'):
             remote_path = f"/{remote_path}"
-        if not remote_path.endswith("/"):
+        if remote_path and not remote_path.endswith("/"):
             remote_path = f"{remote_path}/"
         if file_types is not None and not isinstance(file_types, list):
             msg = '"file_types" should be a list of file extension. e.g [".jpg", ".png"]'
@@ -198,6 +201,12 @@ class Uploader:
         if remote_name is None:
             remote_name_list = [None] * len(local_path_list)
 
+        try:
+            driver_path = self.items_repository.dataset.project.drivers.get(
+                driver_id=self.items_repository.dataset.driver).path
+        except Exception:
+            driver_path = None
+
         futures = deque()
         total_size = 0
         for upload_item_element, remote_name, upload_annotations_element in zip(local_path_list,
@@ -238,7 +247,8 @@ class Uploader:
                 'filename': None,
                 'root': None,
                 'export_version': export_version,
-                'item_description': item_description
+                'item_description': item_description,
+                'driver_path': driver_path
             }
             if isinstance(upload_item_element, str):
                 with_head_folder = True
@@ -342,16 +352,9 @@ class Uploader:
         return futures
 
     async def __single_external_sync(self, element):
-        remote_path = element.remote_path
-        if len(remote_path) <= 1:
-            split_dir = os.path.dirname(element.buffer).split('//')
-            if len(split_dir) > 1:
-                remote_path = split_dir[1] + '/'
-
-        filename = remote_path + element.remote_name
         storage_id = element.buffer.split('//')[1]
         req_json = dict()
-        req_json['filename'] = filename
+        req_json['filename'] = element.remote_filepath
         req_json['storageId'] = storage_id
         success, response = self.items_repository._client_api.gen_request(req_type='post',
                                                                           path='/datasets/{}/imports'.format(
@@ -530,9 +533,10 @@ class Uploader:
                                    ref=item.id)
                 if pbar is not None:
                     pbar.update()
-                    self.items_repository._client_api.callbacks.run_on_event(event=self.items_repository._client_api.callbacks.CallbackEvent.ITEMS_UPLOAD,
-                                                                             context={'item_id': item.id, 'dataset_id': item.dataset_id},
-                                                                             progress=round(pbar.n / pbar.total * 100, 0))
+                    self.items_repository._client_api.callbacks.run_on_event(
+                        event=self.items_repository._client_api.callbacks.CallbackEvent.ITEMS_UPLOAD,
+                        context={'item_id': item.id, 'dataset_id': item.dataset_id},
+                        progress=round(pbar.n / pbar.total * 100, 0))
             else:
                 if isinstance(element.buffer, str):
                     ref = element.buffer

@@ -65,7 +65,7 @@ def step_impl(context, count):
     if not success:
         print(context.tasks_list)
         print(context.project.tasks.list())
-    assert success
+    assert success, 'Tasks list is not as expected, expect: {} got: {}'.format(count, context.tasks_list)
 
 
 @behave.given(u'There is a second project and dataset')

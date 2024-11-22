@@ -347,7 +347,6 @@ class PromptItem:
     def add(self,
             message: dict,
             prompt_key: str = None,
-            stream: bool = True,
             model_info: dict = None):
         """
         add a prompt to the prompt item
@@ -356,29 +355,28 @@ class PromptItem:
 
         :param message:
         :param prompt_key:
-        :param stream:
         :param model_info:
         :return:
         """
-        if prompt_key is None:
-            prompt_key = len(self.prompts) + 1
         role = message.get('role', 'user')
         content = message.get('content', list())
 
         if self.role_mapping.get(role, 'item') == 'item':
+            if prompt_key is None:
+                prompt_key = str(len(self.prompts) + 1)
             # for new prompt we need a new key
-            prompt = Prompt(key=str(prompt_key), role=role)
+            prompt = Prompt(key=prompt_key, role=role)
             for element in content:
                 prompt.add_element(value=element.get('value', ''),
                                    mimetype=element.get('mimetype', PromptType.TEXT))
 
             # create new prompt and add to prompts
             self.prompts.append(prompt)
-            if self._item is not None and stream is True:
+            if self._item is not None:
                 self._item._Item__update_item_binary(_json=self.to_json())
         else:
-            # for response - we need to assign to previous key
-            prompt_key = str(prompt_key - 1)
+            if prompt_key is None:
+                prompt_key = str(len(self.prompts))
             assistant_message = content[0]
             assistant_mimetype = assistant_message.get('mimetype', PromptType.TEXT)
             uploaded_annotation = None
@@ -421,21 +419,19 @@ class PromptItem:
                 prompt.add_element(mimetype=PromptType.METADATA,
                                    value={"model_info": model_info})
 
-                if stream:
-                    existing_annotation = entities.Annotation.new(item=self._item,
-                                                                  metadata=metadata,
-                                                                  annotation_definition=annotation_definition)
-                    uploaded_annotation = existing_annotation.upload()
-                    prompt.add_element(mimetype=PromptType.METADATA,
-                                       value={"id": uploaded_annotation.id})
+                existing_annotation = entities.Annotation.new(item=self._item,
+                                                              metadata=metadata,
+                                                              annotation_definition=annotation_definition)
+                uploaded_annotation = existing_annotation.upload()
+                prompt.add_element(mimetype=PromptType.METADATA,
+                                   value={"id": uploaded_annotation.id})
                 existing_prompt = prompt
                 self.assistant_prompts.append(prompt)
 
-            # TODO Shadi fix
             existing_prompt_element = [element for element in existing_prompt.elements if
                                        element['mimetype'] != PromptType.METADATA][-1]
             existing_prompt_element['value'] = assistant_message.get('value')
-            if stream is True and uploaded_annotation is None:
+            if uploaded_annotation is None:
                 # Creating annotation with old dict to match platform dict
                 annotation_definition = entities.FreeText(text='')
                 metadata = {'system': {'promptId': prompt_key},
@@ -451,7 +447,3 @@ class PromptItem:
                 # update the annotation with the new text
                 annotation.annotation_definition.text = existing_prompt_element['value']
                 self._item.annotations.update(annotation)
-
-    def update(self):
-        if self._item is not None:
-            self._item._Item__update_item_binary(_json=self.to_json())

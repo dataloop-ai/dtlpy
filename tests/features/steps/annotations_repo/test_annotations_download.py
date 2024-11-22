@@ -28,6 +28,7 @@ def step_impl(context, ann_type, path):
             filepath=path,
             annotation_format=ann_type,
             thickness=1)
+    context.annotation_download_filepath = path
 
 
 @behave.when(u'I download items annotations from item with "{ann_type}" to "{path}"')
@@ -168,3 +169,15 @@ def step_impl(context, folder_name, folder_path):
     count_files = os.listdir(os.path.join(folder_path, folder_name))
     assert len(count_files) == 1
 
+
+@behave.then(u'Validate annotation file has "{ann_count}" annotations')
+def step_impl(context, ann_count):
+    if not hasattr(context, 'annotation_download_filepath'):
+        raise Exception(
+            'annotation_download_filepath not found in context, please run: I download items annotations with "{ann_type}" to "{path}"')
+
+    import json
+    with open(context.annotation_download_filepath, 'r') as f:
+        annotation_file = json.load(f)
+
+    assert len(annotation_file['annotations']) == int(ann_count), f"TEST FAILED: expected {ann_count} annotations, got {len(annotation_file['annotations'])}"

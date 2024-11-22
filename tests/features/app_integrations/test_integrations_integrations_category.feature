@@ -22,3 +22,9 @@ Feature: publish a dpk with service Integration
     And Execution was executed and finished with status "success"
     And Execution output is "category"
     When I delete integration in context
+
+  @DAT-81128
+  Scenario: publishing a dpk with integrations in scope node - integrations in module use integration category
+    Given I publish a pipeline node dpk from file "apps/app_scope_node_with_init.json" and with code path "move_item"
+    When I install the app
+    Then i got the dpk required integration

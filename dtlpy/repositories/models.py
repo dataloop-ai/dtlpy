@@ -660,18 +660,21 @@ class Models:
                                             client_api=self._client_api,
                                             project=self._project)
 
-    def predict(self, model, item_ids):
+    def predict(self, model, item_ids, dataset_id=None):
         """
         Run model prediction with items
 
         :param model: dl.Model entity to run the prediction.
         :param item_ids: a list of item id to run the prediction.
+        :param dataset_id: a dataset id to run the prediction.
         :return:
         """
         if len(model.metadata['system'].get('deploy', {}).get('services', [])) == 0:
             # no services for model
             raise ValueError("Model doesnt have any associated services. Need to deploy before predicting")
-        payload = {'input': {'itemIds': item_ids},
+        if item_ids is None and dataset_id is None:
+            raise ValueError("Need to provide either item_ids or dataset_id")
+        payload = {'input': {'itemIds': item_ids, 'datasetId': dataset_id},
                    'config': {'serviceId': model.metadata['system']['deploy']['services'][0]}}
 
         success, response = self._client_api.gen_request(req_type="post",
@@ -682,6 +685,62 @@ class Models:
         return entities.Execution.from_json(_json=response.json(),
                                             client_api=self._client_api,
                                             project=self._project)
+
+    def embed(self, model, item_ids=None, dataset_id=None):
+        """
+        Run model embed with items
+
+        :param model: dl.Model entity to run the prediction.
+        :param item_ids: a list of item id to run the embed.
+        :param dataset_id: a dataset id to run the embed.
+        :return: Execution
+        :rtype: dtlpy.entities.execution.Execution
+        """
+        if len(model.metadata['system'].get('deploy', {}).get('services', [])) == 0:
+            # no services for model
+            raise ValueError("Model doesnt have any associated services. Need to deploy before predicting")
+        if item_ids is None and dataset_id is None:
+            raise ValueError("Need to provide either item_ids or dataset_id")
+        payload = {'input': {'itemIds': item_ids, 'datasetId': dataset_id},
+                   'config': {'serviceId': model.metadata['system']['deploy']['services'][0]}}
+
+        success, response = self._client_api.gen_request(req_type="post",
+                                                         path=f"/ml/models/{model.id}/embed",
+                                                         json_req=payload)
+        if not success:
+            raise exceptions.PlatformException(response)
+        return entities.Execution.from_json(_json=response.json(),
+                                            client_api=self._client_api,
+                                            project=self._project)
+
+    def embed_datasets(self, model, dataset_ids, attach_trigger=False):
+        """
+        Run model embed with datasets
+
+        :param model: dl.Model entity to run the prediction.
+        :param dataset_ids: a list of dataset id to run the embed.
+        :param attach_trigger: bool, if True will activate the trigger
+        :return:
+        """
+        if len(model.metadata['system'].get('deploy', {}).get('services', [])) == 0:
+            # no services for model
+            raise ValueError("Model doesnt have any associated services. Need to deploy before predicting")
+        if dataset_ids is None:
+            raise ValueError("Need to provide either dataset_id")
+        payload = {'datasetIds': dataset_ids,
+                   'config': {'serviceId': model.metadata['system']['deploy']['services'][0]},
+                   'attachTrigger': attach_trigger
+                   }
+
+        success, response = self._client_api.gen_request(req_type="post",
+                                                         path=f"/ml/models/{model.id}/embed/datasets",
+                                                         json_req=payload)
+        if not success:
+            raise exceptions.PlatformException(response)
+        command = entities.Command.from_json(_json=response.json(),
+                                             client_api=self._client_api)
+        command = command.wait()
+        return command
 
     def deploy(self, model_id: str, service_config=None) -> entities.Service:
         """

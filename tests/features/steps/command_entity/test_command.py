@@ -29,3 +29,7 @@ def step_impl(context):
             1], "TEST FAILED: Command ID not in error"
         return
     assert False
+
+@behave.then(u'command status is "{status}"')
+def step_impl(context, status):
+    assert context.command.status == status, f"TEST FAILED: Expected status {status}, Actual status {context.command.status}"
