@@ -8,8 +8,6 @@ Page Not Found
 
 Sorry, the page you are looking for does not exist.
 
-You can visit our [docs](https://docs.dataloop.ai/) or [developers docs](https://developers.dataloop.ai/)
+You can visit our `Platform Docs <https://docs.dataloop.ai>`_ or `Developers Docs <https://developers.dataloop.ai/>`_
 
-If you want to stay here try:
-- [Go back to the homepage](index.html)
-- [Search the documentation](search.html)
+If you want to stay here, go back to the `homepage <https://sdk-docs.dataloop.ai/en/latest/index.html/>`_
