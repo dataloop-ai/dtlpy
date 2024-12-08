@@ -57,8 +57,10 @@ extensions = [
     'sphinx_rtd_theme',
     # 'sphinxcontrib.lunrsearch',
     'sphinx_copybutton',
-    'recommonmark'
+    'recommonmark',
+    'notfound.extension'
 ]
+notfound_urls_prefix = ''
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -216,4 +218,3 @@ intersphinx_mapping = {'https://docs.python.org/': None}
 todo_include_todos = True
 
 autodoc_mock_imports = ["tensorflow", "torch", "imgaug", "torchvision"]
-
