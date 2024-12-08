@@ -8,3 +8,4 @@ nbsphinx==0.4.2
 m2r==0.2.1
 recommonmark
 mistune==0.8.4
+sphinx-notfound-page
