@@ -218,3 +218,4 @@ intersphinx_mapping = {'https://docs.python.org/': None}
 todo_include_todos = True
 
 autodoc_mock_imports = ["tensorflow", "torch", "imgaug", "torchvision"]
+html_baseurl  = "https://sdk-docs.dataloop.ai/en/latest"
