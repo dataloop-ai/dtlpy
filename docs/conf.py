@@ -60,7 +60,7 @@ extensions = [
     'recommonmark',
     'notfound.extension'
 ]
-notfound_urls_prefix = ''
+notfound_urls_prefix = '/en/latest/'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -218,4 +218,3 @@ intersphinx_mapping = {'https://docs.python.org/': None}
 todo_include_todos = True
 
 autodoc_mock_imports = ["tensorflow", "torch", "imgaug", "torchvision"]
-html_baseurl  = "https://sdk-docs.dataloop.ai/en/latest"
