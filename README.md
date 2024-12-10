@@ -17,7 +17,8 @@ For full SDK documentation click [here](https://console.dataloop.ai/sdk-docs/lat
 
 | Python            | 3.11 | 3.10 | 3.9 | 3.8 | 3.7 | 3.6 | 3.5 |
 |-------------------|------|------|-----|-----|-----|-----|-----|
-| dtlpy >= 1.76     | Yes  | Yes  | Yes | Yes | Yes | Yes |     |
+| dtlpy >= 1.99     | Yes  | Yes  | Yes | Yes | Yes |     |     |
+| dtlpy 1.76 - 1.98 | Yes  | Yes  | Yes | Yes | Yes | Yes |     |
 | dtlpy >= 1.61     |      | Yes  | Yes | Yes | Yes | Yes |     |
 | dtlpy 1.60 - 1.50 |      |      | Yes | Yes | Yes | Yes |     |
 | dtlpy <= 1.49     |      |      | Yes | Yes | Yes | Yes | Yes |           

@@ -112,7 +112,13 @@ class AsyncUploadStream(io.IOBase):
         retries = 0
         while retries < self.max_retries:
             try:
-                data = await asyncio.wait_for(asyncio.to_thread(self.buffer.read, size), timeout=self.chunk_timeout)
+                import sys
+                if sys.version_info < (3, 9):
+                    loop = asyncio.get_event_loop()
+                    data = await asyncio.wait_for(loop.run_in_executor(None, self.buffer.read, size),
+                                                  timeout=self.chunk_timeout)
+                else:
+                    data = await asyncio.wait_for(asyncio.to_thread(self.buffer.read, size), timeout=self.chunk_timeout)
                 if self.callback is not None:
                     self.callback(size)
                 return data

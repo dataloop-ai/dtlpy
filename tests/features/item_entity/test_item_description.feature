@@ -70,3 +70,8 @@ Feature: Item description testing
         And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"
         When I upload an annotation with description
         Then Annotation has description
+
+    @DAT-76218
+    Scenario: Add emoji to item description
+        When I Add description "Test😀😂🥳" to item
+        Then  I validate item.description has "Test\u1f600\u1f602\u1f973" value

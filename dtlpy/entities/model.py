@@ -114,6 +114,7 @@ class Model(entities.BaseEntity):
     _project = attr.ib(repr=False)
     _package = attr.ib(repr=False)
     _dataset = attr.ib(repr=False)
+    _feature_set = attr.ib(repr=False)
     _client_api = attr.ib(type=ApiClient, repr=False)
     _repositories = attr.ib(repr=False)
     _ontology = attr.ib(repr=False, default=None)
@@ -191,6 +192,7 @@ class Model(entities.BaseEntity):
             project=project,
             package=package,
             dataset=None,
+            feature_set=None,
             id=_json.get('id', None),
             url=_json.get('url', None),
             scope=_json.get('scope', entities.EntityScopeLevel.PROJECT),
@@ -218,6 +220,7 @@ class Model(entities.BaseEntity):
                                                         attr.fields(Model)._dataset,
                                                         attr.fields(Model)._ontology,
                                                         attr.fields(Model)._repositories,
+                                                        attr.fields(Model)._feature_set,
                                                         attr.fields(Model)._client_api,
                                                         attr.fields(Model).package_id,
                                                         attr.fields(Model).project_id,
@@ -266,6 +269,30 @@ class Model(entities.BaseEntity):
             self._repositories = self.set_repositories()  # update the repos with the new fetched entity
         assert isinstance(self._project, entities.Project)
         return self._project
+
+    @property
+    def feature_set(self) -> 'entities.FeatureSet':
+        if self._feature_set is None:
+            filters = entities.Filters(field='modelId',
+                                       values=self.id,
+                                       resource=entities.FiltersResource.FEATURE_SET)
+            feature_sets = self.project.feature_sets.list(filters=filters)
+            if feature_sets.items_count > 1:
+                logger.warning("Found more than one feature set associated with model entity. Returning first result."
+                               "Set feature_set if other feature set entity is needed.")
+                self._feature_set = feature_sets.items[0]
+            elif feature_sets.items_count == 1:
+                self._feature_set = feature_sets.items[0]
+            else:
+                self._feature_set = None
+        return self._feature_set
+
+    @feature_set.setter
+    def feature_set(self, feature_set: 'entities.FeatureSet'):
+        if not isinstance(feature_set, entities.FeatureSet):
+            raise ValueError("feature_set must be of type dl.FeatureSet")
+        else:
+            self._feature_set = feature_set
 
     @property
     def package(self):

@@ -2,7 +2,9 @@ import dataclasses
 import tempfile
 import datetime
 import logging
+import string
 import shutil
+import random
 import base64
 import tqdm
 import sys
@@ -119,7 +121,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         if self._model_entity is not None:
             self.package = self.model_entity.package
         if self._package is None:
-            raise ValueError('Missing Package entity on adapter. please set: "adapter.package=package"')
+            raise ValueError('Missing Package entity on adapter. Please set: "adapter.package=package"')
         assert isinstance(self._package, (entities.Package, entities.Dpk))
         return self._package
 
@@ -306,7 +308,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             data_subset_base_path = os.path.join(data_path, subset)
             if os.path.isdir(data_subset_base_path) and not overwrite:
                 # existing and dont overwrite
-                self.logger.debug("Subset {!r} Existing (and overwrite=False). Skipping.".format(subset))
+                self.logger.debug("Subset {!r} already exists (and overwrite=False). Skipping.".format(subset))
             else:
                 self.logger.debug("Downloading subset {!r} of {}".format(subset,
                                                                          self.model_entity.dataset.name))
@@ -349,7 +351,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
 
         :param model_entity:  `str` dl.Model entity
         :param local_path:  `str` directory path in local FileSystem to download the model_entity to
-        :param overwrite: `bool` (default False) if False does not downloads files with same name else (True) download all
+        :param overwrite: `bool` (default False) if False does not download files with same name else (True) download all
         """
         if model_entity is not None:
             self.model_entity = model_entity
@@ -387,8 +389,8 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         self.save(local_path=local_path, **kwargs)
 
         if self.model_entity is None:
-            raise ValueError('missing model entity on the adapter. '
-                             'please set one before saving: "adapter.model_entity=model"')
+            raise ValueError('Missing model entity on the adapter. '
+                             'Please set before saving: "adapter.model_entity=model"')
 
         self.model_entity.artifacts.upload(filepath=os.path.join(local_path, '*'),
                                            overwrite=True)
@@ -466,9 +468,9 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         """
         Extract feature from an input list of items (or single) and return the items and the feature vector.
 
-        :param items: `List[dl.Item]` list of items to predict
+        :param items: `List[dl.Item]` list of items to embed
         :param upload_features: `bool` uploads the features on the given items
-        :param batch_size: `int` size of batch to run a single inference
+        :param batch_size: `int` size of batch to run a single embed
 
         :return: `List[dl.Item]`, `List[List[vector]]`
         """
@@ -477,16 +479,18 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         upload_features = self.adapter_defaults.resolve("upload_features", upload_features)
         input_type = self.model_entity.input_type
         self.logger.debug(
-            "Predicting {} items, using batch size {}. input type: {}".format(len(items), batch_size, input_type))
+            "Embedding {} items, using batch size {}. input type: {}".format(len(items), batch_size, input_type))
 
         # Search for existing feature set for this model id
-        filters = entities.Filters(field='modelId',
-                                   values=self.model_entity.id,
-                                   resource=entities.FiltersResource.FEATURE_SET)
-        pages = self.model_entity.project.feature_sets.list(filters)
-        if pages.items_count == 0:
-            feature_set_name = self.configuration.get('featureSetName', self.model_entity.name)
+        feature_set = self.model_entity.feature_set
+        if feature_set is None:
             logger.info('Feature Set not found. creating... ')
+            try:
+                self.model_entity.project.feature_sets.get(name=self.model_entity.name)
+                feature_set_name = f"{self.model_entity.name}-{''.join(random.choices(string.ascii_letters + string.digits, k=5))}"
+                logger.warning(f"Feature set with the model name already exists. Creating new feature set with name {feature_set_name}")
+            except exceptions.NotFound:
+                feature_set_name = self.model_entity.name
             feature_set = self.model_entity.project.feature_sets.create(name=feature_set_name,
                                                                         entity_type=entities.FeatureEntityType.ITEM,
                                                                         model_id=self.model_entity.id,
@@ -494,22 +498,15 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
                                                                         set_type=self.model_entity.name,
                                                                         size=self.configuration.get('embeddings_size',
                                                                                                     256))
-            if 'featureSetName' not in self.model_entity.configuration:
-                self.model_entity.configuration['featureSetName'] = feature_set_name
-                self.model_entity.update()
             logger.info(f'Feature Set created! name: {feature_set.name}, id: {feature_set.id}')
-        elif pages.items_count > 1:
-            raise ValueError(
-                f'More than one feature set for model. model_id: {self.model_entity.id}, feature_sets_ids: {[f.id for f in pages.all()]}')
         else:
-            feature_set = pages.items[0]
             logger.info(f'Feature Set found! name: {feature_set.name}, id: {feature_set.id}')
 
         # upload the feature vectors
         pool = ThreadPoolExecutor(max_workers=16)
         vectors = list()
         for i_batch in tqdm.tqdm(range(0, len(items), batch_size),
-                                 desc='predicting',
+                                 desc='embedding',
                                  unit='bt',
                                  leave=None,
                                  file=sys.stdout):
@@ -545,19 +542,19 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         Extract feature from all items given
 
         :param dataset: Dataset entity to predict
-        :param filters: Filters entity for a filtering before predicting
+        :param filters: Filters entity for a filtering before embedding
         :param upload_features: `bool` uploads the features back to the given items
-        :param batch_size: `int` size of batch to run a single inference
+        :param batch_size: `int` size of batch to run a single embed
 
-        :return: `bool` indicating if the prediction process completed successfully
+        :return: `bool` indicating if the embedding process completed successfully
         """
         if batch_size is None:
             batch_size = self.configuration.get('batch_size', 4)
         upload_features = self.adapter_defaults.resolve("upload_features", upload_features)
 
-        self.logger.debug("Creating embeddings for dataset (name:{}, id:{}, using batch size {}".format(dataset.name,
-                                                                                                        dataset.id,
-                                                                                                        batch_size))
+        self.logger.debug("Creating embeddings for dataset (name:{}, id:{}), using batch size {}".format(dataset.name,
+                                                                                                         dataset.id,
+                                                                                                         batch_size))
         if not filters:
             filters = entities.Filters()
         if filters is not None and isinstance(filters, dict):
@@ -771,7 +768,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
                                            entity=item)
             return feature
         except Exception as e:
-            logger.error(f'Failed to upload feature vector if length {len(vector)} to item {item.id}, Error: {e}')
+            logger.error(f'Failed to upload feature vector of length {len(vector)} to item {item.id}, Error: {e}')
             return []
 
     def _upload_model_annotations(self, item: entities.Item, predictions, clean_annotations):
@@ -794,7 +791,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
     @staticmethod
     def _item_to_image(item):
         """
-        Preprocess items before cvalling the `predict` functions.
+        Preprocess items before calling the `predict` functions.
         Convert item to numpy array
 
         :param item:

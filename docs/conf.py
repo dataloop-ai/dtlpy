@@ -27,7 +27,7 @@ author = 'Dataloop Team'
 # The short X.Y version
 version = ''
 # The full version, including alpha/beta/rc tags
-release = '1.99.11'
+release = '1.100.4'
 
 add_module_names = False
 
@@ -61,6 +61,7 @@ extensions = [
     'notfound.extension'
 ]
 notfound_urls_prefix = '/en/latest/'
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -218,3 +219,7 @@ intersphinx_mapping = {'https://docs.python.org/': None}
 todo_include_todos = True
 
 autodoc_mock_imports = ["tensorflow", "torch", "imgaug", "torchvision"]
+#
+# html_additional_pages = {
+#     '404': '404.html',
+# }
