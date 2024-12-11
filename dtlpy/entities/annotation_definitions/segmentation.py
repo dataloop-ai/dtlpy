@@ -15,11 +15,30 @@ class Segmentation(BaseAnnotationDefinition):
     """
     type = "binary"
 
-    def __init__(self, geo, label, attributes=None, description=None, color=None):
+    def __init__(self, geo: np.ndarray, label: str, attributes=None, description=None, color=None):
         super().__init__(description=description, attributes=attributes)
-        self.geo = geo
+        self._geo = geo
+        self._coordinates = None
         self.label = label
         self._color = color
+
+    @property
+    def geo(self) -> np.ndarray:
+        if self._geo is None:
+            self._geo = self.from_coordinates(self._coordinates)
+            if self._color is None:
+                color = None
+                fill_coordinates = self._geo.nonzero()
+                if len(fill_coordinates) > 0 and len(fill_coordinates[0]) > 0 and len(fill_coordinates[1]) > 0:
+                    color = self._geo[fill_coordinates[0][0]][fill_coordinates[1][0]]
+                self._color = color
+            self._geo = (self._geo[:, :, 3] > 127).astype(float)
+        return self._geo
+
+    @geo.setter
+    def geo(self, geo: np.ndarray):
+        self._geo = geo
+        self._coordinates = None
 
     @property
     def x(self):
@@ -106,25 +125,31 @@ class Segmentation(BaseAnnotationDefinition):
         return image
 
     def to_coordinates(self, color=None):
-        if color is None:
-            if self._color:
+        need_encode = False
+        if color is not None and self._color is not None:
+            # if input color is not the same as the annotation's color - need to re-encode
+            if self._color != color:
+                need_encode = True
+
+        if need_encode or self._coordinates is None:
+            if self._color is not None:
                 color = self._color
             else:
                 color = (255, 255, 255)
-        max_val = np.max(self.geo)
-        if max_val > 1:
-            self.geo = self.geo / max_val
-        png_ann = np.stack((color[0] * self.geo,
-                            color[1] * self.geo,
-                            color[2] * self.geo,
-                            255 * self.geo),
-                           axis=2).astype(np.uint8)
-        pil_img = Image.fromarray(png_ann)
-        buff = io.BytesIO()
-        pil_img.save(buff, format="PNG")
-        new_image_string = base64.b64encode(buff.getvalue()).decode("utf-8")
-        coordinates = "data:image/png;base64,%s" % new_image_string
-        return coordinates
+            max_val = np.max(self.geo)
+            if max_val > 1:
+                self.geo = self.geo / max_val
+            png_ann = np.stack((color[0] * self.geo,
+                                color[1] * self.geo,
+                                color[2] * self.geo,
+                                255 * self.geo),
+                               axis=2).astype(np.uint8)
+            pil_img = Image.fromarray(png_ann)
+            buff = io.BytesIO()
+            pil_img.save(buff, format="PNG")
+            new_image_string = base64.b64encode(buff.getvalue()).decode("utf-8")
+            self._coordinates = "data:image/png;base64,%s" % new_image_string
+        return self._coordinates
 
     def to_box(self):
         """
@@ -186,23 +211,22 @@ class Segmentation(BaseAnnotationDefinition):
         else:
             raise TypeError('unknown binary data type')
         decode = base64.b64decode(data)
-        return np.array(Image.open(io.BytesIO(decode)))
+        mask = np.array(Image.open(io.BytesIO(decode)))
+        return mask
 
     @classmethod
     def from_json(cls, _json):
         if "coordinates" in _json:
-            mask = cls.from_coordinates(_json["coordinates"])
+            coordinates = _json["coordinates"]
         elif "data" in _json:
-            mask = cls.from_coordinates(_json["data"])
+            coordinates = _json["data"]
         else:
             raise ValueError('can not find "coordinates" or "data" in annotation. id: {}'.format(_json["id"]))
-        fill_coordinates = mask.nonzero()
-        color = None
-        if len(fill_coordinates) > 0 and len(fill_coordinates[0]) > 0 and len(fill_coordinates[1]) > 0:
-            color = mask[fill_coordinates[0][0]][fill_coordinates[1][0]]
-        return cls(
-            geo=(mask[:, :, 3] > 127).astype(float),
+        inst = cls(
+            geo=None,
             label=_json["label"],
             attributes=_json.get("attributes", None),
-            color=color
+            color=None
         )
+        inst._coordinates = coordinates
+        return inst
