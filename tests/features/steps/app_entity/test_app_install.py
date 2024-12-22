@@ -66,6 +66,20 @@ def step_impl(context, flag="True"):
         context.feature.apps = [context.app]
 
 
+@behave.when(u'I try to install the app')
+def step_impl(context):
+    dpk = context.published_dpk if hasattr(context, "published_dpk") else context.dpk
+    try:
+        context.app = context.project.apps.install(dpk=dpk)
+        if hasattr(context.feature, 'apps'):
+            context.feature.apps.append(context.app)
+        else:
+            context.feature.apps = [context.app]
+        context.error = None
+    except Exception as e:
+        context.error = e
+
+
 @behave.when(u'I install the app without custom_installation')
 def step_impl(context):
     context.app = context.dl.entities.App.from_json(

@@ -95,7 +95,7 @@ class Commands:
 
         command = None
         pbar = tqdm.tqdm(total=100,
-                         disable=self._client_api.verbose.disable_progress_bar,
+                         disable=self._client_api.verbose.disable_progress_bar_command_progress,
                          file=sys.stdout,
                          desc='Command Progress')
         num_tries = 1

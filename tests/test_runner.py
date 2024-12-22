@@ -247,7 +247,7 @@ def test_feature_file(w_feature_filename, i_pbar):
             # Need to check the feature folder
             feature_folder = w_feature_filename.split('/')[-2]
             feature_report_path = os.path.join(REPORT_DIR,
-                                               f'{check_feature_folder(feature_folder).lower()}-report.json')
+                                               f'{check_feature_folder(feature_folder, w_feature_filename).lower()}-report.json')
             with FileLock(feature_report_path + ".lock"):
                 if os.path.exists(feature_report_path):
                     with open(feature_report_path, 'r+') as file:
@@ -289,7 +289,7 @@ def test_feature_file(w_feature_filename, i_pbar):
     test_state.end_test(w_feature_filename)
 
 
-def check_feature_folder(feature_folder):
+def check_feature_folder(feature_folder, feature_name=None):
     if feature_folder in ["assignments_repo", "tasks_repo"]:
         return "Ramsay"
     elif feature_folder in ["pipeline_entity", "pipeline_resume", "packages_entity", "packages_flow", "packages_repo",
@@ -306,7 +306,7 @@ def check_feature_folder(feature_folder):
         , "annotations_repo", "features_vector_entity"]:
         return "Rubiks"
     elif feature_folder in ["checkout_testing", "cli_testing", "code_base_entity", "code_bases_repo", "converter",
-                            "documentation_tests", "platform_urls", "webm_converter", "cache", "xray"]:
+                            "documentation_tests", "platform_urls", "webm_converter", "cache", "xray", "ml_subsets"]:
         return "SDK"
     elif feature_folder in ["settings"]:
         return "Woz"
@@ -317,7 +317,7 @@ def check_feature_folder(feature_folder):
     elif feature_folder in ["billing_repo"]:
         return "Billing"
     else:
-        assert False, f"Feature folder '{feature_folder}' not in the services list - Please add it to correct condition"
+        assert False, f"Feature folder '{feature_folder}' not in the services list - Please add it to correct condition.\n{feature_name}"
 
 
 def generate_random_string(length):

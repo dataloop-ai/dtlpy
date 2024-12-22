@@ -48,6 +48,7 @@ class Toolbar(entities.DlEntity):
     invoke: dict = entities.DlProperty(location=['invoke'], _type=dict)
     location: str = entities.DlProperty(location=['location'], _type=str)
     icon: str = entities.DlProperty(location=['icon'], _type=str)
+    action: str = entities.DlProperty(location=['action'], _type=str, default=None)
 
     def to_json(self) -> dict:
         return self._dict.copy()

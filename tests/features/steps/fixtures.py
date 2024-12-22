@@ -286,3 +286,25 @@ def update_nested_structure(context, d):
                 if update_nested_structure(context, item):
                     return True
     return True
+
+
+def update_nested_dict(target_dict: dict, updates: dict):
+    """
+    Updates the target_dict based on the paths and values provided in updates.
+
+        :param target_dict: The original dictionary to be updated.
+        :param updates: A dictionary where keys are dot-separated paths, and values are the new values.
+    """
+    for path, value in updates.items():
+        keys = path.split('.')
+        current = target_dict
+        for key in keys[:-1]:  # Traverse to the second-to-last key
+            if key.isdigit():  # If the key is an integer (for lists), convert it
+                key = int(key)
+            current = current[key]
+        # Handle the last key
+        final_key = keys[-1]
+        if final_key.isdigit():  # If the final key is an integer (for lists), convert it
+            final_key = int(final_key)
+        current[final_key] = value
+

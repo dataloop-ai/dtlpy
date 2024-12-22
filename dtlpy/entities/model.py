@@ -1,11 +1,8 @@
-import json
 from collections import namedtuple
 from enum import Enum
 import traceback
 import logging
-
 import attr
-
 from .. import repositories, entities
 from ..services.api_client import ApiClient
 

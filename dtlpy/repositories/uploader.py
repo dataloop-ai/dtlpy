@@ -38,7 +38,7 @@ class Uploader:
         self.num_files = 0
         self.i_item = 0
         self.pbar = tqdm.tqdm(total=0,
-                              disable=self.items_repository._client_api.verbose.disable_progress_bar,
+                              disable=self.items_repository._client_api.verbose.disable_progress_bar_upload_items,
                               file=sys.stdout, desc='Upload Items')
         self.reporter = Reporter(num_workers=0,
                                  resource=Reporter.ITEMS_UPLOAD,

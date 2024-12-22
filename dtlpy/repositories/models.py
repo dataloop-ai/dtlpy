@@ -674,7 +674,12 @@ class Models:
             raise ValueError("Model doesnt have any associated services. Need to deploy before predicting")
         if item_ids is None and dataset_id is None:
             raise ValueError("Need to provide either item_ids or dataset_id")
-        payload = {'input': {'itemIds': item_ids, 'datasetId': dataset_id},
+        payload_input = {}
+        if item_ids is not None:
+            payload_input['itemIds'] = item_ids
+        if dataset_id is not None:
+            payload_input['datasetId'] = dataset_id
+        payload = {'input': payload_input,
                    'config': {'serviceId': model.metadata['system']['deploy']['services'][0]}}
 
         success, response = self._client_api.gen_request(req_type="post",
@@ -701,7 +706,12 @@ class Models:
             raise ValueError("Model doesnt have any associated services. Need to deploy before predicting")
         if item_ids is None and dataset_id is None:
             raise ValueError("Need to provide either item_ids or dataset_id")
-        payload = {'input': {'itemIds': item_ids, 'datasetId': dataset_id},
+        payload_input = {}
+        if item_ids is not None:
+            payload_input['itemIds'] = item_ids
+        if dataset_id is not None:
+            payload_input['datasetId'] = dataset_id
+        payload = {'input': payload_input,
                    'config': {'serviceId': model.metadata['system']['deploy']['services'][0]}}
 
         success, response = self._client_api.gen_request(req_type="post",

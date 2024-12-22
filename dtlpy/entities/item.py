@@ -716,6 +716,60 @@ class Item(entities.BaseEntity):
         self._platform_dict = self.update()._platform_dict
         return self
 
+    def assign_subset(self, subset: str):
+        """
+        Assign a single ML subset (train/validation/test) to this item.
+        Sets the chosen subset to True and the others to None.
+        Then calls item.update(system_metadata=True).
+
+        :param str subset: 'train', 'validation', or 'test'
+        """
+        if subset not in ['train', 'validation', 'test']:
+            raise ValueError("subset must be one of: 'train', 'validation', 'test'")
+
+        if 'system' not in self.metadata:
+            self.metadata['system'] = {}
+        if 'tags' not in self.metadata['system']:
+            self.metadata['system']['tags'] = {}
+
+        self.metadata['system']['tags']['train'] = True if subset == 'train' else None
+        self.metadata['system']['tags']['validation'] = True if subset == 'validation' else None
+        self.metadata['system']['tags']['test'] = True if subset == 'test' else None
+
+        return self.update(system_metadata=True)
+
+
+    def remove_subset(self):
+        """
+        Remove any ML subset assignment from this item.
+        Sets train, validation, and test to None.
+        Then calls item.update(system_metadata=True).
+        """
+        if 'system' not in self.metadata:
+            self.metadata['system'] = {}
+        if 'tags' not in self.metadata['system']:
+            self.metadata['system']['tags'] = {}
+
+        self.metadata['system']['tags']['train'] = None
+        self.metadata['system']['tags']['validation'] = None
+        self.metadata['system']['tags']['test'] = None
+
+        return self.update(system_metadata=True)
+
+
+    def get_current_subset(self) -> str:
+        """
+        Get the current ML subset assignment of this item.
+        Returns 'train', 'validation', 'test', or None if not assigned.
+
+        :return: subset name or None
+        :rtype: str or None
+        """
+        tags = self.metadata.get('system', {}).get('tags', {})
+        for subset in ['train', 'validation', 'test']:
+            if tags.get(subset) is True:
+                return subset
+        return None
 
 class ModalityTypeEnum(str, Enum):
     """

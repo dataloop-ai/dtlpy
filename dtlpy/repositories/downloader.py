@@ -211,7 +211,7 @@ class Downloader:
         # pool
         pool = client_api.thread_pools(pool_name='item.download')
         # download
-        pbar = tqdm.tqdm(total=num_items, disable=client_api.verbose.disable_progress_bar, file=sys.stdout,
+        pbar = tqdm.tqdm(total=num_items, disable=client_api.verbose.disable_progress_bar_download_dataset, file=sys.stdout,
                          desc='Download Items')
         try:
             i_item = 0
@@ -699,7 +699,7 @@ class Downloader:
                                                       unit_divisor=1024,
                                                       position=1,
                                                       file=sys.stdout,
-                                                      disable=self.items_repository._client_api.verbose.disable_progress_bar,
+                                                      disable=self.items_repository._client_api.verbose.disable_progress_bar_download_item,
                                                       desc='Download Item')
                     except Exception as err:
                         one_file_progress_bar = False

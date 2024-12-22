@@ -1149,3 +1149,69 @@ class Dataset(entities.BaseEntity):
             ontology_id = recipe.ontology_ids[0]
         ontology = recipe.ontologies.get(ontology_id=ontology_id)
         return ontology.delete_attributes(ontology_id=ontology.id, keys=keys)
+
+    def split_ml_subsets(self,
+                         items_query = None,
+                         percentages: dict = None ):
+        """
+        Split dataset items into ML subsets.
+
+        :param dl.Filters items_query: Filters object to select items.
+        :param dict percentages: {'train': x, 'validation': y, 'test': z}.
+        :return: True if the split operation was successful.
+        :rtype: bool
+        """
+        return self.datasets.split_ml_subsets(dataset_id=self.id,
+                                              items_query=items_query,
+                                              ml_split_list=percentages)
+
+    def assign_subset_to_items(self, subset: str, items_query=None) -> bool:
+        """
+        Assign a specific ML subset (train/validation/test) to items defined by the given filters.
+        This will set the chosen subset to True and the others to None.
+
+        :param dl.Filters items_query: Filters to select items
+        :param str subset: 'train', 'validation', or 'test'
+        :return: True if successful
+        :rtype: bool
+        """
+   
+        return self.datasets.bulk_update_ml_subset(dataset_id=self.id,
+                                                   items_query=items_query,
+                                                   subset=subset)
+
+    def remove_subset_from_items(self, items_query= None,) -> bool:
+        """
+        Remove any ML subset assignment from items defined by the given filters.
+        This sets train, validation, and test tags to None.
+
+        :param dl.Filters items_query: Filters to select items
+        :return: True if successful
+        :rtype: bool
+        """
+        return self.datasets.bulk_update_ml_subset(dataset_id=self.id,
+                                                   items_query=items_query,
+                                                   subset=None,
+                                                   deleteTag=True)
+
+    def get_items_missing_ml_subset(self, filters = None) -> list:
+        """
+        Get the list of item IDs that are missing ML subset assignment.
+        An item is considered missing ML subset if train, validation, and test tags are not True (all None).
+
+        :param dl.Filters filters: optional filters to narrow down items. If None, will use a default filter for files.
+        :return: list of item IDs
+        :rtype: list
+        """
+        if filters is None:
+            filters = entities.Filters()
+        filters.add(field='metadata.system.tags.train', values=None)
+        filters.add(field='metadata.system.tags.validation', values=None)
+        filters.add(field='metadata.system.tags.test', values=None)
+        missing_ids = []
+        pages = self.items.list(filters=filters)
+        for page in pages:
+            for item in page:
+                # item that pass filters means no subsets assigned
+                missing_ids.append(item.id)
+        return missing_ids

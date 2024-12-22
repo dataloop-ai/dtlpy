@@ -104,6 +104,16 @@ class Verbose:
     __DEFAULT_DISABLE_PROGRESS_BAR = False
     __DEFAULT_PRINT_ALL_RESPONSES = False
     __PRINT_ERROR_LOGS = False
+    __DEFAULT_PROGRESS_BAR_SETTINGS = {
+        'Iterate Pages': False,
+        'Command Progress': False,
+        'Download Dataset': False,
+        'Download Item': False,
+        'Upload Items': False,
+        'Download Annotations': False,
+        'Upload Annotations': False,
+        'Convert Annotations': False
+    }
 
     def __init__(self, cookie):
         self.cookie = cookie
@@ -115,6 +125,7 @@ class Verbose:
             self._disable_progress_bar = self.__DEFAULT_DISABLE_PROGRESS_BAR
             self._print_all_responses = self.__DEFAULT_PRINT_ALL_RESPONSES
             self._print_error_logs = self.__PRINT_ERROR_LOGS
+            self._progress_bar_settings = self.__DEFAULT_PROGRESS_BAR_SETTINGS
             if os.getenv('DTLPY_REFRESH_TOKEN_METHOD', "") == "proxy":
                 self._print_error_logs = True
             self.to_cookie()
@@ -123,7 +134,9 @@ class Verbose:
         dictionary = {'logging_level': self._logging_level,
                       'disable_progress_bar': self._disable_progress_bar,
                       'print_all_responses': self._print_all_responses,
-                      'print_error_logs': self._print_error_logs}
+                      'print_error_logs': self._print_error_logs,
+                      'progress_bar_setting': json.dumps(self._progress_bar_settings)
+                      }
         self.cookie.put(key='verbose', value=dictionary)
 
     def from_cookie(self, dictionary):
@@ -131,6 +144,83 @@ class Verbose:
         self._disable_progress_bar = dictionary.get('disable_progress_bar', self.__DEFAULT_DISABLE_PROGRESS_BAR)
         self._print_all_responses = dictionary.get('print_all_responses', self.__DEFAULT_PRINT_ALL_RESPONSES)
         self._print_error_logs = dictionary.get('print_error_logs', self.__PRINT_ERROR_LOGS)
+        progress_bar_settings = dictionary.get('progress_bar_setting',  None)
+        if progress_bar_settings is None:
+            self._progress_bar_settings = self.__DEFAULT_PROGRESS_BAR_SETTINGS
+        else:
+            self._progress_bar_settings = json.loads(progress_bar_settings)
+
+    @property
+    def disable_progress_bar_iterate_pages(self):
+        return self._disable_progress_bar or self._progress_bar_settings.get('Iterate Pages', False)
+
+    @disable_progress_bar_iterate_pages.setter
+    def disable_progress_bar_iterate_pages(self, val):
+        self._progress_bar_settings['Iterate Pages'] = val
+        self.to_cookie()
+
+    @property
+    def disable_progress_bar_command_progress(self):
+        return self._disable_progress_bar or self._progress_bar_settings.get('Command Progress', False)
+
+    @disable_progress_bar_command_progress.setter
+    def disable_progress_bar_command_progress(self, val):
+        self._progress_bar_settings['Command Progress'] = val
+        self.to_cookie()
+
+    @property
+    def disable_progress_bar_download_item(self):
+        return self._disable_progress_bar or self._progress_bar_settings.get('Download Item', False)
+
+    @disable_progress_bar_download_item.setter
+    def disable_progress_bar_download_item(self, val):
+        self._progress_bar_settings['Download Item'] = val
+        self.to_cookie()
+
+    @property
+    def disable_progress_bar_download_dataset(self):
+        return self._disable_progress_bar or self._progress_bar_settings.get('Download Dataset', False)
+
+    @disable_progress_bar_download_dataset.setter
+    def disable_progress_bar_download_dataset(self, val):
+        self._progress_bar_settings['Download Dataset'] = val
+        self.to_cookie()
+
+    @property
+    def disable_progress_bar_upload_items(self):
+        return self._disable_progress_bar or self._progress_bar_settings.get('Upload Items', False)
+
+    @disable_progress_bar_upload_items.setter
+    def disable_progress_bar_upload_items(self, val):
+        self._progress_bar_settings['Upload Items'] = val
+        self.to_cookie()
+
+    @property
+    def disable_progress_bar_download_annotations(self):
+        return self._disable_progress_bar or self._progress_bar_settings.get('Download Annotations', False)
+
+    @disable_progress_bar_download_annotations.setter
+    def disable_progress_bar_download_annotations(self, val):
+        self._progress_bar_settings['Download Annotations'] = val
+        self.to_cookie()
+
+    @property
+    def disable_progress_bar_upload_annotations(self):
+        return self._disable_progress_bar or self._progress_bar_settings.get('Upload Annotations', False)
+
+    @disable_progress_bar_upload_annotations.setter
+    def disable_progress_bar_upload_annotations(self, val):
+        self._progress_bar_settings['Upload Annotations'] = val
+        self.to_cookie()
+
+    @property
+    def disable_progress_bar_convert_annotations(self):
+        return self._disable_progress_bar or self._progress_bar_settings.get('Convert Annotations', False)
+
+    @disable_progress_bar_convert_annotations.setter
+    def disable_progress_bar_convert_annotations(self, val):
+        self._progress_bar_settings['Convert Annotations'] = val
+        self.to_cookie()
 
     @property
     def disable_progress_bar(self):
@@ -1073,6 +1163,7 @@ class ApiClient:
                                                 headers=headers_req,
                                                 chunked=stream,
                                                 retry_attempts=5,
+                                                ssl=self.verify,
                                                 retry_exceptions={aiohttp.client_exceptions.ClientOSError,
                                                                   aiohttp.client_exceptions.ServerDisconnectedError,
                                                                   aiohttp.client_exceptions.ClientPayloadError},
@@ -1161,7 +1252,7 @@ class ApiClient:
                                  unit_divisor=1024,
                                  position=1,
                                  file=sys.stdout,
-                                 disable=self.verbose.disable_progress_bar,
+                                 disable=self.verbose.disable_progress_bar_upload_items,
                                  desc='Upload Items')
 
                 def callback(bytes_read):

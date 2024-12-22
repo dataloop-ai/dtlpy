@@ -209,7 +209,7 @@ class Converter:
                 for label in labels:
                     fp.write("{}\n".format(label))
 
-        pbar = tqdm.tqdm(total=pages.items_count, disable=dataset._client_api.verbose.disable_progress_bar,
+        pbar = tqdm.tqdm(total=pages.items_count, disable=dataset._client_api.verbose.disable_progress_bar_convert_annotations,
                          file=sys.stdout, desc='Convert Annotations')
         reporter = Reporter(
             num_workers=pages.items_count,
@@ -359,7 +359,7 @@ class Converter:
         converted_annotations = [None for _ in range(pages.items_count)]
         item_id_counter = 0
         pool = ThreadPool(processes=self.concurrency)
-        pbar = tqdm.tqdm(total=pages.items_count, disable=dataset._client_api.verbose.disable_progress_bar,
+        pbar = tqdm.tqdm(total=pages.items_count, disable=dataset._client_api.verbose.disable_progress_bar_convert_annotations,
                          file=sys.stdout, desc='Convert Annotations')
         reporter = Reporter(
             num_workers=pages.items_count,

@@ -71,7 +71,7 @@ class PagedEntities:
         return self.items_count
 
     def __iter__(self):
-        pbar = tqdm.tqdm(total=self.total_pages_count, disable=self._client_api.verbose.disable_progress_bar,
+        pbar = tqdm.tqdm(total=self.total_pages_count, disable=self._client_api.verbose.disable_progress_bar_iterate_pages,
                          file=sys.stdout, desc="Iterate Pages")
         if self.page_offset != 0:
             # reset the count for page 0

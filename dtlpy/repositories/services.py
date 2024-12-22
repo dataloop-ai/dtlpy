@@ -1589,6 +1589,40 @@ class Services:
 
         return True
 
+    def restart(self, service: entities.Service, replica_name: str = None):
+        """
+        Restart service replica
+
+        **Prerequisites**: You must be in the role of a *developer*.
+
+        :param dtlpy.entities.service.Service service: service entity
+        :param str replica_name: replica name
+        :return: True
+        :rtype: bool
+
+        **Example**:
+
+        .. code-block:: python
+
+            is_restarted = dl.services.restart(service='service_entity',
+                                                    replica_name='replica_name')
+        """
+        payload = {}
+
+        if replica_name is not None:
+            payload['replicaName'] = replica_name
+
+        # request
+        success, response = self._client_api.gen_request(req_type='post',
+                                                         path='/services/{}/restart'.format(service.id),
+                                                         json_req=payload)
+
+        # exception handling
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        return True
+
 
 class ServiceLog:
     """
@@ -1661,3 +1695,4 @@ class ServiceLog:
             for log in self.logs:
                 yield '{}: {}'.format(log.get('timestamp', self.start), log.get('message', '').strip())
             self.get_next_log()
+

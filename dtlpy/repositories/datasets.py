@@ -1008,7 +1008,7 @@ class Datasets:
             pool = dataset._client_api.thread_pools(pool_name='dataset.download')
             jobs = [None for _ in range(pages.items_count)]
             progress = tqdm.tqdm(total=pages.items_count,
-                                 disable=dataset._client_api.verbose.disable_progress_bar,
+                                 disable=dataset._client_api.verbose.disable_progress_bar_download_annotations,
                                  file=sys.stdout, desc='Download Annotations')
             i_item = 0
             for page in pages:
@@ -1081,7 +1081,7 @@ class Datasets:
             filters._user_query = 'false'
         pages = dataset.items.list(filters=filters)
         total_items = pages.items_count
-        pbar = tqdm.tqdm(total=total_items, disable=dataset._client_api.verbose.disable_progress_bar,
+        pbar = tqdm.tqdm(total=total_items, disable=dataset._client_api.verbose.disable_progress_bar_upload_annotations,
                          file=sys.stdout, desc='Upload Annotations')
         pool = self._client_api.thread_pools('annotation.upload')
         annotations_uploaded_count = 0
@@ -1126,3 +1126,108 @@ class Datasets:
         """
         import warnings
         warnings.warn("`readonly` flag on dataset is deprecated, doing nothing.", DeprecationWarning)
+
+
+    @_api_reference.add(path='/datasets/{id}/split', method='post')
+    def split_ml_subsets(self,
+                        dataset_id: str,
+                        items_query: entities.filters,
+                        ml_split_list: dict) -> bool:
+        """
+        Split dataset items into ML subsets.
+
+        :param str dataset_id: The ID of the dataset.
+        :param dict items_query: Query to select items.
+        :param dict ml_split_list: Dictionary with 'train', 'validation', 'test' keys and integer percentages.
+        :return: True if the split operation was successful.
+        :rtype: bool
+        :raises: PlatformException on failure and ValueError if percentages do not sum to 100 or invalid keys/values.
+        """
+         # Validate percentages
+        if not ml_split_list:
+            ml_split_list = {'train': 80, 'validation': 10, 'test': 10}
+          
+        if not items_query:
+            items_query = entities.Filters()
+
+        items_query_dict = items_query.prepare()
+        required_keys = {'train', 'validation', 'test'}
+        if set(ml_split_list.keys()) != required_keys:
+            raise ValueError("MLSplitList must have exactly the keys 'train', 'validation', 'test'.")
+        total = sum(ml_split_list.values())
+        if total != 100:
+            raise ValueError(
+                "Please set the Train, Validation, and Test subsets percentages to add up to 100%. "
+                "For example: 70, 15, 15."
+            )
+        for key, value in ml_split_list.items():
+            if not isinstance(value, int) or value < 0:
+                raise ValueError("Percentages must be integers >= 0.")
+        payload = {
+            'itemsQuery': items_query_dict,
+            'MLSplitList': ml_split_list
+        }
+        path = f'/datasets/{dataset_id}/split'
+        success, response = self._client_api.gen_request(req_type='post',
+                                                        path=path,
+                                                        json_req=payload)
+        if success:
+            # Wait for the split operation to complete
+            command = entities.Command.from_json(_json=response.json(),
+                                                client_api=self._client_api)
+            command.wait()
+            return True
+        else:
+            raise exceptions.PlatformException(response)
+
+
+    @_api_reference.add(path='/datasets/{id}/items/bulk-update-metadata', method='post')
+    def bulk_update_ml_subset(self, dataset_id: str, items_query: dict, subset: str = None, deleteTag: bool = False) -> bool:
+        """
+        Bulk update ML subset assignment for selected items.
+        If subset is None, remove subsets. Otherwise, assign the specified subset.
+
+        :param str dataset_id: ID of the dataset
+        :param dict items_query: DQLResourceQuery (filters) for selecting items
+        :param str subset: 'train', 'validation', 'test' or None to remove all
+        :return: True if success
+        :rtype: bool
+        """
+        if items_query is None:
+            items_query = entities.Filters()
+        items_query_dict = items_query.prepare()
+        if not deleteTag and subset not in ['train', 'validation', 'test']:
+            raise ValueError("subset must be one of: 'train', 'validation', 'test'")
+        # Determine tag values based on subset
+        tags = {
+            'train': True if subset == 'train' else None,
+            'validation': True if subset == 'validation' else None,
+            'test': True if subset == 'test' else None
+        }
+
+        payload = {
+            "query": items_query_dict,
+            "updateQuery": {
+                "update": {
+                    "metadata": {
+                        "system": {
+                            "tags": tags
+                        }
+                    }
+                },
+                "systemSpace": True
+            }
+        }
+
+        success, response = self._client_api.gen_request(
+            req_type='post',
+            path=f'/datasets/{dataset_id}/items/bulk-update-metadata',
+            json_req=payload
+        )
+        if success:
+            # Similar to split operation, a command is returned
+            command = entities.Command.from_json(_json=response.json(), client_api=self._client_api)
+            command.wait()
+            return True
+        else:
+            raise exceptions.PlatformException(response)

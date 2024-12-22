@@ -95,8 +95,7 @@ def step_impl(context, model_name, status, index):
                           'num_epochs': 10},
         'labels': [label.tag for label in context.dataset.labels],
         'metadata': {'system': {'subsets': {'train': dl.Filters().prepare(),
-                                            'validation': dl.Filters().prepare()}}},
-        'outputType': dl.AnnotationType.BOX,
+                                            'validation': dl.Filters().prepare()}}}
     }
     if int(index) == 0:
         context.dpk.components.models[int(index)].update(model)

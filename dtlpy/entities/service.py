@@ -839,6 +839,16 @@ class Service(entities.BaseEntity):
             **kwargs
         )
 
+    def restart(self, replica_name: str = None):
+        """
+        Restart service
+
+        :param str replica_name: replica name
+        :return: True
+        :rtype: bool
+        """
+        return self.services.restart(service=self, replica_name=replica_name)
+
 
 class KubernetesAutoscalerType(str, Enum):
     """ The Service Autoscaler Type (RABBITMQ, CPU).
