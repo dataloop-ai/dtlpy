@@ -57,7 +57,7 @@ class Recipe(entities.BaseEntity):
         Build a Recipe entity object from a json
 
         :param dict _json: _json response from host
-        :param dtlpy.entities.dataset.Dataset Dataset: Dataset entity
+        :param dtlpy.entities.dataset.Dataset dataset: Dataset entity
         :param dtlpy.entities.project.Project project: project entity
         :param dl.ApiClient client_api: ApiClient entity
         :param bool is_fetched: is Entity fetched from Platform

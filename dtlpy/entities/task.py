@@ -116,7 +116,7 @@ class Task:
         self._description['content'] = description
 
     @staticmethod
-    def _protected_from_json(_json, client_api, project, dataset):
+    def _protected_from_json(_json, client_api, project=None, dataset=None):
         """
         Same as from_json but with try-except to catch if error
 

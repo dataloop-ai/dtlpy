@@ -119,7 +119,7 @@ class Model(entities.BaseEntity):
     app = attr.ib(default=None)
 
     @staticmethod
-    def _protected_from_json(_json, client_api, project, package, is_fetched=True):
+    def _protected_from_json(_json, client_api, project=None, package=None, is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
 
@@ -143,7 +143,7 @@ class Model(entities.BaseEntity):
         return status, model
 
     @classmethod
-    def from_json(cls, _json, client_api, project, package, is_fetched=True):
+    def from_json(cls, _json, client_api, project=None, package=None, is_fetched=True):
         """
         Turn platform representation of model into a model entity
 

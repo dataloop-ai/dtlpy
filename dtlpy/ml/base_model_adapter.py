@@ -486,7 +486,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         if feature_set is None:
             logger.info('Feature Set not found. creating... ')
             try:
-                self.model_entity.project.feature_sets.get(name=self.model_entity.name)
+                self.model_entity.project.feature_sets.get(feature_set_name=self.model_entity.name)
                 feature_set_name = f"{self.model_entity.name}-{''.join(random.choices(string.ascii_letters + string.digits, k=5))}"
                 logger.warning(f"Feature set with the model name already exists. Creating new feature set with name {feature_set_name}")
             except exceptions.NotFound:

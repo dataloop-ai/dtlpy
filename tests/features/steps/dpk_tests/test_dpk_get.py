@@ -32,7 +32,6 @@ def step_impl(context, filed, val):
 @behave.then(u'I have the same dpk as the published dpk')
 def step_impl(context):
     to_json = context.dpk.to_json()
-    to_json.pop('trusted', None)
     if to_json.get('dependencies', False) is None:
         to_json.pop('dependencies', None)
     if 'context' in to_json and to_json['context'] is None:

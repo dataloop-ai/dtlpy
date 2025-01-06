@@ -232,11 +232,12 @@ class Pipeline(entities.BaseEntity):
     updated_by = attr.ib(default=None)
 
     @staticmethod
-    def _protected_from_json(_json, client_api, project, is_fetched=True):
+    def _protected_from_json(_json, client_api, project=None, is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
         :param _json: platform json
         :param client_api: ApiClient entity
+        :param dtlpy.entities.project.Project project: entity
         :param is_fetched: is Entity fetched from Platform
         :return:
         """
@@ -254,13 +255,13 @@ class Pipeline(entities.BaseEntity):
         return status, pipeline
 
     @classmethod
-    def from_json(cls, _json, client_api, project, is_fetched=True):
+    def from_json(cls, _json, client_api, project=None, is_fetched=True):
         """
         Turn platform representation of pipeline into a pipeline entity
 
         :param dict _json: platform representation of package
         :param dl.ApiClient client_api: ApiClient entity
-        :param dtlpy.entities.project.Project project: project entity
+        :param dtlpy.entities.project.Project project: entity
         :param bool is_fetched: is Entity fetched from Platform
         :return: Pipeline entity
         :rtype: dtlpy.entities.pipeline.Pipeline
@@ -308,7 +309,7 @@ class Pipeline(entities.BaseEntity):
         return inst
 
     @classmethod
-    def pipeline_node(self, _json):
+    def pipeline_node(cls, _json):
         node_type = _json.get('type')
         if node_type == 'task':
             return TaskNode.from_json(_json)

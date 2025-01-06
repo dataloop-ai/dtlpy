@@ -105,7 +105,7 @@ def before_all(context):
         # save to feature level
         context.feature.dataloop_feature_dl = context.dl
 
-        avoid_testrail = os.environ.get('AVOID_TESTRAIL', 'false') == 'true'
+        avoid_testrail = os.environ.get('AVOID_TESTRAIL', 'true') == 'true'
 
         if not avoid_testrail and len(context.config.reporters) == 1:
             import sys
@@ -198,3 +198,7 @@ def step_impl(context, type, key, interval=0, num_try=1, response=None):
     if response:
         assert response in context.response.text, "TEST FAILED: Expected response to include {}. Actual got {}".format(response, context.response.text)
 
+
+@behave.then(u'I validate no error in context')
+def step_impl(context):
+    assert context.error is None, f"TEST FAILED: Expected no error, Actual got {context.error}"

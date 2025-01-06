@@ -91,7 +91,7 @@ class PipelineExecution(entities.BaseEntity):
     _repositories = attr.ib(repr=False)
 
     @staticmethod
-    def _protected_from_json(_json, client_api, pipeline, is_fetched=True):
+    def _protected_from_json(_json, client_api, pipeline=None, is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
         :param _json: platform json
@@ -114,7 +114,7 @@ class PipelineExecution(entities.BaseEntity):
         return status, pipeline
 
     @classmethod
-    def from_json(cls, _json, client_api, pipeline, is_fetched=True) -> 'PipelineExecution':
+    def from_json(cls, _json, client_api, pipeline=None, is_fetched=True) -> 'PipelineExecution':
         """
         Turn platform representation of pipeline_execution into a pipeline_execution entity
 

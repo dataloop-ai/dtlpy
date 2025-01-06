@@ -119,7 +119,7 @@ class BaseTrigger(entities.BaseEntity):
         return self.updated_at
 
     @staticmethod
-    def _protected_from_json(_json, client_api, project, service=None):
+    def _protected_from_json(_json, client_api, project=None, service=None):
         """
         Same as from_json but with try-except to catch if error
 
@@ -141,7 +141,7 @@ class BaseTrigger(entities.BaseEntity):
         return status, trigger
 
     @classmethod
-    def from_json(cls, _json, client_api, project, service=None):
+    def from_json(cls, _json, client_api, project=None, service=None):
         """
         Build a trigger entity object from a json
 
@@ -305,7 +305,7 @@ class Trigger(BaseTrigger):
         return _json
 
     @classmethod
-    def from_json(cls, _json, client_api, project, service=None):
+    def from_json(cls, _json, client_api, project=None, service=None):
         """
         Build a trigger entity object from a json
 
@@ -377,7 +377,7 @@ class CronTrigger(BaseTrigger):
         return _json
 
     @classmethod
-    def from_json(cls, _json, client_api, project, service=None):
+    def from_json(cls, _json, client_api, project=None, service=None):
         """
         Build a trigger entity object from a json
 

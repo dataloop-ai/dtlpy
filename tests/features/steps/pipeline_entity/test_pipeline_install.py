@@ -40,17 +40,16 @@ def step_impl(context):
 @then(u'Pipeline status is "{status}"')
 def step_impl(context, status):
     try:
-        context.pipeline = context.project.pipelines.get(pipeline_name=context.pipeline_name)
+        context.pipeline = context.project.pipelines.get(pipeline_name=context.pipeline.name)
         assert context.pipeline.status == status
     except:
-        print("TEST FAILED: Pipeline status expected: {} , Got: {}".format(status, context.pipeline.status))
+        print("\nTEST FAILED: Pipeline status expected: {} , Got: {}\n".format(status, context.pipeline.status))
         success, response = context.dl.client_api.gen_request(
             req_type="get",
             path="/compositions/{composition_id}".format(
                 composition_id=context.pipeline.composition_id)
         )
-
-        print("Error message: {}".format(response.json()['errorText']['message']))
+        assert False, "Error message: {}\n".format(response.json()['errorText']['message'])
 
 
 @when(u'I update node input output to infinite loop')

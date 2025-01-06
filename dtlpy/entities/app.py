@@ -132,7 +132,7 @@ class App(entities.BaseEntity):
         return self.apps.pause(self)
 
     @staticmethod
-    def _protected_from_json(_json, client_api, project, is_fetched=True):
+    def _protected_from_json(_json, client_api, project=None, is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
 
@@ -193,7 +193,7 @@ class App(entities.BaseEntity):
         return _json
 
     @classmethod
-    def from_json(cls, _json, client_api: ApiClient, project: entities.Project, is_fetched=True):
+    def from_json(cls, _json, client_api: ApiClient, project: entities.Project=None, is_fetched=True):
         app = cls(
             id=_json.get('id', None),
             name=_json.get('name', None),

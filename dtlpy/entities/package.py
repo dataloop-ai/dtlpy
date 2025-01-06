@@ -124,7 +124,7 @@ class Package(entities.DlEntity):
         self.codebase = entities.ItemCodebase(item_id=item_id)
 
     @staticmethod
-    def _protected_from_json(_json, client_api, project, is_fetched=True):
+    def _protected_from_json(_json, client_api, project=None, is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
 
@@ -144,7 +144,7 @@ class Package(entities.DlEntity):
         return status, package
 
     @classmethod
-    def from_json(cls, _json, client_api, project, is_fetched=True):
+    def from_json(cls, _json, client_api, project=None, is_fetched=True):
         """
         Turn platform representation of package into a package entity
 

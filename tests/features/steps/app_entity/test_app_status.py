@@ -13,6 +13,7 @@ def step_impl(context):
 
 @behave.then(u'The activation should succeed')
 def step_impl(context):
+    assert context.error is None, f"TEST FAILED: Expected no error, Actual got {context.error}"
     assert context.app_activated is True
 
 
@@ -28,6 +29,7 @@ def step_impl(context):
 
 @behave.then(u'The deactivation should succeed')
 def step_impl(context):
+    assert context.error is None, f"TEST FAILED: Expected no error, Actual got {context.error}"
     assert context.app_deactivated is True
 
 

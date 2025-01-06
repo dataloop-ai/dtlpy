@@ -45,6 +45,7 @@ from tests.features.steps.annotation_entity import test_segmentation_to_box
 from tests.features.steps.annotation_collection import test_annotation_collection
 
 from tests.features.steps.items_repo import test_items_get
+from tests.features.steps.items_repo import test_items_clone
 from tests.features.steps.items_repo import test_items_upload
 from tests.features.steps.items_repo import test_items_list
 from tests.features.steps.items_repo import test_items_update
@@ -218,6 +219,7 @@ from tests.features.steps.dpk_tests import dpk_json_to_object, test_dpk_publish,
     test_dpk_pull, test_dpk_get, test_dpk_delete, test_dpk_interface, test_dpk_update, test_dpk_validation
 from tests.features.steps.app_entity import test_app_validate
 from tests.features.steps.app_entity import test_app_interface
+from tests.features.steps.app_entity import app_with_fs_panel
 
 
 from tests.features.steps.webm_converter import test_failed_video_message
@@ -275,5 +277,6 @@ from tests.features.steps.billing_steps import Log_in
 
 from tests.features.steps.pipeline_entity import pipeline_node_input_handling
 from tests.features.steps.compute import compute
+from tests.features.steps.compute import ecr_integrations
 
 from tests.features.steps.ml_subsets import test_ml_subsets

@@ -34,6 +34,8 @@ class IntegrationType(str, Enum):
          - KEY VALUE Integration - for save secrets in the platform
        * - GCP_WORKLOAD_IDENTITY_FEDERATION
          - GCP Workload Identity Federation Integration - for GCP drivers
+       * - PRIVATE_REGISTRY
+         - PRIVATE REGISTRY Integration - for private registry drivers
     """
     S3 = "s3"
     AWS_CROSS_ACCOUNT = 'aws-cross'
@@ -42,7 +44,8 @@ class IntegrationType(str, Enum):
     GCS_CROSS = "gcp-cross"
     AZUREBLOB = "azureblob"
     KEY_VALUE = "key_value"
-    GCP_WORKLOAD_IDENTITY_FEDERATION = "gcp-workload-identity-federation"
+    GCP_WORKLOAD_IDENTITY_FEDERATION = "gcp-workload-identity-federation",
+    PRIVATE_REGISTRY = "private-registry"
 
 
 @attr.s

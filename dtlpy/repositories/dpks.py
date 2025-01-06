@@ -196,8 +196,13 @@ class Dpks:
             dpk = dpk_v.items[0]
         return dpk
 
-    def publish(self, dpk: entities.Dpk = None, ignore_max_file_size: bool = False,
-                manifest_filepath='dataloop.json') -> entities.Dpk:
+    def publish(
+            self,
+            dpk: entities.Dpk = None,
+            ignore_max_file_size: bool = False,
+            manifest_filepath='dataloop.json',
+            local_path: str = None
+    ) -> entities.Dpk:
         """
         Upload a dpk entity to the dataloop platform.
 
@@ -207,6 +212,7 @@ class Dpks:
                                         during the packaging of the codebase.
         :param str manifest_filepath: Optional. Path to the manifest file. Can be absolute or relative.
                                     Defaults to 'dataloop.json'
+        :param str local_path: Optional. The path where the dpk files are located.
 
         :return the published dpk
         :rtype dl.entities.Dpk
@@ -241,8 +247,13 @@ class Dpks:
         if self.project and self.project.id != dpk.context['project']:
             logger.warning("the project id that provide different from the dpk project id")
 
+        if local_path is None:
+            if manifest_filepath=='dataloop.json':
+                local_path = os.getcwd()
+            else:
+                local_path = os.path.dirname(manifest_filepath)
         if dpk.codebase is None:
-            dpk.codebase = self.project.codebases.pack(directory=os.getcwd(),
+            dpk.codebase = self.project.codebases.pack(directory=local_path,
                                                        name=dpk.display_name,
                                                        extension='dpk',
                                                        ignore_directories=['artifacts'],

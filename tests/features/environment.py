@@ -13,6 +13,7 @@ from behave.formatter.base import StreamOpener
 import sys
 
 import dtlpy as dl
+import shutil
 
 try:
     # for local import
@@ -276,6 +277,11 @@ def after_tag(context, tag):
             use_fixture(reset_setenv, context)
         except Exception:
             logging.exception('Failed to reset env')
+    elif tag == 'restore_json_file':
+        try:
+            use_fixture(restore_json_file, context)
+        except Exception:
+            logging.exception('Failed to restore json file')
     elif tag == 'frozen_dataset':
         pass
     elif 'testrail-C' in tag:
@@ -381,7 +387,8 @@ def delete_pipeline(context):
     while context.to_delete_pipelines_ids:
         pipeline_id = context.to_delete_pipelines_ids.pop(0)
         try:
-            filters = context.dl.Filters(resource=context.dl.FiltersResource.EXECUTION, field='latestStatus.status', values=['created', 'in-progress'], operator='in')
+            filters = context.dl.Filters(resource=context.dl.FiltersResource.EXECUTION, field='latestStatus.status',
+                                         values=['created', 'in-progress'], operator='in')
             filters.add(field='pipeline.id', values=pipeline_id)
             executions = context.dl.executions.list(filters=filters)
             for execution in executions.items:
@@ -495,3 +502,14 @@ def models_delete(context):
             all_deleted = False
             logging.exception('Failed deleting model: {}'.format(model.id))
     assert all_deleted
+
+
+def restore_json_file(context):
+    if not hasattr(context, 'backup_path') or not hasattr(context, 'original_path'):
+        assert False, 'Please make sure to set the original_path and backup_path in the context'
+        # Restore the file from the backup
+    if os.path.exists(context.backup_path):
+        shutil.copy(context.backup_path, context.original_path)
+        os.remove(context.backup_path)  # Clean up the backup
+    else:
+        raise FileNotFoundError(f"Backup file not found for {context.original_path}")

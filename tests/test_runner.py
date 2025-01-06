@@ -156,6 +156,42 @@ def delete_projects():
     projects_pool.join()
 
 
+def update_feature_report(temp_report_filepath, w_feature_filename, REPORT_DIR):
+    with open(temp_report_filepath, 'r') as json_file:
+        try:
+            data = json.load(json_file)
+        except json.JSONDecodeError:
+            print("The JSON file is empty or not a valid JSON.")
+            data = []
+    # Need to check the feature folder
+    feature_folder = w_feature_filename.split('/')[-2]
+    feature_report_path = os.path.join(REPORT_DIR,
+                                       f'{check_feature_folder(feature_folder, w_feature_filename).lower()}-report.json')
+    with FileLock(feature_report_path + ".lock"):
+        if os.path.exists(feature_report_path):
+            with open(feature_report_path, 'r+') as file:
+                file_content = file.read()
+                if file_content:
+                    temp = json.loads(file_content)
+                    if isinstance(temp, list):
+                        if len(data) > 0:
+                            temp.append(data[0])
+                            # Move the cursor to the beginning of the file
+                            file.seek(0)
+                            # Write the updated list back to the file
+                            file.write(json.dumps(temp, indent=4))
+                            # Truncate the file to the current size to remove any leftover content
+                            file.truncate()
+                    else:
+                        raise Exception("Expected list in the report file")
+                else:
+                    file.write(json.dumps(data, indent=4))
+
+        else:
+            with open(feature_report_path, 'w') as file:
+                file.write(json.dumps(data, indent=4))
+
+
 def test_feature_file(w_feature_filename, i_pbar):
     timeout = 10 * 60
     longer_timeout = 16 * 60
@@ -199,6 +235,7 @@ def test_feature_file(w_feature_filename, i_pbar):
                     '-o', temp_report_filepath,
                     '--format=pretty',
                     ]
+
             # need to run a new process to avoid collisions
             p = subprocess.Popen(cmds, stderr=subprocess.PIPE)
             _, stderr = p.communicate(
@@ -238,39 +275,7 @@ def test_feature_file(w_feature_filename, i_pbar):
                 ))
                 print('**** stderr: {}'.format(stderr))
 
-            with open(temp_report_filepath, 'r') as json_file:
-                try:
-                    data = json.load(json_file)
-                except json.JSONDecodeError:
-                    print("The JSON file is empty or not a valid JSON.")
-                    data = []
-            # Need to check the feature folder
-            feature_folder = w_feature_filename.split('/')[-2]
-            feature_report_path = os.path.join(REPORT_DIR,
-                                               f'{check_feature_folder(feature_folder, w_feature_filename).lower()}-report.json')
-            with FileLock(feature_report_path + ".lock"):
-                if os.path.exists(feature_report_path):
-                    with open(feature_report_path, 'r+') as file:
-                        file_content = file.read()
-                        if file_content:
-                            temp = json.loads(file_content)
-                            if isinstance(temp, list):
-                                if len(data) > 0:
-                                    temp.append(data[0])
-                                    # Move the cursor to the beginning of the file
-                                    file.seek(0)
-                                    # Write the updated list back to the file
-                                    file.write(json.dumps(temp, indent=4))
-                                    # Truncate the file to the current size to remove any leftover content
-                                    file.truncate()
-                            else:
-                                raise Exception("Expected list in the report file")
-                        else:
-                            file.write(json.dumps(data, indent=4))
-
-                else:
-                    with open(feature_report_path, 'w') as file:
-                        file.write(json.dumps(data, indent=4))
+            update_feature_report(temp_report_filepath, w_feature_filename, REPORT_DIR)
 
 
     except subprocess.TimeoutExpired:
@@ -279,6 +284,23 @@ def test_feature_file(w_feature_filename, i_pbar):
                                        'try': w_i_try,
                                        'avgTime': '{:.2f}[s]'.format(-1),
                                        'timeout': True}
+
+        cmds_dry_run = ['behave', features_path,
+                        '-i', w_feature_filename.split("/")[-1],
+                        '--format=json',
+                        '-o', temp_report_filepath,
+                        '--format=pretty',
+                        '--dry-run'
+                        ]
+
+        p_1 = subprocess.Popen(cmds_dry_run, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+        stdout, stderr = p_1.communicate(
+            timeout=longer_timeout if os.path.basename(w_feature_filename) in longer_timeout_features else timeout)
+        if p_1.returncode != 0:
+            raise Exception(f"Command failed with return code {p.returncode}\nstdout: {stdout}\nstderr: {stderr}")
+
+        update_feature_report(temp_report_filepath, w_feature_filename, REPORT_DIR)  # update report with the dry run
+
     except Exception:
         print(traceback.format_exc())
         results[w_feature_filename] = {'status': False,

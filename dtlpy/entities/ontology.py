@@ -185,7 +185,7 @@ class Ontology(entities.BaseEntity):
         self._color_map = values
 
     @staticmethod
-    def _protected_from_json(_json, client_api, recipe, dataset, project, is_fetched=True):
+    def _protected_from_json(_json, client_api, recipe=None, dataset=None, project=None, is_fetched=True):
         """
         Same as from_json but with try-except to catch if error
         :param _json: platform json
@@ -217,7 +217,7 @@ class Ontology(entities.BaseEntity):
         return True
 
     @classmethod
-    def from_json(cls, _json, client_api, recipe, dataset=None, project=None, is_fetched=True):
+    def from_json(cls, _json, client_api, recipe=None, dataset=None, project=None, is_fetched=True):
         """
         Build an Ontology entity object from a json
 
