@@ -5,10 +5,12 @@ import os
 import json
 import shutil
 from datetime import datetime
+from .. import fixtures
 
 
 @given(u'I have an app with a filesystem panel in path "{filesystem_path}"')
-def step_impl(context, filesystem_path):
+@given(u'I have an app with a filesystem panel in path "{filesystem_path}" and remove key "{remove_key}"')
+def step_impl(context, filesystem_path, remove_key=None):
     path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], filesystem_path)
     manifest_path = os.path.join(path, 'dataloop.json')
     # Need to set the original path and backup path in the context to restore the file later
@@ -20,7 +22,8 @@ def step_impl(context, filesystem_path):
     with open(manifest_path, 'r') as file:
         manifest = json.load(file)
     manifest['name'] = f'filesystem-panel-{datetime.now().strftime("%M%S")}'
-
+    if remove_key:
+        fixtures.remove_key_from_nested_dict(manifest, remove_key)
     manifest['components']['computeConfigs'][0]['versions']['dtlpy'] = context.dl.__version__
     with open(manifest_path, 'w') as file:
         json.dump(manifest, file)
@@ -72,7 +75,7 @@ def step_impl(context):
 
 @given(u'I update the panel with a new sdk version')
 def step_impl(context):
-    valid_sdk_versions = [v for v in ['1.102.7', '1.102.8', '1.102.9'] if v != context.dl.__version__]
+    valid_sdk_versions = [v for v in ['1.102.14', '1.103.2', '1.104.0'] if v != context.dl.__version__]
     new_sdk_version = random.choice(valid_sdk_versions)
 
     path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], 'apps', 'filesystem_panel')

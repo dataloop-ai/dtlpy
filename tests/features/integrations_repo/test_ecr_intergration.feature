@@ -9,13 +9,28 @@ Feature: Integrations repository create testing
   @DAT-83866
   Scenario: ECR integration Flow
       Given There are no private registry integrations in the organization
-      Given A deployed service with custom docker image from ECR private registry
+      Given A deployed service with custom docker image from "ECR" private registry
       And I execute the service
       Then I should get an ImagePullBackOff error
       When I create an ECR integration
       And I pause and resume the service
       Then The execution should complete successfully
-      When I delete the ECR integration
+      When I delete the context integration
+      And I pause and resume the service
+      Given I execute the service
+      Then I should get an ImagePullBackOff error
+
+
+  @DAT-85247
+  Scenario: GAR integration Flow
+      Given There are no private registry integrations in the organization
+      Given A deployed service with custom docker image from "GAR" private registry
+      And I execute the service
+      Then I should get an ImagePullBackOff error
+      When I create an GAR integration
+      And I pause and resume the service
+      Then The execution should complete successfully
+      When I delete the context integration
       And I pause and resume the service
       Given I execute the service
       Then I should get an ImagePullBackOff error

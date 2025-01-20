@@ -59,7 +59,9 @@ class Uploader:
             overwrite=False,
             item_metadata=None,
             export_version: str = entities.ExportVersion.V1,
-            item_description=None
+            item_description=None,
+            raise_on_error=False,
+            return_as_list=False
     ):
         """
         Upload local file to dataset.
@@ -67,7 +69,7 @@ class Uploader:
         If `*` at the end of local_path (e.g. '/images/*') items will be uploaded without head directory
 
         :param local_path: local file or folder to upload
-        :param local_annotations_path: path to dataloop format annotations json files.
+        :param local_annotations_path: path to Dataloop format annotations json files.
         :param remote_path: remote path to save.
         :param remote_name: remote base name to save.
         :param file_types: list of file type to upload. e.g ['.jpg', '.png']. default is all
@@ -75,6 +77,8 @@ class Uploader:
         :param item_metadata: upload the items with the metadata dictionary
         :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
         :param str item_description: add a string description to the uploaded item
+        :param bool raise_on_error: raise an exception if an error occurs
+        :param bool return_as_list: always return a list of items 
 
         :return: Output (list)
         """
@@ -114,13 +118,21 @@ class Uploader:
             if log_filepath is not None:
                 logger.warning("Errors in {n_error} files. See {log_filepath} for full log".format(
                     n_error=errors_count, log_filepath=log_filepath))
-
-        # TODO 2.0 always return a list
+            if raise_on_error is True:
+                raise PlatformException(error="400",
+                                        message=f"Errors in {errors_count} files. See above trace for more information")
+        
+        if return_as_list is True:
+            # return list of items
+            return list(self.reporter.output)
         if len(status_list) == 1:
+            # if there is only one item, return it
             try:
                 return next(self.reporter.output)
             except StopIteration:
+                # if there is no items, return None
                 return None
+        # if there are multiple items, return the generator
         return self.reporter.output
 
     def _build_elements_from_inputs(self,

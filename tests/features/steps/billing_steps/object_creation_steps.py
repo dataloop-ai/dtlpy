@@ -34,7 +34,6 @@ def step_impl(context, entity, name):
         context.feature.dataloop_feature_org = context.org
         if not success:
             raise context.dl.exceptions.PlatformException(response)
-
     elif entity == "project":
 
         context.project = dl.projects.create(project_name=context.name)
@@ -97,26 +96,41 @@ def step_impl(context):
             context.json_object['plan']['resources'][11]['amount'] = float(param[1])
         if param[0] == "compute-cpu-highmem-l":
             context.json_object['plan']['resources'][12]['amount'] = float(param[1])
-        if param[0] == "compute-gpu-k80-s":
-            context.json_object['plan']['resources'][13]['amount'] = float(param[1])
-        if param[0] == "compute-gpu-k80-m":
-            context.json_object['plan']['resources'][14]['amount'] = float(param[1])
         if param[0] == "compute-gpu-t4":
-            context.json_object['plan']['resources'][15]['amount'] = float(param[1])
+            context.json_object['plan']['resources'][13]['amount'] = float(param[1])
         if param[0] == "compute-gpu-t4-m":
-            context.json_object['plan']['resources'][16]['amount'] = float(param[1])
+            context.json_object['plan']['resources'][14]['amount'] = float(param[1])
         if param[0] == "compute-gpu-a100-s":
-            context.json_object['plan']['resources'][17]['amount'] = float(param[1])
+            context.json_object['plan']['resources'][15]['amount'] = float(param[1])
         if param[0] == "compute-gpu-a100-m":
-            context.json_object['plan']['resources'][18]['amount'] = float(param[1])
+            context.json_object['plan']['resources'][16]['amount'] = float(param[1])
         if param[0] == "account":
             context.json_object['account'] = context.org.account['id']
+        if param[0] == "compute-budget":
+            new_json = context.json_object
+            new_resource = {
+                        "description": "",
+                        "icon": "icon url or alias",
+                        "key": "compute-budget",
+                        "name": "Compute Budget",
+                        "type": "metric",
+                        "price": 0,
+                        "unit": "USD",
+                        "overQuota": {
+                          "limit": 10,
+                          "price": 0
+                        },
+                        "amount": 0
+                      }
+            # Append the new resource to the resources list
+            new_json["plan"]["resources"].append(new_resource)
+            context.json_object = new_json
+            context.json_object['plan']['resources'][17]['amount'] = float(param[1])
 
     success, response = dl.client_api.gen_request(req_type='post',
                                                   path=billing_api_calls['create_custom'],
                                                   json_req=context.json_object
                                                   )
-
     if not success:
         raise context.dl.exceptions.PlatformException(response)
 

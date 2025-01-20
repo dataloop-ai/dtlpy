@@ -129,6 +129,41 @@ def step_impl(context):
         annotation_definition=annotation_definition, item=context.item
     )
 
+@behave.when(u"I add annotation to item using add annotation method with empty dict attrs")
+def step_impl(context):
+    context.dataset = context.dataset.update()
+    item = context.item.update()
+    labels = context.dataset.labels
+    height = item.height
+    if height is None:
+        height = 768
+    width = item.width
+    if width is None:
+        width = 1536
+
+    # box
+    top = r.randrange(0, height)
+    left = r.randrange(0, width)
+    right = left + 100
+    bottom = top + 100
+    annotation_definition = context.dl.Box(
+        top=top,
+        left=left,
+        right=right,
+        bottom=bottom,
+        label=r.choice(labels).tag,
+        attributes={},
+    )
+    context.annotation = context.dl.Annotation.new(
+        annotation_definition=annotation_definition, item=context.item
+    )
+
+@behave.then(u"I validate annotation has all expected attributes")
+def step_impl(context):
+    item = context.dl.items.get(item_id=context.item.id)
+    anns = item.annotations.list()
+    for ann in anns:
+        assert ann.attributes in [["attr1", "attr2"], {}, {'4': "true"}], f"TEST FAILED: attributes not exist - {ann.attributes}"
 
 @behave.when(u'I add annotation with attrs "{key}" "{value}" to item using add annotation method')
 def step_impl(context, key, value):

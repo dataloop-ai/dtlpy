@@ -26,7 +26,7 @@ Feature: DPK single Id
 
 
   @DAT-71180
-  Scenario: DPK - Models > Update dpk model labels and update app - Model labels should updated
+  Scenario: DPK - Models > Update dpk model labels and update app - Model labels should not updated
     Given I publish a model dpk from file "model_dpk/modelsDpks.json" package "dummymodel"
     When I install the app without custom_installation
     And I get the dpk by name
@@ -37,6 +37,6 @@ Feature: DPK single Id
     And I update an app
     When i fetch the model by the name "test-model"
     Then "model" has app scope
-    Then I validate the context.model has the attribute "labels" with value "['1']"
+    Then I validate the context.model has the attribute "labels" with value "['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']"
     And I clean the project
 

@@ -31,8 +31,8 @@ DEFAULT_STOPS = {SlotType.ITEM_VIEWER: {"type": "itemViewer",
 
 
 class Slot(entities.DlEntity):
-    type = entities.DlProperty(location=['type'], _type=str)
-    configuration = entities.DlProperty(location=['configuration'], _type=dict)
+    type: str = entities.DlProperty(location=['type'], _type=str)
+    configuration: dict = entities.DlProperty(location=['configuration'], _type=dict)
 
     def to_json(self) -> dict:
         return self._dict.copy()
@@ -59,10 +59,10 @@ class Toolbar(entities.DlEntity):
 
 
 class Panel(entities.DlEntity):
-    name = entities.DlProperty(location=['name'], _type=str)
-    path = entities.DlProperty(location=['path'], _type=str, default=None)
-    min_role = entities.DlProperty(location=['minRole'], _type=list)
-    supported_slots = entities.DlProperty(location=['supportedSlots'], _type=list)
+    name: str = entities.DlProperty(location=['name'], _type=str)
+    path: str = entities.DlProperty(location=['path'], _type=str, default=None)
+    min_role: list = entities.DlProperty(location=['minRole'], _type=list)
+    supported_slots: list = entities.DlProperty(location=['supportedSlots'], _type=list)
 
     metadata = entities.DlProperty(location=['metadata'], _type=list)
     default_settings = entities.DlProperty(location=['defaultSettings'], _type=list)
@@ -233,15 +233,15 @@ class Dpk(entities.DlEntity):
     base_id: str = entities.DlProperty(location=['baseId'], _type=str)
     name: str = entities.DlProperty(location=['name'], _type=str)
     version: str = entities.DlProperty(location=['version'], _type=str)
-    attributes: list = entities.DlProperty(location=['attributes'], _type=dict)
+    attributes: dict = entities.DlProperty(location=['attributes'], _type=dict)
     created_at: str = entities.DlProperty(location=['createdAt'], _type=str)
     updated_at: str = entities.DlProperty(location=['updatedAt'], _type=str)
     creator: str = entities.DlProperty(location=['creator'], _type=str)
     display_name: str = entities.DlProperty(location=['displayName'], _type=str)
     icon: str = entities.DlProperty(location=['icon'], _type=str)
     tags: list = entities.DlProperty(location=['tags'], _type=list)
-    codebase: str = entities.DlProperty(location=['codebase'], _kls="Codebase")
-    scope: dict = entities.DlProperty(location=['scope'], _type=str)
+    codebase: Union[entities.Codebase, None] = entities.DlProperty(location=['codebase'], _kls="Codebase")
+    scope: str = entities.DlProperty(location=['scope'], _type=str)
     context: dict = entities.DlProperty(location=['context'], _type=dict)
     metadata: dict = entities.DlProperty(location=['metadata'], _type=dict)
     dependencies: dict = entities.DlProperty(location=['dependencies'], _type=List[dict])

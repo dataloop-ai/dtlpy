@@ -3,6 +3,7 @@ import string
 import time
 
 import behave
+
 import dtlpy as dl
 
 
@@ -24,6 +25,86 @@ def step_impl(context):
     context.pipeline.nodes.add(node=context.new_node)
     context.pipeline.update()
 
+
+@behave.when(u'I add a predict node to the pipeline')
+def step_impl(context):
+    context.new_node = dl.entities.pipeline.PipelineNode.from_json({
+        "id": "d4de0a46-7597-43bb-a80a-a77cb41ab62d",
+        "inputs": [
+            {
+                "portId": "1dec3c79-680d-4ac7-b380-f51f9e578de6",
+                "nodeId": "1dec3c79-680d-4ac7-b380-f51f9e578de6",
+                "type": "Item",
+                "name": "item",
+                "displayName": "item",
+                "io": "input"
+            }
+        ],
+        "outputs": [
+            {
+                "portId": "5285f12a-ddbe-4e64-b8dd-acf1c05626a7",
+                "nodeId": "5285f12a-ddbe-4e64-b8dd-acf1c05626a7",
+                "type": "Item",
+                "name": "item",
+                "displayName": "item",
+                "io": "output"
+            },
+            {
+                "portId": "bc16fe31-8e42-47bc-912d-13e6b135f98c",
+                "nodeId": "bc16fe31-8e42-47bc-912d-13e6b135f98c",
+                "type": "Annotation[]",
+                "name": "annotations",
+                "displayName": "annotations",
+                "io": "output"
+            }
+        ],
+        "metadata": {
+            "position": {
+                "x": 1490,
+                "y": 640,
+                "z": 0
+            },
+            "modelName": context.model.name,
+            "modelId": context.model.id,
+            "serviceConfig": {
+
+            }
+        },
+        "name": context.model.name,
+        "type": "ml",
+        "namespace": {
+            "functionName": "predict",
+            "projectName": context.project.name,
+            "serviceName": "model-mgmt-app-predict",
+            "moduleName": context.model.module_name,
+            "packageName": "model-mgmt-app"
+        },
+        "projectId": context.project.id
+    })
+
+    context.pipeline.nodes.add(context.new_node)
+    context.pipeline.update()
+
+
+@behave.when(u'i update runnerImage "{image}" to pipeline node with type "{node_type}"')
+def step_impl(context, image, node_type):
+    context.pipeline = context.project.pipelines.get(pipeline_id=context.pipeline.id)
+    for node in context.pipeline.nodes:
+        if node.node_type == node_type:
+            if 'serviceConfig' not in node.metadata:
+                node.metadata['serviceConfig'] = {}
+            if 'runtime' not in node.metadata['serviceConfig']:
+                node.metadata['serviceConfig']['runtime'] = {}
+            node.metadata['serviceConfig']['runtime']['runnerImage'] = image
+            context.pipeline = context.pipeline.update()
+            break
+
+@behave.when(u'i get the service for the pipeline node with type "{node_type}"')
+def step_impl(context, node_type):
+    for node in context.pipeline.nodes:
+        if node.node_type == node_type:
+            context.service = dl.services.get(service_name=node.namespace.service_name)
+            break
 
 @behave.when(u'I execute the pipeline batch items')
 def step_impl(context):

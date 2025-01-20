@@ -497,8 +497,8 @@ class Filters:
         _json["resource"] = f'{_json["resource"]}'
         # convert the dictionary to a json string
         _json['dqlFilter'] = json.dumps({'filter': _json.pop('filter'),
-                                         'join': _json.pop('join'),
-                                         'sort': _json.get('sort')})
+                                         'join': _json.pop('join', None),
+                                         'sort': _json.get('sort', None)})
         # set the page size as the UI default
         _json['pageSize'] = 100
         _json['page'] = _json['page']

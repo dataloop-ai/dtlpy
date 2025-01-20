@@ -610,7 +610,9 @@ class Items:
             output_entity=entities.Item,
             no_output: bool = False,
             export_version: str = entities.ExportVersion.V1,
-            item_description: str = None
+            item_description: str = None,
+            raise_on_error: bool = False,
+            return_as_list: bool = False
     ):
         """
         Upload local file to dataset.
@@ -630,6 +632,9 @@ class Items:
         :param bool no_output: do not return the items after upload
         :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
         :param str item_description: add a string description to the uploaded item
+        :param bool raise_on_error: raise an exception if an error occurs
+        :param bool return_as_list: return a list of items instead of a generator
+        
         :return: Output (generator/single item)
         :rtype: generator or single item
 
@@ -657,7 +662,9 @@ class Items:
             # metadata to upload with items
             item_metadata=item_metadata,
             export_version=export_version,
-            item_description=item_description
+            item_description=item_description,
+            raise_on_error=raise_on_error,
+            return_as_list=return_as_list
         )
 
     @property

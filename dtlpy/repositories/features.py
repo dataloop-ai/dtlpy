@@ -17,9 +17,11 @@ class Features:
                  project_id: str = None,
                  item: entities.Item = None,
                  annotation: entities.Annotation = None,
-                 feature_set: entities.FeatureSet = None):
+                 feature_set: entities.FeatureSet = None,
+                 dataset: entities.Dataset = None):
         if project is not None and project_id is None:
             project_id = project.id
+        self._dataset = dataset
         self._project = project
         self._project_id = project_id
         self._item = item
@@ -50,7 +52,7 @@ class Features:
         if self._project is None:
             raise exceptions.PlatformException(
                 error='2001',
-                message='Cannot perform action WITHOUT Project entity in Datasets repository.'
+                message='Cannot perform action WITHOUT Project entity in Features repository.'
                         ' Please checkout or set a project')
         assert isinstance(self._project, entities.Project)
         return self._project
@@ -60,8 +62,8 @@ class Features:
     ###########
     def _list(self, filters: entities.Filters):
         """
-        Get dataset items list This is a browsing endpoint, for any given path item count will be returned,
-        user is expected to perform another request then for every folder item to actually get the its item list.
+        Get dataset feature vectors list. This is a browsing endpoint, for any given path feature count will be returned,
+        user is expected to perform another request then for every folder item to actually get the item list.
 
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :return: json response
@@ -104,6 +106,8 @@ class Features:
             filters.add(field='featureSetId', values=self._feature_set.id)
         if self._item is not None:
             filters.add(field='entityId', values=self._item.id)
+        if self._dataset is not None:
+            filters.add(field='datasetId', values=self._dataset.id)
         if self._project_id is None:
             self._project_id = self.project.id
         filters.context = {"projects": [self._project_id]}
@@ -169,7 +173,7 @@ class Features:
         if feature_set_id is None:
             if self._feature_set is None:
                 raise ValueError(
-                    'Missing feature_set_id. Must insert the variable or create from context - feature_set.features.create()')
+                    'Missing feature_set_id. Must insert the variable or create from context, e.g. feature_set.features.create()')
             feature_set_id = self._feature_set.id
 
         payload = {'project': project_id,

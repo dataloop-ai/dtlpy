@@ -13,15 +13,20 @@ def step_impl(context):
             integration = context.org.integrations.get(integrations_id=integration['id'])
             integration.delete(sure=True, really=True)
 
-@given(u'A deployed service with custom docker image from ECR private registry')
-def step_impl(context):
-    image_name = "636666312771.dkr.ecr.eu-west-1.amazonaws.com/aharon:latest"
+
+@given(u'A deployed service with custom docker image from "{type}" private registry')
+def step_impl(context, type):
+    image_name = ''
+    if type == 'ECR':
+        image_name = "636666312771.dkr.ecr.eu-west-1.amazonaws.com/aharon:latest"
+    elif type == 'GAR':
+        image_name = "europe-docker.pkg.dev/viewo-g/faas-test/zvi/from-ecr:latest"
 
     def run(item):
         return item
 
     context.service = context.project.services.deploy(
-        name='ecr-service-' + ''.join(random.choices(string.ascii_lowercase + string.digits, k=5)) + 'a',
+        name=f'{type}-service-' + ''.join(random.choices(string.ascii_lowercase + string.digits, k=5)) + 'a',
         func=run,
         runtime=context.dl.KubernetesRuntime(
             runner_image=image_name,
@@ -62,6 +67,7 @@ def step_impl(context):
     context.integration = context.org.integrations.create(
         integrations_type='private-registry',
         name='ecr-1',
+        metadata={"provider": "aws"},
         options={
             "name": "AWS",
             "spec": {
@@ -72,6 +78,13 @@ def step_impl(context):
             }
         }
     )
+
+
+@when(u'I create an GAR integration')
+def step_impl(context):
+    context.org = context.dl.organizations.get(organization_id=context.project.org['id'])
+    context.integration = context.org.integrations._create_private_registry_gar(service_account=os.environ['GAR_SERVICE_ACCOUNT_JSON'], location=os.environ['GAR_LOCATION'])
+
 
 @when(u'I pause and resume the service')
 def step_impl(context):
@@ -94,6 +107,6 @@ def step_impl(context):
 
     assert success, 'Execution did not complete successfully'
 
-@when(u'I delete the ECR integration')
+@when(u'I delete the context integration')
 def step_impl(context):
     context.integration.delete(sure=True, really=True)

@@ -7,6 +7,7 @@ Feature: Resuming Pipeline
 
     @services.delete
     @pipelines.delete
+    @DAT-85194
     Scenario: Resuming pipeline
         Given I create a package and service to pipeline
         And I have a resumable pipeline

@@ -38,10 +38,12 @@ Feature: Pipeline active learning testing
     And I update items annotations in task with context.annotation_definition
     And I update items status to default task actions
     And Dataset in index "1" have "50" items
+    When I get last model in project
+    Then model metadata should include operation "deploy" with filed "services" and length "1"
     When I execute pipeline with input type "None"
     Then I expect that pipeline execution has "6" success executions
     When I get last model in project
-    Then model metadata should include operation "deploy" with filed "services" and length "1"
+    Then model metadata should include operation "evaluate" with filed "datasets" and length "1"
 
 
 

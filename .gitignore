@@ -103,6 +103,7 @@ ENV/
 .ropeproject
 
 ### VisualStudioCode ###
+.vscode
 .vscode/*
 .vs/*
 !.vscode/settings.json

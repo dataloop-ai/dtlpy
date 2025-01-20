@@ -376,24 +376,18 @@ class Pipelines:
 
             pipeline = project.pipelines.update(pipeline='pipeline_entity')
         """
-        if pipeline.status == entities.CompositionStatus.INSTALLED and not pipeline.variables_changed():
-            raise exceptions.PlatformException(
-                error='400',
-                message='Cannot update pipeline while it is installed'
-            )
         # payload
         payload = pipeline.to_json()
 
         # update settings
         if pipeline.settings_changed():
-            self.update_settings(pipeline=pipeline, settings=pipeline.settings)
+            new_pipeline = self.update_settings(pipeline=pipeline, settings=pipeline.settings)
+            payload['settings'] = new_pipeline.to_json().get('settings', payload.get('settings'))
 
         # update variables
         if pipeline.variables_changed():
             new_pipeline = self.__update_variables(pipeline=pipeline)
-            if new_pipeline.status == entities.CompositionStatus.INSTALLED:
-                logger.warning('Pipeline is installed, updating pipeline variables only')
-                return new_pipeline
+            payload['variables'] = new_pipeline.to_json().get('variables', payload.get('variables'))
 
         success, response = self._client_api.gen_request(
             req_type='patch',

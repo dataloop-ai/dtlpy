@@ -488,7 +488,8 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             try:
                 self.model_entity.project.feature_sets.get(feature_set_name=self.model_entity.name)
                 feature_set_name = f"{self.model_entity.name}-{''.join(random.choices(string.ascii_letters + string.digits, k=5))}"
-                logger.warning(f"Feature set with the model name already exists. Creating new feature set with name {feature_set_name}")
+                logger.warning(
+                    f"Feature set with the model name already exists. Creating new feature set with name {feature_set_name}")
             except exceptions.NotFound:
                 feature_set_name = self.model_entity.name
             feature_set = self.model_entity.project.feature_sets.create(name=feature_set_name,
@@ -518,7 +519,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
                 self.logger.debug(
                     "Uploading items' feature vectors for model {!r}.".format(self.model_entity.name))
                 try:
-                    _ = list(pool.map(partial(self._upload_model_features,
+                    list(pool.map(partial(self._upload_model_features,
                                               feature_set.id,
                                               self.model_entity.project_id),
                                       batch_items,
@@ -762,14 +763,13 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
     @staticmethod
     def _upload_model_features(feature_set_id, project_id, item: entities.Item, vector):
         try:
-            feature = item.features.create(value=vector,
-                                           project_id=project_id,
-                                           feature_set_id=feature_set_id,
-                                           entity=item)
-            return feature
+            if vector is not None:
+                item.features.create(value=vector,
+                                     project_id=project_id,
+                                     feature_set_id=feature_set_id,
+                                     entity=item)
         except Exception as e:
             logger.error(f'Failed to upload feature vector of length {len(vector)} to item {item.id}, Error: {e}')
-            return []
 
     def _upload_model_annotations(self, item: entities.Item, predictions, clean_annotations):
         """

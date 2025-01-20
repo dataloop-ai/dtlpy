@@ -1,7 +1,8 @@
 """
 Integrations Repository
 """
-
+import base64
+import json
 import logging
 from .. import entities, exceptions, miscellaneous, _api_reference
 from ..services.api_client import ApiClient
@@ -298,3 +299,53 @@ class Integrations:
 
         available_integrations = miscellaneous.List(response.json())
         return available_integrations
+
+    def _create_private_registry_gar(self, service_account: str, location: str):
+        password = self.__create_gar_password(service_account, location)
+        return self.create(
+            integrations_type='private-registry',
+            name='gar-1',
+            metadata={"provider": "gcp"},
+            options={
+                "name": "_json_key",
+                "spec": {
+                    "password": password
+                }
+            }
+        )
+
+    def __create_gar_password(self, service_account: str, location: str) -> str:
+        """
+        Generates a Google Artifact Registry JSON configuration and returns it as a base64-encoded string.
+
+        Parameters:
+            location (str): The region where the repository will be created (e.g., 'us-central1').
+            service_account (str): The service_account parameter represents the Google Cloud service account credentials
+                                    in the form of a JSON key file. This JSON contains the private key and other metadata
+                                    required for authenticating with Google Artifact Registry. It is used to generate a Kubernetes secret
+                                    that stores the credentials for pulling container images from the registry.
+                                    The JSON key must include fields such as client_email, private_key, and project_id,
+                                    and it is typically downloaded from the Google Cloud Console when creating the service account
+
+        Returns:
+            str: A base64-encoded string representation of the repository JSON configuration.
+        """
+        if not service_account:
+            raise ValueError('Missing Service Account')
+        if not location:
+            raise ValueError('Missing Location')
+        user_name = "_json_key"
+        cred = f"{user_name}:{service_account}"
+        auth = str(base64.b64encode(bytes(cred, 'utf-8')))[2:-1]
+
+        encoded_pass = {
+            "auths": {
+                f"{location}": {
+                    "username": user_name,
+                    "password": service_account,
+                    "auth": auth
+                }
+            }
+        }
+
+        return str(base64.b64encode(bytes(json.dumps(encoded_pass), 'utf-8')))[2:-1]

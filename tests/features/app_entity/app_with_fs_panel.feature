@@ -33,7 +33,6 @@ Feature: Testing App with fs served panel
 
 
   @DAT-84375
-  @pipelines.delete
   @restore_json_file
   Scenario: Create pipeline app with FS panel - Start pipeline should success
     Given I have an app with a filesystem panel in path "apps/pipeline_panel"
@@ -42,3 +41,16 @@ Feature: Testing App with fs served panel
     Given I create pipeline from json in path "pipelines_json/panel_node_fs.json"
     When I install pipeline in context
     Then Pipeline status is "Installed"
+    Then I clean the project
+
+
+  @DAT-84466
+  @pipelines.delete
+  @restore_json_file
+  Scenario: Module without config - Start pipeline should success and service should get default configuration
+    Given I have an app with a filesystem panel in path "apps/pipeline_panel" and remove key "components.modules.0.computeConfig"
+    Given I create pipeline from json in path "pipelines_json/panel_node_fs.json"
+    When I install pipeline in context
+    Then Pipeline status is "Installed"
+    When I list services in project
+    Then I receive a Service list of "1" objects

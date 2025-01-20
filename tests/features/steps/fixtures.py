@@ -308,3 +308,21 @@ def update_nested_dict(target_dict: dict, updates: dict):
             final_key = int(final_key)
         current[final_key] = value
 
+
+def remove_key_from_nested_dict(d, path_key):
+    """
+    Recursively search for a key in a nested dictionary or list and remove it
+    :param d: dictionary or list
+    :param path_key: dot-separated path to the key to remove
+    """
+    keys = path_key.split('.')
+    current = d
+    for key in keys[:-1]:  # Traverse to the second-to-last key
+        if key.isdigit():  # If the key is an integer (for lists), convert it
+            key = int(key)
+        current = current[key]
+    # Handle the last key
+    final_key = keys[-1]
+    if final_key.isdigit():  # If the final key is an integer (for lists), convert it
+        final_key = int(final_key)
+    del current[final_key]

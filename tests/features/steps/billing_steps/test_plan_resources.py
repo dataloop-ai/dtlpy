@@ -194,6 +194,25 @@ def step_impl(context):
         assert False, f"TEST FAILED: Service already inactive"
 
 
+@behave.Then('I deactivate service named "{service_name}"')
+def step_impl(context, service_name):
+    services = context.project.services.list().items
+    # Iterate through the services to find the one with the correct name
+    for service in services:
+        if service.name == service_name:
+            service = dl.services.get(service_id=service.id)
+            if service.active:
+                service.active = False
+                service.update()
+                service = dl.services.get(service_id=service.id)
+                assert not service.active, f"TEST FAILED: Unable to deactivate service '{service_name}'"
+            else:
+                assert False, f"TEST FAILED: Service '{service_name}' is already inactive"
+            break
+    else:
+        assert False, f"TEST FAILED: Service with name '{service_name}' not found"
+
+
 @behave.when(u'I update context.service')
 def step_impl(context):
     num_try = 60
@@ -215,8 +234,8 @@ def step_impl(context):
     assert success, "TEST FAILED: Expected 1-service, Got {}".format(len(services))
 
 
-@behave.when('I get analytics query "{pod_type}"')
-def step_impl(context, pod_type):
+@behave.when('I get analytics query "{pod_type}" for {sec} seconds')
+def step_impl(context, pod_type, sec):
 
 
     # fetch billing api calls
@@ -285,11 +304,11 @@ def step_impl(context, pod_type):
 
                     if pod_type == active_pod_type:
                         num_seconds = response_item.get('seconds', 0)
-                        if num_seconds >= 120:
-                            context.dl.logger.info("Condition met: num_seconds is 120 or more.")
+                        if num_seconds >= int(sec):
+                            context.dl.logger.info(f"Condition met: num_seconds is {sec} or more.")
                             break  # Break out of the inner while loop
                         else:
-                            context.dl.logger.info(f"num_seconds {num_seconds} is less than 120. Checking again after 30 seconds...")
+                            context.dl.logger.info(f"num_seconds {num_seconds} is less than {sec}. Checking again after 30 seconds...")
                             time.sleep(30)  # Wait before checking again
                             break  # Break out of the inner while loop to make a new request
                     else:
@@ -304,7 +323,7 @@ def step_impl(context, pod_type):
                     continue
 
             # If the condition is met, break out of the outer loop
-            if num_seconds >= 120:
+            if num_seconds >= int(sec):
                 break  # Break out of the outer while loop
 
         else:

@@ -421,7 +421,7 @@ class Annotation(entities.BaseEntity):
 
     @property
     def attributes(self):
-        if self._recipe_2_attributes or not self.annotation_definition.attributes:
+        if self._recipe_2_attributes or self.annotation_definition.attributes == []:
             return self._recipe_2_attributes
         return self.annotation_definition.attributes
 
@@ -1095,7 +1095,7 @@ class Annotation(entities.BaseEntity):
         if annotation_definition:
             res.annotation_definition = annotation_definition
 
-        if annotation_definition and annotation_definition.attributes:
+        if annotation_definition and annotation_definition.attributes is not None:
             res.attributes = annotation_definition.attributes
 
         return res
@@ -1679,7 +1679,7 @@ class FrameAnnotation(entities.BaseEntity):
 
     @property
     def attributes(self):
-        if self._recipe_2_attributes or not self.annotation_definition.attributes:
+        if self._recipe_2_attributes or self.annotation_definition.attributes == []:
             return self._recipe_2_attributes
         return self.annotation_definition.attributes
 
@@ -1872,6 +1872,9 @@ class FrameAnnotation(entities.BaseEntity):
             'objectVisible': self.object_visible,
             'data': self.coordinates
         }
+
+        if self.annotation_definition.description is not None:
+            snapshot_dict['description'] = self.annotation_definition.description
 
         if self.annotation._recipe_2_attributes:
             snapshot_dict['namedAttributes'] = self._recipe_2_attributes

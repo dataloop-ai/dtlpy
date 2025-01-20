@@ -482,7 +482,7 @@ def step_impl(context):
     executions = context.service.executions.list()
     assert executions.items_count == 1
     execution = executions.items[0]
-    interval = 3
+    interval = 5
     max_attempts = 15
     attempt = 0
     while execution.latest_status['status'] != 'success' and attempt < max_attempts:
@@ -550,7 +550,7 @@ def step_impl(context):
         con for con in context.pipeline.connections if con.source.node_id == faas_node.node_id
     ][0]
     next_node = [n for n in context.pipeline.nodes if n.node_type == 'task' and n.node_id == connection.target.node_id][0]
-    interval = 3
+    interval = 5
     max_attempts = 15
     attempt = 0
     success = False

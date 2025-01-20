@@ -49,7 +49,7 @@ class Organization(entities.BaseEntity):
     logo_url = attr.ib(repr=False)
     plan = attr.ib(repr=False)
     owner = attr.ib(repr=False)
-    created_by = attr.ib(repr=False)
+    creator = attr.ib(repr=False)
 
     # api
     _client_api = attr.ib(type=ApiClient, repr=False)
@@ -67,7 +67,7 @@ class Organization(entities.BaseEntity):
 
     @property
     def createdBy(self):
-        return self.created_by
+        return self.creator
 
     @_repositories.default
     def set_repositories(self):
@@ -158,7 +158,7 @@ class Organization(entities.BaseEntity):
                    logo_url=_json.get('logoUrl', None),
                    plan=_json.get('plan', None),
                    owner=_json.get('owner', None),
-                   created_by=_json.get('createdBy', None),
+                   creator=_json.get('creator', None),
                    client_api=client_api)
         inst.is_fetched = is_fetched
         return inst
@@ -175,7 +175,7 @@ class Organization(entities.BaseEntity):
                                                               attr.fields(Organization)._repositories,
                                                               attr.fields(Organization).created_at,
                                                               attr.fields(Organization).updated_at,
-                                                              attr.fields(Organization).created_by,
+                                                              attr.fields(Organization).creator,
                                                               ))
         output_dict['members'] = self.members
         output_dict['groups'] = self.groups
@@ -188,7 +188,7 @@ class Organization(entities.BaseEntity):
         output_dict['logo_url'] = self.logo_url
         output_dict['plan'] = self.plan
         output_dict['owner'] = self.owner
-        output_dict['createdBy'] = self.created_by
+        output_dict['creator'] = self.creator
 
         return output_dict
 

@@ -43,3 +43,16 @@ Feature: Ontology Entity attributes testing
     And I update annotation attributes to empty dict
     Then Item in host has annotation added
     Then I validate annotation has no attributes
+
+
+  @DAT-85316
+  Scenario: Add attributes to annotations
+    When I add "yes_no" attribute to ontology
+      | key=4 | title=test4 | scope=all |
+    Then I validate attribute "yes_no" added to ontology
+    Given Item in path "0000000162.jpg" is uploaded to "Dataset"
+    When I add annotation with attrs "4" "true" to item using add annotation method
+    And I upload annotation created
+    And I add annotation to item using add annotation method
+    And I add annotation to item using add annotation method with empty dict attrs
+    Then I validate annotation has all expected attributes

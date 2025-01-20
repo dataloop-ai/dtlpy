@@ -287,10 +287,8 @@ class Dataset(entities.BaseEntity):
                                        'ontologies', 'features', 'settings', 'schema'])
         if self._project is None:
             datasets = repositories.Datasets(client_api=self._client_api, project=self._project)
-            features = repositories.Features(client_api=self._client_api, project=self._project)
         else:
             datasets = self._project.datasets
-            features = self._project.features
 
         return reps(
             items=repositories.Items(client_api=self._client_api, dataset=self, datasets=datasets),
@@ -300,7 +298,7 @@ class Dataset(entities.BaseEntity):
             annotations=repositories.Annotations(client_api=self._client_api, dataset=self),
             datasets=datasets,
             ontologies=repositories.Ontologies(client_api=self._client_api, dataset=self),
-            features=features,
+            features=repositories.Features(client_api=self._client_api, project=self._project, dataset=self),
             settings=repositories.Settings(client_api=self._client_api, dataset=self),
             schema=repositories.Schema(client_api=self._client_api, dataset=self)
         )
