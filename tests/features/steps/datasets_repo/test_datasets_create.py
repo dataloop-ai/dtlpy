@@ -2,6 +2,8 @@ import behave
 import random
 import string
 
+from tests.features.steps import fixtures
+
 
 @behave.fixture
 def delete_all_datasets(context):
@@ -133,3 +135,24 @@ def step_impl(context, action, paths):
         assert paths in schema.get('items', {}).get('unsearchablePaths', {})
     elif action == 'deleted':
         assert paths not in schema.get('items', {}).get('unsearchablePaths', {})
+
+
+@behave.then(u'Dataset attribute should be as given')
+# we need to test the values from the database
+def step_impl(context):
+
+    context.params = {param.split('=')[0]: fixtures.get_value(params=param.split('='), context=context) for param in
+                      context.table.headings if
+                      fixtures.get_value(params=param.split('='), context=context) is not None}
+    for key, val in context.params.items():
+        if hasattr(context, 'clone_dataset'):
+            assert getattr(context.clone_dataset, key) == val
+        else:
+            assert getattr(context.dataset, key) == val
+
+@behave.when(u'I clone a dataset')
+def step_impl(context):
+    dataset_name = context.dataset.name
+    context.clone_dataset = context.dataset.clone(clone_name= dataset_name + "-cloned",filters=None,
+                                                  with_items_annotations=True, with_metadata=True,
+                                                  with_task_annotations_status=True)

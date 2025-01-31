@@ -5,6 +5,8 @@ Feature: Annotations adding multiple frames
     And I create a project by the name of "Project_annotations_format_json"
     And I create a dataset by the name of "Dataset_annotations_format_json" in the project
     And I upload an item of type "webm video" to the dataset
+    When I add "free_text" attribute to ontology
+            | key=1 | title=attr1 | scope=all |
 
   @testrail-C4533707
   @DAT-46419

@@ -169,6 +169,7 @@ messages = repositories.Messages(client_api=client_api)
 compositions = repositories.Compositions(client_api=client_api)
 computes = repositories.Computes(client_api=client_api)
 service_drivers = repositories.ServiceDrivers(client_api=client_api)
+collections = repositories.Collections(client_api=client_api)
 
 try:
     check_sdk.check(version=__version__, client_api=client_api)

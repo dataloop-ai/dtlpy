@@ -4,6 +4,8 @@ Feature: Annotations format json
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
         And I create a project by the name of "Project_annotations_format_json"
         And I create a dataset by the name of "Dataset_annotations_format_json" in the project
+        When I add "free_text" attribute to ontology
+            | key=1 | title=attr1 | scope=all |
 
     @testrail-C4532882
     @DAT-46427

@@ -4,6 +4,8 @@ Feature: Annotations repository Upload service testing
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
         And I create a project by the name of "annotations_upload"
         And I create a dataset with a random name
+        When I add "free_text" attribute to ontology
+            | key=1 | title=attr1 | scope=all |
 
     @testrail-C4523039
     @DAT-46433

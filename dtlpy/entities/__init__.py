@@ -79,3 +79,4 @@ from .compute import ClusterProvider, ComputeType, ComputeStatus, Toleration, De
     NodePool, AuthenticationIntegration, Authentication, ComputeCluster, ComputeContext, Compute, KubernetesCompute, \
     ServiceDriver
 from .gis_item import  ItemGis, Layer
+from .collection import Collection

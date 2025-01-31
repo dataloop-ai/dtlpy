@@ -5,6 +5,10 @@ Feature: Datasets repository download_annotations service testing
     And I create a project by the name of "datasets_download_annotations"
     And I create a dataset with a random name
     And Item in path "0000000162.png" is uploaded to "Dataset"
+    When I add "free_text" attribute to ontology
+      | key=1 | title=attr1 | scope=all |
+    When I add "free_text" attribute to ontology
+      | key=2 | title=attr2 | scope=all |
 
   Scenario: upload annotations
     Then I upload annotations to dataset

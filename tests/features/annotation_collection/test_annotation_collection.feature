@@ -4,6 +4,10 @@ Feature: Annotations collection testing
         Given Platform Interface is initialized as dlp and Environment is set according to git branch
         And I create a project by the name of "Project_test_annotation_collection"
         And I create a dataset with a random name
+        When I add "free_text" attribute to ontology
+              | key=1 | title=attr1 | scope=all |
+        When I add "free_text" attribute to ontology
+            | key=2 | title=attr2 | scope=all |
 
     @testrail-C4523040
     @DAT-46436

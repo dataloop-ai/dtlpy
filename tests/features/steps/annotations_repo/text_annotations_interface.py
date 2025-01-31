@@ -11,14 +11,14 @@ def step_impl(context, annotation_type):
     annotations_definitions_list = {
         "classification": context.dl.Classification(
             label="label1",
-            attributes=[{"attributes1": "classification1"}]
+            attributes={"1": "classification1"}
         ),
         "text mark": context.dl.Text(
             text_type="block",
             start=0,
             end=5,
             label="label1",
-            attributes=[{"attributes1": "text1"}]
+            attributes={"1": "text1"}
         )
     }
 
@@ -36,7 +36,7 @@ def step_impl(context, annotation_type, annotation_description):
     annotations_definitions_list = {
         "classification": context.dl.Classification(
             label="label1",
-            attributes=[{"attributes1": "classification1"}],
+            attributes={"1": "classification1"},
             description=annotation_description
         ),
         "text mark": context.dl.Text(
@@ -44,7 +44,7 @@ def step_impl(context, annotation_type, annotation_description):
             start=0,
             end=5,
             label="label1",
-            attributes=[{"attributes1": "text1"}],
+            attributes={"1": "text1"},
             description=annotation_description
         ),
     }

@@ -325,7 +325,7 @@ def check_feature_folder(feature_folder, feature_name=None):
     elif feature_folder in ["command_entity", "dataset_entity", "datasets_repo", "drivers_repo", "ontologies_repo",
                             "ontology_entity", "recipe_entity", "recipes_repo", "artifacts_repo", "filters_entity",
                             "item_entity", "items_repo", "ann_text_object", "annotation_collection", "annotation_entity"
-        , "annotations_repo", "features_vector_entity"]:
+        , "annotations_repo", "features_vector_entity", "item_collections"]:
         return "Rubiks"
     elif feature_folder in ["checkout_testing", "cli_testing", "code_base_entity", "code_bases_repo", "converter",
                             "documentation_tests", "platform_urls", "webm_converter", "cache", "xray", "ml_subsets"]:

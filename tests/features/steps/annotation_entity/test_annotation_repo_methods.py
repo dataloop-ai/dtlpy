@@ -83,7 +83,11 @@ def step_impl(context):
     annotation = {
         "type": "box",
         "label": "car",
-        "attributes": ["Occlusion2"],
+        "metadata": {
+          "system": {
+            "attributes": {"1":  "Occlusion2"}
+          }
+        },
         "coordinates": [
             {"x": random.randrange(0, 500), "y": random.randrange(0, 500)},
             {"x": random.randrange(0, 500), "y": random.randrange(0, 500)},
@@ -119,7 +123,7 @@ def step_impl(context):
     context.annotation_point = context.dl.Annotation.new(item=context.item,
                                                          annotation_definition=context.dl.Point(x=100, y=150,
                                                                                                 label=labels[0].tag,
-                                                                                                attributes=['attr1']))
+                                                                                                attributes={"1": "attr1"}))
     context.annotation_box = context.dl.Annotation.new(item=context.item,
                                                        annotation_definition=context.dl.Box(left=100, top=200,
                                                                                             right=140, bottom=120,
@@ -129,8 +133,7 @@ def step_impl(context):
                                                                                                     angle=50, ry=20,
                                                                                                     rx=10,
                                                                                                     label=labels[2].tag,
-                                                                                                    attributes=[
-                                                                                                        'attr2']))
+                                                                                                    attributes={"1": "attr2"}))
     context.annotation_polygon = context.dl.Annotation.new(item=context.item, annotation_definition=context.dl.Polygon(
         geo=[(300, 300), (320, 200), (350, 400), (300, 300)], label=labels[0].tag))
     context.num_annotations = 4

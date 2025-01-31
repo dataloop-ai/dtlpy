@@ -271,7 +271,7 @@ class Items:
                 filters.pop(field='hidden')
                 if is_dir:
                     filters.add(field='type', values='dir')
-                    filters.recursive = False
+                filters.recursive = False
                 filters.add(field='filename', values=filepath)
                 paged_entity = self.list(filters=filters)
                 if len(paged_entity.items) == 0:

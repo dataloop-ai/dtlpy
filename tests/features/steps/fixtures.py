@@ -90,6 +90,8 @@ def get_value(params, context):
     elif val == 'current_user':
         if key == 'creator':
             val = dl.info()['user_email']
+        elif key == 'updated_by':
+            val = dl.info()['user_email']
     if key == 'filters' and val == 'context.filters':
         val = context.filters
     elif key == 'filters' and val is not None and not isinstance(val, dict):

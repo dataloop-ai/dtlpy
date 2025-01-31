@@ -6,7 +6,7 @@ import time
 def step_impl(context):
     context.annotations_get = context.item.annotations.list()
     for annotation in context.annotations_get:
-        annotation.attributes = list()
+        annotation.attributes = {}
 
 
 @behave.when(u"I update annotations")

@@ -7,6 +7,7 @@ import copy
 import attr
 import json
 import os
+import warnings
 
 from PIL import Image
 from enum import Enum
@@ -421,7 +422,7 @@ class Annotation(entities.BaseEntity):
 
     @property
     def attributes(self):
-        if self._recipe_2_attributes or self.annotation_definition.attributes == []:
+        if self._recipe_2_attributes is not None or self.annotation_definition.attributes == []:
             return self._recipe_2_attributes
         return self.annotation_definition.attributes
 
@@ -430,6 +431,11 @@ class Annotation(entities.BaseEntity):
         if isinstance(attributes, dict):
             self._recipe_2_attributes = attributes
         elif isinstance(attributes, list):
+            warnings.warn("List attributes are deprecated and will be removed in version 1.109. Use Attribute 2.0 (Dictionary) instead. "
+                "For more details, refer to the documentation: "
+                "https://developers.dataloop.ai/tutorials/data_management/upload_and_manage_annotations/chapter/#set-attributes-on-annotations",
+                DeprecationWarning,
+            )
             self.annotation_definition.attributes = attributes
         elif attributes is None:
             if self._recipe_2_attributes:
@@ -1688,6 +1694,11 @@ class FrameAnnotation(entities.BaseEntity):
         if isinstance(attributes, dict):
             self._recipe_2_attributes = attributes
         elif isinstance(attributes, list):
+            warnings.warn("List attributes are deprecated and will be removed in version 1.109. Use Attribute 2.0 (Dictionary) instead. "
+                "For more details, refer to the documentation: "
+                "https://developers.dataloop.ai/tutorials/data_management/upload_and_manage_annotations/chapter/#set-attributes-on-annotations",
+                DeprecationWarning,
+            )
             self.annotation_definition.attributes = attributes
         else:
             raise ValueError('Attributes must be a dictionary or a list')

@@ -280,3 +280,5 @@ from tests.features.steps.compute import compute
 from tests.features.steps.compute import ecr_integrations
 
 from tests.features.steps.ml_subsets import test_ml_subsets
+
+from tests.features.steps.item_collections import test_item_collections

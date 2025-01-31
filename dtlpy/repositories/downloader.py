@@ -674,6 +674,8 @@ class Downloader:
                                                                                      stream=True,
                                                                                      dataset_id=item.dataset_id)
                     if not result:
+                        if os.path.isfile(local_filepath + '.download'):
+                            os.remove(local_filepath + '.download')
                         raise PlatformException(response)
                 else:
                     _, ext = os.path.splitext(item.metadata['system']['shebang']['linkInfo']['ref'].split('?')[0])

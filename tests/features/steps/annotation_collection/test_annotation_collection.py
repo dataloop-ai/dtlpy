@@ -192,7 +192,7 @@ def step_impl(context):
         x=r.randrange(0, width),
         y=r.randrange(0, height),
         label=r.choice(labels).tag,
-        attributes=["attr1"],
+        attributes={"1": "attr1"},
     )
     context.annotation_collection.add(annotation_definition=annotation_definition)
     # box
@@ -206,7 +206,7 @@ def step_impl(context):
         right=right,
         bottom=bottom,
         label=r.choice(labels).tag,
-        attributes=["attr1", "attr2"],
+        attributes={"1": "attr1", "2": "attr2"},
     )
     context.annotation_collection.add(annotation_definition=annotation_definition)
     # poliygon
@@ -219,7 +219,7 @@ def step_impl(context):
         (r.randrange(0, width), r.randrange(0, height)),
     ]
     annotation_definition = context.dl.Polygon(
-        geo=geo, label=r.choice(labels).tag, attributes=["attr1", "attr2"]
+        geo=geo, label=r.choice(labels).tag, attributes={"1": "attr1", "2": "attr2"}
     )
     context.annotation_collection.add(annotation_definition=annotation_definition)
     # ellipse
@@ -230,7 +230,7 @@ def step_impl(context):
         ry=r.randrange(0, 20),
         angle=r.randrange(0, 100),
         label=r.choice(labels).tag,
-        attributes=["attr2"],
+        attributes={"2": "attr2"},
     )
     context.annotation_collection.add(annotation_definition=annotation_definition)
 
@@ -266,7 +266,7 @@ def step_impl(context):
         x=r.randrange(0, width),
         y=r.randrange(0, height),
         label=r.choice(labels).tag,
-        attributes=["attr1"],
+        attributes={"1": "attr1"},
     )
     context.annotation_collection.add(annotation_definition=annotation_definition)
     # box
@@ -280,7 +280,7 @@ def step_impl(context):
         right=right,
         bottom=bottom,
         label=r.choice(labels).tag,
-        attributes=["attr1", "attr2"],
+        attributes={"1": "attr1", "2": "attr2"},
     )
     context.annotation_collection.add(annotation_definition=annotation_definition)
     # ellipse
@@ -291,7 +291,7 @@ def step_impl(context):
         ry=10,
         angle=r.randrange(0, 100),
         label=r.choice(labels).tag,
-        attributes=["attr2"],
+        attributes={"2": "attr2"},
     )
     context.annotation_collection.add(annotation_definition=annotation_definition)
 

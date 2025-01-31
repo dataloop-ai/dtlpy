@@ -230,9 +230,10 @@ class ComputeCluster:
             devops_output['config']['kubernetesVersion'],
             ClusterProvider(devops_output['config']['provider']),
             node_pools,
-   {},
-            Authentication(AuthenticationIntegration(integration.id,integration.type))
+            {},
+            Authentication(AuthenticationIntegration(integration.id, integration.type))
         )
+
 
 class ComputeContext:
     def __init__(self, labels: List[str], org: str, project: Optional[str] = None):
@@ -376,11 +377,35 @@ class KubernetesCompute(Compute):
 
 
 class ServiceDriver:
-    def __init__(self, name: str, context: ComputeContext, compute_id: str, client_api: ApiClient):
+    def __init__(
+            self,
+            name: str,
+            context: ComputeContext,
+            compute_id: str,
+            client_api: ApiClient,
+            type: ComputeType = None,
+            created_at: str = None,
+            updated_at: str = None,
+            namespace: str = None,
+            metadata: Dict = None,
+            url: str = None,
+            archived: bool = None,
+            id: str = None,
+            is_cache_available: bool = None
+    ):
         self.name = name
         self.context = context
         self.compute_id = compute_id
         self.client_api = client_api
+        self.type = type or ComputeType.KUBERNETES
+        self.created_at = created_at
+        self.updated_at = updated_at
+        self.namespace = namespace
+        self.metadata = metadata
+        self.url = url
+        self.archived = archived
+        self.id = id
+        self.is_cache_available = is_cache_available
 
     @classmethod
     def from_json(cls, _json, client_api: ApiClient):
@@ -388,12 +413,40 @@ class ServiceDriver:
             name=_json.get('name'),
             context=ComputeContext.from_json(_json.get('context', dict())),
             compute_id=_json.get('computeId'),
-            client_api=client_api
+            client_api=client_api,
+            type=_json.get('type', None),
+            created_at=_json.get('createdAt', None),
+            updated_at=_json.get('updatedAt', None),
+            namespace=_json.get('namespace', None),
+            metadata=_json.get('metadata', None),
+            url=_json.get('url', None),
+            archived=_json.get('archived', None),
+            id=_json.get('id', None),
+            is_cache_available=_json.get('isCacheAvailable', None)
         )
 
     def to_json(self):
-        return {
+        _json = {
             'name': self.name,
             'context': self.context.to_json(),
-            'computeId': self.compute_id
+            'computeId': self.compute_id,
+            'type': self.type,
         }
+        if self.created_at is not None:
+            _json['createdAt'] = self.namespace
+        if self.updated_at is not None:
+            _json['updatedAt'] = self.updated_at
+        if self.namespace is not None:
+            _json['namespace'] = self.namespace
+        if self.metadata is not None:
+            _json['metadata'] = self.metadata
+        if self.url is not None:
+            _json['url'] = self.url
+        if self.archived is not None:
+            _json['archived'] = self.archived
+        if self.id is not None:
+            _json['id'] = self.id
+        if self.is_cache_available is not None:
+            _json['isCacheAvailable'] = self.is_cache_available
+
+        return _json

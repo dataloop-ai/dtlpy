@@ -18,6 +18,8 @@ class CommandsStatus(str, Enum):
     SUCCESS = 'success'
     FAILED = 'failed'
     TIMEOUT = 'timeout'
+    CLEANING_UP = 'cleaning-up'
+    ON_ERROR = 'on-error'
 
 
 @attr.s
@@ -135,11 +137,14 @@ class Command(entities.BaseEntity):
         :return: True if command still in progress
         :rtype: bool
         """
-        return self.status in [entities.CommandsStatus.CREATED,
-                               entities.CommandsStatus.MAKING_CHILDREN,
-                               entities.CommandsStatus.WAITING_CHILDREN,
-                               entities.CommandsStatus.FINALIZING,
-                               entities.CommandsStatus.IN_PROGRESS]
+        if self.status not in {status for status in entities.CommandsStatus}:
+            raise ValueError('status is not a valid CommandsStatus')
+        return self.status not in [entities.CommandsStatus.SUCCESS,
+                                   entities.CommandsStatus.FAILED,
+                                   entities.CommandsStatus.TIMEOUT,
+                                   entities.CommandsStatus.CANCELED,
+                                   entities.CommandsStatus.ABORTED
+                                   ]
 
     def wait(self, timeout=0, step=None, backoff_factor=1):
         """

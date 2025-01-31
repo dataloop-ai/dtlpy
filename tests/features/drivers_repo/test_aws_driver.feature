@@ -11,7 +11,7 @@ Feature: Driver repository testing - AWS
   @datasets.delete
   @drivers.delete
   @DAT-49271
-  Scenario: Create AWS Driver
+  Scenario: Create AWS Driver - Sync items - Should success
     When I create driver "s3" with the name "test-aws-driver"
       | key         | value                        |
       | bucket_name | qa-sdk-automation-access-key |
@@ -26,9 +26,9 @@ Feature: Driver repository testing - AWS
   @DAT-49271
   Scenario: Delete AWS Driver without connected dataset
     When I create driver "s3" with the name "test-aws-driver"
-      | key         | value                  |
+      | key         | value                        |
       | bucket_name | qa-sdk-automation-access-key |
-      | region      | eu-west-1              |
+      | region      | eu-west-1                    |
     And I delete driver by the name "test-aws-driver"
     Then I validate driver "test-aws-driver" not longer in project drivers
 
@@ -38,9 +38,9 @@ Feature: Driver repository testing - AWS
   @DAT-49271
   Scenario: Delete AWS Driver with connected dataset - Should return error
     When I create driver "s3" with the name "test-aws-driver"
-      | key         | value                  |
+      | key         | value                        |
       | bucket_name | qa-sdk-automation-access-key |
-      | region      | eu-west-1              |
+      | region      | eu-west-1                    |
     Then I validate driver with the name "test-aws-driver" is created
     When I create dataset "test-aws" with driver entity
     And I sync dataset in context
@@ -55,10 +55,10 @@ Feature: Driver repository testing - AWS
   @DAT-49271
   Scenario: Create AWS Driver with path directory
     When I create driver "s3" with the name "test-aws-driver"
-      | key         | value                  |
+      | key         | value                        |
       | bucket_name | qa-sdk-automation-access-key |
-      | region      | eu-west-1              |
-      | path        | folder-1               |
+      | region      | eu-west-1                    |
+      | path        | folder-1                     |
     Then I validate driver with the name "test-aws-driver" is created
     When I create dataset "test-aws" with driver entity
     And I sync dataset in context
@@ -79,3 +79,22 @@ Feature: Driver repository testing - AWS
     When I create dataset "test-aws" with driver entity
     And I sync dataset in context
     Then I validate driver dataset has "9" items
+
+  @datasets.delete
+  @drivers.delete
+  @DAT-85745
+  Scenario: Create AWS Driver - Stream and upload item - Should success
+    When I create driver "s3" with the name "test-aws-driver"
+      | key         | value                        |
+      | bucket_name | qa-sdk-automation-access-key |
+      | region      | eu-west-1                    |
+    Then I validate driver with the name "test-aws-driver" is created
+    When I create dataset "test-aws" with driver entity
+    And I sync dataset in context
+    Then I validate driver dataset has "9" items
+    And I stream Item by path "/img_1.jpg"
+    When I upload item in "0000000162.jpg"
+    Then I stream Item by path "/0000000162.jpg"
+    When I delete the item by name
+    Then I wait "12"
+    And I validate driver dataset has "9" items

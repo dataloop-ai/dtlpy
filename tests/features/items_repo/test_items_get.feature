@@ -53,3 +53,10 @@ Feature: Items repository get service testing
     Given There are 2 items by the name of "0000000162.jpg"
     Then I get items by dataset Id
 
+
+  @DAT-86214
+  Scenario: Get an existing item by remote path with no type
+    When I upload item in "notype"
+    When I get the item by remote path "/notype"
+    Then I receive an Item object
+    And The item I received equals the item I uploaded

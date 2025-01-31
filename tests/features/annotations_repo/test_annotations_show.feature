@@ -9,8 +9,9 @@ Feature: Annotations repository show method testing
     @DAT-46432
     Scenario: Show mask
         Given Classes in file: "assets_split/annotations_show/classes_new.json" are uploaded to test Dataset
-        And Dataset ontology has attributes "attr1" and "attr2"
         And Item in path "assets_split/annotations_show/0000000162.jpg" is uploaded to "Dataset"
+        When I add "free_text" attribute to ontology
+            | key=1 | title=attr1 | scope=all |
         When Item is annotated with annotations in file: "assets_split/annotations_show/annotations_new.json"
         And I show items annotations with param "mask"
         Then I receive annotations mask and it is equal to mask in "new_mask_should_be.npy"
@@ -19,8 +20,9 @@ Feature: Annotations repository show method testing
     @DAT-46432
     Scenario: Show instance
         Given Classes in file: "assets_split/annotations_show/classes_new.json" are uploaded to test Dataset
-        And Dataset ontology has attributes "attr1" and "attr2"
         And Item in path "assets_split/annotations_show/0000000162.jpg" is uploaded to "Dataset"
+        When I add "free_text" attribute to ontology
+            | key=1 | title=attr1 | scope=all |
         When Item is annotated with annotations in file: "assets_split/annotations_show/annotations_new.json"
         And I show items annotations with param "instance"
         Then I receive annotations mask and it is equal to mask in "new_instance_should_be.npy"

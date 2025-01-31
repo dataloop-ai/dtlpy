@@ -37,3 +37,9 @@ Feature: Datasets repository create service testing
         And Dataset object with the same name should be exist in host
         And I create a dataset with existing recipe
         And dataset recipe is equal to the existing recipe
+
+    @DAT-85612
+    Scenario: Created dataset - Dataset creator should be as given
+        When I create a dataset with a random name
+        Then Dataset attribute should be as given
+            | creator=current_user |

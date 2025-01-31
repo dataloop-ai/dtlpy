@@ -73,3 +73,41 @@ Feature: Driver repository testing - AZURE
     When I create dataset "test-azure" with driver entity
     And I sync dataset in context
     Then I validate driver dataset has "4" items
+
+
+  @datasets.delete
+  @drivers.delete
+  @DAT-85746
+  Scenario: Create Azure Blob Driver - Stream and upload item - Should success
+    When I create driver "azureblob" with the name "test-azure-driver"
+      | key         | value          |
+      | bucket_name | sdk-automation |
+    Then I validate driver with the name "test-azure-driver" is created
+    When I create dataset "test-azure" with driver entity
+    And I sync dataset in context
+    Then I validate driver dataset has "9" items
+    And I stream Item by path "/img_1.jpg"
+    When I upload item in "0000000162.jpg"
+    Then I stream Item by path "/0000000162.jpg"
+    When I delete the item by name
+    Then I wait "12"
+    And I validate driver dataset has "9" items
+
+  @datasets.delete
+  @drivers.delete
+  @DAT-85747
+  Scenario: Create Azure DatalakeGe2 Driver - Stream and upload item - Should success
+    Given I create "azuregen2" integration with name "test-azure-gen2-integration"
+    When I create driver "azureDatalakeGen2" with the name "test-azure-gen2-driver"
+      | key         | value               |
+      | bucket_name | sdk-automation-gen2 |
+    Then I validate driver with the name "test-azure-gen2-driver" is created
+    When I create dataset "azure-datalake-gen2" with driver entity
+    And I sync dataset in context
+    Then I validate driver dataset has "9" items
+    And I stream Item by path "/img_1.jpg"
+    When I upload item in "0000000162.jpg"
+    Then I stream Item by path "/0000000162.jpg"
+    When I delete the item by name
+    Then I wait "12"
+    And I validate driver dataset has "9" items

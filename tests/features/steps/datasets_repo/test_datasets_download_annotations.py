@@ -71,9 +71,11 @@ def step_impl(context):
     ontology = recipe.ontologies.get(ont_id)
     ontology.labels = labels
     recipe.ontologies.update(ontology)
-    context.dataset.attributes = ['attr1', 'attr2']
     context.project.datasets.update(dataset=context.dataset, system_metadata=True)
-    annotation1 = {'attributes': ['attr1'],
+    annotation1 = {'metadata': {
+                       'system':
+                           { 'attributes': {"1": 'attr1'}}
+                   },
                    'coordinates': [
                        {
                            "x": 330,
@@ -88,7 +90,11 @@ def step_impl(context):
                    'label': 'dog',
                    'type': 'box'}
 
-    annotation2 = {'attributes': ['attr2'],
+    annotation2 = {
+                   'metadata': {
+                       'system':
+                           { 'attributes': {"1": 'attr2'}}
+                   },
                    'coordinates': [
                        {
                            "x": 400,
@@ -129,7 +135,12 @@ def step_impl(context):
     annotations_downloaded = annotations_downloaded['annotations']
     assert len(annotations_downloaded) == len(context.annotations)
     for annotation in annotations_downloaded:
-        ann = {'attributes': annotation['attributes'],
+        ann = {
+               "metadata": {
+                   "system": {
+                       "attributes": annotation.get('metadata', {}).get('system', {}).get('attributes')
+                   }
+                },
                'coordinates': annotation['coordinates'],
                'label': annotation['label'],
                'type': annotation['type']}

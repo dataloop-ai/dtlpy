@@ -63,6 +63,8 @@ class Execution(entities.BaseEntity):
     # optional
     pipeline = attr.ib(type=dict, default=None, repr=False)
     model = attr.ib(type=dict, default=None, repr=False)
+    app = attr.ib(default=None)
+    driver_id = attr.ib(default=None)
 
     ################
     # repositories #
@@ -189,6 +191,8 @@ class Execution(entities.BaseEntity):
             pipeline=_json.get('pipeline', None),
             model=_json.get('model', None),
             package_revision=_json.get('packageRevision', None),
+            app=_json.get('app', None),
+            driver_id=_json.get('driverId', None)
         )
         inst.is_fetched = is_fetched
         return inst
@@ -226,6 +230,7 @@ class Execution(entities.BaseEntity):
                 attr.fields(Execution).pipeline,
                 attr.fields(Execution).model,
                 attr.fields(Execution).package_revision,
+                attr.fields(Execution).driver_id,
             )
         )
 
@@ -247,6 +252,7 @@ class Execution(entities.BaseEntity):
         _json['feedbackQueue'] = self.feedback_queue
         _json['syncReplyTo '] = self.sync_reply_to
         _json['packageRevision'] = self.package_revision
+        _json['driverId'] = self.driver_id
 
         if self.pipeline:
             _json['pipeline'] = self.pipeline

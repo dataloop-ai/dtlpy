@@ -11,13 +11,13 @@ def step_impl(context, annotation_type):
     annotations_definitions_list = {
         "classification": context.dl.Classification(
             label="label1",
-            attributes=[{"attributes1": "classification1"}]
+            attributes={"1": "classification1"}
         ),
         "point": context.dl.Point(
             x=10,
             y=10,
             label="label1",
-            attributes=[{"attributes1": "point1"}]
+            attributes={"1": "point1"}
         ),
         "box": context.dl.Box(
             left=50,
@@ -25,7 +25,7 @@ def step_impl(context, annotation_type):
             right=100,
             bottom=100,
             label="label1",
-            attributes=[{"attributes1": "box1"}]
+            attributes={"1": "box1"}
         ),
         "rotated box": context.dl.Box(
             left=50,
@@ -34,7 +34,7 @@ def step_impl(context, annotation_type):
             bottom=100,
             angle=45,
             label="label1",
-            attributes=[{"attributes1": "box1"}]
+            attributes={"1": "box1"}
         ),
         "cube": context.dl.Cube(
             front_bl=[50, 100],
@@ -46,17 +46,17 @@ def step_impl(context, annotation_type):
             back_tr=[75, 25],
             back_tl=[25, 25],
             label="label1",
-            attributes=[{"attributes1": "cube1"}]
+            attributes={"1": "cube1"}
         ),
         "polygon": context.dl.Polygon(
             geo=[[25, 25], [50, 100], [70, 10]],
             label="label1",
-            attributes=[{"attributes1": "polygon1"}]
+            attributes={"1": "polygon1"}
         ),
         "polyline": context.dl.Polyline(
             geo=[[25, 25], [50, 100], [70, 10]],
             label="label1",
-            attributes=[{"attributes1": "polyline1"}]
+            attributes={"1": "polyline1"}
         ),
         "note": context.dl.Note(
             left=50,
@@ -64,7 +64,7 @@ def step_impl(context, annotation_type):
             right=100,
             bottom=100,
             label="label1",
-            attributes=[{"attributes1": "note1"}],
+            attributes={"1": "note1"},
             assignee=context.dl.info()['user_email'],
             creator=context.dl.info()['user_email']
         )
@@ -84,14 +84,14 @@ def step_impl(context, annotation_type, annotation_description):
     annotations_definitions_list = {
         "classification": context.dl.Classification(
             label="label1",
-            attributes=[{"attributes1": "classification1"}],
+            attributes={"1": "classification1"},
             description=annotation_description
         ),
         "point": context.dl.Point(
             x=10,
             y=10,
             label="label1",
-            attributes=[{"attributes1": "point1"}],
+            attributes={"1": "point1"},
             description=annotation_description
         ),
         "box": context.dl.Box(
@@ -100,7 +100,7 @@ def step_impl(context, annotation_type, annotation_description):
             right=100,
             bottom=100,
             label="label1",
-            attributes=[{"attributes1": "box1"}],
+            attributes={"1": "box1"},
             description=annotation_description
         ),
         "rotated box": context.dl.Box(
@@ -110,7 +110,7 @@ def step_impl(context, annotation_type, annotation_description):
             bottom=100,
             angle=45,
             label="label1",
-            attributes=[{"attributes1": "box1"}],
+            attributes={"1": "box1"},
             description=annotation_description
         ),
         "cube": context.dl.Cube(
@@ -123,19 +123,19 @@ def step_impl(context, annotation_type, annotation_description):
             back_tr=[75, 25],
             back_tl=[25, 25],
             label="label1",
-            attributes=[{"attributes1": "cube1"}],
+            attributes={"1": "cube1"},
             description=annotation_description
         ),
         "polygon": context.dl.Polygon(
             geo=[[25, 25], [50, 100], [70, 10]],
             label="label1",
-            attributes=[{"attributes1": "polygon1"}],
+            attributes={"1": "polygon1"},
             description=annotation_description
         ),
         "polyline": context.dl.Polyline(
             geo=[[25, 25], [50, 100], [70, 10]],
             label="label1",
-            attributes=[{"attributes1": "polyline1"}],
+            attributes={"1": "polyline1"},
             description=annotation_description
         ),
         "note": context.dl.Note(
@@ -144,7 +144,7 @@ def step_impl(context, annotation_type, annotation_description):
             right=100,
             bottom=100,
             label="label1",
-            attributes=[{"attributes1": "note1"}],
+            attributes={"1": "note1"},
             assignee=context.dl.info()['user_email'],
             creator=context.dl.info()['user_email'],
             description=annotation_description

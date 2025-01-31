@@ -123,7 +123,7 @@ def step_impl(context):
         right=right,
         bottom=bottom,
         label=r.choice(labels).tag,
-        attributes=["attr1", "attr2"],
+        attributes={"1": "attr1", "2": "attr2"},
     )
     context.annotation = context.dl.Annotation.new(
         annotation_definition=annotation_definition, item=context.item
@@ -411,7 +411,7 @@ def step_impl(context):
     context.label = r.choice(labels).tag
     context.annotation_definition = context.dl.Classification(
         label=context.label,
-        attributes=["attr1", "attr2"],
+        attributes={"1": "attr1", "2": "attr2"},
     )
     context.annotation = context.dl.Annotation.new(
         annotation_definition=context.annotation_definition, item=context.item, end_time=1
@@ -420,7 +420,7 @@ def step_impl(context):
 
 @behave.when(u'I set frame "{frame}" annotation attributes')
 def step_impl(context, frame):
-    context.new_attributes = ["attr3", "attr4"]
+    context.new_attributes = {"1": "attr1", "2": "attr4"}
     context.old_attributes = context.annotation_definition.attributes
     annotation_definition = context.dl.Classification(
         label=context.label,

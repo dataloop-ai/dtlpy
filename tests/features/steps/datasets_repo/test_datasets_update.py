@@ -94,3 +94,9 @@ def step_impl(context, entity, updated_metadata):
     elif isinstance(actual_value, bool):
         expected_value = expected_value.lower() == 'true'
     assert actual_value == expected_value, f"Expected {field} to be {expected_value} but got {actual_value}"
+
+@behave.when(u'I update cloned dataset name to "{new_dataset_name}"')
+def step_impl(context, new_dataset_name):
+    context.clone_dataset.name = new_dataset_name
+    context.project.datasets.update(dataset=context.clone_dataset,
+                                    system_metadata=True)

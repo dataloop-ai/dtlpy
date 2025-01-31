@@ -4,12 +4,15 @@ Feature: Upload annotation testing
       Given Platform Interface is initialized as dlp and Environment is set according to git branch
       And I create a project by the name of "upload_annotations"
       And I create a dataset with a random name
+      When I add "free_text" attribute to ontology
+            | key=1 | title=attr1 | scope=all |
+      When I add "free_text" attribute to ontology
+          | key=2 | title=attr2 | scope=all |
 
     @testrail-C4523047
     @DAT-46449
     Scenario: Upload image annotations from file
           Given Classes in file: "assets_split/annotations_upload/classes_new.json" are uploaded to test Dataset
-          And Dataset ontology has attributes "attr1" and "attr2"
           And Item in path "assets_split/annotations_upload/0000000162.jpg" is uploaded to "Dataset"
           When Item is annotated with annotations in file: "assets_split/annotations_upload/annotations_new.json"
           Then Item annotations in host equal annotations in file "assets_split/annotations_upload/annotations_new.json"

@@ -3,6 +3,10 @@ Feature: Datasets repository download service testing
   Background: Initiate Platform Interface and create a project
     Given Platform Interface is initialized as dlp and Environment is set according to git branch
     And I create a project by the name of "datasets_download"
+    When I add "free_text" attribute to ontology
+      | key=1 | title=attr1 | scope=all |
+    When I add "free_text" attribute to ontology
+      | key=2 | title=attr2 | scope=all |
 
   @testrail-C4523092
   @DAT-46500

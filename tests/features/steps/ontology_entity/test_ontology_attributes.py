@@ -42,6 +42,11 @@ def step_impl(context, input_type):
             attribute_range = param[1]
 
     try:
+        if getattr(context, 'ontology', None) is None:
+            context.recipe_id = context.dataset.metadata['system']['recipes'][0]
+            context.recipe = context.dataset.recipes.get(context.recipe_id)
+            context.ontology_id = context.recipe.ontology_ids[0]
+            context.ontology = context.recipe.ontologies.get(context.ontology_id)
         context.ontology.update_attributes(title=title,
                                            key=key,
                                            attribute_type=att_type,

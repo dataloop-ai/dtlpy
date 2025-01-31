@@ -91,3 +91,20 @@ Feature: Executions repository create service testing
       | sync=True | inputs=e28 |
     Then I receive an Execution entity
     Then Execution input is a valid itemId
+
+  @DAT-85237
+  Scenario: Create Execution from app model
+    Given I create a dataset with a random name
+    When I upload labels to dataset
+    Given I upload an item by the name of "test_item.jpg"
+    Given I fetch the dpk from 'model_dpk/modelsDpks.json' file
+    When I create a dummy model package by the name of "dummymodel" with entry point "main.py"
+    When I create a model from package by the name of "test-model" with status "trained" in index "0"
+    When I add a service to the DPK
+    When I publish a dpk to the platform
+    When I install the app
+    And i fetch the model by the name "test-model"
+    When i "deploy" the model
+    When I run predict on the item with the model from the app
+    When I execute the app service
+    Then Both executions should have app and driverId

@@ -47,7 +47,7 @@ def step_impl(context, annotations_path):
     anns = list()
     for ann in context.annotations:
         ann = {'type': ann['type'],
-               'attributes': ann['attributes'],
+               'attributes': ann.get('metadata', {}).get('system', {}).get('attributes'),
                'label': ann['label'],
                'coordinates': ann['coordinates']}
         anns.append(ann)

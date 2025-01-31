@@ -20,7 +20,12 @@ def step_impl(context):
     assert len(annotations_uploaded) == len(item_annotations)
     for annotation in item_annotations:
         annotation_json = annotation.to_json()
-        ann = {'attributes': annotation_json['attributes'],
+        ann = {
+               "metadata": {
+                   "system": {
+                       "attributes": annotation.attributes
+                   }
+               },
                'coordinates': annotation_json['coordinates'],
                'label': annotation_json['label'],
                'type': annotation_json['type']}

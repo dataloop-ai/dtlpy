@@ -1,5 +1,6 @@
 import logging
 import numpy as np
+import warnings
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -13,8 +14,12 @@ class BaseAnnotationDefinition:
         self._right = 0
         self._annotation = None
 
-        if attributes is None:
-            attributes = list()
+        if isinstance(attributes, list) and len(attributes) > 0:
+            warnings.warn("List attributes are deprecated and will be removed in version 1.109. Use Attribute 2.0 (Dictionary) instead."
+                "For more details, refer to the documentation: "
+                "https://developers.dataloop.ai/tutorials/data_management/upload_and_manage_annotations/chapter/#set-attributes-on-annotations",
+                DeprecationWarning,
+            )
         self._attributes = attributes
 
     @property
@@ -23,8 +28,12 @@ class BaseAnnotationDefinition:
 
     @attributes.setter
     def attributes(self, v):
-        if not isinstance(v, list):
-            raise ValueError('Failed to update annotation attributes. Please use annotation.attrubeute to set the required values')
+        if isinstance(v, list):
+            warnings.warn("List attributes are deprecated and will be removed in version 1.109. Use Attribute 2.0 (Dictionary) instead. "
+                "For more details, refer to the documentation: "
+                "https://developers.dataloop.ai/tutorials/data_management/upload_and_manage_annotations/chapter/#set-attributes-on-annotations",
+                DeprecationWarning,
+            )
         self._attributes = v
     @property
     def top(self):

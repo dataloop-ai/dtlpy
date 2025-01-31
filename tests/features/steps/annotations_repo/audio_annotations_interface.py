@@ -12,7 +12,7 @@ def step_impl(context, annotation_type):
         "subtitle": context.dl.Subtitle(
             text="text1",
             label="label1",
-            attributes=[{"attributes1": "subtitle1"}]
+            attributes={"1": "subtitle1"}
         )
     }
 
@@ -31,7 +31,7 @@ def step_impl(context, annotation_type, annotation_description):
         "subtitle": context.dl.Subtitle(
             text="text1",
             label="label1",
-            attributes=[{"attributes1": "subtitle1"}],
+            attributes={"1": "subtitle1"},
             description=annotation_description
         )
     }

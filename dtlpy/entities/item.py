@@ -12,6 +12,7 @@ from .annotation import ViewAnnotationOptions, ExportVersion
 from ..services.api_client import ApiClient
 from ..services.api_client import client as client_api
 import json
+from typing import List
 import requests
 
 logger = logging.getLogger(name='dtlpy')
@@ -223,7 +224,7 @@ class Item(entities.BaseEntity):
     def set_repositories(self):
         reps = namedtuple('repositories',
                           field_names=['annotations', 'datasets', 'items', 'codebases', 'artifacts', 'modalities',
-                                       'features', 'assignments', 'tasks', 'resource_executions'])
+                                       'features', 'assignments', 'tasks', 'resource_executions', 'collections'])
         reps.__new__.__defaults__ = (None, None, None, None, None, None, None, None, None)
 
         if self._dataset is None:
@@ -270,7 +271,8 @@ class Item(entities.BaseEntity):
                 client_api=self._client_api,
                 project=self._project,
                 resource=self
-            )
+            ),
+            collections=repositories.Collections(client_api=self._client_api, item=self, dataset=self._dataset)
         )
         return r
 
@@ -313,6 +315,11 @@ class Item(entities.BaseEntity):
     def features(self):
         assert isinstance(self._repositories.features, repositories.Features)
         return self._repositories.features
+    
+    @property
+    def collections(self):
+        assert isinstance(self._repositories.collections, repositories.Collections)
+        return self._repositories.collections
 
     ##############
     # Properties #
@@ -770,6 +777,53 @@ class Item(entities.BaseEntity):
             if tags.get(subset) is True:
                 return subset
         return None
+    
+    def assign_collection(self, collections: List[str]) -> bool:
+        """
+        Assign this item to one or more collections.
+
+        :param collections: List of collection names to assign the item to.
+        :return: True if the assignment was successful, otherwise False.
+        """
+        return self.collections.assign(dataset_id=self.dataset_id, collections=collections, item_id=self.id,)
+
+    def unassign_collection(self, collections: List[str]) -> bool:
+        """
+        Unassign this item from one or more collections.
+
+        :param collections: List of collection names to unassign the item from.
+        :return: True if the unassignment was successful, otherwise False.
+        """
+        return self.collections.unassign(dataset_id=self.dataset_id, item_id=self.id, collections=collections)
+
+    def list_collections(self) -> List[dict]:
+        """
+        List all collections associated with this item.
+
+        :return: A list of dictionaries containing collection keys and their respective names.
+                Each dictionary has the structure: {"key": <collection_key>, "name": <collection_name>}.
+        """
+        collections = self.metadata.get("system", {}).get("collections", {})
+        if not isinstance(collections, dict):
+            # Ensure collections is a dictionary
+            return []
+    
+        # Retrieve collection names by their keys
+        return [
+            {"key": key, "name": self.collections.get_name_by_key(key)}
+            for key in collections.keys()
+        ]
+
+    def list_missing_collections(self) -> List[str]:
+        """
+        List all items in the dataset that are not assigned to any collection.
+
+        :return: A list of item IDs that are not part of any collection.
+        """
+        filters = entities.Filters()
+        filters.add(field='metadata.system.collections', values=None)
+        filters.add(field='datasetId', values=self._dataset.id)
+        return self._dataset.items.list(filters=filters)
 
 class ModalityTypeEnum(str, Enum):
     """

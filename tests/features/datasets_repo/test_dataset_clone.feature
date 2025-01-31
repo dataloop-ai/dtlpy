@@ -11,3 +11,13 @@ Feature: Test datasets clone method
     When I create another dataset with a random name
     And I call datasets.clone using dataset.id
     Then Cloned dataset has "10" items
+
+  @DAT-85613
+    Scenario: Updated dataset - Dataset updater should be as given
+        When I create a dataset with a random name
+        And I clone a dataset
+        Then Dataset attribute should be as given
+            | creator=current_user | updated_by=current_user |
+        When I update cloned dataset name to "New dataset name"
+        Then Dataset attribute should be as given
+            | updated_by=current_user |

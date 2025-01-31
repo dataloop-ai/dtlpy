@@ -45,7 +45,7 @@ threadLock = threading.Lock()
 
 
 def format_message(message):
-    if message:
+    if message and isinstance(message, str):
         return message.replace('\\n', '\n')
     return message
 
@@ -1476,7 +1476,7 @@ class ApiClient:
             msg += '[Response <{val}>]'.format(val=resp.status_code)
         if hasattr(resp, 'reason'):
             msg += '[Reason: {val}]'.format(val=resp.reason)
-        if hasattr(resp, 'text'):
+        if hasattr(resp, 'text') and isinstance(resp.text, str):
             msg += '[Text: {val}]'.format(val=format_message(resp.text))
 
         request_id = resp.headers.get('x-request-id', 'na')

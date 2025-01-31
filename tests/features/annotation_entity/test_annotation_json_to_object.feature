@@ -9,8 +9,11 @@ Feature: Annotation Entity Json to Object testing
     @DAT-46444
     Scenario: Image 
         Given Classes in file: "assets_split/ann_json_to_object/classes_new.json" are uploaded to test Dataset
-        And Dataset ontology has attributes "attr1" and "attr2"
         And Item in path "assets_split/ann_json_to_object/0000000162.jpg" is uploaded to "Dataset"
+        When I add "free_text" attribute to ontology
+            | key=1 | title=attr1 | scope=all |
+        When I add "free_text" attribute to ontology
+            | key=2 | title=attr2 | scope=all |
         When Item is annotated with annotations in file: "assets_split/ann_json_to_object/annotations_new.json"
         Then Item annotations in host equal annotations in file "assets_split/ann_json_to_object/annotations_new.json"
         And Object "Annotations" to_json() equals to Platform json.

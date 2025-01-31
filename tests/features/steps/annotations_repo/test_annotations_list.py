@@ -21,7 +21,7 @@ def step_impl(context):
     for annotation in context.annotations_list:
         ann = {'type': annotation.type,
                'label': annotation.label,
-               'attributes': annotation.attributes,
+               'metadata': { 'system': {'attributes': annotation.attributes}},
                'coordinates': annotation.coordinates}
         # remove 'z' value to match file
         for coordinate in ann['coordinates']:

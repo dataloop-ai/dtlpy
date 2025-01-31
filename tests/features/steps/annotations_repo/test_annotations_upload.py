@@ -38,9 +38,10 @@ def step_impl(context):
         ann = {
             "type": annotation.type,
             "label": annotation.label,
-            "attributes": annotation.attributes,
             "coordinates": annotation.coordinates,
         }
+        if annotation.attributes:
+            ann['metadata'] = { "system": { 'attributes': annotation.attributes} }
         # remove 'z' value to match file
         if annotation.type != 'gis':
             for coordinate in ann['coordinates']:
@@ -64,7 +65,11 @@ def step_impl(context):
     context.annotation_description = {
         "type": "box",
         "label": "car",
-        "attributes": ["Occlusion2"],
+        "metadata": {
+            "system": {
+                "attributes": {"1": "Occlusion2"}
+            }
+        },
         "coordinates": [
             {"x": 700, "y": 200},
             {"x": 800, "y": 250},
@@ -83,7 +88,11 @@ def step_impl(context):
     ann = {
         "type": annotation.type,
         "label": annotation.label,
-        "attributes": annotation.attributes,
+        "metadata": {
+            "system": {
+                "attributes": annotation.attributes
+            }
+        },
         "coordinates": annotation.coordinates,
     }
     # remove 'z' value to match file

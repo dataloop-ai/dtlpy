@@ -77,6 +77,17 @@ def step_impl(context):
     if not hasattr(context, "req") or not hasattr(context, "response"):
         return False, "Context missing 'req' / 'response' attribute"
 
-    response_list = [list(att.values())[0] for att in json.loads(context.response.text)]
-    assert all(var in response_list for var in context.req.get("response",
-                                                               None)), f"TEST FAILED: Response from json {context.req.get('response', None)} , Response from request {response_list}"
+    parsed_response = json.loads(context.response.text)
+
+    if isinstance(parsed_response, list):
+        response_list = [list(att.values())[0] for att in parsed_response ]
+        assert all(var in response_list for var in context.req.get("response", None)), \
+            f"TEST FAILED: Expected {context.req.get('response', None)}, Received {response_list}"
+
+    elif isinstance(parsed_response, dict):
+        response_list = list(parsed_response.keys())
+        assert all(var in response_list for var in context.req.get("response", [])), \
+            f"TEST FAILED: Expected {context.req.get('response', None)}, Received {response_list}"
+
+    else:
+        raise TypeError("Unexpected JSON format: not a list or dictionary")

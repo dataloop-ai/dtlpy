@@ -3,7 +3,6 @@ import behave
 import time
 import os
 import random
-import dtlpy as dl
 
 
 @behave.when(u'I create an execution with "{input_type}"')
@@ -215,16 +214,16 @@ def step_impl(context, item_path):
 def step_impl(context, input_type):
     if input_type == "None":
         execution_input = None
-    elif input_type == dl.PackageInputType.ITEM:
+    elif input_type == context.dl.PackageInputType.ITEM:
         execution_input = list()
         execution_input.append(context.dl.FunctionIO(
-            type=dl.PackageInputType.ITEM,
+            type=context.dl.PackageInputType.ITEM,
             value={'item_id': context.item.id},
             name='item'))
-    elif input_type == dl.PackageInputType.MODEL:
+    elif input_type == context.dl.PackageInputType.MODEL:
         execution_input = list()
         execution_input.append(context.dl.FunctionIO(
-            type=dl.PackageInputType.MODEL,
+            type=context.dl.PackageInputType.MODEL,
             value={'model_id': context.model.id},
             name='model'))
     else:
@@ -232,3 +231,66 @@ def step_impl(context, input_type):
 
     context.execution = context.pipeline.execute(
         execution_input=execution_input)
+
+
+@behave.when(u'I add a service to the DPK')
+def step_impl(context):
+    context.dpk.components.services.append({
+        'name': 'test-service-{}'.format(str(random.randrange(0, 1000))),
+        'moduleName': context.dpk.components.modules[0].name
+    })
+
+
+@behave.when(u'I run predict on the item with the model from the app')
+def step_impl(context):
+    models = context.project.models.list().items
+    context.model = [model for model in models if model.app['id'] == context.app.id][0]
+    context.model_predict_execution = context.model.predict(item_ids=[context.item.id])
+
+
+@behave.when(u'I execute the app service')
+def step_impl(context):
+    services = context.project.services.list().items
+    context.service = [service for service in services if service.app['id'] == context.app.id][0]
+    module = context.dpk.components.modules[0]
+    func = [f for f in module.functions if f.name == 'predict_items'][0]
+    context.service_executions = context.service.execute(
+        execution_input={'items': [context.item.id]},
+        project_id=context.project.id,
+        function_name=func.name
+    )
+
+
+@behave.then(u'Both executions should have app and driverId')
+def step_impl(context):
+    interval = 5
+    max_wait = 5 * 60
+    success = False
+    start = time.time()
+    executions = [context.model_predict_execution, context.service_executions]
+    errors = []
+    assertions = []
+
+    def validate(statement, error_message):
+        if not statement:
+            errors.append(error_message)
+        assertions.append(statement)
+
+    while not success and time.time() - start < max_wait:
+        assertions = []
+        errors = []
+        for execution in executions:
+            execution = context.service.executions.get(execution_id=execution.id)
+            validate(execution.driver_id is not None and execution.driver_id == context.service.driver_id,
+                     f"driver_id is not equal to service driver_id for execution {execution.id}")
+            validate(execution.app is not None and execution.app['id'] == context.app.id,
+                     f"app id is not equal to context app id for execution {execution.id}")
+            validate(execution.latest_status['status'] in ['success', 'failed'],
+                     f"execution status is not success for execution {execution.id}")
+
+        success = all(assertions)
+        if success:
+            break
+        time.sleep(interval)
+
+    assert success, f"TEST FAILED: after {max_wait} seconds. Errors: {errors}"
