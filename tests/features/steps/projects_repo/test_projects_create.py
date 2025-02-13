@@ -55,9 +55,20 @@ def step_impl(context):
 
 @behave.then(u'I receive error with status code "{status_code}"')
 def step_impl(context, status_code):
-    if context.error.status_code == status_code or context.error.status_code == int(status_code):
+    if context.error is None:
+        assert False, f"Expected an error with status code {status_code}, but no error was raised."
+
+    expected_code = int(status_code)
+    actual_code = int(context.error.status_code)
+
+    assert actual_code == expected_code, f"Expected {expected_code}, but got {actual_code}"
+
+@behave.then(u'I should not receive an error with status code "{status_code}"')
+def step_impl(context, status_code):
+    if context.error.status_code != status_code:
         return
-    assert False, f"Expected {context.error.status_code}, Actual Got {status_code}"
+    assert False, f"Expected {status_code}, Actual Got {context.error.status_code}"
+
 
 
 @behave.then(u'"{error}" exception should be raised')

@@ -282,6 +282,11 @@ def after_tag(context, tag):
             use_fixture(restore_json_file, context)
         except Exception:
             logging.exception('Failed to restore json file')
+    elif tag == 'compute_serviceDriver.delete':
+        try:
+            use_fixture(delete_compute_servicedriver, context)
+        except Exception:
+            logging.exception('Failed to delete service')
     elif tag == 'frozen_dataset':
         pass
     elif 'testrail-C' in tag:
@@ -504,7 +509,36 @@ def models_delete(context):
     assert all_deleted
 
 
+def delete_compute_servicedriver(context):
+    if not hasattr(context, 'to_delete_computes_ids') and not hasattr(context, 'to_delete_service_drivers_ids'):
+        return
+
+    all_deleted = True
+    for service_driver_id in context.to_delete_service_drivers_ids:
+        try:
+            context.dl.service_drivers.delete(service_driver_id=service_driver_id)
+        except context.dl.exceptions.NotFound:
+            pass
+        except:
+            all_deleted = False
+            logging.exception('Failed deleting serviceDriver: {}'.format(service_driver_id))
+    assert all_deleted
+
+    all_deleted = True
+    for compute_id in context.to_delete_computes_ids:
+        try:
+            context.dl.computes.delete(compute_id=compute_id)
+        except context.dl.exceptions.NotFound:
+            pass
+        except:
+            all_deleted = False
+            logging.exception('Failed deleting compute: {}'.format(compute_id))
+    assert all_deleted
+
+
 def restore_json_file(context):
+    if not hasattr(context.feature, 'dataloop_feature_project'):
+        return
     if not hasattr(context, 'backup_path') or not hasattr(context, 'original_path'):
         assert False, 'Please make sure to set the original_path and backup_path in the context'
         # Restore the file from the backup

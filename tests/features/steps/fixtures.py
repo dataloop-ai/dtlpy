@@ -6,6 +6,7 @@ import json
 import datetime
 import dtlpy as dl
 from operator import attrgetter
+import re
 
 
 @fixture

@@ -59,3 +59,31 @@ def step_impl(context, ):
             context.app = context.dl.apps.get(app_id=context.app.id)
 
     assert finished, f"TEST FAILED: App version was not updated, app current version: {context.app.dpk_version}"
+
+
+@behave.when(u'I update app service SDK version to "{version}"')
+def step_impl(context, version):
+    services = context.project.services.list()
+    context.service = [service for service in services.items if service.app['id'] == context.app.id][0]
+    assert context.service.versions['dtlpy'] != version
+    context.service.versions = {'dtlpy': version}
+    context.service = context.service.update()
+
+
+@behave.then(u'SDK version should be updated to "{version}"')
+def step_impl(context, version):
+    service = context.project.services.get(service_id=context.service.id)
+    assert service.versions[
+               'dtlpy'] == version, f"SDK version was not updated, current version: {service.versions['dtlpy']}"
+
+
+@behave.then(u'App custom installation service should be updated to "{version}"')
+def step_impl(context, version):
+    app = context.project.apps.get(app_id=context.app.id)
+    custom_installation = app.custom_installation
+    components = custom_installation['components']
+    services = components['services']
+    service_custom_installation = \
+    [service for service in services if service['name'] == context.service.app['componentName']][0]
+    assert service_custom_installation['versions'][
+               'dtlpy'] == version, f"SDK version was not updated in app custom installation, current version: {service_custom_installation['versions']['dtlpy']}"

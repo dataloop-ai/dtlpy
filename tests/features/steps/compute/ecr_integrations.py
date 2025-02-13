@@ -83,7 +83,14 @@ def step_impl(context):
 @when(u'I create an GAR integration')
 def step_impl(context):
     context.org = context.dl.organizations.get(organization_id=context.project.org['id'])
-    context.integration = context.org.integrations._create_private_registry_gar(service_account=os.environ['GAR_SERVICE_ACCOUNT_JSON'], location=os.environ['GAR_LOCATION'])
+    options = context.org.integrations.generate_gar_options(service_account=os.environ['GAR_SERVICE_ACCOUNT_JSON'],
+                                                            location=os.environ['GAR_LOCATION'])
+    context.integration = context.org.integrations.create(
+        integrations_type=context.dl.IntegrationType.PRIVATE_REGISTRY,
+        name='gar-1',
+        metadata={"provider": "gcp"},
+        options=options
+    )
 
 
 @when(u'I pause and resume the service')

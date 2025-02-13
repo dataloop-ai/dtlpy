@@ -48,12 +48,19 @@ def step_impl(context, dataset_name):
     context.dataset = context.project.datasets.create(dataset_name=dataset_name, driver_id=context.driver.id, index_driver=context.index_driver_var)
     context.to_delete_datasets_ids.append(context.dataset.id)
 
-
 @behave.when(u'I sync dataset in context')
-def step_impl(context):
-    success = context.dataset.sync()
-    assert success, "TEST FAILED: Failed to sync dataset"
-
+@behave.when(u'I sync dataset in context with is {wait_parameter}')
+def step_impl(context, wait_parameter="True"):
+    wait_parameter = str(wait_parameter).lower() == "true"
+    if wait_parameter:
+        success = context.dataset.sync()
+        assert success, "TEST FAILED: Failed to sync dataset"
+    else:
+        try:
+            context.dataset.sync(wait=wait_parameter)
+            context.error = None
+        except Exception as e:
+            context.error = e
 
 @behave.then(u'I validate driver dataset has "{item_count}" items')
 def step_impl(context, item_count):

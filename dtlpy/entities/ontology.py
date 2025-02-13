@@ -766,7 +766,7 @@ class Ontology(entities.BaseEntity):
         # TODO: Add support for import from ontology entity in the Future
         if not self._use_attributes_2:
             raise ValueError("This method is only supported for attributes 2 mode!")
-        new_ontology = self.from_json(_json=ontology_json, client_api=self._client_api, recipe=self.recipe)
+        new_ontology = self.from_json(_json=ontology_json, client_api=self._client_api)
 
         # Update 'labels' and 'attributes'
         self.labels = new_ontology.labels
@@ -793,6 +793,9 @@ class Ontology(entities.BaseEntity):
                     values=new_attribute.get("values", None),
                     attribute_range=attribute_range
                 )
+
+        # Get remote updated 'attributes'
+        self.metadata["attributes"] = self.ontologies.get(ontology_id=self.id).attributes
 
         # Update 'instance map' and 'color map'
         self._instance_map = new_ontology.instance_map

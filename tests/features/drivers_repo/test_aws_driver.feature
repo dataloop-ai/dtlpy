@@ -98,3 +98,40 @@ Feature: Driver repository testing - AWS
     When I delete the item by name
     Then I wait "12"
     And I validate driver dataset has "9" items
+
+  @datasets.delete
+  @drivers.delete
+  @DAT-86789
+  Scenario: Create AWS Driver - Stream and upload item using Dataloop platform the item should not be corrupted
+    When I create driver "s3" with the name "test-aws-driver"
+      | key         | value                        |
+      | bucket_name | qa-sdk-automation-access-key |
+      | region      | eu-west-1                    |
+    Then I validate driver with the name "test-aws-driver" is created
+    When I create dataset "test-aws" with driver entity
+    And I sync dataset in context
+    Then I validate driver dataset has "9" items
+    When I upload item in "0000000162.jpg"
+    When I create dataset "test-aws-to_delete" with driver entity
+    And I sync dataset in context
+    Then I use CRC to check original item in "0000000162.jpg" and streamed item from new dataset are not corrupted
+    When I delete the item by name
+    Then I wait "12"
+    And I validate driver dataset has "9" items
+
+  @datasets.delete
+  @drivers.delete
+  @DAT-87206
+  Scenario: Create AWS Driver - and multiple sync it to a dataset
+    When I create driver "s3" with the name "test-aws-driver"
+      | key         | value                        |
+      | bucket_name | qa-sdk-automation-access-key |
+      | region      | eu-west-1                    |
+    Then I validate driver with the name "test-aws-driver" is created
+    When I create dataset "test-aws" with driver entity
+    And I sync dataset in context with is "False"
+    Then I wait "0.5"
+    When I sync dataset in context with is "False"
+    Then I receive error with status code "423"
+    Then "as it is already being synced." in error message
+    Then I wait "5"

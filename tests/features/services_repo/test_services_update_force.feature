@@ -24,7 +24,7 @@ Feature: Services repository update with force=True service testing
   @DAT-70898
   Scenario: Update service with force - Execution logs should restart
     Given There is a package (pushed from "services/execution_progress") by the name of "execution-progress"
-    And There is a service by the name of "executions-create" with module name "default_module" saved to context "service"
+    And There is service by the name of "executions-create" with module name "default_module" and execution_timeout of "30" saved to context "service"
     And I execute service
     And Execution is running
     When I update service with force="True"

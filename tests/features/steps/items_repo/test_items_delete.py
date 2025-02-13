@@ -39,7 +39,8 @@ def step_impl(context, item_name, remote_path):
 
 @behave.when(u'I delete the item by name')
 def step_impl(context):
-    context.dataset.items.delete(filename=context.item.filename)
+    for context.dataset in context.project.datasets.list():
+        context.dataset.items.delete(filename=context.item.filename)
 
 
 @behave.then(u'There are no items')

@@ -278,7 +278,13 @@ from tests.features.steps.billing_steps import Log_in
 from tests.features.steps.pipeline_entity import pipeline_node_input_handling
 from tests.features.steps.compute import compute
 from tests.features.steps.compute import ecr_integrations
+from tests.features.steps.compute import test_compute_create
+from tests.features.steps.compute import test_compute_inteface
+from tests.features.steps.compute import test_compute_get
+from tests.features.steps.compute import test_compute_delete
 
 from tests.features.steps.ml_subsets import test_ml_subsets
 
 from tests.features.steps.item_collections import test_item_collections
+
+from tests.features.steps.service_driver_repo import test_service_driver_get

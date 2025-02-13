@@ -114,6 +114,8 @@ class Integrations:
         aws-cross - {}
         gcp-cross - {}
         gcp-workload-identity-federation - {"secret": "", "content": "{}", "clientId": ""}
+        private-registry (ECR) - {"name": "", "spec": {"accessKeyId": "", "secretAccessKey": "", "account": "", "region": ""}}
+        private-registry (GAR) - {"name": "", "spec": {"password": ""}} (can use generate_gar_options to generate the options)
 
         **Prerequisites**: You must be an *owner* in the organization.
 
@@ -129,7 +131,7 @@ class Integrations:
         .. code-block:: python
 
             project.integrations.create(integrations_type=dl.IntegrationType.S3,
-                            name='S3ntegration',
+                            name='S3Integration',
                             options={key: "Access key ID", secret: "Secret access key"})
         """
 
@@ -144,7 +146,9 @@ class Integrations:
             organization_id = self.org.id
 
         url_path = '/orgs/{}/integrations'.format(organization_id)
-        payload = {"type": integrations_type.value if isinstance(integrations_type, entities.IntegrationType) else integrations_type, 'name': name, 'options': options}
+        payload = {"type": integrations_type.value if isinstance(integrations_type,
+                                                                 entities.IntegrationType) else integrations_type,
+                   'name': name, 'options': options}
         if metadata is not None:
             payload['metadata'] = metadata
         success, response = self._client_api.gen_request(req_type='post',
@@ -300,21 +304,7 @@ class Integrations:
         available_integrations = miscellaneous.List(response.json())
         return available_integrations
 
-    def _create_private_registry_gar(self, service_account: str, location: str):
-        password = self.__create_gar_password(service_account, location)
-        return self.create(
-            integrations_type='private-registry',
-            name='gar-1',
-            metadata={"provider": "gcp"},
-            options={
-                "name": "_json_key",
-                "spec": {
-                    "password": password
-                }
-            }
-        )
-
-    def __create_gar_password(self, service_account: str, location: str) -> str:
+    def generate_gar_options(self, service_account: str, location: str) -> dict:
         """
         Generates a Google Artifact Registry JSON configuration and returns it as a base64-encoded string.
 
@@ -348,4 +338,9 @@ class Integrations:
             }
         }
 
-        return str(base64.b64encode(bytes(json.dumps(encoded_pass), 'utf-8')))[2:-1]
+        return {
+            "name": "_json_key",
+            "spec": {
+                "password": str(base64.b64encode(bytes(json.dumps(encoded_pass), 'utf-8')))[2:-1]
+            }
+        }

@@ -8,6 +8,7 @@ from typing import List, Optional, Dict
 from ..entities import ComputeCluster, ComputeContext, ComputeType, Project
 from ..entities.integration import IntegrationType
 
+
 class Computes:
 
     def __init__(self, client_api: ApiClient):
@@ -44,7 +45,8 @@ class Computes:
             type: entities.ComputeType = entities.ComputeType.KUBERNETES,
             is_global: Optional[bool] = False,
             features: Optional[Dict] = None,
-            wait=True
+            wait=True,
+            status: entities.ComputeStatus = None
     ):
         """
         Create a new compute
@@ -57,6 +59,7 @@ class Computes:
         :param is_global: Is global
         :param features: Features
         :param wait: Wait for compute creation
+        :param status: Compute status
         :return: Compute
         """
 
@@ -67,7 +70,8 @@ class Computes:
             'global': is_global,
             'features': features,
             'shared_contexts': [sc.to_json() for sc in shared_contexts],
-            'cluster': cluster.to_json()
+            'cluster': cluster.to_json(),
+            'status': status
         }
 
         # request
@@ -86,7 +90,7 @@ class Computes:
         )
 
         if wait:
-            command_id = compute.metadata.get('system', {}).get('commands', {}).get('create', {})
+            command_id = compute.metadata.get('system', {}).get('commands', {}).get('create', None)
             if command_id is not None:
                 command = self.commands.get(command_id=command_id, url='api/v1/commands/faas/{}'.format(command_id))
                 command.wait()
@@ -200,7 +204,8 @@ class Computes:
             ComputeContext([], org_id, project_id),
             [],
             cluster,
-            ComputeType.KUBERNETES)
+            ComputeType.KUBERNETES,
+            status=config['config'].get('status', None))
         return compute
 
     def create_from_config_file(self, config_file_path, org_id, project_name: Optional[str] = None):
@@ -214,6 +219,7 @@ class Computes:
         integration = self.create_integration(org, integration_name, config['authentication'])
         compute = self.setup_compute_cluster(config, integration, org_id, project)
         return compute
+
 
 class ServiceDrivers:
 

@@ -316,7 +316,7 @@ def check_feature_folder(feature_folder, feature_name=None):
         return "Ramsay"
     elif feature_folder in ["pipeline_entity", "pipeline_resume", "packages_entity", "packages_flow", "packages_repo",
                             "services_entity", "services_repo", "execution_monitoring", "executions_repo",
-                            "triggers_repo", "compute"]:
+                            "triggers_repo", "compute", "service_driver_repo"]:
         return "Piper"
     elif feature_folder in ["bot_entity", "bots_repo", "integrations_repo", "project_entity", "projects_repo"]:
         return "Hodor"

@@ -1,5 +1,4 @@
 import datetime
-
 import behave
 import time
 import os
@@ -253,6 +252,23 @@ def step_impl(context, service_name, module_name, service_attr_name):
 
 
 @behave.given(
+    u'There is service by the name of "{service_name}" with module name "{module_name}" and execution_timeout of "{execution_timeout}" saved to context "{service_attr_name}"')
+def step_impl(context, service_name, module_name, execution_timeout, service_attr_name):
+    service_name = '{}-{}'.format(service_name, random.randrange(1000, 10000))
+    runtime = context.dl.KubernetesRuntime(autoscaler=context.dl.KubernetesAutoscaler(min_replicas=1)).to_json()
+
+    setattr(context, service_attr_name, context.package.services.deploy(service_name=service_name,
+                                                                        bot=context.bot_user,
+                                                                        runtime=runtime,
+                                                                        on_reset='rerun',
+                                                                        execution_timeout=int(execution_timeout),
+                                                                        module_name=module_name))
+    context.to_delete_services_ids.append(getattr(context, service_attr_name).id)
+    assert isinstance(getattr(context, service_attr_name), context.dl.entities.Service)
+
+
+
+@behave.given(
     u'There is a service with max_attempts of "{max_attempts}" by the name of "{service_name}" with module name "{module_name}" saved to context "{service_attr_name}"')
 def step_impl(context, service_name, module_name, service_attr_name, max_attempts):
     max_attempts = int(max_attempts)
@@ -263,6 +279,7 @@ def step_impl(context, service_name, module_name, service_attr_name, max_attempt
             service_name=service_name,
             bot=context.bot_user,
             runtime=runtime,
+            execution_timeout=30,
             module_name=module_name,
             max_attempts=max_attempts
         )

@@ -3,6 +3,8 @@ import behave
 import time
 import os
 import random
+import binascii
+import io
 
 
 @behave.when(u'I create an execution with "{input_type}"')
@@ -294,3 +296,32 @@ def step_impl(context):
         time.sleep(interval)
 
     assert success, f"TEST FAILED: after {max_wait} seconds. Errors: {errors}"
+
+
+@behave.then(u'I use CRC to check original item in "{original_item_path}" and streamed item from new dataset are not corrupted')
+def step_impl(context, original_item_path):
+    original_item = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], original_item_path)
+    item = context.dataset.items.get(filepath="/" + original_item_path)
+    downloded_item = context.dataset.items.download(items=item.id,
+                                                    save_locally=False)
+    assert calculate_crc(original_item) == calculate_crc(downloded_item), f"TEST FAILED: files didn't pass crc test"
+
+
+def calculate_crc(item):
+    crc = 0
+    if isinstance(item, io.BytesIO):
+        item.seek(0)
+        for chunk in iter(lambda: item.read(4096), b''):
+            crc = binascii.crc32(chunk, crc)
+        return crc & 0xFFFFFFFF
+    if isinstance(item, str):
+        try:
+            with open(item, 'rb') as f:
+                for chunk in iter(lambda: f.read(4096), b''):
+                    crc = binascii.crc32(chunk, crc)
+            return crc & 0xFFFFFFFF
+        except FileNotFoundError:
+            print(f"Error: File not found - {item}")
+            return None
+    print("Error: Unsupported input type. Provide a file path (str) or io.BytesIO object.")
+    return None
