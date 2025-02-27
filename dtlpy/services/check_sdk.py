@@ -66,29 +66,3 @@ def check(version, client_api):
             logger.error(msg=msg)
         else:
             logger.debug(msg='unknown')
-
-
-def resolve_platform_settings_in_thread(settings, client_api):
-    try:
-        # check for a valid token
-        if client_api.token_expired():
-            # wait for user to maybe login in the next 2 minutes
-            time.sleep(120)
-        # check for a valid token again
-        if client_api.token_expired():
-            # return if cant find a valid token
-            logger.debug('Cant set settings without a valid token.')
-            return
-        settings_list = settings.resolve(user_email=client_api.info()['user_email'])
-        client_api.platform_settings.add_bulk(settings_list)
-
-    except Exception:
-        logger.debug(traceback.format_exc())
-        logger.debug('Error in add settings.')
-
-
-def resolve_platform_settings(client_api, settings):
-    worker = threading.Thread(target=resolve_platform_settings_in_thread,
-                              kwargs={'client_api': client_api, 'settings': settings})
-    worker.daemon = True
-    worker.start()

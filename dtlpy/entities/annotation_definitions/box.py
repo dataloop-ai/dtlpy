@@ -1,9 +1,6 @@
-import copy
-
 import numpy as np
 from . import BaseAnnotationDefinition
 from .polygon import Polygon
-import warnings
 
 
 class Box(BaseAnnotationDefinition):
@@ -45,72 +42,21 @@ class Box(BaseAnnotationDefinition):
         self.bottom_left = [left, bottom]
         self.bottom_right = [right, bottom]
         self.label = label
-        self._four_points = self._rotate_around_point() if self.is_rotated else [self.top_left,
-                                                                                 self.bottom_left,
-                                                                                 self.bottom_right,
-                                                                                 self.top_right]
-
-    @property
-    def is_rotated(self):
-        return self.angle is not None and self.angle != 0
 
     @property
     def x(self):
-        if self._box_points_setting():
-            return [x_point[0] for x_point in self._four_points]
         return [self.left, self.right]
 
     @property
     def y(self):
-        if self._box_points_setting():
-            return [y_point[1] for y_point in self._four_points]
         return [self.top, self.bottom]
 
     @property
     def geo(self):
-        if self._box_points_setting():
-            res = self._four_points
-        else:
-            res = [
-                [self.left, self.top],
-                [self.right, self.bottom]
-            ]
-        return res
-
-    def _box_points_setting(self):
-        res = False
-        if self._annotation and self._annotation.item:
-            item = self._annotation.item
-            project_id = item.project_id if item.project_id else item.project.id
-            settings_dict = item._client_api.platform_settings.settings.get('4ptBox', None)
-            if settings_dict is not None:
-                if project_id in settings_dict:
-                    res = settings_dict.get(project_id, None)
-                elif '*' in settings_dict:
-                    res = settings_dict.get('*', None)
-        return res
-
-    def _rotate_points(self, points):
-        angle = np.radians(self.angle)
-        rotation_matrix = np.asarray([[np.cos(angle), -np.sin(angle)],
-                                      [np.sin(angle), np.cos(angle)]])
-        pts2 = np.asarray([rotation_matrix.dot(pt)[:2] for pt in points])
-        return pts2
-
-    def _translate(self, points, translate_x, translate_y=None):
-        translation_matrix = np.asarray([[1, 0, translate_x],
-                                         [0, 1, translate_y],
-                                         [0, 0, 1]])
-        pts2 = np.asarray([translation_matrix.dot(list(pt) + [1])[:2] for pt in points])
-        return pts2
-
-    def _rotate_around_point(self):
-        points = copy.deepcopy(self.four_points)
-        center = [((self.left + self.right) / 2), ((self.top + self.bottom) / 2)]
-        centerized = self._translate(points, -center[0], -center[1])
-        rotated = self._rotate_points(centerized)
-        moved = self._translate(rotated, center[0], center[1])
-        return moved
+        return [
+            [self.left, self.top],
+            [self.right, self.bottom]
+        ]
 
     @property
     def four_points(self):
@@ -140,10 +86,7 @@ class Box(BaseAnnotationDefinition):
             thickness = 2
 
         # draw annotation
-        if self.is_rotated:
-            points = self._rotate_around_point()
-        else:
-            points = self.four_points
+        points = self.four_points
 
         # create image to draw on
         if alpha != 1:

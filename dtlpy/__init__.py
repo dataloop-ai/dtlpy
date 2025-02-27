@@ -176,11 +176,6 @@ try:
 except Exception:
     logger.debug("Failed to check SDK! Continue without")
 
-try:
-    check_sdk.resolve_platform_settings(client_api=client_api, settings=settings)
-except Exception:
-    pass
-
 verbose = client_api.verbose
 login = client_api.login
 logout = client_api.logout
@@ -195,7 +190,6 @@ info = client_api.info
 cache_state = client_api.cache_state
 attributes_mode = client_api.attributes_mode
 sdk_cache = client_api.sdk_cache
-platform_settings = client_api.platform_settings
 
 
 def get_secret(secret):
@@ -329,8 +323,6 @@ INSTANCE_CATALOG_HIGHMEM_XS = InstanceCatalog.HIGHMEM_XS
 INSTANCE_CATALOG_HIGHMEM_S = InstanceCatalog.HIGHMEM_S
 INSTANCE_CATALOG_HIGHMEM_M = InstanceCatalog.HIGHMEM_M
 INSTANCE_CATALOG_HIGHMEM_L = InstanceCatalog.HIGHMEM_L
-INSTANCE_CATALOG_GPU_K80_S = InstanceCatalog.GPU_K80_S
-INSTANCE_CATALOG_GPU_K80_M = InstanceCatalog.GPU_K80_M
 INSTANCE_CATALOG_GPU_T4_S = InstanceCatalog.GPU_T4_S
 INSTANCE_CATALOG_GPU_T4_M = InstanceCatalog.GPU_T4_M
 

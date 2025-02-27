@@ -516,6 +516,23 @@ class Dataset(entities.BaseEntity):
         return self.datasets.update(dataset=self,
                                     system_metadata=system_metadata)
 
+    def unlock(self):
+        """
+        Unlock dataset
+
+        **Prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :return: Dataset object
+        :rtype: dtlpy.entities.dataset.Dataset
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset = dataset.unlock()
+        """
+        return self.datasets.unlock(dataset=self)
+
     def set_readonly(self, state: bool):
         """
         Set dataset readonly mode
@@ -607,7 +624,8 @@ class Dataset(entities.BaseEntity):
                              export_png_files=False,
                              filter_output_annotations=False,
                              alpha=1,
-                             export_version=ExportVersion.V1
+                             export_version=ExportVersion.V1,
+                             dataset_lock=False
                              ):
         """
         Download dataset by filters.
@@ -621,6 +639,7 @@ class Dataset(entities.BaseEntity):
         :param list(dtlpy.entities.annotation.ViewAnnotationOptions) annotation_options: download annotations options: list(dl.ViewAnnotationOptions)
         :param dtlpy.entities.filters.Filters annotation_filters: Filters entity to filter annotations for download
         :param bool overwrite: optional - default = False
+        :param bool dataset_lock: optional - default = False
         :param int thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :param bool with_text: optional - add text to annotations, default = False
         :param str remote_path: DEPRECATED and ignored
@@ -642,7 +661,8 @@ class Dataset(entities.BaseEntity):
                                          overwrite=False,
                                          thickness=1,
                                          with_text=False,
-                                         alpha=1
+                                         alpha=1,
+                                         dataset_lock=False
                                          )
         """
 
@@ -660,7 +680,8 @@ class Dataset(entities.BaseEntity):
             export_png_files=export_png_files,
             filter_output_annotations=filter_output_annotations,
             alpha=alpha,
-            export_version=export_version
+            export_version=export_version,
+            dataset_lock=dataset_lock            
         )
 
     def export(self,
@@ -671,7 +692,8 @@ class Dataset(entities.BaseEntity):
                include_feature_vectors: bool = False,
                include_annotations: bool = False,
                export_type: ExportType = ExportType.JSON,
-               timeout: int = 0):
+               timeout: int = 0,
+               dataset_lock: bool = False):
         """
         Export dataset items and annotations.
 
@@ -685,6 +707,7 @@ class Dataset(entities.BaseEntity):
         :param dtlpy.entities.filters.Filters feature_vector_filters: Filters entity
         :param bool include_feature_vectors: Include item feature vectors in the export
         :param bool include_annotations: Include item annotations in the export
+        :param bool dataset_lock: Make dataset readonly during the export
         :param entities.ExportType export_type: Type of export ('json' or 'zip')
         :param int timeout: Maximum time in seconds to wait for the export to complete
         :return: Exported item
@@ -708,7 +731,8 @@ class Dataset(entities.BaseEntity):
                                     include_feature_vectors=include_feature_vectors,
                                     include_annotations=include_annotations,
                                     export_type=export_type,
-                                    timeout=timeout)
+                                    timeout=timeout,
+                                   dataset_lock=dataset_lock)
 
     def upload_annotations(self,
                            local_path,
@@ -942,7 +966,8 @@ class Dataset(entities.BaseEntity):
             with_text=False,
             without_relative_path=None,
             alpha=1,
-            export_version=ExportVersion.V1
+            export_version=ExportVersion.V1,
+            dataset_lock=False
     ):
         """
         Download dataset by filters.
@@ -957,6 +982,7 @@ class Dataset(entities.BaseEntity):
         :param list annotation_options: type of download annotations: list(dl.ViewAnnotationOptions)
         :param dtlpy.entities.filters.Filters annotation_filters: Filters entity to filter annotations for download
         :param bool overwrite: optional - default = False to overwrite the existing files
+        :param bool dataset_lock: optional - default = False to make dataset readonly during the download
         :param bool to_items_folder: Create 'items' folder and download items to it
         :param int thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :param bool with_text: optional - add text to annotations, default = False
@@ -974,7 +1000,8 @@ class Dataset(entities.BaseEntity):
                              overwrite=False,
                              thickness=1,
                              with_text=False,
-                             alpha=1
+                             alpha=1,
+                             dataset_lock=False,                             
                              )
         """
         return self.items.download(filters=filters,
@@ -988,7 +1015,8 @@ class Dataset(entities.BaseEntity):
                                    with_text=with_text,
                                    without_relative_path=without_relative_path,
                                    alpha=alpha,
-                                   export_version=export_version)
+                                   export_version=export_version,
+                                   dataset_lock=dataset_lock)
 
     def download_folder(
             self,
@@ -1004,7 +1032,8 @@ class Dataset(entities.BaseEntity):
             with_text=False,
             without_relative_path=None,
             alpha=1,
-            export_version=ExportVersion.V1
+            export_version=ExportVersion.V1,
+            dataset_lock=False
     ):
         """
         Download dataset folder.
@@ -1019,6 +1048,7 @@ class Dataset(entities.BaseEntity):
         :param list annotation_options: type of download annotations: list(dl.ViewAnnotationOptions)
         :param dtlpy.entities.filters.Filters annotation_filters: Filters entity to filter annotations for download
         :param bool overwrite: optional - default = False to overwrite the existing files
+        :param bool dataset_lock: optional - default = False to make the dataset readonly during the download
         :param bool to_items_folder: Create 'items' folder and download items to it
         :param int thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :param bool with_text: optional - add text to annotations, default = False
@@ -1038,7 +1068,8 @@ class Dataset(entities.BaseEntity):
                              thickness=1,
                              with_text=False,
                              alpha=1,
-                             save_locally=True
+                             save_locally=True,
+                             dataset_lock=False
                              )
         """
         filters = self.datasets._bulid_folder_filter(folder_path=folder_path, filters=filters)
@@ -1053,7 +1084,8 @@ class Dataset(entities.BaseEntity):
                                    with_text=with_text,
                                    without_relative_path=without_relative_path,
                                    alpha=alpha,
-                                   export_version=export_version)
+                                   export_version=export_version,
+                                   dataset_lock=dataset_lock)
 
     def delete_labels(self, label_names):
         """

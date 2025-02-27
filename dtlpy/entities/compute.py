@@ -20,6 +20,7 @@ class ComputeStatus(str, Enum):
     READY = "ready"
     INITIALIZING = "initializing"
     PAUSE = "pause"
+    FAILED = "failed"
 
 
 class Toleration:

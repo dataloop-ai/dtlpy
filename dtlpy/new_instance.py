@@ -104,7 +104,6 @@ class Dtlpy:
         self.cache_state = self.client_api.cache_state
         self.attributes_mode = self.client_api.attributes_mode
         self.sdk_cache = self.client_api.sdk_cache
-        self.platform_settings = self.client_api.platform_settings
 
     def __del__(self):
         for name, pool in self.client_api._thread_pools.items():
@@ -243,8 +242,6 @@ class Dtlpy:
         HIGHMEM_S = 'highmem-s'
         HIGHMEM_M = 'highmem-m'
         HIGHMEM_L = 'highmem-l'
-        GPU_K80_S = "gpu-k80-s"
-        GPU_K80_M = "gpu-k80-m"
         GPU_T4_S = "gpu-t4-s"
         GPU_T4_M = "gpu-t4-m"
 

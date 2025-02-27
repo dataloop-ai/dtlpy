@@ -1089,3 +1089,36 @@ class Tasks:
                     success_count=len(updated_items), failed_items=failed_items)
             logger.info(msg=log_msg)
         return True
+    
+    def task_scores(self, task_id: str = None, page_offset: int = 0, page_size: int = 100):
+        """
+        Get all entities scores in a task.
+
+        :param str task_id: the id of the task
+        :param int page_offset: the page offset
+        :param int page_size: the page size
+        :return: page of the task scores
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset.tasks.task_scores(task_id= 'task_id')
+        """
+        if task_id is None:
+            raise exceptions.PlatformException('400', 'Please provide task_id')
+    
+        url = '/scores/tasks/{task_id}?page={page_offset}&pageSize={page_size}'.format(
+            task_id=task_id,
+            page_offset=page_offset,
+            page_size=page_size
+        )
+        success, response = self._client_api.gen_request(
+            req_type='get',
+            path=url
+        )
+
+        if success:
+            return response.json()
+        else:
+            raise exceptions.PlatformException(response)

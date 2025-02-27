@@ -112,12 +112,6 @@ class Settings:
         else:
             raise exceptions.PlatformException(response)
 
-        # add settings to cookies
-        self._client_api.platform_settings.add(setting.name,
-                                               {
-                                                   setting.scope.id: setting.value
-                                               }
-                                               )
         return constructor(
             _json=_json,
             client_api=self._client_api,
@@ -171,13 +165,6 @@ class Settings:
             constructor = self.get_constructor(_json)
         else:
             raise exceptions.PlatformException(response)
-
-        # add settings to cookies
-        self._client_api.platform_settings.add(setting.name,
-                                               {
-                                                   setting.scope.id: setting.value
-                                               }
-                                               )
 
         return constructor(
             _json=_json,

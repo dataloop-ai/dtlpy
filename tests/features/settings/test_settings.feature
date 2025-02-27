@@ -3,15 +3,6 @@ Feature: Settings Context
   Background: Background name
     Given Platform Interface is initialized as dlp and Environment is set according to git branch
 
-  @testrail-C4529105
-  @DAT-46619
-  Scenario: check box rotation settings
-    When I create two project and datasets by the name of "settings_test1" "settings_test2"
-    And I upload item in "0000000162.jpg" to both datasets
-    And i upload annotations to both items
-    And add settings to the project
-    Then check if geo in the first item and in the second are difference
-
   @testrail-C4532534
   @DAT-46619
   Scenario: check get setting by id

@@ -76,3 +76,22 @@ Feature: Driver repository testing - GCS
     When I delete the item by name
     Then I wait "12"
     And I validate driver dataset has "9" items
+
+  @datasets.delete
+  @drivers.delete
+  @DAT-87282
+  Scenario: GCS Driver Actions - Stream and upload item using Dataloop platform the item should not be corrupted
+    When I create driver "gcs" with the name "test-gcs-driver"
+      | key                   | value          |
+      | bucket_name           | sdk_automation |
+    Then I validate driver with the name "test-gcs-driver" is created
+    When I create dataset "test-gcs" with driver entity
+    And I sync dataset in context
+    Then I validate driver dataset has "9" items
+    When I upload item in "0000000162.jpg"
+    When I create dataset "test-gcs-to_delete" with driver entity
+    And I sync dataset in context
+    Then I use CRC to check original item in "0000000162.jpg" and streamed item from new dataset are not corrupted
+    When I delete the item by name
+    Then I wait "12"
+    And I validate driver dataset has "9" items

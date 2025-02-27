@@ -447,3 +447,12 @@ class PromptItem:
                 # update the annotation with the new text
                 annotation.annotation_definition.text = existing_prompt_element['value']
                 self._item.annotations.update(annotation)
+
+    def update(self):
+        """
+        Update the prompt item in the platform. 
+        """
+        if self._item is not None:
+            self._item._Item__update_item_binary(_json=self.to_json())
+        else:
+            raise ValueError('Cannot update PromptItem without an item.')

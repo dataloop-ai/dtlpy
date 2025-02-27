@@ -1634,6 +1634,17 @@ class Annotation(entities.BaseEntity):
 
         return _json
 
+    def task_scores(self, task_id: str, page_offset: int = None, page_size: int = None):
+        """
+        Get the scores of the annotation in a specific task.
+        :param task_id: The ID of the task.
+        :param page_offset: The page offset.
+        :param page_size: The page size.
+        :return: page of scores
+        """
+        return self.annotations.task_scores(annotation_id=self.id ,task_id=task_id, page_offset=page_offset, page_size=page_size)
+        
+
 
 @attr.s
 class FrameAnnotation(entities.BaseEntity):

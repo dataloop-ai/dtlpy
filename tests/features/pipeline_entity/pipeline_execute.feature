@@ -41,3 +41,20 @@ Feature: Pipeline entity method testing
     Given I install a pipeline with 2 dataset nodes
     When I execute the second node which is not the root node
     Then Then pipeline should start from the requested node
+
+
+  @DAT-87313
+  Scenario: app service execute batch
+    Given I upload item by the name of "test_item.jpg" to a remote path "test"
+    And I upload item by the name of "test_item2.jpg" to a remote path "test"
+    When I create a new plain recipe
+    And I update dataset recipe to the new recipe
+    Given I fetch the dpk from 'apps/app_move_item_service.json' file
+    When I set code path "move_item" to context
+    And I pack directory by name "move_item"
+    And I add codebase to dpk
+    And I publish a dpk
+    And I install the app
+    When I get service in index "0"
+    And I execute the full dataset items on function "move_item"
+    Then service execution are success in "3" items

@@ -118,6 +118,10 @@ def step_impl(context):
     service_name = context.pipeline.nodes[0].namespace.service_name
     context.service = dl.services.get(service_name=service_name)
 
+@behave.when(u'I execute the full dataset items on function "{func_name}"')
+def step_impl(context, func_name):
+    context.command = context.service.execute_batch(
+        filters=dl.Filters(context={'datasets': [context.dataset.id]}), function_name=func_name)
 
 @behave.when(u'I execute the service batch items')
 def step_impl(context):

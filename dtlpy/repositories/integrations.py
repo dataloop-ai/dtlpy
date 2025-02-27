@@ -304,7 +304,8 @@ class Integrations:
         available_integrations = miscellaneous.List(response.json())
         return available_integrations
 
-    def generate_gar_options(self, service_account: str, location: str) -> dict:
+    @staticmethod
+    def generate_gar_options(service_account: str, location: str, email: str = None) -> dict:
         """
         Generates a Google Artifact Registry JSON configuration and returns it as a base64-encoded string.
 
@@ -320,27 +321,119 @@ class Integrations:
         Returns:
             str: A base64-encoded string representation of the repository JSON configuration.
         """
-        if not service_account:
-            raise ValueError('Missing Service Account')
-        if not location:
-            raise ValueError('Missing Location')
-        user_name = "_json_key"
-        cred = f"{user_name}:{service_account}"
-        auth = str(base64.b64encode(bytes(cred, 'utf-8')))[2:-1]
+        return IntegrationUtils.generate_gar_options(service_account=service_account, location=location, email=email)
 
+    @staticmethod
+    def generate_docker_hub_options(username: str, password: str, email: str = None) -> dict:
+        """
+        Generates a Docker Hub JSON configuration and returns it as a base64-encoded string.
+
+        Parameters:
+            username (str): The Docker Hub username.
+            password (str): The Docker Hub password.
+            email (str): Optional - Docker Hub email.
+
+        Returns:
+            str: A base64-encoded string representation of the repository JSON configuration.
+        """
+        return IntegrationUtils.generate_docker_hub_options(username=username, password=password, email=email)
+
+    @staticmethod
+    def generate_ecr_options(access_key_id: str, secret_access_key: str, account: str, region: str) -> dict:
+        """
+        Generates an Amazon Elastic Container Registry (ECR) JSON configuration and returns it as a base64-encoded string.
+
+        Parameters:
+            access_key_id (str): The AWS access key ID.
+            secret_access_key (str): The AWS secret access key.
+            account (str): The AWS account ID.
+            region (str): The AWS region.
+
+        Returns:
+            str: A base64-encoded string representation of the repository JSON configuration.
+        """
+        return IntegrationUtils.generate_ecr_options(
+            access_key_id=access_key_id,
+            secret_access_key=secret_access_key,
+            account=account,
+            region=region
+        )
+
+
+class IntegrationUtils:
+
+    @staticmethod
+    def encode(st: str):
+        return str(base64.b64encode(bytes(st, 'utf-8')))[2:-1]
+
+    @staticmethod
+    def generate_json_key_options(location: str, username: str, password: str, auth: str, email: str = None):
         encoded_pass = {
             "auths": {
                 f"{location}": {
-                    "username": user_name,
-                    "password": service_account,
+                    "username": username,
+                    "password": password,
                     "auth": auth
                 }
             }
         }
 
+        if email:
+            encoded_pass['auths'][f'{location}']['email'] = email
+
         return {
             "name": "_json_key",
             "spec": {
-                "password": str(base64.b64encode(bytes(json.dumps(encoded_pass), 'utf-8')))[2:-1]
+                "password": IntegrationUtils.encode(json.dumps(encoded_pass))
+            }
+        }
+
+    @staticmethod
+    def generate_gar_options(service_account: str, location: str, email: str = None) -> dict:
+
+        if not service_account:
+            raise ValueError('Missing Service Account')
+        if not location:
+            raise ValueError('Missing Location')
+
+        username = "_json_key"
+        cred = f"{username}:{service_account}"
+        auth = IntegrationUtils.encode(cred)
+
+        return IntegrationUtils.generate_json_key_options(
+            location=location,
+            username=username,
+            password=service_account,
+            auth=auth,
+            email=email
+        )
+
+    @staticmethod
+    def generate_docker_hub_options(username: str, password: str, email: str = None) -> dict:
+
+        if not username:
+            raise ValueError('Missing Username')
+        if not password:
+            raise ValueError('Missing Password')
+
+        auth = IntegrationUtils.encode('{}:{}'.format(username, password))
+
+        return IntegrationUtils.generate_json_key_options(
+            location='docker.io',
+            username=username,
+            password=password,
+            auth=auth,
+            email=email
+        )
+
+    @staticmethod
+    def generate_ecr_options(access_key_id: str, secret_access_key: str, account: str, region: str) -> dict:
+        return {
+            "name": "AWS",
+            "spec": {
+                "accessKeyId": access_key_id,
+                "secretAccessKey": secret_access_key,
+                "account": account,
+                "region": region,
             }
         }

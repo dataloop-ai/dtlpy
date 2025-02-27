@@ -36,7 +36,7 @@ def step_impl(context):
 
 @behave.when(u'add settings to the project')
 def step_impl(context):
-    context.setting = context.project.settings.create(setting_name='4ptBox', setting_value=True,
+    context.setting = context.project.settings.create(setting_name='settingtest', setting_value=True,
                                                       setting_value_type=context.dl.SettingsValueTypes.BOOLEAN)
 
 

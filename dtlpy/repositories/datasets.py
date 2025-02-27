@@ -127,8 +127,8 @@ class Datasets:
         return dataset_id
 
     @staticmethod
-    def _build_payload(filters, include_feature_vectors, include_annotations, export_type, annotation_filters,
-                       feature_vector_filters):
+    def _build_payload(filters, include_feature_vectors, include_annotations,
+                       export_type, annotation_filters, feature_vector_filters, dataset_lock):
         valid_list = [e.value for e in entities.ExportType]
         valid_types = ', '.join(valid_list)
         if export_type not in ['json', 'zip']:
@@ -157,6 +157,8 @@ class Datasets:
         if annotation_filters is not None:
             payload['annotationsQuery'] = annotation_filters.prepare()['filter']
             payload['annotations']['filter'] = True
+        if dataset_lock:
+            payload['datasetLock'] = dataset_lock
 
         return payload
 
@@ -471,6 +473,32 @@ class Datasets:
             return dataset
         else:
             raise exceptions.PlatformException(response)
+        
+    @_api_reference.add(path='/datasets/{id}/unlock', method='patch')
+    def unlock(self, dataset: entities.Dataset ) -> entities.Dataset:
+        """
+        Unlock dataset.
+
+        **Prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :param dtlpy.entities.dataset.Dataset dataset: dataset object
+        :return: Dataset object
+        :rtype: dtlpy.entities.dataset.Dataset
+
+        **Example**:
+
+        .. code-block:: python
+
+            dataset = project.datasets.unlock(dataset='dataset_entity')
+        """
+        url_path = '/datasets/{}/unlock'.format(dataset.id)
+
+        success, response = self._client_api.gen_request(req_type='patch', path=url_path)
+        if success:
+            logger.info('Dataset was unlocked successfully')
+            return dataset
+        else:
+            raise exceptions.PlatformException(response)
 
     @_api_reference.add(path='/datasets/{id}/directoryTree', method='get')
     def directory_tree(self,
@@ -602,7 +630,8 @@ class Datasets:
                include_feature_vectors: bool = False,
                include_annotations: bool = False,
                export_type: entities.ExportType = entities.ExportType.JSON,
-               timeout: int = 0):
+               timeout: int = 0,
+               dataset_lock: bool = False):
         """
         Export dataset items and annotations.
 
@@ -619,6 +648,7 @@ class Datasets:
         :param dtlpy.entities.filters.Filters feature_vector_filters: Filters entity to filter feature vectors for export
         :param bool include_feature_vectors: Include item feature vectors in the export
         :param bool include_annotations: Include item annotations in the export
+        :param bool dataset_lock: Make dataset readonly during the export
         :param entities.ExportType export_type: Type of export ('json' or 'zip')
         :param int timeout: Maximum time in seconds to wait for the export to complete
         :return: Exported item
@@ -632,11 +662,12 @@ class Datasets:
                                                   filters=filters,
                                                   include_feature_vectors=True,
                                                   include_annotations=True,
-                                                  export_type=dl.ExportType.JSON)
+                                                  export_type=dl.ExportType.JSON,
+                                                  dataset_lock=True)
         """
         dataset_id = self._resolve_dataset_id(dataset, dataset_name, dataset_id)
-        payload = self._build_payload(filters, include_feature_vectors, include_annotations, export_type,
-                                      annotation_filters, feature_vector_filters)
+        payload = self._build_payload(filters, include_feature_vectors, include_annotations,
+                                       export_type, annotation_filters, feature_vector_filters, dataset_lock)
 
         success, response = self._client_api.gen_request(req_type='post', path=f'/datasets/{dataset_id}/export',
                                                          json_req=payload)
@@ -900,7 +931,8 @@ class Datasets:
                              export_png_files: bool = False,
                              filter_output_annotations: bool = False,
                              alpha: float = None,
-                             export_version=entities.ExportVersion.V1
+                             export_version=entities.ExportVersion.V1,
+                             dataset_lock: bool = False                    
                              ) -> str:
         """
         Download dataset's annotations by filters.
@@ -917,6 +949,7 @@ class Datasets:
         :param list annotation_options: type of download annotations: list(dl.ViewAnnotationOptions)
         :param dtlpy.entities.filters.Filters annotation_filters: Filters entity to filter annotations for download
         :param bool overwrite: optional - default = False to overwrite the existing files
+        :param bool dataset_loc: optional - default = False to make the dataset readonly
         :param int thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :param bool with_text: optional - add text to annotations, default = False
         :param str remote_path: DEPRECATED and ignored
@@ -926,6 +959,7 @@ class Datasets:
         :param float alpha: opacity value [0 1], default 1
         :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
         :return: local_path of the directory where all the downloaded item
+        :param bool dataset_lock: optional - default = False
         :rtype: str
 
         **Example**:
@@ -938,7 +972,8 @@ class Datasets:
                                                  overwrite=False,
                                                  thickness=1,
                                                  with_text=False,
-                                                 alpha=1
+                                                 alpha=1,
+                                                 dataset_lock=False                                                    
                                                  )
         """
         if annotation_options is None:
@@ -998,7 +1033,8 @@ class Datasets:
                                         include_annotations_in_output=include_annotations_in_output,
                                         export_png_files=export_png_files,
                                         filter_output_annotations=filter_output_annotations,
-                                        export_version=export_version
+                                        export_version=export_version,
+                                        dataset_lock=dataset_lock                                        
                                         )
         if annotation_options:
             pages = dataset.items.list(filters=filters)

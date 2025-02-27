@@ -432,14 +432,6 @@ class Projects:
         assert isinstance(project, entities.Project)
         if checkout:
             self.checkout(project=project)
-        if project.id not in self._client_api.platform_settings.working_projects:
-            self._client_api.platform_settings.add_project(project.id)
-            try:
-                settings_list = project.settings.resolve(user_email=self._client_api.info()['user_email'],
-                                                         project_id=project.id)
-                self._client_api.platform_settings.add_bulk(settings_list)
-            except:
-                logger.warning("failed to add project settings")
         return project
 
     @_api_reference.add(path='/projects/{projectId}', method='delete')

@@ -89,10 +89,6 @@ class InstanceCatalog(str, Enum):
          - highmem pod with medium size
        * - HIGHMEM_L
          - highmem pod with large size
-       * - GPU_K80_S
-         - GPU NVIDIA K80 pod with small size
-       * - GPU_K80_M
-         - GPU NVIDIA K80 pod with medium size
        * - GPU_T4_S
          - GPU NVIDIA T4 pod with regular memory
        * - GPU_T4_M
@@ -106,8 +102,6 @@ class InstanceCatalog(str, Enum):
     HIGHMEM_S = "highmem-s"
     HIGHMEM_M = "highmem-m"
     HIGHMEM_L = "highmem-l"
-    GPU_K80_S = "gpu-k80-s"
-    GPU_K80_M = "gpu-k80-m"
     GPU_T4_S = "gpu-t4"
     GPU_T4_M = "gpu-t4-m"
 

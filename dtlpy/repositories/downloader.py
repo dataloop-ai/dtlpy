@@ -46,7 +46,8 @@ class Downloader:
                  export_png_files=False,
                  filter_output_annotations=False,
                  alpha=1,
-                 export_version=entities.ExportVersion.V1
+                 export_version=entities.ExportVersion.V1,
+                 dataset_lock=False
                  ):
         """
         Download dataset by filters.
@@ -72,6 +73,7 @@ class Downloader:
         :param filter_output_annotations: default - False, given an export by filter - determine if to filter out annotations
         :param alpha: opacity value [0 1], default 1
         :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
+        :param bool dataset_lock: optional - default = False
         :return: Output (list)
         """
 
@@ -195,7 +197,8 @@ class Downloader:
                 'include_annotations_in_output': include_annotations_in_output,
                 'export_png_files': export_png_files,
                 'filter_output_annotations': filter_output_annotations,
-                'export_version': export_version
+                'export_version': export_version,
+                'dataset_lock': dataset_lock
             })
         ###############
         # downloading #
@@ -361,7 +364,8 @@ class Downloader:
                              include_annotations_in_output=True,
                              export_png_files=False,
                              filter_output_annotations=False,
-                             export_version=entities.ExportVersion.V1
+                             export_version=entities.ExportVersion.V1,
+                             dataset_lock=False                             
                              ):
         """
         Download annotations json for entire dataset
@@ -375,6 +379,7 @@ class Downloader:
         :param export_png_files: default - if True, semantic annotations should be exported as png files
         :param filter_output_annotations: default - False, given an export by filter - determine if to filter out annotations
         :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
+        :param bool dataset_lock: optional - default = False
         :return:
         """
         local_path = os.path.join(local_path, "json")
@@ -397,6 +402,8 @@ class Downloader:
             if annotation_filters is not None:
                 payload['annotationsQuery'] = annotation_filters.prepare()
                 payload['annotations']['filter'] = filter_output_annotations
+            if dataset_lock:
+                payload['datasetLock'] = dataset_lock
 
             success, response = dataset._client_api.gen_request(req_type='post',
                                                                 path='/datasets/{}/export'.format(dataset.id),

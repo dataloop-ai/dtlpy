@@ -430,51 +430,6 @@ class Attributes2:
         os.environ["USE_ATTRIBUTE_2"] = json.dumps(val)
         self.to_cookie()
 
-
-class PlatformSettings:
-
-    def __init__(self):
-        self._working_projects = list()
-        self._settings = dict()
-
-    @property
-    def settings(self) -> dict:
-        return self._settings
-
-    @property
-    def working_projects(self) -> list:
-        return self._working_projects
-
-    @settings.setter
-    def settings(self, val: dict):
-        if not isinstance(val, dict):
-            raise exceptions.PlatformException(error=400,
-                                               message="input must be of type dict")
-
-        self._settings = val
-
-    def add(self, setting_name: str, setting: dict):
-        if setting_name in self.settings:
-            self._settings[setting_name].update(setting)
-        else:
-            self._settings[setting_name] = setting
-
-    def add_project(self, project_id: str):
-        if not isinstance(project_id, str):
-            raise exceptions.PlatformException(error=400,
-                                               message="input must be of type str")
-        self._working_projects.append(project_id)
-
-    def add_bulk(self, settings_list):
-        settings_dict = {s.name: {s.scope.id: s.value}
-                         for s in settings_list}
-        for setting_name, settings_val in settings_dict.items():
-            if setting_name in self._settings:
-                self._settings[setting_name].update(settings_val)
-            else:
-                self._settings[setting_name] = settings_val
-
-
 class Decorators:
     @staticmethod
     def token_expired_decorator(method):
@@ -522,7 +477,6 @@ class ApiClient:
         self._callbacks = None
         self._cache_state = None
         self._attributes_mode = None
-        self._platform_settings = None
         self._cache_configs = None
         self._sdk_cache = None
         self._fetch_entities = None
@@ -792,13 +746,6 @@ class ApiClient:
             self._attributes_mode = Attributes2(cookie=self.cookie_io)
         assert isinstance(self._attributes_mode, Attributes2)
         return self._attributes_mode
-
-    @property
-    def platform_settings(self):
-        if self._platform_settings is None:
-            self._platform_settings = PlatformSettings()
-        assert isinstance(self._platform_settings, PlatformSettings)
-        return self._platform_settings
 
     @property
     def sdk_cache(self):

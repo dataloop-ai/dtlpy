@@ -453,7 +453,8 @@ class Item(entities.BaseEntity):
             with_text=False,
             annotation_filters=None,
             alpha=1,
-            export_version=ExportVersion.V1
+            export_version=ExportVersion.V1,
+            dataset_lock=False
     ):
         """
         Download dataset by filters.
@@ -467,6 +468,7 @@ class Item(entities.BaseEntity):
         :param list annotation_options: download annotations options:  list(dl.ViewAnnotationOptions)
         :param dtlpy.entities.filters.Filters annotation_filters: Filters entity to filter annotations for download
         :param bool overwrite: optional - default = False
+        :param bool dataset_lock: optional - default = False
         :param bool to_items_folder: Create 'items' folder and download items to it
         :param int thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :param bool with_text: optional - add text to annotations, default = False
@@ -485,7 +487,8 @@ class Item(entities.BaseEntity):
                          thickness=1,
                          with_text=False,
                          alpha=1,
-                         save_locally=True
+                         save_locally=True,
+                         dataset_lock=False
                          )
         """
         # if dir - concatenate local path and item name
@@ -519,7 +522,8 @@ class Item(entities.BaseEntity):
                                    alpha=alpha,
                                    with_text=with_text,
                                    export_version=export_version,
-                                   filters=filters)
+                                   filters=filters,
+                                   dataset_lock=dataset_lock)
 
     def delete(self):
         """
@@ -824,6 +828,15 @@ class Item(entities.BaseEntity):
         filters.add(field='metadata.system.collections', values=None)
         filters.add(field='datasetId', values=self._dataset.id)
         return self._dataset.items.list(filters=filters)
+    
+    def task_scores(self, task_id: str, page_offset: int = None, page_size: int = None):
+        """
+        Get the scores of the item in a specific task.
+        :param task_id: The ID of the task.
+        :return: page of scores
+        """
+        return self.items.task_scores(item_id=self.id, task_id=task_id, page_offset=page_offset, page_size=page_size)
+
 
 class ModalityTypeEnum(str, Enum):
     """

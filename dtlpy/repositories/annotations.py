@@ -885,6 +885,32 @@ class Annotations:
         """
         return entities.AnnotationCollection(item=self.item)
 
+    def task_scores(self, annotation_id: str, task_id: str, page_offset: int = 0, page_size: int = 100):
+        """
+        Get annotation scores in a task
+
+        **Prerequisites**: You must be able to read the task
+
+        :param str annotation_id: The id of the annotation
+        :param str task_id: The id of the task
+        :param int page_offset: starting page
+        :param int page_size: size of page
+        :return: json response
+        :rtype: dict
+        """
+        if annotation_id is None:
+            raise exceptions.PlatformException('400', 'annotation_id must be provided')
+        if task_id is None:
+            raise exceptions.PlatformException('400', 'task_id must be provided')
+
+        success, response = self._client_api.gen_request(req_type='get',
+                                                         path='/scores/tasks/{}/annotations/{}?page={}&pageSize={}'
+                                                         .format(task_id, annotation_id, page_offset, page_size))
+        if success:
+            return response.json()
+        else:
+            raise exceptions.PlatformException(response)
+
     ##################
     # async function #
     ##################

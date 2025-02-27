@@ -527,7 +527,8 @@ class Items:
             export_png_files: bool = False,
             filter_output_annotations: bool = False,
             alpha: float = 1,
-            export_version=entities.ExportVersion.V1
+            export_version=entities.ExportVersion.V1,
+            dataset_lock: bool = False           
     ):
         """
         Download dataset items by filters.
@@ -547,6 +548,7 @@ class Items:
         :param list annotation_options: download annotations options:  list(dl.ViewAnnotationOptions)
         :param dtlpy.entities.filters.Filters annotation_filters: Filters entity to filter annotations for download
         :param bool overwrite: optional - default = False
+        :param bool dataset_lock: optional - default = False
         :param bool to_items_folder: Create 'items' folder and download items to it
         :param int thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :param bool with_text: optional - add text to annotations, default = False
@@ -593,7 +595,8 @@ class Items:
             include_annotations_in_output=include_annotations_in_output,
             export_png_files=export_png_files,
             filter_output_annotations=filter_output_annotations,
-            export_version=export_version
+            export_version=export_version,
+            dataset_lock=dataset_lock
         )
 
     def upload(
@@ -869,3 +872,38 @@ class Items:
             raise exceptions.PlatformException(response)
 
         return success
+    
+    def task_scores(self, item_id: str, task_id: str, page_offset: int = 0, page_size: int = 100):
+        """
+        Get item score
+
+        **Prerequisites**: You must be able to read the task
+
+        :param str item_id: item id
+        :param str task_id: task id
+        :param int page_offset: start page
+        :param int page_size: page size
+        :return: page of item scores
+
+        **Example**:
+
+        .. code-block:: python
+        
+            dataset.items.item_score(item_id='item_id', task_id='task_id')
+
+        """
+
+        if item_id is None:
+            raise exceptions.PlatformException('400', 'Must provide item id')
+
+        if task_id is None:
+            raise exceptions.PlatformException('400', 'Must provide task id')
+
+        success, response = self._client_api.gen_request(req_type="get",
+                                                         path="/scores/tasks/{}/items/{}?page={}&pageSize={}"
+                                                         .format(task_id, item_id, page_offset, page_size))
+        if success:
+            return response.json()
+        else:
+            raise exceptions.PlatformException(response)
+
