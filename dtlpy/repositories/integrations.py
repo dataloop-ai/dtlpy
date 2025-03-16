@@ -55,12 +55,15 @@ class Integrations:
     def delete(self,
                integrations_id: str,
                sure: bool = False,
-               really: bool = False) -> bool:
+               really: bool = False,
+               organization_id: str = None
+               ) -> bool:
         """
         Delete integrations from the organization.
 
         **Prerequisites**: You must be an organization *owner* to delete an integration.
 
+        :param organization_id: organization id
         :param str integrations_id: integrations id
         :param bool sure: Are you sure you want to delete?
         :param bool really: Really really sure?
@@ -74,11 +77,12 @@ class Integrations:
             project.integrations.delete(integrations_id='integrations_id', sure=True, really=True)
         """
         if sure and really:
-            if self.project is None and self.org is None:
+            if self.project is None and self.org is None and organization_id is None:
                 raise exceptions.PlatformException(
                     error='400',
                     message='Must provide an identifier in inputs')
 
+        if organization_id is None:
             if self.project is not None:
                 organization_id = self.project.org.get('id')
             else:
@@ -101,7 +105,9 @@ class Integrations:
                integrations_type: entities.IntegrationType,
                name: str,
                options: dict,
-               metadata: dict = None):
+               metadata: dict = None,
+               organization_id: str = None,
+               ):
         """
         Create an integration between an external storage and the organization.
 
@@ -123,6 +129,7 @@ class Integrations:
         :param str name: integrations name
         :param dict options: dict of storage secrets
         :param dict metadata: metadata
+        :param str organization_id: organization id
         :return: success
         :rtype: bool
 
@@ -135,15 +142,16 @@ class Integrations:
                             options={key: "Access key ID", secret: "Secret access key"})
         """
 
-        if self.project is None and self.org is None:
+        if self.project is None and self.org is None and organization_id is None:
             raise exceptions.PlatformException(
                 error='400',
                 message='Must have an organization or project')
 
-        if self.project is not None:
-            organization_id = self.project.org.get('id')
-        else:
-            organization_id = self.org.id
+        if organization_id is None:
+            if self.project is not None:
+                organization_id = self.project.org.get('id')
+            else:
+                organization_id = self.org.id
 
         url_path = '/orgs/{}/integrations'.format(organization_id)
         payload = {"type": integrations_type.value if isinstance(integrations_type,
@@ -170,7 +178,9 @@ class Integrations:
                new_name: str = None,
                integrations_id: str = None,
                integration: entities.Integration = None,
-               new_options: dict = None):
+               new_options: dict = None,
+               organization_id: str = None,
+               ):
         """
         Update the integration's name.
 
@@ -180,6 +190,7 @@ class Integrations:
         :param str integrations_id: integrations id
         :param Integration integration: integration object
         :param dict new_options: new value
+        :param str organization_id: organization id
         :return: Integration object
         :rtype: dtlpy.entities.integration.Integration
 
@@ -198,7 +209,8 @@ class Integrations:
 
             project.integrations.update(integrations_id='integrations_id', new_options={roleArn: ""})
         """
-        if self.project is None and self.org is None:
+
+        if self.project is None and self.org is None and organization_id is None:
             raise exceptions.PlatformException(
                 error='400',
                 message='Must have an organization or project')
@@ -207,10 +219,11 @@ class Integrations:
                 error='400',
                 message='Must have an integrations_id or integration')
 
-        if self.project is not None:
-            organization_id = self.project.org.get('id')
-        else:
-            organization_id = self.org.id
+        if organization_id is None:
+            if self.project is not None:
+                organization_id = self.project.org.get('id')
+            else:
+                organization_id = self.org.id
 
         url_path = '/orgs/{}/integrations/'.format(organization_id)
         payload = dict(integrationId=integrations_id if integrations_id is not None else integration.id)
@@ -230,13 +243,14 @@ class Integrations:
         return entities.Integration.from_json(_json=response.json(), client_api=self._client_api)
 
     @_api_reference.add(path='/orgs/{orgId}/integrations/{integrationId}', method='get')
-    def get(self, integrations_id: str):
+    def get(self, integrations_id: str, organization_id: str = None):
         """
         Get organization integrations. Use this method to access your integration and be able to use it in your code.
 
         **Prerequisites**: You must be an *owner* in the organization.
 
         :param str integrations_id: integrations id
+        :param str organization_id: organization id
         :return: Integration object
         :rtype: dtlpy.entities.integration.Integration
 
@@ -246,15 +260,16 @@ class Integrations:
 
             project.integrations.get(integrations_id='integrations_id')
         """
-        if self.project is None and self.org is None:
+        if self.project is None and self.org is None and organization_id is None:
             raise exceptions.PlatformException(
                 error='400',
                 message='Must have an organization or project')
 
-        if self.project is not None:
-            organization_id = self.project.org.get('id')
-        else:
-            organization_id = self.org.id
+        if organization_id is None:
+            if self.project is not None:
+                organization_id = self.project.org.get('id')
+            else:
+                organization_id = self.org.id
 
         url_path = '/orgs/{}/integrations/{}'.format(organization_id, integrations_id)
 
@@ -265,13 +280,14 @@ class Integrations:
         return entities.Integration.from_json(_json=response.json(), client_api=self._client_api)
 
     @_api_reference.add(path='/orgs/{orgId}/integrations', method='get')
-    def list(self, only_available=False):
+    def list(self, only_available=False, organization_id: str = None):
         """
         List all the organization's integrations with external storage.
 
         **Prerequisites**: You must be an *owner* in the organization.
 
         :param bool only_available: if True list only the available integrations.
+        :param str organization_id: organization id
         :return: groups list
         :rtype: list
 
@@ -281,15 +297,16 @@ class Integrations:
 
             project.integrations.list(only_available=True)
         """
-        if self.project is None and self.org is None:
+        if self.project is None and self.org is None and organization_id is None:
             raise exceptions.PlatformException(
                 error='400',
                 message='Must have an organization or project')
 
-        if self.project is not None:
-            organization_id = self.project.org.get('id')
-        else:
-            organization_id = self.org.id
+        if organization_id is None:
+            if self.project is not None:
+                organization_id = self.project.org.get('id')
+            else:
+                organization_id = self.org.id
 
         if only_available:
             url_path = '/orgs/{}/availableIntegrations'.format(organization_id)

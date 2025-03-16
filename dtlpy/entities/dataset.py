@@ -625,7 +625,8 @@ class Dataset(entities.BaseEntity):
                              filter_output_annotations=False,
                              alpha=1,
                              export_version=ExportVersion.V1,
-                             dataset_lock=False
+                             dataset_lock=False,
+                             lock_timeout_sec=None
                              ):
         """
         Download dataset by filters.
@@ -640,6 +641,7 @@ class Dataset(entities.BaseEntity):
         :param dtlpy.entities.filters.Filters annotation_filters: Filters entity to filter annotations for download
         :param bool overwrite: optional - default = False
         :param bool dataset_lock: optional - default = False
+        :param int lock_timeout_sec: optional
         :param int thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :param bool with_text: optional - add text to annotations, default = False
         :param str remote_path: DEPRECATED and ignored
@@ -663,6 +665,7 @@ class Dataset(entities.BaseEntity):
                                          with_text=False,
                                          alpha=1,
                                          dataset_lock=False
+                                         lock_timeout_sec=300
                                          )
         """
 
@@ -681,7 +684,8 @@ class Dataset(entities.BaseEntity):
             filter_output_annotations=filter_output_annotations,
             alpha=alpha,
             export_version=export_version,
-            dataset_lock=dataset_lock            
+            dataset_lock=dataset_lock,
+            lock_timeout_sec=lock_timeout_sec         
         )
 
     def export(self,
@@ -693,7 +697,8 @@ class Dataset(entities.BaseEntity):
                include_annotations: bool = False,
                export_type: ExportType = ExportType.JSON,
                timeout: int = 0,
-               dataset_lock: bool = False):
+               dataset_lock: bool = False,
+               lock_timeout_sec: int = None):
         """
         Export dataset items and annotations.
 
@@ -708,6 +713,7 @@ class Dataset(entities.BaseEntity):
         :param bool include_feature_vectors: Include item feature vectors in the export
         :param bool include_annotations: Include item annotations in the export
         :param bool dataset_lock: Make dataset readonly during the export
+        :param int lock_timeout_sec: Timeout for locking the dataset during export in seconds
         :param entities.ExportType export_type: Type of export ('json' or 'zip')
         :param int timeout: Maximum time in seconds to wait for the export to complete
         :return: Exported item
@@ -732,7 +738,8 @@ class Dataset(entities.BaseEntity):
                                     include_annotations=include_annotations,
                                     export_type=export_type,
                                     timeout=timeout,
-                                   dataset_lock=dataset_lock)
+                                    dataset_lock=dataset_lock,
+                                    lock_timeout_sec=lock_timeout_sec)
 
     def upload_annotations(self,
                            local_path,
@@ -967,7 +974,8 @@ class Dataset(entities.BaseEntity):
             without_relative_path=None,
             alpha=1,
             export_version=ExportVersion.V1,
-            dataset_lock=False
+            dataset_lock=False,
+            lock_timeout_sec=None
     ):
         """
         Download dataset by filters.
@@ -983,6 +991,7 @@ class Dataset(entities.BaseEntity):
         :param dtlpy.entities.filters.Filters annotation_filters: Filters entity to filter annotations for download
         :param bool overwrite: optional - default = False to overwrite the existing files
         :param bool dataset_lock: optional - default = False to make dataset readonly during the download
+        :param int lock_timeout_sec: optional - Set lock timeout for the export
         :param bool to_items_folder: Create 'items' folder and download items to it
         :param int thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :param bool with_text: optional - add text to annotations, default = False
@@ -1001,7 +1010,8 @@ class Dataset(entities.BaseEntity):
                              thickness=1,
                              with_text=False,
                              alpha=1,
-                             dataset_lock=False,                             
+                             dataset_lock=False,      
+                             lock_timeout_sec=300                       
                              )
         """
         return self.items.download(filters=filters,
@@ -1016,7 +1026,9 @@ class Dataset(entities.BaseEntity):
                                    without_relative_path=without_relative_path,
                                    alpha=alpha,
                                    export_version=export_version,
-                                   dataset_lock=dataset_lock)
+                                   dataset_lock=dataset_lock,
+                                   lock_timeout_sec=lock_timeout_sec
+                                   )
 
     def download_folder(
             self,
@@ -1033,7 +1045,8 @@ class Dataset(entities.BaseEntity):
             without_relative_path=None,
             alpha=1,
             export_version=ExportVersion.V1,
-            dataset_lock=False
+            dataset_lock=False,
+            lock_timeout_sec=None
     ):
         """
         Download dataset folder.
@@ -1049,6 +1062,7 @@ class Dataset(entities.BaseEntity):
         :param dtlpy.entities.filters.Filters annotation_filters: Filters entity to filter annotations for download
         :param bool overwrite: optional - default = False to overwrite the existing files
         :param bool dataset_lock: optional - default = False to make the dataset readonly during the download
+        :param bool lock_timeout_sec: optional - Set lock timeout for the export
         :param bool to_items_folder: Create 'items' folder and download items to it
         :param int thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :param bool with_text: optional - add text to annotations, default = False
@@ -1070,6 +1084,7 @@ class Dataset(entities.BaseEntity):
                              alpha=1,
                              save_locally=True,
                              dataset_lock=False
+                             lock_timeout_sec=300
                              )
         """
         filters = self.datasets._bulid_folder_filter(folder_path=folder_path, filters=filters)
@@ -1085,7 +1100,9 @@ class Dataset(entities.BaseEntity):
                                    without_relative_path=without_relative_path,
                                    alpha=alpha,
                                    export_version=export_version,
-                                   dataset_lock=dataset_lock)
+                                   dataset_lock=dataset_lock,
+                                   lock_timeout_sec=lock_timeout_sec
+                                   )
 
     def delete_labels(self, label_names):
         """

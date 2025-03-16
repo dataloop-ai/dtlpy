@@ -49,3 +49,11 @@ Feature: Items repository download service testing
       When I download the item without saving and create folder
       Then file do not created
 
+
+  @DAT-88891
+  Scenario: Download link item
+    Given There are no items
+    And I upload an item link
+    And Folder "test_items_download" is empty
+    When I download an item by the id to "test_items_download"
+    Then There are "1" files in dir "test_items_download/items"

@@ -469,9 +469,9 @@ def step_impl(context, type, flag):
 
     time.sleep(5)
     try:
-        context.task = context.project.tasks.get(task_name=task_name + " (" + pipeline_name + ")")
+        context.task = context.project.tasks.get(task_name=task_name)
     except Exception as e:
-        assert False, "Failed to get task with the name: {}\n{}".format(task_name + " (" + pipeline_name + ")", e)
+        assert False, f"Failed to get task with the name: {task_name}\n{e}"
 
 
 @behave.when(u'I create a pipeline with task node and new recipe')
@@ -599,10 +599,9 @@ def step_impl(context):
 
 @behave.then(u'Context should have all required properties')
 def step_impl(context):
-    timeout = 60 * 10
+    timeout = 50 * 10
     interval = 5
     start_time = time.time()
-    execution = None
     success = False
     while time.time() - start_time < timeout:
         cycles = context.pipeline.pipeline_executions.list().items
@@ -628,6 +627,8 @@ def step_impl(context):
                    [n for n in context.pipeline.nodes if n.namespace.service_name == service.name][0].name
             assert execution.output['assignmentName'] == context.task.assignments.list()[0].name
             assert execution.output['itemStatus'] == context.item_status
+    else:
+        assert False, f"TEST FAILED: At least one cycle was not completed successfully - {success}"
 
 
 @behave.given(u'pipeline with 2 nodes')

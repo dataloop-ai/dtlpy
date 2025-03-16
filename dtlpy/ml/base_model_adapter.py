@@ -340,6 +340,9 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
                                                   annotation_options=annotation_options,
                                                   annotation_filters=annotation_filters
                                                   )
+                if isinstance(ret_list, list) and len(ret_list) == 0:
+                    raise ValueError(f"No items downloaded for subset {subset}! Cannot train model with empty subset.\n"
+                                     f"Subset {subset} filters: {filters.prepare()}\nAnnotation filters: {annotation_filters.prepare()}")
 
         self.convert_from_dtlpy(data_path=data_path, **kwargs)
         return root_path, data_path, output_path

@@ -47,7 +47,8 @@ class Downloader:
                  filter_output_annotations=False,
                  alpha=1,
                  export_version=entities.ExportVersion.V1,
-                 dataset_lock=False
+                 dataset_lock=False,
+                 lock_timeout_sec=None
                  ):
         """
         Download dataset by filters.
@@ -74,6 +75,7 @@ class Downloader:
         :param alpha: opacity value [0 1], default 1
         :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
         :param bool dataset_lock: optional - default = False
+        :param int lock_timeout_sec: optional
         :return: Output (list)
         """
 
@@ -198,7 +200,8 @@ class Downloader:
                 'export_png_files': export_png_files,
                 'filter_output_annotations': filter_output_annotations,
                 'export_version': export_version,
-                'dataset_lock': dataset_lock
+                'dataset_lock': dataset_lock,
+                'lock_timeout_sec': lock_timeout_sec
             })
         ###############
         # downloading #
@@ -365,7 +368,8 @@ class Downloader:
                              export_png_files=False,
                              filter_output_annotations=False,
                              export_version=entities.ExportVersion.V1,
-                             dataset_lock=False                             
+                             dataset_lock=False,
+                             lock_timeout_sec=None                          
                              ):
         """
         Download annotations json for entire dataset
@@ -380,6 +384,7 @@ class Downloader:
         :param filter_output_annotations: default - False, given an export by filter - determine if to filter out annotations
         :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
         :param bool dataset_lock: optional - default = False
+        :param int lock_timeout_sec: optional
         :return:
         """
         local_path = os.path.join(local_path, "json")
@@ -404,6 +409,9 @@ class Downloader:
                 payload['annotations']['filter'] = filter_output_annotations
             if dataset_lock:
                 payload['datasetLock'] = dataset_lock
+                
+            if lock_timeout_sec:
+                payload['lockTimeoutSec'] = lock_timeout_sec
 
             success, response = dataset._client_api.gen_request(req_type='post',
                                                                 path='/datasets/{}/export'.format(dataset.id),
@@ -737,19 +745,15 @@ class Downloader:
                                                 one_file_pbar.update(len(chunk))
                                 except Exception as err:
                                     pass
-                            file_validation, start_point, chunk_resume = self.__get_next_chunk(item=item,
-                                                                                              download_progress=temp_file_path,
-                                                                                              chunk_resume=chunk_resume)
+
+                            file_validation = True
+                            if not is_url:
+                                file_validation, start_point, chunk_resume = self.__get_next_chunk(item=item,
+                                                                                                  download_progress=temp_file_path,
+                                                                                                  chunk_resume=chunk_resume)
                             if file_validation:
                                 shutil.move(temp_file_path, local_filepath)
                                 download_done = True
-                            else:
-                                if not is_url:
-                                    continue
-                                else:
-                                    raise PlatformException(
-                                        error="400",
-                                        message='Downloaded file is corrupted. Please try again. If the issue repeats please contact support.')
                         except Exception as err:
                             if os.path.isfile(temp_file_path):
                                 os.remove(temp_file_path)

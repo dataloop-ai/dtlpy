@@ -66,10 +66,9 @@ def step_impl(context, task_type):
 @behave.then(u'I get task by pipeline task node')
 def step_impl(context):
     try:
-        pipeline_task_name = "{} ({})".format(context.task_name, context.pipeline.name)
-        context.task = context.project.tasks.get(task_name=pipeline_task_name)
+        context.task = context.project.tasks.get(task_name=context.task_name)
     except Exception as e:
-        assert False, "Failed to get task with the name: {}\n{}".format(pipeline_task_name, e)
+        assert False, "Failed to get task with the name: {}\n{}".format(context.task_name, e)
 
 
 @behave.then(u'I validate pulling task created equal to pipeline task node')

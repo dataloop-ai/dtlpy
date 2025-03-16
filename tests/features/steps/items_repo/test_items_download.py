@@ -43,6 +43,17 @@ def step_impl(context, item_count, local_path):
     assert len(content) == int(item_count), "TEST FAILED: Expected {} got {}".format(item_count, len(content))
 
 
+@behave.then(u'There are "{item_count}" files in dir "{local_path}"')
+def step_impl(context, item_count, local_path):
+    local_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], local_path)
+    content = list()
+    for root, dirs, files in os.walk(local_path):
+        for file in files:
+            content.append(file)
+
+    assert len(content) == int(item_count), "TEST FAILED: Expected {} got {}".format(item_count, len(content))
+
+
 @behave.then(u'Item is correctly downloaded to "{downloaded_path}" (compared with "{item_to_compare}")')
 def step_impl(context, downloaded_path, item_to_compare):
     import cv2

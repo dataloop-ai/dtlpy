@@ -329,7 +329,7 @@ class Task:
         """
         Update an Annotation Task
 
-        :param bool system_metadata: True, if you want to change metadata system
+        :param bool system_metadata: DEPRECATED
         """
         return self.tasks.update(task=self, system_metadata=system_metadata)
 

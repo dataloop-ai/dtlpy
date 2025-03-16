@@ -454,7 +454,8 @@ class Item(entities.BaseEntity):
             annotation_filters=None,
             alpha=1,
             export_version=ExportVersion.V1,
-            dataset_lock=False
+            dataset_lock=False,
+            lock_timeout_sec=None
     ):
         """
         Download dataset by filters.
@@ -469,6 +470,7 @@ class Item(entities.BaseEntity):
         :param dtlpy.entities.filters.Filters annotation_filters: Filters entity to filter annotations for download
         :param bool overwrite: optional - default = False
         :param bool dataset_lock: optional - default = False
+        :param int lock_timeout_sec: optional
         :param bool to_items_folder: Create 'items' folder and download items to it
         :param int thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :param bool with_text: optional - add text to annotations, default = False
@@ -489,6 +491,7 @@ class Item(entities.BaseEntity):
                          alpha=1,
                          save_locally=True,
                          dataset_lock=False
+                         lock_timeout_sec=300
                          )
         """
         # if dir - concatenate local path and item name
@@ -523,7 +526,8 @@ class Item(entities.BaseEntity):
                                    with_text=with_text,
                                    export_version=export_version,
                                    filters=filters,
-                                   dataset_lock=dataset_lock)
+                                   dataset_lock=dataset_lock,
+                                   lock_timeout_sec=lock_timeout_sec)
 
     def delete(self):
         """

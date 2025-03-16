@@ -92,7 +92,9 @@ def step_impl(context, model_name, status, index):
         'status': status,
         'configuration': {'weights_filename': 'model.pth',
                           'batch_size': 16,
-                          'num_epochs': 10},
+                          'num_epochs': 10,
+                          'include_model_annotations': True,
+                          },
         'labels': [label.tag for label in context.dataset.labels],
         'metadata': {'system': {'subsets': {'train': dl.Filters().prepare(),
                                             'validation': dl.Filters().prepare()}}}

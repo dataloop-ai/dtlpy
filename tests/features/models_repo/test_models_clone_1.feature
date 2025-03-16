@@ -10,7 +10,7 @@ Feature: Models repository clone testing
 
   @DAT-55187
   Scenario: test clone model
-    Given I fetch the dpk from 'model_dpk/modelsDpks.json' file
+    Given I fetch the dpk from 'model_dpk/modelBasicDpk.json' file
     When I create a dummy model package by the name of "dummymodel" with entry point "main.py"
     And I create a model from package by the name of "test-model" with status "trained" in index "0"
     And I publish a dpk to the platform
@@ -30,7 +30,7 @@ Feature: Models repository clone testing
 
   @DAT-65866
   Scenario: test clone model failed
-    Given I fetch the dpk from 'model_dpk/modelsDpks.json' file
+    Given I fetch the dpk from 'model_dpk/modelBasicDpk.json' file
     When I create a dummy model package by the name of "dummymodel" with entry point "main.py"
     And I create a model from package by the name of "test-model" with status "failed" in index "0"
     And I publish a dpk to the platform
@@ -42,7 +42,7 @@ Feature: Models repository clone testing
 
   @DAT-77435
   Scenario: test clone model artifact
-    Given I fetch the dpk from 'model_dpk/modelsDpks.json' file
+    Given I fetch the dpk from 'model_dpk/modelBasicDpk.json' file
     When I create a dummy model package by the name of "dummymodel" with entry point "main.py"
     And I create a model from package by the name of "test-model" with status "trained" in index "0"
     And I publish a dpk to the platform

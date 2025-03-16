@@ -2,6 +2,7 @@ import datetime
 import logging
 import json
 from typing import Union, List
+import warnings
 
 from .. import exceptions, miscellaneous, entities, repositories, _api_reference
 from ..services.api_client import ApiClient
@@ -426,7 +427,7 @@ class Tasks:
         **Prerequisites**: You must be in the role of an *owner* or *developer* or *annotation manager* who created that task.
 
         :param dtlpy.entities.task.Task task: the task object
-        :param bool system_metadata: True, if you want to change metadata system
+        :param bool system_metadata: DEPRECATED
         :return: Task object
         :rtype: dtlpy.entities.task.Task
 
@@ -440,7 +441,7 @@ class Tasks:
         url = '{}/{}'.format(url, task.id)
 
         if system_metadata:
-            url += '?system=true'
+            warnings.warn("Task system metadata updates are not permitted. Please store custom metadata in 'task.metadata['user']' instead.", DeprecationWarning)
 
         success, response = self._client_api.gen_request(req_type='patch',
                                                          path=url,

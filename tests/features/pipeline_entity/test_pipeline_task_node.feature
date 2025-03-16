@@ -14,8 +14,9 @@ Feature: Pipeline entity method testing - Task node execution
   Scenario: Execute task node twice with the same item - Should remove the assignment status
     Given I create pipeline with the name "pipeline"
     And I create "task" node with params
-      | key      | value |
-      | position | (1,1) |
+      | key      | value          |
+      | position | (1,1)          |
+      | name     | Task DAT-52654 |
     When I add and connect all nodes in list to pipeline entity
     And I install pipeline in context
     When I execute pipeline on item
@@ -31,8 +32,9 @@ Feature: Pipeline entity method testing - Task node execution
   Scenario: Create task node with item and delete node shouldn't delete task
     Given I create pipeline with the name "pipeline"
     And I create "task" node with params
-      | key      | value |
-      | position | (1,1) |
+      | key      | value          |
+      | position | (1,1)          |
+      | name     | Task DAT-63245 |
     When I add and connect all nodes in list to pipeline entity
     And I install pipeline in context
     And I execute pipeline on item

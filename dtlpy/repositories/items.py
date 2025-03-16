@@ -528,7 +528,8 @@ class Items:
             filter_output_annotations: bool = False,
             alpha: float = 1,
             export_version=entities.ExportVersion.V1,
-            dataset_lock: bool = False           
+            dataset_lock: bool = False,
+            lock_timeout_sec: int = None     
     ):
         """
         Download dataset items by filters.
@@ -549,6 +550,7 @@ class Items:
         :param dtlpy.entities.filters.Filters annotation_filters: Filters entity to filter annotations for download
         :param bool overwrite: optional - default = False
         :param bool dataset_lock: optional - default = False
+        :param int lock_timeout_sec: optional
         :param bool to_items_folder: Create 'items' folder and download items to it
         :param int thickness: optional - line thickness, if -1 annotation will be filled, default =1
         :param bool with_text: optional - add text to annotations, default = False
@@ -596,7 +598,8 @@ class Items:
             export_png_files=export_png_files,
             filter_output_annotations=filter_output_annotations,
             export_version=export_version,
-            dataset_lock=dataset_lock
+            dataset_lock=dataset_lock,
+            lock_timeout_sec=lock_timeout_sec
         )
 
     def upload(

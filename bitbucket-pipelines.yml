@@ -103,8 +103,8 @@ pipelines:
             - python tests/test_runner.py
     "run-test-python-3.9.0":
       - step:
-          image: python:3.9.0
-          name: Tests-3.9.0
+          image: python:3.9
+          name: Tests-3.9
           script:
             - python --version
             - PYTHONPATH=$PWD

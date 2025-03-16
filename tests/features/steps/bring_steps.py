@@ -23,6 +23,7 @@ from tests.features.steps.datasets_repo import test_dataset_upload_csv
 from tests.features.steps.datasets_repo import test_datasets_download
 from tests.features.steps.datasets_repo import test_dataset_context
 from tests.features.steps.datasets_repo import tets_dataset_upload_labels
+from tests.features.steps.datasets_repo import test_datasets_unlock
 
 from tests.features.steps.dataset_entity import test_dataset_repo_methods
 from tests.features.steps.dataset_entity import test_add_labels_methods

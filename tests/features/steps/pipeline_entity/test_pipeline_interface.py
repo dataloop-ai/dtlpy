@@ -186,7 +186,7 @@ def check_no_connection_for_input(pipeline_json, node_input):
     return True
 
 
-def generate_pipeline_json(context, pipeline_json):
+def generate_pipeline_json(context, pipeline_json, flag=None):
     pipeline_json['name'] = 'json-pipe-{}'.format(random.randrange(10000, 100000))
     pipeline_json['creator'] = context.dl.info()['user_email']
     pipeline_json['projectId'] = context.project.id
@@ -208,6 +208,8 @@ def generate_pipeline_json(context, pipeline_json):
     task_nodes = [node for node in pipeline_json.get('nodes', []) if node['type'] == 'task']
     for node in task_nodes:
         node['projectId'] = context.project.id
+        if flag:
+            node['name'] = f"{node['name']} ({pipeline_json['name']})"
         if not hasattr(context, "datasets"):
             node['metadata']["recipeTitle"] = context.dataset.recipes.list()[0].title
             node['metadata']["recipeId"] = context.dataset.recipes.list()[0].id
@@ -277,14 +279,17 @@ def generate_pipeline_json(context, pipeline_json):
 
 
 @behave.given(u'I create pipeline from json in path "{path}"')
-def step_impl(context, path):
+@behave.given(u'I create pipeline from json in path "{path}" add pipeline_name to task "{flag}"')
+def step_impl(context, path, flag=None):
+    assert flag in [None, 'TRUE'], "TEST FAILED: Please provide valid flag value : TRUE"
     test_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], path)
     with open(test_path, 'r') as pipeline_path:
         pipeline_json = json.load(pipeline_path)
 
     pipeline_payload = generate_pipeline_json(
         context=context,
-        pipeline_json=pipeline_json
+        pipeline_json=pipeline_json,
+        flag=flag
     )
 
     try:

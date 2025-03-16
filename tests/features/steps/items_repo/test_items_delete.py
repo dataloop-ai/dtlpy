@@ -9,6 +9,14 @@ def step_impl(context):
     assert len(context.dataset.items.list(filters=filters).items) == 0
 
 
+@behave.given(u'I upload an item link')
+def step_impl(context):
+    url_link = context.dl.UrlLink(
+        ref='https://www.example.com',
+        mimetype='image',
+        name='urlExample')
+    context.item = context.dataset.items.upload(local_path=url_link)
+
 @behave.given(u'I upload an item by the name of "{item_name}"')
 def step_impl(context, item_name):
     local_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], '0000000162.jpg')

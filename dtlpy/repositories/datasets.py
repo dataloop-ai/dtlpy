@@ -128,7 +128,7 @@ class Datasets:
 
     @staticmethod
     def _build_payload(filters, include_feature_vectors, include_annotations,
-                       export_type, annotation_filters, feature_vector_filters, dataset_lock):
+                       export_type, annotation_filters, feature_vector_filters, dataset_lock, lock_timeout_sec):
         valid_list = [e.value for e in entities.ExportType]
         valid_types = ', '.join(valid_list)
         if export_type not in ['json', 'zip']:
@@ -157,9 +157,13 @@ class Datasets:
         if annotation_filters is not None:
             payload['annotationsQuery'] = annotation_filters.prepare()['filter']
             payload['annotations']['filter'] = True
+
         if dataset_lock:
             payload['datasetLock'] = dataset_lock
 
+        if lock_timeout_sec:
+            payload['lockTimeoutSec'] = lock_timeout_sec
+   
         return payload
 
     def _download_exported_item(self, item_id, export_type, local_path=None):
@@ -631,7 +635,8 @@ class Datasets:
                include_annotations: bool = False,
                export_type: entities.ExportType = entities.ExportType.JSON,
                timeout: int = 0,
-               dataset_lock: bool = False):
+               dataset_lock: bool = False,
+               lock_timeout_sec: int = None):
         """
         Export dataset items and annotations.
 
@@ -649,6 +654,7 @@ class Datasets:
         :param bool include_feature_vectors: Include item feature vectors in the export
         :param bool include_annotations: Include item annotations in the export
         :param bool dataset_lock: Make dataset readonly during the export
+        :param int lock_timeout_sec: Timeout for locking the dataset during export in seconds
         :param entities.ExportType export_type: Type of export ('json' or 'zip')
         :param int timeout: Maximum time in seconds to wait for the export to complete
         :return: Exported item
@@ -663,11 +669,12 @@ class Datasets:
                                                   include_feature_vectors=True,
                                                   include_annotations=True,
                                                   export_type=dl.ExportType.JSON,
-                                                  dataset_lock=True)
+                                                  dataset_lock=True
+                                                  lock_timeout_sec=300)
         """
         dataset_id = self._resolve_dataset_id(dataset, dataset_name, dataset_id)
         payload = self._build_payload(filters, include_feature_vectors, include_annotations,
-                                       export_type, annotation_filters, feature_vector_filters, dataset_lock)
+                                       export_type, annotation_filters, feature_vector_filters, dataset_lock, lock_timeout_sec)
 
         success, response = self._client_api.gen_request(req_type='post', path=f'/datasets/{dataset_id}/export',
                                                          json_req=payload)
@@ -932,7 +939,8 @@ class Datasets:
                              filter_output_annotations: bool = False,
                              alpha: float = None,
                              export_version=entities.ExportVersion.V1,
-                             dataset_lock: bool = False                    
+                             dataset_lock: bool = False, 
+                             lock_timeout_sec: int = None                
                              ) -> str:
         """
         Download dataset's annotations by filters.
@@ -960,6 +968,7 @@ class Datasets:
         :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
         :return: local_path of the directory where all the downloaded item
         :param bool dataset_lock: optional - default = False
+        :param int lock_timeout_sec: optional
         :rtype: str
 
         **Example**:
@@ -973,7 +982,8 @@ class Datasets:
                                                  thickness=1,
                                                  with_text=False,
                                                  alpha=1,
-                                                 dataset_lock=False                                                    
+                                                 dataset_lock=False
+                                                 lock_timeout_sec=300                                                 
                                                  )
         """
         if annotation_options is None:
@@ -1034,7 +1044,8 @@ class Datasets:
                                         export_png_files=export_png_files,
                                         filter_output_annotations=filter_output_annotations,
                                         export_version=export_version,
-                                        dataset_lock=dataset_lock                                        
+                                        dataset_lock=dataset_lock,
+                                        lock_timeout_sec=lock_timeout_sec                                        
                                         )
         if annotation_options:
             pages = dataset.items.list(filters=filters)

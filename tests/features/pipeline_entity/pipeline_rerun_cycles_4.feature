@@ -12,7 +12,7 @@ Feature: Pipeline entity method testing - rerun cycle
   @pipelines.delete
   @DAT-52626
   Scenario: Rerun pipeline - with task node (start-node) should remove item status after rerun
-    Given I create pipeline from json in path "pipelines_json/task_dataset_nodes.json"
+    Given I create pipeline from json in path "pipelines_json/task_dataset_nodes.json" add pipeline_name to task "TRUE"
     And I install pipeline in context
     When I execute pipeline on item
     And I get task by pipeline task node
@@ -29,7 +29,7 @@ Feature: Pipeline entity method testing - rerun cycle
   @pipelines.delete
   @DAT-52626
   Scenario: Rerun pipeline - with task node (last-node) should remove item status after rerun
-    Given I create pipeline from json in path "pipelines_json/dataset_task_nodes.json"
+    Given I create pipeline from json in path "pipelines_json/dataset_task_nodes.json" add pipeline_name to task "TRUE"
     And I install pipeline in context
     When I execute pipeline on item
     And I get task by pipeline task node
