@@ -28,6 +28,48 @@ def step_impl(context, img_filepath, annotation_format):
         with_text=False)
 
 
+@behave.when(u'I download all mask annotations to "{img_filepath}"')
+def step_impl(context, img_filepath):
+    import cv2
+    import numpy as np
+    import os
+
+    # Set the path for the output PNG file
+    path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], img_filepath)
+
+    # Ensure the directory exists
+    if not os.path.isdir(os.path.dirname(path)):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+
+    # Get item dimensions (assuming the first annotation gives the correct item dimensions)
+    context.annotations = context.item.annotations.list()
+
+    if not context.annotations:
+        raise ValueError("No annotations found in the item.")
+
+    # Assuming context.item has attributes for width and height
+    height = context.item.height
+    width = context.item.width
+
+    # Create an empty mask to accumulate all binary masks
+    combined_mask = np.zeros((height, width), dtype=np.uint8)
+
+    # Iterate through annotations and download mask annotations
+    for annotation in context.annotations:
+        if annotation.type == 'binary':  # Check if the annotation is of type 'binary'
+            mask = annotation.show(height=height, width=width)  # Generate the mask for the annotation
+
+            # Check if the mask has multiple channels (e.g., RGBA or RGB)
+            if mask.ndim == 3:
+                mask = mask[:, :, 0]  # Extract the first channel (assuming it's a grayscale mask)
+
+            combined_mask = np.maximum(combined_mask, mask)  # Combine masks (ensuring overlapping areas are preserved)
+
+    # Save the combined mask as a PNG file
+    cv2.imwrite(path, combined_mask)
+    print(f"All mask annotations have been saved to {path}")
+
+
 @behave.given(u'I change annotation x label to "{new_label}"')
 def step_impl(context, new_label):
     context.annotation_x.label = new_label

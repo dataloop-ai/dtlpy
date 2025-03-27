@@ -33,6 +33,11 @@ def step_impl(context, labels_file_path):
 def step_impl(context):
     context.annotation_x = context.item.annotations.list()[0]
 
+@behave.then(u'I validate that I have "{number}" annotations in item')
+def atp_step_impl(context, number):
+    filters = context.dl.Filters(resource=context.dl.FiltersResource.ANNOTATION)
+    context.annotations = context.dataset.annotations.list(filters=filters)
+    assert context.annotations.items_count == int(number)
 
 @behave.when(u'I get the annotation by id')
 def step_impl(context):
@@ -67,3 +72,19 @@ def step_impl(context, annotations_path):
     except Exception as e:
         context.error = e
         assert False, context.error
+
+@behave.then(u'I validate that I have an annotation in item with the name "{name}"')
+def atp_step_impl(context, name):
+    context.annotations = context.item.annotations.list()
+    for i in range(0, len(context.annotations)):
+        if context.annotations[i].label == name:
+           break
+    else:
+        assert False, f"No annotation found with the name '{name}'"
+
+@behave.then(u'I have "{number}" "{type}" annotations')
+def atp_step_impl(context, number, type):
+    count = int(number)
+    context.annotations = context.item.annotations.list()
+    type_annotations = [annotation for annotation in context.annotations if annotation.type == type]
+    assert len(type_annotations) == count, f"Expected {count} {type} annotations, but found {len(type_annotations)}"

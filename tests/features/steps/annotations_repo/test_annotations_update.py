@@ -82,6 +82,12 @@ def step_impl(context):
     context.annotation_x.label = "person"
 
 
+@behave.given(u'I change annotation "{number}" value to "{name}"')
+def atp_step_impl(context, number, name):
+    context.annotations_list[int(number)].label = name
+    context.annotations_list[int(number)].update()
+
+
 @behave.when(u"I update annotation")
 def step_impl(context):
     context.item.annotations.update(
@@ -165,4 +171,41 @@ def step_impl(context):
     filters = context.filters
     annotations = context.dataset.annotations.list(filters=filters)
     assert annotations.items_count != 0
+
+
+@behave.when(u'I set object id for annotation "{number}" to be "{new_number}"')
+def atp_step_impl(context, number, new_number):
+    context.annotations_list[int(number)].object_id = new_number
+    context.annotations_list[int(number)].update(system_metadata=True)
+
+
+@behave.then(u'I validate that annotation "{number}" has object id "{new_number}"')
+def atp_step_impl(context, number, new_number):
+    assert context.annotations_list[int(number)].object_id == new_number
+
+
+@behave.when(u'I set an issue to the annotation')
+def atp_step_impl(context):
+    context.annotation.metadata['system']['issueAssignmentId'] = context.assignment.id
+    context.annotation.metadata['system']['issueTaskId'] = context.task.id
+    context.annotation.status = 'issue'
+    context.annotation.update(True)
+    time.sleep(1)
+
+
+@behave.when(u'I update annotation status to "{issue_status}"')
+def atp_step_impl(context, issue_status):
+    # issue status = (issue, review, approved, clear)
+    context.annotation.status = issue_status
+    context.annotation.update(True)
+    time.sleep(1)
+
+
+@behave.then(u'annotation status is "{issue_status}"')
+def atp_step_impl(context, issue_status):
+    # issue status = (issue, review, approved, clear)
+    status = context.annotation.status
+    assert issue_status == status, f"Failed, Wrong status got {status} and expected {issue_status}"
+
+
 

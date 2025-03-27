@@ -3,6 +3,7 @@ import os
 import time
 import shutil
 import io
+import json
 
 
 @behave.when(u'I upload a file in path "{item_local_path}"')
@@ -300,3 +301,77 @@ def step_impl(context, item_count):
             remote_path=None
         )
         counter += 1
+
+
+@behave.when(u'I upload an item with its modalities')
+def atp_step_impl(context):
+    import traceback
+    import random
+    import string
+    import dtlpy as dl
+    from concurrent.futures import ThreadPoolExecutor
+
+    file_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], "api", "api_assets.json")
+    with open(file_path, 'r') as file:
+        json_obj = json.load(file)
+
+    primary_url = json_obj['images_links']['image1']
+    secondary_urls = [
+        json_obj['images_links']['image2']
+    ]
+
+    # Use the existing upload_single function from your dtlpy repository
+    def upload_single(w_url, w_metadata):
+        try:
+            item = context.dataset.items.upload(local_path=dl.UrlLink(
+                ref=w_url,
+                name='.{}.json'.format(
+                    ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(10)))),
+                remote_path='/cats',
+                item_metadata=w_metadata)
+            return item.id
+        except:
+            print(traceback.format_exc())
+            return None
+
+    context.dataset = context.dataset
+    # Using ThreadPoolExecutor to upload secondary items concurrently
+    pool = ThreadPoolExecutor(max_workers=32)
+    jobs = list()
+    for i_url, url in enumerate(secondary_urls):
+        jobs.append(pool.submit(upload_single, **{'w_url': url, 'w_metadata': {'user': {'num': i_url}}}))
+    pool.shutdown()
+
+    # Collect the IDs of uploaded secondary items
+    secondary_ids = [j.result() for j in jobs]
+    modalities = list()
+
+    # Creating modalities for the secondary items
+    for i_secondary_id, secondary_id in enumerate(secondary_ids):
+        modalities.append(dl.Modality(modality_type=dl.ModalityTypeEnum.OVERLAY,
+                                      ref=secondary_id,
+                                      name='cat_num:{}'.format(i_secondary_id)).to_json())
+
+    # Uploading the primary item with the modalities
+    primary_item = context.dataset.items.upload(
+        local_path=dl.UrlLink(ref=primary_url),
+        item_metadata={'system': {'modalities': modalities}}
+    )
+
+    context.primary_item = primary_item
+
+
+@behave.then(u'I validate item has modalities')
+def atp_step_impl(context):
+    item = context.primary_item
+    metadata = item.metadata
+    if 'system' not in metadata or 'modalities' not in metadata['system']:
+        raise AssertionError("Item does not have modalities in its metadata.")
+    modalities = metadata['system']['modalities']
+    if not modalities:
+        raise AssertionError("No modalities found in item metadata.")
+    for modality in modalities:
+        if 'type' not in modality or 'ref' not in modality or 'name' not in modality:
+            raise AssertionError(f"Invalid modality structure found: {modality}")
+        if modality['type'] not in ['overlay', 'preview', 'replace']:
+            raise AssertionError(f"Unsupported modality type: {modality['type']}")

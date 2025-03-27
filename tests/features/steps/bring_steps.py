@@ -184,6 +184,7 @@ from tests.features.steps.models_repo import test_model_flow
 from tests.features.steps.models_repo import test_models_get
 
 from tests.features.steps.model_entity import test_model_name
+from tests.features.steps.model_entity import test_model_metrics
 
 from tests.features.steps.pipeline_entity import pipeline_get, pipeline_delete, pipeline_update, pipeline_flow, pipeline_output_list, pipeline_execute
 from tests.features.steps.pipeline_resume import pipeline_resume

@@ -123,3 +123,12 @@ Feature: Items repository upload service testing
         And Item object from host equals item uploaded
         And Item in host when downloaded to "test_items_upload_downloaded_item" equals item in "assets_split/items_upload/0000000162.jpg"
         And I validate item.description has "description" value
+
+    @DAT-89728
+    Scenario: Upload a single item with a specific remote name start with backslash
+        When I upload the file in path "assets_split/items_upload/0000000162.jpg" with remote name "/file.jpg"
+        Then Item exist in host
+        And Item in host has name "file.jpg"
+        And Upload method returned an Item object
+        And Item object from host equals item uploaded
+        And Item in host when downloaded to "test_items_upload_downloaded_item" equals item in "assets_split/items_upload/0000000162.jpg"

@@ -81,3 +81,18 @@ def step_impl(context):
     )
     if not success:
         raise dl.exceptions.PlatformException(response)
+
+
+@when(u'I try to update install pipeline')
+def step_impl(context):
+    print(context.pipeline)
+    try:
+        context.pipeline.update()
+        context.error = None
+    except Exception as e:
+        context.error = e
+
+
+@when(u'I update pipeline')
+def step_impl(context):
+    context.pipeline = context.pipeline.update()

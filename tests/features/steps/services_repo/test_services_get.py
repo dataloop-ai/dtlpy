@@ -62,3 +62,17 @@ def step_impl(context):
 
     assert context.integration.id in context.service.secrets, \
         f"TEST FAILED: Expected integration to be in service secrets, Actual: {context.service.secrets}"
+
+
+@behave.then(u'service status is "{service_status}"')
+def step_impl(context, service_status):
+    context.service = context.project.services.get(service_id=context.service.id)
+    if service_status.lower() == "active":
+        active = True
+    elif service_status.lower() == "paused":
+        active = False
+    else:
+        raise ValueError(f"Invalid service status please choose between 'active' or 'paused'")
+
+    assert context.service.active == active, \
+        f"TEST FAILED: Expected service status active to be {active}, Actual: {context.service.active}"

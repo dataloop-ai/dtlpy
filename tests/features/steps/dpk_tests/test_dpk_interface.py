@@ -114,3 +114,12 @@ def step_impl(context, entry_point='main.py', model_name='test-model', status='c
         context.published_dpks = list()
     context.published_dpks.append(context.dpk)
     # Make sure to publish the
+
+
+@behave.when(u'I save "{dpk_obj}" in context.saved_dpk')
+def step_impl(context, dpk_obj):
+    try:
+        context.saved_dpk = context.project.dpks.get(dpk_name=getattr(context, dpk_obj).name)
+        context.error = None
+    except Exception as e:
+        context.error = e

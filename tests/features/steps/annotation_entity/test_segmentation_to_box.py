@@ -1,6 +1,7 @@
 from behave import given, then, when
 import numpy as np
 import dtlpy as dl
+from PIL import Image
 
 
 def mask_from_circle(h, w, center, radius):
@@ -43,6 +44,38 @@ def step_impl(context):
     builder.add(annotation_definition=bbox)
     annotations = builder.upload()
     context.bboxes = annotations
+
+
+@when(u'I execute to_polygon function on mask annotation')
+def atp_step_impl(context):
+    filters = context.dl.Filters(resource=context.dl.FiltersResource.ANNOTATION)
+    annotations = context.dataset.annotations.list(filters=filters)
+    builder = context.item.annotations.builder()
+    for annotation in annotations.items:
+        if annotation.type == "binary":
+            builder.add(dl.Polygon.from_segmentation(mask=annotation.annotation_definition.geo,
+                                                     # binary mask of the annotation
+                                                     label=annotation.label,
+                                                     max_instances=None))
+            annotation.delete()
+    context.item.annotations.upload(annotations=builder)
+
+
+@when(u'I execute to_mask function on polygon annotation')
+def atp_step_impl(context):
+    filters = context.dl.Filters(resource=context.dl.FiltersResource.ANNOTATION)
+    annotations = context.dataset.annotations.list(filters=filters)
+    buffer = context.item.download(save_locally=False)
+    img = Image.open(buffer)
+    builder = context.item.annotations.builder()
+    for annotation in annotations.items:
+        if annotation.type == "segment":
+            builder.add(dl.Segmentation.from_polygon(geo=annotation.annotation_definition.geo,
+                                                     # binary mask of the annotation
+                                                     label=annotation.label,
+                                                     shape=img.size[::-1]))
+            annotation.delete()
+    context.item.annotations.upload(annotations=builder)
 
 
 @when(u'I create Box annotation with  from_segmentation function with mask')

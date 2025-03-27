@@ -328,11 +328,10 @@ class Filters:
             # add annotations defaults
             elif self.resource == FiltersResource.ANNOTATION:
                 self._unique_fields = ['type']
-                self.add(field='type',
-                         values=['box', 'class', 'comparison', 'ellipse', 'point', 'segment', 'polyline', 'binary',
-                                 'subtitle', 'cube', 'cube_3d', 'pose', 'text_mark', 'text', 'ref_image', 'gis'],
-                         operator=FiltersOperations.IN,
-                         method=FiltersMethod.AND)
+                values = [annotation_type.value for annotation_type in entities.AnnotationType]
+                values.remove(entities.AnnotationType.NOTE.value)
+                values += ["text", "ref_image"]  # Prompt Annotation Types
+                self.add(field='type', values=values, operator=FiltersOperations.IN, method=FiltersMethod.AND)
 
     def __generate_query(self):
         filters_dict = dict()

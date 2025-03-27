@@ -66,6 +66,15 @@ def step_impl(context, flag="True"):
         context.feature.apps = [context.app]
 
 
+@behave.when(u'I install the app using the global dpk')
+def step_impl(context):
+    context.app = context.project.apps.install(dpk=context.dpk, scope='project')
+    if hasattr(context.feature, 'apps'):
+        context.feature.apps.append(context.app)
+    else:
+        context.feature.apps = [context.app]
+
+
 @behave.when(u'I try to install the app')
 def step_impl(context):
     dpk = context.published_dpk if hasattr(context, "published_dpk") else context.dpk

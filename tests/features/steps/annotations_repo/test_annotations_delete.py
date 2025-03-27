@@ -6,6 +6,12 @@ def step_impl(context):
     context.item.annotations.delete(annotation_id=context.annotation_x.id)
 
 
+@behave.when(u'I delete all annotations in item')
+def atp_step_impl(context):
+    filters = context.dl.Filters(resource=context.dl.FiltersResource.ANNOTATION)
+    context.item.annotations.delete(filters=filters)
+
+
 @behave.when(u'I try to delete a non-existing annotation')
 def step_impl(context):
     try:

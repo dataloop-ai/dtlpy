@@ -1,3 +1,5 @@
+import time
+import uuid
 import random
 import string
 import time
@@ -142,6 +144,64 @@ def step_impl(context, items_count):
     assert context.command.status == dl.ExecutionStatus.SUCCESS
     assert len(context.command.spec['inputs']) == eval(items_count)
     assert context.service.executions.list().items_count == eval(items_count)
+
+
+@behave.when(u'I execute pipeline using cron trigger for node "{node_name}"')
+def atp_step_impl(context, node_name=None):
+    """
+    This step is for Active learning pipeline
+    For making the trigger cron to execute the pipeline
+    We need to update the cron trigger to execute the pipeline
+    After execution created we return the cron to original state
+    """
+    filters = dl.Filters()
+    filters.resource = dl.FiltersResource.TRIGGER
+    filters.add(field='type', values=dl.TriggerType.CRON)
+    filters.add(field='projectId', values=context.project.id)
+    triggers = context.project.triggers.list(filters=filters).items
+    if not triggers:
+        raise Exception('No cron trigger found')
+
+    trigger = triggers[0]
+    original_cron = trigger.cron
+    trigger.cron = '*/30 * * * * *'
+    trigger = trigger.update()
+
+    num_try = 15
+    interval = 4
+    success = False
+
+    # Get the service name from the pipeline node
+    pipeline_node = context.pipeline.nodes.get(node_name=node_name)
+    service_name = pipeline_node.namespace.service_name
+    service = context.project.services.get(service_name=service_name)
+    for i in range(num_try):
+        if service.executions.list().items_count == 1:
+            success = True
+            break
+        time.sleep(interval)
+
+    trigger.cron = original_cron
+    trigger.update()
+    if not success:
+        raise Exception('Pipeline execution not created from cron trigger')
+
+
+@behave.when(u'I update pipeline start_nodes to start with node "{node_name}"')
+def atp_step_impl(context, node_name):
+    context.pipeline.pause()
+    context.pipeline = context.project.pipelines.get(pipeline_id=context.pipeline.id)
+    node = context.pipeline.nodes.get(node_name=node_name)
+    for start_node in context.pipeline.start_nodes:
+        if start_node['nodeId'] == node.node_id:
+            start_node['type'] = 'root'
+        else:
+            if start_node.get('trigger'):
+                start_node['type'] = 'trigger'
+            else:
+                raise Exception('Start node must to be root or trigger type')
+    context.pipeline = context.pipeline.update()
+    context.pipeline.install()
 
 
 @behave.given(u'I install a pipeline with 2 dataset nodes')

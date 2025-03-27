@@ -71,6 +71,15 @@ def step_impl(context):
         assert False, "Failed to get task with the name: {}\n{}".format(context.task_name, e)
 
 
+@behave.when(u'I get qa task by pipeline qa task node')
+@behave.then(u'I get qa task by pipeline qa task node')
+def atp_step_impl(context):
+    try:
+        context.qa_task = context.project.tasks.get(task_name=context.qa_task_name)
+    except Exception as e:
+        assert False, "Failed to get task with the name: {}\n{}".format(context.qa_task_name, e)
+
+
 @behave.then(u'I validate pulling task created equal to pipeline task node')
 def step_impl(context):
     assert context.task_node.task_type == context.task.spec['type'], "TEST FAILED: task_type Expected - {}, Got - {}".format(context.task_node.task_type, context.task.spec['type'])

@@ -114,3 +114,41 @@ def step_impl(context, input, input_type, name_input):
             break
 
     assert finished, f"TEST FAILED: Execution status - {status}"
+
+
+@behave.Then(u'Services are created with expected configuration')
+def atp_step_impl(context):
+    # Extract configurations from service and dpk
+    dpk_runtime = context.json_object['components']['computeConfigs'][0]['runtime']
+    service_runtime = context.project.services.list().items[0].runtime
+
+    # Convert service_runtime object to a dictionary
+    service_runtime_dict = vars(service_runtime)
+
+    # Mapping of fields between dpk_runtime and service_runtime (handle naming differences)
+    field_mapping = {
+        'numReplicas': 'num_replicas',
+        'concurrency': 'concurrency',
+        'podType': 'pod_type',
+        'runnerImage': 'runner_image'
+    }
+
+    # Prepare filtered dicts based on the mapping
+    dpk_filtered = {}
+    service_filtered = {}
+
+    for dpk_field, service_field in field_mapping.items():
+        if dpk_field in dpk_runtime and service_field in service_runtime_dict:
+            dpk_value = dpk_runtime[dpk_field]
+            service_value = service_runtime_dict[service_field]
+
+            if dpk_field == 'podType':
+                dpk_value = str(dpk_value).split('.')[-1].lower().replace('_', '-')
+                service_value = service_value.lower().replace('_', '-')
+
+            # Add the filtered values
+            dpk_filtered[dpk_field] = dpk_value
+            service_filtered[dpk_field] = service_value
+
+    # Compare the filtered configurations
+    assert dpk_filtered == service_filtered, f"Configurations do not match:\nDPK Runtime: {dpk_filtered}\nService Runtime: {service_filtered}"

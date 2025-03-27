@@ -44,3 +44,21 @@ Feature: Test pipeline refs
     Given I pause pipeline when executions are created
     When I install pipeline
     Then model services should still have refs
+
+
+  @DAT-81446
+  @pipelines.delete
+  Scenario: Updating pipeline servie out of scope - service should update as expected
+    Given I create pipeline with the name "pipeline"
+    And I create "code" node with params
+      | key      | value |
+      | position | (1,1) |
+    When I add and connect all nodes in list to pipeline entity
+    And I install pipeline in context
+    And I get service in index "-1"
+    When I pause service in context
+    And I pause pipeline in context
+    When I update pipeline
+    Then service status is "Paused"
+    When I install pipeline in context
+    Then service status is "Active"

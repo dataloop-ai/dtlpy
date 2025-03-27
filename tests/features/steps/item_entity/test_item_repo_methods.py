@@ -86,3 +86,7 @@ def step_impl(context, item_path):
             raise TimeoutError("Timeout while waiting for platform attributes")
 
 
+@behave.given(u'I add "{new_field}" field to be "{boolean}" in item metadata')
+def step_impl(context, new_field, boolean):
+    context.item.metadata = {f"{new_field}": boolean}
+    context.item.update()

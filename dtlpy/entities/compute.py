@@ -10,6 +10,7 @@ class ClusterProvider(str, Enum):
     AZURE = 'azure'
     HPC = 'hpc'
     LOCAL = 'local'
+    RANCHER_K3S = 'rancher-k3s'
 
 
 class ComputeType(str, Enum):
@@ -21,6 +22,30 @@ class ComputeStatus(str, Enum):
     INITIALIZING = "initializing"
     PAUSE = "pause"
     FAILED = "failed"
+
+
+class ComputeConsumptionMethod(str, Enum):
+    MQ = "MQ",
+    API = "API"
+
+
+class ComputeSettings:
+    def __init__(self, default_namespace: str, consumption_method: ComputeConsumptionMethod):
+        self.consumption_method = consumption_method
+        self.default_namespace = default_namespace
+
+    @classmethod
+    def from_json(cls, _json):
+        return cls(
+            default_namespace=_json.get('defaultNamespace'),
+            consumption_method=_json.get('consumptionMethod')
+        )
+
+    def to_json(self):
+        return {
+            'defaultNamespace': self.default_namespace,
+            'consumptionMethod': self.consumption_method
+        }
 
 
 class Toleration:
@@ -100,7 +125,7 @@ class NodePool:
             tolerations: Optional[List[Toleration]] = None,
             description: str = "",
             node_selector: str = "",
-            preemtible: bool = False,
+            preemptible: bool = False,
             deployment_resources: DeploymentResources = None
     ):
         self.name = name
@@ -109,7 +134,7 @@ class NodePool:
         self.tolerations = tolerations if tolerations is not None else []
         self.description = description
         self.node_selector = node_selector
-        self.preemtible = preemtible
+        self.preemptible = preemptible
         self.deployment_resources = deployment_resources
 
     @classmethod
@@ -120,7 +145,7 @@ class NodePool:
             dl_types=_json.get('dlTypes'),
             description=_json.get('description'),
             node_selector=_json.get('nodeSelector'),
-            preemtible=_json.get('preemtible'),
+            preemptible=_json.get('preemptible'),
             deployment_resources=DeploymentResources.from_json(_json.get('deploymentResources', dict())),
             tolerations=[Toleration.from_json(t) for t in _json.get('tolerations', list())]
         )
@@ -133,7 +158,7 @@ class NodePool:
             'isDlTypeDefault': self.is_dl_type_default,
             'description': self.description,
             'nodeSelector': self.node_selector,
-            'preemtible': self.preemtible,
+            'preemptible': self.preemptible,
             'deploymentResources': self.deployment_resources.to_json(),
             'tolerations': [t.to_json() for t in self.tolerations]
         }
@@ -271,6 +296,7 @@ class Compute:
             type: ComputeType = ComputeType.KUBERNETES,
             features: Optional[Dict] = None,
             metadata: Optional[Dict] = None,
+            settings: Optional[ComputeSettings] = None
     ):
         self.id = id
         self.name = name
@@ -284,6 +310,7 @@ class Compute:
         self._client_api = client_api
         self._computes = None
         self._serviceDrivers = None
+        self.settings = settings
 
     @property
     def computes(self):
@@ -315,7 +342,8 @@ class Compute:
             type=ComputeType(_json.get('type')),
             features=_json.get('features'),
             client_api=client_api,
-            metadata=_json.get('metadata')
+            metadata=_json.get('metadata'),
+            settings=ComputeSettings.from_json(_json.get('settings', dict())) if _json.get('settings') else None
         )
 
     def to_json(self):
@@ -327,7 +355,8 @@ class Compute:
             'status': self.status.value,
             'type': self.type.value,
             'features': self.features,
-            'metadata': self.metadata
+            'metadata': self.metadata,
+            'settings': self.settings.to_json() if isinstance(self.settings, ComputeSettings) else self.settings
         }
 
 
@@ -335,6 +364,7 @@ class KubernetesCompute(Compute):
     def __init__(
             self,
             id: str,
+            name: str,
             context: ComputeContext,
             cluster: ComputeCluster,
             shared_contexts: Optional[List[ComputeContext]] = None,
@@ -343,10 +373,11 @@ class KubernetesCompute(Compute):
             type: ComputeType = ComputeType.KUBERNETES,
             features: Optional[Dict] = None,
             metadata: Optional[Dict] = None,
-            client_api: ApiClient = None
+            client_api: ApiClient = None,
+            settings: Optional[ComputeSettings] = None
     ):
         super().__init__(id=id, context=context, shared_contexts=shared_contexts, global_=global_, status=status,
-                         type=type, features=features, metadata=metadata, client_api=client_api)
+                         type=type, features=features, metadata=metadata, client_api=client_api, settings=settings, name=name)
         self.cluster = cluster
 
     @classmethod
@@ -361,7 +392,8 @@ class KubernetesCompute(Compute):
             type=ComputeType(_json.get('type')),
             features=_json.get('features'),
             metadata=_json.get('metadata'),
-            client_api=client_api
+            client_api=client_api,
+            settings=ComputeSettings.from_json(_json.get('settings', dict())) if _json.get('settings') else None
         )
 
     def to_json(self):
@@ -373,7 +405,9 @@ class KubernetesCompute(Compute):
             'global': self.global_,
             'status': self.status.value,
             'type': self.type.value,
-            'features': self.features
+            'features': self.features,
+            'metadata': self.metadata,
+            'settings': self.settings.to_json() if isinstance(self.settings, ComputeSettings) else self.settings
         }
 
 

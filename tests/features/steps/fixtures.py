@@ -140,6 +140,21 @@ def get_value(params, context):
         val = int(val)
     elif key == 'scoring':
         val = eval(val)
+    elif key == 'workload':
+        if isinstance(val, str):
+            # Split the input string 'val' and convert it to a list of integers
+            try:
+                loads = [int(x.strip()) for x in val.split(',')]
+            except ValueError:
+                raise ValueError(f"Invalid input format: {val}. Ensure it contains only numbers separated by commas.")
+            # Check if there are exactly 2 values and if their sum is 100
+            if len(loads) != 2 or sum(loads) != 100:
+                raise ValueError(f"Invalid workload values: {val}. The values must sum to 100.")
+            workload = [
+                dl.WorkloadUnit(assignee_id='annotator1@dataloop.ai', load=loads[0]),
+                dl.WorkloadUnit(assignee_id='annotator2@dataloop.ai', load=loads[1])
+            ]
+            val = dl.Workload(workload)
 
     return val
 

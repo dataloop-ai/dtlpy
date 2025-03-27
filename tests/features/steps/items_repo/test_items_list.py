@@ -11,6 +11,11 @@ def step_impl(context):
                                               page_size=100)
 
 
+@behave.when(u'I get item from task')
+def step_impl(context):
+    context.item = context.task.get_items().items[0]
+
+
 @behave.then(u'I receive a PageEntity object')
 def step_impl(context):
     assert type(context.list) == context.dl.entities.PagedEntities
@@ -48,7 +53,7 @@ def step_impl(context, item_count):
         with open(filepath, 'rb') as f:
             buffer = io.BytesIO(f.read())
             buffer.name = uploaded_filename
-        context.dataset.items.upload(
+        context.item = context.dataset.items.upload(
             local_path=buffer,
             remote_path=None
         )

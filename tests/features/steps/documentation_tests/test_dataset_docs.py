@@ -79,3 +79,13 @@ def step_impl(context, merge_dataset_name):
     project__datasets_list = context.project.datasets.list()
 
     assert len(project__datasets_list) == 4
+
+
+@behave.then(u'"{merge_dataset_name}" has "{number}" items')
+def atp_step_impl(context, merge_dataset_name, number):
+    expected_item_count = int(number)
+    merged_dataset = context.project.datasets.get(dataset_name=merge_dataset_name)
+    item_list = merged_dataset.items.list()
+    actual_item_count = item_list.items_count
+    assert actual_item_count == expected_item_count, f"Expected {expected_item_count} items, but found {actual_item_count}"
+

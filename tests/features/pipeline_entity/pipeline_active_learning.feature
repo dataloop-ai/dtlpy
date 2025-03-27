@@ -27,7 +27,7 @@ Feature: Pipeline active learning testing
     And I upload items in the path "images_numbers/1_50" to the dataset in index "0"
     And I validate all items is annotated in dataset in index "0"
     And I get task by pipeline task node
-    Then I expect Task created with "50" items
+    Then I expect "task" created with "50" items
     When I have box annotation_definition with params
       | key    | value    |
       | label  | "Number" |

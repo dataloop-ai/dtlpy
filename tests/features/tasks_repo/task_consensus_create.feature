@@ -18,7 +18,7 @@ Feature: Tasks repository create consensus task
     And I add app to context.feature.apps
     Then I receive a task entity
     And Task has the correct attributes for type "annotation"
-    And I expect Task created with "30" items
+    And I expect "task" created with "30" items
 
   @testrail-C4533547
   @DAT-46620
@@ -29,7 +29,7 @@ Feature: Tasks repository create consensus task
     And I add app to context.feature.apps
     Then I receive a task entity
     And Task has the correct attributes for type "annotation"
-    And I expect Task created with "20" items
+    And I expect "task" created with "20" items
 
   @DAT-51555
   Scenario: Create qualification task with 100 percentage should success
@@ -39,4 +39,4 @@ Feature: Tasks repository create consensus task
     And I add app to context.feature.apps
     Then I receive a task entity
     And Task has the correct attributes for type "annotation"
-    And I expect Task created with "30" items
+    And I expect "task" created with "30" items

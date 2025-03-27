@@ -13,16 +13,16 @@ from datetime import datetime
 
 
 def update_env_cookie_file(env_name, base_env):
-    if base_env in ['prod', 'rc', 'dev']:
+    if base_env in ['prod', 'rc', 'dev', 'custom']:
         return
 
     if base_env not in [env_dict['alias'] for env_url, env_dict in dl.client_api.environments.items()]:
         dl.add_environment(
-            environment='https://{}-gate.dataloop.ai/api/v1'.format(base_env),
-            verify_ssl=True,
-            alias='{}'.format(base_env),
-            gate_url="https://{}-gate.dataloop.ai".format(base_env),
-            url="https://{}.dataloop.ai/".format(env_name)
+            environment=os.environ.get("ENVIRONMENT_SDK", f'https://{base_env}-gate.dataloop.ai/api/v1'),
+            verify_ssl=eval(os.environ.get("VERIFY_SSL_SDK", "True")),
+            alias=f'{base_env}',
+            gate_url=os.environ.get("GATE_URL_SDK", f"https://{base_env}-gate.dataloop.ai"),
+            url=os.environ.get("URL_SDK", f"https://{base_env}.dataloop.ai")
         )
 
     assert base_env in [env_dict['alias'] for env_url, env_dict in

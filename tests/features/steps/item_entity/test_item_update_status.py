@@ -1,5 +1,4 @@
 import time
-
 import behave
 import random
 
@@ -28,8 +27,130 @@ def step_impl(context):
                 if item.annotated:
                     item.update_status(status=context.dl.ItemStatus.COMPLETED, task_id=context.task.id)
                 else:
-                    # item.update_status(status=context.dl.ItemStatus.DISCARDED,task_id=context.task.id)
-                    item.update_status(status='discard', task_id=context.task.id)
+                    item.update_status(status=context.dl.ItemStatus.DISCARDED, task_id=context.task.id)
+
+    except context.dl.exceptions.PlatformException as e:
+        assert False, "Failed to update item_status \n".format(e)
+
+
+@behave.when(u'I update items status to default qa_task actions with qa_task id')
+def atp_step_impl(context):
+    pages = context.qa_task.get_items()
+    try:
+        for page in pages:
+            for item in page:
+                if item.annotated:
+                    item.update_status(status=context.dl.ItemStatus.APPROVED, task_id=context.qa_task.id)
+                else:
+                    item.update_status(status=context.dl.ItemStatus.DISCARDED, task_id=context.qa_task.id)
+
+    except context.dl.exceptions.PlatformException as e:
+        assert False, "Failed to update item_status \n".format(e)
+
+
+@behave.when(u'I complete all items in task except for discarded items')
+def step_impl(context):
+    pages = context.task.get_items()
+    try:
+        for page in pages:
+            for item in page:
+                if item.status(task_id=context.task.id) != 'discard':
+                    item.update_status(status=context.dl.ItemStatus.COMPLETED, task_id=context.task.id)
+                else:
+                    continue
+
+    except context.dl.exceptions.PlatformException as e:
+        assert False, "Failed to update item_status \n".format(e)
+
+
+@behave.when(u'I approve all items in task except for discarded items')
+def step_impl(context):
+    pages = context.qa_task.get_items()
+    try:
+        for page in pages:
+            for item in page:
+                if item.status(task_id=context.qa_task.id) != 'discard':
+                    item.update_status(status=context.dl.ItemStatus.APPROVED, task_id=context.qa_task.id)
+                else:
+                    continue
+
+    except context.dl.exceptions.PlatformException as e:
+        assert False, "Failed to update item_status \n".format(e)
+
+
+@behave.then(u'I validate "{completed_items}" completed and "{discarded_items}" discarded items')
+def step_impl(context, discarded_items, completed_items):
+    pages = context.task.get_items()
+    discarded = 0
+    completed = 0
+    for page in pages:
+        for item in page:
+            if item.status(task_id=context.task.id) == 'discard':
+                discarded += 1
+            elif item.status(task_id=context.task.id) == 'completed':
+                completed += 1
+    assert int(discarded_items) == discarded, f"Failed, expected {discarded_items} discarded and got {discarded}"
+    assert int(completed_items) == completed, f"Failed, expected {completed_items} completed and got {completed}"
+
+
+@behave.then(u'I validate "{approved_items}" approved and "{discarded_items}" discarded items')
+def step_impl(context, discarded_items, approved_items):
+    pages = context.qa_task.get_items()
+    discarded = 0
+    approved = 0
+    for page in pages:
+        for item in page:
+            if item.status(task_id=context.qa_task.id) == 'discard':
+                discarded += 1
+            elif item.status(task_id=context.qa_task.id) == 'approved':
+                approved += 1
+    assert int(discarded_items) == discarded, f"Failed, expected {discarded_items} discarded and got {discarded}"
+    assert int(approved_items) == approved, f"Failed, expected {approved_items} completed and got {approved}"
+
+
+@behave.when(u'I "{action}" the "{status}" status of the item on the task')
+def step_impl(context, status, action):
+    try:
+        if action == "add":
+            if status == "complete":
+                context.item.update_status(status=context.dl.ItemStatus.COMPLETED, task_id=context.task.id)
+            elif status == "discard":
+                context.item.update_status(status=context.dl.ItemStatus.DISCARDED, task_id=context.task.id)
+            else:
+                assert False, "Failed, Wrong status (complete / discard)"
+        elif action == "clear":
+            if status == "complete":
+                context.item.update_status(status=context.dl.ItemStatus.COMPLETED, task_id=context.task.id, clear=True)
+            elif status == "discard":
+                context.item.update_status(status=context.dl.ItemStatus.DISCARDED, task_id=context.task.id, clear=True)
+            else:
+                assert False, "Failed, Wrong status (complete / discard)"
+        else:
+            assert False, "Failed, Wrong action (add / clear)"
+
+    except context.dl.exceptions.PlatformException as e:
+        assert False, "Failed to update item_status \n".format(e)
+
+
+@behave.when(u'I "{action}" the "{status}" status of the item on the QA task')
+def step_impl(context, status, action):
+    try:
+        if action == "add":
+            if status == "approve":
+                context.item.update_status(status=context.dl.ItemStatus.APPROVED, task_id=context.qa_task.id)
+            elif status == "discard":
+                context.item.update_status(status=context.dl.ItemStatus.DISCARDED, task_id=context.qa_task.id)
+            else:
+                assert False, "Failed, Wrong status (approve / discard)"
+        elif action == "clear":
+            if status == "approve":
+                context.item.update_status(status=context.dl.ItemStatus.APPROVED, task_id=context.qa_task.id, clear=True)
+            elif status == "discard":
+                context.item.update_status(status=context.dl.ItemStatus.DISCARDED, task_id=context.qa_task.id, clear=True)
+            else:
+                assert False, "Failed, Wrong status (approve / discard)"
+        else:
+            assert False, "Failed, Wrong action (add / clear)"
 
     except context.dl.exceptions.PlatformException as e:
         assert False, "Failed to update item_status \n".format(e)
@@ -113,3 +234,5 @@ def step_impl(context, status_value, action_type):
         time.sleep(interval)
 
     assert success, f"TEST FAILED: Expected {status_value} | {action_type}, actual status is {item_latest_status} | {item_latest_action}"
+
+

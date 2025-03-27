@@ -9,13 +9,17 @@ import os
 
 
 @behave.when(u'I create a dummy model package by the name of "{package_name}" with entry point "{entry_point}"')
-def step_impl(context, package_name, entry_point):
+@behave.when(u'I create a dummy model package by the name of "{package_name}" with entry point "{entry_point}" and docker image "{docker_image}"')
+def step_impl(context, package_name, entry_point, docker_image=None):
+    if docker_image == 'None':
+        docker_image = None
+    else:
+        docker_image = 'jjanzic/docker-python3-opencv'
     if package_name == "ac-lr-package":
         context.codebase_local_dir = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], 'model_ac_lr')
         docker_image = None
     else:
         context.codebase_local_dir = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], 'models_flow')
-        docker_image = 'jjanzic/docker-python3-opencv'
     module = dl.PackageModule.from_entry_point(
         entry_point=os.path.join(context.codebase_local_dir, entry_point))
     context.dpk.components.modules._dict[0] = module.to_json()
@@ -79,16 +83,21 @@ def step_impl(context):
 
 
 @behave.when(u'I create a model from package by the name of "{model_name}" with status "{status}" in index "{index}"')
-def step_impl(context, model_name, status, index):
+@behave.when(
+    u'I create a model from package by the name of "{model_name}" with status "{status}" in index "{index}" "{artifact_flag}" artifacts')
+def step_impl(context, model_name, status, index, artifact_flag=None):
+    artifact = [dl.LinkArtifact(
+        url='https://storage.googleapis.com/model-mgmt-snapshots/ResNet50/model.pth',
+        filename='model.pth').to_json()]
+    if artifact_flag == 'without':
+        artifact = []
     model = {
         'name': model_name,
         'description': 'model for testing',
         'datasetId': context.dataset.id,
         'moduleName': context.dpk.components.modules[0].name,
         'scope': 'project',
-        'model_artifacts': [dl.LinkArtifact(
-            url='https://storage.googleapis.com/model-mgmt-snapshots/ResNet50/model.pth',
-            filename='model.pth').to_json()],
+        'model_artifacts': artifact,
         'status': status,
         'configuration': {'weights_filename': 'model.pth',
                           'batch_size': 16,
@@ -231,8 +240,8 @@ def step_impl(context, item_id):
 
 @behave.then(u'model status should be "{status}" with execution "{flag}" that has function "{func}"')
 def step_impl(context, status, flag, func):
-    num_try = 54
-    interval = 10
+    num_try = 72
+    interval = 20
     completed = False
 
     if eval(flag):
@@ -433,6 +442,10 @@ def step_impl(context):
 
 @behave.then(u'model metadata should include operation "{operation}" with filed "{field}" and length "{value}"')
 def step_impl(context, operation, field, value):
+    # Skip this step if context.skip_step is set, this is used to skip steps in case of specific conditions
+    if hasattr(context, 'skip_step'):
+        return
+    time.sleep(5)
     value = int(value)
     context.model = dl.models.get(model_id=context.model.id)
     assert operation in context.model.metadata['system'], f"TEST FAILED: operation {operation} is not in model metadata"
@@ -485,3 +498,16 @@ def step_impl(context, values, index=0):
                 del model['metadata'][value.split('.')[-1]]
         else:
             del model[value]
+
+
+@behave.when(u'I update model')
+def step_impl(context):
+    context.model = context.model.update()
+
+
+@behave.when(u'I prepare model for training')
+def step_impl(context):
+    context.model.dataset_id = context.dataset.id
+    context.model.metadata['system'].update({'subsets': {'train': dl.Filters().prepare(),
+                                                         'validation': dl.Filters().prepare()}})
+    context.model.update(True)

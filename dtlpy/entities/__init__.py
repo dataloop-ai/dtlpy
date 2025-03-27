@@ -75,8 +75,9 @@ from .app_module import AppModule
 from .resource_execution import ResourceExecution
 from .message import Message, NotificationEventContext
 from .prompt_item import Prompt, PromptItem, PromptType
-from .compute import ClusterProvider, ComputeType, ComputeStatus, Toleration, DeploymentResource, DeploymentResources, \
+from .compute import ClusterProvider, ComputeType, ComputeStatus, Toleration, DeploymentResource, DeploymentResources, ComputeSettings, ComputeConsumptionMethod, \
     NodePool, AuthenticationIntegration, Authentication, ComputeCluster, ComputeContext, Compute, KubernetesCompute, \
     ServiceDriver
 from .gis_item import  ItemGis, Layer
 from .collection import Collection
+

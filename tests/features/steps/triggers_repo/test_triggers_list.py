@@ -14,3 +14,9 @@ def step_impl(context, count):
             for trigger in page:
                 assert isinstance(trigger, context.dl.entities.Trigger) or \
                        isinstance(trigger, context.dl.entities.trigger.CronTrigger)
+
+
+@behave.then(u'I have "{count}" triggers in project')
+def step_impl(context, count):
+    triggers_count = context.project.triggers.list().items_count
+    assert triggers_count == int(count), f"Expected {count} triggers, but got {triggers_count}"

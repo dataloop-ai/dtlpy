@@ -8,17 +8,21 @@ logger = logging.getLogger(name='dtlpy')
 
 class Apps:
 
-    def __init__(self, client_api: ApiClient, project: entities.Project = None):
+    def __init__(self, client_api: ApiClient, project: entities.Project = None, project_id: str = None):
         self._client_api = client_api
         self._project = project
+        self._project_id = project_id 
         self._commands = None
 
     @property
     def project(self) -> entities.Project:
         if self._project is None:
-            raise exceptions.PlatformException(
-                error='2001',
-                message='Missing "project". need to set a Project entity or use project.apps repository')
+            if self._project_id is None:
+                raise exceptions.PlatformException(
+                    error='2001',
+                    message='Missing "project". need to set a Project entity or use project.apps repository')
+            else:
+                self._project = repositories.Projects(client_api=self._client_api).get(project_id=self._project_id)
         assert isinstance(self._project, entities.Project)
         return self._project
 

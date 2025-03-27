@@ -46,7 +46,8 @@ class Computes:
             is_global: Optional[bool] = False,
             features: Optional[Dict] = None,
             wait=True,
-            status: entities.ComputeStatus = None
+            status: entities.ComputeStatus = None,
+            settings: entities.ComputeSettings = None
     ):
         """
         Create a new compute
@@ -60,18 +61,24 @@ class Computes:
         :param features: Features
         :param wait: Wait for compute creation
         :param status: Compute status
+        :param settings: Compute settings
         :return: Compute
         """
 
+        shared_contexts_json = []
+        for shared_context in shared_contexts:
+            src_json = shared_context.to_json() if isinstance(shared_context, entities.ComputeContext) else shared_context
+            shared_contexts_json.append(src_json)
         payload = {
             'name': name,
             'context': context.to_json(),
             'type': type.value,
             'global': is_global,
             'features': features,
-            'shared_contexts': [sc.to_json() for sc in shared_contexts],
+            'sharedContexts': shared_contexts_json,
             'cluster': cluster.to_json(),
-            'status': status
+            'status': status,
+            "settings": settings.to_json() if isinstance(settings, entities.ComputeSettings) else settings
         }
 
         # request
@@ -205,7 +212,9 @@ class Computes:
             [],
             cluster,
             ComputeType.KUBERNETES,
-            status=config['config'].get('status', None))
+            status=config['config'].get('status', None),
+            settings=config['config'].get('settings', None))
+
         return compute
 
     def create_from_config_file(self, config_file_path, org_id, project_name: Optional[str] = None):

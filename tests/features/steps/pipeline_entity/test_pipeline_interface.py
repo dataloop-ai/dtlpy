@@ -225,6 +225,13 @@ def generate_pipeline_json(context, pipeline_json, flag=None):
                 "load": 100
             }
         ]
+        if node['metadata'].get('taskType', None):
+            if node['metadata']['taskType'] == 'annotation':
+                context.task_name = node['name']
+            elif node['metadata']['taskType'] == 'qa':
+                context.qa_task_name = node['name']
+        else:
+            context.task_name = node['name']
 
     function_nodes = [node for node in pipeline_json.get('nodes', []) if node['type'] == 'function']
     for node in function_nodes:
@@ -315,3 +322,45 @@ def step_impl(context):
             flag = True
             break
     assert flag, f"TEST FAILED: Task still exist"
+
+
+@behave.when(u'I update pipeline variables with the params')
+def atp_step_impl(context):
+    params = {}
+    for row in context.table:
+        params[row['variable-name']] = eval(f"context.{row['value']}")
+
+    for variable in context.pipeline.variables:
+        if params.get(variable.name, None):
+            variable.value = params[variable.name]
+
+    context.pipeline = context.pipeline.update()
+
+
+@behave.when(u'I update pipeline tasks nodes')
+def atp_step_impl(context):
+    for node in context.pipeline.nodes:
+        if node.node_type == 'task':
+            if not hasattr(context, "datasets"):
+                node.metadata["recipeTitle"] = context.dataset.recipes.list()[0].title
+                node.metadata["recipeId"] = context.dataset.recipes.list()[0].id
+                node.metadata["datasetId"] = context.dataset.id
+            else:
+                node.metadata["recipeTitle"] = context.datasets[0].recipes.list()[0].title
+                node.metadata["recipeId"] = context.datasets[0].recipes.list()[0].id
+                node.metadata["datasetId"] = context.datasets[0].id
+            node.metadata["taskOwner"] = context.dl.info()['user_email']
+            node.metadata["workload"] = [
+                {
+                    "assigneeId": context.dl.info()['user_email'],
+                    "load": 100
+                }
+            ]
+            node.metadata["batchSize"] = None
+            node.metadata["maxBatchWorkload"] = None
+            if node.task_type == 'annotation':
+                context.task_name = node.name
+            elif node.task_type == 'qa':
+                context.qa_task_name = node.name
+
+    context.pipeline = context.pipeline.update()

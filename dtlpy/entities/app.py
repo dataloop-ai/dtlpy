@@ -60,7 +60,7 @@ class App(entities.BaseEntity):
         reps = namedtuple('repositories', field_names=['projects', 'apps', 'compositions'])
         return reps(
             projects=repositories.Projects(client_api=self._client_api),
-            apps=repositories.Apps(client_api=self._client_api, project=self._project),
+            apps=repositories.Apps(client_api=self._client_api, project=self._project, project_id=self.project_id),
             compositions=repositories.Compositions(client_api=self._client_api, project=self._project)
         )
 

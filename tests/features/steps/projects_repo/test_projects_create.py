@@ -81,7 +81,10 @@ def step_impl(context, error):
 @behave.then(u'"{error_msg}" in error message with status code "{status_code}"')
 def step_impl(context, error_msg, status_code=None):
     if status_code:
-        assert status_code == context.error.status_code, f"TEST FAILED: Expected status_code: {status_code}\nActual Got {context.error.message}"
+        if context.error:
+            assert status_code == context.error.status_code, f"TEST FAILED: Expected status_code: {status_code}\nActual Got {context.error.message}"
+        else:
+            assert False, f"TEST FAILED: Expected status_code: {status_code}\nActual Got None"
     assert error_msg in context.error.message, f"TEST FAILED: Actual msg: {context.error.message}"
 
 

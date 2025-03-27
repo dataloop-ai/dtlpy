@@ -121,20 +121,21 @@ def after_feature(context, feature):
 
     # update api call json
     if hasattr(feature, 'dataloop_feature_dl'):
-        try:
-            api_calls_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], 'api_calls.json')
-            with open(api_calls_path, 'r') as f:
-                api_calls = json.load(f)
-            if context.feature.name in api_calls:
-                api_calls[context.feature.name] += feature.dataloop_feature_dl.client_api.calls_counter.number
-            else:
-                api_calls[context.feature.name] = feature.dataloop_feature_dl.client_api.calls_counter.number
-            # lock the file for multi processes needs
-            with FileLock("api_calls.json.lock"):
-                with open(api_calls_path, 'w') as f:
-                    json.dump(api_calls, f)
-        except Exception:
-            logging.exception('Failed to update api calls')
+        if not os.environ.get('IGNORE_API_CALLS', 'false') == 'true':
+            try:
+                api_calls_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], 'api_calls.json')
+                with open(api_calls_path, 'r') as f:
+                    api_calls = json.load(f)
+                if context.feature.name in api_calls:
+                    api_calls[context.feature.name] += feature.dataloop_feature_dl.client_api.calls_counter.number
+                else:
+                    api_calls[context.feature.name] = feature.dataloop_feature_dl.client_api.calls_counter.number
+                # lock the file for multi processes needs
+                with FileLock("api_calls.json.lock"):
+                    with open(api_calls_path, 'w') as f:
+                        json.dump(api_calls, f)
+            except Exception:
+                logging.exception('Failed to update api calls')
 
     if hasattr(feature, 'dataloop_feature_compute'):
         try:
@@ -293,7 +294,7 @@ def after_tag(context, tag):
         pass
     elif tag == 'wip':
         pass
-    elif any(i_tag in tag for i_tag in ['DAT-', 'qa-', 'rc_only', 'skip_test']):
+    elif any(i_tag in tag for i_tag in ['DAT-', 'qa-', 'rc_only', 'skip_test', 'ATP', 'AIRGAPPED']):
         pass
     else:
         raise ValueError('unknown tag: {}'.format(tag))

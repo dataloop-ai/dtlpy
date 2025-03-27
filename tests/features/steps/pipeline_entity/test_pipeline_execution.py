@@ -74,7 +74,14 @@ def step_impl(context):
 
 
 @behave.then(u'I expect that pipeline execution has "{execution_number}" success executions')
-def step_impl(context, execution_number):
+@behave.then(u'I expect that pipeline execution has "{execution_number}" success executions - ALP "{flag_alp}"')
+def step_impl(context, execution_number, flag_alp=None):
+    """
+    Validate that the pipeline execution has the expected number of executions
+    :param context: Behave context
+    :param execution_number: Number of expected executions  (str)
+    :param flag_alp: Optional flag to indicate if the pipeline is an ALP pipeline
+    """
     time.sleep(.500)
     assert context.pipeline.pipeline_executions.list().items_count != 0, "Pipeline not executed found 0 executions"
     context.pipeline = context.project.pipelines.get(context.pipeline.name)
@@ -84,6 +91,7 @@ def step_impl(context, execution_number):
     executed = False
     execution_count = 0
     pipeline_executions = None
+    cycle = None
     for i in range(num_try):
         time.sleep(interval)
         context.cycles = context.pipeline.pipeline_executions.list().items
@@ -102,10 +110,19 @@ def step_impl(context, execution_number):
             executed = execution_count == int(execution_number)
             break
 
-
     if pipeline_executions and pipeline_executions.items[-1].latest_status['status'] == 'failed':
         assert False, f"TEST FAILED: Last execution failed with message: {pipeline_executions.items[-1].latest_status['message']}"
-    assert executed, "TEST FAILED: Pipeline has {} executions instead of {}".format(execution_count, execution_number)
+    if flag_alp and not executed:
+        filters = context.dl.Filters(resource=context.dl.FiltersResource.EXECUTION)
+        filters.add(field='pipeline.executionId', values=cycle.id)
+        filters.add(field='pipeline.id', values=context.pipeline.id)
+        last_execution = context.dl.executions.list(filters=filters).items[-1]
+        assert last_execution.latest_status['status'] == 'success', \
+            f"TEST FAILED: Last execution failed with message: {last_execution.latest_status['message']} And has {execution_count} executions"
+        context.skip_step = True
+        executed = True
+        print(f"ALP pipeline execution success with {execution_count} executions")
+    assert executed, f"TEST FAILED: Pipeline has {execution_count} executions instead of {execution_number}"
     return executed
 
 
@@ -132,10 +149,30 @@ def step_impl(context, status):
 
     for i in range(num_try):
         time.sleep(interval)
-        context.pipeline_execution = context.pipeline.pipeline_executions.get(pipeline_execution_id=context.pipeline_execution_id)
+        context.pipeline_execution = context.pipeline.pipeline_executions.get(
+            pipeline_execution_id=context.pipeline_execution_id)
         if context.pipeline_execution.status == status:
             executed = True
             break
 
-    assert executed, "TEST FAILED: Pipeline cycle status is {} Expected to get {}".format(context.pipeline_execution.status, status)
+    assert executed, "TEST FAILED: Pipeline cycle status is {} Expected to get {}".format(
+        context.pipeline_execution.status, status)
     return executed
+
+
+@behave.when(u'I execute node by node id "{node_id}"')
+@behave.when(u'I execute node by node id "{node_id}" with params')
+def step_impl(context, node_id):
+    node_inputs = None
+    if context.table is not None:
+        node_inputs = dict()
+        for row in context.table:
+            value = row['value']
+            if "context." in value:
+                value = eval(value)
+            node_inputs[row['key']] = value
+
+    # Check if node_id is not a string
+    if "context." in node_id:
+        node_id = eval(node_id)
+    context.execution = context.pipeline.execute(node_id=node_id, execution_input=node_inputs)

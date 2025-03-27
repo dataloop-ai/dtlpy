@@ -10,6 +10,21 @@ def step_impl(context):
         raise AttributeError("'dpk' not found in 'context'")
 
 
+@behave.when(u'I create template from pipeline app')
+def step_impl(context):
+    success, response = context.dl.client_api.gen_request(req_type='post',
+                                                          path=f"/apps/{context.app.id}/resolvePipelineTemplate",
+                                                          json_req={})
+
+    if success:
+        context.pipeline = context.dl.Pipeline.from_json(client_api=context.dl.client_api,
+                                                         _json=response.json(),
+                                                         project=context.project)
+        context.to_delete_pipelines_ids.append(context.pipeline.id)
+    else:
+        raise context.dl.exceptions.PlatformException(response)
+
+
 @behave.then(u'App is not installed in the project')
 def step_impl(context):
     try:

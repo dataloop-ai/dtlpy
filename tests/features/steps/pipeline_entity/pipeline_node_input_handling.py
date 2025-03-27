@@ -158,3 +158,10 @@ def step_impl(context, cycle_number, expected_cycle_status ):
     cycle_index = int(cycle_number) - 1
     cycle = context.cycles[cycle_index]
     assert cycle.status == expected_cycle_status, "Cycle status is {} where {} was expected".format(cycle.status, expected_cycle_status)
+
+
+@behave.when(u'I get node by name "{node_name}"')
+def step_impl(context, node_name):
+    context.node = context.pipeline.nodes.get(node_name=node_name)
+    assert isinstance(context.node, dl.entities.node.PipelineNode), f"TEST FAILED: Node was not found - {context.node}"
+

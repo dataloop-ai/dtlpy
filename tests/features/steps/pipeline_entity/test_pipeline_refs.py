@@ -348,7 +348,7 @@ def step_impl(context):
 @when(u'I install pipeline')
 def step_impl(context):
     context.pipeline = context.pipeline.install()
-    assert context.pipeline.status == 'Installed'
+    assert context.pipeline.status == 'Installed', f"TEST FAILED: Expected: 'Installed' Actual: {context.pipeline.status}"
 
 
 @then(u'service should have pipeline refs and cannot be uninstall')

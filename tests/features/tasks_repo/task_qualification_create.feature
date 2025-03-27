@@ -15,4 +15,4 @@ Feature: Tasks repository create qualification task
       | task_name=min_params | due_date=auto | assignee_ids=auto | metadata={"system":{"consensusTaskType":"qualification"}} |
     Then I receive a task entity
     And Task has the correct attributes for type "annotation"
-    And I expect Task created with "30" items
+    And I expect "task" created with "30" items

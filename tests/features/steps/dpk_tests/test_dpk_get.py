@@ -57,7 +57,7 @@ def step_impl(context):
 @behave.when(u'I get global dpk by name "{dpk_name}"')
 def step_impl(context, dpk_name):
     try:
-        context.dpk = context.dl.dpks.get(dpk_name=dpk_name)
+        context.dpk = context.dl.dpks.get(dpk_name=eval(dpk_name) if "context." in dpk_name else dpk_name)
         context.error = None
     except Exception as e:
         raise e

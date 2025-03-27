@@ -155,6 +155,10 @@ class Uploader:
             remote_path = f"/{remote_path}"
         if remote_path and not remote_path.endswith("/"):
             remote_path = f"{remote_path}/"
+
+        if remote_name:
+            remote_name = remote_name.lstrip('/')
+
         if file_types is not None and not isinstance(file_types, list):
             msg = '"file_types" should be a list of file extension. e.g [".jpg", ".png"]'
             raise PlatformException(error="400", message=msg)

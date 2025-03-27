@@ -338,6 +338,8 @@ def check_feature_folder(feature_folder, feature_name=None):
         return "Hedwig"
     elif feature_folder in ["billing_repo"]:
         return "Billing"
+    elif feature_folder in ['flows']:
+        return "Flows"
     else:
         assert False, f"Feature folder '{feature_folder}' not in the services list - Please add it to correct condition.\n{feature_name}"
 
@@ -385,7 +387,7 @@ def send_alert():
 
 
 def report_to_xray(test_env: str = 'RC'):
-    services_list = ['Ramsay', 'Piper', 'Hodor', 'Apps', 'Rubiks', 'SDK', 'Woz', 'Roberto', 'Hedwig', 'Billing']
+    services_list = ['Ramsay', 'Piper', 'Hodor', 'Apps', 'Rubiks', 'SDK', 'Woz', 'Roberto', 'Hedwig', 'Billing', 'Flows']
 
     """
     Check if all services has a report folder and remove from the list if not
@@ -478,7 +480,7 @@ if __name__ == '__main__':
     results = dict()
     features_to_run = set()
     for path, subdirs, files in os.walk(features_path):
-        if "billing_repo" not in path:
+        if "billing_repo" not in path and "flows" not in path:
             for filename in files:
                 striped, ext = os.path.splitext(filename)
                 if ext in ['.feature']:
