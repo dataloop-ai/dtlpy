@@ -136,3 +136,20 @@ We encourage contributions! Please ensure:
 Create pull requests for review. All contributions will be reviewed carefully and integrated accordingly.
 
 ---
+
+## **Repository Governance**
+
+This repository is governed according to our established guidelines to ensure consistency, security, and efficiency.
+
+#### 1. Quarterly Reviews
+Regular audits to verify repository activity, permissions, compliance, and health.
+
+#### 2. Deprecation Process
+Inactive or redundant repositories (no commits for 6+ months) are proposed for archival with stakeholder notification and a feedback period.
+
+#### 3. Public/Private Evaluation
+Annual assessments or upon significant changes, evaluating security, intellectual property, and compliance implications.
+
+For repository issues or suggestions, please use the dedicated Slack channel (`#github-repo-governance`) or raise a ticket in the Repository Governance Jira board.
+
+For detailed information, please see the [Repository Governance Document](https://dataloop.atlassian.net/wiki/spaces/DG/pages/1342799902/Git+Repository+Governance+Process?force_transition=34c5fc5b-725f-4d3e-8687-06e76a169d5e) or contact the DevOps Team.
