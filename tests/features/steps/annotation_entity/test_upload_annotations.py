@@ -29,10 +29,11 @@ def step_impl(context, annotations_path):
     annotations_get = context.item.annotations.list()
     for ann in annotations_get:
         metadata = ann.to_json()['metadata']
-        ann = {'type': ann.type,
-               'attributes': ann.attributes,
-               'label': ann.label,
-               'coordinates': ann.coordinates,
+        ann_json = ann.to_json()
+        ann = {'type': ann_json.get('type'),
+               'attributes': ann_json.get('attributes'),
+               'label': ann_json.get('label'),
+               'coordinates': ann_json.get('coordinates'),
                'metadata': metadata}
 
         if 'coordinateVersion' in ann['metadata']['system']:
@@ -47,7 +48,7 @@ def step_impl(context, annotations_path):
     anns = list()
     for ann in context.annotations:
         ann = {'type': ann['type'],
-               'attributes': ann.get('metadata', {}).get('system', {}).get('attributes'),
+               'attributes': ann.get('metadata', {}).get('system', {}).get('attributes', {}),
                'label': ann['label'],
                'coordinates': ann['coordinates']}
         anns.append(ann)

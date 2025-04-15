@@ -43,7 +43,7 @@ from .package_slot import PackageSlot, SlotPostAction, SlotPostActionType, SlotD
     UiBindingPanel
 from .package_function import PackageFunction, FunctionIO, PackageInputType
 from .time_series import TimeSeries
-from .service import Service, KubernetesAutoscalerType, KubernetesAutuscalerType, KubernetesRabbitmqAutoscaler, KubernetesAutoscaler, KubernetesRPSAutoscaler, \
+from .service import Service, KubernetesAutoscalerType, KubernetesRabbitmqAutoscaler, KubernetesAutoscaler, KubernetesRPSAutoscaler, \
     InstanceCatalog, KubernetesRuntime, ServiceType, ServiceModeType
 from .execution import Execution, ExecutionStatus
 from .command import Command, CommandsStatus
@@ -76,8 +76,8 @@ from .resource_execution import ResourceExecution
 from .message import Message, NotificationEventContext
 from .prompt_item import Prompt, PromptItem, PromptType
 from .compute import ClusterProvider, ComputeType, ComputeStatus, Toleration, DeploymentResource, DeploymentResources, ComputeSettings, ComputeConsumptionMethod, \
-    NodePool, AuthenticationIntegration, Authentication, ComputeCluster, ComputeContext, Compute, KubernetesCompute, \
-    ServiceDriver
+    NodePool, AuthenticationIntegration, Authentication, ComputeCluster, ComputeContext, Compute, KubernetesCompute
+from .service_driver import ServiceDriver
 from .gis_item import  ItemGis, Layer
 from .collection import Collection
 

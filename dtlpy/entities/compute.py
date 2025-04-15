@@ -1,3 +1,4 @@
+import traceback
 from enum import Enum
 from typing import List, Optional, Dict
 from ..services.api_client import ApiClient
@@ -22,6 +23,7 @@ class ComputeStatus(str, Enum):
     INITIALIZING = "initializing"
     PAUSE = "pause"
     FAILED = "failed"
+    VALIDATING = "validating"
 
 
 class ComputeConsumptionMethod(str, Enum):
@@ -105,8 +107,8 @@ class DeploymentResources:
     @classmethod
     def from_json(cls, _json):
         return cls(
-            request=DeploymentResource.from_json(_json.get('request', dict())),
-            limit=DeploymentResource.from_json(_json.get('limit', dict()))
+            request=DeploymentResource.from_json(_json.get('request') or dict()),
+            limit=DeploymentResource.from_json(_json.get('limit') or dict())
         )
 
     def to_json(self):
@@ -296,7 +298,8 @@ class Compute:
             type: ComputeType = ComputeType.KUBERNETES,
             features: Optional[Dict] = None,
             metadata: Optional[Dict] = None,
-            settings: Optional[ComputeSettings] = None
+            settings: Optional[ComputeSettings] = None,
+            url: Optional[str] = None
     ):
         self.id = id
         self.name = name
@@ -311,6 +314,7 @@ class Compute:
         self._computes = None
         self._serviceDrivers = None
         self.settings = settings
+        self.url = url
 
     @property
     def computes(self):
@@ -318,17 +322,29 @@ class Compute:
             self._computes = repositories.Computes(client_api=self._client_api)
         return self._computes
 
-    @property
-    def service_drivers(self):
-        if self._serviceDrivers is None:
-            self._serviceDrivers = repositories.ServiceDrivers(client_api=self._client_api)
-        return self._serviceDrivers
-
     def delete(self):
         return self.computes.delete(compute_id=self.id)
 
     def update(self):
         return self.computes.update(compute=self)
+
+    @staticmethod
+    def _protected_from_json(_json: dict, client_api: ApiClient):
+        """
+        Same as from_json but with try-except to catch if error
+
+        :param _json: platform json
+        :param client_api: ApiClient entity
+        :return:
+        """
+        try:
+            compute = Compute.from_json(_json=_json,
+                                        client_api=client_api)
+            status = True
+        except Exception:
+            compute = traceback.format_exc()
+            status = False
+        return status, compute
 
     @classmethod
     def from_json(cls, _json, client_api: ApiClient):
@@ -343,12 +359,14 @@ class Compute:
             features=_json.get('features'),
             client_api=client_api,
             metadata=_json.get('metadata'),
-            settings=ComputeSettings.from_json(_json.get('settings', dict())) if _json.get('settings') else None
+            settings=ComputeSettings.from_json(_json.get('settings', dict())) if _json.get('settings') else None,
+            url=_json.get('url'),
         )
 
     def to_json(self):
         return {
             'id': self.id,
+            'name': self.name,
             'context': self.context.to_json(),
             'sharedContexts': [sc.to_json() for sc in self.shared_contexts],
             'global': self.global_,
@@ -356,7 +374,8 @@ class Compute:
             'type': self.type.value,
             'features': self.features,
             'metadata': self.metadata,
-            'settings': self.settings.to_json() if isinstance(self.settings, ComputeSettings) else self.settings
+            'settings': self.settings.to_json() if isinstance(self.settings, ComputeSettings) else self.settings,
+            'url': self.url
         }
 
 
@@ -374,16 +393,19 @@ class KubernetesCompute(Compute):
             features: Optional[Dict] = None,
             metadata: Optional[Dict] = None,
             client_api: ApiClient = None,
-            settings: Optional[ComputeSettings] = None
+            settings: Optional[ComputeSettings] = None,
+            url: Optional[str] = None
     ):
         super().__init__(id=id, context=context, shared_contexts=shared_contexts, global_=global_, status=status,
-                         type=type, features=features, metadata=metadata, client_api=client_api, settings=settings, name=name)
+                         type=type, features=features, metadata=metadata, client_api=client_api, settings=settings,
+                         name=name, url=url)
         self.cluster = cluster
 
     @classmethod
     def from_json(cls, _json, client_api: ApiClient):
         return cls(
             id=_json.get('id'),
+            name=_json.get('name'),
             context=ComputeContext.from_json(_json.get('context', dict())),
             cluster=ComputeCluster.from_json(_json.get('cluster', dict())),
             shared_contexts=[ComputeContext.from_json(sc) for sc in _json.get('sharedContexts', list())],
@@ -393,12 +415,14 @@ class KubernetesCompute(Compute):
             features=_json.get('features'),
             metadata=_json.get('metadata'),
             client_api=client_api,
-            settings=ComputeSettings.from_json(_json.get('settings', dict())) if _json.get('settings') else None
+            settings=ComputeSettings.from_json(_json.get('settings', dict())) if _json.get('settings') else None,
+            url=_json.get('url'),
         )
 
     def to_json(self):
         return {
             'id': self.id,
+            'name': self.name,
             'context': self.context.to_json(),
             'cluster': self.cluster.to_json(),
             'sharedContexts': [sc.to_json() for sc in self.shared_contexts],
@@ -407,81 +431,6 @@ class KubernetesCompute(Compute):
             'type': self.type.value,
             'features': self.features,
             'metadata': self.metadata,
-            'settings': self.settings.to_json() if isinstance(self.settings, ComputeSettings) else self.settings
+            'settings': self.settings.to_json() if isinstance(self.settings, ComputeSettings) else self.settings,
+            'url': self.url
         }
-
-
-class ServiceDriver:
-    def __init__(
-            self,
-            name: str,
-            context: ComputeContext,
-            compute_id: str,
-            client_api: ApiClient,
-            type: ComputeType = None,
-            created_at: str = None,
-            updated_at: str = None,
-            namespace: str = None,
-            metadata: Dict = None,
-            url: str = None,
-            archived: bool = None,
-            id: str = None,
-            is_cache_available: bool = None
-    ):
-        self.name = name
-        self.context = context
-        self.compute_id = compute_id
-        self.client_api = client_api
-        self.type = type or ComputeType.KUBERNETES
-        self.created_at = created_at
-        self.updated_at = updated_at
-        self.namespace = namespace
-        self.metadata = metadata
-        self.url = url
-        self.archived = archived
-        self.id = id
-        self.is_cache_available = is_cache_available
-
-    @classmethod
-    def from_json(cls, _json, client_api: ApiClient):
-        return cls(
-            name=_json.get('name'),
-            context=ComputeContext.from_json(_json.get('context', dict())),
-            compute_id=_json.get('computeId'),
-            client_api=client_api,
-            type=_json.get('type', None),
-            created_at=_json.get('createdAt', None),
-            updated_at=_json.get('updatedAt', None),
-            namespace=_json.get('namespace', None),
-            metadata=_json.get('metadata', None),
-            url=_json.get('url', None),
-            archived=_json.get('archived', None),
-            id=_json.get('id', None),
-            is_cache_available=_json.get('isCacheAvailable', None)
-        )
-
-    def to_json(self):
-        _json = {
-            'name': self.name,
-            'context': self.context.to_json(),
-            'computeId': self.compute_id,
-            'type': self.type,
-        }
-        if self.created_at is not None:
-            _json['createdAt'] = self.namespace
-        if self.updated_at is not None:
-            _json['updatedAt'] = self.updated_at
-        if self.namespace is not None:
-            _json['namespace'] = self.namespace
-        if self.metadata is not None:
-            _json['metadata'] = self.metadata
-        if self.url is not None:
-            _json['url'] = self.url
-        if self.archived is not None:
-            _json['archived'] = self.archived
-        if self.id is not None:
-            _json['id'] = self.id
-        if self.is_cache_available is not None:
-            _json['isCacheAvailable'] = self.is_cache_available
-
-        return _json

@@ -13,14 +13,9 @@ class BaseAnnotationDefinition:
         self._bottom = 0
         self._right = 0
         self._annotation = None
-
-        if isinstance(attributes, list) and len(attributes) > 0:
-            warnings.warn("List attributes are deprecated and will be removed in version 1.109. Use Attribute 2.0 (Dictionary) instead."
-                "For more details, refer to the documentation: "
-                "https://developers.dataloop.ai/tutorials/data_management/upload_and_manage_annotations/chapter/#set-attributes-on-annotations",
-                DeprecationWarning,
-            )
-        self._attributes = attributes
+        if attributes and not isinstance(attributes, dict):
+            raise TypeError('attributes should be a dictionary')
+        self._attributes = attributes or {}
 
     @property
     def attributes(self):
@@ -28,13 +23,10 @@ class BaseAnnotationDefinition:
 
     @attributes.setter
     def attributes(self, v):
-        if isinstance(v, list):
-            warnings.warn("List attributes are deprecated and will be removed in version 1.109. Use Attribute 2.0 (Dictionary) instead. "
-                "For more details, refer to the documentation: "
-                "https://developers.dataloop.ai/tutorials/data_management/upload_and_manage_annotations/chapter/#set-attributes-on-annotations",
-                DeprecationWarning,
-            )
+        if v and not isinstance(v, dict):
+            raise TypeError('attributes should be a dictionary')
         self._attributes = v
+
     @property
     def top(self):
         return self._top

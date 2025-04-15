@@ -43,6 +43,7 @@ class Slot(entities.DlEntity):
 
 
 class Toolbar(entities.DlEntity):
+    name: str = entities.DlProperty(location=['name'], _type=str)
     display_name: str = entities.DlProperty(location=['displayName'], _type=str)
     conditions: dict = entities.DlProperty(location=['conditions'], _type=dict)
     invoke: dict = entities.DlProperty(location=['invoke'], _type=dict)

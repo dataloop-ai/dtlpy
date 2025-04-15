@@ -8,7 +8,7 @@ Feature: Test app umbrella refs - Auto update Pipeline nodes
   @DAT-72923
   @DAT-75739
   Scenario: Auto update app model service - update code and not update config
-    Given I publish a model dpk from file "model_dpk/basicModelDpk.json" package "dummymodel" with status "trained"
+    Given I publish a model dpk from file "model_dpk/basicModelDpk.json" package "dummymodel" with status "trained" and docker image "jjanzic/docker-python3-opencv"
     When I install the app without custom_installation
     And I update app auto update to "True"
     And I get last model in project

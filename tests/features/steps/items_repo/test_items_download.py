@@ -91,6 +91,19 @@ def step_impl(context):
                                                        annotation_options=None)
 
 
+@behave.when(u'I download the item without saving and create folder and with array convert')
+def step_impl(context):
+    context.path = os.path.join(os.getcwd(), 'items_check')
+    context.item_data = context.dataset.items.download(items=context.item.id,
+                                                       save_locally=False,
+                                                       local_path=context.path,
+                                                       annotation_options=None,
+                                                       to_array=True)
+
+@behave.then(u'item has data')
+def step_impl(context):
+    assert context.item_data is not None, "TEST FAILED: Item data is None"
+
 @behave.then(u'file do not created')
 def step_impl(context):
     assert not os.path.exists(path=context.path)

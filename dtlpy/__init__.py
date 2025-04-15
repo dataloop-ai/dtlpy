@@ -77,7 +77,7 @@ from .entities import (
     # triggers
     TriggerResource, TriggerAction, TriggerExecutionMode, TriggerType,
     # faas
-    FunctionIO, KubernetesAutoscalerType, KubernetesAutuscalerType, KubernetesRabbitmqAutoscaler, KubernetesAutoscaler, KubernetesRuntime,
+    FunctionIO, KubernetesAutoscalerType, KubernetesRabbitmqAutoscaler, KubernetesAutoscaler, KubernetesRuntime,
     InstanceCatalog, PackageInputType, ServiceType, ServiceModeType, KubernetesRPSAutoscaler,
     PackageSlot, SlotPostAction, SlotPostActionType, SlotDisplayScope, SlotDisplayScopeResource, UiBindingPanel,
     # roberto
@@ -231,12 +231,6 @@ def checkout_state():
     """
     state = client_api.state_io.read_json()
     return state
-
-
-def use_attributes_2(state: bool = True):
-    warnings.warn("Function 'use_attributes_2()' is deprecated as of version 1.99.12 and has been non-functional since version 1.90.39.  To work with attributes 2.0, simply use 'update_attributes()'.", DeprecationWarning)
-    client_api.attributes_mode.use_attributes_2 = state
-
 
 class LoggingLevel:
     DEBUG = "debug"

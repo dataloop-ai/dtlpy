@@ -248,7 +248,7 @@ class Dpks:
             logger.warning("the project id that provide different from the dpk project id")
 
         if local_path is None:
-            if manifest_filepath=='dataloop.json':
+            if manifest_filepath == 'dataloop.json':
                 local_path = os.getcwd()
             else:
                 local_path = os.path.dirname(manifest_filepath)
@@ -407,3 +407,28 @@ class Dpks:
             dpk = self.__get_by_name(dpk_name=dpk_name, dpk_version=dpk_version)
 
         return dpk
+
+    def get_previews(self, dpk: entities.Dpk):
+        """
+        Get the preview of a specific dpk.
+
+        :param entities.Dpk dpk: the dpk entity to get the preview for.
+        :return the preview of the dpk's templates
+        :rtype dict
+
+        ** Example **
+        ..coed-block:: python
+            res = dl.dpks.get_previews(dpk=dpk)
+        """
+        url = '/app-registry/{}/previews'.format(dpk.id)
+
+        # request
+        success, response = self._client_api.gen_request(
+            req_type='get',
+            path=url
+        )
+
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        return response.json()

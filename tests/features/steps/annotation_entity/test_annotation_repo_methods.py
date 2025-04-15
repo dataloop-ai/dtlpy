@@ -183,10 +183,10 @@ def step_impl(context):
 
 @behave.when(u'I upload annotation entity to item')
 def step_impl(context):
-    context.annotation_point.upload()
-    context.annotation_box.upload()
-    context.annotation_ellipse.upload()
-    context.annotation_polygon.upload()
+    context.annotation_point = context.annotation_point.upload()
+    context.annotation_box = context.annotation_box.upload()
+    context.annotation_ellipse = context.annotation_ellipse.upload()
+    context.annotation_polygon = context.annotation_polygon.upload()
 
 
 @behave.then(u'Item in host has annotation entity created')
@@ -270,7 +270,7 @@ def step_impl(context):
         context.annotation.add_frame(annotation_definition=context.dl.Point(x=x, y=y, label=labels[1].tag),
                                      frame_num=i_frame,
                                      fixed=False)
-    context.annotation.update(True)
+    context.annotation = context.annotation.update(True)
 
 
 @behave.then(u'annotation do not have snapshots')

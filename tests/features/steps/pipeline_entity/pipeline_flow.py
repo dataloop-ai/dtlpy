@@ -37,7 +37,7 @@ def step_impl(context):
                                                       package=context.package,
                                                       runtime={"gpu": False, "numReplicas": 1, 'concurrency': 1,
                                                                'autoscaler': {
-                                                                   'type': dl.KubernetesAutuscalerType.RABBITMQ,
+                                                                   'type': dl.KubernetesAutoscalerType.RABBITMQ,
                                                                    'minReplicas': 1,
                                                                    'maxReplicas': 5,
                                                                    'queueLength': 10}}

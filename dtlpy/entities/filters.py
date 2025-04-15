@@ -46,7 +46,9 @@ class FiltersResource(str, Enum):
     DRIVERS = 'drivers'
     SETTINGS = 'setting'
     RESOURCE_EXECUTION = 'resourceExecution'
-    METRICS = 'metrics'
+    METRICS = 'metrics',
+    SERVICE_DRIVER = 'serviceDrivers',
+    COMPUTE = 'compute'
 
 
 class FiltersOperations(str, Enum):

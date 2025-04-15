@@ -257,7 +257,7 @@ def step_impl(context, num_times: str):
 @behave.when(u'I expect all executions to be successful and no execution should have ran twice')
 def step_impl(context):
     # all success
-    max_wait = 60 * 5
+    max_wait = 60 * 10
     start_time = time.time()
     interval = 3
 

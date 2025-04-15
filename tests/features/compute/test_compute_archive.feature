@@ -17,3 +17,7 @@ Feature: Compute archive testing
     When I try to create the compute from context.original_path
     Then I validate no error in context
     When I get compute from the compute list by the name
+    And I update the compute
+    Then compute should be updated
+    When I delete the compute
+    Then the compute is deleted

@@ -35,6 +35,9 @@ pipelines:
             - python3 bumpversion.py --hard $BITBUCKET_TAG.0
             - git push --follow-tags
             - cd ..
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Build SDK Container` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
       - step:
           name: Update dataloop-infra
           image: node:20.6.0
@@ -54,6 +57,9 @@ pipelines:
                 -d grant_type=client_credentials -d scopes="repository"| jq --raw-output '.access_token')
 
             - git tag -a $BITBUCKET_TAG -m "DTLPY=$BITBUCKET_TAG" && git push https://x-token-auth:${access_token}@bitbucket.org/dataloop-ai/dataloop-infra.git --follow-tags
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Update dataloop-infra` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
 
     "run-test-python-3.6.11":
       - step:
@@ -70,6 +76,9 @@ pipelines:
             - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - python tests/test_runner.py
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Tests-3.6.11` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
     "run-test-python-3.7.8":
       - step:
           image: python:3.7.8
@@ -85,6 +94,9 @@ pipelines:
             - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - python tests/test_runner.py
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Tests3.7.8` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
     "run-test-python-3.8.4":
       - step:
           image: python:3.8.4
@@ -101,6 +113,9 @@ pipelines:
             - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - python tests/test_runner.py
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Tests-3.8.4` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
     "run-test-python-3.9.0":
       - step:
           image: python:3.9
@@ -116,6 +131,9 @@ pipelines:
             - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - python tests/test_runner.py
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Tests-3.9` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
     "run-test-python-3.10":
       - step:
           image: python:3.10
@@ -131,6 +149,9 @@ pipelines:
             - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - python tests/test_runner.py
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Tests-3.10` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
     "run-test-python-3.11":
       - step:
           image: python:3.11
@@ -146,6 +167,9 @@ pipelines:
             - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - python tests/test_runner.py
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Tests-3.11` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
     "run-test-python-3.12":
       - step:
           image: python:3.12
@@ -161,6 +185,9 @@ pipelines:
             - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - python tests/test_runner.py
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Tests-3.12` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
     "examples":
       - step:
           image: python:3.7.8
@@ -175,6 +202,9 @@ pipelines:
             - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - python tests/test_examples.py
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Examples-3.7.8` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
   custom:
     "xray-hook":
       - variables:
@@ -200,6 +230,9 @@ pipelines:
             - ./test.sh $TAGS
           artifacts:
             - behave_test_report.json
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Test & Report to XRay (xray-hook)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
 
     "xray-pipeline":
       - variables:
@@ -242,6 +275,9 @@ pipelines:
             - ./test.sh $TAGS
           artifacts:
             - behave_test_report.json
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Test & Report to XRay (xray-pipeline: $TAGS)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
 
     "xray-nightly-parallel-archived":
       - variables:
@@ -266,6 +302,9 @@ pipelines:
             - chmod +x ./test.sh
           artifacts:
             - $ARTIFACTS_PATH
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Test & Report to XRay (xray-nightly-parallel-archived - Setup)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
       - parallel:
           steps:
             - step:
@@ -276,6 +315,9 @@ pipelines:
                   - AVOID_TESTRAIL=true
                   - PYTHONPATH=$PWD
                   - ./test.sh Hodor
+                after-script:
+                  - |
+                    if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Hodor (xray-nightly-parallel-archived)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
             - step:
                 name: Apps
                 script:
@@ -284,6 +326,9 @@ pipelines:
                   - AVOID_TESTRAIL=true
                   - PYTHONPATH=$PWD
                   - ./test.sh Apps
+                after-script:
+                  - |
+                    if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Apps (xray-nightly-parallel-archived)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
 
     "xray-Hodor":
       - variables:
@@ -308,6 +353,9 @@ pipelines:
             - ./test.sh Hodor
           artifacts:
             - behave_test_report.json
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Test & Report to XRay (xray-Hodor)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
 
     "xray-Apps":
       - variables:
@@ -332,6 +380,9 @@ pipelines:
             - ./test.sh Apps
           artifacts:
             - behave_test_report.json
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Test & Report to XRay (xray-Apps)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
 
     "xray-Ramsay":
       - variables:
@@ -356,6 +407,9 @@ pipelines:
             - ./test.sh Ramsay
           artifacts:
             - behave_test_report.json
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Test & Report to XRay (xray-Ramsay)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
 
     "xray-Rubiks":
       - variables:
@@ -380,6 +434,9 @@ pipelines:
             - ./test.sh Rubiks
           artifacts:
             - behave_test_report.json
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Test & Report to XRay (xray-Rubiks)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
 
     "xray-Rubiks-Dataset-Recipe":
       - variables:
@@ -404,6 +461,9 @@ pipelines:
             - ./test.sh Rubiks-Dataset-Recipe
           artifacts:
             - behave_test_report.json
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Test & Report to XRay (xray-Rubiks-Dataset-Recipe)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
 
     "xray-Rubiks-Items-Annotations":
       - variables:
@@ -418,7 +478,6 @@ pipelines:
             - PYTHONPATH=$PWD
             - pip install --upgrade pip
             - apt-get -y update && apt-get install -y libgl1-mesa-glx
-            - pip install -r requirements.txt
             - pip install -r tests/requirements.txt
             - python setup.py build
             - python setup.py install
@@ -428,6 +487,9 @@ pipelines:
             - ./test.sh Rubiks-Items-Annotations
           artifacts:
             - behave_test_report.json
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Test & Report to XRay (xray-Rubiks-Items-Annotations)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
 
     "xray-SDK":
       - variables:
@@ -451,6 +513,9 @@ pipelines:
             - ./test.sh SDK
           artifacts:
             - behave_test_report.json
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Test & Report to XRay (xray-SDK)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
 
     "xray-Woz":
       - variables:
@@ -475,6 +540,9 @@ pipelines:
             - ./test.sh Woz
           artifacts:
             - behave_test_report.json
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Test & Report to XRay (xray-Woz)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
 
     "xray-Roberto":
       - variables:
@@ -499,6 +567,9 @@ pipelines:
             - ./test.sh Roberto
           artifacts:
             - behave_test_report.json
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Test & Report to XRay (xray-Roberto)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
 
     "xray-Hedwig":
       - variables:
@@ -523,6 +594,9 @@ pipelines:
             - ./test.sh Hedwig
           artifacts:
             - behave_test_report.json
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Test & Report to XRay (xray-Hedwig)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
 
     "xray-Piper":
       - variables:
@@ -547,6 +621,9 @@ pipelines:
             - ./test.sh Piper
           artifacts:
             - behave_test_report.json
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Test & Report to XRay (xray-Piper)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
 
     "xray-Piper-Pipelines":
       - variables:
@@ -571,6 +648,9 @@ pipelines:
             - ./test.sh Piper-Pipelines
           artifacts:
             - behave_test_report.json
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Test & Report to XRay (xray-Piper-Pipelines)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
 
     "xray-Piper-Faas":
       - variables:
@@ -595,6 +675,9 @@ pipelines:
             - ./test.sh Piper-Faas
           artifacts:
             - behave_test_report.json
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Test & Report to XRay (xray-Piper-Faas)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
 
 
     "xray-Piper-Triggers-Executions":
@@ -620,6 +703,9 @@ pipelines:
             - ./test.sh Piper-Triggers-Executions
           artifacts:
             - behave_test_report.json
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Test & Report to XRay (xray-Piper-Triggers-Executions)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
 
 
     "xray-Billing_daily":
@@ -645,6 +731,9 @@ pipelines:
             - ./test.sh Billing_daily
           artifacts:
             - behave_test_report.json
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Test & Report to XRay (xray-Billing_daily)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
 
 
 
@@ -671,6 +760,9 @@ pipelines:
             - ./test.sh Billing_weekly
           artifacts:
             - behave_test_report.json
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Test & Report to XRay (xray-Billing-weekly)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
 
 
 
@@ -697,6 +789,9 @@ pipelines:
             - ./test.sh Flows
           artifacts:
             - behave_test_report.json
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Test & Report to XRay (xray-Flows)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
 
 
 
@@ -723,6 +818,9 @@ pipelines:
                 - ./test.sh Hodor
               artifacts:
                 - behave_test_report.json
+              after-script:
+                - |
+                  if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Hodor (xray-nightly-parallel-1)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
           - step:
               image: python:3.11
               name: Woz
@@ -741,6 +839,9 @@ pipelines:
                 - ./test.sh Woz
               artifacts:
                 - behave_test_report.json
+              after-script:
+                - |
+                  if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Woz (xray-nightly-parallel-1)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
           - step:
               image: python:3.11
               name: Ramsay
@@ -759,6 +860,9 @@ pipelines:
                 - ./test.sh Ramsay
               artifacts:
                 - behave_test_report.json
+              after-script:
+                - |
+                  if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Ramsay (xray-nightly-parallel-1)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
           - step:
               image: python:3.11
               name: SDK
@@ -777,6 +881,9 @@ pipelines:
                 - ./test.sh SDK
               artifacts:
                 - behave_test_report.json
+              after-script:
+                - |
+                  if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `SDK (xray-nightly-parallel-1)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
           - step:
               image: python:3.11
               name: Piper-Faas
@@ -795,6 +902,9 @@ pipelines:
                 - ./test.sh Piper-Faas
               artifacts:
                 - behave_test_report.json
+              after-script:
+                - |
+                  if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Piper-Faas (xray-nightly-parallel-1)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
 
 
     "xray-nightly-parallel-2":
@@ -820,6 +930,9 @@ pipelines:
                 - ./test.sh Piper-Triggers-Executions
               artifacts:
                 - behave_test_report.json
+              after-script:
+                - |
+                  if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Piper-Triggers-Executions (xray-nightly-parallel-2)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
           - step:
               image: python:3.11
               name: Apps
@@ -838,6 +951,9 @@ pipelines:
                 - ./test.sh Apps
               artifacts:
                 - behave_test_report.json
+              after-script:
+                - |
+                  if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Apps (xray-nightly-parallel-2)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
           - step:
               image: python:3.11
               name: Rubiks-Items-Annotations
@@ -856,6 +972,9 @@ pipelines:
                 - ./test.sh Rubiks-Items-Annotations
               artifacts:
                 - behave_test_report.json
+              after-script:
+                - |
+                  if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Rubiks-Items-Annotations (xray-nightly-parallel-2)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
           - step:
               image: python:3.11
               name: Roberto
@@ -874,6 +993,9 @@ pipelines:
                 - ./test.sh Roberto
               artifacts:
                 - behave_test_report.json
+              after-script:
+                - |
+                  if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Roberto (xray-nightly-parallel-2)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
 
 
     "xray-nightly-parallel-3":
@@ -899,6 +1021,9 @@ pipelines:
                 - ./test.sh Rubiks-Dataset-Recipe
               artifacts:
                 - behave_test_report.json
+              after-script:
+                - |
+                  if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Rubiks-Dataset-Recipe (xray-nightly-parallel-3)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
           - step:
               image: python:3.11
               name: Piper-Pipelines
@@ -917,6 +1042,9 @@ pipelines:
                 - ./test.sh Piper-Pipelines
               artifacts:
                 - behave_test_report.json
+              after-script:
+                - |
+                  if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Piper-Pipelines (xray-nightly-parallel-3)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
 
 
     "schedule-tests":
@@ -936,14 +1064,19 @@ pipelines:
             - python tests/test_runner.py
           artifacts:
             - tests/reports/**
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Tests-3.10 (schedule-tests)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
 
     custom-variables:
       - variables:
           - name: DLP_ENV_NAME
           - name: AVOID_TESTRAIL
-            default: true
+            default: "true"
           - name: INDEX_DRIVER_VAR
           - name: API_KEY
+          - name: SPECIFIC_FOLDERS
+          - name: ADDITIONAL_TITLE_XRAY
       - step:
           image: python:3.10
           name: Tests-3.10
@@ -961,4 +1094,7 @@ pipelines:
             - python tests/test_runner.py
           artifacts:
             - tests/reports/**
+          after-script:
+            - |
+              if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Tests-3.10 (custom-variables)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
 

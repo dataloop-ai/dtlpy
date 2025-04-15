@@ -146,21 +146,24 @@ class Command(entities.BaseEntity):
                                    entities.CommandsStatus.ABORTED
                                    ]
 
-    def wait(self, timeout=0, step=None, backoff_factor=1):
+    def wait(self, timeout=0, step=None, backoff_factor=1, iteration_callback=None):
         """
         Wait for Command to finish
 
         :param int timeout: int, seconds to wait until TimeoutError is raised. if 0 - wait until done
         :param int step: int, seconds between polling
         :param float backoff_factor: A backoff factor to apply between attempts after the second try
+        :param function iteration_callback: function to call on each iteration
         :return: Command  object
         """
         if not self.in_progress():
             return self
 
-        return self.commands.wait(command_id=self.id,
-                                  timeout=timeout,
-                                  step=step,
-                                  url=self.url,
-                                  backoff_factor=backoff_factor
-                                  )
+        return self.commands.wait(
+            command_id=self.id,
+            timeout=timeout,
+            step=step,
+            url=self.url,
+            backoff_factor=backoff_factor,
+            iteration_callback=iteration_callback
+        )

@@ -14,6 +14,10 @@ Feature: Service driver testing
       | config.status | ready |
     When I try to create the compute from context.original_path
     Then I validate compute service driver is "created"
+    When I update the service driver
+    Then service driver should be updated
+    When I delete the service driver
+    Then the service driver is deleted
 
   @DAT-87190
   @restore_json_file

@@ -91,7 +91,6 @@ class PipelineNodeIO:
                  port_id: str = None,
                  color: tuple = None,
                  port_percentage: int = None,
-                 action: str = None,
                  default_value=None,
                  variable_name: str = None,
                  actions: list = None,
@@ -118,18 +117,7 @@ class PipelineNodeIO:
         self.default_value = default_value
         self.variable_name = variable_name
         self.description = description
-
-        if action is not None:
-            warnings.warn('action param has been deprecated in version 1.95', DeprecationWarning)
-            if actions is None:
-                actions = []
-            actions.append(action)
         self.actions = actions
-
-    @property
-    def action(self):
-        warnings.warn('action attribute has been deprecated in version 1.95', DeprecationWarning)
-        return None
 
     @staticmethod
     def from_json(_json: dict):

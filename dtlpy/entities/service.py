@@ -869,18 +869,9 @@ class KubernetesAutoscalerType(str, Enum):
 class KubernetesAutuscalerTypeMeta(type):
     def __getattribute__(cls, item):
         if hasattr(KubernetesAutoscalerType, item):
-            warnings.warn(
-                'KubernetesAutuscalerType is deprecated and will be removed in version 1.97.0, '
-                'use KubernetesAutoscalerType instead',
-                DeprecationWarning
-            )
             return getattr(KubernetesAutoscalerType, item)
         else:
             raise AttributeError(f"KubernetesAutuscalerType has no attribute '{item}'")
-
-
-class KubernetesAutuscalerType(metaclass=KubernetesAutuscalerTypeMeta):
-    pass
 
 
 class KubernetesAutoscaler(entities.BaseEntity):

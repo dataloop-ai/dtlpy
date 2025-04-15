@@ -12,8 +12,8 @@ def step_impl(context):
 @behave.given(u'I upload an item link')
 def step_impl(context):
     url_link = context.dl.UrlLink(
-        ref='https://www.example.com',
-        mimetype='image',
+        ref='https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png',
+        mimetype='image/png',
         name='urlExample')
     context.item = context.dataset.items.upload(local_path=url_link)
 

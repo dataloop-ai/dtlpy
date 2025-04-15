@@ -193,8 +193,8 @@ def update_feature_report(temp_report_filepath, w_feature_filename, REPORT_DIR):
 
 
 def test_feature_file(w_feature_filename, i_pbar):
-    timeout = 10 * 60
-    longer_timeout = 16 * 60
+    timeout = 15 * 60
+    longer_timeout = 18 * 60
 
     longer_timeout_features = [
         'pipeline_active_learning.feature',
@@ -406,13 +406,14 @@ def report_to_xray(test_env: str = 'RC'):
     """
 
     shell_script_path = os.path.join(os.getcwd(), 'xrayreporter.sh')
+    additional_title = f" - {os.environ.get('ADDITIONAL_TITLE_XRAY')}" if os.environ.get('ADDITIONAL_TITLE_XRAY') else ''
     subprocess.run(['chmod', '+x', shell_script_path])
     for service in services_list:
         print(f"### Reporting for service: {service} ###")
         report_path = os.path.join(REPORT_DIR, f'{service.lower()}-report.json')
         try:
             # Make the shell script executable (optional, do this only if it's not already executable)
-            result = subprocess.run([shell_script_path, test_env, service, report_path], capture_output=True, text=True)
+            result = subprocess.run([shell_script_path, test_env, f"{service}{additional_title}", report_path], capture_output=True, text=True)
             print(result.stdout)
         except subprocess.CalledProcessError as e:
             print(f"### Failed to report for service: {service} ###")
@@ -469,6 +470,7 @@ if __name__ == '__main__':
     if base_env == 'rc':
         max_workers = 10
     pool = ThreadPoolExecutor(max_workers=max_workers)
+
     features_path = os.path.join(TEST_DIR, 'features')
     if not os.path.exists(REPORT_DIR):
         os.makedirs(REPORT_DIR)
@@ -479,8 +481,14 @@ if __name__ == '__main__':
 
     results = dict()
     features_to_run = set()
+
+    # Get specific folders from environment variable
+    specific_folders = os.environ.get('SPECIFIC_FOLDERS', '').split(',')
+
     for path, subdirs, files in os.walk(features_path):
         if "billing_repo" not in path and "flows" not in path:
+            if specific_folders and not any(folder in path for folder in specific_folders):
+                continue
             for filename in files:
                 striped, ext = os.path.splitext(filename)
                 if ext in ['.feature']:

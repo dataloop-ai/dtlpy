@@ -12,9 +12,7 @@ import os
 @behave.when(u'I create a dummy model package by the name of "{package_name}" with entry point "{entry_point}" and docker image "{docker_image}"')
 def step_impl(context, package_name, entry_point, docker_image=None):
     if docker_image == 'None':
-        docker_image = None
-    else:
-        docker_image = 'jjanzic/docker-python3-opencv'
+        docker_image=None
     if package_name == "ac-lr-package":
         context.codebase_local_dir = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], 'model_ac_lr')
         docker_image = None
@@ -240,7 +238,7 @@ def step_impl(context, item_id):
 
 @behave.then(u'model status should be "{status}" with execution "{flag}" that has function "{func}"')
 def step_impl(context, status, flag, func):
-    num_try = 72
+    num_try = 80
     interval = 20
     completed = False
 

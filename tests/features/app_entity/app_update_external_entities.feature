@@ -12,6 +12,6 @@ Feature: App service update entities externally
     When I add a service to the DPK
     When I publish a dpk to the platform
     When I install the app
-    When I update app service SDK version to "1.99.12"
-    Then SDK version should be updated to "1.99.12"
-    And App custom installation service should be updated to "1.99.12"
+    When I update app service SDK version to "1.107.8"
+    Then SDK version should be updated to "1.107.8"
+    And App custom installation service should be updated to "1.107.8"

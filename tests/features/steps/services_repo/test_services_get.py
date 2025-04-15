@@ -47,6 +47,8 @@ def step_impl(context, value):
 
 @behave.when(u'I get service in index "{service_index}"')
 def step_impl(context, service_index):
+    f = context.dl.Filters(resource=context.dl.FiltersResource.SERVICE)
+    f.sort_by(field='createdAt')
     context.service = context.project.services.list().items[int(service_index)]
 
 

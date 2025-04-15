@@ -15,7 +15,7 @@ Feature: Test dpk with gen model
 
   @DAT-73514
   Scenario: Auto update app model should be LLM
-    Given I publish a model dpk from file "model_dpk/basicModelDpk.json" package "dummymodel" with status "trained"
+    Given I publish a model dpk from file "model_dpk/basicModelDpk.json" package "dummymodel" with status "trained" and docker image "jjanzic/docker-python3-opencv"
     When I install the app without custom_installation
     And I update app auto update to "True"
     And I get last model in project

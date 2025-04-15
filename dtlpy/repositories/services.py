@@ -606,6 +606,7 @@ class Services:
                 max_attempts: int = None,
                 secrets=None,
                 integrations=None,
+                active: bool = True,
                 **kwargs
                 ) -> entities.Service:
         """
@@ -633,6 +634,7 @@ class Services:
         :param bool force: optional - terminate old replicas immediately
         :param list secrets: list of the integrations ids
         :param list integrations: list of the integrations
+        :param bool active: optional - if true, service will be active
         :param kwargs:
         :return: Service object
         :rtype: dtlpy.entities.service.Service
@@ -686,6 +688,7 @@ class Services:
             'versions': agent_versions,
             'packageRevision': revision if revision is not None else package.version,
             'driverId': driver_id,
+            'active': active
         }
 
         if secrets is not None:
@@ -1183,6 +1186,7 @@ class Services:
                force: bool = False,
                secrets: list = None,
                integrations: list = None,
+               active: bool = True,
                **kwargs) -> entities.Service:
         """
         Deploy service.
@@ -1212,6 +1216,7 @@ class Services:
         :param bool force: optional - if true, terminate old replicas immediately
         :param list secrets: list of the integrations ids
         :param list integrations: list of the integrations
+        :param bool active: if true, activate the service
         :param kwargs: list of additional arguments
         :return: Service object
         :rtype: dtlpy.entities.service.Service
@@ -1336,6 +1341,7 @@ class Services:
                                    on_reset=on_reset,
                                    secrets=secrets,
                                    integrations=integrations,
+                                   active=active
                                    )
         if checkout:
             self.checkout(service=service)

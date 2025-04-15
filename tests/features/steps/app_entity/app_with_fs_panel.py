@@ -75,7 +75,7 @@ def step_impl(context):
 
 @given(u'I update the panel with a new sdk version')
 def step_impl(context):
-    valid_sdk_versions = [v for v in ['1.102.14', '1.103.2', '1.104.0'] if v != context.dl.__version__]
+    valid_sdk_versions = [v for v in ['1.108.6', '1.108.7', '1.108.9'] if v != context.dl.__version__]
     new_sdk_version = random.choice(valid_sdk_versions)
 
     path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], 'apps', 'filesystem_panel')

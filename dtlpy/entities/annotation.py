@@ -132,9 +132,7 @@ class Annotation(entities.BaseEntity):
     _annotations = attr.ib(repr=False, default=None)
     __client_api = attr.ib(default=None, repr=False)
     _items = attr.ib(repr=False, default=None)
-
-    # temp
-    _recipe_2_attributes = attr.ib(repr=False, default=None)
+    _recipe_1_attributes = attr.ib(repr=False, default=None)
 
     ############
     # Platform #
@@ -424,28 +422,11 @@ class Annotation(entities.BaseEntity):
 
     @property
     def attributes(self):
-        if self._recipe_2_attributes is not None or self.annotation_definition.attributes == []:
-            return self._recipe_2_attributes
         return self.annotation_definition.attributes
 
     @attributes.setter
     def attributes(self, attributes):
-        if isinstance(attributes, dict):
-            self._recipe_2_attributes = attributes
-        elif isinstance(attributes, list):
-            warnings.warn("List attributes are deprecated and will be removed in version 1.109. Use Attribute 2.0 (Dictionary) instead. "
-                "For more details, refer to the documentation: "
-                "https://developers.dataloop.ai/tutorials/data_management/upload_and_manage_annotations/chapter/#set-attributes-on-annotations",
-                DeprecationWarning,
-            )
-            self.annotation_definition.attributes = attributes
-        elif attributes is None:
-            if self._recipe_2_attributes:
-                self._recipe_2_attributes = {}
-            if self.annotation_definition.attributes:
-                self.annotation_definition.attributes = []
-        else:
-            raise ValueError('Attributes must be a dictionary or a list')
+        self.annotation_definition.attributes = attributes
 
     @property
     def color(self):
@@ -1369,9 +1350,9 @@ class Annotation(entities.BaseEntity):
             status = _json['metadata']['system'].get('status', status)
 
         named_attributes = metadata.get('system', dict()).get('attributes', None)
-        attributes = named_attributes if named_attributes else _json.get('attributes', None)
+        recipe_1_attributes = _json.get('attributes', None)
 
-        first_frame_attributes = attributes
+        first_frame_attributes = recipe_1_attributes
         first_frame_coordinates = list()
         first_frame_number = 0
         first_frame_start_time = 0
@@ -1427,7 +1408,7 @@ class Annotation(entities.BaseEntity):
             def_dict = {'type': _json['type'],
                         'coordinates': coordinates,
                         'label': _json['label'],
-                        'attributes': attributes}
+                        'attributes': named_attributes}
             annotation_definition = FrameAnnotation.json_to_annotation_definition(def_dict)
 
         frames = entities.ReflectDict(
@@ -1472,9 +1453,9 @@ class Annotation(entities.BaseEntity):
             start_frame=start_frame,
             annotations=annotations,
             start_time=start_time,
-            recipe_2_attributes=named_attributes,
             label_suggestions=_json.get('labelSuggestions', None),
-            source=_json.get('source', None)
+            source=_json.get('source', None),
+            recipe_1_attributes=recipe_1_attributes,
         )
         annotation.annotation_definition = annotation_definition
         annotation.__client_api = client_api
@@ -1600,15 +1581,9 @@ class Annotation(entities.BaseEntity):
         if isinstance(self.annotation_definition, entities.Description):
             _json['metadata']['system']['system'] = True
 
-        if self._recipe_2_attributes is not None:
-            _json['metadata']['system']['attributes'] = self._recipe_2_attributes
-            if 'attributes' in self._platform_dict:
-                _json['attributes'] = self._platform_dict['attributes']
-        else:
-            _json['attributes'] = self.attributes
-            orig_metadata_system = self._platform_dict.get('metadata', {}).get('system', {})
-            if 'attributes' in orig_metadata_system:
-                _json['metadata']['system']['attributes'] = orig_metadata_system['attributes']
+        _json['metadata']['system']['attributes'] = self.attributes if self.attributes is not None else dict()
+        _json['attributes'] = self._recipe_1_attributes
+
 
         # add frame info
         if self.is_video or (self.end_time and self.end_time > 0) or (self.end_frame and self.end_frame > 0):
@@ -1645,7 +1620,7 @@ class Annotation(entities.BaseEntity):
         :return: page of scores
         """
         return self.annotations.task_scores(annotation_id=self.id ,task_id=task_id, page_offset=page_offset, page_size=page_size)
-        
+
 
 
 @attr.s
@@ -1665,8 +1640,8 @@ class FrameAnnotation(entities.BaseEntity):
     object_visible = attr.ib()
 
     # temp
-    _recipe_2_attributes = attr.ib(repr=False, default=None)
     _interpolation = attr.ib(repr=False, default=False)
+    _recipe_1_attributes = attr.ib(repr=False, default=None)
 
     ################################
     # parent annotation attributes #
@@ -1698,23 +1673,11 @@ class FrameAnnotation(entities.BaseEntity):
 
     @property
     def attributes(self):
-        if self._recipe_2_attributes or self.annotation_definition.attributes == []:
-            return self._recipe_2_attributes
         return self.annotation_definition.attributes
 
     @attributes.setter
     def attributes(self, attributes):
-        if isinstance(attributes, dict):
-            self._recipe_2_attributes = attributes
-        elif isinstance(attributes, list):
-            warnings.warn("List attributes are deprecated and will be removed in version 1.109. Use Attribute 2.0 (Dictionary) instead. "
-                "For more details, refer to the documentation: "
-                "https://developers.dataloop.ai/tutorials/data_management/upload_and_manage_annotations/chapter/#set-attributes-on-annotations",
-                DeprecationWarning,
-            )
-            self.annotation_definition.attributes = attributes
-        else:
-            raise ValueError('Attributes must be a dictionary or a list')
+        self.annotation_definition.attributes = attributes
 
     @property
     def geo(self):
@@ -1795,6 +1758,11 @@ class FrameAnnotation(entities.BaseEntity):
 
     @staticmethod
     def json_to_annotation_definition(_json):
+        if 'namedAttributes' in _json:
+            _json['attributes'] = _json['namedAttributes']
+        else:
+            if not isinstance(_json.get('attributes'), dict):
+                _json['attributes'] = None
         if _json['type'] == 'segment':
             annotation = entities.Polygon.from_json(_json)
         elif _json['type'] == 'polyline':
@@ -1868,6 +1836,7 @@ class FrameAnnotation(entities.BaseEntity):
         """
         # get annotation class
         _json['type'] = annotation.type
+        attrs = _json.get('attributes', None)
         annotation_definition = cls.json_to_annotation_definition(_json=_json)
 
         frame_num = _json.get('frame', annotation.last_frame + 1)
@@ -1881,9 +1850,7 @@ class FrameAnnotation(entities.BaseEntity):
             frame_num=frame_num,
             fixed=_json.get('fixed', False),
             object_visible=_json.get('objectVisible', True),
-
-            # temp
-            recipe_2_attributes=_json.get('namedAttributes', None)
+            recipe_1_attributes=attrs,
         )
 
     def to_snapshot(self):
@@ -1900,9 +1867,11 @@ class FrameAnnotation(entities.BaseEntity):
         if self.annotation_definition.description is not None:
             snapshot_dict['description'] = self.annotation_definition.description
 
-        if self.annotation._recipe_2_attributes:
-            snapshot_dict['namedAttributes'] = self._recipe_2_attributes
-        else:
-            snapshot_dict['attributes'] = self.attributes
+        if self.attributes is not None:
+            snapshot_dict['namedAttributes'] = self.attributes
+
+        if self._recipe_1_attributes is not None:
+            snapshot_dict['attributes'] = self._recipe_1_attributes
+
 
         return snapshot_dict

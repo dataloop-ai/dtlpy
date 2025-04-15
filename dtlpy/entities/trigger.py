@@ -343,7 +343,7 @@ class Trigger(BaseTrigger):
             filters=spec.get('filter', dict()),
             project=project,
             service=service,
-            id=_json['id'],
+            id=_json.get('id', None),
             op_type=operation.get('type', None),
             spec=spec,
             pipeline_id=pipeline_id,

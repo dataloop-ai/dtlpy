@@ -40,7 +40,7 @@ Feature: Items repository download service testing
     And Folder "test_items_download" is empty
     When I download an item by the name of "/test" to "test_items_download"
     Then There are "1" files in "test_items_download"
-    
+
   @testrail-C4533355
   @DAT-46533
   Scenario: Download item by id - do not save locally and create dir
@@ -57,3 +57,15 @@ Feature: Items repository download service testing
     And Folder "test_items_download" is empty
     When I download an item by the id to "test_items_download"
     Then There are "1" files in dir "test_items_download/items"
+
+  @DAT-91531
+  Scenario: Download link item save locally false
+    Given There are no items
+    And I upload an item link
+    And Folder "test_items_download" is empty
+    When I download the item without saving and create folder
+    Then file do not created
+    Then item has data
+    When I download the item without saving and create folder and with array convert
+    Then file do not created
+    Then item has data

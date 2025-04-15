@@ -70,7 +70,7 @@ class Commands:
         return entities.Command.from_json(client_api=self._client_api,
                                           _json=response.json())
 
-    def wait(self, command_id, timeout=0, step=None, url=None, backoff_factor=1):
+    def wait(self, command_id, timeout=0, step=None, url=None, backoff_factor=1, iteration_callback=None):
         """
         Wait for command to finish
 
@@ -84,6 +84,7 @@ class Commands:
         :param int timeout: int, seconds to wait until TimeoutError is raised. if 0 - wait until done
         :param int step: int, seconds between polling
         :param str url: url to the command
+        :param function iteration_callback: function to call on each iteration
         :param float backoff_factor: A backoff factor to apply between attempts after the second try
         :return: Command  object
         """
@@ -112,9 +113,18 @@ class Commands:
             elapsed = time.time() - start
             sleep_time = np.min([timeout - elapsed, backoff_factor * (2 ** num_tries), MAX_SLEEP_TIME])
             num_tries += 1
-            logger.debug("Command {!r} is running for {:.2f}[s] and now Going to sleep {:.2f}[s]".format(command.id,
-                                                                                                         elapsed,
-                                                                                                         sleep_time))
+            logger.debug(
+                "Command {!r} is running for {:.2f}[s] and now Going to sleep {:.2f}[s]".format(
+                    command.id,
+                    elapsed,
+                    sleep_time
+                )
+            )
+            if iteration_callback is not None:
+                try:
+                    iteration_callback()
+                except Exception as e:
+                    logger.warning('iteration_callback failed: {}'.format(e.__str__()))
             time.sleep(sleep_time)
         pbar.close()
         if command is None:

@@ -48,7 +48,8 @@ class Downloader:
                  alpha=1,
                  export_version=entities.ExportVersion.V1,
                  dataset_lock=False,
-                 lock_timeout_sec=None
+                 lock_timeout_sec=None,
+                 export_summary=False
                  ):
         """
         Download dataset by filters.
@@ -75,6 +76,7 @@ class Downloader:
         :param alpha: opacity value [0 1], default 1
         :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
         :param bool dataset_lock: optional - default = False
+        :param bool export_summary: optional - default = False
         :param int lock_timeout_sec: optional
         :return: Output (list)
         """
@@ -201,7 +203,8 @@ class Downloader:
                 'filter_output_annotations': filter_output_annotations,
                 'export_version': export_version,
                 'dataset_lock': dataset_lock,
-                'lock_timeout_sec': lock_timeout_sec
+                'lock_timeout_sec': lock_timeout_sec,
+                'export_summary': export_summary
             })
         ###############
         # downloading #
@@ -369,7 +372,8 @@ class Downloader:
                              filter_output_annotations=False,
                              export_version=entities.ExportVersion.V1,
                              dataset_lock=False,
-                             lock_timeout_sec=None                          
+                             lock_timeout_sec=None,
+                             export_summary=False                         
                              ):
         """
         Download annotations json for entire dataset
@@ -384,6 +388,7 @@ class Downloader:
         :param filter_output_annotations: default - False, given an export by filter - determine if to filter out annotations
         :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
         :param bool dataset_lock: optional - default = False
+        :param bool export_summary: optional - default = False
         :param int lock_timeout_sec: optional
         :return:
         """
@@ -409,6 +414,9 @@ class Downloader:
                 payload['annotations']['filter'] = filter_output_annotations
             if dataset_lock:
                 payload['datasetLock'] = dataset_lock
+
+            if export_summary:
+                payload['summary'] = export_summary
                 
             if lock_timeout_sec:
                 payload['lockTimeoutSec'] = lock_timeout_sec
@@ -694,7 +702,8 @@ class Downloader:
                         raise PlatformException(response)
                 else:
                     _, ext = os.path.splitext(item.metadata['system']['shebang']['linkInfo']['ref'].split('?')[0])
-                    local_filepath += ext
+                    if local_filepath:
+                        local_filepath += ext
                     response = self.get_url_stream(url=url)
 
                 if save_locally:
@@ -791,9 +800,12 @@ class Downloader:
                             for chunk in response.iter_content(chunk_size=chunk_size):
                                 if chunk:  # filter out keep-alive new chunks
                                     data.write(chunk)
-                            file_validation, start_point, chunk_resume = self.__get_next_chunk(item=item,
-                                                                                              download_progress=data,
-                                                                                              chunk_resume=chunk_resume)
+
+                            file_validation = True
+                            if not is_url:
+                                file_validation, start_point, chunk_resume = self.__get_next_chunk(item=item,
+                                                                                                   download_progress=data,
+                                                                                                   chunk_resume=chunk_resume)
                             if file_validation:
                                 download_done = True
                             else:
@@ -804,7 +816,7 @@ class Downloader:
                     data.seek(0)
                     data.name = item.name
                     if not save_locally and to_array:
-                        if 'image' not in item.mimetype:
+                        if 'image' not in item.mimetype and not is_url:
                             raise PlatformException(
                                 error="400",
                                 message='Download element type numpy.ndarray support for image only. '

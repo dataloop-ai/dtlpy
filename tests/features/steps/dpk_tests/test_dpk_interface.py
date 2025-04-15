@@ -65,14 +65,15 @@ def step_impl(context, file_name, code_path):
 @behave.given(u'I publish a model dpk from file "{file_name}" package "{package_name}"')
 @behave.given(u'I publish a model dpk from file "{file_name}" package "{package_name}" entry point "{entry_point}" model "{model_name}" status "{status}" in index "{index}"')
 @behave.given(u'I publish a model dpk from file "{file_name}" package "{package_name}" with status "{status}"')
-def step_impl(context, file_name, package_name, entry_point='main.py', model_name='test-model', status='created', index='0'):
+@behave.given(u'I publish a model dpk from file "{file_name}" package "{package_name}" with status "{status}" and docker image "{docker_image}"')
+def step_impl(context, file_name, package_name, entry_point='main.py', model_name='test-model', status='created', index='0', docker_image=None):
     context.execute_steps(f"""
     Given I create a dataset with a random name
     And I upload an item by the name of "test_item.jpg"
     When I upload labels to dataset
     And I upload "5" box annotation to item
     Given I fetch the dpk from '{file_name}' file
-    When I create a dummy model package by the name of "{package_name}" with entry point "{entry_point}"
+    When I create a dummy model package by the name of "{package_name}" with entry point "{entry_point}" and docker image "{docker_image}"
     And I create a model from package by the name of "{model_name}" with status "{status}" in index "{index}"
     And I publish a dpk to the platform
     """)
