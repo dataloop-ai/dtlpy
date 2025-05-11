@@ -53,7 +53,8 @@ class Computes:
             features: Optional[Dict] = None,
             wait=True,
             status: entities.ComputeStatus = None,
-            settings: entities.ComputeSettings = None
+            settings: entities.ComputeSettings = None,
+            metadata: dict = None
     ):
         """
         Create a new compute
@@ -68,10 +69,12 @@ class Computes:
         :param wait: Wait for compute creation
         :param status: Compute status
         :param settings: Compute settings
+        :param metadata: Compute metadata
         :return: Compute
         :rtype: dl.entities.compute.Compute
         """
-
+        if metadata is None:
+            metadata = {}
         shared_contexts_json = []
         for shared_context in shared_contexts:
             src_json = shared_context.to_json() if isinstance(shared_context, entities.ComputeContext) else shared_context
@@ -85,7 +88,8 @@ class Computes:
             'sharedContexts': shared_contexts_json,
             'cluster': cluster.to_json(),
             'status': status,
-            "settings": settings.to_json() if isinstance(settings, entities.ComputeSettings) else settings
+            "settings": settings.to_json() if isinstance(settings, entities.ComputeSettings) else settings,
+            "metadata": metadata
         }
 
         # request
@@ -312,7 +316,8 @@ class Computes:
             cluster,
             ComputeType.KUBERNETES,
             status=config['config'].get('status', None),
-            settings=config['config'].get('settings', None))
+            settings=config['config'].get('settings', None),
+            metadata=config['config'].get('metadata', None))
 
         return compute
 

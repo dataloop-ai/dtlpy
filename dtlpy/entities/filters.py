@@ -332,7 +332,6 @@ class Filters:
                 self._unique_fields = ['type']
                 values = [annotation_type.value for annotation_type in entities.AnnotationType]
                 values.remove(entities.AnnotationType.NOTE.value)
-                values += ["text", "ref_image"]  # Prompt Annotation Types
                 self.add(field='type', values=values, operator=FiltersOperations.IN, method=FiltersMethod.AND)
 
     def __generate_query(self):

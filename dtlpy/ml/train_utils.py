@@ -28,8 +28,8 @@ def prepare_dataset(dataset: entities.Dataset,
     """
 
     project = dataset.project
-    now = datetime.datetime.utcnow().isoformat(timespec='minutes', sep='T')  # This serves as an id
-    today = datetime.datetime.utcnow().strftime('%F')
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='minutes', sep='T')  # This serves as an id
+    today = datetime.datetime.now(datetime.timezone.utc).strftime('%F')
 
     # CLONE
     clone_name = 'cloned-{ds_name}-{date_str}'.format(ds_name=dataset.name, date_str=today)

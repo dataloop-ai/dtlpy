@@ -313,20 +313,21 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
                 self.logger.debug("Downloading subset {!r} of {}".format(subset,
                                                                          self.model_entity.dataset.name))
 
-                if self.model_entity.output_type is not None:
+                annotation_filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION)
+
+                    
+                if self.model_entity.output_type is not None and self.model_entity.output_type != "embedding":
                     if self.model_entity.output_type in [entities.AnnotationType.SEGMENTATION,
-                                                         entities.AnnotationType.POLYGON]:
+                                                        entities.AnnotationType.POLYGON]:
                         model_output_types = [entities.AnnotationType.SEGMENTATION, entities.AnnotationType.POLYGON]
                     else:
                         model_output_types = [self.model_entity.output_type]
-                    annotation_filters = entities.Filters(
+                        
+                    annotation_filters.add(
                         field=entities.FiltersKnownFields.TYPE,
                         values=model_output_types,
-                        resource=entities.FiltersResource.ANNOTATION,
                         operator=entities.FiltersOperations.IN
                     )
-                else:
-                    annotation_filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION)
 
                 if not self.configuration.get("include_model_annotations", False):
                     annotation_filters.add(
@@ -467,7 +468,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
     @entities.Package.decorators.function(display_name='Embed Items',
                                           inputs={'items': 'Item[]'},
                                           outputs={'items': 'Item[]', 'features': 'Json[]'})
-    def embed_items(self, items: list, upload_features=None, batch_size=None, **kwargs):
+    def embed_items(self, items: list, upload_features=None, batch_size=None, progress:utilities.Progress=None, **kwargs):
         """
         Extract feature from an input list of items (or single) and return the items and the feature vector.
 
@@ -523,8 +524,9 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
                     "Uploading items' feature vectors for model {!r}.".format(self.model_entity.name))
                 try:
                     list(pool.map(partial(self._upload_model_features,
-                                              feature_set.id,
-                                              self.model_entity.project_id),
+                                          progress.logger if progress is not None else self.logger,
+                                          feature_set.id,
+                                          self.model_entity.project_id),
                                       batch_items,
                                       batch_vectors))
                 except Exception as err:
@@ -541,6 +543,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
                       filters: entities.Filters = None,
                       upload_features=None,
                       batch_size=None,
+                      progress:utilities.Progress=None,
                       **kwargs):
         """
         Extract feature from all items given
@@ -569,6 +572,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         self.embed_items(items=items,
                          upload_features=upload_features,
                          batch_size=batch_size,
+                         progress=progress,
                          **kwargs)
         return True
 
@@ -764,7 +768,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
     # =============
 
     @staticmethod
-    def _upload_model_features(feature_set_id, project_id, item: entities.Item, vector):
+    def _upload_model_features(logger, feature_set_id, project_id, item: entities.Item, vector):
         try:
             if vector is not None:
                 item.features.create(value=vector,

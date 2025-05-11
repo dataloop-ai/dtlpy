@@ -84,7 +84,7 @@ class FileHistory(History):
             def write(t):
                 f.write(t.encode('utf-8'))
 
-            write('\n# %s\n' % datetime.datetime.utcnow())
+            write('\n# %s\n' % datetime.datetime.now(datetime.timezone.utc))
             for line in string.split('\n'):
                 hide = any(field in line for field in self.to_hide)
                 if not hide:

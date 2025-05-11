@@ -25,7 +25,10 @@ from tests.features.steps.datasets_repo import test_dataset_context
 from tests.features.steps.datasets_repo import tets_dataset_upload_labels
 from tests.features.steps.datasets_repo import test_datasets_unlock
 from tests.features.steps.datasets_repo import test_dataset_export
-
+from tests.features.steps.prompt_item_entity import test_item_metadata
+from tests.features.steps.prompt_item_entity import test_prompt_creation
+from tests.features.steps.prompt_item_entity import test_prompt_responses
+from tests.features.steps.prompt_item_entity import shared_steps
 from tests.features.steps.dataset_entity import test_dataset_repo_methods
 from tests.features.steps.dataset_entity import test_add_labels_methods
 

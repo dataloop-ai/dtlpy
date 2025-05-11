@@ -762,7 +762,7 @@ class Models:
         """
         payload = dict()
         if service_config is not None:
-            payload['serviceConfig'] = service_config
+            payload['serviceConfig'] = service_config if not service_config.get("serviceConfig") else service_config.get("serviceConfig")
         success, response = self._client_api.gen_request(req_type="post",
                                                          path=f"/ml/models/{model_id}/deploy",
                                                          json_req=payload)

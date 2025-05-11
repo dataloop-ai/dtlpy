@@ -214,7 +214,7 @@ class Reporter:
             os.mkdir(reports_dir)
         log_filepath = os.path.join(reports_dir,
                                     "log_{}_{}.json".format(self._resource,
-                                                            datetime.datetime.utcnow().strftime("%Y%m%d_%H%M%S")))
+                                                            datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")))
         errors_json = dict()
         if self.cache_mode == 'diskcache':
             err_cache = self._reports['errors']

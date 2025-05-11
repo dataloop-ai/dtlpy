@@ -106,7 +106,7 @@ class DataloopLogger(logging.handlers.BaseRotatingHandler):
     @staticmethod
     def get_log_filepath():
         log_path = DataloopLogger.get_log_path()
-        log_filepath = os.path.join(log_path, '{}.log'.format(datetime.datetime.utcnow().strftime('%Y-%m-%d_%H-%M-%S')))
+        log_filepath = os.path.join(log_path, '{}.log'.format(datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d_%H-%M-%S')))
         return log_filepath
 
     def doRollover(self):

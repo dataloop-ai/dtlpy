@@ -7,7 +7,6 @@ Feature: Pipeline entity method testing
     And I upload item in "0000000162.jpg" to dataset
 
 
-
   @pipelines.delete
   @testrail-C4533385
   @DAT-46573
@@ -58,3 +57,16 @@ Feature: Pipeline entity method testing
     When I get service in index "0"
     And I execute the full dataset items on function "move_item"
     Then service execution are success in "3" items
+
+
+  @pipelines.delete
+  @DAT-91921
+  Scenario: pipeline execute batch
+    Given There are items, path = "filters/image.jpg"
+      | directory={"/": 3, "/dir1/": 3, "/dir1/dir2/": 3} | annotated_label={"dog": 3, "cat": 3} | annotated_type={"box": 3, "polygon": 3} |
+    When I create filters
+    And I join field "label" with values "dog" and operator "None"
+    When I create a pipeline with name "test_pipeline_execute"
+    And I add a code node to the pipeline
+    When I execute the pipeline batch items with "context.filters"
+    Then pipeline execution are success in "3" items

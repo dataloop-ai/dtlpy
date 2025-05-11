@@ -76,7 +76,7 @@ class List(list, typing.MutableSequence[T]):
                         str_timestamp = str(element['createdAt'])
                         if len(str_timestamp) > 10:
                             str_timestamp = str_timestamp[:10]
-                        element['createdAt'] = datetime.datetime.utcfromtimestamp(int(str_timestamp)).isoformat()
+                        element['createdAt'] = datetime.datetime.fromtimestamp(int(str_timestamp), datetime.timezone.utc).isoformat()
                     except Exception:
                         pass
             df = pandas.DataFrame(to_print, columns=keys_list)

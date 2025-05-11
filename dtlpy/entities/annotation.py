@@ -47,6 +47,8 @@ class AnnotationType(str, Enum):
     GIS = "gis"
     SEMANTIC_3D = "ref_semantic_3d"
     POLYLINE_3D = "polyline_3d"
+    FREE_TEXT = "text"
+    REF_IMAGE = "ref_image"
 
 
 class ViewAnnotationOptions(str, Enum):

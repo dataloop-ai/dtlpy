@@ -325,7 +325,7 @@ def check_feature_folder(feature_folder, feature_name=None):
     elif feature_folder in ["command_entity", "dataset_entity", "datasets_repo", "drivers_repo", "ontologies_repo",
                             "ontology_entity", "recipe_entity", "recipes_repo", "artifacts_repo", "filters_entity",
                             "item_entity", "items_repo", "ann_text_object", "annotation_collection", "annotation_entity"
-        , "annotations_repo", "features_vector_entity", "item_collections"]:
+        , "annotations_repo", "features_vector_entity", "item_collections", "prompt_item"]:
         return "Rubiks"
     elif feature_folder in ["checkout_testing", "cli_testing", "code_base_entity", "code_bases_repo", "converter",
                             "documentation_tests", "platform_urls", "webm_converter", "cache", "xray", "ml_subsets"]:
@@ -387,7 +387,8 @@ def send_alert():
 
 
 def report_to_xray(test_env: str = 'RC'):
-    services_list = ['Ramsay', 'Piper', 'Hodor', 'Apps', 'Rubiks', 'SDK', 'Woz', 'Roberto', 'Hedwig', 'Billing', 'Flows']
+    services_list = ['Ramsay', 'Piper', 'Hodor', 'Apps', 'Rubiks', 'SDK', 'Woz', 'Roberto', 'Hedwig', 'Billing',
+                     'Flows']
 
     """
     Check if all services has a report folder and remove from the list if not
@@ -406,18 +407,29 @@ def report_to_xray(test_env: str = 'RC'):
     """
 
     shell_script_path = os.path.join(os.getcwd(), 'xrayreporter.sh')
-    additional_title = f" - {os.environ.get('ADDITIONAL_TITLE_XRAY')}" if os.environ.get('ADDITIONAL_TITLE_XRAY') else ''
+    additional_title = f" - {os.environ.get('ADDITIONAL_TITLE_XRAY')}" if os.environ.get(
+        'ADDITIONAL_TITLE_XRAY') else ''
     subprocess.run(['chmod', '+x', shell_script_path])
     for service in services_list:
         print(f"### Reporting for service: {service} ###")
         report_path = os.path.join(REPORT_DIR, f'{service.lower()}-report.json')
         try:
             # Make the shell script executable (optional, do this only if it's not already executable)
-            result = subprocess.run([shell_script_path, test_env, f"{service}{additional_title}", report_path], capture_output=True, text=True)
+            result = subprocess.run([shell_script_path, test_env, f"{service}{additional_title}", report_path],
+                                    capture_output=True, text=True)
             print(result.stdout)
         except subprocess.CalledProcessError as e:
             print(f"### Failed to report for service: {service} ###")
             print(f"### Error: {e} ###")
+
+
+def set_organization_by_id(org_id=None):
+    # Set organization
+    success, response = dl.client_api.gen_request(req_type='post', path='/users/me',
+                                                  json_req={'org': org_id})
+    dl.logger.info("Organization updated successfully")
+    if not success:
+        raise Exception(f"Failed to set organization: {response.text}")
 
 
 if __name__ == '__main__':
@@ -464,6 +476,20 @@ if __name__ == '__main__':
                                 'oa-test-2@dataloop.ai',
                                 'oa-test-3@dataloop.ai']:
         assert False, 'Cannot run test on user: "{}". only test users'.format(payload['email'])
+
+    # Set different organization for testing
+    org_flag = False
+    if os.environ.get('DLP_ORG_NAME', None) is not None:
+        # Get current organization id
+        success, response = dl.client_api.gen_request(req_type='get', path='/users/me')
+        if not success:
+            raise Exception(f"Failed to set organization: {response.text}")
+        original_org = dl.organizations.get(organization_id=response.json()['org']['id'])
+
+        org_id = dl.organizations.get(organization_name=os.environ.get('DLP_ORG_NAME')).id
+        dl.logger.info("Updating user organization to {}".format(os.environ.get('DLP_ORG_NAME')))
+        set_organization_by_id(org_id=org_id)
+        org_flag = True
 
     # run tests
     max_workers = 6
@@ -602,6 +628,11 @@ if __name__ == '__main__':
             print(res_msg)
 
     delete_projects()
+
+    if org_flag is True:
+        # set organization back to original
+        dl.logger.info("Updating user organization back to {}".format(original_org.name))
+        set_organization_by_id(org_id=original_org.id)
 
     report_to_xray(test_env=base_env)
 

@@ -216,6 +216,7 @@ class ComputeCluster:
             node_pools: Optional[List[NodePool]] = None,
             metadata: Optional[Dict] = None,
             authentication: Optional[Authentication] = None,
+            plugins: Optional[dict] = None
     ):
         self.name = name
         self.endpoint = endpoint
@@ -225,6 +226,7 @@ class ComputeCluster:
         self.metadata = metadata if metadata is not None else {}
         self.authentication = authentication if authentication is not None else Authentication(
             AuthenticationIntegration("", ""))
+        self.plugins = plugins
 
     @classmethod
     def from_json(cls, _json):
@@ -235,7 +237,8 @@ class ComputeCluster:
             provider=ClusterProvider(_json.get('provider')),
             node_pools=[NodePool.from_json(np) for np in _json.get('nodePools', list())],
             metadata=_json.get('metadata'),
-            authentication=Authentication.from_json(_json.get('authentication', dict()))
+            authentication=Authentication.from_json(_json.get('authentication', dict())),
+            plugins=_json.get('plugins')
         )
 
     def to_json(self):
@@ -246,20 +249,22 @@ class ComputeCluster:
             'provider': self.provider.value,
             'nodePools': [np.to_json() for np in self.node_pools],
             'metadata': self.metadata,
-            'authentication': self.authentication.to_json()
+            'authentication': self.authentication.to_json(),
+            'plugins': self.plugins
         }
 
     @classmethod
     def from_setup_json(cls, devops_output, integration):
         node_pools = [NodePool.from_json(n) for n in devops_output['config']['nodePools']]
         return cls(
-            devops_output['config']['name'],
-            devops_output['config']['endpoint'],
-            devops_output['config']['kubernetesVersion'],
-            ClusterProvider(devops_output['config']['provider']),
-            node_pools,
-            {},
-            Authentication(AuthenticationIntegration(integration.id, integration.type))
+            name=devops_output['config']['name'],
+            endpoint=devops_output['config']['endpoint'],
+            kubernetes_version=devops_output['config']['kubernetesVersion'],
+            provider=ClusterProvider(devops_output['config']['provider']),
+            node_pools=node_pools,
+            metadata={},
+            authentication=Authentication(AuthenticationIntegration(integration.id, integration.type)),
+            plugins=devops_output['config'].get('plugins')
         )
 
 

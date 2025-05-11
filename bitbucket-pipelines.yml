@@ -1048,6 +1048,9 @@ pipelines:
 
 
     "schedule-tests":
+      - variables:
+          - name: ADDITIONAL_TITLE_XRAY
+            description: "Add additional title for the Xray test execution"
       - step:
           image: python:3.10
           name: Tests-3.10
@@ -1074,9 +1077,15 @@ pipelines:
           - name: AVOID_TESTRAIL
             default: "true"
           - name: INDEX_DRIVER_VAR
+            description: "Set a default type for dataset creation - Mongo / s2 - choose 'v1' or 'v2'"
           - name: API_KEY
+            description: "Set the API key to true for login with api key"
           - name: SPECIFIC_FOLDERS
+            description: "Select specific folders from features folder - comma separated no spaces"
           - name: ADDITIONAL_TITLE_XRAY
+            description: "Add additional title for the Xray test execution"
+          - name: DLP_ORG_NAME
+            description: "Set different organization name for the test (user should be an admin in the org)"
       - step:
           image: python:3.10
           name: Tests-3.10

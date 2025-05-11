@@ -1351,8 +1351,8 @@ class ApiClient:
             else:
                 payload = jwt.decode(self.token, algorithms=['HS256'],
                                      options={'verify_signature': False}, verify=False)
-                d = datetime.datetime.utcnow()
-                epoch = datetime.datetime(1970, 1, 1)
+                d = datetime.datetime.now(datetime.timezone.utc)
+                epoch = datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc)
                 now = (d - epoch).total_seconds()
                 exp = payload['exp']
                 if now < (exp - t):

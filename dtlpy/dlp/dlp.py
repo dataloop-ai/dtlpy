@@ -27,7 +27,7 @@ logger.propagate = False
 
 
 def dlp_exit():
-    print(datetime.datetime.utcnow())
+    print(datetime.datetime.now(datetime.timezone.utc))
     print("Goodbye ;)")
     sys.exit(0)
 
@@ -71,7 +71,7 @@ def main():
                     else:
                         command_executor.run(args=args)
                 except exceptions.TokenExpired:
-                    print(datetime.datetime.utcnow())
+                    print(datetime.datetime.now(datetime.timezone.utc))
                     print("[ERROR] token expired, please login.")
                     continue
                 except SystemExit as e:
@@ -83,11 +83,11 @@ def main():
                             sys.exit(0)
                     # error
                     else:
-                        print(datetime.datetime.utcnow())
+                        print(datetime.datetime.now(datetime.timezone.utc))
                         print('"{command}" is not a valid command'.format(command=text))
                         continue
                 except Exception as e:
-                    print(datetime.datetime.utcnow())
+                    print(datetime.datetime.now(datetime.timezone.utc))
                     if hasattr(e, 'message'):
                         print(e.message)
                     else:
@@ -102,11 +102,11 @@ def main():
                 command_executor.run(args=args)
                 sys.exit(0)
             except exceptions.TokenExpired:
-                print(datetime.datetime.utcnow())
+                print(datetime.datetime.now(datetime.timezone.utc))
                 print("[ERROR] token expired, please login.")
                 sys.exit(1)
             except Exception as e:
-                print(datetime.datetime.utcnow())
+                print(datetime.datetime.now(datetime.timezone.utc))
                 print(traceback.format_exc())
                 print(e)
                 sys.exit(1)
@@ -123,6 +123,6 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as err:
-        print(datetime.datetime.utcnow())
+        print(datetime.datetime.now(datetime.timezone.utc))
         print("[ERROR]\t%s" % err)
     print("Dataloop.ai CLI. Type dlp --help for options")

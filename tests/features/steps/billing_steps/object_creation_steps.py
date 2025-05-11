@@ -59,7 +59,7 @@ def step_impl(context):
     with open(path, 'r') as file:
         billing_api_calls = json.load(file)
 
-    current_utc_datetime = datetime.datetime.now(datetime.UTC)
+    current_utc_datetime = datetime.datetime.now(datetime.timezone.utc)
     next_year_datetime = current_utc_datetime.replace(year=current_utc_datetime.year + 1)
     utc_formated = current_utc_datetime.strftime('%Y-%m-%dT00:00:00.000Z')
     next_year_formated = next_year_datetime.strftime('%Y-%m-%dT00:00:00.000Z')

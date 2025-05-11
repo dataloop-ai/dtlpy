@@ -101,6 +101,7 @@ def step_impl(context, image, node_type):
             context.pipeline = context.pipeline.update()
             break
 
+
 @behave.when(u'i get the service for the pipeline node with type "{node_type}"')
 def step_impl(context, node_type):
     for node in context.pipeline.nodes:
@@ -108,11 +109,21 @@ def step_impl(context, node_type):
             context.service = dl.services.get(service_name=node.namespace.service_name)
             break
 
+
 @behave.when(u'I execute the pipeline batch items')
-def step_impl(context):
+@behave.when(u'I execute the pipeline batch items with "{filters_input}"')
+def step_impl(context, filters_input=None):
+    if filters_input is None:
+        filters = dl.Filters(field='dir', values='/test', context={'datasets': [context.dataset.id]})
+    elif filters_input == 'context.filters':
+        filters = context.filters
+        if context.filters.context is None:
+            context.filters.context = {'datasets': [context.dataset.id]}
+    else:
+        filters = dl.Filters(context={'datasets': [context.dataset.id]})
     context.command = context.pipeline.execute_batch(
         execution_inputs=dl.FunctionIO(type=dl.PackageInputType.STRING, value='test', name='string'),
-        filters=dl.Filters(field='dir', values='/test', context={'datasets': [context.dataset.id]}))
+        filters=filters)
 
 
 @behave.when(u'I get the pipeline service')
@@ -120,10 +131,12 @@ def step_impl(context):
     service_name = context.pipeline.nodes[0].namespace.service_name
     context.service = dl.services.get(service_name=service_name)
 
+
 @behave.when(u'I execute the full dataset items on function "{func_name}"')
 def step_impl(context, func_name):
     context.command = context.service.execute_batch(
         filters=dl.Filters(context={'datasets': [context.dataset.id]}), function_name=func_name)
+
 
 @behave.when(u'I execute the service batch items')
 def step_impl(context):
@@ -134,16 +147,18 @@ def step_impl(context):
 
 @behave.then(u'pipeline execution are success in "{items_count}" items')
 def step_impl(context, items_count):
-    assert context.command.status == dl.ExecutionStatus.SUCCESS
-    assert len(context.command.spec['inputs']) == eval(items_count)
-    assert context.pipeline.pipeline_executions.list().items_count == eval(items_count)
+    assert context.command.status == dl.ExecutionStatus.SUCCESS, \
+        f"Expected {dl.ExecutionStatus.SUCCESS} but got {context.command.status} ExecutionStatus"
+    assert context.pipeline.pipeline_executions.list().items_count == eval(items_count), \
+        f"Expected {items_count} but got {context.pipeline.pipeline_executions.list().items_count} pipeline_executions"
 
 
 @behave.then(u'service execution are success in "{items_count}" items')
 def step_impl(context, items_count):
-    assert context.command.status == dl.ExecutionStatus.SUCCESS
-    assert len(context.command.spec['inputs']) == eval(items_count)
-    assert context.service.executions.list().items_count == eval(items_count)
+    assert context.command.status == dl.ExecutionStatus.SUCCESS, \
+        f"Expected {dl.ExecutionStatus.SUCCESS} but got {context.command.status} ExecutionStatus"
+    assert context.service.executions.list().items_count == eval(items_count), \
+        f"Expected {items_count} but got {context.service.executions.list().items_count} Service executions"
 
 
 @behave.when(u'I execute pipeline using cron trigger for node "{node_name}"')

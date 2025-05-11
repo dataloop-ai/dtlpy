@@ -5,6 +5,7 @@ import enum
 import json
 import io
 import os
+from typing import List, Optional
 
 from concurrent.futures import ThreadPoolExecutor
 from .. import entities, repositories
@@ -152,14 +153,17 @@ class PromptItem:
         self.assistant_prompts = list()
         # list of assistant (annotations) prompts in the prompt item
         # Dataloop Item
-        self._messages = []
         self._item: entities.Item = item
+        self._messages = []
         self._annotations: entities.AnnotationCollection = None
         if item is not None:
+            if 'json' not in item.mimetype or item.system.get('shebang', dict()).get('dltype') != 'prompt':
+                raise ValueError('Expecting a json item with system.shebang.dltype = prompt')
             self._items = item.items
             self.fetch()
         else:
             self._items = repositories.Items(client_api=client_api)
+
         # to avoid broken stream of json files - DAT-75653
         self._items._client_api.default_headers['x-dl-sanitize'] = '0'
 
@@ -454,5 +458,43 @@ class PromptItem:
         """
         if self._item is not None:
             self._item._Item__update_item_binary(_json=self.to_json())
+            self._item = self._item.update()
         else:
             raise ValueError('Cannot update PromptItem without an item.')
+
+    # Properties
+    @property
+    def item(self) -> Optional['entities.Item']:
+        """
+        Get the underlying Item object.
+
+        :return: The Item object associated with this PromptItem, or None.
+        :rtype: Optional[dtlpy.entities.Item]
+        """
+        return self._item
+
+    @item.setter
+    def item(self, item: Optional['entities.Item']):
+        """
+        Set the underlying Item object.
+
+        :param item: The Item object to associate with this PromptItem, or None.
+        :type item: Optional[dtlpy.entities.Item]
+        """
+        if item is not None and not isinstance(item, entities.Item):
+            raise ValueError(f"Expected dtlpy.entities.Item or None, got {type(item)}")
+        self._item = item
+
+
+    @property
+    def metadata(self) -> dict:
+        """
+        Get the metadata from the underlying Item object.
+
+        :return: Metadata dictionary from the item, or empty dict if no item exists.
+        :rtype: dict
+        """
+        if self._item is not None:
+            return self._item.metadata
+        else:
+            raise ValueError('No item found, cannot get metadata, to set item use prompt_item.item = item')

@@ -125,6 +125,13 @@ class Segmentation(BaseAnnotationDefinition):
         return image
 
     def to_coordinates(self, color=None):
+        """
+        Convert segmentation to coordinates
+        `self._color` is ignored if `color` is provided
+        
+        :param color: color
+        :return: coordinates
+        """
         need_encode = False
         if color is not None and self._color is not None:
             # if input color is not the same as the annotation's color - need to re-encode
@@ -132,10 +139,11 @@ class Segmentation(BaseAnnotationDefinition):
                 need_encode = True
 
         if need_encode or self._coordinates is None:
-            if self._color is not None:
-                color = self._color
-            else:
-                color = (255, 255, 255)
+            if color is None:
+                if self._color is not None:
+                    color = self._color
+                else:
+                    color = (255, 255, 255)
             max_val = np.max(self.geo)
             if max_val > 1:
                 self.geo = self.geo / max_val

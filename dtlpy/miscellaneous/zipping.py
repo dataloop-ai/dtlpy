@@ -117,15 +117,14 @@ class Zipping:
 
     @staticmethod
     def unzip_directory(zip_filename, to_directory=None):
-        zipdata = zipfile.ZipFile(zip_filename)
-        zipinfos = zipdata.infolist()
-
-        # iterate through each file
-        for zipinfo in zipinfos:
-            # encode the file names
-            # zip package make decode by cp437 for file that have name that not ascii
-            # this happen when the flag_bits be different than 0
-            # so we encode the name back
-            if not zipinfo.flag_bits:
-                zipinfo.filename = zipinfo.filename.encode('cp437').decode('utf-8')
-            zipdata.extract(zipinfo, to_directory)
+        with zipfile.ZipFile(zip_filename) as zipdata:
+            zipinfos = zipdata.infolist()
+            # iterate through each file
+            for zipinfo in zipinfos:
+                # encode the file names
+                # zip package make decode by cp437 for file that have name that not ascii
+                # this happen when the flag_bits be different than 0
+                # so we encode the name back
+                if not zipinfo.flag_bits:
+                    zipinfo.filename = zipinfo.filename.encode('cp437').decode('utf-8')
+                zipdata.extract(zipinfo, to_directory)
