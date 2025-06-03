@@ -33,3 +33,10 @@ def step_impl(context):
 @behave.then(u'command status is "{status}"')
 def step_impl(context, status):
     assert context.command.status == status, f"TEST FAILED: Expected status {status}, Actual status {context.command.status}"
+
+
+@behave.then(u'Validate faas command failed with error "{error}"')
+def step_impl(context, error):
+    assert context.command.status == 'failed', f"TEST FAILED: Expected status failed, Actual status {context.command.status}"
+    assert error in context.command.error, f"TEST FAILED: Expected {error}, Actual {context.command.error}"
+

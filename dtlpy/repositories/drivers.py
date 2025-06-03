@@ -1,4 +1,5 @@
 import logging
+import re
 
 from .. import entities, miscellaneous, exceptions, _api_reference
 from ..services.api_client import ApiClient
@@ -151,7 +152,8 @@ class Drivers:
                allow_external_delete: bool = True,
                region: str = None,
                storage_class: str = "",
-               path: str = ""):
+               path: str = "",
+               endpoint: str = None):
         """
         Create a storage driver.
 
@@ -167,6 +169,7 @@ class Drivers:
         :param str region: relevant only for s3 - the bucket region
         :param str storage_class: relevant only for s3
         :param str path: Optional. By default path is the root folder. Path is case sensitive integration
+        :param endpoint path: Optional. Custom endpoint for S3 storage. Must be in the format 'http://<hostname>:<port>' or 'https://<hostname>:<port>'.
         :return: driver object
         :rtype: dtlpy.entities.driver.Driver
 
@@ -185,6 +188,11 @@ class Drivers:
             integration_type = driver_type
         if driver_type == entities.ExternalStorage.S3:
             bucket_payload = 'bucketName'
+            if endpoint:
+                if not re.match(r'^https?://[A-Za-z0-9.-]+:\d+$', endpoint):
+                    raise ValueError(
+                        f"Invalid endpoint URL '{endpoint}'. Must be 'http://<hostname>:<port>' or 'https://<hostname>:<port>'."
+                    )
         elif driver_type == entities.ExternalStorage.GCS:
             bucket_payload = 'bucket'
         else:
@@ -208,6 +216,8 @@ class Drivers:
             "allowExternalDelete": allow_external_delete,
             "creator": self._client_api.info().get('user_email')
         }
+        if endpoint and driver_type == entities.ExternalStorage.S3:
+            payload['payload']['endpoint'] = endpoint
 
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/drivers',

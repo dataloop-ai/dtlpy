@@ -133,25 +133,31 @@ class Computes:
     def __get_log_compute_progress_callback(self, compute_id: str):
         def func():
             compute = self.get(compute_id=compute_id)
-            bootstrap_progress = compute.metadata.get('system', {}).get('bootstrapProcess', {}).get('progress', None)
-            bootstrap_logs = compute.metadata.get('system', {}).get('bootstrapProcess', {}).get('logs', None)
+            bootstrap_progress = compute.metadata.get('system', {}).get('bootstrap', {}).get('progress', None)
+            bootstrap_logs = compute.metadata.get('system', {}).get('bootstrap', {}).get('logs', None)
             validation_progress = compute.metadata.get('system', {}).get('validation', {}).get('progress', None)
             validation_logs = compute.metadata.get('system', {}).get('validation', {}).get('logs', None)
-            if bootstrap_progress not in [None, 100]:
-                logger.info(f"Bootstrap in progress: {bootstrap_progress}%")
+            if bootstrap_progress is not None:
+                if 'bootstrap' not in self.log_cache.get(compute_id, {}):
+                    logger.info(f"Bootstrap in progress:")
                 last_index = len(self.log_cache.get(compute_id, {}).get('bootstrap', []))
                 new_logs = bootstrap_logs[last_index:]
                 if new_logs:
-                    logger.info("Bootstrap Logs: {}".format('\n'.join(new_logs)))
+                    for log in new_logs:
+                        logger.info(log)
+                    logger.info(f'Bootstrap progress: {int(bootstrap_progress)}%')
                     if compute_id not in self.log_cache:
                         self.log_cache[compute_id] = {}
                     self.log_cache[compute_id]['bootstrap'] = bootstrap_logs
-            if validation_progress not in [None, 100]:
-                logger.info(f"Validating created compute. Progress: {validation_progress}%")
+            if bootstrap_progress in [100, None] and validation_progress is not None:
+                if 'validation' not in self.log_cache.get(compute_id, {}):
+                    logger.info(f"Validating created compute:")
                 last_index = len(self.log_cache.get(compute_id, {}).get('validation', []))
                 new_logs = validation_logs[last_index:]
                 if new_logs:
-                    logger.info("Validation Logs: {}".format('\n'.join(new_logs)))
+                    for log in new_logs:
+                        logger.info(log)
+                    logger.info(f'Validation progress: {int(validation_progress)}%')
                     if compute_id not in self.log_cache:
                         self.log_cache[compute_id] = {}
                     self.log_cache[compute_id]['validation'] = validation_logs

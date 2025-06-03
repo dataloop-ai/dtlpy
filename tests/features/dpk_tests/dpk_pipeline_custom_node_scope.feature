@@ -15,6 +15,8 @@ Feature: publish a dpk with pipeline Custom Node
     When I wait "5"
     And I list services in project
     Then I receive a Service list of "3" objects
+    And I pause pipeline in context
+    And I uninstall the app
 
 
   @DAT-62875
@@ -36,3 +38,5 @@ Feature: publish a dpk with pipeline Custom Node
     When I get the pipeline service
     And set context.published_dpk to context.dpk
     Then service has app scope
+    And I pause pipeline in context
+    And I uninstall the app

@@ -13,7 +13,7 @@ Feature: Executions repository create service testing
   @DAT-25330
   Scenario: Init error should raise notification
     Given There is a package (pushed from "faas/oomError") by the name of "oom-error"
-    And There is a service by the name of "oom-error" with module name "default_module" saved to context "service"
+    And There is a service by the name of "oom-error" with module name "default_module" saved to context "service" with on reset "rerun"
     And I upload item in "0000000162.jpg" to dataset
     When I create an execution with "inputs"
       | sync=False | inputs=Item |

@@ -24,7 +24,8 @@ def step_impl(context, filesystem_path, remove_key=None):
     manifest['name'] = f'filesystem-panel-{datetime.now().strftime("%M%S")}'
     if remove_key:
         fixtures.remove_key_from_nested_dict(manifest, remove_key)
-    manifest['components']['computeConfigs'][0]['versions']['dtlpy'] = context.dl.__version__
+    if 'computeConfigs' in manifest['components']:
+        manifest['components']['computeConfigs'][0]['versions']['dtlpy'] = context.dl.__version__
     with open(manifest_path, 'w') as file:
         json.dump(manifest, file)
 

@@ -52,3 +52,46 @@ Feature: Annotaions repository Delete service testing
         And I count other Annotation except "box" using "item" entity
         When I delete annotation from type "box" using "item" entity
         Then I verify that I has the right number of annotations
+
+    @skip_test
+    @DAT-94134
+    @DM-cache
+    Scenario: Delete annotation from cache
+        Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
+        And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"
+        And Item is annotated with annotations in file: "assets_split/annotations_crud/0162_annotations.json"
+        And There is annotation x
+        When I delete a annotation x
+        Then Annotation x does not exist in item
+        And I wait "1"
+        Then Annotation x does not exist in item
+
+    @skip_test
+    @DAT-94134
+    @DM-cache
+    Scenario: Delete Annotation using filters on Dataset level from cache
+        Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
+        And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"
+        And Item is annotated with annotations in file: "assets_split/annotations_show/annotations_new.json"
+        And Item in path "artifacts_repo/artifact_item.jpg" is uploaded to "Dataset"
+        And Item is annotated with annotations in file: "assets_split/annotations_show/annotations_new.json"
+        And I count other Annotation except "box" using "dataset" entity
+        When I delete annotation from type "box" using "dataset" entity
+        Then I verify that I has the right number of annotations
+        And I wait "1"
+        Then I verify that I has the right number of annotations
+
+    @skip_test
+    @DAT-94134
+    @DM-cache
+    Scenario: Delete Annotation using filters on Item level from cache
+        Given Labels in file: "assets_split/annotations_crud/labels.json" are uploaded to test Dataset
+        And Item in path "assets_split/annotations_crud/0000000162.jpg" is uploaded to "Dataset"
+        And Item is annotated with annotations in file: "assets_split/annotations_show/annotations_new.json"
+        And Item in path "artifacts_repo/artifact_item.jpg" is uploaded to "Dataset"
+        And Item is annotated with annotations in file: "assets_split/annotations_show/annotations_new.json"
+        And I count other Annotation except "box" using "item" entity
+        When I delete annotation from type "box" using "item" entity
+        Then I verify that I has the right number of annotations
+        And I wait "1"
+        Then I verify that I has the right number of annotations

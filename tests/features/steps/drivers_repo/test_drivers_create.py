@@ -1,16 +1,23 @@
 import behave
 import time
+import os
 
 
 @behave.when(u'I create driver "{driver_type}" with the name "{driver_name}"')
-def step_impl(context, driver_type, driver_name):
+@behave.when(u'I create driver "{driver_type}" with the name "{driver_name}" and end point "{end_point}"')
+def step_impl(context, driver_type, driver_name, end_point=None):
     params = dict()
     for row in context.table:
         params[row['key']] = row['value']
 
-    assert hasattr(context, "integration"), "TEST FAILED: Context has no object integration"
+    if not hasattr(context, "integration"):
+        if hasattr(context, 'error'):
+            raise context.error
+        assert False, "TEST FAILED: Context has no object integration"
     try:
         context.driver_type = driver_type
+        if end_point:
+            context.end_point = end_point
 
         time.sleep(5)  # Wait for integration
         context.driver = context.project.drivers.create(
@@ -23,7 +30,8 @@ def step_impl(context, driver_type, driver_name):
             allow_external_delete=params.get('allow_external_delete', True),
             region=params.get('region', None),
             storage_class=params.get('storage_class', ""),
-            path=params.get('path', ""))
+            path=params.get('path', ""),
+            endpoint=os.getenv(params.get('end_point', '')))
         context.to_delete_drivers_ids.append(context.driver.id)
         context.error = None
     except Exception as e:
@@ -39,14 +47,18 @@ def step_impl(context, driver_name):
     except Exception as e:
         context.error = e
 
-    assert driver_name == context.driver.name, "TEST FAILED: Expected - {}, Got - {}".format(driver_name, context.driver.name)
-    assert context.driver_type == context.driver.type, "TEST FAILED: Expected - {}, Got - {}".format(context.driver_type, context.driver.type)
+    assert driver_name == context.driver.name, "TEST FAILED: Expected - {}, Got - {}".format(driver_name,
+                                                                                             context.driver.name)
+    assert context.driver_type == context.driver.type, "TEST FAILED: Expected - {}, Got - {}".format(
+        context.driver_type, context.driver.type)
 
 
 @behave.when(u'I create dataset "{dataset_name}" with driver entity')
 def step_impl(context, dataset_name):
-    context.dataset = context.project.datasets.create(dataset_name=dataset_name, driver_id=context.driver.id, index_driver=context.index_driver_var)
+    context.dataset = context.project.datasets.create(dataset_name=dataset_name, driver_id=context.driver.id,
+                                                      index_driver=context.index_driver_var)
     context.to_delete_datasets_ids.append(context.dataset.id)
+
 
 @behave.when(u'I sync dataset in context')
 @behave.when(u'I sync dataset in context with is {wait_parameter}')
@@ -61,6 +73,7 @@ def step_impl(context, wait_parameter="True"):
             context.error = None
         except Exception as e:
             context.error = e
+
 
 @behave.then(u'I validate driver dataset has "{item_count}" items')
 def step_impl(context, item_count):

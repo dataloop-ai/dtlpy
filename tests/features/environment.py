@@ -294,10 +294,10 @@ def after_tag(context, tag):
         pass
     elif tag == 'wip':
         pass
-    elif any(i_tag in tag for i_tag in ['DAT-', 'qa-', 'rc_only', 'skip_test', 'ATP', 'AIRGAPPED']):
+    elif any(i_tag in tag for i_tag in ['DAT-', 'qa-', 'rc_only', 'skip_test', 'ATP', 'AIRGAPPED', 'DM-cache']):
         pass
     else:
-        raise ValueError('unknown tag: {}'.format(tag))
+        raise ValueError('Unknown tag: {}'.format(tag))
 
 
 @fixture

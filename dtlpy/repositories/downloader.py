@@ -96,6 +96,9 @@ class Downloader:
                         error='400',
                         message='Unknown annotation download option: {}, please choose from: {}'.format(
                             ann_option, list(entities.ViewAnnotationOptions)))
+        # normalize items argument: treat empty list as “no items specified”
+        if isinstance(items, list) and len(items) == 0:
+            items = None
         #####################
         # items to download #
         #####################

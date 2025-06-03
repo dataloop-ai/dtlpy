@@ -111,7 +111,7 @@ class Features:
         if self._project_id is None:
             self._project_id = self.project.id
         filters.context = {"projects": [self._project_id]}
-
+        
         paged = entities.PagedEntities(items_repository=self,
                                        filters=filters,
                                        page_offset=filters.page,

@@ -313,10 +313,9 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
                 self.logger.debug("Downloading subset {!r} of {}".format(subset,
                                                                          self.model_entity.dataset.name))
 
-                annotation_filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION)
-
-                    
+                annotation_filters = None
                 if self.model_entity.output_type is not None and self.model_entity.output_type != "embedding":
+                    annotation_filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION, use_defaults=False)
                     if self.model_entity.output_type in [entities.AnnotationType.SEGMENTATION,
                                                         entities.AnnotationType.POLYGON]:
                         model_output_types = [entities.AnnotationType.SEGMENTATION, entities.AnnotationType.POLYGON]
@@ -329,12 +328,12 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
                         operator=entities.FiltersOperations.IN
                     )
 
-                if not self.configuration.get("include_model_annotations", False):
-                    annotation_filters.add(
-                        field="metadata.system.model.name",
-                        values=False,
-                        operator=entities.FiltersOperations.EXISTS
-                    )
+                    if not self.configuration.get("include_model_annotations", False):
+                        annotation_filters.add(
+                            field="metadata.system.model.name",
+                            values=False,
+                            operator=entities.FiltersOperations.EXISTS
+                        )
 
                 ret_list = dataset.items.download(filters=filters,
                                                   local_path=data_subset_base_path,

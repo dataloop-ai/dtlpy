@@ -15,6 +15,8 @@ def step_impl(context, integration_type, integration_name, metadata=None):
 
     if integration_type == 's3':
         integration_options["s3"] = eval(os.environ.get("aws"))
+    elif integration_type == 's3_minio':
+        integration_options["s3_minio"] = eval(os.environ.get("minio"))
     elif integration_type == 'gcs':
         integration_options["gcs"] = {
             'key': None, 'secret': None, 'content': os.environ.get('gcs')
@@ -42,8 +44,9 @@ def step_impl(context, integration_type, integration_name, metadata=None):
                 context.integration = context.feature.dataloop_feature_integration
                 return
 
-        # Handle AzureDatalakeGen2 integration
+        # Handle AzureDatalakeGen2 integration and minio
         context.integration_type = context.integration_type.replace('azuregen2', 'azureblob')
+        context.integration_type = context.integration_type.replace('s3_minio', 's3')
         num = random.randint(1000, 10000)
         context.integration_name = f"{integration_name}-{num}"
         context.integration = context.project.integrations.create(

@@ -46,4 +46,17 @@ Feature: Item Entity repo services
         Then Item is annotated
         Then Object "Item" to_json() equals to Platform json.
 
-
+    @skip_test
+    @DAT-93805
+    @DM-cache
+    Scenario: Update items name from cache
+        Given There is an item
+        When I get the item by id
+        And I wait "1"
+        When I get the item by id
+        When I update item entity name to "/test_name.jpg"
+        Then I receive an Item object with name "/test_name.jpg"
+        And I wait "1"
+        Then I receive an Item object with name "/test_name.jpg"
+        And Item in host was changed to "/test_name.jpg"
+        And Only name attributes was changed

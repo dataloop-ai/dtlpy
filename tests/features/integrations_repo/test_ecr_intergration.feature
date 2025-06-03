@@ -35,6 +35,20 @@ Feature: Integrations repository create testing
       Given I execute the service
       Then I should get an ImagePullBackOff error
 
+  @DAT-94844
+  Scenario: ACR integration Flow
+      Given There are no private registry integrations in the organization
+      Given A deployed service with custom docker image from "ACR" private registry
+      And I execute the service
+      Then I should get an ImagePullBackOff error
+      When I create an ACR integration
+      And I pause and resume the service
+      Then The execution should complete successfully
+      When I delete the context integration
+      And I pause and resume the service
+      Given I execute the service
+      Then I should get an ImagePullBackOff error
+
 #  TODO - Remove commenting after we get the private registry in the dl organization in Dockerhub
 #  @DAT-85679
 #  Scenario: DockerHub integration Flow

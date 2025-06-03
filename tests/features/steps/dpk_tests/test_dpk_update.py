@@ -60,3 +60,13 @@ def step_impl(context):
     assert context.dpk.icon == 'newIcon', f'icon is not updated'
     assert context.dpk.scope == 'project', f'scope is updated'
     assert context.dpk.components.pipeline_templates[0]['preview'] != context.last_preview, f'preview is not updated'
+
+
+@behave.when(u'I update dpk autoscaler to string')
+def step_impl(context):
+    context.dpk.components.services[0]['runtime']['autoscaler']['maxReplicas'] = '2'
+    try:
+        context.dpk = context.dpk.publish()
+        context.error = None
+    except Exception as e:
+        context.error = e

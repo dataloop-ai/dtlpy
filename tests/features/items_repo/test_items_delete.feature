@@ -40,4 +40,14 @@ Feature: Items repository delete service testing
         Then "BadRequest" exception should be raised
         And No item was deleted
 
-
+    @skip_test
+    @DAT-93945
+    @DM-cache
+    Scenario: Delete item by name with cache
+        Given There are no items
+        And I upload an item by the name of "test_item.jpg"
+        When I get the item by id
+        And I wait "1"
+        When I get the item by id
+        When I delete the item by name
+        Then There are no items

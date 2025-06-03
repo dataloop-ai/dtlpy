@@ -211,6 +211,7 @@ pipelines:
           - name: DLP_ENV_NAME
             default: rc
           - name: TAGS
+            description: "For multiple tags, separate them with commas (e.g., @DAT-..,@DAT-..)"
       - step:
           image: python:3.11
           name: Test & Report to XRay

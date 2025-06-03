@@ -75,3 +75,32 @@ Feature: Item description testing
     Scenario: Add emoji to item description
         When I Add description "Test😀😂🥳" to item
         Then  I validate item.description has "Test\u1f600\u1f602\u1f973" value
+
+    @skip_test
+    @DAT-93853
+    @DM-cache
+    Scenario: Add description to item from cache
+        When I get the item by id
+        And I wait "1"
+        When I get the item by id
+        When  I Add description "Item description" to item
+        Then  I validate item.description has "Item description" value
+        And I wait "1"
+        Then  I validate item.description has "Item description" value
+
+    @skip_test
+    @DAT-93933
+    @DM-cache
+    Scenario: Update and restore metadata from cache
+        When I get the item by id
+        And I wait "1"
+        When I get the item by id
+        When I update item system metadata with system_metadata="True"
+        Then Then I receive an Item object
+        And Item in host has modified metadata
+        And I update the metadata
+        And Item was modified metadata
+        And I wait "1"
+        And Item was modified metadata
+        And I remove the added metadata
+        And metadata was deleted

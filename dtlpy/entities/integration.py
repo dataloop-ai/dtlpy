@@ -111,9 +111,12 @@ class Integration(entities.BaseEntity):
             raise ValueError('Must input a valid Project entity')
         self._project = project
 
-    def update(self,
-               new_name: str = None,
-               new_options: dict = None):
+    def update(
+            self,
+            new_name: str = None,
+            new_options: dict = None,
+            reload_services: bool = None
+    ):
         """
         Update the integration's name.
 
@@ -121,6 +124,7 @@ class Integration(entities.BaseEntity):
 
         :param str new_name: new name
         :param dict new_options: new value
+        :param bool reload_services: reload services associated with this integration
         :return: Integration object
         :rtype: dtlpy.entities.integration.Integration
 
@@ -148,10 +152,13 @@ class Integration(entities.BaseEntity):
                 error='400',
                 message='Must provide an identifier in inputs')
 
-        identifier.integrations.update(new_name=new_name,
-                                       integrations_id=self.id,
-                                       integration=self,
-                                       new_options=new_options)
+        identifier.integrations.update(
+            new_name=new_name,
+            integrations_id=self.id,
+            integration=self,
+            new_options=new_options,
+            reload_services=reload_services
+        )
 
     def delete(self,
                sure: bool = False,

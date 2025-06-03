@@ -120,8 +120,10 @@ class Integrations:
         aws-cross - {}
         gcp-cross - {}
         gcp-workload-identity-federation - {"secret": "", "content": "{}", "clientId": ""}
-        private-registry (ECR) - {"name": "", "spec": {"accessKeyId": "", "secretAccessKey": "", "account": "", "region": ""}}
-        private-registry (GAR) - {"name": "", "spec": {"password": ""}} (can use generate_gar_options to generate the options)
+        private-registry (ECR) - can use generate_ecr_options to generate the options
+        private-registry (GAR) - use generate_gar_options to generate the options
+        private-registry (ACR) - use generate_azure_container_registry_options to generate the options
+        private-registry (DockerHub) - use generate_docker_hub_options to generate the options
 
         **Prerequisites**: You must be an *owner* in the organization.
 
@@ -180,6 +182,7 @@ class Integrations:
                integration: entities.Integration = None,
                new_options: dict = None,
                organization_id: str = None,
+               reload_services: bool = None,
                ):
         """
         Update the integration's name.
@@ -191,6 +194,7 @@ class Integrations:
         :param Integration integration: integration object
         :param dict new_options: new value
         :param str organization_id: organization id
+        :param bool reload_services: reload services associated with this integration
         :return: Integration object
         :rtype: dtlpy.entities.integration.Integration
 
@@ -225,7 +229,16 @@ class Integrations:
             else:
                 organization_id = self.org.id
 
-        url_path = '/orgs/{}/integrations/'.format(organization_id)
+        if reload_services is None:
+            logger.warning(
+                "Param reload_services was not provided. If the integration you are updating is used\n"
+                "in FaaS services these services will keep using the old value until updated."
+            )
+
+        url_path = '/orgs/{org_id}/integrations{query_params}'.format(
+            org_id=organization_id,
+            query_params='?reloadServices=true' if reload_services else ''
+        )
         payload = dict(integrationId=integrations_id if integrations_id is not None else integration.id)
         if new_name is not None:
             payload['name'] = new_name
@@ -356,6 +369,21 @@ class Integrations:
         return IntegrationUtils.generate_docker_hub_options(username=username, password=password, email=email)
 
     @staticmethod
+    def generate_azure_container_registry_options(username: str, password: str, location: str) -> dict:
+        """
+        Generates an Azure Container Registry JSON configuration and returns it as a base64-encoded string.
+
+        Parameters:
+            username (str): The Azure username.
+            password (str): The Azure password.
+            location (str): server URL of Azure Container Registry
+
+        Returns:
+            str: A base64-encoded string representation of the repository JSON configuration.
+        """
+        return IntegrationUtils.generate_docker_hub_options(username=username, password=password, location=location)
+
+    @staticmethod
     def generate_ecr_options(access_key_id: str, secret_access_key: str, account: str, region: str) -> dict:
         """
         Generates an Amazon Elastic Container Registry (ECR) JSON configuration and returns it as a base64-encoded string.
@@ -426,7 +454,7 @@ class IntegrationUtils:
         )
 
     @staticmethod
-    def generate_docker_hub_options(username: str, password: str, email: str = None) -> dict:
+    def generate_docker_hub_options(username: str, password: str, email: str = None, location='docker.io') -> dict:
 
         if not username:
             raise ValueError('Missing Username')
@@ -436,7 +464,7 @@ class IntegrationUtils:
         auth = IntegrationUtils.encode('{}:{}'.format(username, password))
 
         return IntegrationUtils.generate_json_key_options(
-            location='docker.io',
+            location=location,
             username=username,
             password=password,
             auth=auth,

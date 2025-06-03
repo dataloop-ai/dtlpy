@@ -237,16 +237,16 @@ def step_impl(context, function_name, package_path):
     context.to_delete_packages_ids.append(context.package.id)
     assert isinstance(context.package, context.dl.entities.Package)
 
-
-@behave.given(
-    u'There is a service by the name of "{service_name}" with module name "{module_name}" saved to context "{service_attr_name}"')
-def step_impl(context, service_name, module_name, service_attr_name):
+@behave.given(u'There is a service by the name of "{service_name}" with module name "{module_name}" saved to context "{service_attr_name}"')
+@behave.given(u'There is a service by the name of "{service_name}" with module name "{module_name}" saved to context "{service_attr_name}" with on reset "{reset}"')
+def step_impl(context, service_name, module_name, service_attr_name, reset=None):
     service_name = '{}-{}'.format(service_name, random.randrange(1000, 10000))
     runtime = context.dl.KubernetesRuntime(autoscaler=context.dl.KubernetesAutoscaler(min_replicas=1)).to_json()
     setattr(context, service_attr_name, context.package.services.deploy(service_name=service_name,
                                                                         bot=context.bot_user,
                                                                         runtime=runtime,
-                                                                        module_name=module_name))
+                                                                        module_name=module_name,
+                                                                        on_reset=reset,))
     context.to_delete_services_ids.append(getattr(context, service_attr_name).id)
     assert isinstance(getattr(context, service_attr_name), context.dl.entities.Service)
 

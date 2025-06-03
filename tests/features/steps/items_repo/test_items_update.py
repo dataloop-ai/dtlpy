@@ -4,6 +4,7 @@ import time
 import logging
 import json
 from .. import fixtures
+import threading
 
 
 @behave.when(u'I update items name to "{name}"')
@@ -11,11 +12,31 @@ def step_impl(context, name):
     context.item.filename = name
     context.item_update = context.dataset.items.update(item=context.item)
 
+@behave.when('I update items name to "{name1}" and "{name2}" at the same time')
+def step_impl(context, name1, name2):
+    # context.item.filename = name1
+    # context.item_update = context.dataset.items.update(item=context.item)
+    def update_name(new_name):
+        context.item.filename = new_name
+        context.item_update = context.dataset.items.update(item=context.item)
+
+    context.buffer1 = threading.Thread(target=update_name, args=(name1,))
+    context.buffer2 = threading.Thread(target=update_name, args=(name2,))
+    context.buffer1.start()
+    context.buffer2.start()
+    context.buffer1.join()
+    context.buffer2.join()
+
 
 @behave.then(u'I receive an Item object with name "{name}"')
 def step_impl(context, name):
     assert type(context.item_update) == context.dl.Item
     assert context.item_update.filename == name
+
+@behave.then(u'I receive an Item object with names "{name1}" or "{name2}"')
+def step_impl(context, name1, name2):
+    assert isinstance(context.item_update, context.dl.Item)
+    assert context.item_update.filename in (name1, name2)
 
 
 @behave.then(u"Only name attributes was changed")
@@ -48,6 +69,18 @@ def step_impl(context, name):
             )
         )
     assert context.item_get.filename == name
+
+@behave.then(u'Item in host was changed to name "{name1}" or "{name2}"')
+def step_impl(context, name1, name2):
+    time.sleep(3)
+    context.item_get = context.dataset.items.get(item_id=context.item.id)
+    if context.item_get.filename not in (name1, name2):
+        logging.error(
+            "item_get name = {item_get_name}, expected {name1} or {name2}".format(
+                item_get_name=context.item_get.filename, name1=name1, name2=name2
+            )
+        )
+    assert context.item_get.filename in (name1, name2)
 
 
 @behave.given(u'And There is an item by the name of "{name}"')

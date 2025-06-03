@@ -75,4 +75,16 @@ Feature: Items repository list service testing
         And PageEntity items has length of "1"
         And And PageEntity item received equal to .mp4 item uploadede
 
+    Scenario: Hybrid ID-based pagination for items
+        Given There are "10" items
+
+        When I list items with page_size "1"
+        Then I should receive "1" item
+        And I record the last_seen_id from that page
+
+        When I list items after last_seen_id with page_size "1"
+        Then I should receive "1" item
+        And that item’s id should differ from the first page’s id
+
+
 

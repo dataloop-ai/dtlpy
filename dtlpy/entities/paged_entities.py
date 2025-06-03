@@ -6,6 +6,8 @@ import copy
 import sys
 
 import attr
+
+from .filters import FiltersOperations, FiltersOrderByDirection, FiltersResource
 from .. import miscellaneous
 from ..services.api_client import ApiClient
 
@@ -29,6 +31,10 @@ class PagedEntities:
     total_pages_count = attr.ib(default=0)
     items_count = attr.ib(default=0)
 
+    # hybrid pagination
+    use_id_based_paging = attr.ib(default=False)
+    last_seen_id = attr.ib(default=None)
+
     # execution attribute
     _service_id = attr.ib(default=None, repr=False)
     _project_id = attr.ib(default=None, repr=False)
@@ -42,6 +48,15 @@ class PagedEntities:
 
     # items list
     items = attr.ib(default=miscellaneous.List(), repr=False)
+
+    @staticmethod
+    def _has_explicit_sort(flt):
+        """
+        Check if the filter has custom sort fields defined (not id/createdAt).
+        """
+        prepared = flt.prepare() if flt else {}
+        sort_fields = list(prepared.get("sort", {}).keys())
+        return bool(sort_fields and sort_fields[0] not in {"id", "createdAt"})
 
     def process_result(self, result):
         """
@@ -71,7 +86,8 @@ class PagedEntities:
         return self.items_count
 
     def __iter__(self):
-        pbar = tqdm.tqdm(total=self.total_pages_count, disable=self._client_api.verbose.disable_progress_bar_iterate_pages,
+        pbar = tqdm.tqdm(total=self.total_pages_count,
+                         disable=self._client_api.verbose.disable_progress_bar_iterate_pages,
                          file=sys.stdout, desc="Iterate Pages")
         if self.page_offset != 0:
             # reset the count for page 0
@@ -109,18 +125,68 @@ class PagedEntities:
         if page_offset is None:
             page_offset = self.page_offset
 
-        if self.filters is not None:
-            filters = copy.copy(self.filters)
-            filters.page = page_offset
-            filters.page_size = page_size
-            if self._list_function is None:
-                result = self.items_repository._list(filters=filters)
-            else:
-                result = self._list_function(filters=filters)
-            items = self.process_result(result)
-            return items
+        if self.filters is None:
+            raise ValueError("Cant return page. Filters is empty")
+
+        req = copy.deepcopy(self.filters)
+        req.page_size = page_size
+
+        after_id = getattr(req, "after_id", None)
+        if after_id is not None:
+            delattr(req, "after_id")
+
+        enable_hybrid = getattr(self.filters, "resource", None) in [
+            FiltersResource.ITEM,
+            FiltersResource.ANNOTATION,
+            FiltersResource.FEATURE,
+        ]
+
+        if enable_hybrid and not self._has_explicit_sort(req):
+            req.sort_by(field="id", value=FiltersOrderByDirection.ASCENDING)
+
+        if enable_hybrid and self.use_id_based_paging:
+            req.page = 0
+            if self.last_seen_id:
+                req.add(
+                    field="id",
+                    values=self.last_seen_id,
+                    operator=FiltersOperations.GREATER_THAN,
+                    method=FiltersOperations.AND,
+                )
         else:
-            raise ValueError('Cant return page. Filters is empty')
+            auto_hybrid = (
+                enable_hybrid
+                and not self.use_id_based_paging
+                and not self._has_explicit_sort(self.filters)
+                and self.last_seen_id is not None
+            )
+            if auto_hybrid and page_offset > 0:
+                req.page = 0
+                req.add(
+                    field="id",
+                    values=after_id or self.last_seen_id,
+                    operator=FiltersOperations.GREATER_THAN,
+                    method=FiltersOperations.AND,
+                )
+                self.use_id_based_paging = True
+            else:
+                req.page = page_offset
+
+        if self._list_function is None:
+            result = self.items_repository._list(filters=req)
+        else:
+            result = self._list_function(filters=req)
+
+        items = self.process_result(result)
+
+        if enable_hybrid and items and hasattr(items[-1], "id"):
+            self.last_seen_id = items[-1].id
+
+        if self.use_id_based_paging:
+            if "hasNextPage" not in result:
+                self.has_next_page = len(items) == page_size
+
+        return items
 
     def get_page(self, page_offset=None, page_size=None):
         """
@@ -164,7 +230,8 @@ class PagedEntities:
     def all(self):
         page_offset = 0
         page_size = 100
-        pbar = tqdm.tqdm(total=self.items_count, disable=self._client_api.verbose.disable_progress_bar,
+        pbar = tqdm.tqdm(total=self.items_count,
+                         disable=self._client_api.verbose.disable_progress_bar,
                          file=sys.stdout, desc='Iterate Entity')
         total_pages = math.ceil(self.items_count / page_size)
         jobs = list()

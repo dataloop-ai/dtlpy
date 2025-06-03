@@ -60,3 +60,14 @@ Feature: Items repository get service testing
     When I get the item by remote path "/notype"
     Then I receive an Item object
     And The item I received equals the item I uploaded
+
+  @skip_test
+  @DAT-84281
+  @DM-cache
+  Scenario: Get an existing item by id from cache
+    Given There is an item
+    When I get the item by id
+    And I wait "1"
+    When I get the item by id
+    Then I receive an Item object
+    And The item I received equals the item I uploaded

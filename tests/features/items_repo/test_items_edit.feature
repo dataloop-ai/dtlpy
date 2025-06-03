@@ -80,3 +80,11 @@ Feature: Items repository update service testing
     Then I validate for "item" that the updated metadata is "user.a:b"
     Then I validate for "item" that the updated metadata is "system.c:d"
 
+  @skip_test
+  @DAT-94062
+  @DM-cache
+  Scenario: Update items name twice at the same time
+    When I update items name to "/test_name.jpg" and "/test_name2.jpg" at the same time
+    Then I receive an Item object with names "/test_name.jpg" or "/test_name2.jpg"
+    And Item in host was changed to name "/test_name.jpg" or "/test_name2.jpg"
+    And Only name attributes was changed

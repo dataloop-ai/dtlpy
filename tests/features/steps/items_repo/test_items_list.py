@@ -1,5 +1,5 @@
 import time
-
+import dtlpy as dl
 import behave
 import os
 
@@ -251,3 +251,59 @@ def step_impl(context, index=None):
         time.sleep(interval)
 
     assert finished, f"TEST FAILED: Not all items annotated , number left - {items_count}"
+
+
+@behave.when(u'I list items with page_size "{n:d}"')
+def step_list_with_page_size(context, n):
+    context.first_page = context.dataset.items.list(
+        filters=None,
+        page_offset=0,
+        page_size=n
+    )
+    context.first_items = list(context.first_page.items)
+    assert context.first_items, "First page has no items!"
+    context.last_seen_id = context.first_page.last_seen_id
+    assert context.last_seen_id is not None, "Expected last_seen_id to be set on first_page"
+
+
+@behave.then(u'I record the last_seen_id from that page')
+def step_record_items_cursor(context):
+    assert hasattr(context, 'first_page'), "first_page was not set"
+    cursor = getattr(context.first_page, 'last_seen_id', None)
+    assert cursor is not None, "Expected first_page.last_seen_id to be populated"
+    context.last_seen_id = cursor
+
+
+@behave.when(u'I list items after last_seen_id with page_size "{n:d}"')
+def step_list_items_after_cursor(context, n):
+    f = dl.Filters()
+    f.page = 0 
+    f.page_size = n
+    f.add(
+        field="id",
+        values=context.last_seen_id,
+        operator=dl.FiltersOperations.GREATER_THAN,
+        method=dl.FiltersOperations.AND
+    )
+
+    context.second_page = context.dataset.items.list(filters=f)
+    context.second_items = list(context.second_page.items)
+    assert context.second_items, "Second page has no items!"
+
+
+@behave.then(u'I should receive "{count:d}" item')
+def step_assert_item_count(context, count):
+    items = getattr(context, 'second_items', None) or context.first_items
+    actual = len([i for i in items if i.type == 'file'])
+    assert actual == count, f"Expected {count}, got {actual}"
+
+
+@behave.then(u'that item’s id should differ from the first page’s id')
+def step_assert_item_distinct(context):
+    first_id  = context.first_items[0].id
+    second_id = context.second_items[0].id
+    print(f"▶ First page last_seen_id: {context.last_seen_id}")
+    print(f"▶ First item ID: {context.first_items[0].id}")  
+    print(f"▶ Second item ID: {context.second_items[0].id}")
+    assert second_id != first_id, \
+        f"Expected second-page id to differ; got both = {first_id}"

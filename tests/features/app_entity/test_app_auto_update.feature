@@ -113,3 +113,17 @@ Feature: Test app umbrella refs - Auto update Pipeline nodes
     And "service" has app scope
     And I clean the project
 
+
+  @DAT-92924
+  @restore_json_file
+  Scenario: Auto update - Publish new version of dpk - DpkAutoUpdateAppsCmd failed - App should not updated
+    Given I have an app with a filesystem panel in path "apps/app_update"
+    When I fetch the panel
+    When I update app auto update to "True"
+    And I update dpk autoscaler to string
+    And I wait "4"
+    And Get dpk app command from metadata
+    Then Validate faas command failed with error "error updating an app"
+    Then I expect app dpk version to be "1.0.1"
+    Then I expect app to be in status "Failure"
+    Then I uninstall the app

@@ -33,5 +33,38 @@ Feature: Upload annotation testing
           When Item is annotated with annotations in file: "audio_annotations.json"
           Then audio in host has annotation added
 
+    @skip_test
+    @DAT-94137
+    @DM-cache
+    Scenario: Upload image annotations from file from cache
+          Given Classes in file: "assets_split/annotations_upload/classes_new.json" are uploaded to test Dataset
+          And Item in path "assets_split/annotations_upload/0000000162.jpg" is uploaded to "Dataset"
+          When Item is annotated with annotations in file: "assets_split/annotations_upload/annotations_new.json"
+          Then Item annotations in host equal annotations in file "assets_split/annotations_upload/annotations_new.json"
+          And I wait "1"
+          Then Item annotations in host equal annotations in file "assets_split/annotations_upload/annotations_new.json"
+
+    @skip_test
+    @DAT-94137
+    @DM-cache
+    Scenario: Upload video annotations from file from cache
+          Given Classes in file: "assets_split/annotations_upload/video_classes.json" are uploaded to test Dataset
+          And Item in path "assets_split/annotations_upload/sample_video.mp4" is uploaded to "Dataset"
+          When Item is annotated with annotations in file: "assets_split/annotations_upload/video_annotations.json"
+          Then Item video annotations in host equal annotations in file "assets_split/annotations_upload/video_annotations.json"
+          And I wait "1"
+          Then Item video annotations in host equal annotations in file "assets_split/annotations_upload/video_annotations.json"
+
+    @skip_test
+    @DAT-94137
+    @DM-cache
+    Scenario: Upload audio annotations from file from cache
+          Given Classes in file: "classes_new.json" are uploaded to test Dataset
+          And Item in path "simple_audio.mp3" is uploaded to "Dataset"
+          When Item is annotated with annotations in file: "audio_annotations.json"
+          Then audio in host has annotation added
+          And I wait "1"
+          Then audio in host has annotation added
+
 
 

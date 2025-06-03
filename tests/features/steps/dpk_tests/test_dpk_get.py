@@ -91,3 +91,10 @@ def step_impl(context):
 
     else:
         raise TypeError("Unexpected JSON format: not a list or dictionary")
+
+
+@behave.when(u'Get dpk app command from metadata')
+def step_impl(context):
+    context.dpk = context.project.dpks.get(dpk_id=context.dpk.id)
+    command_id = context.dpk.metadata.get('commands', {}).get('apps', None)
+    context.command = context.dl.commands.get(command_id=command_id, url='api/v1/commands/faas/{}'.format(command_id))

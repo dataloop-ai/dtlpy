@@ -140,6 +140,34 @@ def step_impl(context):
     context.custom_installation.get('components').get('triggers').pop(-1)
 
 
+
+@behave.when(u'I "{action}" the "{entity}" "{name}" from context.custom_installation')
+def step_impl(context, action, entity, name):
+    if not hasattr(context, "custom_installation"):
+        raise AttributeError(
+            "Please make sure to add 'custom_installation' to 'context', Can use step 'When I create a context.custom_installation var'")
+
+    if action == 'remove':
+        to_remove_index = None
+        comp_entities = context.custom_installation.get('components').get(entity)
+        for i in range(len(comp_entities)):
+            if comp_entities[i].get('name') == name:
+                to_remove_index = i
+                break
+        if to_remove_index is not None:
+            context.custom_installation.get('components').get(entity).pop(to_remove_index)
+    elif action == 'add':
+        if context.custom_installation.get('components').get(entity, None) is None:
+            context.custom_installation.get('components')[entity] = []
+        context.custom_installation.get('components').get(entity).append({'name': name})
+
+
+@behave.when(u"I update app custom installation")
+def step_impl(context):
+    context.app.custom_installation = context.custom_installation
+    context.app.update()
+    context.app = context.project.apps.get(app_id=context.app.id)
+
 @behave.when(u"I add service to context.custom_installation")
 def step_impl(context):
     if not hasattr(context, "custom_installation"):

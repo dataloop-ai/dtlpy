@@ -15,3 +15,5 @@ Feature: publish a dpk with pipeline Custom Node
     When I wait "5"
     And I get service by name "compare-models-test"
     Then I validate service configuration in dpk is equal to service from app
+    And I pause pipeline in context
+    And I uninstall the app

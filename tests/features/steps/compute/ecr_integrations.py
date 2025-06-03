@@ -3,6 +3,7 @@ import time
 from behave import given, when, then
 import random
 import string
+import json
 
 
 @given(u'There are no private registry integrations in the organization')
@@ -17,13 +18,18 @@ def step_impl(context):
 
 @given(u'A deployed service with custom docker image from "{type}" private registry')
 def step_impl(context, type):
+    file_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], 'docker', 'images.json')
+    with open(file_path, 'r') as f:
+        docker_images = json.load(f)
     image_name = ''
     if type == 'ECR':
-        image_name = "636666312771.dkr.ecr.eu-west-1.amazonaws.com/aharon:latest"
+        image_name = docker_images['ECR']['image_name']
     elif type == 'GAR':
-        image_name = "europe-docker.pkg.dev/viewo-g/faas-test/zvi/from-ecr:latest"
+        image_name = docker_images['GAR']['image_name']
     elif type == "Dockerhub":
-        image_name = "dataloopai/test-private-dh-registry:test1"
+        image_name = docker_images['Dockerhub']['image_name']
+    elif type == "ACR":
+        image_name = docker_images['ACR']['image_name']
 
     def run(item):
         return item
@@ -37,6 +43,7 @@ def step_impl(context, type):
             num_replicas=1
         )
     )
+
 
 @given(u'I execute the service')
 def step_impl(context):
@@ -112,6 +119,23 @@ def step_impl(context):
         integrations_type=context.dl.IntegrationType.PRIVATE_REGISTRY,
         name='gar-1',
         metadata={"provider": "gcp"},
+        options=options
+    )
+
+
+@when(u'I create an ACR integration')
+def step_impl(context):
+    context.org = context.dl.organizations.get(organization_id=context.project.org['id'])
+    options = context.org.integrations.generate_azure_container_registry_options(
+        username=os.environ['ACR_USERNAME'],
+        password=os.environ['ACR_PASSWORD'],
+        location=os.environ['ACR_LOCATION']
+
+    )
+    context.integration = context.org.integrations.create(
+        integrations_type=context.dl.IntegrationType.PRIVATE_REGISTRY,
+        name='acr-1',
+        metadata={"provider": "azure"},
         options=options
     )
 

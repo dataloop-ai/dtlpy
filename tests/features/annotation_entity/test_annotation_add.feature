@@ -42,3 +42,52 @@ Feature: Annotation Entity Add annotation
         And I have a segmentation annotation
         And Classes in file: "classes_new.json" are uploaded to test Dataset
         Then annotation color is set to recipe color
+
+    @skip_test
+    @DAT-94137
+    @DM-cache
+    Scenario: Image - using add annotation method with cache
+        Given Classes in file: "classes_new.json" are uploaded to test Dataset
+        And Item in path "0000000162.jpg" is uploaded to "Dataset"
+        When I add annotation to item using add annotation method
+        And I upload annotation created
+        Then Item in host has annotation added
+        And I wait "1"
+        Then Item in host has annotation added
+
+
+    @skip_test
+    @DAT-94137
+    @DM-cache
+    Scenario: Video - using add annotation method with cache
+        Given Classes in file: "video_classes.json" are uploaded to test Dataset
+        And Item in path "sample_video.mp4" is uploaded to "Dataset"
+        When I add annotation to item using add annotation method
+        And I add some frames to annotation
+        And I upload annotation created
+        Then Item in host has annotation added
+        And I wait "1"
+        Then Item in host has annotation added
+
+
+    @skip_test
+    @DAT-94137
+    @DM-cache
+    Scenario: Audio - using add annotation method with cache
+        Given Classes in file: "classes_new.json" are uploaded to test Dataset
+        And Item in path "simple_audio.mp3" is uploaded to "Dataset"
+        When I add annotation to audio using add annotation method
+        Then audio in host has annotation added
+        And I wait "1"
+        Then audio in host has annotation added
+
+    @skip_test
+    @DAT-94137
+    @DM-cache
+    Scenario: annotation color is set to default with cache
+        Given Item in path "0000000162.jpg" is uploaded to "Dataset"
+        And I have a segmentation annotation
+        And Classes in file: "classes_new.json" are uploaded to test Dataset
+        Then annotation color is set to recipe color
+        And I wait "1"
+        Then annotation color is set to recipe color
