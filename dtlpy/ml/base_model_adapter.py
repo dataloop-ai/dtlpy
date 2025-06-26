@@ -693,8 +693,6 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             if output_path is not None:
                 self.save_to_model(local_path=output_path, replace=True)
             logger.info('Execution failed. Setting model.status to failed')
-            model.status = 'failed'
-            model.update()
             raise
         return model
 

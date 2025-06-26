@@ -245,7 +245,7 @@ def generate_pipeline_json(context, pipeline_json, flag=None):
         if not hasattr(context, "model"):
             break
         elif node['namespace']['functionName'] == "train":
-            node['metadata']['aiLibraryId'] = context.model.package.id
+            node['metadata']['aiLibraryId'] = context.model.package.name
             if check_no_connection_for_input(pipeline_json, node['inputs'][0]):
                 node['inputs'][0]['defaultValue'] = context.model.id
         elif node['namespace']['functionName'] == "predict":
@@ -253,7 +253,7 @@ def generate_pipeline_json(context, pipeline_json, flag=None):
             node['metadata']["modelId"] = context.model.id
             node['metadata']["modelName"] = context.model.name
         elif node['namespace']['functionName'] == "evaluate":
-            node['metadata']['aiLibraryId'] = context.model.package.id
+            node['metadata']['aiLibraryId'] = context.model.package.name
             for node_input in node['inputs']:
                 if node_input['type'] == 'Model' and check_no_connection_for_input(pipeline_json, node_input):
                     node_input['defaultValue'] = context.model.id

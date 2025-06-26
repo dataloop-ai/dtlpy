@@ -141,8 +141,14 @@ class PagedEntities:
             FiltersResource.FEATURE,
         ]
 
+        prepared= req.prepare()
+        sort_spec= prepared.get("sort", {})
+        sort_dir= next(iter(sort_spec.values()), None)
+        order= sort_dir or FiltersOrderByDirection.ASCENDING
+        operator_value = (FiltersOperations.LESS_THAN if sort_dir == FiltersOrderByDirection.DESCENDING else FiltersOperations.GREATER_THAN)
+
         if enable_hybrid and not self._has_explicit_sort(req):
-            req.sort_by(field="id", value=FiltersOrderByDirection.ASCENDING)
+            req.sort_by(field="id", value=order)
 
         if enable_hybrid and self.use_id_based_paging:
             req.page = 0
@@ -150,7 +156,7 @@ class PagedEntities:
                 req.add(
                     field="id",
                     values=self.last_seen_id,
-                    operator=FiltersOperations.GREATER_THAN,
+                    operator=operator_value,
                     method=FiltersOperations.AND,
                 )
         else:
@@ -165,7 +171,7 @@ class PagedEntities:
                 req.add(
                     field="id",
                     values=after_id or self.last_seen_id,
-                    operator=FiltersOperations.GREATER_THAN,
+                    operator=operator_value,
                     method=FiltersOperations.AND,
                 )
                 self.use_id_based_paging = True

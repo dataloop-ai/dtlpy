@@ -61,6 +61,7 @@ def step_impl(context, on_reset):
     time.sleep(context.service.execution_timeout + context.service.drain_time + 5)
     num_tries = 60
     interval = 7
+    execution = None
 
     reset = False
     for _ in range(num_tries):
@@ -80,7 +81,8 @@ def step_impl(context, on_reset):
             break
         time.sleep(interval)
 
-    assert reset, f"TEST FAILED: after {round(num_tries * interval / 60, 1)} minutes"
+    execution_url = getattr(execution, 'url') if hasattr(execution, 'url') else None
+    assert reset, f"TEST FAILED: after {round(num_tries * interval / 60, 1)} minutes\n{execution_url}"
 
 
 @behave.when(u'I terminate an execution')

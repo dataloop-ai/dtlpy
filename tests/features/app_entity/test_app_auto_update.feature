@@ -82,7 +82,10 @@ Feature: Test app umbrella refs - Auto update Pipeline nodes
       | packageRevision | 1.0.1 |
     And "model" has app scope
     And "service" has app scope
+    And I validate dpk not have refs
+    And I validate app have refs
     And I pause pipeline in context
+    And I validate app not have refs
     And I install pipeline in context
     When I get service in index "-1"
     Then "service" has app scope

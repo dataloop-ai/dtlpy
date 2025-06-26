@@ -138,6 +138,7 @@ from tests.features.steps.services_repo import test_services_crashloop
 from tests.features.steps.services_repo import test_service_validation
 
 from tests.features.steps.filters_entity import test_filters
+from tests.features.steps.filters_entity import test_filters_sort
 
 from tests.features.steps.executions_repo import test_executions_get
 from tests.features.steps.executions_repo import test_executions_create

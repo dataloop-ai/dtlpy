@@ -227,8 +227,8 @@ def step_impl(context, num_times: str):
         start_time = time.time()
         f = create_filter(c=context)
         f.add(
-            field='latestStatus.status', values=context.dl.ExecutionStatus.CREATED,
-            operator=context.dl.FiltersOperations.NOT_EQUAL
+            field='latestStatus.status', values=context.dl.ExecutionStatus.SUCCESS,
+            operator=context.dl.FiltersOperations.EQUAL
         )
         es = context.service.executions.list(filters=f)
         while es.items_count <= last_running_executions_count and time.time() - start_time < max_wait:
@@ -247,8 +247,8 @@ def step_impl(context, num_times: str):
         time.sleep(interval)
         filters = create_filter(c=context)
         filters.add(
-            field='latestStatus.status', values=context.dl.ExecutionStatus.CREATED,
-            operator=context.dl.FiltersOperations.NOT_EQUAL
+            field='latestStatus.status', values=context.dl.ExecutionStatus.SUCCESS,
+            operator=context.dl.FiltersOperations.EQUAL
         )
         executions = context.service.executions.list(filters=filters)
         last_count = executions.items_count
@@ -293,11 +293,15 @@ def step_impl(context):
                 machines.add(replica_id)
             else:
                 assert False, 'Execution status is missing replicaId'
-            assert latest_status == context.dl.ExecutionStatus.SUCCESS, f"TEST FAILED: Expected {context.dl.ExecutionStatus.SUCCESS}, Actual {latest_status}"
+            if latest_status != context.dl.ExecutionStatus.SUCCESS:
+                print(f"Execution not successful. URL: {execution.url}")
+                context.dl.logger.error(execution.url)
+            assert latest_status == context.dl.ExecutionStatus.SUCCESS, f"TEST FAILED: Execution status Expected {context.dl.ExecutionStatus.SUCCESS}, Actual {latest_status}"
             e_status_list = [s['status'] for s in execution.status]
             e_status_list.sort()
-            assert '-'.join(e_status_list) == pattern, f"TEST FAILED: Expected {pattern}, Actual {'-'.join(e_status_list)}"
+            status_list = '-'.join(e_status_list)
+            assert status_list == pattern, f"TEST FAILED: Execution Expected pattern {pattern}, Actual {status_list}"
 
     # make sure executions ran on different machines
-    assert len(machines) == context.machine_count, f"TEST FAILED: Expected {context.machine_count} , Actual {len(machines)}"
+    assert len(machines) == context.machine_count, f"TEST FAILED: Execution machine count Expected {context.machine_count} , Actual {len(machines)}"
 

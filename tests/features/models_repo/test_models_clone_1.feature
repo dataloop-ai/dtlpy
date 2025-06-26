@@ -51,4 +51,6 @@ Feature: Models repository clone testing
     And I upload artifact in "0000000162.jpg"
     When I clone the model
     Then src model and clone model should have the same artifact name and different id
+    When set the clone model to the model context
+    Then i see the model status log containing "pre-trained,cloning,pre-trained"
     And I clean the project

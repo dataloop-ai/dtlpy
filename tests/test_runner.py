@@ -588,6 +588,7 @@ if __name__ == '__main__':
     tests_results = results.items()
 
     # print timeout first
+    all_tags = set()  # Use set to avoid duplicates
     for feature, result in tests_results:
         if result and not result.get('status', None) and 'timeout' in result:
             status = 'timeout'
@@ -597,6 +598,14 @@ if __name__ == '__main__':
             res_msg = '{}\t in try: {}\tavg time: {}\tfeature: {}'.format(status, i_try, avg_time,
                                                                           os.path.basename(feature))
             print(res_msg)
+            # Collect DAT tags from the feature file
+            try:
+                with open(feature, 'r') as f:
+                    content = f.read()
+                    tags = [line.strip() for line in content.split('\n') if line.strip().startswith('@DAT-')]
+                    all_tags.update(tags)
+            except Exception as e:
+                print(f"Could not read tags from {feature}: {str(e)}")
 
     # print failed first
     for feature, result in tests_results:
@@ -608,6 +617,15 @@ if __name__ == '__main__':
             res_msg = '{}\t in try: {}\tavg time: {}\tfeature: {}'.format(status, i_try, avg_time,
                                                                           os.path.basename(feature))
             print(res_msg)
+            # Collect DAT tags from the feature file
+            try:
+                with open(feature, 'r') as f:
+                    content = f.read()
+                    tags = [line.strip() for line in content.split('\n') if line.strip().startswith('@DAT-')]
+                    all_tags.update(tags)
+            except Exception as e:
+                print(f"Could not read tags from {feature}: {str(e)}")
+
 
     # print unrun tests
     for feature, result in tests_results:
@@ -627,6 +645,13 @@ if __name__ == '__main__':
                                                                           os.path.basename(feature))
             print(res_msg)
 
+    # Print all collected DAT tags
+    print('-------------- Tags for Retest --------------')
+    if all_tags:
+        print("\nAll DAT tags from failed and timeout tests:")
+        print(','.join(sorted(all_tags)))
+
+    print('-------------- Delete projects --------------')
     delete_projects()
 
     if org_flag is True:

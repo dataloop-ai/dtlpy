@@ -20,12 +20,10 @@ Feature: Test pipeline refs
     And code node package should have pipeline refs
     And code node service should have pipeline refs and cannot be uninstall
     And app should have pipeline refs and cannot be uninstall
-    And dpk should have pipeline refs and cannot be deleted
     When I delete pipeline
     Then service should not have pipeline refs and uninstall service "True"
     And model should not have pipeline refs and delete model "True"
     And app should not have pipeline refs and uninstall app "True"
-    And dpk should not have pipeline refs and delete dpk "True"
 
   @DAT-70831
   @pipelines.delete

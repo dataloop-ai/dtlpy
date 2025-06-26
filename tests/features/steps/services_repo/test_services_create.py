@@ -7,7 +7,6 @@ import time
 from dtlpy import FunctionIO, PackageInputType, KubernetesAutoscalerType
 
 
-
 @behave.when(u"I create a service")
 def step_impl(context):
     service_name = None
@@ -54,7 +53,6 @@ def step_impl(context):
                 bot_user = context.project.bots.get(bot_name=param[1])
             else:
                 bot_user = context.bot_user
-
 
     context.service = context.package.services._create(
         bot=bot_user,
@@ -168,8 +166,22 @@ def step_impl(context, log_message):
         if success:
             break
 
-    assert success, f"TEST FAILED: After {round(num_tries * interval_time / 60, 1)} minutes"
+    if hasattr(context, 'ex') or hasattr(context, 'execution'):
+        debug_data = context.ex.url if hasattr(context, 'ex') else context.execution.url
+    else:
+        debug_data = context.service.status()
+    assert success, f"TEST FAILED: After {round(num_tries * interval_time / 60, 1)} minutes\n{debug_data}"
 
+
+@behave.then(u'No log is in service.log()')
+def step_impl(context):
+    success = True
+    for log in context.service.log(view=False):
+        if log != None:
+                success = False
+                break
+
+    assert success, f"TEST FAILED: found log in service.log()"
 
 @behave.when(u'I deploy a service from function "{service_name}"')
 def step_impl(context, service_name):
@@ -199,4 +211,3 @@ def step_impl(context):
         execution_input=FunctionIO(name='items', value=items_list, type=PackageInputType.ITEMS),
         function_name='run',
         project_id=context.package.project_id)
-

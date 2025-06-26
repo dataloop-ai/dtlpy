@@ -235,6 +235,24 @@ def step_impl(context, item_id):
     except Exception as e:
         context.error = e
 
+@behave.when(u'i see the model status log containing "{statuses}"')
+@behave.then(u'i see the model status log containing "{statuses}"')
+def step_impl(context, statuses):
+    statuses_list = statuses.split(',')
+    context.model = dl.models.get(model_id=context.model.id)
+    for status in statuses_list:
+        found = False
+        for log in context.model.status_logs:
+            if status == log['status']:
+                if status == 'failed':
+                    assert log['message'], f"TEST FAILED: status {status} found in model status log but no error message"
+                found = True
+                break
+        assert found, f"TEST FAILED: status {status} not found in model status log"
+
+@behave.when(u'set the clone model to the model context')
+def step_impl(context):
+    context.model = context.model_clone
 
 @behave.then(u'model status should be "{status}" with execution "{flag}" that has function "{func}"')
 def step_impl(context, status, flag, func):
@@ -256,13 +274,16 @@ def step_impl(context, status, flag, func):
         completed = True
     assert completed, f"TEST FAILED: execution was not completed, after {round(num_try * interval / 60, 1)} minutes"
 
+    if status == 'failed':
+        time.sleep(10)
     context.model = dl.models.get(model_id=context.model.id)
     assert context.model.status == status, f"TEST FAILED: model status is not as expected, expected: {status}, got: {context.model.status}"
 
 
 @behave.then(u'model status should be "{status}"')
 def step_impl(context, status):
-    assert context.model_clone.status == status, f"TEST FAILED: model status is not as expected, expected: {status}, got: {context.model_clone.status}"
+    model_status = context.model_clone.status if hasattr(context, 'model_clone') else context.model.status
+    assert model_status == status, f"TEST FAILED: model status is not as expected, expected: {status}, got: {model_status}"
 
 
 @behave.then(u'I clean the project')

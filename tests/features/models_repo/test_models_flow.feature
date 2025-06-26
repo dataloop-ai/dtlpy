@@ -21,14 +21,18 @@ Feature: Models repository flow testing
     And I publish a dpk to the platform
     And I install the app
     And i fetch the model by the name "test-model"
+    And I see the model status log containing "created"
     When i "train" the model
+    And I see the model status log containing "created,pending"
     Then service metadata has a model id and operation "train"
     Then model status should be "trained" with execution "True" that has function "train_model"
+    And I see the model status log containing "created,pending,training,trained"
     When i "deploy" the model
     Then model status should be "deployed" with execution "False" that has function "None"
     When i "evaluate" the model
     Then service metadata has a model id and operation "evaluate"
     Then model status should be "deployed" with execution "True" that has function "evaluate_model"
+    And i see the model status log containing "created,pending,training,trained,deployed"
     And Dataset has a scores file
     When i call the precision recall api
     Then i should get a json response

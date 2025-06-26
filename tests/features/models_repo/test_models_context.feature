@@ -18,7 +18,9 @@ Feature: Models repository flow testing
     And I install the app
     And i fetch the model by the name "test-model-failed"
     When i "train" the model
+    Then I wait "10"
     Then model status should be "failed" with execution "True" that has function "train_model"
+    Then i see the model status log containing "created,pending,training,failed"
 
 
   @DAT-52904
@@ -31,3 +33,19 @@ Feature: Models repository flow testing
     And i fetch the model by the name "test-model-init"
     When i train the model with init param model none
     Then model status should be "trained" with execution "True" that has function "train_model"
+
+
+  @DAT-95511
+  Scenario: test model revert status
+    Given I fetch the dpk from 'model_dpk/modelBasicDpk.json' file
+    When I create a dummy model package by the name of "dummymodel" with entry point "main.py"
+    And I create a model from package by the name of "test-model" with status "trained" in index "0"
+    And I publish a dpk to the platform
+    And I install the app
+    And i fetch the model by the name "test-model"
+    And I see the model status log containing "trained"
+    When i "deploy" the model
+    And I uninstall service
+    Then model status should be "trained" with execution "False" that has function "None"
+    And I wait "5"
+    And I see the model status log containing "trained,deployed"

@@ -228,7 +228,7 @@ pipelines:
             - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - chmod +x ./test.sh
-            - ./test.sh $TAGS
+            - timeout 6600 ./test.sh $TAGS
           artifacts:
             - behave_test_report.json
           after-script:
@@ -273,7 +273,7 @@ pipelines:
             - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - chmod +x ./test.sh
-            - ./test.sh $TAGS
+            - timeout 6600 ./test.sh $TAGS
           artifacts:
             - behave_test_report.json
           after-script:
@@ -287,8 +287,6 @@ pipelines:
       - step:
           image: python:3.11
           name: Test & Report to XRay
-          caches:
-            - pip
           script:
             - python --version
             - pip install --upgrade pip
@@ -301,6 +299,7 @@ pipelines:
             - export ARTIFACTS_PATH=$(python -c "import dtlpy; print(dtlpy.client_api.cookie_io.COOKIE)")
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - chmod +x ./test.sh
+            - timeout 6600 ./test.sh $TAGS
           artifacts:
             - $ARTIFACTS_PATH
           after-script:
@@ -315,7 +314,8 @@ pipelines:
                   - ls -l $ARTIFACTS_PATH
                   - AVOID_TESTRAIL=true
                   - PYTHONPATH=$PWD
-                  - ./test.sh Hodor
+                  - chmod +x ./test.sh
+                  - timeout 6600 ./test.sh Hodor
                 after-script:
                   - |
                     if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Hodor (xray-nightly-parallel-archived)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
@@ -326,7 +326,8 @@ pipelines:
                   - ls -l $ARTIFACTS_PATH
                   - AVOID_TESTRAIL=true
                   - PYTHONPATH=$PWD
-                  - ./test.sh Apps
+                  - chmod +x ./test.sh
+                  - timeout 6600 ./test.sh Apps
                 after-script:
                   - |
                     if [ "$BITBUCKET_EXIT_CODE" -ne 0 ]; then curl -X POST -H 'Content-type: application/json' --data '{"text": "🚨 *Pipeline Failed!* \\n Step: `Apps (xray-nightly-parallel-archived)` \\n Repository: `'"$BITBUCKET_REPO_SLUG"'` \\n Branch: `'"$BITBUCKET_BRANCH"'` \\n Commit: `'"$BITBUCKET_COMMIT"'` \\n <'"$BITBUCKET_GIT_HTTP_ORIGIN"'/commits/'"$BITBUCKET_COMMIT"'|View Commit>"}' "$SLACK_WEBHOOK_URL"; fi
@@ -351,7 +352,7 @@ pipelines:
             - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - chmod +x ./test.sh
-            - ./test.sh Hodor
+            - timeout 6600 ./test.sh Hodor
           artifacts:
             - behave_test_report.json
           after-script:
@@ -378,7 +379,7 @@ pipelines:
             - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - chmod +x ./test.sh
-            - ./test.sh Apps
+            - timeout 6600 ./test.sh Apps
           artifacts:
             - behave_test_report.json
           after-script:
@@ -405,7 +406,7 @@ pipelines:
             - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - chmod +x ./test.sh
-            - ./test.sh Ramsay
+            - timeout 6600 ./test.sh Ramsay
           artifacts:
             - behave_test_report.json
           after-script:
@@ -432,7 +433,7 @@ pipelines:
             - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - chmod +x ./test.sh
-            - ./test.sh Rubiks
+            - timeout 6600 ./test.sh Rubiks
           artifacts:
             - behave_test_report.json
           after-script:
@@ -459,7 +460,7 @@ pipelines:
             - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - chmod +x ./test.sh
-            - ./test.sh Rubiks-Dataset-Recipe
+            - timeout 6600 ./test.sh Rubiks-Dataset-Recipe
           artifacts:
             - behave_test_report.json
           after-script:
@@ -485,7 +486,7 @@ pipelines:
             - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - chmod +x ./test.sh
-            - ./test.sh Rubiks-Items-Annotations
+            - timeout 6600 ./test.sh Rubiks-Items-Annotations
           artifacts:
             - behave_test_report.json
           after-script:
@@ -511,7 +512,7 @@ pipelines:
             - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - chmod +x ./test.sh
-            - ./test.sh SDK
+            - timeout 6600 ./test.sh SDK
           artifacts:
             - behave_test_report.json
           after-script:
@@ -538,7 +539,7 @@ pipelines:
             - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - chmod +x ./test.sh
-            - ./test.sh Woz
+            - timeout 6600 ./test.sh Woz
           artifacts:
             - behave_test_report.json
           after-script:
@@ -565,7 +566,7 @@ pipelines:
             - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - chmod +x ./test.sh
-            - ./test.sh Roberto
+            - timeout 6600 ./test.sh Roberto
           artifacts:
             - behave_test_report.json
           after-script:
@@ -592,7 +593,7 @@ pipelines:
             - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - chmod +x ./test.sh
-            - ./test.sh Hedwig
+            - timeout 6600 ./test.sh Hedwig
           artifacts:
             - behave_test_report.json
           after-script:
@@ -619,7 +620,7 @@ pipelines:
             - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - chmod +x ./test.sh
-            - ./test.sh Piper
+            - timeout 6600 ./test.sh Piper
           artifacts:
             - behave_test_report.json
           after-script:
@@ -646,7 +647,7 @@ pipelines:
             - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - chmod +x ./test.sh
-            - ./test.sh Piper-Pipelines
+            - timeout 6600 ./test.sh Piper-Pipelines
           artifacts:
             - behave_test_report.json
           after-script:
@@ -673,7 +674,7 @@ pipelines:
             - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - chmod +x ./test.sh
-            - ./test.sh Piper-Faas
+            - timeout 6600 ./test.sh Piper-Faas
           artifacts:
             - behave_test_report.json
           after-script:
@@ -694,14 +695,13 @@ pipelines:
             - PYTHONPATH=$PWD
             - pip install --upgrade pip
             - apt-get -y update && apt-get install -y libgl1-mesa-glx
-            - pip install -r requirements.txt
             - pip install -r tests/requirements.txt
             - python setup.py build
             - python setup.py install
             - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - chmod +x ./test.sh
-            - ./test.sh Piper-Triggers-Executions
+            - timeout 6600 ./test.sh Piper-Triggers-Executions
           artifacts:
             - behave_test_report.json
           after-script:
@@ -729,7 +729,7 @@ pipelines:
             - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - chmod +x ./test.sh
-            - ./test.sh Billing_daily
+            - timeout 6600 ./test.sh Billing_daily
           artifacts:
             - behave_test_report.json
           after-script:
@@ -758,7 +758,7 @@ pipelines:
             - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - chmod +x ./test.sh
-            - ./test.sh Billing_weekly
+            - timeout 6600 ./test.sh Billing_weekly
           artifacts:
             - behave_test_report.json
           after-script:
@@ -787,7 +787,7 @@ pipelines:
             - python tests/test_login.py
             - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
             - chmod +x ./test.sh
-            - ./test.sh Flows
+            - timeout 6600 ./test.sh Flows
           artifacts:
             - behave_test_report.json
           after-script:
@@ -816,7 +816,7 @@ pipelines:
                 - python tests/test_login.py
                 - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
                 - chmod +x ./test.sh
-                - ./test.sh Hodor
+                - timeout 6600 ./test.sh Hodor
               artifacts:
                 - behave_test_report.json
               after-script:
@@ -837,7 +837,7 @@ pipelines:
                 - python tests/test_login.py
                 - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
                 - chmod +x ./test.sh
-                - ./test.sh Woz
+                - timeout 6600 ./test.sh Woz
               artifacts:
                 - behave_test_report.json
               after-script:
@@ -858,7 +858,7 @@ pipelines:
                 - python tests/test_login.py
                 - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
                 - chmod +x ./test.sh
-                - ./test.sh Ramsay
+                - timeout 6600 ./test.sh Ramsay
               artifacts:
                 - behave_test_report.json
               after-script:
@@ -879,7 +879,7 @@ pipelines:
                 - python tests/test_login.py
                 - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
                 - chmod +x ./test.sh
-                - ./test.sh SDK
+                - timeout 6600 ./test.sh SDK
               artifacts:
                 - behave_test_report.json
               after-script:
@@ -900,7 +900,7 @@ pipelines:
                 - python tests/test_login.py
                 - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
                 - chmod +x ./test.sh
-                - ./test.sh Piper-Faas
+                - timeout 6600 ./test.sh Piper-Faas
               artifacts:
                 - behave_test_report.json
               after-script:
@@ -928,7 +928,7 @@ pipelines:
                 - python tests/test_login.py
                 - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
                 - chmod +x ./test.sh
-                - ./test.sh Piper-Triggers-Executions
+                - timeout 6600 ./test.sh Piper-Triggers-Executions
               artifacts:
                 - behave_test_report.json
               after-script:
@@ -949,7 +949,7 @@ pipelines:
                 - python tests/test_login.py
                 - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
                 - chmod +x ./test.sh
-                - ./test.sh Apps
+                - timeout 6600 ./test.sh Apps
               artifacts:
                 - behave_test_report.json
               after-script:
@@ -970,7 +970,7 @@ pipelines:
                 - python tests/test_login.py
                 - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
                 - chmod +x ./test.sh
-                - ./test.sh Rubiks-Items-Annotations
+                - timeout 6600 ./test.sh Rubiks-Items-Annotations
               artifacts:
                 - behave_test_report.json
               after-script:
@@ -991,7 +991,7 @@ pipelines:
                 - python tests/test_login.py
                 - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
                 - chmod +x ./test.sh
-                - ./test.sh Roberto
+                - timeout 6600 ./test.sh Roberto
               artifacts:
                 - behave_test_report.json
               after-script:
@@ -1019,7 +1019,7 @@ pipelines:
                 - python tests/test_login.py
                 - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
                 - chmod +x ./test.sh
-                - ./test.sh Rubiks-Dataset-Recipe
+                - timeout 6600 ./test.sh Rubiks-Dataset-Recipe
               artifacts:
                 - behave_test_report.json
               after-script:
@@ -1040,7 +1040,7 @@ pipelines:
                 - python tests/test_login.py
                 - git clone git@bitbucket.org:dataloop-ai/dtlpy-assets.git tests/assets
                 - chmod +x ./test.sh
-                - ./test.sh Piper-Pipelines
+                - timeout 6600 ./test.sh Piper-Pipelines
               artifacts:
                 - behave_test_report.json
               after-script:

@@ -101,6 +101,7 @@ class Model(entities.BaseEntity):
     scope = attr.ib()
     version = attr.ib()
     context = attr.ib()
+    status_logs = attr.ib()
 
     # name change
     package_id = attr.ib(repr=False)
@@ -199,7 +200,8 @@ class Model(entities.BaseEntity):
             output_type=_json.get('outputType', None),
             module_name=_json.get('moduleName', None),
             updated_by=_json.get('updatedBy', None),
-            app=_json.get('app', None)
+            app=_json.get('app', None),
+            status_logs=_json.get('statusLogs', []),
         )
         inst.is_fetched = is_fetched
         return inst
@@ -229,7 +231,8 @@ class Model(entities.BaseEntity):
                                                         attr.fields(Model).input_type,
                                                         attr.fields(Model).output_type,
                                                         attr.fields(Model).updated_by,
-                                                        attr.fields(Model).app
+                                                        attr.fields(Model).app,
+                                                        attr.fields(Model).status_logs
                                                         ))
         _json['packageId'] = self.package_id
         _json['datasetId'] = self.dataset_id
@@ -253,6 +256,8 @@ class Model(entities.BaseEntity):
             _json['updatedBy'] = self.updated_by
         if self.app:
             _json['app'] = self.app
+        if self.status_logs:
+            _json['statusLogs'] = self.status_logs
 
         return _json
 
@@ -295,7 +300,10 @@ class Model(entities.BaseEntity):
     def package(self):
         if self._package is None:
             try:
-                self._package = self.packages.get(package_id=self.package_id)
+                if self.app:
+                    self._package = self.dpks.get_revisions(dpk_id=self.app['dpkId'], version=self.app['dpkVersion'])
+                else:
+                    self._package = self.packages.get(package_id=self.package_id)
             except Exception as e:
                 error = e
                 try:

@@ -51,21 +51,39 @@ def step_impl(context):
 @then(u'I should find the sdk version from the computeConfig in the panel')
 def step_impl(context):
     interval = 3
-    num_tries = 300
+    num_tries = 285  # total time = 285 * 3 = 855 seconds
     success = False
+    start_time = time.time()
+    status_check_interval = 300  # 5 minutes in seconds
+    last_status_check = start_time
     url = context.app.routes[context.dpk.components.panels[0].name]
     url = url.split('v1')[1]
 
     while num_tries > 0 and not success:
+        current_time = time.time()
         success, response = context.dl.client_api.gen_request(req_type='GET', path=url)
         if success:
             content = response.content.decode('utf-8')
             success = 'Panel({})'.format(context.dpk.components.compute_configs[0].versions['dtlpy']) in content
         if not success:
+            # Display the app panel jobs if 5 minutes have passed.
+            if current_time - last_status_check >= status_check_interval:
+                elapsed_minutes = (current_time - start_time) / 60
+                context.dl.logger.warning(f"\nOver {elapsed_minutes:.1f} minutes have passed.")
+                composition = context.project.compositions.get(context.app.composition_id)
+                context.dl.logger.warning(f"Composition Id : {composition.get('id', 'No composition Id')}\nJobs:\n{composition.get('jobs', 'No jobs in composition')}")
+                last_status_check = current_time
+                
             time.sleep(interval)
             num_tries -= 1
 
-    assert success, 'Failed to fetch panel'
+    if not success:
+        elapsed = time.time() - start_time
+        context.dl.logger.warning(f"\nFailed after {elapsed:.1f} seconds.")
+        composition = context.project.compositions.get(context.app.composition_id)
+        context.dl.logger.warning(f"Composition Id : {composition.get('id', 'No composition Id')}\nJobs:\n{composition.get('jobs', 'No jobs in composition')}")
+    
+    assert success
 
 
 @then(u'no services deployed in the project')

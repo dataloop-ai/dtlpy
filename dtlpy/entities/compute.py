@@ -12,6 +12,7 @@ class ClusterProvider(str, Enum):
     HPC = 'hpc'
     LOCAL = 'local'
     RANCHER_K3S = 'rancher-k3s'
+    RANCHER_RKE = 'rancher-rke'
 
 
 class ComputeType(str, Enum):
@@ -327,8 +328,8 @@ class Compute:
             self._computes = repositories.Computes(client_api=self._client_api)
         return self._computes
 
-    def delete(self):
-        return self.computes.delete(compute_id=self.id)
+    def delete(self, skip_destroy: bool = False):
+        return self.computes.delete(compute_id=self.id, skip_destroy=skip_destroy)
 
     def update(self):
         return self.computes.update(compute=self)

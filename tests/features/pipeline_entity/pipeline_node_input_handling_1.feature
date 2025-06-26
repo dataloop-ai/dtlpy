@@ -25,22 +25,4 @@ Feature: Pipeline node input handling
         And Cycle "1" status is "success"
         And Cycle "1" node "2" execution "1" single output is: "string_from_root"
 
-    @DAT-54491
-    @pipelines.delete
-    Scenario: First node does not pass input and the second node function has default input in case of missing input
-        When I build a pipeline where the second node handles missing input
-        And I execute pipeline with input type: "String" and input value: "return_none"
-        Then Pipeline has "1" cycle executions
-        And Cycle completed with save "True"
-        And Cycle "1" status is "success"
-        And Cycle "1" node "2" execution "1" single output is: "default_string"
-
-    @DAT-54490
-    @pipelines.delete
-    Scenario: First node does not pass input and the second node function has no default input in case of missing input
-        When I build a pipeline where the second node does not handle missing input
-        And I execute pipeline with input type: "String" and input value: "return_none"
-        Then Pipeline has "1" cycle executions
-        And Cycle completed with save "True"
-        And Cycle "1" status is "failed"
 

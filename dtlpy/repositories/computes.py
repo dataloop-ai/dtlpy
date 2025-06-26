@@ -10,6 +10,7 @@ from typing import List, Optional, Dict
 from ..entities import ComputeCluster, ComputeContext, ComputeType
 from ..entities.integration import IntegrationType
 import logging
+from urllib.parse import urlparse, urlencode, parse_qs, urlunparse
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -209,17 +210,25 @@ class Computes:
 
         return compute
 
-    def delete(self, compute_id: str):
+    def delete(self, compute_id: str, skip_destroy: bool = False
+):
         """
         Delete a compute
 
         :param compute_id: compute ID
+        :param skip_destroy: bool
         """
-
+        url_path = self._base_url + '/{}'.format(compute_id)
+        params_to_add = {"skipDestroy": "true" if skip_destroy else "false" }
+        parsed_url = urlparse(url_path)
+        query_dict = parse_qs(parsed_url.query)
+        query_dict.update(params_to_add)
+        new_query = urlencode(query_dict, doseq=True)
+        url_path = urlunparse(parsed_url._replace(query=new_query))
         # request
         success, response = self._client_api.gen_request(
             req_type='delete',
-            path=self._base_url + '/{}'.format(compute_id)
+            path=url_path
         )
 
         if not success:

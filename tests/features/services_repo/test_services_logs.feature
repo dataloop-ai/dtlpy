@@ -39,3 +39,13 @@ Feature: Services repository logs testing
       | service_name=services-log-init | package=services-log-init | revision=1.0.1 | config=None | runtime=None |
     Then I receive a Service entity
     And Log "ERROR: No matching distribution found for" is in service.log()
+
+
+  @services.delete
+  @packages.delete
+  @DAT-96889
+  Scenario: Service with no logs
+    When I create a service
+      | service_name=services-log | package=services-log | revision=None | config=None | runtime=None |
+    Then I receive a Service entity
+    And No log is in service.log()
