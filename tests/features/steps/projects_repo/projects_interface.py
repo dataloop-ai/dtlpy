@@ -1,6 +1,7 @@
 import behave
 import time
 import random
+import datetime
 
 
 @behave.given(u'I create a project by the name of "{project_name}"')
@@ -10,8 +11,15 @@ def step_impl(context, project_name):
     else:
         num = random.randint(10000, 100000)
         project_name = 'to-delete-test-{}_{}'.format(str(num), project_name)
-        context.project = context.dl.projects.create(project_name=project_name)
-        context.to_delete_projects_ids.append(context.project.id)
+        try:
+            context.project = context.dl.projects.create(project_name=project_name)
+            context.to_delete_projects_ids.append(context.project.id)
+            context.error = None
+        except Exception as e:
+            current_time = datetime.datetime.now(datetime.timezone.utc)
+            print(f"Error creating project '{project_name}' at {current_time}")
+            raise e
+        
         context.feature.dataloop_feature_project = context.project
         start = time.time()
         timeout = 60

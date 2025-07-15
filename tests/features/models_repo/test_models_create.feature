@@ -52,7 +52,7 @@ Feature: Models repository create testing
   Scenario: Create a model with filter
     When get global model package
     And I create a model with a random name
-    Then Model filter should not be empty
+    Then Model "train" filter should not be empty
 
   @DAT-45099
   Scenario: Create a model without filter

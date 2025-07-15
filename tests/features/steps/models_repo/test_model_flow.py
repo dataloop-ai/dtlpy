@@ -12,7 +12,7 @@ import os
 @behave.when(u'I create a dummy model package by the name of "{package_name}" with entry point "{entry_point}" and docker image "{docker_image}"')
 def step_impl(context, package_name, entry_point, docker_image=None):
     if docker_image == 'None':
-        docker_image=None
+        docker_image = None
     if package_name == "ac-lr-package":
         context.codebase_local_dir = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], 'model_ac_lr')
         docker_image = None
@@ -171,7 +171,6 @@ def step_impl(context):
         pass
 
 
-
 @behave.then(u'command massage is in model')
 def step_impl(context):
     model = dl.models.get(model_id=context.model.id)
@@ -190,11 +189,13 @@ def step_impl(context, executions_num, triggers_num):
     assert len(triggers) == int(
         triggers_num), f"TEST FAILED: Expected {triggers_num}, Actual triggers in service {len(triggers)}"
 
+
 @behave.when(u'i change model status to "{status}"')
 def step_impl(context, status):
     context.model = dl.models.get(model_id=context.model.id)
     context.model.status = status
     context.model = context.model.update()
+
 
 @behave.when(u'I "{func}" the model')
 @behave.when(u'I "{func}" the model with exception "{flag}"')
@@ -235,6 +236,7 @@ def step_impl(context, item_id):
     except Exception as e:
         context.error = e
 
+
 @behave.when(u'i see the model status log containing "{statuses}"')
 @behave.then(u'i see the model status log containing "{statuses}"')
 def step_impl(context, statuses):
@@ -250,9 +252,11 @@ def step_impl(context, statuses):
                 break
         assert found, f"TEST FAILED: status {status} not found in model status log"
 
+
 @behave.when(u'set the clone model to the model context')
 def step_impl(context):
     context.model = context.model_clone
+
 
 @behave.then(u'model status should be "{status}" with execution "{flag}" that has function "{func}"')
 def step_impl(context, status, flag, func):
@@ -530,3 +534,47 @@ def step_impl(context):
     context.model.metadata['system'].update({'subsets': {'train': dl.Filters().prepare(),
                                                          'validation': dl.Filters().prepare()}})
     context.model.update(True)
+
+@behave.when(u'I add dataset to model')
+def step_impl(context):
+    context.model.dataset_id = context.dataset.id
+    context.model.update(True)
+
+@behave.when(u'I update the model config with the following')
+def step_impl(context):
+    for row in context.table:
+        key = row['key']
+        value = row['value']
+        context.model.configuration[key] = value
+    context.model = context.model.update()
+
+
+@behave.then(u'model config should be updated with the following')
+def step_impl(context):
+    context.model = dl.models.get(model_id=context.model.id)
+    for row in context.table:
+        key = row['key']
+        value = row['value']
+        assert context.model.configuration.get(key) == value, \
+            f"TEST FAILED: model configuration for '{key}' is not as expected, expected: {value}, got: {context.model.configuration.get(key)}"
+
+
+@behave.then(u'all relevant model services should be updated')
+def step_impl(context):
+    filters = dl.Filters(field='archive', values=[True, False, None], resource=dl.FiltersResource.SERVICE, operator=dl.FiltersOperations.IN)
+    services = context.model.services.list(filters=filters).items
+    assert services, "TEST FAILED: No services found for the model"
+    for service in services:
+        if service.metadata['ml']['modelOperation'] in ['train', 'evaluate']:
+            assert service.version == '1.0.0', f"TEST FAILED: service {service.id} version is updated, expected: not 1.0.0, got: {service.version}"
+        else:
+            assert service.version == '1.0.1', f"TEST FAILED: service {service.id} version is not updated, expected: 1.0.1, got: {service.version}"
+
+
+@behave.when(u'model "{command_name}" command success')
+def step_impl(context, command_name):
+    context.model = dl.models.get(model_id=context.model.id)
+    command_id = context.model.metadata['system'][command_name]['commandId']
+    command = dl.commands.get(command_id=command_id, url=f'api/v1/commands/model-management/{command_id}')
+    command = command.wait()
+    assert command.status == 'success', f"TEST FAILED: command {command_id} status is not success, got: {command.status}"

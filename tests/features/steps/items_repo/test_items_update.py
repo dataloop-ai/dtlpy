@@ -183,3 +183,18 @@ def step_impl(context):
         context.error = None
     except Exception as e:
         context.error = e
+
+
+@behave.when(u'I update item metadata with \'{metadata_json}\'')
+def step_impl(context, metadata_json):
+    metadata = json.loads(metadata_json)
+    # Merge the new metadata into the existing item metadata
+    def deep_update(d, u):
+        for k, v in u.items():
+            if isinstance(v, dict):
+                d[k] = deep_update(d.get(k, {}), v)
+            else:
+                d[k] = v
+        return d
+    context.item.metadata = deep_update(context.item.metadata, metadata)
+    context.item = context.dataset.items.update(item=context.item)

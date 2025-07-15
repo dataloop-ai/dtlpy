@@ -5,6 +5,7 @@ Feature: Sorting items and annotations
     And I create a project by the name of "items_sort"
     And I create dataset and items for sorting tests
 
+  @DAT-96443
   Scenario Outline: Sort items by <field> in <order> order
     When I list items sorted by <field> in <order> order
     Then the items should be sorted by <field> in <order> order
@@ -18,6 +19,7 @@ Feature: Sorting items and annotations
       | updated_at | ascending  |
       | updated_at | descending |
 
+  @DAT-96444
   Scenario Outline: Sort items by <field> in <order> order with paging
     When I list items sorted by <field> in <order> order with page size 10
     Then the items across all pages should be sorted by <field> in <order> order
@@ -31,6 +33,7 @@ Feature: Sorting items and annotations
       | updated_at | ascending  |
       | updated_at | descending |
 
+  @DAT-96445
   Scenario Outline: Sort annotations by <field> in <order> order
     When I list annotations sorted by <field> in <order> order
     Then the annotations should be sorted by <field> in <order> order
@@ -42,6 +45,7 @@ Feature: Sorting items and annotations
       | type       | ascending  |
       | type       | descending |
 
+  @DAT-96446
   Scenario Outline: Sort annotations by <field> in <order> order with paging
     When I list annotations sorted by <field> in <order> order with page size 10
     Then the annotations across all pages should be sorted by <field> in <order> order

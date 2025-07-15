@@ -7,8 +7,7 @@ Feature: Execution Monitoring
 
     @services.delete
     @packages.delete
-    @testrail-C4523104
-    @DAT-46522
+    @DAT-97389
     Scenario: Timeout - failed
         When I push and deploy package with param "failed" in "execution_monitoring/timeout"
         And I execute
@@ -16,8 +15,7 @@ Feature: Execution Monitoring
 
     @services.delete
     @packages.delete
-    @testrail-C4523104
-    @DAT-46522
+    @DAT-97390
     Scenario: Timeout - rerun
         When I push and deploy package with param "rerun" in "execution_monitoring/timeout"
         And I execute

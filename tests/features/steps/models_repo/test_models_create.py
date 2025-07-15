@@ -2,6 +2,7 @@ import behave
 import random
 import string
 import os
+import json
 
 
 @behave.when(u'I create a model with a random name')
@@ -14,7 +15,6 @@ def step_impl(context):
         context.dataset = context.project.datasets.get('model_dataset')
     except context.dl.exceptions.NotFound:
         context.dataset = context.project.datasets.create('model_dataset', index_driver=context.index_driver_var)
-
 
     # create model
     context.model = context.package.models.create(model_name=model_name,
@@ -76,10 +76,34 @@ def step_impl(context):
         context.error = e
 
 
-@behave.Then(u'Model filter should not be empty')
-def step_impl(context):
-    assert context.model.metadata['system'].get('subsets', {}).get('train',
-                                                                   None) is not None, 'train filter is empty'
+@behave.Then(u'Model "{filter_type}" filter should not be empty')
+def step_impl(context, filter_type):
+    if filter_type == "annotations":
+        assert context.model.metadata['system'].get('annotationsSubsets', {}).get("all",
+                                                                                  None) is not None, f'{filter_type} filter is empty'
+    else:
+        assert context.model.metadata['system'].get('subsets', {}).get(filter_type,
+                                                                       None) is not None, f'{filter_type} filter is empty'
+
+
+@behave.Then(u'Model "{filter_type}" filter should be empty')
+def step_impl(context, filter_type):
+    if filter_type == "annotations":
+        assert context.model.metadata['system'].get('annotationsSubsets', {}).get("all",
+                                                                                  None) is None, f'{filter_type} filter is not empty'
+    else:
+        assert context.model.metadata['system'].get('subsets', {}).get(filter_type,
+                                                                       None) is None, f'{filter_type} filter is not empty'
+
+
+@behave.When(u'I add "{filter_name}" filter with resource "{filter_resource}" to the model')
+def step_impl(context, filter_name, filter_resource):
+    filters = context.dl.Filters(resource=filter_resource)
+    if filter_name == 'annotations':
+        context.model.metadata['system']['annotationsSubsets'] = {"all": filters.prepare()}
+    else:
+        context.model.add_subset(filter_name, filters)
+    context.model = context.model.update(True)
 
 
 @behave.then(u'The project have only one bot')
@@ -127,6 +151,7 @@ def step_impl(context):
     assert pages.items_count == context.model_count, 'model count doesnt match. {} from server, {} from test'.format(
         pages.items_count, context.model_count)
 
+
 @behave.when(u'I upload an artifact "{artifact_path}" to the model')
 def step_impl(context, artifact_path):
     artifact_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], artifact_path)
@@ -150,3 +175,13 @@ def step_impl(context):
     except context.dl.exceptions.NotFound:
         artifact = None
     assert artifact is not None, 'artifact not found'
+
+
+@behave.when(u'I add annotation subset to model with filter \'{filter_json}\'')
+def step_impl(context, filter_json):
+    filter_dict = json.loads(filter_json.replace("'", '"'))
+    context.filters = context.dl.Filters(resource='annotations')
+    for key, val in filter_dict.items():
+        context.filters.add(field=key, values=val)
+    context.model.metadata['system']['annotationsSubsets'] = {"all": context.filters.prepare()}
+    context.model = context.model.update(True)

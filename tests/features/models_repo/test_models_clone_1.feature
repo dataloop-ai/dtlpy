@@ -38,6 +38,8 @@ Feature: Models repository clone testing
     And i fetch the model by the name "test-model"
     When I clone the model
     Then model status should be "pre-trained"
+    When set the clone model to the model context
+    Then i see the model status log containing "cloning,pre-trained"
     And I clean the project
 
   @DAT-77435
@@ -52,5 +54,5 @@ Feature: Models repository clone testing
     When I clone the model
     Then src model and clone model should have the same artifact name and different id
     When set the clone model to the model context
-    Then i see the model status log containing "pre-trained,cloning,pre-trained"
+    Then i see the model status log containing "cloning,pre-trained"
     And I clean the project

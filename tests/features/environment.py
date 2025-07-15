@@ -171,6 +171,7 @@ def get_step_key(step):
 
 @fixture
 def before_step(context, step):
+    context.step = step
     key = get_step_key(step)
     setattr(context, key, time.time())
 

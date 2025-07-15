@@ -4,6 +4,7 @@ import time
 import shutil
 import io
 import json
+import dtlpy as dl
 
 
 @behave.when(u'I upload a file in path "{item_local_path}"')
@@ -375,3 +376,13 @@ def atp_step_impl(context):
             raise AssertionError(f"Invalid modality structure found: {modality}")
         if modality['type'] not in ['overlay', 'preview', 'replace']:
             raise AssertionError(f"Unsupported modality type: {modality['type']}")
+
+
+@behave.when(u'I upload all items and annotations from directory "{directory_path}"')
+def step_impl(context, directory_path):
+    """
+    Upload all items and their corresponding annotations from a directory.
+    Assumes annotation files have the same name as the item but with .json extension.
+    """
+    path = os.path.join(os.environ["DATALOOP_TEST_ASSETS"], directory_path)
+    context.dataset.items.upload(local_path=f'{path}/items/**', local_annotations_path=f'{path}/json')

@@ -4,6 +4,7 @@ import time
 import tqdm
 import copy
 import sys
+from typing import Optional, List, Any
 
 import attr
 
@@ -17,52 +18,81 @@ logger = logging.getLogger(name='dtlpy')
 @attr.s
 class PagedEntities:
     """
-    Pages object
+    Pages object for efficient API pagination.
+    Defaults to offset-based pagination for compatibility with all operations.
+    Switches to keyset/cursor-based pagination (using 'id' as the cursor) during iteration for performance.
+    Falls back to offset-based pagination if keyset is not possible (e.g., custom sort).
     """
     # api
-    _client_api = attr.ib(type=ApiClient, repr=False)
+    _client_api: ApiClient = attr.ib(repr=False)
 
     # params
-    page_offset = attr.ib()
-    page_size = attr.ib()
-    filters = attr.ib()
-    items_repository = attr.ib(repr=False)
-    has_next_page = attr.ib(default=False)
-    total_pages_count = attr.ib(default=0)
-    items_count = attr.ib(default=0)
+    page_offset: int = attr.ib()
+    page_size: int = attr.ib()
+    filters: Any = attr.ib()
+    items_repository: Any = attr.ib(repr=False)
+    has_next_page: bool = attr.ib(default=False)
+    total_pages_count: int = attr.ib(default=0)
+    items_count: int = attr.ib(default=0)
 
     # hybrid pagination
-    use_id_based_paging = attr.ib(default=False)
-    last_seen_id = attr.ib(default=None)
+    use_id_based_paging: bool = attr.ib(default=False)  # Default to False for offset-based pagination
+    last_seen_id: Optional[Any] = attr.ib(default=None)
 
     # execution attribute
     _service_id = attr.ib(default=None, repr=False)
     _project_id = attr.ib(default=None, repr=False)
-    _order_by_type = attr.ib(default=None, repr=False)
-    _order_by_direction = attr.ib(default=None, repr=False)
-    _execution_status = attr.ib(default=None, repr=False)
-    _execution_resource_type = attr.ib(default=None, repr=False)
-    _execution_resource_id = attr.ib(default=None, repr=False)
-    _execution_function_name = attr.ib(default=None, repr=False)
     _list_function = attr.ib(default=None, repr=False)
 
     # items list
-    items = attr.ib(default=miscellaneous.List(), repr=False)
+    items: List[Any] = attr.ib(default=miscellaneous.List(), repr=False)
 
     @staticmethod
-    def _has_explicit_sort(flt):
+    def _has_explicit_sort(flt) -> bool:
         """
         Check if the filter has custom sort fields defined (not id/createdAt).
         """
         prepared = flt.prepare() if flt else {}
         sort_fields = list(prepared.get("sort", {}).keys())
-        return bool(sort_fields and sort_fields[0] not in {"id", "createdAt"})
+        if isinstance(sort_fields, list) and len(sort_fields) > 0:
+            return sort_fields[0] not in {"id", "createdAt"}
+        return False
 
-    def process_result(self, result):
+    def _should_use_keyset_pagination(self) -> bool:
         """
+        Determine whether to use keyset pagination based on page offset and resource type.
+        Keyset pagination can only be used when page_offset is 0 (first page).
+        :param page_offset: The page offset to check
+        :return: True if keyset pagination should be used, False otherwise
+        """
+        # Keyset pagination only works for page 0 (first page)
+        if self.page_offset != 0:
+            return False
+            
+        # Check if the resource supports keyset pagination
+        enable_id_based_paging = getattr(self.filters, "resource", None) in [
+            FiltersResource.ITEM,
+            FiltersResource.ANNOTATION,
+            FiltersResource.FEATURE,
+        ]
+        
+        if not enable_id_based_paging:
+            return False
+            
+        # Check if there's no explicit sort that would prevent keyset pagination
+        if self._has_explicit_sort(self.filters):
+            return False
+            
+        return True
+
+    def process_result(self, result: dict) -> List[Any]:
+        """
+        Process the API result and update pagination state.
         :param result: json object
+        :return: list of items
         """
-        if 'page_offset' in result:
+        # Only update page_offset if using offset-based pagination
+        if not self.use_id_based_paging and 'page_offset' in result:
             self.page_offset = result['page_offset']
         if 'page_size' in result:
             self.page_size = result['page_size']
@@ -78,33 +108,54 @@ class PagedEntities:
             items = miscellaneous.List(list())
         return items
 
-    def __getitem__(self, y):
+    def __getitem__(self, y: int) -> List[Any]:
+        # If we're already on the requested page, return current items
+        if y == self.page_offset:
+            return self.items
+        # Otherwise, go to the requested page
         self.go_to_page(y)
         return self.items
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.items_count
 
     def __iter__(self):
-        pbar = tqdm.tqdm(total=self.total_pages_count,
+        # Use keyset/cursor-based pagination for iteration when possible
+        self.last_seen_id = None
+        self.page_offset = 0  # Start from the first page for iteration
+        self.use_id_based_paging = self._should_use_keyset_pagination()
+        self.has_next_page = True  # Start with assumption that there are more pages
+        self.page_size = self.page_size or 100
+        pbar = tqdm.tqdm(total=self.items_count,
                          disable=self._client_api.verbose.disable_progress_bar_iterate_pages,
                          file=sys.stdout, desc="Iterate Pages")
-        if self.page_offset != 0:
-            # reset the count for page 0
-            self.page_offset = 0
-            self.get_page()
-        while True:
+        
+        # Get the first page
+        self.get_page()
+        if self.items:
             yield self.items
             pbar.update()
-
-            if self.has_next_page:
-                self.page_offset += 1
+        
+        # Continue with next pages
+        while self.has_next_page:
+            if self.use_id_based_paging:
+                # For keyset pagination, just get the next page
+                self.page_offset = 0
                 self.get_page()
             else:
-                pbar.close()
+                # For offset pagination, increment the offset
+                self.page_offset += 1
+                self.get_page()
+            
+            if not self.items:
                 break
+            yield self.items
+            pbar.update()
+        pbar.close()
 
     def __reversed__(self):
+        # Force offset-based pagination for reverse iteration
+        self.use_id_based_paging = False
         self.page_offset = self.total_pages_count - 1
         while True:
             self.get_page()
@@ -113,45 +164,43 @@ class PagedEntities:
                 break
             self.page_offset -= 1
 
-    def return_page(self, page_offset=None, page_size=None):
+    def return_page(self, page_offset: Optional[int] = None, page_size: Optional[int] = None) -> List[Any]:
         """
-        Return page
-
-        :param page_offset: page offset
+        Return a page of results using offset-based pagination by default.
+        Switches to keyset/cursor-based pagination when supported and beneficial.
+        :param page_offset: page offset (for offset-based)
         :param page_size: page size
+        :return: list of items
         """
-        if page_size is None:
-            page_size = self.page_size
-        if page_offset is None:
-            page_offset = self.page_offset
+        if page_size is not None:
+            self.page_size = page_size
+        if page_offset is not None:
+            self.page_offset = page_offset
 
         if self.filters is None:
-            raise ValueError("Cant return page. Filters is empty")
-
+            raise ValueError("Can't return page. Filters is empty")
+        self.filters.page_size = self.page_size
+        self.filters.page = self.page_offset
         req = copy.deepcopy(self.filters)
-        req.page_size = page_size
 
-        after_id = getattr(req, "after_id", None)
-        if after_id is not None:
-            delattr(req, "after_id")
+        # Determine pagination method based on page offset and resource type
+        self.use_id_based_paging = self._should_use_keyset_pagination()
 
-        enable_hybrid = getattr(self.filters, "resource", None) in [
-            FiltersResource.ITEM,
-            FiltersResource.ANNOTATION,
-            FiltersResource.FEATURE,
-        ]
-
-        prepared= req.prepare()
-        sort_spec= prepared.get("sort", {})
-        sort_dir= next(iter(sort_spec.values()), None)
-        order= sort_dir or FiltersOrderByDirection.ASCENDING
-        operator_value = (FiltersOperations.LESS_THAN if sort_dir == FiltersOrderByDirection.DESCENDING else FiltersOperations.GREATER_THAN)
-
-        if enable_hybrid and not self._has_explicit_sort(req):
+        if self.use_id_based_paging:
+            # Use keyset/cursor-based pagination
+            prepared = req.prepare()
+            sort_spec = prepared.get("sort", {})
+            order = next(iter(sort_spec.values()), None)
+            if order is None:
+                order = FiltersOrderByDirection.ASCENDING
+            if order == FiltersOrderByDirection.DESCENDING:
+                operator_value = FiltersOperations.LESS_THAN
+            else:
+                operator_value = FiltersOperations.GREATER_THAN
+                
             req.sort_by(field="id", value=order)
-
-        if enable_hybrid and self.use_id_based_paging:
-            req.page = 0
+            req.page = 0  # always fetch from the start for keyset
+            # Only add last_seen_id filter if we're not explicitly requesting page 0
             if self.last_seen_id:
                 req.add(
                     field="id",
@@ -159,25 +208,8 @@ class PagedEntities:
                     operator=operator_value,
                     method=FiltersOperations.AND,
                 )
-        else:
-            auto_hybrid = (
-                enable_hybrid
-                and not self.use_id_based_paging
-                and not self._has_explicit_sort(self.filters)
-                and self.last_seen_id is not None
-            )
-            if auto_hybrid and page_offset > 0:
-                req.page = 0
-                req.add(
-                    field="id",
-                    values=after_id or self.last_seen_id,
-                    operator=operator_value,
-                    method=FiltersOperations.AND,
-                )
-                self.use_id_based_paging = True
-            else:
-                req.page = page_offset
 
+        # Fetch data
         if self._list_function is None:
             result = self.items_repository._list(filters=req)
         else:
@@ -185,78 +217,65 @@ class PagedEntities:
 
         items = self.process_result(result)
 
-        if enable_hybrid and items and hasattr(items[-1], "id"):
+        # Update last_seen_id for keyset
+        if self.use_id_based_paging and items and hasattr(items[-1], "id"):
             self.last_seen_id = items[-1].id
-
-        if self.use_id_based_paging:
-            if "hasNextPage" not in result:
-                self.has_next_page = len(items) == page_size
-
+        elif self.use_id_based_paging and not items:
+            self.last_seen_id = None
         return items
 
-    def get_page(self, page_offset=None, page_size=None):
+    def get_page(self, page_offset: Optional[int] = None, page_size: Optional[int] = None) -> None:
         """
-        Get page
-
-        :param page_offset: page offset
+        Get a page of results and update self.items.
+        :param page_offset: page offset (for offset-based)
         :param page_size: page size
         """
-        items = self.return_page(page_offset=page_offset,
-                                 page_size=page_size)
+        items = self.return_page(page_offset=page_offset, page_size=page_size)
         self.items = items
 
-    def next_page(self):
+    def next_page(self) -> None:
         """
-        Brings the next page of items from host
+        Brings the next page of items from host.
+        """
+        if self.use_id_based_paging:
+            # For keyset pagination, just get the next page
+            self.get_page()
+        else:
+            # For offset pagination, increment the offset
+            self.page_offset += 1
+            self.get_page()
 
-        :return:
+    def prev_page(self) -> None:
         """
-        self.page_offset += 1
-        self.get_page()
-
-    def prev_page(self):
+        Brings the previous page of items from host.
+        Only works with offset-based pagination.
         """
-        Brings the previous page of items from host
-
-        :return:
-        """
+        if self.use_id_based_paging:
+            raise NotImplementedError("prev_page is not supported for keyset pagination.")
         self.page_offset -= 1
         self.get_page()
 
-    def go_to_page(self, page=0):
+    def go_to_page(self, page: int = 0) -> None:
         """
-        Brings specified page of items from host
-
+        Brings specified page of items from host.
+        For page 0, uses keyset pagination if supported.
+        For other pages, uses offset-based pagination.
         :param page: page number
-        :return:
         """
+        # Reset last_seen_id when going to page 0 to ensure we get all items
+        if page == 0:
+            self.last_seen_id = None
         self.page_offset = page
         self.get_page()
 
     def all(self):
-        page_offset = 0
-        page_size = 100
-        pbar = tqdm.tqdm(total=self.items_count,
-                         disable=self._client_api.verbose.disable_progress_bar,
-                         file=sys.stdout, desc='Iterate Entity')
-        total_pages = math.ceil(self.items_count / page_size)
-        jobs = list()
-        pool = self._client_api.thread_pools('item.page')
-        while True:
-            time.sleep(0.01)  # to flush the results
-            if page_offset <= total_pages:
-                jobs.append(pool.submit(self.return_page, **{'page_offset': page_offset,
-                                                             'page_size': page_size}))
-                page_offset += 1
-            for i_job, job in enumerate(jobs):
-                if job.done():
-                    for item in job.result():
-                        pbar.update()
-                        yield item
-                    jobs.remove(job)
-            if len(jobs) == 0:
-                pbar.close()
-                break
+        """
+        Iterate over all items in all pages efficiently.
+        Uses the iterator implementation (__iter__).
+        """
+        for items in self:
+            for item in items:
+                yield item
 
     ########
     # misc #

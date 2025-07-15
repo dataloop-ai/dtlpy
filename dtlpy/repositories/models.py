@@ -1,6 +1,7 @@
 import time
 from typing import List
 import logging
+from urllib.parse import urlencode
 
 from .. import entities, repositories, exceptions, miscellaneous
 from ..services.api_client import ApiClient
@@ -582,12 +583,15 @@ class Models:
 
     def update(self,
                model: entities.Model,
-               system_metadata: bool = False) -> entities.Model:
+               system_metadata: bool = False,
+               reload_services: bool = True
+               ) -> entities.Model:
         """
         Update Model changes to platform
 
         :param model: Model entity
         :param bool system_metadata: True, if you want to change metadata system
+        :param bool reload_services: True, if you want to update services
         :return: Model entity
         """
         # payload
@@ -595,8 +599,14 @@ class Models:
 
         # url
         url_path = '/ml/models/{}'.format(model.id)
+        query_params = {}
         if system_metadata:
-            url_path += '?system=true'
+            query_params['system'] = 'true'
+        if reload_services is not None:
+            query_params['reloadServices'] = 'true' if reload_services else 'false'
+
+        if query_params:
+            url_path += '?' + urlencode(query_params)
 
         # request
         success, response = self._client_api.gen_request(req_type='patch',

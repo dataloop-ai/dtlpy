@@ -144,6 +144,10 @@ def step_impl(context):
 def step_impl(context):
     context.unassigned_items = context.dataset.collections.list_unassigned_items()
 
+@behave.then(u'I expect to see "{item_count}" unassigned items')
+def step_impl(context, item_count):
+    assert len(context.unassigned_items) == int(item_count), f"Expected {item_count} unassigned items, but found {len(context.unassigned_items)}"
+
 @behave.then(u'The unassigned items list is accurate')
 def step_impl(context):
     assigned_item_ids = {

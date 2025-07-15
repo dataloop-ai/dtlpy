@@ -16,3 +16,25 @@ Feature: Pipeline resource connectors testing
     And I upload item in "0000000162.jpg" to dataset
     Then I expect that pipeline execution has "2" success executions
     And I pause pipeline in context
+
+  @pipelines.delete
+  @DAT-97125
+  Scenario: Pipeline connector with regex filter - Should move the correct item (positive)
+    Given I create pipeline from json in path "pipelines_json/pipeline_connector_regex_filter.json" no error
+    And I upload item in "0000000162.jpg" to dataset
+    When I update item metadata with '{"user": {"exif": {"Make": "Canon12345"}}}'
+    And I install pipeline in context
+    And I execute the pipeline on item
+    Then I expect that pipeline execution has "2" success executions
+    And I pause pipeline in context
+
+  @pipelines.delete
+  @DAT-97414
+  Scenario: Pipeline connector with regex filter - Should not move the item (negative)
+    Given I create pipeline from json in path "pipelines_json/pipeline_connector_regex_filter.json" no error
+    And I upload item in "0000000162.jpg" to dataset
+    When I update item metadata with '{"user": {"exif": {"Make": "test"}}}'
+    And I install pipeline in context
+    And I execute the pipeline on item
+    Then I expect that pipeline execution has "1" success executions
+    And I pause pipeline in context

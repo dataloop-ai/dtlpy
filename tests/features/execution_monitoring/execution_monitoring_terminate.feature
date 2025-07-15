@@ -7,7 +7,6 @@ Feature: Execution Monitoring
 
     @services.delete
     @packages.delete
-    @testrail-C4523104
     @DAT-46522
     Scenario: Kill Thread
         When I push and deploy package with param "None" in "execution_monitoring/kill_thread"
@@ -17,8 +16,7 @@ Feature: Execution Monitoring
 
     @services.delete
     @packages.delete
-    @testrail-C4523104
-    @DAT-46522
+    @DAT-97388
     Scenario: Kill Process
         When I push and deploy package with param "None" in "execution_monitoring/run_as_process"
         And I execute

@@ -488,15 +488,18 @@ class Model(entities.BaseEntity):
         """
         self.models.delete_subset(self, subset_name)
 
-    def update(self, system_metadata=False):
+    def update(self, system_metadata=False, reload_services=True):
         """
         Update Models changes to platform
 
         :param bool system_metadata: bool - True, if you want to change metadata system
+        :param bool reload_services: bool - True, if you want to update the services with the new model
         :return: Models entity
         """
         return self.models.update(model=self,
-                                  system_metadata=system_metadata)
+                                  system_metadata=system_metadata,
+                                  reload_services=reload_services
+                                  )
 
     def open_in_web(self):
         """

@@ -193,17 +193,11 @@ class Items:
                 message='Filters resource must to be FiltersResource.ITEM. Got: {!r}'.format(filters.resource))
 
         # page size
-        if page_size is None:
-            # take from default
-            page_size = filters.page_size
-        else:
+        if page_size is not None:
             filters.page_size = page_size
 
         # page offset
-        if page_offset is None:
-            # take from default
-            page_offset = filters.page
-        else:
+        if page_offset is not None:
             filters.page = page_offset
 
         if filters.resource == entities.FiltersResource.ITEM:
@@ -214,8 +208,8 @@ class Items:
 
         paged = entities.PagedEntities(items_repository=items_repository,
                                        filters=filters,
-                                       page_offset=page_offset,
-                                       page_size=page_size,
+                                       page_offset=filters.page,
+                                       page_size=filters.page_size,
                                        client_api=self._client_api)
         paged.get_page()
         return paged

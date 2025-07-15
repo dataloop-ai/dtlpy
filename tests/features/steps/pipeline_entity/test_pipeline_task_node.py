@@ -225,6 +225,7 @@ def step_impl(context):
 
 
 @given(u'I execute the pipeline on item')
+@when(u'I execute the pipeline on item')
 def step_impl(context):
     context.execution = context.pipeline.execute(
         execution_input={'item': context.item.id}

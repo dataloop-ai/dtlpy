@@ -110,7 +110,9 @@ class Computes:
             if command_id is not None:
                 command = self.commands.get(command_id=command_id, url='api/v1/commands/faas/{}'.format(command_id))
                 try:
-                    command.wait(iteration_callback=self.__get_log_compute_progress_callback(compute.id))
+                    callback = self.__get_log_compute_progress_callback(compute.id)
+                    command.wait(iteration_callback=callback)
+                    callback()
                 except Exception as e:
                     self.log_cache.pop(compute.id, None)
                     raise e
@@ -131,25 +133,32 @@ class Computes:
             )
         return compute
 
-    def __get_log_compute_progress_callback(self, compute_id: str):
+    def __get_log_compute_progress_callback(self, compute_id: str, is_destroy=False):
         def func():
-            compute = self.get(compute_id=compute_id)
-            bootstrap_progress = compute.metadata.get('system', {}).get('bootstrap', {}).get('progress', None)
-            bootstrap_logs = compute.metadata.get('system', {}).get('bootstrap', {}).get('logs', None)
-            validation_progress = compute.metadata.get('system', {}).get('validation', {}).get('progress', None)
-            validation_logs = compute.metadata.get('system', {}).get('validation', {}).get('logs', None)
+            compute = self.get(compute_id=compute_id, archived=True)
+            log_type = 'bootstrap'
+            validation_progress = None
+            validation_logs = None
+            if is_destroy is True:
+                log_type = 'destroy'
+            else:
+                validation_progress = compute.metadata.get('system', {}).get('validation', {}).get('progress', None)
+                validation_logs = compute.metadata.get('system', {}).get('validation', {}).get('logs', None)
+            bootstrap_progress = compute.metadata.get('system', {}).get(log_type, {}).get('progress', None)
+            bootstrap_logs = compute.metadata.get('system', {}).get(log_type, {}).get('logs', None)
+
             if bootstrap_progress is not None:
                 if 'bootstrap' not in self.log_cache.get(compute_id, {}):
-                    logger.info(f"Bootstrap in progress:")
-                last_index = len(self.log_cache.get(compute_id, {}).get('bootstrap', []))
+                    logger.info(f"{log_type} in progress:")
+                last_index = len(self.log_cache.get(compute_id, {}).get(log_type, []))
                 new_logs = bootstrap_logs[last_index:]
                 if new_logs:
                     for log in new_logs:
                         logger.info(log)
-                    logger.info(f'Bootstrap progress: {int(bootstrap_progress)}%')
+                    logger.info(f'{log_type} progress: {int(bootstrap_progress)}%')
                     if compute_id not in self.log_cache:
                         self.log_cache[compute_id] = {}
-                    self.log_cache[compute_id]['bootstrap'] = bootstrap_logs
+                    self.log_cache[compute_id][log_type] = bootstrap_logs
             if bootstrap_progress in [100, None] and validation_progress is not None:
                 if 'validation' not in self.log_cache.get(compute_id, {}):
                     logger.info(f"Validating created compute:")
@@ -164,20 +173,26 @@ class Computes:
                     self.log_cache[compute_id]['validation'] = validation_logs
         return func
 
-
-    def get(self, compute_id: str):
+    def get(self, compute_id: str, archived = False):
         """
         Get a compute
 
         :param compute_id: Compute ID
+        :param archived: Archived
         :return: Compute
         :rtype: dl.entities.compute.Compute
         """
-
+        url_path = self._base_url + '/{}'.format(compute_id)
+        params_to_add = {"archived": "true" if archived else "false" }
+        parsed_url = urlparse(url_path)
+        query_dict = parse_qs(parsed_url.query)
+        query_dict.update(params_to_add)
+        new_query = urlencode(query_dict, doseq=True)
+        url_path = urlunparse(parsed_url._replace(query=new_query))
         # request
         success, response = self._client_api.gen_request(
             req_type='get',
-            path=self._base_url + '/{}'.format(compute_id)
+            path=url_path
         )
 
         if not success:
@@ -210,13 +225,13 @@ class Computes:
 
         return compute
 
-    def delete(self, compute_id: str, skip_destroy: bool = False
-):
+    def delete(self, compute_id: str, skip_destroy: bool = False, wait: bool = True):
         """
         Delete a compute
 
         :param compute_id: compute ID
         :param skip_destroy: bool
+        :param bool wait: Wait for deletion
         """
         url_path = self._base_url + '/{}'.format(compute_id)
         params_to_add = {"skipDestroy": "true" if skip_destroy else "false" }
@@ -233,6 +248,17 @@ class Computes:
 
         if not success:
             raise exceptions.PlatformException(response)
+        if skip_destroy is not True and wait is True:
+            command_response = response.json()
+            command_id = command_response['id']
+            command = self.commands.get(command_id, url='api/v1/commands/faas/{}'.format(command_id))
+            try:
+                callback = self.__get_log_compute_progress_callback(compute_id, is_destroy=True)
+                command.wait(iteration_callback=callback)
+                callback()
+            except Exception as e:
+                self.log_cache.pop(command_id, None)
+                raise e
 
         return True
 
@@ -262,7 +288,9 @@ class Computes:
             if command_id is not None:
                 command = self.commands.get(command_id=command_id, url='api/v1/commands/faas/{}'.format(command_id))
                 try:
-                    command.wait(iteration_callback=self.__get_log_compute_progress_callback(compute.id))
+                    callback = self.__get_log_compute_progress_callback(compute.id)
+                    command.wait(iteration_callback=callback)
+                    callback()
                 except Exception as e:
                     self.log_cache.pop(compute.id, None)
                     raise e

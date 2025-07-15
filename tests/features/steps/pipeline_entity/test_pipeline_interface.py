@@ -286,6 +286,7 @@ def generate_pipeline_json(context, pipeline_json, flag=None):
 
 
 @behave.given(u'I create pipeline from json in path "{path}"')
+@behave.given(u'I create pipeline from json in path "{path}" no error')
 @behave.given(u'I create pipeline from json in path "{path}" add pipeline_name to task "{flag}"')
 def step_impl(context, path, flag=None):
     assert flag in [None, 'TRUE'], "TEST FAILED: Please provide valid flag value : TRUE"
@@ -310,6 +311,8 @@ def step_impl(context, path, flag=None):
     except Exception as e:
         context.error = e
 
+    if 'no error' in context.step.name:
+        assert not context.error, f"TEST FAILED: {context.error}"
 
 @behave.Then(u'I dont get Pipeline Task by name')
 def step_impl(context):

@@ -2,12 +2,13 @@ from .. import entities, exceptions
 from ..services.api_client import ApiClient
 from typing import List
 
+
 class Collections:
-    def __init__(self, 
-                client_api: ApiClient,
-                item: entities.Item = None, 
-                dataset: entities.Dataset = None
-            ):
+    def __init__(self,
+                 client_api: ApiClient,
+                 item: entities.Item = None,
+                 dataset: entities.Dataset = None
+                 ):
         self._client_api = client_api
         self._dataset = dataset
         self._item = item
@@ -17,7 +18,7 @@ class Collections:
         if self._dataset is None:
             raise ValueError("Must set dataset for this action.")
         return self._dataset
-    
+
     @dataset.setter
     def dataset(self, dataset: entities.Dataset):
         self._dataset = dataset
@@ -27,11 +28,11 @@ class Collections:
         if self._item is None:
             raise ValueError("Must set item for this action.")
         return self._item
-    
+
     @item.setter
     def item(self, item: entities.Item):
         self._item = item
-    
+
     def create(self, name: str) -> entities.Collection:
         """
         Creates a new collection in the dataset.
@@ -49,7 +50,7 @@ class Collections:
             collection_json = self._single_collection(data=response.json(), name=name)
             return entities.Collection.from_json(client_api=self._client_api, _json=collection_json)
         else:
-            raise exceptions.PlatformException(response) 
+            raise exceptions.PlatformException(response)
 
     def update(self, collection_name: str, new_name: str) -> entities.Collection:
         """
@@ -82,7 +83,7 @@ class Collections:
         if success:
             # Wait for the split operation to complete
             command = entities.Command.from_json(_json=response.json(),
-                                                client_api=self._client_api)
+                                                 client_api=self._client_api)
             command.wait()
             return True
         else:
@@ -115,12 +116,11 @@ class Collections:
         cloned_collection = self.create(name=clone_name)
         filters = entities.Filters()
         filters.add(field=f'metadata.system.collections.{original_collection["key"]}', values=True)
-        self.assign(collections=[cloned_collection.name], 
+        self.assign(collections=[cloned_collection.name],
                     filters=filters)
         return cloned_collection
 
-
-    def list_all_collections(self) -> entities.Collection:
+    def list_all_collections(self) -> List[dict]:
         """
         Retrieves all collections in the dataset.
 
@@ -134,7 +134,7 @@ class Collections:
             return self._list_collections(data)
         else:
             raise exceptions.PlatformException(response)
-        
+
     def validate_collection_name(self, name: str):
         """
         Validate that the collection name is unique.
@@ -143,7 +143,7 @@ class Collections:
         :raises ValueError: If a collection with the same name already exists.
         """
         collections = self.list_all_collections()
-        if any(c["name"] == name for c in collections): 
+        if any(c["name"] == name for c in collections):
             raise ValueError(f"A collection with the name '{name}' already exists.")
 
     def validate_max_collections(self) -> None:
@@ -155,25 +155,15 @@ class Collections:
         collections = self.list_all_collections()
         if len(collections) >= 10:
             raise ValueError("The dataset already has the maximum number of collections (10).")
-        
-    def list_missing_collections(self) -> List[str]:
+
+    def list_missing_collections(self) -> entities.PagedEntities:
         """
         List all items in the dataset that are not assigned to any collection.
 
-        :return: A list of item IDs that are not part of any collection.
+        :return: A list of items that are not part of any collection.
         """
-        filters = entities.Filters()
-        filters.add(field='metadata.system.collections', values=None)
-        filters.add(field='datasetId', values=self._dataset.id)
-        return self._dataset.items.list(filters=filters)
-    
-    def list_unassigned_items(self) -> list:
-        """
-        List unassigned items in a dataset (items where all collection fields are false).
-
-        :return: List of unassigned item IDs
-        :rtype: list
-        """
+        if self._dataset is None:
+            raise ValueError("Must set dataset for this action.")
         filters = entities.Filters(method=entities.FiltersMethod.AND)  # Use AND method for all conditions
         collection_fields = [
             "collections0",
@@ -190,10 +180,19 @@ class Collections:
 
         # Add each field to the filter with a value of False
         for field in collection_fields:
-            filters.add(field=field, values=False, method=entities.FiltersMethod.AND)
+            filters.add(field=field, values=False, method=entities.FiltersMethod.AND,
+                        operator=entities.FiltersOperations.EXISTS)
+        return self._dataset.items.list(filters=filters)
 
+    def list_unassigned_items(self) -> list:
+        """
+        List unassigned items in a dataset (items where all collection fields are false).
+
+        :return: List of unassigned item IDs
+        :rtype: list
+        """
         missing_ids = []
-        pages = self._dataset.items.list(filters=filters)
+        pages = self.list_missing_collections()
         for page in pages:
             for item in page:
                 # Items that pass filters mean all collections are false
@@ -201,48 +200,37 @@ class Collections:
 
         return missing_ids
 
-    def assign(
-        self, 
-        collections: List[str],
-        dataset_id: str = None, 
-        item_id: str = None, 
-        filters: entities.Filters = None
-    ) -> bool:
-        """
-        Assign an item to a collection. Creates the collection if it does not exist.
-
-        :param collections: List of the collections to assign the item to.
-        :param dataset_id: ID of the dataset.
-        :param item_id: (Optional) ID of the item to assign. If not provided, all items in the dataset will be updated.
-        :param filters: (Optional) Filters of items to assign to the collections.
-        :return: True if the assignment was successful, otherwise raises an exception.
-        """
+    def __assign_unassigned_items(self,
+                                  action: str,
+                                  collections: List[str],
+                                  dataset_id: str = None,
+                                  item_id: str = None,
+                                  filters: entities.Filters = None
+                                  ) -> bool:
         if not isinstance(collections, list):
             raise ValueError("collections must be a list.")
         if dataset_id is None and self._dataset is not None:
             dataset_id = self.dataset.id
         if item_id is None and self._item is not None:
-            item_id = self.item.id 
-        # Build the query structure
+            item_id = self.item.id
+            # Build the query structure
+        query = {}
         if item_id is not None:
-            query = {
-                "id": {"$eq": item_id}
-            }
+            query = entities.Filters(field="id", values=[item_id], operator=entities.FiltersOperations.IN,
+                                     method=entities.FiltersMethod.AND).prepare().get("filter")
         elif filters is not None:
             query = filters.prepare().get("filter")
-        else:
-            raise ValueError("Either collection_key or item_id must be provided.")
 
         # Create the payload
         payload = {
-            "query": query,
+            "query": {"filter": query},
             "collections": collections,
         }
 
         # Make the API request to assign the item
         success, response = self._client_api.gen_request(
             req_type="post",
-            path=f"/datasets/{dataset_id}/items/collections/bulk-add",
+            path=f"/datasets/{dataset_id}/items/collections/{action}",
             json_req=payload,
         )
 
@@ -254,11 +242,34 @@ class Collections:
         else:
             raise exceptions.PlatformException(f"Failed to assign item to collections: {response}")
 
-        
-    def unassign(self, 
-                 collections: List[str], 
+    def assign(
+            self,
+            collections: List[str],
+            dataset_id: str = None,
+            item_id: str = None,
+            filters: entities.Filters = None
+    ) -> bool:
+        """
+        Assign an item to a collection. Creates the collection if it does not exist.
+
+        :param collections: List of the collections to assign the item to.
+        :param dataset_id: ID of the dataset.
+        :param item_id: (Optional) ID of the item to assign. If not provided, all items in the dataset will be updated.
+        :param filters: (Optional) Filters of items to assign to the collections.
+        :return: True if the assignment was successful, otherwise raises an exception.
+        """
+        return self.__assign_unassigned_items(
+            action="bulk-add",
+            collections=collections,
+            dataset_id=dataset_id,
+            item_id=item_id,
+            filters=filters
+        )
+
+    def unassign(self,
+                 collections: List[str],
                  dataset_id: str = None,
-                 item_id: str = None, 
+                 item_id: str = None,
                  filters: entities.Filters = None) -> bool:
         """
         Unassign an item from a collection.
@@ -267,42 +278,15 @@ class Collections:
         :param item_id: ID of the item.
         :param filters: (Optional) Filters of items to unassign from the collections.
         """
-        if not isinstance(collections, list):
-            raise ValueError("collections must be a list.")
-        # build the context
-        if dataset_id is None and self._dataset is not None:
-            dataset_id = self._dataset.id
-        if item_id is None and self._item is not None:
-            item_id = self._item.id
-            
-        # build the payload
-        if item_id is not None and filters is None:
-            payload = {
-                "query": {"id": {"$eq": item_id}},
-                "collections": collections,
-            }
-        elif filters is not None and item_id is None:
-            payload = {
-                "query": filters.prepare().get("filter"),
-                "collections": collections,
-            }
-        else:
-            raise ValueError("Either item_id or filters must be provided but not both.")
-        success, response = self._client_api.gen_request(
-            req_type="post",
-            path=f"/datasets/{dataset_id}/items/collections/bulk-remove",
-            json_req=payload,
+        return self.__assign_unassigned_items(
+            action="bulk-remove",
+            collections=collections,
+            dataset_id=dataset_id,
+            item_id=item_id,
+            filters=filters
         )
-        if success:
-            # Wait for the split operation to complete
-            command = entities.Command.from_json(_json=response.json(),
-                                                client_api=self._client_api)
-            command.wait()
-            return True
-        else:
-            raise exceptions.PlatformException(response)
 
-    def _single_collection(sef, data: dict, name: str):
+    def _single_collection(self, data: dict, name: str):
         """
         Retrieves the key-value pair from the dictionary where the collection's name matches the given name.
 
@@ -315,7 +299,7 @@ class Collections:
             if value.get("name") == name:
                 return {key: value}
         return None
-    
+
     def _list_collections(self, data: dict):
         """
         Create a list of Collection entities from the dataset JSON.
@@ -332,7 +316,7 @@ class Collections:
                 collection_name = value.get("name")
                 collections.append({"key": key, "name": collection_name})
         return collections
-    
+
     def get_name_by_key(self, key: str) -> str:
         """
         Get the name of a collection by its key.

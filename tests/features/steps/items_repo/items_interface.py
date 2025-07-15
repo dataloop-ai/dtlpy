@@ -71,3 +71,25 @@ def step_impl(context, item_path, dataset_name):
     context.item_path = os.path.join(os.environ['DATALOOP_TEST_ASSETS'], item_path)
     dataset = context.dl.datasets.get(dataset_name=dataset_name)
     context.item = dataset.items.upload(local_path=context.item_path)
+
+
+@behave.when('I save the list of items as "{var_name}"')
+def step_impl(context, var_name):
+    items = getattr(context, 'items', None)
+    assert items is not None, 'No items found in context to save.'
+    ids = []
+    for item in items:
+        if hasattr(item, 'id'):
+            ids.append(item.id)
+        elif isinstance(item, dict) and 'id' in item:
+            ids.append(item['id'])
+        else:
+            ids.append(item)
+    setattr(context, var_name, ids)
+
+
+@behave.then('The list "{list1}" should match the list "{list2}"')
+def step_impl(context, list1, list2):
+    l1 = set(getattr(context, list1))
+    l2 = set(getattr(context, list2))
+    assert l1 == l2, f"Lists do not match: {list1}={l1}, {list2}={l2}"

@@ -35,7 +35,7 @@ def step_impl(context):
 
 @behave.when(u'I delete the compute')
 def step_impl(context):
-    deleted = context.compute.delete()
+    deleted = context.compute.delete(skip_destroy=True)
     assert deleted
 
 @behave.then(u'the compute is deleted')

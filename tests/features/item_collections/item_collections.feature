@@ -42,7 +42,7 @@ Feature: Item Collections
 
   @DAT-85370
   Scenario: Assign an item to a collection
-    Given I have an item in the dataset 
+    Given I have an item in the dataset
     When I assign the item to the collection "Justice League"
     Then The item is assigned to the collection "Justice League"
 
@@ -53,3 +53,12 @@ Feature: Item Collections
     When I assign the item to the collection "Cloning Collection"
     When I clone the collection "Cloning Collection"
     Then The item is assigned to the collection "Cloning Collection-clone-1"
+
+  @DAT-98058
+  Scenario: Assign an item to a collection
+    Given I upload an item by the name of "test_item.jpg"
+    Given I have an item in the dataset
+    When  I assign the item to the collection "Justice League"
+    Then The item is assigned to the collection "Justice League"
+    When I list all unassigned items
+    Then I expect to see "1" unassigned items

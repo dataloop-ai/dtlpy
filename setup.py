@@ -16,7 +16,7 @@
 
 from setuptools import setup, find_packages
 
-with open('README.md') as f:
+with open('README.md', encoding='utf-8') as f:
     readme = f.read()
 
 with open('LICENSE') as f:
@@ -36,7 +36,7 @@ setup(name='dtlpy',
           'Programming Language :: Python :: 3.10',
           'Programming Language :: Python :: 3.11',
       ],
-      version='1.113.10',
+      version='1.114.12',
       description='SDK and CLI for Dataloop platform',
       author='Dataloop Team',
       author_email='info@dataloop.ai',
