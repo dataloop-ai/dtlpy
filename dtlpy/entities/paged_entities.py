@@ -68,7 +68,11 @@ class PagedEntities:
         # Keyset pagination only works for page 0 (first page)
         if self.page_offset != 0:
             return False
-            
+                
+        # can't use add to custom filter
+        if self.filters.custom_filter is not None:
+            return False
+        
         # Check if the resource supports keyset pagination
         enable_id_based_paging = getattr(self.filters, "resource", None) in [
             FiltersResource.ITEM,

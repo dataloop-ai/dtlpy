@@ -148,6 +148,7 @@ from tests.features.steps.executions_repo import test_executions_context
 from tests.features.steps.execution_monitoring import test_execution_monitoring
 from tests.features.steps.executions_repo import test_execution_rerun
 from tests.features.steps.executions_repo import test_execution_validation
+from tests.features.steps.executions_repo import test_executions_laod_balance
 
 from tests.features.steps.bots_repo import test_bots_create
 from tests.features.steps.bots_repo import test_bots_list
